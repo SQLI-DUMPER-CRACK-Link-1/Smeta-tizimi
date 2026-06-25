@@ -1,0 +1,14 @@
+# Hamma narsani e'tiborsiz qoldirish
+**/*
+
+# Faqat ildiz papkadagi GAS fayllariga ruxsat berish
+!*.js
+!*.gs
+!*.html
+!appsscript.json
+
+# Papkalarni butunlay inkor qilish
+frontend/**
+.git/**
+.claude/**
+node_modules/**

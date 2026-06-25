@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Segoe UI, Arial; margin: 0; background: #f5f7fb; }
+    header { padding: 14px 16px; background: white; border-bottom: 1px solid #e6e9f2; }
+    .wrap { display: grid; grid-template-columns: 360px 1fr; gap: 12px; padding: 12px; }
+    .card { background: white; border: 1px solid #e6e9f2; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
+    .card h3 { margin: 0; padding: 12px 14px; border-bottom: 1px solid #eef1f7; font-size: 14px; }
+    .list { max-height: 480px; overflow: auto; padding: 8px; }
+    .item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+    .item:hover { background: #f0f5ff; }
+    .path { padding: 12px 14px; font-size: 13px; color: #334155; }
+    .btns { padding: 12px 14px; display: flex; gap: 10px; }
+    button { border: none; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-weight: 600; }
+    .primary { background: #2563eb; color: white; }
+    .ghost { background: #eef2ff; color: #1e40af; }
+    .muted { color: #64748b; font-size: 12px; }
+    .crumb { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid #eef1f7; }
+    .crumb span { background:#f1f5f9; padding:4px 8px; border-radius:999px; font-size:12px; cursor:pointer; }
+    .crumb span:hover { background:#e2e8f0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div><b>Folder tanlash</b> <span class="muted">— ichma-ich papkalar bo‘yicha</span></div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <h3>Papkalar</h3>
+      <div class="crumb" id="crumb"></div>
+      <div class="list" id="list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Tanlangan folder</h3>
+      <div class="path" id="selectedPath">—</div>
+      <div class="btns">
+        <button class="ghost" onclick="goUp()">⬅️ Orqaga</button>
+        <button class="primary" onclick="confirm()">✅ Tanlash</button>
+      </div>
+      <div class="path muted">
+        Eslatma: Tanlaganingizdan keyin sistema bu folderga aktlarni avtomatik joylaydi.
+      </div>
+    </div>
+  </div>
+
+<script>
+  const CONTEXT = JSON.parse('<?= context ?>');
+  const ROOT_ID = "<?= rootFolderId ?>";
+
+  let stack = [{ id: ROOT_ID, name: "ROOT" }];
+  let currentId = ROOT_ID;
+
+  function renderCrumb() {
+    const el = document.getElementById("crumb");
+    el.innerHTML = "";
+    stack.forEach((c, idx) => {
+      const s = document.createElement("span");
+      s.textContent = c.name;
+      s.onclick = () => jump(idx);
+      el.appendChild(s);
+    });
+  }
+
+  function setSelectedPath() {
+    document.getElementById("selectedPath").textContent = stack.map(x => x.name).join("/");
+  }
+
+  function load(folderId) {
+    currentId = folderId;
+    google.script.run.withSuccessHandler((items) => {
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+      items.forEach(it => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `<div>${it.name}</div><div class="muted">▶</div>`;
+        div.onclick = () => enter(it.id, it.name);
+        list.appendChild(div);
+      });
+      setSelectedPath();
+      renderCrumb();
+    }).picker_listSubfolders(folderId);
+  }
+
+  function enter(id, name) {
+    stack.push({ id, name });
+    load(id);
+  }
+
+  function goUp() {
+    if (stack.length <= 1) return;
+    stack.pop();
+    load(stack[stack.length - 1].id);
+  }
+
+  function jump(idx) {
+    stack = stack.slice(0, idx + 1);
+    load(stack[idx].id);
+  }
+
+  function confirm() {
+    const path = stack.map(x => x.name).join("/");
+    google.script.run.withSuccessHandler(() => {
+      google.script.host.close();
+    }).picker_confirmSelection({
+      folderId: currentId,
+      folderPath: path,
+      context: CONTEXT
+    });
+  }
+
+  // init: rename ROOT to actual root folder name
+  google.script.run.withSuccessHandler((name) => {
+    stack[0].name = name;
+    load(ROOT_ID);
+  }).picker_getFolderName(ROOT_ID);
+</script>
+</body>
+</html>

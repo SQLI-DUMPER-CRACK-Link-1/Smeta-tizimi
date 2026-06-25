@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__d407d989-0088-40d0-9602-87fae4391200__read_file_content",
+      "Bash(python -c ' *)",
+      "mcp__d407d989-0088-40d0-9602-87fae4391200__search_files",
+      "Bash(clasp push *)",
+      "Bash(cd \"C:/Users/PC/Documents/GAS/Akt generator\" && echo \"scriptId:\" && cat .clasp.json | grep scriptId && echo \"--- pushed account ---\" && cat ~/.clasprc.json 2>/dev/null | grep -o '\"[^\"]*@[^\"]*\"' | head -1)",
+      "mcp__d407d989-0088-40d0-9602-87fae4391200__get_file_metadata",
+      "Bash(mkdir -p /tmp/claspcheck)",
+      "Bash(cp \"C:/Users/PC/Documents/GAS/Akt generator/.clasp.json\" /tmp/claspcheck/.clasp.json)",
+      "Read(//tmp/**)",
+      "Bash(clasp pull *)"
+    ]
+  }
+}

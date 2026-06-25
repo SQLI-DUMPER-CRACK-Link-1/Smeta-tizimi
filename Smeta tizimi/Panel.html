@@ -1,0 +1,3578 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>СМЕТА</title>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Frappe Gantt -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
+
+<style>
+:root{
+  /* Ultra Premium Dark Theme */
+  --bg: #09090b; --bg2: rgba(24, 24, 27, 0.7); 
+  --surface: rgba(39, 39, 42, 0.6); --surface2: rgba(63, 63, 70, 0.8);
+  --line: rgba(255, 255, 255, 0.08); --line2: rgba(255, 255, 255, 0.12);
+  --txt: #f8fafc; --txt2: #cbd5e1; --txt3: #94a3b8; --txt4: #64748b;
+  --pri: #38bdf8; --pri2: #7dd3fc; --pri-d: #0284c7;
+  --grn: #34d399; --grn2: #6ee7b7; --amber: #fbbf24; --amber2: #fcd34d;
+  --red: #f87171; --red2: #fca5a5; --violet: #a78bfa; --cyan: #22d3ee;
+  --r: 16px; --r-sm: 8px; --r-lg: 24px;
+  --sh: 0 8px 32px 0 rgba(0, 0, 0, 0.3); --sh-sm: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
+  --glow-pri: 0 0 20px rgba(56, 189, 248, 0.25);
+  --glow-grn: 0 0 20px rgba(52, 211, 153, 0.2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.2)}
+body{
+  font-family:'Outfit',system-ui,sans-serif;
+  font-size:13px;color:var(--txt);height:100vh;overflow:hidden;
+  background-color: var(--bg);
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.06), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(129, 140, 248, 0.06), transparent 25%);
+  -webkit-font-smoothing:antialiased;
+}
+#app{display:flex;flex-direction:column;height:100vh}
+
+/* HEADER */
+#hdr{
+  background: rgba(9, 9, 11, 0.8);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  padding: 12px 24px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+}
+#hdr h1{font-size:18px;font-weight:800;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;
+  background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+#hdr h1::before{content:"🏗️";font-size:18px; -webkit-text-fill-color: initial;}
+#keshBadge{font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;cursor:pointer;transition:.2s}
+#keshBadge.fresh{background:rgba(52,211,153,.15);color:var(--grn);border:1px solid rgba(52,211,153,.3)}
+#keshBadge.stale{background:rgba(251,191,36,.15);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+#keshBadge.none{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+#hdrOb{font-size:12px;font-weight:700;color:var(--pri);padding:4px 14px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:20px}
+.hgap{flex:1}
+.hbtn{
+  background:rgba(255,255,255,.05);border:1px solid var(--line);color:#fff;
+  padding:8px 16px;border-radius:var(--r-sm);cursor:pointer;font-size:12px;font-weight:600;
+  font-family: inherit; transition:.2s cubic-bezier(.4,0,.2,1);
+}
+.hbtn:hover{background:rgba(255,255,255,.1);transform:translateY(-1px);box-shadow:var(--glow-pri);border-color:rgba(56,189,248,0.4);}
+.hbtn:active{transform:translateY(0)}
+.hbtn.grn{background:linear-gradient(135deg,#059669,#10b981);border:none;box-shadow:var(--glow-grn);}
+.hbtn.grn:hover{background:linear-gradient(135deg,#047857,#059669);}
+.lang-btns{display:flex;gap:4px;align-items:center;margin-left:8px}
+.lang-btn{background:rgba(255,255,255,.05);border:1px solid var(--line);cursor:pointer;
+  font-size:15px;padding:5px 8px;border-radius:8px;opacity:.5;transition:.2s;}
+.lang-btn.active{opacity:1;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3)}
+.lang-btn:hover{opacity:.9}
+
+/* TABS */
+#tabs{display:flex;gap:4px;background:transparent;padding:12px 24px 0;flex-shrink:0;border-bottom:1px solid var(--line)}
+.tab{
+  padding:10px 20px;cursor:pointer;font-size:13px;font-weight:600;color:var(--txt3);
+  border-radius:var(--r-sm) var(--r-sm) 0 0;transition:.2s;user-select:none;position:relative;
+  background: transparent;
+}
+.tab::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:transparent;border-radius:3px 3px 0 0;transition:.3s}
+.tab.active{color:var(--pri);background:var(--bg2);}
+.tab.active::after{background:var(--pri);box-shadow: 0 -2px 10px rgba(56,189,248,0.5);}
+.tab:hover:not(.active){color:#fff;background:rgba(255,255,255,.03)}
+
+/* BODY */
+#body{flex:1;overflow:hidden;display:flex}
+.pane{display:none;flex:1;overflow-y:auto;padding:24px;flex-direction:column;gap:16px}
+.pane.active{display:flex;animation:fade .3s ease}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* BADGES */
+.badge{font-size:10px;padding:4px 10px;border-radius:20px;font-weight:800;letter-spacing:0.5px}
+.badge.tn{background:rgba(56,189,248,.15);color:var(--pri);border:1px solid rgba(56,189,248,.3)}
+.badge.abc{background:rgba(167,139,250,.15);color:var(--violet);border:1px solid rgba(167,139,250,.3)}
+.badge.lock{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+
+/* BUTTONS */
+.btn{
+  background:linear-gradient(135deg,var(--pri-d),var(--pri));border:none;color:#fff;
+  padding:8px 16px;border-radius:var(--r-sm);cursor:pointer;font-size:12px;font-weight:700;
+  transition:.2s cubic-bezier(.4,0,.2,1);box-shadow:var(--glow-pri);font-family:inherit;
+}
+.btn:hover{filter:brightness(1.15);transform:translateY(-1px);}
+.btn:active{transform:translateY(0)}
+.btn.s{background:rgba(255,255,255,0.05);color:var(--txt2);border:1px solid var(--line);box-shadow:none}
+.btn.s:hover{background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2);}
+.btn.red{background:linear-gradient(135deg,#dc2626,#ef4444);box-shadow:0 0 20px rgba(239,68,68,.25)}
+.btn.grn{background:linear-gradient(135deg,#059669,#10b981);box-shadow:var(--glow-grn)}
+.btn.xs{padding:4px 10px;font-size:11px;border-radius:6px;box-shadow:none}
+
+/* INPUTS */
+select,input[type=text],input[type=number]{
+  background:rgba(0,0,0,0.2);border:1px solid var(--line);color:var(--txt);
+  padding:8px 12px;border-radius:var(--r-sm);font-size:13px;transition:.2s;font-family:inherit;font-weight:500;
+}
+select:hover,input:hover{border-color:rgba(255,255,255,0.2)}
+select:focus,input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(56,189,248,.15);background:rgba(0,0,0,0.4)}
+input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
+
+/* TOOLBAR */
+.tbar{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;background:var(--bg2);padding:12px 16px;border-radius:var(--r);border:1px solid var(--line)}
+
+/* MSG */
+.msg{padding:12px 16px;border-radius:var(--r-sm);font-size:13px;flex-shrink:0;line-height:1.6;font-weight:500;}
+.msg.i{background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);color:#bae6fd}
+.msg.ok{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:#a7f3d0}
+.msg.err{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);color:#fecaca}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;flex-shrink:0}
+.kpi{
+  background:var(--bg2); backdrop-filter:blur(10px);
+  border:1px solid var(--line);border-radius:var(--r);padding:20px;
+  box-shadow:var(--sh-sm);position:relative;overflow:hidden;transition:.3s;
+}
+.kpi:hover{border-color:var(--line2);box-shadow:var(--sh);transform:translateY(-2px)}
+.kpi::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--pri);border-radius:4px 0 0 4px}
+.kpi::after{content:"";position:absolute;top:-20px;right:-20px;width:100px;height:100px;border-radius:50%;background:var(--pri);opacity:.03}
+.kpi.warn::before{background:var(--amber)} .kpi.warn::after{background:var(--amber)}
+.kpi.ok::before{background:var(--grn)} .kpi.ok::after{background:var(--grn)}
+.kpi.red::before{background:var(--red)} .kpi.red::after{background:var(--red)}
+.kpi label{font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;font-weight:800;display:flex;align-items:center;gap:6px}
+.kpi .kv{font-size:24px;font-weight:900;color:var(--txt);margin-top:8px;font-family:'JetBrains Mono',monospace;letter-spacing:-0.5px;line-height:1}
+.kpi .ks{font-size:12px;color:var(--txt4);margin-top:6px;display:flex;align-items:center;gap:4px;font-weight:500}
+.kpi .kbar{height:4px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:12px;overflow:hidden}
+.kpi .kbar-fill{height:100%;border-radius:2px;background:var(--pri);transition:.8s cubic-bezier(.4,0,.2,1)}
+.kpi.warn .kv{color:var(--amber)} .kpi.warn .kbar-fill{background:var(--amber)}
+.kpi.ok .kv{color:var(--grn)} .kpi.ok .kbar-fill{background:var(--grn)}
+.kpi.red .kv{color:var(--red)} .kpi.red .kbar-fill{background:var(--red)}
+
+/* TREE */
+.tree-wrap{flex:1;overflow:auto;padding-right:4px}
+
+/* Group blocks */
+.grp{margin-bottom:12px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:rgba(0,0,0,0.2);box-shadow:var(--sh-sm)}
+.grp-h{padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;user-select:none;transition:.2s}
+.grp-h:hover{background:rgba(255,255,255,0.03)}
+.grp-arr{font-size:10px;color:var(--txt4);transition:.3s;flex-shrink:0}
+.grp.open>.grp-h .grp-arr{transform:rotate(90deg);color:var(--pri)}
+.grp-nom{font-weight:800;flex:1;letter-spacing:0.3px;font-size:14px}
+.grp-cnt{font-size:11px;font-weight:700;background:rgba(255,255,255,.05);padding:4px 10px;border-radius:20px;color:var(--txt3)}
+.grp-body{display:none;padding:12px}
+.grp.open>.grp-body{display:block}
+
+/* Depth colors */
+.d0>.grp-h .grp-nom{color:var(--pri)}
+.d1>.grp-h .grp-nom{color:var(--violet)}
+.d2>.grp-h .grp-nom{color:var(--cyan)}
+
+/* RZ block */
+.rz{margin-bottom:12px;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:var(--bg2)}
+.rz-h{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none;transition:.2s;border-left:3px solid var(--pri)}
+.rz-h:hover{background:var(--surface)}
+.rz-arr{font-size:10px;color:var(--txt4);transition:.3s;flex-shrink:0}
+.rz.open>.rz-h .rz-arr{transform:rotate(90deg);color:var(--pri)}
+.rz-nom{font-size:14px;color:#fff;font-weight:700;flex:1}
+.rz-body{display:none;border-top:1px solid var(--line)}
+.rz.open>.rz-body{display:block}
+
+/* BL row */
+.bl{border-top:1px solid var(--line)}
+.bl-h{padding:10px 16px 10px 24px;cursor:pointer;display:flex;align-items:center;gap:12px;background:transparent;transition:.2s}
+.bl-h:hover{background:rgba(255,255,255,0.02)}
+.bl-arr{font-size:10px;color:var(--txt4);transition:.3s;flex-shrink:0}
+.bl.open>.bl-h .bl-arr{transform:rotate(90deg)}
+.bl-nom{font-size:13px;color:var(--txt2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.bl.isq>.bl-h .bl-nom{color:var(--amber)}
+.bl.isq>.bl-h{background:rgba(251,191,36,.03)}
+.bl-bir{font-size:10px;color:var(--txt4);font-weight:700;flex-shrink:0;background:rgba(255,255,255,.05);padding:3px 8px;border-radius:6px}
+.bl-inp{flex-shrink:0}
+.bl-inp input{width:90px;padding:6px 10px;font-size:13px;font-weight:700}
+.bl-pbar{width:100px;height:8px;background:rgba(0,0,0,0.3);border-radius:4px;flex-shrink:0;overflow:hidden;border:1px solid var(--line)}
+.bl-pbar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--pri-d),var(--pri),var(--cyan));transition:.5s}
+.bl-pct{font-size:12px;font-weight:800;color:var(--txt);min-width:40px;text-align:right;flex-shrink:0;font-family:'JetBrains Mono',monospace}
+
+.bl-body{display:none;padding:16px 20px 16px 36px;background:rgba(0,0,0,0.2);border-top:1px solid var(--line)}
+.bl.open>.bl-body{display:block}
+
+/* BL stats */
+.bl-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.bl-stat{font-size:12px;color:var(--txt3);background:rgba(255,255,255,.03);padding:6px 12px;border-radius:8px;border:1px solid var(--line);display:flex;flex-direction:column;gap:4px;}
+.bl-stat b{color:var(--txt);font-weight:800;font-family:'JetBrains Mono',monospace;font-size:14px}
+
+.inp-section{margin-top:12px;display:flex;flex-direction:column;gap:4px}
+.inp-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.inp-lbl{font-size:12px;min-width:160px;color:var(--txt3);font-weight:600}
+.inp-lbl.fakt{color:var(--pri);font-weight:700}
+.inp-lbl.oy{color:var(--amber);font-weight:700}
+.inp-actions{display:flex;gap:6px}
+
+/* RS list */
+.rs-list{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.rs-row{display:flex;gap:12px;padding:8px 10px;border-radius:8px;font-size:12px;align-items:center;transition:.2s}
+.rs-row:hover{background:rgba(255,255,255,.03)}
+.rs-nom{flex:1;color:var(--txt3);font-weight:500}
+.rs-val{color:var(--txt);min-width:80px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700}
+.rs-val.fakt{color:var(--grn)}
+.rs-row.isq .rs-nom{color:var(--amber)}
+
+/* SAVE BAR */
+.save-bar{
+  flex-shrink:0;background:rgba(9, 9, 11, 0.9);
+  backdrop-filter: blur(10px);
+  border:1px solid var(--pri);border-radius:var(--r);margin-top:12px;
+  padding:14px 24px;display:flex;align-items:center;gap:16px;
+  box-shadow:var(--glow-pri), var(--sh);
+  animation:slideUp .3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+.save-cnt{font-size:14px;color:var(--pri);flex:1;font-weight:800;display:flex;align-items:center;gap:8px}
+.save-cnt::before{content:"●";color:var(--amber);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.save-shortcut{font-size:11px;color:var(--txt4);background:rgba(255,255,255,.05);padding:4px 8px;border-radius:6px;border:1px solid var(--line2);font-weight:700}
+.save-msg{font-size:13px;color:var(--grn);font-weight:700}
+
+/* SKAN */
+.skan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.skan-row{
+  background:var(--bg2);backdrop-filter:blur(10px);border:1px solid var(--line);
+  border-radius:var(--r);padding:20px;transition:.3s;position:relative;
+}
+.skan-row:hover{border-color:rgba(56,189,248,.4);box-shadow:var(--glow-pri),var(--sh)}
+.skan-hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.skan-nom{font-weight:900;color:#fff;font-size:16px;flex:1;letter-spacing:-0.5px}
+.skan-files{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.skan-file{background:rgba(0,0,0,0.2);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.skan-file-lbl{font-size:10px;color:var(--txt4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:800}
+.skan-file-nom{font-size:12px;color:var(--txt2);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skan-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.skan-prog{font-size:11px;color:var(--txt3);background:rgba(255,255,255,.05);
+  padding:6px 12px;border-radius:6px;border:1px solid var(--line);flex:1;text-align:center;font-weight:700}
+.skan-prog.run{color:var(--amber);border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.1);animation:pulse 2s infinite}
+
+/* UNIVERSAL MODAL */
+.modal-bg{position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;animation:fadeInModal 0.3s forwards}
+@keyframes fadeInModal { to { opacity: 1; } }
+.modal{background:var(--bg);border:1px solid var(--line2);border-radius:var(--r-lg);
+  padding:32px;width:100%;display:flex;flex-direction:column;gap:16px;
+  max-height:90vh;overflow:auto;box-shadow:0 32px 100px rgba(0,0,0,.8);transform:translateY(20px);animation:slideUpModal 0.3s forwards cubic-bezier(0.16, 1, 0.3, 1)}
+@keyframes slideUpModal { to { transform: translateY(0); } }
+.modal h3{margin:0;font-size:20px;color:#fff}
+
+/* OVERRIDES FOR OTHER TABLES (IER, NARX, PUZZLE) TO MATCH NEW DESIGN */
+.ier-tbl th, .nx-tbl th, .sh-tbl th { background:rgba(0,0,0,0.3); color:var(--txt4); font-size:11px; padding:12px; border-bottom:2px solid var(--line); text-transform:uppercase; font-weight:800; letter-spacing:1px;}
+.ier-tbl td, .nx-tbl td, .sh-tbl td { padding:10px 12px; border-bottom:1px solid var(--line); font-size:13px; font-weight:500;}
+.nx-row.fakt-win td { background: rgba(251,191,36,0.05); }
+.nx-row.smeta-win td { background: rgba(52,211,153,0.05); }
+
+/* GANTT VIEW WITHIN PANEL */
+#ganttView {
+  margin-top: 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg2); padding: 16px; overflow-x: auto;
+}
+.gantt .bar-progress { fill: var(--pri); }
+.gantt .bar { fill: rgba(255,255,255,0.05); stroke: var(--pri); stroke-width: 1px; }
+.gantt .bar-label { fill: #fff; font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 13px; }
+.gantt .grid-header { fill: transparent; }
+.gantt .grid-row { fill: transparent; }
+.gantt .grid-row:nth-child(even) { fill: rgba(255,255,255,0.02); }
+.gantt .tick { stroke: var(--line2); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="hdr">
+  <h1>СМЕТА</h1>
+  <span id="hdrOb"></span>
+  <span id="keshBadge" class="none" onclick="keshYangilashModal()" title="Kesh holati — bosing yangilash uchun">⏱ —</span>
+  <div class="hgap"></div>
+  <input class="hdr-search" type="text" id="treeSearch" placeholder="🔍 Qidir..." oninput="treeQidir(this.value)" title="Ctrl+F">
+  <button class="hbtn" data-i18n="hbtn-refresh" onclick="tabOch('skan')">↺ Янгилаш</button>
+  <button class="hbtn grn" data-i18n="hbtn-server" onclick="serverYig()">⬆ Серверга</button>
+  <button class="hbtn" data-i18n="hbtn-soz" onclick="tabOch('soz')">⚙ Созлама</button>
+  <button class="hbtn" data-i18n="hbtn-boss" onclick="navTo('boss')">📊 Дашборд</button>
+  <button class="hbtn" onclick="navTo('')">🏠</button>
+  <div class="lang-btns">
+    <button class="lang-btn" data-lang="uz" onclick="setLang('uz')" title="O'zbekcha">🇺🇿</button>
+    <button class="lang-btn" data-lang="ru" onclick="setLang('ru')" title="Русский">🇷🇺</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<!-- 4 ASOSIY TAB (ergonomika: 8 → 4, qolganlari 🗂 Бошқарув ichida) -->
+<div id="tabs">
+  <div class="tab active" onclick="tabOch('holat')" data-tab="holat" data-i18n="tab-holat">Ҳолат ва Ф2</div>
+  <div class="tab" onclick="tabOch('shart')" data-tab="shart" data-i18n="tab-shart">📜 Шартнома</div>
+  <div class="tab" onclick="tabOch('narx')" data-tab="narx" data-i18n="tab-narx">Нархлар</div>
+  <div class="tab" onclick="tabOch('skan')" data-tab="bosh" data-i18n="tab-bosh">🗂 Бошқарув</div>
+</div>
+<!-- Бошқарув ichki bo'limlari (faqat Бошқарув tanlanganда ko'rinadi) -->
+<div id="subtabs" style="display:none;gap:6px;padding:6px 14px;background:rgba(255,255,255,.02);
+  border-bottom:1px solid var(--line2,#1a2640);flex-wrap:wrap">
+  <button class="btn xs s sub-t" data-sub="skan" onclick="tabOch('skan')" data-i18n="tab-skan">Объектлар</button>
+  <button class="btn xs s sub-t" data-sub="puz" onclick="tabOch('puz')" data-i18n="tab-puz">Файл боғлаш</button>
+  <button class="btn xs s sub-t" data-sub="ier" onclick="tabOch('ier')" data-i18n="tab-ier">Иерархия</button>
+  <button class="btn xs s sub-t" data-sub="huj" onclick="tabOch('huj')" data-i18n="tab-huj">Ҳужжатлар</button>
+  <button class="btn xs s sub-t" data-sub="soz" onclick="tabOch('soz')" data-i18n="tab-soz">Созлама</button>
+</div>
+
+<div id="body">
+
+<!-- ====== HOLAT + F2 ====== -->
+<div class="pane active" id="pane-holat">
+  <div class="ob-row">
+    <select id="selOb" onchange="holatYukla()" style="width:210px">
+      <option value="">— Объект танланг —</option>
+    </select>
+    <span id="bFmt" class="badge tn" style="display:none">TN</span>
+    <span id="bLock" class="badge lock" style="display:none" data-i18n="badge-lock">🔒 ҚУЛФ</span>
+    <button class="btn s" id="btnLock" onclick="lockToggle()" style="display:none" data-i18n="btn-lock">Қулфлаш</button>
+    <div class="hgap"></div>
+    <button class="btn s" id="btnTashxis" onclick="tashxisYukla()" style="display:none;font-size:11px" title="Narx/miqdor tashxisi — shishish, 0-narx, topilmaganlar" data-i18n="btn-tashxis">🔍 Ташхис</button>
+    <button class="btn s" id="btnAi" onclick="aiTahlil(false)" style="display:none;font-size:11px" title="AI maslahatchi — holatdan xulosa" data-i18n="btn-ai">🤖 Таҳлил</button>
+    <button class="btn s" id="btnOy" onclick="oyQosh()" style="display:none;font-size:11px" data-i18n="btn-oy">+ Ой</button>
+    <button class="btn s" id="btnF2Imp" onclick="f2ImpOch()" style="display:none;font-size:11px;background:#4f46e5;border-color:#4f46e5;color:#fff">📄 Ф2 Импорт</button>
+    <button class="btn s" onclick="holatYukla(true)" style="font-size:11px">↺</button>
+  </div>
+
+  <div class="msg i" style="flex-shrink:0;line-height:1.5">
+    <b>Бу бўлим:</b> объект бўйича факт ва Ф2 ҳолати. Объект танланг — блоклар дарахти кўринади.
+    Ҳар блокка <b>факт ҳажм</b> ёзинг ёки <b>100%</b> босинг; ой устуни бўлса <b>📅 ой</b> га Ф2 ҳажмни киритинг.
+    <b>🔒 Қулф</b> — объект тайёр бўлса, асл сметани муҳофаза қилади (фақат «+» қўшимча ишлар янгиланади).
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div id="aiBox" style="display:none;background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(16,185,129,.06));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:13px;line-height:1.6;color:var(--txt2);white-space:pre-wrap"></div>
+  <div id="tashxisBox" style="display:none;background:rgba(15,23,42,.5);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:12px;max-height:420px;overflow:auto"></div>
+  <div id="catStats" style="display:none"></div>
+  <div id="hMsg" style="display:none"></div>
+  <div class="tree-actions" id="treeActions" style="display:none">
+    <button class="tree-act-btn" data-i18n="tree-expand" onclick="treeBarcha('open')">▼ Barchasini yoy</button>
+    <button class="tree-act-btn" data-i18n="tree-collapse" onclick="treeBarcha('close')">▶ Barchasini yig'</button>
+    <button class="tree-act-btn" onclick="toggleGantt()" style="background:rgba(56,189,248,0.1); color:var(--pri); border-color:var(--pri)">📅 Gantt Diagramma</button>
+    <span id="searchInfo" style="font-size:10px;color:var(--txt4);margin-left:4px"></span>
+  </div>
+  <div id="ganttView" style="display:none; height:400px; overflow-y:auto; overflow-x:auto; margin-bottom: 16px;">
+    <svg id="ganttPanelSvg"></svg>
+  </div>
+  <div class="tree-wrap" id="tree"></div>
+
+  <div class="save-bar" id="sbar" style="display:none">
+    <span class="save-cnt" id="sCnt">0 ўзгариш</span>
+    <span class="save-shortcut">Ctrl+S</span>
+    <span class="hgap"></span>
+    <button class="btn s" data-i18n="btn-cancel" onclick="pendingTozala()">✕ Бекор</button>
+    <button class="btn" data-i18n="btn-save" onclick="saqlash()">💾 Сақлаш</button>
+    <span id="sMsg" class="save-msg"></span>
+  </div>
+</div>
+
+<!-- ====== NARXLAR ====== -->
+<div class="pane" id="pane-narx">
+  <div class="tbar">
+    <select id="narxKat" onchange="narxYukla()" style="width:110px">
+      <option value="ALL">Барча</option>
+      <option value="МАТ">МАТ</option>
+      <option value="ОБ">ОБ</option>
+      <option value="МАШ">МАШ</option>
+      <option value="ЧЕЛ">ЧЕЛ</option>
+    </select>
+    <input id="narxQidir" type="text" placeholder="Nom bo'yicha qidirish..."
+      style="width:220px" oninput="narxFilter()">
+    <button class="btn" onclick="narxYukla()">↺ Yangilash</button>
+    <button class="btn grn" id="narxSaqlaBtn" onclick="narxSaqla()" style="display:none">💾 Saqlash</button>
+    <span id="narxMsg" style="font-size:11px;color:var(--grn2)"></span>
+  </div>
+
+  <div class="msg i" style="flex-shrink:0;line-height:1.6;font-size:11.5px">
+    <b>Narxlar taqqoslash:</b>
+    Har bir resurs uchun smeta narxi (barcha ob'ektlardan <b>MAX</b>) va fakt narxi ko'rsatiladi.<br>
+    <span style="background:rgba(16,185,129,.2);padding:1px 6px;border-radius:3px">Yashil</span> — fakt &lt; smeta (smeta narxi ishlatiladi) &nbsp;
+    <span style="background:rgba(245,158,11,.2);padding:1px 6px;border-radius:3px">Sariq</span> — fakt &gt; smeta (fakt narxi ishlatiladi).<br>
+    Fakt narxini o'zgartirib <b>Saqlash</b> bosing → <code>SOZLAMALAR_НАРХ</code> yangilanadi → keyingi Ишла da kuchga kiradi.
+  </div>
+
+  <div id="narxTable" style="flex:1;overflow:auto"></div>
+</div>
+
+<!-- ====== IERARXIYA ====== -->
+<div class="pane" id="pane-ier">
+  <div class="tbar">
+    <select id="ierOb" onchange="ierObTanla()" style="width:210px">
+      <option value="">— Объект танланг —</option>
+    </select>
+    <button class="btn" onclick="ierShOch()">📋 РАЗДЕЛЛАР варағини очиш</button>
+    <button class="btn grn" onclick="ierLrvGaYoz()" id="btnIerLrv" style="display:none">📥 LRV га қўй</button>
+    <span id="ierMsg" style="font-size:11px;color:#34d399;margin-left:4px"></span>
+  </div>
+
+  <div class="msg i" style="flex-shrink:0;line-height:1.7">
+    <b>Иш тартиби:</b><br>
+    1️⃣ Объект танланг → <b>«РАЗДЕЛЛАР варағини очиш»</b><br>
+    2️⃣ РАЗДЕЛЛАР варағида
+       <span style="background:#1d4ed8;color:#fff;padding:1px 6px;border-radius:3px">Д-1</span>…
+       <span style="background:#1d4ed8;color:#fff;padding:1px 6px;border-radius:3px">Д-5</span>
+       устунларига қиймат ёзинг <i>(масалан: Д-1 = «1-қават», Д-2 = «КЖ»)</i><br>
+    3️⃣ Панелга қайтинг → <b>«📥 LRV га қўй»</b> ни босинг<br>
+    4️⃣ Мана шу — LRV_PLUS даги барча қаторларга (<b>rz/bl/rs/mat</b>) ёзилади<br><br>
+    <span style="color:#fbbf24">⚡ Қоида:</span>
+    Бир хил Д-1 ли RZ лар Ҳолат табида бир гуруҳга тушади.
+    Д-1..Д-5 бўш бўлса — RZ «Тақсимланмаган» гуруҳда кўринади.
+  </div>
+
+  <!-- RZ ro'yxati preview -->
+  <div id="ierRzList" style="flex:1;overflow-y:auto"></div>
+</div>
+
+<!-- ====== PUZZLE ====== -->
+<div class="pane" id="pane-puz">
+  <div class="tbar">
+    <button class="btn" onclick="puzYukla()">↺ Рўйхат</button>
+    <button class="btn grn" onclick="puzSaqla()">Сақлаш</button>
+    <span id="puzMsg" style="font-size:11px;color:#34d399"></span>
+  </div>
+  <div class="msg i" style="flex-shrink:0;line-height:1.5">
+    <b>Бу бўлим:</b> ҳар объект учун <b>локалка</b> ва <b>свод</b> файлларини боғлаш. Тизим авто топади,
+    нотўғри бўлса рўйхатдан қўлда танланг. <b>ФОРМАТ</b>: TN (классик ТН) ёки ABC4 (Картинг типи).
+    Ўзгартиргач — <b>Сақлаш</b>.
+  </div>
+  <div style="display:grid;grid-template-columns:150px 1fr 1fr 80px;gap:5px;padding:0 10px 4px;font-size:10px;color:#374151;font-weight:600">
+    <div>ОБЪЕКТ</div><div>ЛОКАЛКА</div><div>СВОД</div><div>ФОРМАТ</div>
+  </div>
+  <div id="puzList"></div>
+</div>
+
+<!-- ====== HUJJATLAR ====== -->
+<div class="pane" id="pane-huj">
+  <div class="tbar">
+    <button class="btn s hujsub active" data-sub="akt" onclick="hujSub('akt')">📋 Актлар</button>
+    <button class="btn s hujsub" data-sub="prixod" onclick="hujSub('prixod')">📦 Приход</button>
+    <button class="btn s hujsub" data-sub="viborka" onclick="hujSub('viborka')">📐 Выборка</button>
+    <div class="hgap"></div>
+    <input id="hujQidir" type="text" placeholder="🔍 Қидириш..." style="width:200px" oninput="hujQidirDeb()">
+    <button class="btn" onclick="hujYukla()">↺</button>
+    <a class="btn s" id="hujOchLink" href="#" target="_blank" style="text-decoration:none">↗ Очиш</a>
+  </div>
+  <div id="hujStat" class="cat-stats" style="display:none"></div>
+  <div id="hujList" style="flex:1;overflow:auto"></div>
+</div>
+
+<!-- ====== SKAN ====== -->
+<div class="pane" id="pane-skan">
+  <div class="tbar">
+    <button class="btn s" data-i18n="btn-skan" onclick="skanQil()">↺ Скан</button>
+    <button class="btn grn" data-i18n="btn-all-ishla" onclick="barchaIshla()">⚡ Барчасини ишлаш</button>
+    <span id="skanMsg" style="font-size:11px;color:#60a5fa;flex:1"></span>
+    <button class="btn s" style="font-size:11px" onclick="serverYig()">⬆ Серверга</button>
+  </div>
+  <div id="skanList"></div>
+</div>
+
+<!-- ====== ШАРТНОМА ====== -->
+<div class="pane" id="pane-shart">
+  <div class="tbar">
+    <button class="btn grn" onclick="shartModalOch()">＋ Янги шартнома</button>
+    <button class="btn s" onclick="qoshIshModalOch()">＋ Қўшимча иш (субподряд)</button>
+    <button class="btn s" onclick="nakrModalOch()">⚙ Накрутка %</button>
+    <button class="btn s" onclick="shartYukla(true)">↺ Янгилаш</button>
+    <span id="shartMsg" style="font-size:11px;color:#60a5fa;flex:1"></span>
+  </div>
+  <div class="msg i" style="font-size:11px;line-height:1.6">
+    <b>Шартнома (договор)</b> — лойиҳанинг юқори қатлами: ҳар шартномага объектлар бириктирилади
+    ва смета ташқари <b>қўшимча ишлар</b> (субподряд — Бронза, Пилястр каби) қўлда суммалар билан қўшилади.
+    <b>НАКРУТКА</b> — смета категорияларидан ВСЕГО (НДС билан) ҳисобланади (транспорт/склад/прочие 18%/страх/НДС).
+  </div>
+  <div id="shartList"><div class="msg i"><span class="spin">⟳</span> Юкланмоқда...</div></div>
+</div>
+
+<!-- Шартнома modal -->
+<div class="modal-bg" id="shModal" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <h3 id="shMTitle">Шартнома</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <label style="font-size:11px;color:var(--txt2)">ШАРТНОМА №*
+        <input id="shNo" placeholder="98-1-29" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+      <label style="font-size:11px;color:var(--txt2)">Ҳолат
+        <select id="shHolat" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)">
+          <option>Фаол</option><option>Ёпилган</option><option>Пауза</option></select></label>
+    </div>
+    <label style="font-size:11px;color:var(--txt2)">Номи
+      <input id="shNomi" placeholder="Амфитеатр қурилиши" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+    <label style="font-size:11px;color:var(--txt2)">Тараф (буюртмачи)
+      <input id="shTaraf" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <label style="font-size:11px;color:var(--txt2)">Сумма (НДСсиз)
+        <input id="shSumma" type="number" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+      <label style="font-size:11px;color:var(--txt2)">Жами (НДС билан)
+        <input id="shJami" type="number" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+    </div>
+    <label style="font-size:11px;color:#93c5fd">💰 ЧЕЛ-Ч ставка (ЗАТРАТЫ ТРУДА РАБОЧИХ — шу шартноманинг БАРЧА объектларига)
+      <input id="shChel" type="number" placeholder="масалан 24000 — бўш = свод нархи"
+        style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+    <label style="font-size:11px;color:var(--txt2)">Изоҳ
+      <input id="shIzoh" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+    <div id="shMMsg" style="font-size:11px;color:#f87171"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn s" onclick="g('shModal').style.display='none'">Бекор</button>
+      <button class="btn grn" onclick="shartSaqla()">Сақлаш</button>
+    </div>
+  </div>
+</div>
+
+<!-- Qo'shimcha ish modal -->
+<div class="modal-bg" id="qiModal" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <h3>Қўшимча иш (субподряд)</h3>
+    <div class="msg i" style="font-size:10px">Смета ташқари ишлар — суммалар қўлда киритилади (масалан Бронза VIP ART, Пилястр, бадиий ишлар).</div>
+    <input type="hidden" id="qiRow" value="">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <label style="font-size:11px;color:var(--txt2)">Шартнома №
+        <select id="qiShNo" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></select></label>
+      <label style="font-size:11px;color:var(--txt2)">Иш номи*
+        <input id="qiNomi" placeholder="Бронза VIP ART" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <label style="font-size:11px;color:var(--txt2)">СМЕТА суммаси
+        <input id="qiSmeta" type="number" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+      <label style="font-size:11px;color:var(--txt2)">ФАКТ суммаси
+        <input id="qiFakt" type="number" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+      <label style="font-size:11px;color:var(--txt2)">Ф2 олинган
+        <input id="qiF2" type="number" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+      <label style="font-size:11px;color:var(--txt2)">Ф2 мумкин
+        <input id="qiF2m" type="number" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+    </div>
+    <label style="font-size:11px;color:var(--txt2)">Изоҳ
+      <input id="qiIzoh" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+    <div id="qiMsg" style="font-size:11px;color:#f87171"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn s" onclick="g('qiModal').style.display='none'">Бекор</button>
+      <button class="btn grn" onclick="qoshIshSaqla()">Сақлаш</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nakrutka modal -->
+<div class="modal-bg" id="nkModal" style="display:none">
+  <div class="modal" style="max-width:560px">
+    <h3>⚙ Накрутка коэффициентлари (%)</h3>
+    <div id="nkList" style="max-height:50vh;overflow:auto"></div>
+    <div id="nkMsg" style="font-size:11px;color:#f87171"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn s" onclick="g('nkModal').style.display='none'">Бекор</button>
+      <button class="btn grn" onclick="nakrSaqla()">Сақлаш</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SOZ ====== -->
+<div class="pane" id="pane-soz">
+  <div class="msg i" style="line-height:1.5;max-width:600px">
+    <b>Бу бўлим:</b> глобал созламалар. <b>ROOT папка ID</b> — объект папкалари жойлашган асосий папка.
+    <b>Dashboard ID</b> — марказий йиғма файл (бўш = авто яратилади). <b>Маълумот қатори</b> — локалкада
+    жадвал бошланиш сатри (0 = авто аниқлаш). <b>Нарх мантиқ</b>: MAX = смета/факт қайси қиммат, SVOD = доим свод.
+  </div>
+  <div class="soz-grid" id="sozForm"></div>
+  <div style="margin-top:10px;display:flex;gap:8px">
+    <button class="btn" data-i18n="btn-soz-save" onclick="sozSaqla()">Сақлаш</button>
+    <span id="sozMsg" style="font-size:11px;color:#34d399"></span>
+  </div>
+</div>
+
+</div><!-- /body -->
+</div><!-- /app -->
+
+<script>
+/* ── State ─────────────────────────────────────── */
+var OBS=[], FMTMAP={}, PENDING={}, CUR_OB='', TREE_DATA=null;
+var IER_DATA=[];  // [{rzNom, d1..d5}] for current object in ier tab
+var WAPP_URL='';
+
+/* Rejim almashtirish — top-level navigatsiya.
+ * WAPP_URL panelBoot (apiPanelInit) da o'rnatiladi; navTo da yo'q bo'lsa olinadi. */
+function navTo(p){
+  if(Object.keys(PENDING).length>0 && !confirm('Сақланмаган ўзгаришлар бор. Барибир чиқасизми?')) return;
+  if(!WAPP_URL){
+    google.script.run.withSuccessHandler(function(u){ WAPP_URL=u; _doNav(p); })._webAppUrl();
+  } else _doNav(p);
+}
+function _doNav(p){
+  var url=WAPP_URL+(p?'?p='+p:'');
+  try{ window.top.location.href=url; }catch(e){ window.open(url,'_blank'); }
+}
+
+/* ── Tabs ─────────────────────────────────────── */
+var _TAB_GRP={skan:1,puz:1,ier:1,huj:1,soz:1};   // 🗂 Бошқарув guruhi
+function tabOch(t){
+  if(t==='bosh') t='skan';
+  var grp=_TAB_GRP[t];
+  document.querySelectorAll('.tab').forEach(function(el){
+    el.classList.toggle('active', grp ? el.dataset.tab==='bosh' : el.dataset.tab===t);
+  });
+  var sb=document.getElementById('subtabs');
+  if(sb){
+    sb.style.display=grp?'flex':'none';
+    sb.querySelectorAll('.sub-t').forEach(function(b){
+      b.classList.toggle('grn', b.dataset.sub===t);
+    });
+  }
+  document.querySelectorAll('.pane').forEach(function(el){ el.classList.toggle('active', el.id==='pane-'+t); });
+  if(t==='skan' && !OBS.length) skanQil();
+  if(t==='soz') sozYukla();
+  if(t==='puz' && !OBS.length) skanQil();
+  if(t==='ier'){ _ierObToldir(); if(CUR_OB) document.getElementById('ierOb').value=CUR_OB; }
+  if(t==='huj' && !_hujLoaded){ _hujLoaded=true; hujYukla(); }
+  if(t==='shart' && !_shartLoaded) shartYukla();
+}
+
+/* ── ШАРТНОМА (dogovor qatlami) ─────────────────── */
+var _shartLoaded=false, SH_DATA=null;
+
+function shartYukla(force){
+  _shartLoaded=true;
+  g('shartList').innerHTML='<div class="msg i"><span class="spin">⟳</span> Шартномалар юкланмоқда...</div>';
+  run('apiShartnomaDashboard',[],function(r){
+    SH_DATA=r;
+    _shartRender();
+  },function(e){
+    g('shartList').innerHTML='<div class="msg e">✗ '+esc(String(e&&e.message||e))+'</div>';
+  });
+}
+
+function _fm0(v){ return (Math.round(v||0)).toLocaleString('ru-RU'); }
+
+function _shartRender(){
+  if(!SH_DATA){ return; }
+  var bogMap={}; // tezkor — obyekt select uchun keyin ham kerak
+  var h='';
+  var list=SH_DATA.shartnomalar||[];
+  if(!list.length){ g('shartList').innerHTML='<div class="msg i">Шартнома йўқ — «＋ Янги шартнома» босинг.</div>'; return; }
+  list.forEach(function(S){
+    var meta=S.meta||{};
+    var nakr=S.nakrutka||{};
+    var nomi=(S.no==='—')?'Бириктирилмаган объектлар':(meta.nomi||'');
+    h+='<div class="sh-card">'
+      +'<div class="sh-head">'
+      +'<span class="sh-no">'+(S.no==='—'?'⚠ —':'📜 '+esc(S.no))+'</span>'
+      +'<span style="font-size:12px;color:var(--txt2)">'+esc(nomi)+'</span>'
+      +(meta.holat?'<span class="badge" style="font-size:9px">'+esc(meta.holat)+'</span>':'')
+      +'<span style="flex:1"></span>'
+      +(S.no!=='—'
+        ?'<button class="btn xs s" onclick=\'nakrModalOch('+JSON.stringify(S.no)+')\'>⚙ Накрутка</button>'
+         +'<button class="btn xs s" onclick=\'shartModalOch('+JSON.stringify(S.no)+')\'>✎</button>'
+         +'<button class="btn xs s" style="color:#f87171" onclick=\'shartOchir('+JSON.stringify(S.no)+')\'>🗑</button>'
+        :'')
+      +'</div>'
+      +(meta.chelCh?'<div style="font-size:10px;color:#93c5fd;margin-top:4px">💰 ЧЕЛ-Ч ставка (дogovor оиласи): <b>'+_fm0(meta.chelCh)+'</b> — барча объектларига</div>':'')
+      // KPI: прямые + ВСЕГО (nakrutka)
+      +'<div class="sh-kpi">'
+      +'<span>СМЕТА (прямые) <b>'+_fm0(S.smeta)+'</b></span>'
+      +'<span>＋Қўшимча <b>'+_fm0(S.qoshSmeta)+'</b></span>'
+      +'<span style="color:#93c5fd">ВСЕГО смета (НДС б-н) <b>'+_fm0((nakr.vsego||0)+S.qoshSmeta)+'</b></span>'
+      +'<span style="color:var(--grn2,#34d399)">ФАКТ <b>'+_fm0(S.jamiFakt)+'</b></span>'
+      +'<span style="color:#fbbf24">Ф2 олинган <b>'+_fm0(S.jamiF2)+'</b></span>'
+      +(meta.jami?'<span style="color:#c4b5fd">Договор суммаси <b>'+_fm0(meta.jami)+'</b></span>':'')
+      +'</div>';
+    // Obyektlar jadvali
+    if(S.obyektlar.length){
+      h+='<table class="sh-tbl"><tr><th>Объект</th><th style="text-align:right">Смета</th>'
+        +'<th style="text-align:right">Факт</th><th style="text-align:right">Ф2</th>'
+        +'<th style="text-align:right">Қолдиқ</th><th></th></tr>';
+      S.obyektlar.forEach(function(o){
+        h+='<tr><td>'+esc(o.obyekt)+'</td><td class="num">'+_fm0(o.smeta)+'</td>'
+          +'<td class="num">'+_fm0(o.fakt)+'</td><td class="num">'+_fm0(o.f2)+'</td>'
+          +'<td class="num">'+_fm0(o.ost)+'</td>'
+          +'<td><button class="btn xs s" style="font-size:9px" onclick=\'obBogModal('+JSON.stringify(o.obyekt)+')\'>📜 бириктириш</button></td></tr>';
+      });
+      h+='</table>';
+    }
+    // Qo'shimcha ishlar
+    if(S.qoshlar.length){
+      h+='<table class="sh-tbl"><tr><th>＋ Қўшимча иш (субподряд)</th><th style="text-align:right">Смета</th>'
+        +'<th style="text-align:right">Факт</th><th style="text-align:right">Ф2</th><th></th></tr>';
+      S.qoshlar.forEach(function(q){
+        h+='<tr><td style="color:#fcd34d">'+esc(q.nomi)+'</td><td class="num">'+_fm0(q.smeta)+'</td>'
+          +'<td class="num">'+_fm0(q.fakt)+'</td><td class="num">'+_fm0(q.f2ol)+'</td>'
+          +'<td><button class="btn xs s" onclick="qoshIshTahrir('+q.row+')">✎</button>'
+          +'<button class="btn xs s" style="color:#f87171" onclick="qoshIshOchir('+q.row+')">🗑</button></td></tr>';
+      });
+      h+='</table>';
+    }
+    // НАКРУТКА — TO'LIQ podval zanjiri (har qator alohida, F2 hujjatidagidek)
+    if(S.smeta>0){
+      function nkr(nom,val,bold){
+        return '<tr'+(bold?' style="font-weight:800;color:var(--txt)"':'')+'>'
+          +'<td style="font-size:10px">'+nom+'</td><td class="num">'+_fm0(val)+'</td></tr>';
+      }
+      h+='<details style="margin-top:8px;font-size:10px;color:var(--txt3)" open>'
+        +'<summary style="cursor:pointer;font-weight:700">📋 НАКРУТКА тафсилоти — шартнома '+esc(S.no)+' учун (смета)</summary>'
+        +'<table class="sh-tbl" style="max-width:560px">'
+        +nkr('ИТОГО ПРЯМЫЕ ЗАТРАТЫ', nakr.pryamye, true)
+        +nkr('&nbsp;&nbsp;ЗАТРАТЫ ТРУДА (ЧЕЛ)', nakr.chel)
+        +nkr('&nbsp;&nbsp;МАШИНЫ И МЕХАНИЗМЫ (МАШ)', nakr.mash)
+        +nkr('&nbsp;&nbsp;МАТЕРИАЛЫ (МАТ)', nakr.mat)
+        +nkr('ТРАНСПОРТНЫЕ РАСХОДЫ НА МАТЕРИАЛЫ', nakr.trMat)
+        +nkr('СКЛАДСКИЕ РАСХОДЫ (МАТ + М/К)', nakr.sklMat)
+        +nkr('КАБЕЛИ И ПРОВОДА', nakr.kab)
+        +nkr('ТРАНСПОРТ НА КАБЕЛИ', nakr.trKab)
+        +nkr('ИТОГО', nakr.itogo1, true)
+        +nkr('ПРОЧИЕ ЗАТРАТЫ ПОДРЯДЧИКА', nakr.prochie)
+        +nkr('ИТОГО', nakr.itogo2, true)
+        +nkr('ОБОРУДОВАНИЯ', nakr.ob)
+        +nkr('ТРАНСПОРТ НА ОБОРУДОВАНИЯ', nakr.trOb)
+        +nkr('ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ', nakr.zagOb)
+        +nkr('ИТОГО', nakr.itogo3, true)
+        +nkr('СТРАХОВАНИЕ ОБЪЕКТА', nakr.strax)
+        +nkr('КОЭФФИЦИЕНТ РИСКА', nakr.risk)
+        +nkr('ИТОГО', nakr.itogo4, true)
+        +nkr('НДС', nakr.nds)
+        +nkr('ВСЕГО СТОИМОСТЬ В ТЕКУЩИХ ЦЕНАХ', nakr.vsego, true)
+        +'</table></details>';
+    }
+    h+='</div>';
+  });
+  g('shartList').innerHTML=h;
+}
+
+/* — Shartnoma CRUD modal — */
+function shartModalOch(no){
+  g('shMMsg').textContent='';
+  var S=null;
+  if(no && SH_DATA){ (SH_DATA.shartnomalar||[]).forEach(function(x){ if(x.no===no) S=x.meta; }); }
+  g('shMTitle').textContent=S?'Шартнома таҳрири — '+no:'Янги шартнома';
+  g('shNo').value=S?S.no:''; g('shNo').disabled=!!S;
+  g('shNomi').value=S?S.nomi:''; g('shTaraf').value=S?S.taraf:'';
+  g('shSumma').value=S&&S.summa?S.summa:''; g('shJami').value=S&&S.jami?S.jami:'';
+  g('shChel').value=S&&S.chelCh?S.chelCh:'';
+  g('shIzoh').value=S?S.izoh:''; g('shHolat').value=S?(S.holat||'Фаол'):'Фаол';
+  g('shModal').style.display='flex';
+}
+function shartSaqla(){
+  var d={no:g('shNo').value, nomi:g('shNomi').value, taraf:g('shTaraf').value,
+    summa:parseFloat(g('shSumma').value)||0, jami:parseFloat(g('shJami').value)||0,
+    nds:(parseFloat(g('shJami').value)||0)-(parseFloat(g('shSumma').value)||0),
+    chelCh:parseFloat(g('shChel').value)||0,
+    holat:g('shHolat').value, izoh:g('shIzoh').value};
+  if(!d.no.trim()){ g('shMMsg').textContent='Шартнома № киритинг'; return; }
+  run('apiShartnomaSaqla',[d],function(r){
+    g('shModal').style.display='none'; toast(r.xabar,'ok'); shartYukla(true);
+  },function(e){ g('shMMsg').textContent='✗ '+(e.message||e); });
+}
+function shartOchir(no){
+  if(!confirm('Шартнома ўчирилсинми: '+no+'?\n(Объект бириктиришлари ва қўшимча ишлар сақланиб қолади — «—» гуруҳига тушади)')) return;
+  run('apiShartnomaOchir',[no],function(r){ toast(r.xabar,'ok'); shartYukla(true); });
+}
+
+/* — Obyektni shartnomaga biriktirish — */
+function obBogModal(obyekt){
+  var nolar=(SH_DATA&&SH_DATA.shartnomalar||[]).map(function(s){return s.no;}).filter(function(n){return n!=='—';});
+  if(!nolar.length){ toast('Аввал шартнома яратинг','err'); return; }
+  var tanlov=prompt('«'+obyekt+'» қайси шартномага?\nМавжуд: '+nolar.join(', ')+'\n(бўш = бириктиришни олиб ташлаш)');
+  if(tanlov===null) return;
+  run('apiShartnomaBogSaqla',[obyekt, tanlov.trim()],function(r){ toast(r.xabar,'ok'); shartYukla(true); });
+}
+
+/* — Qo'shimcha ish modal — */
+function qoshIshModalOch(){
+  g('qiMsg').textContent=''; g('qiRow').value='';
+  g('qiNomi').value=''; g('qiSmeta').value=''; g('qiFakt').value='';
+  g('qiF2').value=''; g('qiF2m').value=''; g('qiIzoh').value='';
+  var sel=g('qiShNo'); sel.innerHTML='';
+  (SH_DATA&&SH_DATA.shartnomalar||[]).forEach(function(s){
+    if(s.no!=='—') sel.add(new Option(s.no+(s.meta&&s.meta.nomi?' — '+s.meta.nomi:''), s.no));
+  });
+  g('qiModal').style.display='flex';
+}
+function qoshIshTahrir(row){
+  var Q=null;
+  (SH_DATA&&SH_DATA.shartnomalar||[]).forEach(function(s){ s.qoshlar.forEach(function(q){ if(q.row===row) Q=q; }); });
+  if(!Q) return;
+  qoshIshModalOch();
+  g('qiRow').value=Q.row; g('qiShNo').value=Q.shNo; g('qiNomi').value=Q.nomi;
+  g('qiSmeta').value=Q.smeta||''; g('qiFakt').value=Q.fakt||'';
+  g('qiF2').value=Q.f2ol||''; g('qiF2m').value=Q.f2mum||''; g('qiIzoh').value=Q.izoh;
+}
+function qoshIshSaqla(){
+  var d={row:parseInt(g('qiRow').value)||0, shNo:g('qiShNo').value, nomi:g('qiNomi').value,
+    smeta:parseFloat(g('qiSmeta').value)||0, fakt:parseFloat(g('qiFakt').value)||0,
+    f2ol:parseFloat(g('qiF2').value)||0, f2mum:parseFloat(g('qiF2m').value)||0, izoh:g('qiIzoh').value};
+  if(!d.nomi.trim()){ g('qiMsg').textContent='Иш номини киритинг'; return; }
+  run('apiQoshIshSaqla',[d],function(r){
+    g('qiModal').style.display='none'; toast(r.xabar,'ok'); shartYukla(true);
+  },function(e){ g('qiMsg').textContent='✗ '+(e.message||e); });
+}
+function qoshIshOchir(row){
+  if(!confirm('Қўшимча иш ўчирилсинми?')) return;
+  run('apiQoshIshOchir',[row],function(r){ toast(r.xabar,'ok'); shartYukla(true); });
+}
+
+/* — Nakrutka modal (har shartnoma ALOHIDA yoki umumiy default) — */
+var _nkShNo='';
+function nakrModalOch(shNo){
+  _nkShNo=shNo||'';
+  g('nkMsg').textContent='';
+  var ttl=document.querySelector('#nkModal h3');
+  if(ttl) ttl.textContent='⚙ Накрутка % — '+(_nkShNo?('шартнома '+_nkShNo+' учун'):'УМУМИЙ (default)');
+  g('nkList').innerHTML='<div class="msg i"><span class="spin">⟳</span>...</div>';
+  g('nkModal').style.display='flex';
+  run('apiNakrutkaOl',[_nkShNo],function(items){
+    var h='<table class="sh-tbl"><tr><th>Коэффициент</th><th>%</th><th>Изоҳ</th></tr>';
+    (items||[]).forEach(function(x){
+      h+='<tr><td style="font-size:10px">'+esc(x.koef)
+        +(x.override?' <span style="color:#fbbf24;font-size:9px">●ўзгартирилган</span>':'')+'</td>'
+        +'<td><input class="num nk-inp" data-koef="'+escAttr(x.koef)+'" data-def="'+x.def+'"'
+        +' data-izoh="'+escAttr(x.izoh)+'" type="number" step="0.01" value="'+x.qiymat+'" style="width:70px"></td>'
+        +'<td style="font-size:10px;color:var(--txt3)">'+esc(x.izoh)
+        +(_nkShNo?(' <span style="color:var(--txt4)">(умумий: '+x.def+'%)</span>'):'')+'</td></tr>';
+    });
+    g('nkList').innerHTML=h+'</table>'
+      +(_nkShNo?'<div class="msg i" style="font-size:10px;margin-top:6px">Умумий default билан бир хил қолдирилса — шартнома устуни бўш бўлади (умумий ишлатилади).</div>':'');
+  });
+}
+function nakrSaqla(){
+  var items=[];
+  document.querySelectorAll('.nk-inp').forEach(function(inp){
+    items.push({koef:inp.dataset.koef, qiymat:parseFloat(inp.value)||0,
+      def:parseFloat(inp.dataset.def)||0, izoh:inp.dataset.izoh});
+  });
+  run('apiNakrutkaSaqla',[items,_nkShNo],function(r){
+    g('nkModal').style.display='none'; toast(r.xabar,'ok'); shartYukla(true);
+  },function(e){ g('nkMsg').textContent='✗ '+(e.message||e); });
+}
+
+/* ── Skan ──────────────────────────────────────── */
+function skanQil(){
+  g('skanList').innerHTML='<div class="msg i"><span class="spin">⟳</span> Скан...</div>';
+  run('apiPapkaSkan', null, function(obs){
+    OBS=obs||[];
+    _obToldir(); _ierObToldir();
+    run('apiBoglashOl', null, function(m){ FMTMAP=m||{}; });
+    _skanRender();
+  });
+}
+function _skanRender(){
+  var el=g('skanList'), h='';
+  if(!OBS.length){ el.innerHTML='<div class="msg err">Объект топилмади.</div>'; return; }
+  h='<div class="skan-grid">';
+  OBS.forEach(function(o){
+    var isLocked=o.locked, plusBor=o.plusBor;
+    h+='<div class="skan-row" id="skanCard_'+escAttr(o.obyekt)+'">'
+      +'<div class="skan-hdr">'
+      +'<span class="skan-nom">'+esc(o.obyekt)+'</span>'
+      +(isLocked?'<span class="badge lock" style="font-size:9px">🔒 ҚУЛФ</span>':'')
+      +'<span class="badge '+(o.format==='ABC4'?'abc':'tn')+'" style="font-size:9px">'+esc(o.format)+'</span>'
+      +(plusBor?'<span style="font-size:9px;color:var(--grn2);background:rgba(16,185,129,.1);padding:2px 6px;border-radius:10px;border:1px solid rgba(16,185,129,.2)">✓ LRV</span>':'<span style="font-size:9px;color:var(--txt4)">— LRV yo\'q</span>')
+      +'</div>'
+      +'<div class="skan-files">'
+      +'<div class="skan-file"><div class="skan-file-lbl">Локалка</div><div class="skan-file-nom" title="'+escAttr(o.lokName)+'">'+esc(o.lokName)+'</div></div>'
+      +'<div class="skan-file"><div class="skan-file-lbl">Свод</div><div class="skan-file-nom" title="'+escAttr(o.svodName)+'">'+esc(o.svodName)+'</div></div>'
+      +'</div>'
+      +'<div class="skan-actions">'
+      +'<span class="skan-prog" id="skanProg_'+escAttr(o.obyekt)+'">—</span>'
+      +'<button class="btn xs s" data-ob="'+escAttr(o.obyekt)+'" onclick="stavkaModal(this.dataset.ob)" title="ЧЕЛ-Ч / МАШ-Ч фиксирланган нарх">💰 Ставка</button>'
+      +'<button class="btn xs s" data-ob="'+escAttr(o.obyekt)+'" onclick="oraliqModal(this.dataset.ob)" title="Seksiya oraliqlarini sozlash">⚙ Оралиқ</button>'
+      +'<button class="btn xs '+(isLocked?'s':'')+(plusBor?' s':'')+'" data-ob="'+escAttr(o.obyekt)+'" onclick="obyektIshla(this.dataset.ob)">'+(plusBor?'↺ Қайта':'▶ Ишла')+'</button>'
+      +'</div>'
+      +'</div>';
+  });
+  h+='</div>';
+  el.innerHTML=h;
+}
+function obyektIshla(ob){
+  obyektFonIshla(ob);
+}
+/* BARCHASINI ISHLASH — fon-navbat (timeout yo'q, UI bloklanmaydi) */
+function barchaIshla(){
+  var el=g('skanMsg');
+  if(!confirm('Барча объектлар фонда кетма-кет ишланади.\nҲар бири алоҳида (timeout йўқ). Давом?')) return;
+  el.textContent='⟳ Навбат бошланмоқда...';
+  run('apiBarchaFonIshla', null, function(r){
+    if(r&&r.ok){
+      toast('⚡ '+r.xabar,'ok');
+      _navbatPoll();
+    } else { el.textContent='✗ '+(r&&r.xabar||'Xato'); }
+  });
+}
+
+/* Bitta ob'ektni fonda ishlash */
+function obyektFonIshla(ob){
+  var p=g('skanProg_'+ob);
+  if(p){ p.textContent='⟳ навбатда'; p.className='skan-prog run'; }
+  run('apiObyektFonIshla', ob, function(r){
+    if(r&&r.ok){ toast('⚡ '+ob+' навбатга қўйилди','ok'); _navbatPoll(); }
+  });
+}
+
+/* Navbat progress — har 3 sek tekshiradi */
+var _nbPoll=null;
+function _navbatPoll(){
+  if(_nbPoll) clearInterval(_nbPoll);
+  _nbPoll=setInterval(function(){
+    run('apiNavbatHolat', null, function(h){
+      var el=g('skanMsg');
+      if(h.running){
+        el.textContent='⚡ '+h.bajarilgan+'/'+h.jami+' ('+h.foiz+'%) — ҳозир: '+h.hozir;
+      } else {
+        clearInterval(_nbPoll); _nbPoll=null;
+        var xato=(h.log||[]).filter(function(x){return !x.ok;}).length;
+        el.textContent='✅ Тайёр: '+h.bajarilgan+'/'+h.jami+(xato?' ('+xato+' хато)':'');
+        toast('✅ Барчаси ишланди ('+h.bajarilgan+' объект)','ok',4000);
+        skanQil();
+      }
+    });
+  }, 3000);
+}
+
+/* ── Puzzle ────────────────────────────────────── */
+function puzYukla(){
+  if(!OBS.length){ skanQil(); return; }
+  run('apiBoglashOl', null, function(m){ FMTMAP=m||{}; _puzRender(); });
+}
+
+// _puz: {obyektNom: {lok, svod, fmt, lokSheets:[], svodSheets:[]}}
+var _puz={};
+var FMTMAP={};  // {obyektNom: format}
+
+function _puzRender(){
+  var h='<div style="display:grid;grid-template-columns:160px 1fr 1fr 80px;gap:5px;padding:0 10px 4px;font-size:10px;color:var(--txt4);font-weight:600">'
+    +'<div>ОБЪЕКТ</div><div>ЛОКАЛКА</div><div>СВОД</div><div>ФОРМАТ</div></div>';
+  OBS.forEach(function(o){
+    var fmt=FMTMAP[o.obyekt]||o.format||'TN';
+    var e=_puz[o.obyekt]||{};
+    var lokSh=(e.lokSheets||o.lokSheets||[]).join(', ');
+    var svodSh=(e.svodSheets||o.svodSheets||[]).join(', ');
+    var lokId=e.lok||o.lokId||'', svodId=e.svod||o.svodId||'';
+    // oid HTML atributlar uchun (id="..."), onclickda ishlatilmaydi — apostrof xatosidan
+    // saqlanish uchun data-ob atributi ishlatiladi, JS tomonida this.dataset.ob o'qiladi
+    var oid=escAttr(o.obyekt);
+    h+='<div class="puz-row" id="puz_'+oid+'" style="grid-template-columns:160px 1fr 1fr 80px">'
+      +'<div>'
+        +'<div class="puz-nom">'+esc(o.obyekt)+'</div>'
+        +'<button class="btn xs grn" style="margin-top:4px;font-size:9px"'
+          +' data-ob="'+oid+'" onclick="puzNative(this.dataset.ob)"'
+          +' title="Excel → Google Sheets (katta fayllar uchun)">⚡ Doimiy GS</button>'
+        +'<span id="pnat_'+oid+'" style="font-size:9px;color:var(--txt4);display:block;margin-top:2px"></span>'
+      +'</div>'
+      +'<div>'
+        +'<select id="plok_'+oid+'" data-ob="'+oid+'" data-tip="lok" onchange="puzCh(this.dataset.ob,this.dataset.tip,this.value)">'+_candOpt(o,lokId)+'</select>'
+        +'<div style="display:flex;gap:4px;margin-top:4px;align-items:center">'
+          +'<button class="btn xs s" data-ob="'+oid+'" data-tip="lok" onclick="puzSheetSel(this.dataset.ob,this.dataset.tip)">🗂 Варақлар</button>'
+          +'<span id="ploksh_'+oid+'" style="font-size:10px;color:var(--pri2)">'+(lokSh||'ҳаммаси')+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<div>'
+        +'<select id="psvod_'+oid+'" data-ob="'+oid+'" data-tip="svod" onchange="puzCh(this.dataset.ob,this.dataset.tip,this.value)">'+_candOpt(o,svodId)+'</select>'
+        +'<div style="display:flex;gap:4px;margin-top:4px;align-items:center">'
+          +'<button class="btn xs s" data-ob="'+oid+'" data-tip="svod" onclick="puzSheetSel(this.dataset.ob,this.dataset.tip)">🗂 Варақлар</button>'
+          +'<button class="btn xs s" data-ob="'+oid+'" onclick="svUstun(this.dataset.ob)" title="Свод устунларини белгилаш (НОМ/НАРХ)">🔬 Устун</button>'
+          +'<span id="psvodsh_'+oid+'" style="font-size:10px;color:var(--pri2)">'+(svodSh||'ҳаммаси')+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<div><select data-ob="'+oid+'" onchange="puzFmt(this.dataset.ob,this.value)">'
+        +'<option value="TN"'+(fmt==='TN'?' selected':'')+'>TN</option>'
+        +'<option value="ABC4"'+(fmt==='ABC4'?' selected':'')+'>ABC4</option>'
+      +'</select></div>'
+    +'</div>';
+  });
+  g('puzList').innerHTML=h||'<div class="msg i">Скан қилинг</div>';
+}
+function _candOpt(o,selId){
+  var h='<option value="">(авто)</option>';
+  (o.candidates||[]).forEach(function(c){
+    h+='<option value="'+c.id+'"'+(c.id===selId?' selected':'')+'>'+esc(c.name)+'</option>';
+  });
+  return h;
+}
+function puzCh(ob,tip,v){
+  _puz[ob]=_puz[ob]||{};
+  _puz[ob][tip]=v;
+  _puz[ob][tip+'Sheets']=[];   // fayl o'zgardi → varaq tanlovi reset
+  var spId = tip==='lok' ? 'ploksh_'+ob : 'psvodsh_'+ob;
+  if(g(spId)) g(spId).textContent='ҳаммаси';
+}
+function puzFmt(ob,fmt){ _puz[ob]=_puz[ob]||{}; _puz[ob].fmt=fmt; FMTMAP[ob]=fmt; }
+
+/* ⚡ DOIMIY GS — Excel fayllarni native Google Sheets ga aylantiradi (bir marta).
+ * Katta fayl uchun ham server tomonda tez. Keyin Varaqlar/Ишла darhol ishlaydi. */
+function puzNative(oid){
+  // oid escAttr qilingan → asl obyekt nomini OBS dan topamiz
+  var o=OBS.find(function(x){return escAttr(x.obyekt)===oid;});
+  if(!o){ toast('Объект топилмади','err'); return; }
+  var st=g('pnat_'+oid);
+  if(st) st.textContent='⟳ айлантирилмоқда...';
+  run('apiNativeGaAylantir',o.obyekt,function(r){
+    if(st) st.textContent='✓ тайёр';
+    toast('✅ '+(r&&r.xabar||'Айлантирилди'),'ok',5000);
+    // OBS yangilanadi (yangi native ID lar bilan) → qayta chizamiz
+    skanQil();
+    run('apiBoglashOl',null,function(m){ FMTMAP=m||{}; });
+  },function(e){
+    if(st) st.textContent='✗ хато';
+    toast('✗ '+(e&&e.message||e),'err',5000);
+  });
+}
+
+// Varaqlarni tanlash modali — native fayllarda darhol, Excelda konvert qiladi
+var _shCtx={ob:'',tip:'',all:[],sel:[]};
+function puzSheetSel(ob,tip){
+  var e=_puz[ob]||{};
+  var fileId=tip==='lok'?(e.lok||(OBS.find(function(o){return escAttr(o.obyekt)===ob;})||{}).lokId||'')
+                        :(e.svod||(OBS.find(function(o){return escAttr(o.obyekt)===ob;})||{}).svodId||'');
+  if(!fileId){ toast('Аввал юқоридаги рўйхатдан файлни танланг','warn',3000); return; }
+  _shCtx={ob:ob,tip:tip,all:[],sel: tip==='lok'?(e.lokSheets||[]):(e.svodSheets||[])};
+  g('shModal').style.display='flex';
+  g('shList').innerHTML='<span class="spin">⟳</span> Юкланмоқда...';
+  run('apiSheetlarOl',[fileId],function(names){
+    if(!names||!names.length){
+      g('shList').innerHTML='<div class="msg warn" style="padding:12px">Варақлар юкланмади.<br>'
+        +'Агар бу <b>катта Excel</b> бўлса — аввал <b>⚡ Doimiy GS</b> тугмасини босинг, кейин қайта уриниб кўринг.</div>';
+      return;
+    }
+    _shCtx.all=names; _shRender();
+  },function(){
+    g('shList').innerHTML='<div class="msg err" style="padding:12px">Юклаб бўлмади (файл катта Excel бўлиши мумкин).<br>'
+      +'<b>⚡ Doimiy GS</b> тугмасини босиб, native Google Sheets га айлантиринг.</div>';
+  });
+}
+function _shRender(){
+  var h='';
+  _shCtx.all.forEach(function(nm){
+    var chk=_shCtx.sel.indexOf(nm)>=0;
+    h+='<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;transition:.12s;'+(chk?'background:rgba(59,130,246,.12)':'')+'">'
+      +'<input type="checkbox" '+(chk?'checked':'')+' onchange="shToggle(\''+escAttr(nm)+'\',this.checked)" style="width:15px;height:15px">'
+      +'<span style="font-size:12px;color:'+(chk?'var(--pri2)':'var(--txt2)')+'">'+esc(nm)+'</span>'
+      +'</label>';
+  });
+  g('shList').innerHTML=h||'<div class="msg i">Varaqlar topilmadi</div>';
+  g('shTitle').textContent=(_shCtx.tip==='lok'?'Локалка':'Свод')+' varaqlari';
+  g('shInfo').textContent=_shCtx.sel.length?_shCtx.sel.length+' tanlangan':'barchasi ishlatiladi';
+}
+function shToggle(nm,chk){
+  var i=_shCtx.sel.indexOf(nm);
+  if(chk && i<0) _shCtx.sel.push(nm);
+  if(!chk && i>=0) _shCtx.sel.splice(i,1);
+  _shRender();
+}
+function shClear(){ _shCtx.sel=[]; _shRender(); }
+function shToggleAll(){
+  if(_shCtx.sel.length===_shCtx.all.length) _shCtx.sel=[];
+  else _shCtx.sel=_shCtx.all.slice();
+  _shRender();
+}
+function shSaqla(){
+  var ob=_shCtx.ob, tip=_shCtx.tip, sel=_shCtx.sel.slice();
+  _puz[ob]=_puz[ob]||{}; _puz[ob][tip+'Sheets']=sel;
+  var spId=tip==='lok'?'ploksh_'+ob:'psvodsh_'+ob;
+  if(g(spId)) g(spId).textContent=sel.length?sel.join(', '):'ҳаммаси';
+  shYop();
+}
+function shYop(){ g('shModal').style.display='none'; }
+
+/* ── 🔬 СВОД УСТУН БЕЛГИЛАШ ──────────────────────── */
+var _svCtx={ob:'', joriy:null};
+function svUstun(ob){
+  var o=OBS.find(function(x){return escAttr(x.obyekt)===ob;});
+  if(!o){ toast('Объект топилмади','err'); return; }
+  _svCtx={ob:o.obyekt, joriy:null};
+  g('svTitle').textContent='🔬 Свод устунлари — '+esc(o.obyekt);
+  g('svMsg').textContent='';
+  g('svPreview').innerHTML='<div class="msg i" style="margin:12px"><span class="spin">⟳</span> Свод юкланмоқда...</div>';
+  g('svModal').style.display='flex';
+  run('apiSvodOldindan', o.obyekt, function(d){
+    _svCtx.joriy=d;
+    // Joriy qiymatlarni inputlarga (qo'lda belgilangan bo'lsa o'sha, aks holda joriy/default)
+    var q=d.qolda||{}, j=d.joriy||{};
+    g('svNom').value   = q.nom||'';
+    g('svBir').value   = q.bir||'';
+    g('svQty').value   = q.qty||'';
+    g('svNarx').value  = q.narx||'';
+    g('svSumma').value = q.summa||'';
+    g('svBlok').value  = q.blok||'';
+    g('svPreview').innerHTML=_svRender(d);
+  }, function(e){
+    g('svPreview').innerHTML='<div class="msg err" style="margin:12px">✗ '+esc(e.message||e)+'</div>';
+  });
+}
+function _svRender(d){
+  var n=d.ustunSoni||0;
+  var h='<div style="font-size:11px;color:var(--txt4);margin:6px 10px">Варақ: <b>'+esc(d.varaq)+'</b> · формат '+esc(d.format)
+    +' · default: НОМ='+d.base.nom+', БИР='+d.base.bir+', ҲАЖМ='+(d.base.qty||'-')+', НАРХ='+d.base.narx+', СУММА='+(d.base.summa||'-')+'</div>';
+  h+='<table style="border-collapse:collapse;font-size:11px;white-space:nowrap">';
+  // Ustun raqamlari sarlavhasi
+  h+='<tr><th style="position:sticky;top:0;background:var(--bg2);padding:3px 6px;color:var(--txt4)">#</th>';
+  for(var c=1;c<=n;c++){
+    h+='<th style="position:sticky;top:0;background:var(--bg2);padding:3px 8px;border:1px solid var(--line);color:var(--amber2);cursor:pointer" '
+      +'onclick="svPick('+c+')" title="Босиб НАРХ устуни қилиб белгиланг">'+c+'</th>';
+  }
+  h+='</tr>';
+  (d.data||[]).forEach(function(row,ri){
+    h+='<tr><td style="padding:2px 6px;color:var(--txt4);border:1px solid var(--line)">'+(ri+1)+'</td>';
+    for(var c=0;c<n;c++){
+      var v=row[c]; var s=(v===null||v===undefined)?'':String(v);
+      if(s.length>22) s=s.slice(0,22)+'…';
+      h+='<td style="padding:2px 8px;border:1px solid var(--line);color:var(--txt2)">'+esc(s)+'</td>';
+    }
+    h+='</tr>';
+  });
+  h+='</table>';
+  return h;
+}
+// Ustun sarlavhasini bosganda → НАРХ ustuni qilib belgilaydi (eng ko'p kerak bo'ladigan)
+function svPick(c){ g('svNarx').value=c; g('svMsg').textContent='НАРХ устуни = '+c; }
+function svSaqla(){
+  var sc={
+    nom:   parseInt(g('svNom').value)||0,
+    bir:   parseInt(g('svBir').value)||0,
+    qty:   parseInt(g('svQty').value)||0,
+    narx:  parseInt(g('svNarx').value)||0,
+    summa: parseInt(g('svSumma').value)||0,
+    blok:  parseInt(g('svBlok').value)||0
+  };
+  g('svMsg').textContent='⟳ Сақланмоқда...';
+  run('apiSvodUstunSaqla',[_svCtx.ob, sc],function(r){
+    g('svMsg').textContent='✓ Сақланди';
+    if(r&&r.skan&&r.skan.length){ OBS=r.skan; _puzRender(); }
+    toast('✅ '+_svCtx.ob+': свод устунлари сақланди. Энди [Ишла] қилинг','ok',4000);
+    setTimeout(svYop, 700);
+  },function(e){ g('svMsg').textContent='✗ '+(e.message||e); });
+}
+function svYop(){ g('svModal').style.display='none'; }
+
+function puzSaqla(){
+  var pairs=OBS.map(function(o){
+    var oid=escAttr(o.obyekt), e=_puz[oid]||{};
+    return {
+      obyekt:o.obyekt,
+      lokId:     e.lok    || o.lokId    || '',
+      lokName:   o.lokName|| '',
+      svodId:    e.svod   || o.svodId   || '',
+      svodName:  o.svodName||'',
+      format:    (e.fmt||FMTMAP[o.obyekt]||o.format||'TN').toUpperCase(),
+      lokSheets: e.lokSheets  || o.lokSheets  || [],
+      svodSheets:e.svodSheets || o.svodSheets || [],
+      svodCols:  o.svodCols   || null         // ustun xaritasini yo'qotmaymiz
+    };
+  });
+  var msgEl=g('puzMsg'); msgEl.textContent='⟳ Сақланмоқда...';
+  run('apiBoglashSaqla',[pairs],function(r){
+    var msg=(r&&r.xabar)?r.xabar:(r&&typeof r==='string'?r:'Сақланди');
+    msgEl.textContent='✓ '+msg; _puz={};
+    var freshObs=(r&&r.skan&&r.skan.length)?r.skan:null;
+    if(freshObs){ OBS=freshObs; _obToldir(); _ierObToldir(); _skanRender(); }
+    else { skanQil(); }
+    run('apiBoglashOl',null,function(m){ FMTMAP=m||{}; _puzRender(); });
+  }, function(e){
+    msgEl.textContent='✗ '+(e&&e.message||e);
+  });
+}
+
+/* ── Holat ─────────────────────────────────────── */
+function _obToldir(){
+  var sel=g('selOb'), cur=sel.value;
+  sel.innerHTML='<option value="">— Объект танланг —</option>';
+  OBS.forEach(function(o){
+    var opt=document.createElement('option');
+    opt.value=o.obyekt; opt.textContent=o.obyekt+(o.locked?' 🔒':'');
+    sel.appendChild(opt);
+  });
+  if(cur) sel.value=cur;
+}
+
+function holatYukla(force){
+  CUR_OB=g('selOb').value;
+  if(!CUR_OB){
+    g('tree').innerHTML=''; _kpi(null);
+    ['bFmt','bLock','btnLock','btnOy','btnF2Imp','btnAi','btnTashxis'].forEach(function(id){ g(id).style.display='none'; });
+    g('aiBox').style.display='none'; g('tashxisBox').style.display='none';
+    return;
+  }
+  g('hMsg').style.display='none';
+  PENDING={}; _pendSyn();
+
+  // Kesh belgisi ko'rsatamiz
+  var keshKey='holat_'+CUR_OB;
+  var keshH=_keshHolat[keshKey];
+  var keshFresh=keshH&&keshH.ageSek<3600;
+  g('tree').innerHTML='<div class="msg i"><span class="spin">⟳</span> '
+    +((keshFresh && !force)?'Кешдан юкланмоқда... ('+Math.round(keshH.ageSek/60)+' дақ. олдин)':'Сервердан юкланмоқда...')
+    +'</div>';
+
+  run('apiHolatOl', [CUR_OB, !!force], function(data){
+    TREE_DATA=data;
+    g('hdrOb').textContent=data.obyekt;
+    var fb=g('bFmt'); fb.textContent=data.format||'TN';
+    fb.className='badge '+(data.format==='ABC4'?'abc':'tn'); fb.style.display='';
+    var lb=g('bLock'), lbtn=g('btnLock');
+    lb.style.display=data.locked?'':'none';
+    lbtn.style.display=''; lbtn.textContent=data.locked?'Қулфни ОЧ':'Қулфлаш';
+    lbtn.className='btn '+(data.locked?'grn':'red');
+    g('btnOy').style.display=data.locked?'none':'';
+    g('btnF2Imp').style.display=data.locked?'none':'';
+    g('btnAi').style.display='';
+    g('btnTashxis').style.display='';
+    g('aiBox').style.display='none';   // obyekt almashganda eski tahlilni yashiramiz
+    g('tashxisBox').style.display='none';
+    _kpi(data.tree);
+    g('tree').innerHTML=_buildTree(data)||'<div class="msg i">Маълумот йўқ</div>';
+  }, function(err){
+    g('tree').innerHTML='<div class="msg err">'+esc(err)+'</div>';
+  });
+}
+
+/* 🤖 AI MASLAHATCHI — holatdan xulosa (Claude API orqali) */
+function aiTahlil(force){
+  if(!CUR_OB){ toast('Аввал объект танланг','warn'); return; }
+  var box=g('aiBox'), btn=g('btnAi');
+  box.style.display='';
+  box.innerHTML='<span class="spin">⟳</span> AI таҳлил қилмоқда... (10-40 сония)';
+  btn.disabled=true;
+  run('apiMaslahatObyekt', [CUR_OB, !!force], function(r){
+    btn.disabled=false;
+    var sana=r&&r.sana?r.sana:'';
+    box.innerHTML='<div style="font-weight:600;color:var(--pri2);margin-bottom:6px">🤖 AI хулоса — '+esc(CUR_OB)
+      +'<span style="float:right;font-weight:400;font-size:10px;color:var(--txt4)">'+esc(sana)
+      +' · <a href="#" onclick="aiTahlil(true);return false" style="color:var(--pri2)">↻ янгилаш</a></span></div>'
+      +esc((r&&r.text)||'(бўш)');
+  }, function(e){
+    btn.disabled=false;
+    box.innerHTML='<span style="color:var(--red2)">✗ '+esc(e.message||e)+'</span>';
+  });
+}
+
+/* 🔍 ТАШХИС — narx/miqdor parchalash (shishish manbasini topadi) */
+function tashxisYukla(){
+  if(!CUR_OB){ toast('Аввал объект танланг','warn'); return; }
+  var box=g('tashxisBox'), btn=g('btnTashxis');
+  box.style.display='';
+  box.innerHTML='<span class="spin">⟳</span> Ташхис қилинмоқда...';
+  btn.disabled=true;
+  run('apiTashxis', CUR_OB, function(d){
+    btn.disabled=false;
+    box.innerHTML=_tashxisRender(d);
+  }, function(e){
+    btn.disabled=false;
+    box.innerHTML='<span style="color:var(--red2)">✗ '+esc(e.message||e)+'</span>';
+  });
+}
+function _tashxisRender(d){
+  var jami=d.jamiSmeta||0;
+  function pct(v){ return jami>0?Math.round(v/jami*100):0; }
+  var h='<div style="font-weight:700;color:var(--pri2);margin-bottom:8px">🔍 Ташхис — '+esc(d.obyekt)
+    +'<span style="float:right;font-weight:400;color:var(--txt4)">НАРХ_МАНТИҚ: '+esc(d.narxMantiq)+'</span></div>';
+  // Jami + kategoriya
+  h+='<div style="margin-bottom:6px"><b>ЖАМИ СМЕТА:</b> <span style="color:var(--amber2);font-weight:700">'+fmt0(jami)+'</span> сўм · '+d.leaf+' ресурс</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+  ['ЧЕЛ','МАШ','МАТ','ОБ','М/К','КАБ','?'].forEach(function(k){
+    var v=(d.katSum&&d.katSum[k])||0; if(!v) return;
+    h+='<span style="background:rgba(99,102,241,.12);border:1px solid var(--line2);border-radius:6px;padding:3px 8px">'
+      +esc(k)+': <b>'+fmt0(v)+'</b> ('+pct(v)+'%)</span>';
+  });
+  h+='</div>';
+  // FAKT-override ogohlantirish (shishishning asosiy nomzodi)
+  if(d.faktSmeta>0){
+    h+='<div style="background:rgba(245,158,11,.1);border:1px solid var(--amber);border-radius:8px;padding:8px 10px;margin-bottom:10px;color:var(--amber2)">'
+      +'⚠️ <b>FAKT-нарх (MAX) билан нархланган:</b> '+d.faktSoni+' ресурс, '+fmt0(d.faktSmeta)+' сўм ('+pct(d.faktSmeta)+'%)<br>'
+      +'<span style="font-size:11px;color:var(--txt3)">Агар бу катта бўлса — шишишнинг сабаби шу. NARX_MANTIQ=SVOD қилиб синаб кўринг.</span></div>';
+  } else if(d.faktBor===0){
+    h+='<div style="font-size:11px;color:var(--txt4);margin-bottom:8px">FAKT нарх жадвали бўш — шишиш FAKT-override дан эмас.</div>';
+  }
+  // 0-narx
+  if(d.nolSoni>0){
+    h+='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--red2)">🔴 Нарxи 0 (ҳажми бор): '+d.nolSoni+' та</summary>';
+    h+='<div style="max-height:140px;overflow:auto;margin-top:4px">';
+    d.nol.slice(0,80).forEach(function(r){
+      h+='<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)">'+esc(r.nom)+' <span style="color:var(--txt4)">('+esc(r.birlik)+', ҳажм '+fmt2(r.e)+', '+esc(r.varaq)+'!'+r.qator+')</span></div>';
+    });
+    h+='</div></details>';
+  }
+  // Topilmaganlar
+  if(d.missSoni>0){
+    h+='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--amber2)">🔎 Нарх топилмаган (MISS): '+d.missSoni+' та</summary>';
+    h+='<div style="max-height:140px;overflow:auto;margin-top:4px">';
+    d.miss.slice(0,80).forEach(function(r){
+      h+='<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)">'+esc(r.nom)+' <span style="color:var(--txt4)">('+esc(r.birlik)+', '+esc(r.tur)+', '+esc(r.varaq)+'!'+r.qator+')</span></div>';
+    });
+    h+='</div></details>';
+  }
+  // Top-40 qimmat
+  h+='<details open><summary style="cursor:pointer;color:var(--pri2)">💰 Энг қиммат 40 ресурс (абсурд нарх шу ерда кўринади)</summary>';
+  h+='<table style="width:100%;border-collapse:collapse;margin-top:4px;font-size:11px">'
+    +'<tr style="color:var(--txt4);text-align:left"><th>Ном</th><th>Бир</th><th style="text-align:right">Ҳажм</th><th style="text-align:right">Нарх</th><th style="text-align:right">Сумма</th><th>Кат</th></tr>';
+  (d.top||[]).forEach(function(r){
+    h+='<tr style="border-top:1px solid rgba(255,255,255,.05)">'
+      +'<td>'+esc(r.nom)+'</td><td style="color:var(--txt4)">'+esc(r.birlik)+'</td>'
+      +'<td style="text-align:right">'+fmt2(r.f||r.e)+'</td>'
+      +'<td style="text-align:right">'+fmt0(r.narx)+'</td>'
+      +'<td style="text-align:right;color:var(--amber2)">'+fmt0(r.smeta)+'</td>'
+      +'<td>'+esc(r.kat)+'</td></tr>';
+  });
+  h+='</table></details>';
+  return h;
+}
+
+/* KPI */
+function _kpi(tree){
+  if(!tree){ g('kpis').innerHTML=''; g('catStats').style.display='none';
+    if(g('treeActions')) g('treeActions').style.display='none'; return; }
+  var sm=0,fk=0,f2=0,stFk=0,stF2=0,stSm=0;
+  var cats={ЧЕЛ:{sm:0,fk:0,f2:0},МАШ:{sm:0,fk:0,f2:0},МАТ:{sm:0,fk:0,f2:0},ОБ:{sm:0,fk:0,f2:0}};
+  // Faqat bl/mat (leaf summalar) qo'shiladi. rz/rs qo'shilmaydi:
+  //   - rz = bl bolalarining yig'indisi (qo'shsak ikki marta bo'lardi)
+  //   - rs = bl ichidagi resurs (bl.smeta allaqachon rs larni qamragan)
+  // ⚠ MUHIM: har node FAQAT BIR MARTA walk qilinadi. Avval bolalar ustidan
+  //   ikki marta forEach yurildi (walk(c) + forEach(walk)) → summalar 2x shishardi
+  //   (501 mlrd → ~1 трлн). Endi bitta forEach.
+  function walk(n){
+    if(n.type==='bl'||n.type==='mat'){
+      sm+=n.smetaHajm||0; fk+=n.fakt||0; f2+=n.f2ol||0;
+      stFk+=n.stFakt||0; stF2+=n.stF2||0; stSm+=n.smeta||0;
+    }
+    (n.children||[]).forEach(walk);
+  }
+  tree.forEach(walk);
+  var pF=sm>0?Math.min(100,Math.round(fk/sm*100)):0;
+  var pF2=fk>0?Math.min(100,Math.round(f2/fk*100)):0;
+  var pSm=stSm>0?Math.min(100,Math.round(stFk/stSm*100)):0;
+  g('kpis').innerHTML=
+    _kpiBox('💰 Умумий смета','',fmt0(stSm)+' сўм',pSm+'% бажарилди',pSm)+
+    _kpiBox('✅ Факт (пул)','ok',fmt0(stFk)+' сўм','Ҳажм: '+fmt2(fk)+' ('+pF+'%)',pF)+
+    _kpiBox('📤 Ф-2 олинган','warn',fmt0(stF2)+' сўм',pF2+'% фактдан',pF2)+
+    _kpiBox('⏳ Олиш мумкин','red',fmt0(stFk-stF2)+' сўм','Факт − Ф2 қолдиқ',100-pF2);
+  if(g('treeActions')) g('treeActions').style.display='flex';
+  // Cat stats — TREE_DATA ichida smeta bo'lsa
+  _drawCatStats(stSm, stFk, stF2);
+}
+function _drawCatStats(stSm,stFk,stF2){
+  var cs=g('catStats'); if(!cs) return;
+  if(stSm<=0){ cs.style.display='none'; return; }
+  var pF=stSm>0?Math.round(stFk/stSm*100):0;
+  var pF2=stFk>0?Math.round(stF2/stFk*100):0;
+  cs.innerHTML='<div class="cat-stats">'
+    +'<span class="cat-stat"><span class="cat-stat-dot" style="background:var(--grn2)"></span>'
+    +'<span class="cat-stat-val" style="color:var(--grn2)">'+pF+'%</span>'
+    +'<span class="cat-stat-lbl">факт / смета</span></span>'
+    +'<span class="cat-stat"><span class="cat-stat-dot" style="background:var(--amber2)"></span>'
+    +'<span class="cat-stat-val" style="color:var(--amber2)">'+pF2+'%</span>'
+    +'<span class="cat-stat-lbl">ф-2 / факт</span></span>'
+    +'<span class="cat-stat" style="margin-left:auto"><span class="cat-stat-lbl">Смета: </span>'
+    +'<span class="cat-stat-val" style="color:var(--pri2)">'+fmt0(stSm)+'</span></span>'
+    +'</div>';
+  cs.style.display='block';
+}
+function _kpiBox(l,c,v,s,pct){
+  return '<div class="kpi '+(c||'')+'">'
+    +'<label>'+l+'</label>'
+    +'<div class="kv">'+v+'</div>'
+    +'<div class="ks">'+s+'</div>'
+    +(pct!==undefined?'<div class="kbar"><div class="kbar-fill" style="width:'+Math.min(pct,100)+'%"></div></div>':'')
+    +'</div>';
+}
+
+/* ── TREE BUILD ─────────────────────────────────── */
+function _buildTree(data){
+  var tree=data.tree||[], oylar=data.oylar||[], locked=data.locked;
+  var darajalar=data.darajalar||[];
+
+  /* RZ → path map (faqat D1-D2-D3 guruhlash uchun; D4/D5 LRV dan auto) */
+  var pathMap={};
+  darajalar.forEach(function(r){
+    var path=[r.d1,r.d2,r.d3].filter(Boolean);
+    // Duplikat: oxirgi daraja rz nomi bilan bir xil bo'lsa olib tashlaymiz
+    if(path.length){
+      var last=path[path.length-1].toUpperCase().replace(/\s+/g,' ').trim();
+      var rzU=(r.rzNom||'').toUpperCase().replace(/\s+/g,' ').trim();
+      if(last===rzU || rzU.indexOf(last)===0 || last.indexOf(rzU)===0) path.pop();
+    }
+    if(r.rzNom) pathMap[r.rzNom]=path;
+  });
+
+  /* Non-empty RZ nodes from tree */
+  var rzNodeMap={};
+  tree.forEach(function(n){
+    if(n.type!=='rz') return;
+    var hasKid=(n.children||[]).some(function(c){ return c.type==='bl'||c.type==='mat'; });
+    if(hasKid) rzNodeMap[n.nom]=n;
+  });
+
+  /* Build nested group structure */
+  function getOrCreate(parent,label){
+    for(var i=0;i<parent.ch.length;i++) if(parent.ch[i].label===label) return parent.ch[i];
+    var node={label:label, ch:[], rz:[]};
+    parent.ch.push(node);
+    return node;
+  }
+
+  var root={ch:[], rz:[]};
+  Object.keys(rzNodeMap).forEach(function(rzNom){
+    var path=pathMap[rzNom]||[];
+    if(!path.length) return; // yo'lsizlar — unmapped seksiyada ko'rinadi
+    var cur=root;
+    path.forEach(function(lbl){ cur=getOrCreate(cur,lbl); });
+    cur.rz.push(rzNodeMap[rzNom]);
+  });
+
+  /* Unmapped: RZs with BL kids but no path */
+  var unmapped=Object.keys(rzNodeMap).filter(function(n){ return !pathMap[n]; });
+
+  /* Count BL nodes */
+  function countBL(node){
+    var c=(node.rz||[]).reduce(function(s,rz){
+      return s+(rz.children||[]).filter(function(ch){ return ch.type==='bl'||ch.type==='mat'; }).length;
+    },0);
+    (node.ch||[]).forEach(function(ch){ c+=countBL(ch); });
+    return c;
+  }
+
+  /* Render group recursively */
+  function renderGroup(node, depth, prefix){
+    var h='';
+    node.ch.forEach(function(child,ci){
+      var id=prefix+'g'+ci, cnt=countBL(child);
+      h+='<div class="grp d'+depth+' open" id="'+id+'">'
+        +'<div class="grp-h" onclick="toggle(\''+id+'\')">'
+        +'<span class="grp-arr">▶</span>'
+        +'<span class="grp-nom">'+esc(child.label)+'</span>'
+        +'<span class="grp-cnt">'+cnt+' блок</span>'
+        +'</div>'
+        +'<div class="grp-body">'
+        +renderGroup(child, depth+1, id+'_')
+        +'</div></div>';
+    });
+    /* RZs directly at this node level */
+    (node.rz||[]).forEach(function(rz,ri){
+      h+=_rzHtml(rz, prefix+'rz'+ri, oylar, locked);
+    });
+    return h;
+  }
+
+  var h=renderGroup(root,0,'r_');
+
+  /* Show unmapped in collapsed section */
+  if(unmapped.length){
+    var hint=root.ch.length>0||root.rz.length>0;
+    if(hint){
+      h+='<div class="nomal" id="nomal">'
+        +'<div class="nomal-h" onclick="toggle(\'nomal\')">'
+        +'<span style="font-size:8px;color:#374151">▶</span>'
+        +'<span class="nomal-nom">Тақсимланмаган ('+unmapped.length+' RZ) — Иерархия табини очинг</span>'
+        +'</div>'
+        +'<div class="nomal-body">';
+      unmapped.forEach(function(rzNom,i){
+        h+=_rzHtml(rzNodeMap[rzNom],'nomal_rz'+i,oylar,locked);
+      });
+      h+='</div></div>';
+    } else {
+      /* No groups yet — show flat with hint */
+      h='<div class="msg i" style="flex-shrink:0">💡 <b>Иерархия</b> табини очиб D1..D5 устунларини тўлдиринг.</div>';
+      unmapped.forEach(function(rzNom,i){
+        h+=_rzHtml(rzNodeMap[rzNom],'flat_rz'+i,oylar,locked);
+      });
+    }
+  }
+
+  /* Root-level BL/MAT (no RZ parent) */
+  tree.filter(function(n){return n.type==='bl'||n.type==='mat';}).forEach(function(bl,bi){
+    h+=_blHtml(bl,'root_bl'+bi,oylar,locked);
+  });
+
+  return h;
+}
+
+function _rzHtml(rz, id, oylar, locked){
+  var blCnt=(rz.children||[]).filter(function(c){return c.type==='bl'||c.type==='mat';}).length;
+  // RZ ning so'nggi bolasi row si (yangi bl qo'shish uchun afterRow)
+  var rzLastRow=rz.row;
+  (rz.children||[]).forEach(function(c){
+    if(c.row>rzLastRow) rzLastRow=c.row;
+    (c.children||[]).forEach(function(r2){if(r2.row>rzLastRow) rzLastRow=r2.row;});
+  });
+  var rzMon=(rz.smeta>0?'<span style="font-size:10px;color:var(--amber2);margin-left:8px" title="Смета суммаси">💰 '+fmt0(rz.smeta)+'</span>':'')
+           +(rz.stFakt>0?'<span style="font-size:10px;color:var(--grn2);margin-left:6px" title="Факт суммаси">✓ '+fmt0(rz.stFakt)+'</span>':'')
+           +(rz.stF2>0?'<span style="font-size:10px;color:var(--pri2);margin-left:6px" title="Ф2 олинган">📤 '+fmt0(rz.stF2)+'</span>':'')
+           +(rz.stOst>0?'<span style="font-size:10px;color:var(--txt4);margin-left:6px" title="Қолдиқ">⏳ '+fmt0(rz.stOst)+'</span>':'');
+  var h='<div class="rz open" id="'+id+'">'
+    +'<div class="rz-h" onclick="toggle(\''+id+'\')">'
+    +'<span class="rz-arr">▶</span>'
+    +'<span class="rz-nom">'+esc(rz.nom)+'</span>'
+    +'<span style="font-size:10px;color:#374151;margin-left:6px">'+blCnt+' блок</span>'
+    +rzMon
+    +'<span class="hgap"></span>'
+    +'<button class="btn xs" onclick="event.stopPropagation();rz100(\''+id+'\')" title="Раздел остидаги барча ишларга ФАКТ=СМЕТА">✓100%</button>'
+    +'<button class="btn xs grn" onclick="event.stopPropagation();ishTurModal(\''+escAttr(rz.varaq||'LRV')+'\','+rzLastRow+',\''+escAttr(rz.nom||'')+'\')">➕ Ish qo\'sh</button>'
+    +'</div>'
+    +'<div class="rz-body">';
+  (rz.children||[]).forEach(function(bl,bi){
+    h+=_blHtml(bl, id+'_bl'+bi, oylar, locked);
+  });
+  h+='</div></div>';
+  return h;
+}
+
+function _blHtml(bl, id, oylar, locked){
+  var isQ=bl.isQosh;
+  var pct=bl.smetaHajm>0?Math.min(100,Math.round((bl.fakt||0)/bl.smetaHajm*100)):0;
+  var pctF2=bl.smetaHajm>0?Math.min(100,Math.round((bl.f2ol||0)/bl.smetaHajm*100)):0;
+
+  /* Header */
+  var h='<div class="bl'+(isQ?' isq':'')+'" id="'+id+'"'
+    +' data-varaq="'+escAttr(bl.varaq||'')+'" data-row="'+bl.row+'"'
+    +' data-smeta="'+bl.smetaHajm+'" data-fakt="'+(bl.fakt||0)+'">'
+    +'<div class="bl-h">'
+    +'<span class="bl-arr" onclick="toggle(\''+id+'\');event.stopPropagation()">▶</span>'
+    +'<span class="bl-nom" onclick="toggle(\''+id+'\');event.stopPropagation()">'+(isQ?'＋ ':'')+esc(bl.nom)+'</span>'
+    +'<span class="bl-bir">'+esc(bl.birlik)+'</span>'
+    +(bl.smeta>0?'<span class="bl-money has-val" title="Смета суммаси: '+fmt0(bl.smeta)+' сўм">'+fmt0(bl.smeta)+'</span>':'');
+
+  /* FAKT input — qulflangan bo'lsa ham doim ko'rinadi (faqat smeta skeleti qulflanadi) */
+  h+='<span class="bl-inp">'
+    +'<input class="num" type="number" step="0.001" value="'+num2str(bl.fakt||0)+'"'
+    +' data-varaq="'+escAttr(bl.varaq||'')+'" data-row="'+bl.row+'" data-field="fakt">'
+    +' <button class="btn xs" data-action="pct100" data-bl-id="'+id+'">100%</button>'
+    +'</span>';
+
+  h+='<div class="bl-pbar" onclick="toggle(\''+id+'\');event.stopPropagation()">'
+    +'<div class="bl-pbar-fill" style="width:'+pct+'%"></div>'
+    +'</div>'
+    +'<span class="bl-pct" onclick="toggle(\''+id+'\');event.stopPropagation()">'+pct+'%</span>'
+    +'</div>';/* /bl-h */
+
+  /* Body (expand) */
+  h+='<div class="bl-body">';
+
+  /* Stats */
+  var stOst=bl.stOst||(bl.smeta-(bl.stFakt||0));
+  h+='<div class="bl-stats">'
+    +'<span class="bl-stat">Ҳажм смета <b>'+fmt2(bl.smetaHajm)+'</b></span>'
+    +'<span class="bl-stat">Ҳажм факт <b>'+fmt2(bl.fakt)+'</b> ('+pct+'%)</span>'
+    +'<span class="bl-stat">Ҳажм қолдиқ <b>'+fmt2(bl.qoldiq)+'</b></span>'
+    +'<span class="bl-stat">Ҳажм Ф2 <b>'+fmt2(bl.f2ol)+'</b> ('+pctF2+'%)</span>'
+    +'<span class="bl-stat">Ҳажм мумкин <b>'+fmt2(bl.f2mum)+'</b></span>'
+    +'</div>'
+    +'<div class="bl-stats" style="margin-top:3px;border-top:1px solid rgba(255,255,255,.06);padding-top:3px">'
+    +'<span class="bl-stat" style="color:var(--amber2)">💰 Смета <b>'+fmt0(bl.smeta)+'</b></span>'
+    +'<span class="bl-stat" style="color:var(--grn2)">✓ Факт <b>'+fmt0(bl.stFakt||0)+'</b></span>'
+    +'<span class="bl-stat" style="color:var(--pri2)">📤 Ф2 <b>'+fmt0(bl.stF2||0)+'</b></span>'
+    +'<span class="bl-stat" style="color:var(--txt4)">⏳ Қолдиқ <b>'+fmt0(stOst)+'</b></span>'
+    +'</div>';
+
+  /* F2 oylar — qulflangan bo'lsa ham doim ko'rinadi */
+  h+='<div class="inp-section">';
+  if(oylar.length===0){
+    if(!locked) h+='<div style="font-size:10px;color:#475569;padding:4px 0">Ой йўқ — юқоридан «+ Ой» босинг</div>';
+  } else {
+    oylar.forEach(function(oy){
+      var oyVal=(bl.oylar&&bl.oylar[oy]!==undefined)?bl.oylar[oy]:0;
+      h+='<div class="inp-row">'
+        +'<span class="inp-lbl oy">📅 '+esc(oy)+'</span>'
+        +'<input class="num" type="number" step="0.001" value="'+num2str(oyVal)+'"'
+        +' data-varaq="'+escAttr(bl.varaq||'')+'" data-row="'+bl.row+'" data-field="oy" data-oy="'+escAttr(oy)+'">'
+        +'<div class="inp-actions">'
+        +'<button class="btn xs s" data-action="oy-fakt" data-bl-id="'+id+'" data-oy="'+escAttr(oy)+'">= Факт</button>'
+        +'</div>'
+        +'</div>';
+    });
+  }
+  h+='</div>';
+
+  /* RS */
+  if(bl.children&&bl.children.length){
+    h+='<div class="rs-list">'
+      +'<div style="display:flex;align-items:center;margin-bottom:5px">'
+      +'<span style="font-size:9px;color:var(--txt4);text-transform:uppercase;letter-spacing:.5px;flex:1">Ресурслар</span>'
+      +'<button class="btn xs s" style="font-size:9px" '
+      +'data-varaq="'+escAttr(bl.varaq||'')+'" data-blrow="'+bl.row+'" data-blnom="'+escAttr(bl.nom||'')+'" '
+      +'onclick="event.stopPropagation();rsQoshModal(this.dataset.varaq,parseInt(this.dataset.blrow),this.dataset.blnom)">＋ RS</button>'
+      +'</div>';
+    bl.children.forEach(function(rs){
+      var katBadge=rs.kat?('<span style="font-size:9px;padding:1px 5px;border-radius:8px;margin-right:5px;'
+        +(rs.kat==='ОБ'?'background:rgba(245,158,11,.18);color:var(--amber2);border:1px solid var(--amber)'
+          :rs.kat==='ЧЕЛ'?'background:rgba(59,130,246,.12);color:var(--pri2)'
+          :rs.kat==='МАШ'?'background:rgba(139,92,246,.14);color:#c4b5fd'
+          :'background:rgba(255,255,255,.05);color:var(--txt4)')+'">'+esc(rs.kat)+'</span>'):'';
+      h+='<div class="rs-row'+(rs.isQosh?' isq':'')+'">'
+        +'<span class="rs-nom">'+(rs.isQosh?'<span style="color:var(--amber2)">＋</span> ':'')+katBadge+esc(rs.nom)+'</span>'
+        +'<span style="color:var(--txt4);min-width:32px;font-size:10px">'+esc(rs.birlik)+'</span>'
+        +'<span class="rs-val" title="Ҳажм смета">'+fmt2(rs.smetaHajm)+'</span>'
+        +'<span class="rs-val fakt" title="Ҳажм факт">'+fmt2(rs.fakt)+'</span>'
+        +'<span class="rs-val" title="Ҳажм қолдиқ" style="color:var(--txt4)">'+fmt2(rs.qoldiq)+'</span>'
+        +(rs.smeta>0?'<span class="rs-val" title="Смета суммаси (пул)" style="color:var(--amber2);margin-left:4px;font-size:10px">'+fmt0(rs.smeta)+'</span>':'')
+        +(rs.stFakt>0?'<span class="rs-val" title="Факт суммаси (пул)" style="color:var(--grn2);font-size:10px">'+fmt0(rs.stFakt)+'</span>':'')
+        +'</div>';
+    });
+    h+='</div>';
+  } else {
+    // RS yo'q — qo'shish tugmasi
+    h+='<div style="padding:4px 0">'
+      +'<button class="btn xs s" style="font-size:10px" '
+      +'data-varaq="'+escAttr(bl.varaq||'')+'" data-blrow="'+bl.row+'" data-blnom="'+escAttr(bl.nom||'')+'" '
+      +'onclick="event.stopPropagation();rsQoshModal(this.dataset.varaq,parseInt(this.dataset.blrow),this.dataset.blnom)">＋ Resurs qo\'sh</button>'
+      +'</div>';
+  }
+
+  /* BL ning oxirgi bola row si — shu BL dan keyin yangi ish qo'shish uchun */
+  var blLastRow=bl.row;
+  (bl.children||[]).forEach(function(rs){ if(rs.row>blLastRow) blLastRow=rs.row; });
+  if(!locked){
+    h+='<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);display:flex;gap:6px">'
+      +'<button class="btn xs grn" style="font-size:9px" '
+      +'data-varaq="'+escAttr(bl.varaq||'LRV')+'" data-after="'+blLastRow+'" data-rz="'+escAttr(bl.nom||'')+'" '
+      +'onclick="event.stopPropagation();ishTurModal(this.dataset.varaq,parseInt(this.dataset.after),this.dataset.rz)">➕ Шу ишдан кейин янги иш тури</button>'
+      +'</div>';
+  }
+
+  h+='</div></div>';/* /bl-body, /bl */
+  return h;
+}
+
+function toggle(id){
+  var el=document.getElementById(id); if(el) el.classList.toggle('open');
+}
+
+/* ── Pending ────────────────────────────────────── */
+function inputOzgardi(inp){
+  var varaq=inp.dataset.varaq, row=parseInt(inp.dataset.row);
+  var val=parseFloat(inp.value); if(isNaN(val)) val=0;
+  var field=inp.dataset.field, oy=inp.dataset.oy;
+  var key=varaq+'|'+row;
+  if(!PENDING[key]) PENDING[key]={varaq:varaq, row:row, fakt:null, oylar:{}};
+  if(field==='fakt') PENDING[key].fakt=val;
+  else if(field==='oy'&&oy){ PENDING[key].oylar[oy]=val; }
+  _pendSyn();
+}
+
+function _pendSyn(){
+  var n=Object.keys(PENDING).length;
+  g('sbar').style.display=n>0?'':'none';
+  g('sCnt').textContent=n+' та ўзгариш';
+  g('sMsg').textContent='';
+}
+function pendingTozala(){ PENDING={}; _pendSyn(); holatYukla(); }
+
+function saqlash(){
+  var edits=Object.values(PENDING); if(!edits.length) return;
+  var msg=g('sMsg'); msg.textContent='⟳ ...'; msg.className='save-msg';
+  run('apiHolatSaqla',[CUR_OB,edits],function(r){
+    PENDING={}; _pendSyn();
+    msg.textContent='✓ '+r.xabar; msg.className='save-msg ok';
+    toast('✅ '+r.xabar,'ok');
+    holatYukla();
+  },function(err){
+    msg.textContent='✗ '+err; msg.className='save-msg err';
+    toast('❌ Сақлашда хато: '+err,'err');
+  });
+}
+
+/* RZ darajasida 100% — раздел ostidagi BARCHA BL larga ФАКТ = СМЕТА hajmi.
+ * Ierarxiyaning har qatlamida tez to'ldirish (foydalanuvchi talabi). */
+function rz100(rzId){
+  var rzEl=document.getElementById(rzId); if(!rzEl) return;
+  if(!confirm('Шу РАЗДЕЛ остидаги БАРЧА ишларга ФАКТ = СМЕТА ҳажми (100%) қўйилсинми?')) return;
+  var n100=0;   // children DOM da (yopiq bo'lsa ham) — to'g'ridan ishlaymiz
+  rzEl.querySelectorAll('[data-smeta]').forEach(function(b){
+    var sm=parseFloat(b.dataset.smeta)||0;
+    var fi=b.querySelector('input[data-field="fakt"]');
+    if(fi && sm>0){ fi.value=num2str(sm); inputOzgardi(fi); n100++; }
+  });
+  toast('✓ '+n100+' та ишга 100% қўйилди — Сақлашни унутманг!','ok');
+}
+
+/* 100% tugma va oy=fakt tugma — event delegation */
+document.addEventListener('click',function(e){
+  var act=e.target.dataset.action;
+  if(!act) return;
+  var blId=e.target.dataset.blId;
+  var blEl=blId?document.getElementById(blId):null;
+  if(!blEl) return;
+
+  if(act==='pct100'){
+    var smeta=parseFloat(blEl.dataset.smeta)||0;
+    var inp=blEl.querySelector('input[data-field="fakt"]');
+    if(inp){ inp.value=num2str(smeta); inputOzgardi(inp); }
+  } else if(act==='oy-fakt'){
+    var oy=e.target.dataset.oy;
+    var faktInp=blEl.querySelector('input[data-field="fakt"]');
+    var faktVal=faktInp?(parseFloat(faktInp.value)||0):(parseFloat(blEl.dataset.fakt)||0);
+    var oyInp=blEl.querySelector('input[data-field="oy"][data-oy="'+oy+'"]');
+    if(oyInp){ oyInp.value=num2str(faktVal); inputOzgardi(oyInp); }
+  }
+});
+
+/* ── Oy / Lock ─────────────────────────────────── */
+function oyQosh(){
+  var nom=prompt('Янги ой номи? (масалан: Июнь 2026)'); if(!nom) return;
+  run('apiOyQosh',[CUR_OB,nom.trim()],function(r){ toast('✅ '+r.xabar,'ok'); holatYukla(); });
+}
+function lockToggle(){
+  if(!CUR_OB) return;
+  if(TREE_DATA&&TREE_DATA.locked){
+    var iz=prompt('Қулфни очиш сабаби?')||'';
+    run('apiLockOch',[CUR_OB,iz],function(){ holatYukla(); skanQil(); });
+  } else {
+    var iz=prompt('Қулфлаш сабаби:')||'100% тайёр';
+    run('apiLockBos',[CUR_OB,iz],function(){ holatYukla(); skanQil(); });
+  }
+}
+
+/* ── Ierarxiya ─────────────────────────────────── */
+function _ierObToldir(){
+  var sel=g('ierOb'), cur=sel.value;
+  sel.innerHTML='<option value="">— Объект танланг —</option>';
+  OBS.forEach(function(o){
+    var opt=document.createElement('option');
+    opt.value=o.obyekt; opt.textContent=o.obyekt; sel.appendChild(opt);
+  });
+  if(cur) sel.value=cur;
+}
+
+function ierObTanla(){
+  var ob=g('ierOb').value;
+  g('btnIerLrv').style.display=ob?'':'none';
+  if(!ob){ g('ierRzList').innerHTML=''; return; }
+  // RZ ro'yxatini ko'rsatamiz
+  g('ierRzList').innerHTML='<div class="msg i"><span class="spin">⟳</span> Юкланмоқда...</div>';
+  run('apiDarajalarOl',[ob],function(rows){
+    if(!rows||!rows.length){
+      g('ierRzList').innerHTML='<div class="msg i">RZ топилмади — аввал «РАЗДЕЛЛАР варағини очиш» босинг</div>';
+      return;
+    }
+    var h='<table class="ier-tbl" style="margin-top:8px"><thead><tr>'
+      +'<th>RZ НОМ</th><th>Д-1</th><th>Д-2</th><th>Д-3</th><th>Д-4</th><th>Д-5</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var hasD=r.d1||r.d2||r.d3||r.d4||r.d5;
+      h+='<tr style="'+(hasD?'':'opacity:.5')+'">'
+        +'<td style="max-width:280px;white-space:normal">'+esc(r.rzNom)+'</td>'
+        +'<td><span style="color:var(--pri2)">'+(r.d1||'—')+'</span></td>'
+        +'<td>'+(r.d2||'—')+'</td>'
+        +'<td>'+(r.d3||'—')+'</td>'
+        +'<td>'+(r.d4||'—')+'</td>'
+        +'<td>'+(r.d5||'—')+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table>';
+    g('ierRzList').innerHTML=h;
+  });
+}
+
+function ierShOch(){
+  var ob=g('ierOb').value;
+  if(!ob){ g('ierMsg').textContent='Объект танланг'; g('ierMsg').style.color='#f87171'; return; }
+  g('ierMsg').textContent='⟳ Тайёрланмоқда...'; g('ierMsg').style.color='#60a5fa';
+  run('apiRazdellarShYasaVaOch',[ob],function(msg){
+    g('ierMsg').textContent='✓ '+msg; g('ierMsg').style.color='#34d399';
+    setTimeout(function(){ ierObTanla(); },800);
+  },function(e){
+    g('ierMsg').textContent='✗ '+(e.message||e); g('ierMsg').style.color='#f87171';
+  });
+}
+
+function ierLrvGaYoz(){
+  var ob=g('ierOb').value;
+  if(!ob) return;
+  var btn=g('btnIerLrv');
+  btn.textContent='⟳ Ёзилмоқда...'; btn.disabled=true;
+  g('ierMsg').textContent='';
+  run('apiDarajalarLrvGaYoz',[ob],function(r){
+    btn.textContent='📥 LRV га қўй'; btn.disabled=false;
+    g('ierMsg').textContent='✅ '+(r&&r.xabar?r.xabar:'Тайёр');
+    g('ierMsg').style.color='#34d399';
+    // Holat tabini yangilash
+    if(CUR_OB===ob) holatYukla();
+  },function(e){
+    btn.textContent='📥 LRV га қўй'; btn.disabled=false;
+    g('ierMsg').textContent='✗ '+(e.message||e); g('ierMsg').style.color='#f87171';
+  });
+}
+
+/* ── Sozlama ─────────────────────────────────────── */
+function sozYukla(){
+  run('apiSozlamaOl',null,function(o){
+    g('sozForm').innerHTML=
+      _sozRow('ROOT_FOLDER_ID','rootId','Асосий папка ID',o.rootId,'text')+
+      _sozRow('SERVER_ID','serverId','Dashboard ID (бўш=авто)',o.serverId,'text')+
+      _sozRow('DATA_QATOR','dataQator','Маълумот қатори (0=авто)',o.dataQator,'number')+
+      _sozRow('NARX_MANTIQ','narxMantiq','Нарх мантиқ (MAX/SVOD)',o.narxMantiq,'text');
+  });
+}
+function _sozRow(l,id,hint,val,type){
+  return '<label title="'+esc(hint)+'" style="font-size:12px;color:#4b5563">'+l+'</label>'
+        +'<input type="'+type+'" id="soz_'+id+'" value="'+esc(String(val||''))+'" style="width:100%">';
+}
+function sozSaqla(){
+  run('apiSozlamaSaqla',[{rootId:gv('soz_rootId'),serverId:gv('soz_serverId'),
+    dataQator:parseInt(gv('soz_dataQator'))||0,narxMantiq:gv('soz_narxMantiq')||'MAX'}],
+    function(r){ g('sozMsg').textContent='✓ '+r; });
+}
+
+/* ── Server ─────────────────────────────────────── */
+function serverYig(){
+  var btn=document.querySelector('.hbtn.grn'); btn.textContent='⟳ ...';
+  toast('⟳ Серверга йиғилмоқда...','i',2000);
+  run('apiServerYig',null,function(r){
+    btn.textContent='⬆ Серверга'; toast('✅ '+r,'ok');
+  },function(e){ btn.textContent='⬆ Серверга'; toast('✗ '+(e.message||e),'err'); });
+}
+
+/* ── i18n — TIL ALMASHISH ───────────────────────── */
+var LANG={
+  uz:{
+    'tab-holat':'Ҳолат ва Ф2','tab-shart':'📜 Шартнома','tab-bosh':'🗂 Бошқарув','tab-narx':'Нархлар','tab-ier':'Иерархия',
+    'tab-huj':'Ҳужжатлар','tab-puz':'Файл боғлаш','tab-skan':'Объектлар','tab-soz':'Созлама',
+    'hbtn-refresh':'↺ Янгилаш','hbtn-server':'⬆ Серверга','hbtn-soz':'⚙ Созлама','hbtn-boss':'📊 Дашборд',
+    'badge-lock':'🔒 ҚУЛФ','btn-lock':'Қулфлаш','btn-tashxis':'🔍 Ташхис',
+    'btn-ai':'🤖 Таҳлил','btn-oy':'+ Ой','btn-save':'💾 Сақлаш','btn-cancel':'✕ Бекор','btn-soz-save':'Сақлаш',
+    'tree-expand':'▼ Barchasini yoy',"tree-collapse":"▶ Barchasini yig'",
+    'btn-skan':'↺ Скан','btn-all-ishla':'⚡ Барчасини ишлаш',
+    'sel-ob':'— Объект танланг —','sel-ob-ier':'— Объект танланг —',
+    'loading':'Юкланмоқда...','no-ob':'Объект топилмади',
+    'saved-msg':'сохранено','unsaved':'та ўзгариш','lock-open':'Қулфлаш','lock-close':'Очиш',
+    'server-wait':'⟳ Ёзилмоқда...','server-done':'⬆ Серверга'
+  },
+  ru:{
+    'tab-holat':'Состояние и Ф2','tab-shart':'📜 Договор','tab-bosh':'🗂 Управление','tab-narx':'Цены','tab-ier':'Иерархия',
+    'tab-huj':'Документы','tab-puz':'Привязка файлов','tab-skan':'Объекты','tab-soz':'Настройки',
+    'hbtn-refresh':'↺ Обновить','hbtn-server':'⬆ На сервер','hbtn-soz':'⚙ Настройки','hbtn-boss':'📊 Дашборд',
+    'badge-lock':'🔒 БЛОК','btn-lock':'Заблокировать','btn-tashxis':'🔍 Диагностика',
+    'btn-ai':'🤖 Анализ','btn-oy':'+ Месяц','btn-save':'💾 Сохранить','btn-cancel':'✕ Отмена','btn-soz-save':'Сохранить',
+    'tree-expand':'▼ Развернуть все','tree-collapse':'▶ Свернуть все',
+    'btn-skan':'↺ Сканировать','btn-all-ishla':'⚡ Обработать все',
+    'sel-ob':'— Выберите объект —','sel-ob-ier':'— Выберите объект —',
+    'loading':'Загрузка...','no-ob':'Объект не найден',
+    'saved-msg':'сохранено','unsaved':'изменений','lock-open':'Заблокировать','lock-close':'Разблокировать',
+    'server-wait':'⟳ Запись...','server-done':'⬆ На сервер'
+  }
+};
+var _CUR_LANG='uz';
+function t(key){ return (LANG[_CUR_LANG]&&LANG[_CUR_LANG][key])||LANG.uz[key]||key; }
+function setLang(lang){
+  _CUR_LANG=lang;
+  localStorage.setItem('smeta_lang',lang);
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var k=el.getAttribute('data-i18n'), v=t(k); if(v) el.textContent=v;
+  });
+  document.querySelectorAll('.lang-btn').forEach(function(b){
+    b.classList.toggle('active',b.getAttribute('data-lang')===lang);
+  });
+  // Select default option yangilash
+  ['selOb','ierOb'].forEach(function(id){
+    var s=g(id); if(!s) return;
+    var opt=s.querySelector('option[value=""]'); if(opt) opt.textContent=t('sel-ob');
+  });
+}
+function initLang(){
+  _CUR_LANG=localStorage.getItem('smeta_lang')||'uz';
+  setLang(_CUR_LANG);
+}
+
+/* ── Utils ─────────────────────────────────────── */
+function run(fn,arg,ok,err){
+  var c=google.script.run.withSuccessHandler(ok||function(){})
+    .withFailureHandler(err||function(e){ toast('Хато: '+(e.message||e),'err',4000); });
+  if(arg===null||arg===undefined) c[fn]();
+  else if(Array.isArray(arg)) c[fn].apply(c,arg);
+  else c[fn](arg);
+}
+function mxb(fn,arg,msgId,ok){
+  var el=g(msgId); if(el) el.textContent='⟳ ...';
+  run(fn,arg,ok,function(e){ if(el) el.textContent='✗ '+e.message; });
+}
+var _pt=null, _pts=0;
+function _progPoll(ob,msgId,pfx){
+  _progStop(); _pts=0;
+  _pt=setInterval(function(){
+    run('apiProgressOl',ob,function(p){
+      if(!p||!p.ts||p.ts===_pts) return; _pts=p.ts;
+      var el=g(msgId); if(!el) return;
+      el.textContent='⟳ '+(pfx||'')+(p.stage?'['+p.stage+'] ':'')+p.message;
+    });
+  },1200);
+}
+function _progStop(){ if(_pt){ clearInterval(_pt); _pt=null; } }
+function g(id){ return document.getElementById(id); }
+function gv(id){ var el=g(id); return el?el.value:''; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return esc(s); }
+function fmt0(n){ n=parseFloat(n)||0; return Math.round(n).toLocaleString('ru-RU'); }
+function fmt2(n){ n=parseFloat(n)||0; return n%1===0?n.toLocaleString('ru-RU'):(+n.toFixed(3))+''; }
+function num2str(n){ n=parseFloat(n)||0; return n%1===0?String(n):(+n.toFixed(3))+''; }
+
+/* ── TOAST ──────────────────────────────────── */
+function toast(msg, type, ms){
+  var el=g('toast'); if(!el) return;
+  var icon=type==='ok'?'✅':type==='err'?'❌':type==='warn'?'⚠️':'ℹ️';
+  var item=document.createElement('div');
+  item.className='toast-item '+(type||'');
+  item.innerHTML=icon+' '+esc(msg);
+  el.appendChild(item);
+  setTimeout(function(){
+    item.style.animation='toastIn .25s ease reverse';
+    setTimeout(function(){ if(item.parentNode) item.parentNode.removeChild(item); },220);
+  }, ms||3000);
+}
+
+/* ── TREE SEARCH ────────────────────────────── */
+function treeQidir(q){
+  var si=g('searchInfo');
+  if(!q.trim()){
+    document.querySelectorAll('.bl,.rz,.grp').forEach(function(el){el.style.display='';});
+    if(si) si.textContent='';
+    return;
+  }
+  var qu=q.toUpperCase().replace(/\s+/g,' ').trim(), found=0;
+  document.querySelectorAll('.bl').forEach(function(el){
+    var nom=(el.querySelector('.bl-nom')||{}).textContent||'';
+    var vis=nom.toUpperCase().indexOf(qu)>=0;
+    el.style.display=vis?'':'none';
+    if(vis){ found++; el.classList.add('open'); }
+  });
+  document.querySelectorAll('.rz').forEach(function(el){
+    var anyVisible=el.querySelectorAll('.bl:not([style*="display: none"]):not([style*="display:none"])').length>0;
+    el.style.display=anyVisible?'':'none';
+    if(anyVisible) el.classList.add('open');
+  });
+  if(si) si.textContent=found ? found+' ta topildi' : 'Topilmadi';
+}
+
+/* ── TREE COLLAPSE / EXPAND ─────────────────── */
+function treeBarcha(action){
+  var isOpen=action==='open';
+  document.querySelectorAll('.bl,.rz,.grp,.nomal').forEach(function(el){
+    el.classList[isOpen?'add':'remove']('open');
+  });
+}
+
+/* Init */
+window.addEventListener('load',function(){
+  initLang();         // Til almashish — localStorage dan
+  panelBoot();        // skan + format + kesh + URL — bitta RPC
+  tabOch('holat');
+  document.addEventListener('change',function(e){
+    if(e.target&&e.target.classList.contains('num')) inputOzgardi(e.target);
+  });
+  // Keyboard shortcuts
+  document.addEventListener('keydown',function(e){
+    // Ctrl+S — saqlash
+    if((e.ctrlKey||e.metaKey) && e.key==='s'){
+      e.preventDefault();
+      if(Object.keys(PENDING).length>0) saqlash();
+      else toast('Сақлаш учун ўзгариш йўқ','warn',2000);
+    }
+    // Ctrl+F — qidiruv
+    if((e.ctrlKey||e.metaKey) && e.key==='f'){
+      var ts=g('treeSearch');
+      if(ts){ e.preventDefault(); ts.focus(); ts.select(); }
+    }
+    // Escape — qidiruvni tozalash
+    if(e.key==='Escape'){
+      var ts=g('treeSearch');
+      if(ts&&document.activeElement===ts){ ts.value=''; treeQidir(''); ts.blur(); }
+    }
+  });
+});
+
+/* ── KESH TIZIMI ──────────────────────────────────── */
+var _keshHolat = {};
+
+function _keshBadgeRender(){
+  var h=_keshHolat||{}, keys=Object.keys(h);
+  var b=g('keshBadge'); if(!b) return;
+  if(!keys.length){ b.className='none'; b.textContent='⏱ Kesh yo\'q'; return; }
+  var maxAge=0;
+  keys.forEach(function(k){ if(h[k].ageSek>maxAge) maxAge=h[k].ageSek; });
+  if(maxAge<300){        // 5 daqiqa ichida
+    b.className='fresh'; b.textContent='✓ Kesh yangi';
+  } else if(maxAge<3600){ // 1 soat ichida
+    b.className='fresh'; b.textContent='✓ '+Math.round(maxAge/60)+' daq oldin';
+  } else {
+    b.className='stale'; b.textContent='⚠ Kesh eski ('+Math.round(maxAge/3600)+' soat)';
+  }
+}
+function keshBadgeYangilash(){
+  run('apiKeshHolat', null, function(h){ _keshHolat=h||{}; _keshBadgeRender(); });
+}
+
+/* BITTA chaqiruvda boshlang'ich yuklash — skan + format + kesh + URL */
+function panelBoot(){
+  run('apiPanelInit', null, function(d){
+    d=d||{};
+    if(d.webAppUrl) WAPP_URL=d.webAppUrl;
+    OBS=d.skan||[];
+    FMTMAP=d.fmtMap||{};
+    _keshHolat=d.kesh||{};
+    _obToldir(); _ierObToldir(); _skanRender();
+    _keshBadgeRender();
+  }, function(e){
+    // Zaxira — eski alohida yo'l
+    skanQil(); keshBadgeYangilash();
+  });
+}
+
+function keshYangilashModal(){
+  var b=g('keshBadge'); b.className='stale'; b.textContent='⟳ ...';
+  run('apiKeshYangilash', null, function(r){
+    b.className='fresh';
+    b.textContent='✓ Yangilandi';
+    skanQil();
+  });
+}
+
+// Panel ochilganda kesh holatini ko'rsatamiz
+function _panelInit(){
+  keshBadgeYangilash();
+}
+
+/* ── NARXLAR ──────────────────────────────────────── */
+var _narxData=null;   // {rows, objects, sanalar}
+var _narxEdits={};    // key → {nom,birlik,narx,smetaMax,kat}
+
+function narxYukla(){
+  g('narxTable').innerHTML='<div class="msg i" style="margin:12px"><span class="spin">⟳</span> Юklanмоqда...</div>';
+  g('narxMsg').textContent='';
+  // Har doim ALL yuklaymiz — server keshdan tez qaytaradi, filter client-side
+  run('apiNarxlarOl',['ALL'],function(d){
+    _narxData=d;
+    _narxEdits={};
+    g('narxSaqlaBtn').style.display='none';
+    narxFilter();
+  });
+}
+function narxFilter(){
+  if(!_narxData){ narxYukla(); return; }
+  var kat=g('narxKat').value||'ALL';
+  var q=_norm2(g('narxQidir').value||'');
+  var rows=_narxData.rows;
+  if(kat && kat!=='ALL') rows=rows.filter(function(r){ return r.kat===kat; });
+  if(q) rows=rows.filter(function(r){ return _norm2(r.nom).indexOf(q)>=0||_norm2(r.birlik).indexOf(q)>=0; });
+  g('narxTable').innerHTML=_narxHtml(rows, _narxData.objects);
+}
+function _norm2(s){ return s.toUpperCase().replace(/\s+/g,' ').trim(); }
+
+function _narxHtml(rows, obList){
+  if(!rows.length) return '<div class="msg i" style="margin:12px">Натижа йўқ</div>';
+  var sanalar=(_narxData&&_narxData.sanalar)||[];
+
+  // Header
+  var h='<table class="nx-tbl"><thead><tr>'
+    +'<th style="min-width:200px">Номланиш</th>'
+    +'<th>Бирлик</th><th>Кат</th>'
+    +'<th class="nx-price">Белгиланган</th>';
+  // Har ob'ekt — qisqartirilgan nom
+  obList.forEach(function(ob){
+    h+='<th class="nx-price" style="font-size:9px" title="'+esc(ob)+'">'+esc(_shortOb(ob))+'</th>';
+  });
+  // Sana narxlari
+  sanalar.forEach(function(s){
+    h+='<th class="nx-price" style="font-size:9px;color:var(--amber2)">'+esc(s)+'</th>';
+  });
+  h+='<th class="nx-price">Янги нарх</th>'
+    +'<th class="nx-price" style="color:var(--grn2)">ТИЗИМ</th>'
+    +'<th style="min-width:110px;font-size:9px;color:var(--txt3)">Манба</th>'
+    +'</tr></thead><tbody>';
+
+  rows.forEach(function(r){
+    var key=_norm2(r.nom)+'||'+_norm2(r.birlik);
+    var edited=_narxEdits[key];
+    var editedNarx=edited?edited.narx:0;
+    var natija=Math.max(r.belgilangan||0, r.max||0, r.maxSana||0, editedNarx||0);
+    var xavf=r.xavf;
+    var smetaJson=JSON.stringify(r.smeta||{});
+
+    // Manba: yangi narx kiritilgan bo'lsa u ustunlik qiladi
+    var manba=r.manba||'';
+    var manbaWin=editedNarx>0&&editedNarx>=natija;
+    if(manbaWin) manba='Yangi narx';
+
+    h+='<tr class="nx-row'+(xavf?' xavf-row':'')+'">'
+      +'<td class="nx-nom">'
+        +(xavf?'<span title="Turli ob\'ektlarda farqli narx" style="color:var(--amber2);margin-right:4px">⚠</span>':'')
+        +esc(r.nom)
+      +'</td>'
+      +'<td class="nx-bir">'+esc(r.birlik)+'</td>'
+      +'<td>'+_katSel(r.nom,r.birlik,r.kat)+'</td>'
+      // Belgilangan (inline tahrirlash)
+      +'<td><input class="num nx-fakt-inp" type="number" step="1"'
+        +' value="'+(r.belgilangan>0?r.belgilangan:'')+'"'
+        +' data-nom="'+escAttr(r.nom)+'" data-bir="'+escAttr(r.birlik)+'"'
+        +' style="width:96px" onchange="narxBelgilaganSaqla(this)" placeholder="—"></td>';
+
+    // Har ob'ekt smeta narxi — eng kattasi SARIQ
+    obList.forEach(function(ob){
+      var p=r.smeta[ob]||0;
+      var isMax=(p>0 && p===r.max);
+      h+='<td class="nx-price" style="'+(isMax?'color:var(--amber2);font-weight:700':'color:var(--txt4)')+'">'+( p?fmt0(p):'—')+'</td>';
+    });
+    // Sana narxlari
+    sanalar.forEach(function(s){
+      var sp=(r.sanaLar&&r.sanaLar[s])||0;
+      h+='<td class="nx-price" style="color:'+(sp>0?'var(--amber2)':'var(--txt4)')+'">'+( sp?fmt0(sp):'—')+'</td>';
+    });
+    // Yangi narx input
+    h+='<td>'
+      +'<input class="num nx-fakt-inp" type="number" step="1" value="'+(editedNarx||'')+'"'
+      +' data-key="'+escAttr(key)+'" data-nom="'+escAttr(r.nom)+'" data-bir="'+escAttr(r.birlik)+'"'
+      +' data-max="'+r.max+'" data-xavf="'+(xavf?'1':'0')+'" data-kat="'+esc(r.kat)+'"'
+      +' data-smeta="'+escAttr(smetaJson)+'"'
+      +' oninput="narxEdit(this)" placeholder="Yangi narx">'
+      +'</td>'
+      // TIZIM
+      +'<td class="nx-win" id="nxw_'+escAttr(key)+'"'
+        +' style="color:'+(editedNarx>0&&editedNarx>=r.max?'var(--amber2)':'var(--grn2)')+'">'+fmt0(natija)+'</td>'
+      // Manba
+      +'<td style="font-size:10px;color:'+(manba==='Yangi narx'?'var(--amber2)':manba?'var(--pri2)':'var(--txt4)')+';white-space:nowrap">'
+        +(manba?'← '+esc(manba):'—')
+      +'</td>'
+      +'</tr>';
+  });
+  h+='</tbody></table>';
+  return h;
+}
+
+function _katSel(nom,bir,cur){
+  var opts=['МАТ','ОБ','ЧЕЛ','МАШ','М/К','КАБ'];
+  var h='<select class="nx-kat-sel" data-nom="'+escAttr(nom)+'" data-bir="'+escAttr(bir)+'" onchange="narxKatOzgartir(this)">';
+  opts.forEach(function(k){
+    h+='<option value="'+k+'"'+(k===cur?' selected':'')+'>'+k+'</option>';
+  });
+  return h+'</select>';
+}
+function narxKatOzgartir(sel){
+  var nom=sel.dataset.nom, bir=sel.dataset.bir, kat=sel.value;
+  sel.style.opacity='.5';
+  run('apiNarxKatSaqla',[nom,bir,kat],function(r){
+    sel.style.opacity='1';
+    if(!r.ok){ toast(r.xabar||'Xato','err'); return; }
+    // Lokal data ham yangilaymiz
+    if(_narxData&&_narxData.rows){
+      _narxData.rows.forEach(function(row){
+        if(row.nom===nom&&row.birlik===bir) row.kat=kat;
+      });
+    }
+  },function(e){ sel.style.opacity='1'; toast('Xato: '+e.message,'err'); });
+}
+
+function _shortOb(s){
+  // "Turk oshxonasi 2sht" → "Turk osh." — 10 belgigacha qisqartirish
+  if(!s) return '';
+  if(s.length<=11) return s;
+  return s.substring(0,10)+'…';
+}
+
+function narxEdit(inp){
+  var key=inp.dataset.key;
+  var fakt=parseFloat(inp.value)||0;
+  var max=parseFloat(inp.dataset.max)||0;
+  var xavf=inp.dataset.xavf==='1';
+  var smetaJson=inp.dataset.smeta||'{}';
+  var smeta={}; try{smeta=JSON.parse(smetaJson);}catch(e){}
+  _narxEdits[key]={nom:inp.dataset.nom,birlik:inp.dataset.bir,narx:fakt,
+                   smetaMax:max,xavf:xavf,smeta:smeta,kat:inp.dataset.kat};
+  // Natija rangini yangilash
+  var tr=inp.closest('tr');
+  if(tr){
+    var win=Math.max(fakt,max);
+    var faktWin=fakt>0&&fakt>max;
+    tr.className='nx-row '+(fakt>0?(faktWin?'fakt-win':'smeta-win'):'');
+    var winCell=tr.querySelector('.nx-win');
+    if(winCell){ winCell.textContent=fmt0(win); winCell.style.color=faktWin?'var(--amber2)':'var(--grn2)'; }
+  }
+  g('narxSaqlaBtn').style.display=Object.keys(_narxEdits).length?'':'none';
+}
+
+/* Belgilangan narxni saqlash (D ustun) */
+function narxBelgilaganSaqla(inp){
+  var key=inp.dataset.key;
+  var nom=inp.dataset.nom, bir=inp.dataset.bir;
+  var val=parseFloat(inp.value)||0;
+  run('apiNarxBelgilanganSaqla',[nom,bir,val],function(r){
+    if(!r.ok) toast(r.xabar||'Xato','err'); else toast('✅ Сақланди','ok',1500);
+  });
+}
+
+/* Yangi sana + narx qo'shish modal */
+var _narxSanaCtx=[];
+function narxSanaModal(){
+  var edits=Object.values(_narxEdits);
+  if(!edits.length){ toast('Avval narx kiriting','warn'); return; }
+  // Xavfli resurslarni topamiz
+  var xavfli=edits.filter(function(e){ return e.xavf; });
+  g('nsSanaInp').value=new Date().toISOString().slice(0,10);
+  g('nsXavfBlok').style.display=xavfli.length?'':'none';
+  if(xavfli.length){
+    var h='<b>⚠ Quyidagi materiallar turli ob\'ektlarda farqli smeta narxida:</b><br>';
+    xavfli.forEach(function(e){
+      h+='<div style="margin:4px 0;font-size:11px;color:var(--amber2)">• '+esc(e.nom)+' ['+esc(e.birlik)+']<br>';
+      Object.keys(e.smeta||{}).forEach(function(ob){
+        if(e.smeta[ob]) h+='&nbsp;&nbsp;'+esc(ob)+': <b>'+fmt0(e.smeta[ob])+'</b> ';
+      });
+      h+='</div>';
+    });
+    g('nsXavfContent').innerHTML=h;
+  }
+  _narxSanaCtx=edits;
+  g('nsSanaModal').style.display='flex';
+}
+function nsSanaYop(){ g('nsSanaModal').style.display='none'; }
+function nsSanaSaqla(){
+  var sana=g('nsSanaInp').value;
+  if(!sana){ toast('Sana kiriting','warn'); return; }
+  var tasdiqlandi=!_narxSanaCtx.some(function(e){return e.xavf;}) ||
+                  g('nsXavfTasdiq').checked;
+  if(!tasdiqlandi){ toast('Xavf borligini tasdiqlang','warn'); return; }
+  var edits=_narxSanaCtx.map(function(e){
+    return {nom:e.nom,birlik:e.birlik,sana:sana,narx:e.narx,
+            smetaMax:e.smetaMax,kat:e.kat,xavfTasdiqlandi:true};
+  });
+  g('narxMsg').textContent='⟳ Сақланмоқда...';
+  nsSanaYop();
+  run('apiNarxSanaQosh',[edits],function(r){
+    g('narxMsg').textContent='✅ '+sana+': '+r.jami+' нарх сақланди';
+    g('narxSaqlaBtn').style.display='none';
+    _narxEdits={};
+    setTimeout(function(){ g('narxMsg').textContent=''; narxYukla(); },2000);
+    // SOZLAMALAR_НАРХ ga ham ko'chiramiz
+    run('_narxlarToSozlama',null,function(){});
+  });
+}
+function narxSaqla(){ narxSanaModal(); }
+
+/* ── ISH TURI MODAL ──────────────────────────────────────── */
+var _itVaraq='', _itAfterRow=0, _itRzNom='';
+var _itTanlov=null;
+var _itResults=[];  // JSON array orqali — onclick da serialization muammosi yo'q
+
+function ishTurModal(varaq, afterRow, rzNom){
+  if(!CUR_OB) return;
+  _itVaraq=varaq; _itAfterRow=afterRow; _itRzNom=rzNom; _itTanlov=null; _itResults=[];
+  g('itRzNom').textContent=rzNom||'';
+  g('itHajm').value='';
+  g('itTanlov').innerHTML='';
+  g('itQidiruv').value='';
+  g('itNatija').innerHTML='<div style="color:var(--txt3);font-size:11px;padding:8px 0">Qidirish uchun matn yozing yoki bo\'sh qoldiring...</div>';
+  g('itModal').style.display='flex';
+  g('itQidiruv').focus();
+  // Boshida hammani ko'rsat
+  itQidir();
+}
+var _treeYangiKerak=false;
+function itYop(){
+  g('itModal').style.display='none'; _itTanlov=null;
+  if(_treeYangiKerak){ _treeYangiKerak=false; holatYukla(); }
+}
+
+function itQidir(){
+  var q=g('itQidiruv').value.trim();
+  g('itNatija').innerHTML='<span class="spin">⟳</span>';
+  run('apiIshTurQidir',[q,30],function(res){
+    _itResults=res||[];
+    if(!_itResults.length){
+      g('itNatija').innerHTML='<div style="color:var(--txt3);font-size:11px;padding:8px 0">'
+        +'Кутубхонада топилмади.</div>'
+        +_itYangiBtn();
+      return;
+    }
+    var h='';
+    _itResults.forEach(function(it,i){
+      h+='<div class="it-row" id="itr'+i+'" onclick="itTanla('+i+')">'
+        +'<div class="it-nom">'+esc(it.blNom)+'</div>'
+        +'<div class="it-meta">'
+        +'<span class="badge '+(it.fmt==='ABC4'?'abc':'tn')+'">'+it.fmt+'</span>'
+        +' <span style="color:var(--txt2);font-weight:600">'+esc(it.blBirlik)+'</span>'
+        +' <span style="color:var(--txt4);font-size:10px">'+esc(it.manba)+'</span>'
+        +'</div>'
+        +'<div class="it-rs" style="color:var(--txt4)">'+it.rs.length+' resurs</div>'
+        +'</div>';
+    });
+    g('itNatija').innerHTML=h+_itYangiBtn();
+  });
+}
+
+/* "Yangi ish turi yaratish" tugmasi — kutubxonada yo'q ish uchun */
+function _itYangiBtn(){
+  var q=g('itQidiruv').value.trim();
+  return '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">'
+    +'<button class="btn xs grn" onclick="itYangiForma()">➕ Янги иш тури яратиш'+(q?': "'+esc(q)+'"':'')+'</button>'
+    +'</div>';
+}
+/* Yangi bo'sh ish turi forma */
+function itYangiForma(){
+  var q=g('itQidiruv').value.trim();
+  g('itNatija').innerHTML=
+    '<div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px">'
+    +'<div style="font-size:11px;color:var(--grn2);font-weight:700">➕ Янги иш тури (бўш — кейин ресурс қўшасиз)</div>'
+    +'<input id="itYnom" type="text" placeholder="Иш тури номи" value="'+esc(q)+'" style="width:100%">'
+    +'<div style="display:flex;gap:8px">'
+    +'<input id="itYbir" type="text" placeholder="Бирлик (м3, шт...)" style="flex:1">'
+    +'<input id="itYhajm" type="number" step="any" placeholder="Ҳажм" style="width:90px">'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;justify-content:flex-end">'
+    +'<button class="btn xs s" onclick="itQidir()">← Орқага</button>'
+    +'<button class="btn xs grn" onclick="itYangiSaqla()">✅ Яратиш</button>'
+    +'</div></div>';
+  g('itYnom').focus();
+}
+function itYangiSaqla(){
+  var nom=g('itYnom').value.trim();
+  var bir=g('itYbir').value.trim();
+  var hajm=_toNum2(g('itYhajm').value);
+  if(!nom){ toast('Ном киритинг','warn'); return; }
+  if(hajm<=0){ toast('Ҳажм киритинг','warn'); return; }
+  run('apiBlQosh',[{obyekt:CUR_OB,varaq:_itVaraq,afterRow:_itAfterRow,nom:nom,birlik:bir,hajm:hajm}],
+    function(r){
+      if(r&&r.ok){
+        toast('✅ '+r.xabar,'ok');
+        _treeYangiKerak=true;
+        if(r.blRow) _itAfterRow=r.blRow;
+        itQidir();
+        g('itTanlov').innerHTML='<div style="color:var(--grn2);font-size:11px;padding:4px 0">✓ '+esc(nom)+' яратилди. Дарахтда «＋ RS» билан ресурс қўшинг.</div>';
+      } else toast('✗ '+(r&&r.xabar||'Xato'),'err');
+    });
+}
+
+function itTanla(i){
+  _itTanlov=_itResults[i];
+  if(!_itTanlov) return;
+  document.querySelectorAll('.it-row').forEach(function(e){ e.classList.remove('it-sel'); });
+  var el=g('itr'+i); if(el) el.classList.add('it-sel');
+  var it=_itTanlov;
+  var h='<div style="padding:6px 0 8px;font-size:12px;color:var(--pri2);font-weight:700">✓ '+esc(it.blNom)+' <span style="color:var(--txt3);font-weight:400">['+esc(it.blBirlik)+']</span></div>';
+  if(it.rs&&it.rs.length){
+    h+='<div style="font-size:10px;color:var(--txt4);display:flex;flex-wrap:wrap;gap:4px">';
+    it.rs.forEach(function(r){
+      h+='<span style="background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:4px;padding:2px 6px">'+esc(r.nom)+' <b>'+esc(r.birlik)+'</b></span>';
+    });
+    h+='</div>';
+  }
+  g('itTanlov').innerHTML=h;
+  g('itBirlikLbl').textContent=it.blBirlik||'';
+  g('itHajm').focus(); g('itHajm').select();
+}
+
+function itSaqla(){
+  if(!_itTanlov){ toast('Ish turini tanlang (ro\'yxatdan bosing)','warn'); return; }
+  var hajm=_toNum2(g('itHajm').value);
+  if(hajm<=0){ toast('Hajm kiriting (0 dan katta)','warn'); return; }
+  g('itBtn').disabled=true; g('itBtn').textContent='⟳ ...';
+  run('apiIshTurQosh',[{
+    obyekt:CUR_OB, varaq:_itVaraq, afterRow:_itAfterRow, key:_itTanlov.key, hajm:hajm
+  }],function(r){
+    g('itBtn').disabled=false; g('itBtn').textContent='✅ Qo\'sh';
+    if(r&&r.ok){
+      toast('✅ '+r.xabar,'ok');
+      // Modal OCHIQ qoladi — ketma-ket qo'shish uchun.
+      // Keyingi qo'shish shu BL dan keyinga tushadi.
+      if(r.blRow){ _itAfterRow=r.blRow + (r.nRows?r.nRows-1:0); }
+      _itTanlov=null;
+      g('itHajm').value='';
+      g('itTanlov').innerHTML='<div style="color:var(--grn2);font-size:11px;padding:4px 0">✓ Qo\'shildi. Yana qidiring yoki <b>Yopish</b> bosing.</div>';
+      g('itQidiruv').value=''; g('itQidiruv').focus();
+      document.querySelectorAll('.it-row').forEach(function(e){e.classList.remove('it-sel');});
+      _treeYangiKerak=true; // yopilganda tree yangilanadi
+    } else { toast('✗ '+(r&&r.xabar||'Xato'),'err'); }
+  }, function(e){ g('itBtn').disabled=false; g('itBtn').textContent='✅ Qo\'sh'; toast('✗ '+e.message,'err'); });
+}
+
+/* ── RS QO'SHISH MODAL ──────────────────────────────────── */
+var _rsCtx={};  // {obyekt, varaq, blRow, blNom}
+
+function rsQoshModal(varaq, blRow, blNom){
+  if(!CUR_OB) return;
+  _rsCtx={obyekt:CUR_OB, varaq:varaq, blRow:blRow, blNom:blNom};
+  g('rsBlNom').textContent=blNom||'';
+  g('rsNom').value=''; g('rsBirlik').value=''; g('rsNorm').value='';
+  g('rsMsg').textContent='';
+  g('rsModal').style.display='flex';
+  g('rsNom').focus();
+}
+function rsYop(){ g('rsModal').style.display='none'; }
+function rsSaqla(){
+  var nom=g('rsNom').value.trim();
+  var birlik=g('rsBirlik').value.trim();
+  var norm=_toNum2(g('rsNorm').value);
+  if(!nom){ toast('Resurs nomini kiriting','warn'); return; }
+  if(!birlik){ toast('Birlikni kiriting','warn'); return; }
+  if(norm<=0){ toast('Norm kiritng (0 dan katta)','warn'); return; }
+  g('rsSaqlaBtn').disabled=true; g('rsMsg').textContent='⟳ Qo\'shilmoqda...';
+  run('apiRsQosh',[{
+    obyekt:_rsCtx.obyekt, varaq:_rsCtx.varaq,
+    blRow:_rsCtx.blRow, nom:nom, birlik:birlik, norm:norm
+  }],function(r){
+    g('rsSaqlaBtn').disabled=false; g('rsMsg').textContent='';
+    if(r&&r.ok){ rsYop(); holatYukla(); toast('✅ '+nom+' qo\'shildi','ok'); }
+    else{ g('rsMsg').textContent='✗ '+(r&&r.xabar||'Xato'); }
+  }, function(e){ g('rsSaqlaBtn').disabled=false; g('rsMsg').textContent='✗ '+e.message; });
+}
+
+function _toNum2(v){ return parseFloat(String(v).replace(/\s/g,'').replace(',','.')) || 0; }
+
+/* ── HUJJATLAR (Akt / Prixod / Viborka) ──────────── */
+var _hujLoaded=false, _hujSub='akt', _hujData=null, _hujDeb=null, _hujUrls={};
+
+function hujSub(tur){
+  _hujSub=tur;
+  g('hujQidir').value='';
+  document.querySelectorAll('.hujsub').forEach(function(b){ b.classList.toggle('active', b.dataset.sub===tur); });
+  hujYukla();
+}
+function hujQidirDeb(){
+  clearTimeout(_hujDeb);
+  _hujDeb=setTimeout(hujYukla, 350);
+}
+function hujYukla(){
+  var q=g('hujQidir').value.trim();
+  g('hujList').innerHTML='<div class="msg i"><span class="spin">⟳</span> Юкланмоқда...</div>';
+  g('hujStat').style.display='none';
+  if(_hujSub==='akt'){
+    run('apiAktlarOl',[100,q],function(d){ _hujData=d; _hujUrls.akt=d.url; _setHujLink(d.url); _renderAkt(d); });
+  } else if(_hujSub==='prixod'){
+    run('apiPrixodOl',[150,q],function(d){ _hujData=d; _hujUrls.prixod=d.url; _setHujLink(d.url); _renderPrixod(d); });
+  } else {
+    run('apiViborkaOl',null,function(d){ _setHujLink(d.url);
+      g('hujList').innerHTML='<div class="msg i" style="line-height:1.7">'+esc(d.xabar)
+        +'<br><br><a class="btn" href="'+d.url+'" target="_blank" style="text-decoration:none">📐 Выборка ҳужжатини очиш</a></div>';
+    });
+  }
+}
+function _setHujLink(url){ var a=g('hujOchLink'); if(a&&url) a.href=url; }
+
+/* AKT render */
+function _renderAkt(d){
+  if(!d.rows||!d.rows.length){ g('hujList').innerHTML='<div class="msg i">Акт топилмади</div>'; return; }
+  // Stat
+  var sh='';
+  for(var k in (d.statlar||{})){
+    sh+='<span class="cat-stat"><span class="cat-stat-val">'+d.statlar[k]+'</span>'
+      +'<span class="cat-stat-lbl">'+esc(k)+'</span></span>';
+  }
+  sh+='<span class="cat-stat" style="margin-left:auto"><button class="btn xs grn" onclick="aktYozModal()">➕ Янги акт</button></span>';
+  g('hujStat').innerHTML=sh; g('hujStat').style.display='flex';
+  var h='<table class="nx-tbl"><thead><tr>'
+    +'<th>№</th><th>Иш номи</th><th>Объект</th><th>Статус</th>'
+    +'<th>Бошланди</th><th>Тугади</th><th></th></tr></thead><tbody>';
+  d.rows.forEach(function(a){
+    var stColor=/обеими|подписано обе/i.test(a.comm)?'var(--grn2)':/подряд/i.test(a.comm)?'var(--amber2)':'var(--txt3)';
+    h+='<tr>'
+      +'<td style="font-weight:700;color:var(--pri2)">'+esc(a.num)+'</td>'
+      +'<td class="nx-nom" style="max-width:320px">'+esc(a.work)+'</td>'
+      +'<td style="font-size:10px;color:var(--txt3)">'+esc(a.obj)+'</td>'
+      +'<td style="font-size:10px;color:'+stColor+'">'+esc(a.comm||a.status)+'</td>'
+      +'<td style="font-size:10px;white-space:nowrap">'+esc(a.start)+'</td>'
+      +'<td style="font-size:10px;white-space:nowrap">'+esc(a.end)+'</td>'
+      +'<td>'+(a.pdf?'<a href="'+esc(a.pdf)+'" target="_blank" class="btn xs s" style="text-decoration:none">PDF</a>':'')+'</td>'
+      +'</tr>';
+  });
+  h+='</tbody></table>';
+  g('hujList').innerHTML=h;
+}
+
+/* PRIXOD render */
+function _renderPrixod(d){
+  if(!d.rows||!d.rows.length){ g('hujList').innerHTML='<div class="msg i">Материал топилмади</div>'; return; }
+  g('hujStat').innerHTML='<span class="cat-stat"><span class="cat-stat-val">'+d.jami+'</span>'
+    +'<span class="cat-stat-lbl">та ёзув</span></span>'
+    +'<span class="cat-stat" style="margin-left:auto"><button class="btn xs grn" onclick="prixodYozModal()">➕ Янги приход</button></span>';
+  g('hujStat').style.display='flex';
+  var h='<table class="nx-tbl"><thead><tr>'
+    +'<th>Материал</th><th>Раздел</th><th>Бирлик</th>'
+    +'<th class="nx-price">Ҳажм</th><th>Сана</th><th>Поставщик</th>'
+    +'<th class="nx-price">Нарх</th><th class="nx-price">Қолдиқ</th></tr></thead><tbody>';
+  d.rows.forEach(function(p){
+    h+='<tr>'
+      +'<td class="nx-nom" style="max-width:260px">'+esc(p.nom)+'</td>'
+      +'<td style="font-size:10px;color:var(--txt3)">'+esc(p.razdel)+'</td>'
+      +'<td style="font-size:10px">'+esc(p.birlik)+'</td>'
+      +'<td class="nx-price">'+fmt2(p.hajm)+'</td>'
+      +'<td style="font-size:10px;white-space:nowrap">'+esc(p.sana)+'</td>'
+      +'<td style="font-size:10px;color:var(--txt3)">'+esc(p.postavshik)+'</td>'
+      +'<td class="nx-price">'+(p.narx?fmt0(p.narx):'—')+'</td>'
+      +'<td class="nx-price" style="color:var(--amber2)">'+(p.ostatka?fmt2(p.ostatka):'—')+'</td>'
+      +'</tr>';
+  });
+  h+='</tbody></table>';
+  g('hujList').innerHTML=h;
+}
+
+/* AKT yozish modal */
+function aktYozModal(){
+  _hujModal('➕ Янги акт', [
+    {id:'akNum',lbl:'Акт рақами',type:'text'},
+    {id:'akWork',lbl:'Иш номи',type:'text',wide:true},
+    {id:'akObj',lbl:'Объект',type:'text'},
+    {id:'akProg',lbl:'Бажарилган иш тавсифи',type:'textarea'},
+    {id:'akStart',lbl:'Бошланиш санаси',type:'text'},
+    {id:'akEnd',lbl:'Тугаш санаси',type:'text'}
+  ], function(){
+    run('apiAktYoz',[{
+      num:gv('akNum'),work:gv('akWork'),obj:gv('akObj'),
+      progress:gv('akProg'),start:gv('akStart'),end:gv('akEnd'),status:'NEW'
+    }],function(r){ _hujModalYop(); toast('✅ '+r.xabar,'ok'); hujYukla(); });
+  });
+}
+/* PRIXOD yozish modal */
+function prixodYozModal(){
+  _hujModal('➕ Янги приход', [
+    {id:'pxNom',lbl:'Материал номи',type:'text',wide:true},
+    {id:'pxRazdel',lbl:'Раздел',type:'text'},
+    {id:'pxBir',lbl:'Бирлик',type:'text'},
+    {id:'pxHajm',lbl:'Ҳажм',type:'number'},
+    {id:'pxSana',lbl:'Сана (кун.ой.йил)',type:'text'},
+    {id:'pxPost',lbl:'Поставщик',type:'text'},
+    {id:'pxNarx',lbl:'Нарх',type:'number'}
+  ], function(){
+    var nom=gv('pxNom'); if(!nom){ toast('Ном киритинг','warn'); return; }
+    var hajm=_toNum2(gv('pxHajm')); if(hajm<=0){ toast('Ҳажм киритинг','warn'); return; }
+    run('apiPrixodYoz',[{
+      nom:nom,razdel:gv('pxRazdel'),birlik:gv('pxBir'),hajm:hajm,
+      sana:gv('pxSana'),postavshik:gv('pxPost'),narx:_toNum2(gv('pxNarx'))
+    }],function(r){ _hujModalYop(); toast('✅ '+r.xabar,'ok'); hujYukla(); });
+  });
+}
+/* Universal hujjat modal */
+function _hujModal(title, fields, onSave){
+  var h='<div style="display:flex;align-items:center;margin-bottom:14px">'
+    +'<span style="font-size:14px;font-weight:800;color:#fff">'+title+'</span>'
+    +'<span class="hgap"></span><button class="btn xs s" onclick="_hujModalYop()">✕</button></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  fields.forEach(function(f){
+    var span=f.wide||f.type==='textarea'?'grid-column:1/-1':'';
+    h+='<div style="'+span+'">'
+      +'<label style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">'+f.lbl+'</label>'
+      +(f.type==='textarea'
+        ?'<textarea id="'+f.id+'" rows="3" style="width:100%;background:var(--surface);border:1px solid var(--line2);color:var(--txt);border-radius:7px;padding:7px 10px;font-size:12px;font-family:inherit;resize:vertical"></textarea>'
+        :'<input id="'+f.id+'" type="'+f.type+'" style="width:100%">')
+      +'</div>';
+  });
+  h+='</div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">'
+    +'<button class="btn s" onclick="_hujModalYop()">Бекор</button>'
+    +'<button class="btn grn" id="hujSaveBtn">✅ Сақлаш</button></div>';
+  g('hujModalBox').innerHTML=h;
+  g('hujModal').style.display='flex';
+  g('hujSaveBtn').onclick=onSave;
+}
+function _hujModalYop(){ g('hujModal').style.display='none'; }
+</script>
+
+<!-- SANA NARX MODAL -->
+<div id="nsSanaModal" style="display:none;position:fixed;inset:0;z-index:9997;background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
+    padding:22px;width:520px;max-width:95vw;box-shadow:var(--sh);display:flex;flex-direction:column;gap:14px">
+    <div style="font-size:14px;font-weight:800;color:#fff">📅 Narx saqlanmoqda</div>
+
+    <div style="display:flex;align-items:center;gap:12px">
+      <label style="font-size:12px;color:var(--txt2);min-width:80px">Sana:</label>
+      <input id="nsSanaInp" type="date" style="width:160px">
+    </div>
+
+    <!-- Xavf bloki -->
+    <div id="nsXavfBlok" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);
+      border-radius:var(--r-sm);padding:12px">
+      <div id="nsXavfContent"></div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="nsXavfTasdiq" style="width:16px;height:16px">
+        <label for="nsXavfTasdiq" style="font-size:12px;color:var(--txt2);cursor:pointer">
+          Farqli narxlarni bilaman, davom etaman
+        </label>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--txt3)">
+      Kiritilgan narxlar <b>NARXLAR</b> varaqiga saqlanadi.<br>
+      🟡 Sariq = fakt &gt; smeta (fakt narxi ishlatiladi) &nbsp; 🟢 Yashil = smeta yaxshi
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn s" onclick="nsSanaYop()">Bekor</button>
+      <button class="btn grn" onclick="nsSanaSaqla()">💾 Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- VARAQ TANLASH MODAL -->
+<div id="shModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
+    padding:20px;width:440px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:var(--sh)">
+    <div style="display:flex;align-items:center">
+      <span id="shTitle" style="font-size:14px;font-weight:800;color:#fff">Varaqlar</span>
+      <span class="hgap"></span>
+      <span id="shInfo" style="font-size:11px;color:var(--txt3);margin-right:10px"></span>
+      <button class="btn xs s" onclick="shYop()">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--txt3)">
+      Bo'sh qoldiring = barcha varaqlar ishlatiladi. Tanlasangiz — faqat tanlangan varaqlar.
+    </div>
+    <div id="shList" style="flex:1;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-sm);padding:4px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn xs s" onclick="shToggleAll()">Hammasini tanlash/bekor</button>
+      <button class="btn xs s" onclick="shClear()">Tozalash</button>
+      <button class="btn xs grn" onclick="shSaqla()">✅ Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- SVOD USTUN MODAL -->
+<div id="svModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
+    padding:18px;width:880px;max-width:97vw;max-height:88vh;display:flex;flex-direction:column;gap:10px;box-shadow:var(--sh)">
+    <div style="display:flex;align-items:center">
+      <span id="svTitle" style="font-size:14px;font-weight:800;color:#fff">🔬 Свод устунлари</span>
+      <span class="hgap"></span>
+      <button class="btn xs s" onclick="svYop()">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--txt3)">
+      Свод жадвалининг юқори қаторлари. Қайси устун <b>НОМ</b>, <b>БИРЛИК</b>, <b>ҲАЖМ (QTY)</b>,
+      <b>дона НАРХ</b>, <b>СУММА (жами)</b>, <b>БЛОК/тип</b> эканини пастдаги майдонларга устун рақамини
+      ёзинг. <b>Нарх = дона НАРХ</b> устунидан олинади; <b>СУММА</b> фақат <i>дона×ҳажм=сумма</i>
+      текширув учун (нарх манбаи эмас). Бўш = формат default.
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:rgba(99,102,241,.08);border-radius:8px">
+      <label style="font-size:12px">НОМ устун №: <input id="svNom" type="number" min="0" style="width:55px"></label>
+      <label style="font-size:12px">БИРЛИК устун №: <input id="svBir" type="number" min="0" style="width:55px"></label>
+      <label style="font-size:12px">ҲАЖМ (QTY) устун №: <input id="svQty" type="number" min="0" style="width:55px"></label>
+      <label style="font-size:12px;color:var(--amber2);font-weight:700">дона НАРХ устун №: <input id="svNarx" type="number" min="0" style="width:55px"></label>
+      <label style="font-size:12px">СУММА устун №: <input id="svSumma" type="number" min="0" style="width:55px"></label>
+      <label style="font-size:12px">БЛОК устун №: <input id="svBlok" type="number" min="0" style="width:55px"></label>
+      <span class="hgap"></span>
+      <button class="btn xs grn" onclick="svSaqla()">✅ Сақлаш</button>
+      <span id="svMsg" style="font-size:11px;color:var(--grn2)"></span>
+    </div>
+    <div id="svPreview" style="flex:1;overflow:auto;border:1px solid var(--line);border-radius:var(--r-sm)"></div>
+  </div>
+</div>
+
+<!-- ISH TURI MODAL -->
+<div id="itModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
+    padding:22px;width:640px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:var(--sh)">
+    <div style="display:flex;align-items:center;margin-bottom:14px">
+      <span style="font-size:14px;font-weight:800;color:#fff">➕ Ish turi qo'shish</span>
+      <span style="margin-left:10px;font-size:11px;color:var(--txt3)" id="itRzNom"></span>
+      <span class="hgap"></span>
+      <button class="btn s xs" onclick="itYop()">✕</button>
+    </div>
+
+    <!-- Qidiruv -->
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input id="itQidiruv" type="text" placeholder="Nom yoki kod bo'yicha qidiring..."
+        style="flex:1" oninput="itQidir()">
+    </div>
+
+    <!-- Natijalar -->
+    <div id="itNatija" style="max-height:260px;overflow-y:auto;border:1px solid var(--line);
+      border-radius:var(--r-sm);padding:6px;margin-bottom:10px"></div>
+
+    <!-- Tanlangan -->
+    <div id="itTanlov"></div>
+
+    <!-- Hajm -->
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+      <label style="font-size:12px;color:var(--txt2);min-width:60px">Hajm:</label>
+      <input id="itHajm" type="number" step="any" class="num"
+        placeholder="0.00" style="width:120px"
+        onkeydown="if(event.key==='Enter') itSaqla()">
+      <span id="itBirlikLbl" style="font-size:12px;color:var(--txt3)"></span>
+      <span class="hgap"></span>
+      <button class="btn s" onclick="itYop()">Bekor</button>
+      <button id="itBtn" class="btn grn" onclick="itSaqla()">✅ Qo'sh</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.it-row{padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;transition:.12s;
+  border:1px solid transparent;margin-bottom:4px}
+.it-row:hover{background:var(--surface2);border-color:var(--line2)}
+.it-row.it-sel{background:rgba(59,130,246,.12);border-color:var(--pri)}
+.it-nom{font-size:12px;font-weight:600;color:var(--txt);margin-bottom:2px}
+.it-meta{font-size:10px;display:flex;gap:6px;align-items:center}
+.it-rs{font-size:10px;color:var(--txt4);margin-top:2px}
+</style>
+
+<!-- HUJJAT YOZISH MODAL -->
+<div id="hujModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.7);
+  align-items:center;justify-content:center">
+  <div id="hujModalBox" style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
+    padding:22px;width:560px;max-width:95vw;max-height:88vh;overflow:auto;box-shadow:var(--sh)"></div>
+</div>
+
+<!-- RS QO'SHISH MODAL -->
+<div id="rsModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.7);
+  align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
+    padding:22px;width:440px;max-width:95vw;display:flex;flex-direction:column;gap:14px;box-shadow:var(--sh)">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:14px;font-weight:800;color:#fff">＋ Resurs qo'shish</span>
+      <span class="hgap"></span>
+      <button class="btn xs s" onclick="rsYop()">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--txt3);background:rgba(255,255,255,.03);
+      padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--line)">
+      BL: <b id="rsBlNom" style="color:var(--pri2)"></b>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="grid-column:1/-1">
+        <label style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Resurs nomi</label>
+        <input id="rsNom" type="text" style="width:100%" placeholder="masalan: Цемент М400"
+          onkeydown="if(event.key==='Enter') g('rsBirlik').focus()">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Birlik</label>
+        <input id="rsBirlik" type="text" style="width:100%" placeholder="т, м3, шт..."
+          onkeydown="if(event.key==='Enter') g('rsNorm').focus()">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Norm (1 BL birligiga)</label>
+        <input id="rsNorm" type="number" step="any" style="width:100%" placeholder="0.00"
+          onkeydown="if(event.key==='Enter') rsSaqla()">
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="rsMsg" style="font-size:11px;color:var(--red2);flex:1"></span>
+      <button class="btn s" onclick="rsYop()">Bekor</button>
+      <button id="rsSaqlaBtn" class="btn grn" onclick="rsSaqla()">✅ Qo'sh</button>
+    </div>
+  </div>
+</div>
+
+<!-- STAVKA MODAL (har obyekt ЧЕЛ-Ч / МАШ-Ч fiksirlangan narx) -->
+<div id="stModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);
+  align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
+    padding:22px;width:440px;max-width:95vw;display:flex;flex-direction:column;gap:14px;box-shadow:var(--sh)">
+    <div style="display:flex;align-items:center">
+      <span style="font-size:15px;font-weight:800;color:#fff" id="stTitle">💰 Ставка</span>
+      <span class="hgap"></span>
+      <button class="btn xs s" onclick="stYop()">✕</button>
+    </div>
+    <div class="msg i" style="font-size:11px;line-height:1.6">
+      Бу объект учун <b>фиксирланган ишчи меҳнат haqi</b> — фақат
+      <b>«ЗАТРАТЫ ТРУДА РАБОЧИХ»</b> ресурси учун (машинист ёки бошқа ЧЕЛ ресурсга ТЕГМАЙДИ).
+      Киритилса — свод нархидан <b>устун</b> (масалан Амфитеатр=24000, GAME CLUB=29000).
+      <b>Бўш</b> қолдирилса — свод нархи ишлатилади.
+    </div>
+    <label style="font-size:12px;color:var(--txt2);font-weight:600">ЧЕЛ-Ч нарх (ЗАТРАТЫ ТРУДА РАБОЧИХ — 1 соат)
+      <input id="stChel" type="number" min="0" step="any" placeholder="масалан 24000"
+        style="width:100%;margin-top:5px;padding:9px 11px;background:var(--bg);border:1px solid var(--line2);
+        border-radius:8px;color:var(--txt);font-size:14px"></label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="stMsg" style="font-size:11px;color:var(--grn2)"></span>
+      <span class="hgap"></span>
+      <button class="btn s" onclick="stYop()">Бекор</button>
+      <button class="btn grn" onclick="stSaqla()">💾 Сақлаш</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORALIQ MODAL -->
+<div id="orModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);
+  align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
+    padding:22px;width:750px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;gap:14px;box-shadow:var(--sh);overflow:hidden">
+    <div style="display:flex;align-items:center">
+      <span style="font-size:15px;font-weight:800;color:#fff" id="orTitle">⚙ Оралиқлар</span>
+      <span class="hgap"></span>
+      <button class="btn xs s" onclick="orYop()">✕</button>
+    </div>
+    <div class="msg i" style="font-size:11px;line-height:1.6">
+      Свод файлдаги <b>сексия сарлавҳалари</b> автоматик аниқланди.
+      Ҳар бир сексиянинг <b>категориясини</b> текширинг.
+      Хато бўлса ўзгартиринг ва <b>Сақлаш</b> босинг.<br>
+      Кейинги <b>Ишла</b> да айнан шу оралиқлар ишлатилади.
+    </div>
+    <div id="orList" style="flex:1;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn s" onclick="orSkanQayta()">↺ Қайта скан</button>
+      <span id="orMsg" style="font-size:11px;color:var(--grn2)"></span>
+      <span class="hgap"></span>
+      <button class="btn s" onclick="orYop()">Бекор</button>
+      <button class="btn grn" onclick="orSaqla()">💾 Сақлаш</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── STAVKA MODAL (har obyekt ЧЕЛ-Ч / МАШ-Ч fiksirlangan narx) ── */
+var _stOb='';
+function stavkaModal(ob){
+  _stOb=ob;
+  g('stTitle').textContent='💰 Ставка — '+ob;
+  g('stMsg').textContent='';
+  g('stChel').value='';
+  g('stModal').style.display='flex';
+  run('apiStavkaOl',[ob],function(r){
+    if(r){ g('stChel').value=r.chel||''; }
+  });
+}
+function stYop(){ g('stModal').style.display='none'; }
+function stSaqla(){
+  var chel=parseFloat(g('stChel').value)||0;
+  g('stMsg').textContent='⟳ сақланмоқда...';
+  run('apiStavkaSaqla',[_stOb,chel],function(r){
+    toast(r&&r.xabar?r.xabar:'Сақланди','ok');
+    stYop();
+  },function(e){ g('stMsg').textContent='✗ '+(e.message||e); });
+}
+
+/* ── ORALIQ MODAL ─────────────────────────── */
+var _orOb='', _orData=[];
+
+function oraliqModal(ob){
+  _orOb=ob;
+  g('orTitle').textContent='⚙ Оралиқлар — '+ob;
+  g('orMsg').textContent='';
+  g('orList').innerHTML='<div class="msg i"><span class="spin">⟳</span> Юкланмоқда...</div>';
+  g('orModal').style.display='flex';
+  // Avval saqlanganni ko'ramiz
+  run('apiOraliqlarOl',[ob],function(saved){
+    if(saved&&saved.length){
+      _orData=saved;
+      _orRender();
+      g('orMsg').textContent='Сақланган оралиқлар юкланди';
+    } else {
+      _orSkan();
+    }
+  });
+}
+function _orSkan(){
+  g('orList').innerHTML='<div class="msg i"><span class="spin">⟳</span> Свод сканланмоқда...</div>';
+  g('orMsg').textContent='';
+  run('apiOraliqlarSkan',[_orOb],function(r){
+    _orData=(r&&r.oraliqlar)||[];
+    _orRender();
+    g('orMsg').textContent=_orData.length+' сексия топилди ('+r.format+')';
+  },function(e){
+    g('orList').innerHTML='<div class="msg err">'+esc(e.message||e)+'</div>';
+  });
+}
+function orSkanQayta(){ _orSkan(); }
+function _orRender(){
+  if(!_orData.length){
+    g('orList').innerHTML='<div class="msg i">Сексия топилмади. Свод файлни текширинг.</div>';
+    return;
+  }
+  var cats=['ЧЕЛ','МАШ','МАТ','ОБ','М/К','КАБ'];
+  var h='<table class="ier-tbl"><thead><tr>'
+    +'<th style="width:60px">Қатор</th><th style="width:100px">Варақ</th>'
+    +'<th>Сарлавҳа (свод файлдан)</th><th style="width:100px">Категория</th>'
+    +'<th style="width:40px"></th></tr></thead><tbody>';
+  _orData.forEach(function(o,i){
+    var katColor=o.kat==='ЧЕЛ'?'#93c5fd':o.kat==='МАШ'?'#c4b5fd':o.kat==='ОБ'?'#fcd34d':'#6ee7b7';
+    h+='<tr>'
+      +'<td style="font-family:monospace;color:var(--pri2);font-weight:700;text-align:center">'+o.qator+'</td>'
+      +'<td style="font-size:10px;color:var(--txt3)">'+esc(o.varaq)+'</td>'
+      +'<td style="color:var(--txt);font-size:12px">'+esc(o.sarlavha)+'</td>'
+      +'<td><select id="ork_'+i+'" class="nx-kat-sel" style="width:80px;color:'+katColor+'">';
+    cats.forEach(function(k){
+      h+='<option value="'+k+'"'+(k===o.kat?' selected':'')+'>'+k+'</option>';
+    });
+    h+='</select></td>'
+      +'<td><button class="btn xs red" onclick="orOchir('+i+')" title="Ўчириш">✕</button></td>'
+      +'</tr>';
+  });
+  h+='</tbody></table>';
+  g('orList').innerHTML=h;
+}
+function orOchir(i){ _orData.splice(i,1); _orRender(); }
+function orYop(){ g('orModal').style.display='none'; }
+function orSaqla(){
+  for(var i=0;i<_orData.length;i++){
+    var sel=g('ork_'+i);
+    if(sel) _orData[i].kat=sel.value;
+  }
+  g('orMsg').textContent='⟳ Сақланмоқда...';
+  run('apiOraliqlarSaqla',[_orOb,_orData],function(r){
+    if(r.ok){
+      g('orMsg').textContent='✅ '+r.xabar;
+      setTimeout(function(){ orYop(); },800);
+    }
+  },function(e){ g('orMsg').textContent='✗ '+e.message; });
+}
+
+/* =========================================================================
+   GANTT CHART PANEL INTEGRATION 
+========================================================================= */
+var ganttPanelInstance = null;
+function toggleGantt() {
+  var view = g('ganttView');
+  var tree = g('tree');
+  if (view.style.display === 'none') {
+    view.style.display = 'block';
+    tree.style.display = 'none';
+    renderGanttPanel();
+  } else {
+    view.style.display = 'none';
+    tree.style.display = 'block';
+  }
+}
+
+function renderGanttPanel() {
+  if (!O || !O.rzList || O.rzList.length === 0) {
+    g('ganttView').innerHTML = '<div class="msg i">Gantt diagrammasi uchun ma\'lumot yetarli emas.</div>';
+    return;
+  }
+  g('ganttView').innerHTML = '<svg id="ganttPanelSvg"></svg>';
+  
+  var tasks = [];
+  var today = new Date();
+  var currentYear = today.getFullYear();
+  
+  O.rzList.forEach(function(rz, i) {
+    var p = rz.jami ? Math.round(rz.jami.p || 0) : 0;
+    // Simulate dates for Gantt visualization using current year
+    tasks.push({
+      id: 'rz_' + i,
+      name: esc(rz.nom),
+      start: currentYear + '-01-01',
+      end: currentYear + '-12-31',
+      progress: p,
+      dependencies: '',
+      custom_class: p > 80 ? 'gantt-high' : p > 40 ? 'gantt-mid' : 'gantt-low'
+    });
+  });
+  
+  if(tasks.length === 0) return;
+  
+  try {
+    ganttPanelInstance = new Gantt("#ganttPanelSvg", tasks, {
+      header_height: 50,
+      column_width: 30,
+      step: 24,
+      view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+      bar_height: 20,
+      bar_corner_radius: 4,
+      arrow_curve: 5,
+      padding: 18,
+      view_mode: 'Month',
+      date_format: 'YYYY-MM-DD',
+      custom_popup_html: function(task) {
+        return `
+          <div style="background:var(--bg2); padding:12px; border:1px solid var(--line); border-radius:8px; box-shadow:var(--sh); color:#fff; max-width:250px;">
+            <div style="font-weight:700; margin-bottom:6px; font-size:13px; line-height:1.4">${task.name}</div>
+            <div style="font-size:12px; color:var(--grn2)">Bajarildi: ${task.progress}%</div>
+          </div>
+        `;
+      }
+    });
+  } catch(e) {
+    console.error('Gantt error:', e);
+    g('ganttView').innerHTML = '<div class="msg err">Gantt diagrammasini chizishda xatolik: ' + e.message + '</div>';
+  }
+}
+
+/* =========================================================================
+   F2 DUAL-PANE IMPORTER (RESTORED & IMPROVED)
+========================================================================= */
+var _f2Data = [];
+var _f2Mappings = [];
+var _f2Dopps = [];
+var _expandedNodeIds = {};
+var _f2SelectedUids = [];
+var _lastDropTime = 0;
+
+function f2ImpOch() {
+   g('f2ImpModal').style.display='flex';
+   g('f2ImpChap').innerHTML='<div class="msg i">F2 файлини юқоридан танланг ва юкланг...</div>';
+   g('f2ImpOng').innerHTML='';
+   _f2Data = []; _f2Mappings = []; _f2Dopps = [];
+   _expandedNodeIds = {};
+   _f2SelectedUids = [];
+   
+   // Fayllarni yuklash
+   g('f2ImpFaylSel').innerHTML = '<option>Қидирилмоқда...</option>';
+   run('apiF2FayllarOl', [CUR_OB], function(r) {
+      if(!r.ok) { g('f2ImpFaylSel').innerHTML = '<option>Хато: '+r.xabar+'</option>'; return; }
+      if(r.fayllar.length===0) { g('f2ImpFaylSel').innerHTML = '<option value="">F2 файллар топилмади</option>'; return; }
+      var h = '<option value="">— Файлни танланг —</option>';
+      r.fayllar.forEach(function(f){ h+='<option value="'+f.id+'">'+esc(f.name)+'</option>'; });
+      g('f2ImpFaylSel').innerHTML = h;
+   });
+   
+   // Oylarni yuklash
+   var ho = '';
+   if(TREE_DATA && TREE_DATA.oylar) {
+      TREE_DATA.oylar.forEach(function(o){ ho+='<option value="'+esc(o)+'">'+esc(o)+'</option>'; });
+   }
+   ho += '<option value="YANGI">+ Янги ой яратиш...</option>';
+   g('f2ImpOySel').innerHTML = ho;
+   
+   f2OngChiz();
+}
+function f2ImpYop() { g('f2ImpModal').style.display='none'; }
+
+var _curF2Fid = '';
+
+function f2ImpYukla() {
+   var fid = g('f2ImpFaylSel').value;
+   if(!fid) { toast('Файлни танланг', 'err'); return; }
+   f2VaraklarOch(fid);
+}
+
+function f2YuklaLocal(input) {
+   if(!input.files || input.files.length===0) return;
+   var file = input.files[0];
+   var ext = file.name.split('.').pop().toLowerCase();
+   var allowed = ['xlsx', 'xls', 'csv'];
+   if(allowed.indexOf(ext) === -1) { toast('Фақат Excel ёки CSV файллари қабул қилинади', 'err'); input.value=''; return; }
+   
+   var oyNom = g('f2ImpOySel').value;
+   if(oyNom === 'YANGI') {
+      oyNom = prompt('Янги ой номини киритинг (масалан: Июнь 2026)');
+      if(!oyNom) { input.value=''; return; }
+      var opt = document.createElement('option');
+      opt.value = oyNom; opt.textContent = oyNom;
+      g('f2ImpOySel').insertBefore(opt, g('f2ImpOySel').lastElementChild);
+      g('f2ImpOySel').value = oyNom;
+   }
+   if(!oyNom) { toast('Ойни танланг', 'err'); input.value=''; return; }
+   
+   var reader = new FileReader();
+   reader.onload = function(e) {
+      var base64 = e.target.result.split(',')[1];
+      g('f2ImpChap').innerHTML='<div class="msg i"><span class="spin">⟳</span> Юкланмоқда ва конвертация қилинмоқда, кутинг...</div>';
+      run('apiF2FaylYukla', [CUR_OB, base64, file.type, file.name, oyNom], function(r) {
+         input.value='';
+         if(!r.ok) { g('f2ImpChap').innerHTML = '<div class="msg err">'+r.xabar+'</div>'; return; }
+         if(r.warn) toast('⚠️ '+r.warn, 'warn');
+         else toast('✅ Файл муваффақиятли юкланди', 'ok');
+         
+         run('apiF2FayllarOl', [CUR_OB], function(r2) {
+            if(r2.ok) {
+               var h = '<option value="">— Файлни танланг —</option>';
+               r2.fayllar.forEach(function(f){ h+='<option value="'+f.id+'" '+(f.id===r.fileId?'selected':'')+'>'+esc(f.name)+'</option>'; });
+               g('f2ImpFaylSel').innerHTML = h;
+               g('f2ImpFaylSel').value = r.fileId;
+            }
+         });
+         
+         f2VaraklarOch(r.fileId);
+      });
+   };
+   reader.readAsDataURL(file);
+}
+
+function f2VaraklarOch(fid) {
+   _curF2Fid = fid;
+   g('f2ImpColWrap').style.display='none';
+   g('btnF2Saqla').style.display='none';
+   g('f2ImpChap').innerHTML='<div class="msg i"><span class="spin">⟳</span> Варақлар (Листлар) ўқилмоқда...</div>';
+   run('apiF2VaraklarOl', [fid], function(r) {
+      if(!r.ok) { g('f2ImpChap').innerHTML = '<div class="msg err">'+r.xabar+'</div>'; return; }
+      g('f2ImpVarWrap').style.display='flex';
+      var h = '';
+      r.varaqlar.forEach(function(v){ h+='<option value="'+esc(v)+'">'+esc(v)+'</option>'; });
+      g('f2ImpVarSel').innerHTML = h;
+      g('f2ImpChap').innerHTML='<div class="msg i">👆 Энди юқоридан "Варақни танлаш" ёнидаги <b>[Устунларни созлаш]</b> тугмасини босинг.</div>';
+   });
+}
+
+function f2UstunOch() {
+   var varaq = g('f2ImpVarSel').value;
+   if(!varaq) return;
+   g('f2ImpChap').innerHTML='<div class="msg i"><span class="spin">⟳</span> Файл тузилиши таҳлил қилинмоқда...</div>';
+   run('apiF2FaylOqi', [_curF2Fid, varaq, null], function(r) {
+      if(!r.ok) { g('f2ImpChap').innerHTML = '<div class="msg err">'+r.xabar+'</div>'; return; }
+      if(r.mode === 'config') {
+         g('f2ImpColWrap').style.display='flex';
+         _buildColOptions('f2ColKod', r.maxCol, r.cols.kod);
+         _buildColOptions('f2ColNom', r.maxCol, r.cols.nom);
+         _buildColOptions('f2ColBir', r.maxCol, r.cols.bir);
+         _buildColOptions('f2ColHajm', r.maxCol, r.cols.hajm);
+         _buildColOptions('f2ColNarx', r.maxCol, r.cols.narx);
+         g('f2ImpChap').innerHTML='<div class="msg i">👆 Юқорида устунларни текшириб, <b>[Дарахтни Қуриш]</b> тугмасини босинг.</div>';
+      } else {
+         _f2Data = r.tree || [];
+         f2ChapChiz();
+      }
+   });
+}
+
+function _buildColOptions(id, maxCol, selected) {
+   var h = '<option value="-1">Бўш/Йўқ</option>';
+   for(var i=0; i<maxCol; i++) {
+      var L = String.fromCharCode(65 + i);
+      if(i>=26) L = String.fromCharCode(64 + Math.floor(i/26)) + String.fromCharCode(65 + (i%26));
+      h += '<option value="'+i+'" '+(i===selected?'selected':'')+'>'+L+' (устун)</option>';
+   }
+   g(id).innerHTML = h;
+}
+
+function f2DaraxtQur() {
+   var varaq = g('f2ImpVarSel').value;
+   var colConfig = {
+      kod: g('f2ColKod').value,
+      nom: g('f2ColNom').value,
+      bir: g('f2ColBir').value,
+      hajm: g('f2ColHajm').value,
+      narx: g('f2ColNarx').value
+   };
+   g('f2ImpChap').innerHTML='<div class="msg i"><span class="spin">⟳</span> Дарахт қурилмоқда...</div>';
+   run('apiF2FaylOqi', [_curF2Fid, varaq, colConfig], function(r) {
+      if(!r.ok) { g('f2ImpChap').innerHTML = '<div class="msg err">'+r.xabar+'</div>'; return; }
+      _f2Data = r.tree || [];
+      f2ChapChiz();
+      g('btnF2Saqla').style.display = 'inline-block';
+   });
+}
+
+function f2Toggle(id, ev) {
+   if(Date.now() - _lastDropTime < 300) return;
+   if(ev) ev.stopPropagation();
+   var el = g(id);
+   var arr = g(id+'_arr');
+   if(!el) return;
+   if(el.style.display === 'none') {
+      el.style.display = 'block';
+      if(arr) arr.textContent = '▼';
+      _expandedNodeIds[id] = true;
+   } else {
+      el.style.display = 'none';
+      if(arr) arr.textContent = '▶';
+      delete _expandedNodeIds[id];
+   }
+}
+
+function f2ToggleSelect(uid, checked) {
+   var idx = _f2SelectedUids.indexOf(uid);
+   if(checked) {
+      if(idx === -1) _f2SelectedUids.push(uid);
+   } else {
+      if(idx >= 0) _f2SelectedUids.splice(idx, 1);
+   }
+}
+
+function f2ChapChiz() {
+   var h = '<div style="font-weight:700; margin-bottom:10px; color:var(--pri)">F2 Ҳужжати</div>';
+   
+   function drawF2Node(node, level) {
+      var hasChildren = node.children && node.children.length > 0;
+      var cId = 'f2cc_' + node.uid;
+      
+      if(node.type === 'rz') {
+         var isExpanded = _expandedNodeIds[cId] === true;
+         var disp = isExpanded ? 'block' : 'none';
+         var arrIcon = isExpanded ? '▼' : '▶';
+         
+         h += '<div style="background:var(--bg3); padding:8px; margin-top:10px; font-weight:bold; border-radius:4px; cursor:pointer" onclick="f2Toggle(\''+cId+'\', event)">';
+         if(hasChildren) h += '<span id="'+cId+'_arr" style="display:inline-block; width:16px; font-size:10px; color:var(--txt3)">'+arrIcon+'</span>';
+         h += esc(node.nom) + '</div>';
+         
+         if(hasChildren) {
+            h += '<div id="'+cId+'" style="display:'+disp+'">';
+            node.children.forEach(function(c){ drawF2Node(c, level+1); });
+            h += '</div>';
+         }
+         return;
+      }
+      
+      var isMapped = _f2Mappings.find(function(m){return m.uid===node.uid;}) || _f2Dopps.find(function(m){return m.uid===node.uid;});
+      var bg = isMapped ? 'rgba(16,185,129,0.05)' : 'var(--bg)';
+      var border = isMapped ? '1px solid var(--grn)' : '1px dashed var(--line2)';
+      var padLeft = (level > 1) ? 'margin-left:20px;' : '';
+      var tColor = (node.type === 'bl') ? 'var(--pri2)' : (node.type === 'ob' ? '#eab308' : '#93c5fd');
+      var isChecked = _f2SelectedUids.indexOf(node.uid) >= 0;
+      
+      var isExpanded = _expandedNodeIds[cId] === true;
+      var disp = isExpanded ? 'block' : 'none';
+      var arrIcon = isExpanded ? '▼' : '▶';
+      
+      h += '<div style="padding:8px; margin:6px 0; border:'+border+'; border-radius:6px; background:'+bg+'; display:flex; gap:10px; align-items:center; font-size:12px; cursor:grab; '+padLeft+'" id="f2c_'+node.uid+'" draggable="true" ondragstart="f2Drag(event, \''+node.uid+'\')" '+(hasChildren?'onclick="f2Toggle(\''+cId+'\', event)"':'')+'>';
+      
+      h += '<input type="checkbox" class="f2-node-chk" data-uid="'+node.uid+'" '+(isChecked?'checked':'')+' onclick="event.stopPropagation(); f2ToggleSelect(\''+node.uid+'\', this.checked)" style="margin-right:2px; cursor:pointer; width:15px; height:15px;">';
+      
+      h += '<div style="flex:1">';
+      h += '<div style="margin-bottom:4px">';
+      if(hasChildren) h += '<span id="'+cId+'_arr" style="display:inline-block; width:16px; font-size:10px; color:var(--txt3)">'+arrIcon+'</span>';
+      h += '<b style="color:'+tColor+'">'+esc(node.kod)+'</b> '+esc(node.nom)+'</div>';
+      h += '<div style="color:var(--txt3)">Бирлик: <b>'+esc(node.bir)+'</b> | Ҳажм: <b style="color:var(--grn);font-size:14px">'+node.hajm+'</b></div>';
+      h += '</div>';
+      
+      if(!isMapped) {
+         h += '<button class="btn s" onclick="event.stopPropagation(); f2DopQil(\''+node.uid+'\')" style="background:#eab308; color:#000; border:none" title="Қўшимча иш сифатида қўшиш">+ Доп</button>';
+      } else {
+         h += '<span style="color:var(--grn); font-weight:bold; font-size:16px">✓</span>';
+      }
+      h += '</div>';
+      
+      if(hasChildren) {
+         h += '<div id="'+cId+'" style="display:'+disp+'">';
+         node.children.forEach(function(c){ drawF2Node(c, level+1); });
+         h += '</div>';
+      }
+   }
+   
+   _f2Data.forEach(function(rz) { drawF2Node(rz, 0); });
+   g('f2ImpChap').innerHTML = h;
+}
+
+function f2OngChiz() {
+   if(!TREE_DATA || !TREE_DATA.tree) { g('f2ImpOng').innerHTML='<div class="msg i">Смета юкланмаган</div>'; return; }
+   var h = '<div style="font-weight:700; margin-bottom:10px; color:var(--pri)">Жорий Смета</div>';
+   
+   function drawSmetaNode(node, level) {
+      var hasChildren = node.children && node.children.length > 0;
+      var cId = 'smc_' + node.varaq.replace(/\W/g,'_') + '_' + node.row;
+      var isExpanded = _expandedNodeIds[cId] === true;
+      var disp = isExpanded ? 'block' : 'none';
+      var arrIcon = isExpanded ? '▼' : '▶';
+      
+      if(node.type === 'rz') {
+         var fVaraq = (node.children && node.children.length>0 && node.children[0].varaq) ? node.children[0].varaq : '';
+         var rRow = (node.children && node.children.length>0 && node.children[0].row) ? node.children[0].row - 1 : 0;
+         
+         h += '<div style="background:var(--bg3); padding:8px; margin-top:10px; font-weight:bold; border-radius:4px; cursor:pointer" ';
+         h += 'ondragover="event.preventDefault(); this.style.borderColor=\'var(--pri)\'; this.style.background=\'rgba(99,102,241,0.05)\'" ';
+         h += 'ondragleave="this.style.background=\'var(--bg3)\'" ';
+         h += 'ondrop="this.style.background=\'var(--bg3)\'; f2Drop(event, \''+esc(fVaraq)+'\', '+rRow+', \'rz\')" ';
+         h += 'onclick="f2Toggle(\''+cId+'\', event)">';
+         
+         if(hasChildren) h += '<span id="'+cId+'_arr" style="display:inline-block; width:16px; font-size:10px; color:var(--txt3)">'+arrIcon+'</span>';
+         h += esc(node.nom)+'</div>';
+         
+         if(hasChildren) {
+            h += '<div id="'+cId+'" style="display:'+disp+'">';
+            node.children.forEach(function(c){ drawSmetaNode(c, level+1); });
+            h += '</div>';
+         }
+         return;
+      }
+      
+      var padLeft = (level > 1) ? 'margin-left:20px;' : '';
+      var isRs = (node.type === 'rs');
+      var bColor = isRs ? 'var(--line)' : 'var(--line2)';
+      var tColor = (node.type === 'bl') ? 'var(--pri)' : (node.type === 'ob' ? '#eab308' : '#93c5fd');
+      var qoldiq = node.f2mum || node.qoldiq || 0;
+      
+      h += '<div style="padding:8px; margin:6px 0; border:1px dashed '+bColor+'; border-radius:6px; font-size:12px; background:var(--bg); cursor:pointer; '+padLeft+'" ondragover="event.preventDefault(); this.style.borderColor=\'var(--pri)\'; this.style.background=\'rgba(99,102,241,0.05)\'" ondragleave="this.style.borderColor=\''+bColor+'\'; this.style.background=\'var(--bg)\'" ondrop="this.style.borderColor=\''+bColor+'\'; this.style.background=\'var(--bg)\'; f2Drop(event, \''+esc(node.varaq)+'\', '+node.row+', \''+node.type+'\')" '+(hasChildren?'onclick="f2Toggle(\''+cId+'\', event)"':'')+'>';
+      
+      h += '<div style="margin-bottom:4px">';
+      if(hasChildren) h += '<span id="'+cId+'_arr" style="display:inline-block; width:16px; font-size:10px; color:var(--txt3)">'+arrIcon+'</span>';
+      h += '<b style="color:'+tColor+'">'+esc(node.kod)+'</b> '+esc(node.nom)+'</div>';
+      h += '<div style="color:var(--txt3)">Смета: <b style="color:var(--txt)">'+(node.smetaHajm||0)+'</b> | Қолдиқ: <b style="color:var(--red2)">'+qoldiq+'</b></div>';
+      
+      var maps = _f2Mappings.filter(function(m){return m.varaq===node.varaq && m.row===node.row;});
+      if(maps.length > 0) {
+         h += '<div style="margin-top:8px; padding:6px; background:rgba(16,185,129,0.1); border:1px solid var(--grn); border-radius:4px" onclick="event.stopPropagation()">';
+         maps.forEach(function(m) {
+            h += '<div style="display:flex; justify-content:space-between; align-items:center; color:var(--grn); margin-bottom:2px">';
+            h += '<span>+ <b>'+m.hajm+'</b> (F2: '+esc(m.kod)+')</span>';
+            h += '<button class="btn xs red" onclick="f2MapOchir(\''+m.uid+'\')">✕</button>';
+            h += '</div>';
+         });
+         h += '</div>';
+      }
+      h += '</div>';
+      
+      if(hasChildren) {
+         h += '<div id="'+cId+'" style="display:'+disp+'">';
+         node.children.forEach(function(c){ drawSmetaNode(c, level+1); });
+         h += '</div>';
+      }
+   }
+
+   TREE_DATA.tree.forEach(function(rz) { drawSmetaNode(rz, 0); });
+   
+   h += '<div style="background:rgba(234,179,8,0.2); padding:8px; margin-top:20px; font-weight:bold; color:#eab308; border-radius:4px">Қўшимча Ишлар (Доп)</div>';
+   if(_f2Dopps.length === 0) h += '<div style="font-size:12px; color:var(--txt3); padding:10px">Йўқ</div>';
+   _f2Dopps.forEach(function(d) {
+       h += '<div style="padding:8px; margin:6px 0; border:1px solid #eab308; border-radius:6px; font-size:12px; background:rgba(234,179,8,0.05); display:flex; justify-content:space-between; align-items:center">';
+       h += '<div>';
+       h += '<div style="margin-bottom:4px"><b style="color:#eab308">'+esc(d.kod)+'</b> '+esc(d.nom)+'</div>';
+       h += '<div style="color:var(--grn)">Ҳажм: <b>+'+d.hajm+' '+esc(d.bir)+'</b></div>';
+       h += '</div>';
+       h += '<button class="btn s red" onclick="f2MapOchir(\''+d.uid+'\')">✕</button>';
+       h += '</div>';
+   });
+   
+   g('f2ImpOng').innerHTML = h;
+}
+
+function f2Drag(ev, uid) {
+   if(_f2SelectedUids.indexOf(uid) === -1) {
+      _f2SelectedUids = [uid];
+      var chks = document.querySelectorAll('.f2-node-chk');
+      chks.forEach(function(chk) {
+         chk.checked = (chk.getAttribute('data-uid') === uid);
+      });
+   }
+   ev.dataTransfer.setData("uids", JSON.stringify(_f2SelectedUids));
+   ev.dataTransfer.setData("uid", uid);
+}
+
+function _findF2Node(uid, nodes) {
+   for(var i=0; i<nodes.length; i++) {
+      if(nodes[i].uid === uid) return nodes[i];
+      if(nodes[i].children) {
+         var f = _findF2Node(uid, nodes[i].children);
+         if(f) return f;
+      }
+   }
+   return null;
+}
+
+function applySingleDrop(d, varaq, targetRow, targetType) {
+   var uid = d.uid;
+   var isMapped = _f2Mappings.find(function(m){return m.uid===uid;}) || _f2Dopps.find(function(m){return m.uid===uid;});
+   if(isMapped) return false;
+   
+   if(targetType === 'rz') {
+      if(d.type === 'bl') {
+         _f2Dopps.push({uid: uid, varaq: varaq, action: 'add_bl', targetRow: targetRow, kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, narx: d.narx||0, children: d.children});
+         return true;
+      } else {
+         toast("Раздел ичига фақат Иш тури (bl) ташланади", "err");
+         return false;
+      }
+   } 
+   else if(targetType === 'bl') {
+      if(d.type === 'bl') {
+         _f2Mappings.push({uid: uid, varaq: varaq, row: targetRow, kod: d.kod, hajm: d.hajm});
+         
+         var sBl = null;
+         function findSBl(nodes) {
+            for(var i=0; i<nodes.length; i++) {
+               if(nodes[i].varaq===varaq && nodes[i].row===targetRow) { sBl = nodes[i]; return; }
+               if(nodes[i].children) findSBl(nodes[i].children);
+               if(sBl) return;
+            }
+         }
+         findSBl(TREE_DATA.tree);
+         
+         if(sBl && d.children && d.children.length > 0) {
+            d.children.forEach(function(fRs) {
+               if(fRs.type !== 'rs' && fRs.type !== 'mat' && fRs.type !== 'ob') return;
+               
+               var sRs = sBl.children ? sBl.children.find(function(c) { 
+                  var cKod = String(c.kod).replace(/\s+/g,'').toLowerCase();
+                  var fKod = String(fRs.kod).replace(/\s+/g,'').toLowerCase();
+                  if(cKod && fKod && cKod===fKod) return true;
+                  return false;
+               }) : null;
+               
+               if(sRs) {
+                  _f2Mappings.push({uid: fRs.uid, varaq: varaq, row: sRs.row, kod: fRs.kod, hajm: fRs.hajm});
+               } else {
+                  _f2Dopps.push({uid: fRs.uid, varaq: varaq, action: 'add_rs', targetRow: targetRow, kod: fRs.kod, nom: fRs.nom, bir: fRs.bir, hajm: fRs.hajm, narx: fRs.narx||0});
+               }
+            });
+         }
+         return true;
+      } else if(d.type === 'rs' || d.type === 'mat' || d.type === 'ob') {
+         _f2Dopps.push({uid: uid, varaq: varaq, action: 'add_rs', targetRow: targetRow, kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, narx: d.narx||0});
+         return true;
+      }
+   }
+   else {
+      if(d.type === 'bl') { toast("Иш турини ресурс устига ташлаб бўлмайди", "err"); return false; }
+      _f2Mappings.push({uid: uid, varaq: varaq, row: targetRow, kod: d.kod, hajm: d.hajm});
+      return true;
+   }
+   return false;
+}
+
+function f2Drop(ev, varaq, targetRow, targetType) {
+   ev.preventDefault();
+   var uidsStr = ev.dataTransfer.getData("uids");
+   var uids = uidsStr ? JSON.parse(uidsStr) : [ev.dataTransfer.getData("uid")];
+   uids = uids.filter(Boolean);
+   if(uids.length === 0) return;
+   
+   var sortedUids = [];
+   function collectUids(nodes) {
+      nodes.forEach(function(n) {
+         if(uids.indexOf(n.uid) >= 0) sortedUids.push(n.uid);
+         if(n.children) collectUids(n.children);
+      });
+   }
+   collectUids(_f2Data);
+   
+   var flatSmeta = [];
+   function flattenSmeta(nodes) {
+      nodes.forEach(function(n) {
+         if(n.varaq === varaq) {
+            flatSmeta.push(n);
+         }
+         if(n.children) flattenSmeta(n.children);
+      });
+   }
+   flattenSmeta(TREE_DATA.tree);
+   flatSmeta.sort(function(a,b){ return a.row - b.row; });
+   
+   var currentTargetRow = targetRow;
+   var currentTargetType = targetType;
+   
+   for(var k = 0; k < sortedUids.length; k++) {
+      var curUid = sortedUids[k];
+      var d = _findF2Node(curUid, _f2Data);
+      if(!d) continue;
+      
+      var isMappedBefore = _f2Mappings.find(function(m){return m.uid===d.uid;}) || _f2Dopps.find(function(m){return m.uid===d.uid;});
+      if(isMappedBefore) continue;
+      
+      var mapResult = applySingleDrop(d, varaq, currentTargetRow, currentTargetType);
+      if(!mapResult) continue;
+      
+      // Auto-expand the target node in Smeta to prevent hierarchy collapse
+      var cIdStr = 'smc_' + varaq.replace(/\W/g,'_') + '_' + currentTargetRow;
+      _expandedNodeIds[cIdStr] = true;
+      
+      if(k < sortedUids.length - 1) {
+         var nextF2Node = null;
+         for (var tmp = k+1; tmp < sortedUids.length; tmp++) {
+             var tmpUid = sortedUids[tmp];
+             var isMap = _f2Mappings.find(function(m){return m.uid===tmpUid;}) || _f2Dopps.find(function(m){return m.uid===tmpUid;});
+             if (!isMap) {
+                 nextF2Node = _findF2Node(tmpUid, _f2Data);
+                 break;
+             }
+         }
+         
+         if(!nextF2Node) break;
+         
+         var idx = flatSmeta.findIndex(function(n){ return n.row === currentTargetRow; });
+         if(idx === -1) break;
+         
+         var nextTargetNode = null;
+         for(var i = idx + 1; i < flatSmeta.length; i++) {
+            var candidate = flatSmeta[i];
+            if(nextF2Node.type === 'bl' || nextF2Node.type === 'ob') {
+               if(candidate.type === 'bl' || candidate.type === 'ob') {
+                  nextTargetNode = candidate;
+                  break;
+               }
+            } else {
+               if(candidate.type === 'rs' || candidate.type === 'mat') {
+                  nextTargetNode = candidate;
+                  break;
+               }
+            }
+         }
+         
+         if(nextTargetNode) {
+            currentTargetRow = nextTargetNode.row;
+            currentTargetType = nextTargetNode.type;
+         } else {
+            break;
+         }
+      }
+   }
+   
+   _f2SelectedUids = [];
+   f2ChapChiz(); f2OngChiz();
+}
+
+function f2DopQil(uid) {
+   var d = _findF2Node(uid, _f2Data);
+   if(d) {
+      var firstVaraq = (TREE_DATA && TREE_DATA.tree && TREE_DATA.tree[0] && TREE_DATA.tree[0].children && TREE_DATA.tree[0].children[0]) ? TREE_DATA.tree[0].children[0].varaq : '';
+      _f2Dopps.push({
+         uid: uid, 
+         varaq: firstVaraq, 
+         action: 'add_bl', 
+         targetRow: 0, 
+         kod: d.kod, 
+         nom: d.nom, 
+         bir: d.bir, 
+         hajm: d.hajm, 
+         narx: d.narx||0, 
+         children: d.children
+      });
+      f2ChapChiz(); f2OngChiz();
+   }
+}
+
+function f2MapOchir(uid) {
+   _f2Mappings = _f2Mappings.filter(function(m){return m.uid!==uid;});
+   _f2Dopps = _f2Dopps.filter(function(m){return m.uid!==uid;});
+   f2ChapChiz(); f2OngChiz();
+}
+
+function f2ImpSaqla() {
+   var oyNom = g('f2ImpOySel').value;
+   if(oyNom === 'YANGI') {
+      oyNom = prompt('Янги ой номини киритинг (масалан: Июнь 2026)');
+      if(!oyNom) return;
+   }
+   if(_f2Mappings.length === 0 && _f2Dopps.length === 0) { alert('Бирорта ҳам маълумот боғланмади!'); return; }
+   
+   if(!confirm(oyNom + ' ойига жами ' + (_f2Mappings.length + _f2Dopps.length) + ' та позицияни сақлашни тасдиқлайсизми? Бу маълумотлар тўғридан-тўғри сметага ёзилади.')) return;
+   
+   g('btnF2Saqla').textContent = 'Сақланмоқда...';
+   g('btnF2Saqla').disabled = true;
+   
+   run('apiF2Qolla', [CUR_OB, oyNom, _f2Mappings, _f2Dopps], function(r) {
+      g('btnF2Saqla').innerHTML = '💾 Сметага қўллаш (Сақлаш)';
+      g('btnF2Saqla').disabled = false;
+      if(r.ok) {
+         toast('✅ '+r.xabar, 'ok');
+         f2ImpYop();
+         holatYukla(true);
+      } else {
+         toast('❌ '+r.xabar, 'err');
+      }
+   });
+}
+</script>
+
+
+<!-- F2 IMPORT MODAL -->
+<div id="f2ImpModal" class="modal-bg" style="display:none">
+  <div class="m-box" style="max-width:98%; width:98%; height:95vh; display:flex; flex-direction:column; background:var(--bg); border-radius:12px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.5); overflow:hidden;">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:15px; margin-bottom:15px">
+      <h2 style="margin:0; color:var(--pri)">📄 Ф2 Импорт (Икки Ойнали Тизим)</h2>
+      <button class="btn s red" onclick="f2ImpYop()" style="font-size:14px; padding:6px 16px">✕ Ёпиш</button>
+    </div>
+    
+    <div style="display:flex; gap:15px; margin-bottom:10px; align-items:center; background:var(--bg2); padding:10px; border-radius:8px; border:1px solid var(--line); flex-wrap:wrap">
+      <div style="font-weight:bold">1. Файлни юклаш:</div>
+      <input type="file" id="f2ImpFileInp" style="display:none" onchange="f2YuklaLocal(this)">
+      <button class="btn s" onclick="g('f2ImpFileInp').click()" style="background:var(--pri2); color:#fff; border:none; padding:8px 12px">📁 Компьютердан...</button>
+      <div style="font-size:12px; color:var(--txt3)">ёки Drive'dan:</div>
+      <select id="f2ImpFaylSel" style="width:180px; padding:6px; border-radius:4px; border:1px solid var(--line); background:var(--bg); color:var(--txt)"></select>
+      <button class="btn s" onclick="f2ImpYukla()">📥 Ўқиш</button>
+      
+      <div style="width:1px; height:30px; background:var(--line); margin:0 5px"></div>
+      
+      <div style="font-weight:bold">2. Қайси ойга:</div>
+      <select id="f2ImpOySel" style="width:150px; padding:6px; border-radius:4px; border:1px solid var(--line); background:var(--bg); color:var(--txt)"></select>
+      
+      <div style="flex:1"></div>
+      <button class="btn grn" onclick="f2ImpSaqla()" id="btnF2Saqla" style="display:none; font-weight:bold; font-size:15px; padding:8px 20px">💾 Сметага қўллаш (Сақлаш)</button>
+    </div>
+    
+    <div id="f2ImpVarWrap" style="display:none; gap:15px; margin-bottom:15px; align-items:center; background:rgba(99,102,241,0.05); padding:10px; border-radius:8px; border:1px dashed var(--pri)">
+      <div style="font-weight:bold; color:var(--pri)">3. Варақни (Лист) танланг:</div>
+      <select id="f2ImpVarSel" style="width:150px; padding:6px; border-radius:4px; border:1px solid var(--pri); background:var(--bg); color:var(--txt)"></select>
+      <button class="btn s" onclick="f2UstunOch()" style="border-color:var(--pri)">⚙ Устунларни созлаш / Ўқиш</button>
+      
+      <div id="f2ImpColWrap" style="display:none; gap:10px; align-items:center; margin-left:15px; padding-left:15px; border-left:1px solid var(--line)">
+        <div style="font-size:11px; font-weight:bold">Шифр/Код:<br><select id="f2ColKod" style="width:90px; padding:4px"></select></div>
+        <div style="font-size:11px; font-weight:bold">Номи:<br><select id="f2ColNom" style="width:90px; padding:4px"></select></div>
+        <div style="font-size:11px; font-weight:bold">Бирлик:<br><select id="f2ColBir" style="width:90px; padding:4px"></select></div>
+        <div style="font-size:11px; font-weight:bold">Ҳажми:<br><select id="f2ColHajm" style="width:90px; padding:4px"></select></div>
+        <div style="font-size:11px; font-weight:bold">Нархи:<br><select id="f2ColNarx" style="width:90px; padding:4px"></select></div>
+        <button class="btn s grn" onclick="f2DaraxtQur()" style="margin-left:10px; font-weight:bold">✅ Дарахтни Қуриш</button>
+      </div>
+    </div>
+    
+    <div style="flex:1; display:flex; gap:20px; min-height:0">
+      <!-- LEFT: F2 Tree -->
+      <div style="flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:8px; overflow:auto; padding:15px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.2)" id="f2ImpChap">
+         <div class="msg i">F2 файлини юқоридан танланг ва юкланг...</div>
+      </div>
+      
+      <!-- RIGHT: Smeta Tree -->
+      <div style="flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:8px; overflow:auto; padding:15px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.2)" id="f2ImpOng">
+         <div class="msg i">Смета юкланмаган</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

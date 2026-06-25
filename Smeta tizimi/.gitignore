@@ -1,0 +1,7 @@
+.tmp.driveupload/
+frontend/
+scratch/
+stash_diff.txt
+node_modules/
+.env
+.claude/

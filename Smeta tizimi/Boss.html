@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Boss Dashboard - Ultra Premium</title>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<!-- Frappe Gantt -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
+
+<style>
+:root {
+  /* Ultra Premium Dark Theme Colors */
+  --bg-dark: #09090b;
+  --bg-surface: rgba(24, 24, 27, 0.6);
+  --bg-surface-hover: rgba(39, 39, 42, 0.8);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(56, 189, 248, 0.3);
+  
+  --pri: #38bdf8; /* Light Blue/Cyan */
+  --pri-glow: 0 0 20px rgba(56, 189, 248, 0.25);
+  --sec: #818cf8; /* Indigo */
+  --acc-grn: #34d399; /* Emerald */
+  --acc-grn-glow: 0 0 20px rgba(52, 211, 153, 0.2);
+  --acc-amb: #fbbf24; /* Amber */
+  --acc-red: #f87171; /* Rose */
+  
+  --txt-main: #f8fafc;
+  --txt-mut: #94a3b8;
+  --txt-dim: #64748b;
+  
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 8px;
+  
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--txt-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(129, 140, 248, 0.08), transparent 25%);
+  background-attachment: fixed;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glass);
+}
+.glass:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Typography */
+h1, h2, h3 { font-weight: 800; letter-spacing: -0.5px; }
+.num-font { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+/* HEADER */
+.hdr {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px;
+  background: rgba(9, 9, 11, 0.7);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-color);
+}
+.hdr-brand { display: flex; align-items: center; gap: 12px; }
+.hdr-brand h1 { 
+  font-size: 22px; 
+  background: linear-gradient(135deg, #fff, #94a3b8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hdr-icon { font-size: 24px; filter: drop-shadow(0 0 8px var(--pri)); }
+
+.hdr-actions { display: flex; align-items: center; gap: 12px; }
+.btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--txt-main);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex; align-items: center; gap: 8px;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); box-shadow: var(--pri-glow); border-color: rgba(56, 189, 248, 0.5); }
+.btn.pri { background: linear-gradient(135deg, #0284c7, #2563eb); border: none; box-shadow: var(--pri-glow); }
+.btn.pri:hover { background: linear-gradient(135deg, #0369a1, #1d4ed8); }
+
+/* MAIN CONTAINER */
+.container { padding: 32px; max-width: 1600px; margin: 0 auto; }
+
+/* LOADING */
+.loader-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; }
+.spinner {
+  width: 50px; height: 50px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+  border-top-color: var(--pri);
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TABS */
+.nav-tabs {
+  display: flex; gap: 8px; margin-bottom: 32px;
+  background: rgba(0,0,0,0.3); padding: 6px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-color); width: fit-content;
+}
+.nav-tab {
+  padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer;
+  font-weight: 600; font-size: 14px; color: var(--txt-mut); transition: 0.3s;
+}
+.nav-tab.active { background: var(--bg-surface-hover); color: var(--pri); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.nav-tab:hover:not(.active) { color: #fff; }
+
+.view-pane { display: none; animation: fadeIn 0.4s ease; }
+.view-pane.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* KPI GRID */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 32px; }
+.kpi-card { padding: 24px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+.kpi-icon-bg { position: absolute; right: -20px; top: -20px; font-size: 100px; opacity: 0.03; z-index: 0; }
+.kpi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; z-index: 1; }
+.kpi-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-mut); font-weight: 700; }
+.kpi-icon { font-size: 20px; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); }
+.kpi-val { font-size: 32px; font-weight: 900; z-index: 1; margin-bottom: 8px; letter-spacing: -1px; }
+.kpi-sub { font-size: 13px; color: var(--txt-dim); z-index: 1; display: flex; align-items: center; justify-content: space-between; }
+.kpi-badge { padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 800; }
+
+.kpi-card.pri .kpi-icon { color: var(--pri); box-shadow: var(--pri-glow); }
+.kpi-card.pri .kpi-val { background: linear-gradient(to right, #fff, var(--pri)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.kpi-card.grn .kpi-icon { color: var(--acc-grn); box-shadow: var(--acc-grn-glow); }
+.kpi-card.grn .kpi-val { background: linear-gradient(to right, #fff, var(--acc-grn)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.kpi-card.grn .kpi-badge { background: rgba(52,211,153,0.15); color: var(--acc-grn); }
+.kpi-card.amb .kpi-icon { color: var(--acc-amb); }
+.kpi-card.amb .kpi-val { background: linear-gradient(to right, #fff, var(--acc-amb)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.kpi-card.red .kpi-icon { color: var(--acc-red); }
+.kpi-card.red .kpi-val { background: linear-gradient(to right, #fff, var(--acc-red)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* CHARTS ROW */
+.chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 32px; }
+.chart-box { padding: 24px; min-height: 380px; }
+.chart-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.chart-title::before { content: ''; width: 4px; height: 18px; background: var(--pri); border-radius: 4px; }
+
+/* OBJECTS GRID */
+.obj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; margin-bottom: 32px; }
+.obj-card { padding: 24px; cursor: pointer; transition: all 0.3s ease; position: relative; }
+.obj-card::before {
+  content: ''; position: absolute; inset: 0; border-radius: var(--radius-md);
+  padding: 2px; background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+}
+.obj-card:hover { transform: translateY(-5px) scale(1.01); box-shadow: 0 20px 40px rgba(0,0,0,0.4); border-color: rgba(56,189,248,0.4); }
+.obj-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.obj-nom { font-size: 18px; font-weight: 800; color: #fff; line-height: 1.3; margin-right: 12px; }
+.obj-lock { font-size: 11px; background: rgba(248,113,113,0.1); color: var(--acc-red); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(248,113,113,0.2); }
+
+.obj-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.obj-metric { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; }
+.obj-metric-lbl { font-size: 11px; color: var(--txt-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+.obj-metric-val { font-size: 16px; font-weight: 800; }
+.obj-metric-val.grn { color: var(--acc-grn); }
+.obj-metric-val.pri { color: var(--pri); }
+
+.prog-wrap { margin-top: auto; }
+.prog-hdr { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--txt-mut); }
+.prog-bar-bg { height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; display: flex; }
+.prog-bar-fill { height: 100%; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* GANTT TAB */
+.gantt-container { padding: 24px; min-height: 500px; overflow-x: auto; }
+.gantt .bar-progress { fill: var(--acc-grn); }
+.gantt .bar { fill: rgba(56,189,248,0.2); }
+.gantt .bar-label { fill: #fff; font-weight: 600; font-family: 'Outfit', sans-serif; }
+.gantt .grid-header { fill: var(--bg-surface); }
+.gantt .grid-row { fill: transparent; }
+.gantt .grid-row:nth-child(even) { fill: rgba(255,255,255,0.02); }
+.gantt .tick { stroke: var(--border-color); }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; margin-top: 24px; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th { padding: 16px; font-size: 11px; text-transform: uppercase; color: var(--txt-dim); font-weight: 800; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+td { padding: 16px; font-size: 14px; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.02); }
+tr:hover td { background: rgba(255,255,255,0.03); }
+.td-nom { font-weight: 700; color: #fff; cursor: pointer; transition: 0.2s; }
+.td-nom:hover { color: var(--pri); }
+
+/* OB DETAILS VIEW */
+.breadcrumb { font-size: 14px; color: var(--txt-mut); margin-bottom: 24px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.breadcrumb:hover { color: #fff; }
+
+.rz-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.rz-row { padding: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 20px; align-items: center; }
+.rz-nom { font-size: 15px; font-weight: 700; color: #fff; }
+.rz-cats { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.rz-cat { font-size: 10px; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.05); color: var(--txt-mut); font-weight: 600; }
+.rz-val-lbl { font-size: 11px; color: var(--txt-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+.rz-val { font-size: 16px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+
+@media (max-width: 1024px) {
+  .chart-row { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .rz-row { grid-template-columns: 1fr; gap: 12px; }
+}
+@media (max-width: 640px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .hdr { flex-direction: column; gap: 16px; padding: 16px; }
+  .nav-tabs { width: 100%; overflow-x: auto; }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-icon">🏗️</div>
+    <h1>SMETA DASHBOARD</h1>
+  </div>
+  <div class="hdr-actions">
+    <span id="hdrSana" style="font-size: 12px; color: var(--txt-mut); text-align: right; margin-right: 12px;"></span>
+    <button class="btn" onclick="goMain()">🏢 Obyektlar</button>
+    <button class="btn pri" onclick="refresh()">↺ Yangilash</button>
+    <button class="btn" onclick="navTo('admin')">⚙️ Admin Panel</button>
+    <div style="display: flex; gap: 4px; margin-left: 8px;">
+      <button class="btn" style="padding: 8px;" onclick="setLang('uz')">UZ</button>
+      <button class="btn" style="padding: 8px;" onclick="setLang('ru')">RU</button>
+    </div>
+  </div>
+</div>
+
+<div class="container" id="mainApp">
+  <div class="loader-wrap">
+    <div class="spinner"></div>
+    <h3>Ma'lumotlar yuklanmoqda...</h3>
+  </div>
+</div>
+
+<script>
+/* GLOBAL STATE */
+var MAIN = null, OB = null, CUR_OB = '', WAPP_URL = '';
+var CHART_OPTS = {
+  theme: { mode: 'dark' },
+  chart: { background: 'transparent', toolbar: { show: false }, fontFamily: 'Outfit, sans-serif' },
+  grid: { borderColor: 'rgba(255,255,255,0.05)', strokeDashArray: 4 },
+  dataLabels: { enabled: false },
+  tooltip: { theme: 'dark', style: { fontSize: '13px', fontFamily: 'Outfit' } }
+};
+var apexCharts = {}; // Store instances to destroy before recreating
+
+window.onload = function() {
+  initLang();
+  bossBoot();
+};
+
+function bossBoot() {
+  renderLoader();
+  google.script.run
+    .withSuccessHandler(function(r) { 
+      r = r || {}; 
+      if (r.webAppUrl) WAPP_URL = r.webAppUrl; 
+      MAIN = r.data; 
+      renderMain(); 
+    })
+    .withFailureHandler(showErr)
+    .apiBossInit();
+}
+
+function navTo(p) {
+  if (!WAPP_URL) {
+    google.script.run.withSuccessHandler(function(u) { WAPP_URL = u; _doNav(p); })._webAppUrl();
+  } else _doNav(p);
+}
+function _doNav(p) {
+  var url = WAPP_URL + (p ? '?p=' + p : '');
+  try { window.top.location.href = url; } catch(e) { window.open(url, '_blank'); }
+}
+
+function loadMain() {
+  renderLoader();
+  google.script.run
+    .withSuccessHandler(function(d) { MAIN = d; renderMain(); })
+    .withFailureHandler(showErr)
+    .apiBossData();
+}
+
+function refresh() {
+  if (CUR_OB) loadOb(CUR_OB); else loadMain();
+}
+
+function goMain() { CUR_OB = ''; renderMain(); }
+
+function renderLoader() {
+  g('mainApp').innerHTML = `
+    <div class="loader-wrap">
+      <div class="spinner"></div>
+      <h3 style="color:var(--txt-mut)">Ma'lumotlar tahlil qilinmoqda...</h3>
+    </div>
+  `;
+}
+function showErr(e) {
+  g('mainApp').innerHTML = `
+    <div class="glass" style="padding: 32px; border-color: rgba(248,113,113,0.3); text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+      <h2 style="color: var(--acc-red); margin-bottom: 8px;">Xatolik yuz berdi</h2>
+      <p style="color: var(--txt-mut)">${e.message || e}</p>
+      <button class="btn" style="margin: 24px auto 0;" onclick="refresh()">Qayta urinish</button>
+    </div>
+  `;
+}
+
+function renderMain() {
+  if (!MAIN || !MAIN.jami) { showErr("Ma'lumot yo'q"); return; }
+  var j = MAIN.jami, obs = MAIN.objects || [];
+  if (MAIN.sana) g('hdrSana').innerHTML = "Yangilandi:<br><b style='color:#fff'>" + MAIN.sana + "</b>";
+  CUR_OB = '';
+
+  // --- GURUHLASH MANTIQI ---
+  var groups = {};
+  var flat = [];
+  
+  obs.forEach(o => {
+    var parts = o.nom.split(' - ');
+    var base = parts[0].trim();
+    if (parts.length > 1) {
+      if (!groups[base]) groups[base] = [];
+      groups[base].push(o);
+    } else {
+      flat.push(o);
+    }
+  });
+
+  for (var base in groups) {
+    if (groups[base].length === 1) {
+      flat.push(groups[base][0]);
+      delete groups[base];
+    }
+  }
+
+  var renderItems = [];
+
+  for (var base in groups) {
+    var items = groups[base];
+    var sumSmeta = 0, sumFakt = 0, sumF2 = 0;
+    var anyLocked = false;
+    items.forEach(o => {
+      sumSmeta += o.smeta;
+      sumFakt += o.fakt;
+      sumF2 += o.f2;
+      if (o.locked) anyLocked = true;
+    });
+    var progress = sumSmeta > 0 ? Math.round(sumFakt / sumSmeta * 100) : 0;
+    renderItems.push({
+      isGroup: true,
+      nom: base,
+      smeta: sumSmeta,
+      fakt: sumFakt,
+      f2: sumF2,
+      progress: progress,
+      locked: anyLocked,
+      subItems: items
+    });
+  }
+
+  flat.forEach(o => {
+    renderItems.push({
+      isGroup: false,
+      nom: o.nom,
+      smeta: o.smeta,
+      fakt: o.fakt,
+      f2: o.f2,
+      progress: o.progress,
+      locked: o.locked
+    });
+  });
+
+  renderItems.sort((a, b) => b.smeta - a.smeta);
+
+  var h = `
+    <!-- MAIN NAVIGATION TABS -->
+    <div class="nav-tabs">
+      <div class="nav-tab active" onclick="switchTab('main-dash', this)">📊 Asosiy Ko'rsatkichlar</div>
+      <div class="nav-tab" onclick="switchTab('main-gantt', this)">📅 Loyiha Gantt Diagrammasi</div>
+      <div class="nav-tab" onclick="switchTab('main-table', this)">📋 To'liq Jadval</div>
+    </div>
+
+    <!-- TAB: DASHBOARD -->
+    <div id="main-dash" class="view-pane active">
+      <div class="kpi-grid">
+        ${kpiCard('Umumiy Smeta', '💰', fmtM(j.smeta), obs.length + ' obyekt', 'pri')}
+        ${kpiCard('Fakt Bajarilgan', '✅', fmtM(j.fakt), 'Hajm', 'grn', j.progress)}
+        ${kpiCard('F-2 Olingan', '📤', fmtM(j.f2), 'Faktdan', 'amb', j.f2pct)}
+        ${kpiCard('Qolgan Ish', '⏳', fmtM(j.smeta - j.fakt), 'Smetadan', 'red', 100 - j.progress)}
+      </div>
+
+      <div class="chart-row">
+        <div class="glass chart-box">
+          <div class="chart-title">Obyektlar kesimida daromad (Top 10)</div>
+          <div id="chartBarMain"></div>
+        </div>
+        <div class="glass chart-box">
+          <div class="chart-title">Xarajatlar taqsimoti</div>
+          <div id="chartPieMain"></div>
+        </div>
+      </div>
+
+      <h2 style="margin-bottom: 24px;">Barcha Obyektlar</h2>
+      <div class="obj-grid">
+  `;
+  
+  renderItems.forEach(item => {
+    var pCol = item.progress >= 70 ? 'var(--acc-grn)' : item.progress >= 30 ? 'var(--acc-amb)' : 'var(--acc-red)';
+    if (item.isGroup) {
+      h += `
+        <div class="glass obj-card group-card" onclick="toggleGroup(this)" style="transition: border-color 0.2s, box-shadow 0.2s;">
+          <div class="obj-hdr">
+            <div class="obj-nom">📁 ${esc(item.nom)}</div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              ${item.locked ? '<div class="obj-lock" style="margin-bottom:0">🔒 QULF</div>' : ''}
+              <div class="group-badge" style="font-size:11px; background:rgba(56,189,248,0.1); color:var(--pri); padding:4px 8px; border-radius:8px; border:1px solid rgba(56,189,248,0.2)">${item.subItems.length} bo'lim</div>
+            </div>
+          </div>
+          <div class="obj-metrics">
+            <div class="obj-metric">
+              <div class="obj-metric-lbl">Jami Smeta</div>
+              <div class="obj-metric-val num-font">${fmtM(item.smeta)}</div>
+            </div>
+            <div class="obj-metric">
+              <div class="obj-metric-lbl">Jami Fakt</div>
+              <div class="obj-metric-val num-font grn">${fmtM(item.fakt)}</div>
+            </div>
+          </div>
+          <div class="prog-wrap">
+            <div class="prog-hdr">
+              <span>Umumiy Bajarildi</span>
+              <span style="color: ${pCol}">${item.progress}%</span>
+            </div>
+            <div class="prog-bar-bg">
+              <div class="prog-bar-fill" style="width: ${Math.min(item.progress, 100)}%; background: ${pCol}"></div>
+            </div>
+          </div>
+          <div class="sub-items-container" style="display:none; border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px; flex-direction: column; gap: 8px;">
+            ${item.subItems.map(sub => {
+              var subName = sub.nom.split(' - ').slice(1).join(' - ');
+              var subPCol = sub.progress >= 70 ? 'var(--acc-grn)' : sub.progress >= 30 ? 'var(--acc-amb)' : 'var(--acc-red)';
+              return `
+                <div class="sub-item-row" onclick="event.stopPropagation(); loadOb(this.dataset.nom)" data-nom="${escA(sub.nom)}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-sm); transition:0.2s; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                  <div style="font-weight:600; font-size:13px; color:#fff;">📄 ${esc(subName)}</div>
+                  <div style="display:flex; gap:16px; font-size:12px; align-items:center;">
+                    <span style="color:var(--txt-mut)">Smeta: <b class="num-font" style="color:#fff">${fmtM(sub.smeta)}</b></span>
+                    <span style="color:var(--txt-mut)">Fakt: <b class="num-font" style="color:var(--acc-grn)">${fmtM(sub.fakt)}</b></span>
+                    <span style="color: ${subPCol}; font-weight:800">${sub.progress}%</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    } else {
+      h += `
+        <div class="glass obj-card" onclick="loadOb(this.dataset.nom)" data-nom="${escA(item.nom)}">
+          <div class="obj-hdr">
+            <div class="obj-nom">📄 ${esc(item.nom)}</div>
+            ${item.locked ? '<div class="obj-lock">🔒 QULF</div>' : ''}
+          </div>
+          <div class="obj-metrics">
+            <div class="obj-metric">
+              <div class="obj-metric-lbl">Smeta</div>
+              <div class="obj-metric-val num-font">${fmtM(item.smeta)}</div>
+            </div>
+            <div class="obj-metric">
+              <div class="obj-metric-lbl">Fakt</div>
+              <div class="obj-metric-val num-font grn">${fmtM(item.fakt)}</div>
+            </div>
+          </div>
+          <div class="prog-wrap">
+            <div class="prog-hdr">
+              <span>Bajarildi</span>
+              <span style="color: ${pCol}">${item.progress}%</span>
+            </div>
+            <div class="prog-bar-bg">
+              <div class="prog-bar-fill" style="width: ${Math.min(item.progress, 100)}%; background: ${pCol}"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  });
+  
+  h += `
+      </div>
+    </div>
+
+    <!-- TAB: GANTT -->
+    <div id="main-gantt" class="view-pane glass gantt-container">
+      <div class="chart-title">Obyektlar Bajarilish Xaritasi (Simulyatsiya)</div>
+      <p style="color:var(--txt-mut); font-size:13px; margin-bottom:20px;">Loyiha joriy yil davomida deb faraz qilingan. Bajarilish foizi (Fakt) asosida ranglanadi.</p>
+      <svg id="ganttMain"></svg>
+    </div>
+
+    <!-- TAB: TABLE -->
+    <div id="main-table" class="view-pane glass" style="padding: 24px;">
+      <div class="chart-title">Moliya Jadvali</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Obyekt Nomlanishi</th>
+              <th style="text-align:right">Smeta (so'm)</th>
+              <th style="text-align:right">Fakt Bajarildi</th>
+              <th style="text-align:right">%</th>
+              <th style="text-align:right">F-2 Olingan</th>
+              <th style="text-align:right">Qoldiq</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+  
+  renderItems.forEach(item => {
+    if (item.isGroup) {
+      h += `
+        <tr class="group-parent-row" onclick="toggleTableGroup(this.dataset.nom, this)" data-nom="${escA(item.nom)}" style="cursor:pointer; background: rgba(56,189,248,0.03);">
+          <td class="td-nom" style="font-weight: 800; color: var(--pri)">
+            <span class="group-caret" style="display:inline-block; width:12px; margin-right:6px; transition:transform 0.2s">▶</span> 📁 ${esc(item.nom)} (${item.subItems.length})
+          </td>
+          <td class="num-font" style="text-align:right; font-weight:800; color:var(--txt-mut)">${fmtN(item.smeta)}</td>
+          <td class="num-font" style="text-align:right; font-weight:800; color:var(--acc-grn)">${fmtN(item.fakt)}</td>
+          <td class="num-font" style="text-align:right; font-weight:800">${item.progress}%</td>
+          <td class="num-font" style="text-align:right; font-weight:800; color:var(--acc-amb)">${fmtN(item.f2)}</td>
+          <td class="num-font" style="text-align:right; font-weight:800; color:var(--acc-red)">${fmtN(item.smeta - item.fakt)}</td>
+        </tr>
+      `;
+      item.subItems.forEach(sub => {
+        var subName = sub.nom.split(' - ').slice(1).join(' - ');
+        h += `
+          <tr class="${safeClass(item.nom)}" style="display:none; background: rgba(255,255,255,0.01);">
+            <td class="td-nom" onclick="loadOb(this.dataset.nom)" data-nom="${escA(sub.nom)}" style="padding-left: 32px; font-weight:500;">
+              ↳ 📄 ${esc(subName)}
+            </td>
+            <td class="num-font" style="text-align:right; color:var(--txt-mut)">${fmtN(sub.smeta)}</td>
+            <td class="num-font" style="text-align:right; color:var(--acc-grn)">${fmtN(sub.fakt)}</td>
+            <td class="num-font" style="text-align:right; font-weight:800">${sub.progress}%</td>
+            <td class="num-font" style="text-align:right; color:var(--acc-amb)">${fmtN(sub.f2)}</td>
+            <td class="num-font" style="text-align:right; color:var(--acc-red)">${fmtN(sub.smeta - sub.fakt)}</td>
+          </tr>
+        `;
+      });
+    } else {
+      h += `
+        <tr>
+          <td class="td-nom" onclick="loadOb(this.dataset.nom)" data-nom="${escA(item.nom)}">📄 ${esc(item.nom)}</td>
+          <td class="num-font" style="text-align:right; color:var(--txt-mut)">${fmtN(item.smeta)}</td>
+          <td class="num-font" style="text-align:right; color:var(--acc-grn)">${fmtN(item.fakt)}</td>
+          <td class="num-font" style="text-align:right; font-weight:800">${item.progress}%</td>
+          <td class="num-font" style="text-align:right; color:var(--acc-amb)">${fmtN(item.f2)}</td>
+          <td class="num-font" style="text-align:right; color:var(--acc-red)">${fmtN(item.smeta - item.fakt)}</td>
+        </tr>
+      `;
+    }
+  });
+  
+  h += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  
+  g('mainApp').innerHTML = h;
+  
+  setTimeout(() => {
+    drawApexMainBar(obs);
+    drawApexMainPie(j);
+    drawFrappeGanttMain(obs);
+  }, 100);
+}
+
+function toggleGroup(el) {
+  var sub = el.querySelector('.sub-items-container');
+  sub.style.display = sub.style.display === 'none' ? 'flex' : 'none';
+}
+
+function toggleTableGroup(nom, row) {
+  var rows = document.querySelectorAll('.' + safeClass(nom));
+  var caret = row.querySelector('.group-caret');
+  var show = rows[0].style.display === 'none';
+  rows.forEach(r => r.style.display = show ? 'table-row' : 'none');
+  caret.style.transform = show ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+
+function safeClass(str) { return 'grp-' + str.replace(/[^a-zA-Z0-9]/g, ''); }
+
+/* OBJECT DETAILS RENDER */
+function loadOb(nom) {
+  CUR_OB = nom;
+  renderLoader();
+  google.script.run
+    .withSuccessHandler(function(d) { OB = d; renderOb(nom); })
+    .withFailureHandler(showErr)
+    .apiBossObyekt(nom);
+}
+
+function renderOb(nom) {
+  if (!OB) { showErr("Ma'lumot topilmadi"); return; }
+  var t = OB.total, cats = OB.cats, rzList = OB.rzList || [], oylar = OB.oylar || [];
+  
+  var h = `
+    <div class="breadcrumb" onclick="goMain()">
+      <span style="font-size: 20px;">←</span> Barcha Obyektlar / <span style="color:#fff">${esc(nom)}</span>
+    </div>
+    
+    <div class="kpi-grid">
+      ${kpiCard('Obyekt Smetasi', '💰', fmtM(t.res), 'Jami mablag\'', 'pri')}
+      ${kpiCard('Fakt Qilingan', '✅', fmtM(t.fakt), 'Hajm', 'grn', t.progress)}
+      ${kpiCard('Olingan F-2', '📤', fmtM(t.f2), 'Faktdan', 'amb', t.f2pct)}
+      ${kpiCard('Bajarilishi Qolgan', '⏳', fmtM(t.ost), 'Smetadan', 'red', 100 - t.progress)}
+    </div>
+
+    <div class="nav-tabs">
+      <div class="nav-tab active" onclick="switchTab('ob-dash', this)">📊 Tahlil</div>
+      <div class="nav-tab" onclick="switchTab('ob-rz', this)">📁 Razdellar (${rzList.length})</div>
+    </div>
+
+    <!-- TAB: Tahlil -->
+    <div id="ob-dash" class="view-pane active">
+      <div class="chart-row">
+        <div class="glass chart-box">
+          <div class="chart-title">Kategoriyalar bo'yicha Holat</div>
+          <div id="chartBarOb"></div>
+        </div>
+        <div class="glass chart-box">
+          <div class="chart-title">Smeta Tarkibi</div>
+          <div id="chartPieOb"></div>
+        </div>
+      </div>
+      ${oylar.length > 0 ? `
+      <div class="glass chart-box" style="margin-bottom: 32px;">
+        <div class="chart-title">Oylik F-2 Dinamikasi</div>
+        <div id="chartLineOb"></div>
+      </div>
+      ` : ''}
+    </div>
+
+    <!-- TAB: Razdellar -->
+    <div id="ob-rz" class="view-pane">
+      <div class="rz-grid">
+  `;
+  
+  rzList.sort((a,b) => b.res - a.res).forEach(rz => {
+    var pCol = rz.progress >= 70 ? 'var(--acc-grn)' : rz.progress >= 30 ? 'var(--acc-amb)' : 'var(--acc-red)';
+    h += `
+        <div class="glass rz-row">
+          <div>
+            <div class="rz-nom">${esc(rz.nom)}</div>
+            <div class="rz-cats">
+    `;
+    OB.catKeys.forEach(k => {
+      if(rz.cats[k] && rz.cats[k].res > 0) h += `<div class="rz-cat">${k}: ${Math.round(rz.cats[k].res/rz.res*100)}%</div>`;
+    });
+    h += `
+            </div>
+          </div>
+          <div>
+            <div class="rz-val-lbl">Smeta</div>
+            <div class="rz-val" style="color:var(--pri)">${fmtN(rz.res)}</div>
+          </div>
+          <div>
+            <div class="rz-val-lbl">Fakt Bajarildi</div>
+            <div class="rz-val" style="color:var(--acc-grn)">${fmtN(rz.fakt)}</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="rz-val-lbl" style="text-align:right">Progress</div>
+            <div style="font-size:24px; font-weight:900; color:${pCol}">${rz.progress}%</div>
+          </div>
+        </div>
+    `;
+  });
+  
+  h += `
+      </div>
+    </div>
+  `;
+  
+  g('mainApp').innerHTML = h;
+  
+  setTimeout(() => {
+    drawApexObBar(cats, OB.catKeys);
+    drawApexObPie(cats, OB.catKeys);
+    if(oylar.length) drawApexObLine(oylar);
+  }, 100);
+}
+
+/* HELPER COMPONENTS */
+function kpiCard(title, icon, val, sub, theme, pct) {
+  var badge = pct !== undefined ? `<div class="kpi-badge">${pct}%</div>` : '';
+  return `
+    <div class="glass kpi-card ${theme}">
+      <div class="kpi-icon-bg">${icon}</div>
+      <div class="kpi-header">
+        <div class="kpi-title">${title}</div>
+        <div class="kpi-icon">${icon}</div>
+      </div>
+      <div class="kpi-val num-font">${val}</div>
+      <div class="kpi-sub">
+        <span>${sub}</span>
+        ${badge}
+      </div>
+    </div>
+  `;
+}
+
+function switchTab(targetId, btn) {
+  var p = btn.parentElement;
+  p.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  var viewContainer = p.parentElement;
+  viewContainer.querySelectorAll('.view-pane').forEach(v => v.classList.remove('active'));
+  g(targetId).classList.add('active');
+}
+
+/* APEXCHARTS INTEGRATION */
+function destroyChart(id) {
+  if (apexCharts[id]) { apexCharts[id].destroy(); delete apexCharts[id]; }
+}
+
+function drawApexMainBar(obs) {
+  destroyChart('barMain');
+  var top10 = obs.slice(0, 10);
+  var options = {
+    ...CHART_OPTS,
+    series: [
+      { name: 'Smeta', data: top10.map(o => o.smeta) },
+      { name: 'Fakt', data: top10.map(o => o.fakt) },
+      { name: 'F-2', data: top10.map(o => o.f2) }
+    ],
+    chart: { type: 'bar', height: '100%', ...CHART_OPTS.chart },
+    plotOptions: { bar: { horizontal: false, columnWidth: '60%', borderRadius: 4 } },
+    colors: ['var(--pri)', 'var(--acc-grn)', 'var(--acc-amb)'],
+    xaxis: { categories: top10.map(o => shortN(o.nom)), labels: { style: { colors: 'var(--txt-mut)' } } },
+    yaxis: { labels: { formatter: (v) => fmtM(v), style: { colors: 'var(--txt-mut)' } } },
+    legend: { position: 'top', labels: { colors: 'var(--txt-mut)' } }
+  };
+  apexCharts['barMain'] = new ApexCharts(document.querySelector("#chartBarMain"), options);
+  apexCharts['barMain'].render();
+}
+
+function drawApexMainPie(j) {
+  destroyChart('pieMain');
+  var options = {
+    ...CHART_OPTS,
+    series: [j.chel||0, j.mash||0, j.mat||0, j.ob||0, j.mk||0],
+    chart: { type: 'donut', height: '100%', ...CHART_OPTS.chart },
+    labels: ['CHEL', 'MASH', 'MAT', 'OB', 'M/K'],
+    colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#6366f1'],
+    plotOptions: { pie: { donut: { size: '65%', labels: { show: true, name: { color: 'var(--txt-mut)' }, value: { color: '#fff', formatter: (v) => fmtM(v) } } } } },
+    stroke: { show: true, colors: ['var(--bg-surface)'], width: 2 },
+    legend: { position: 'bottom', labels: { colors: 'var(--txt-mut)' } }
+  };
+  apexCharts['pieMain'] = new ApexCharts(document.querySelector("#chartPieMain"), options);
+  apexCharts['pieMain'].render();
+}
+
+function drawApexObBar(cats, catKeys) {
+  destroyChart('barOb');
+  var cData = catKeys.filter(k => cats[k] && cats[k].res > 0);
+  var options = {
+    ...CHART_OPTS,
+    series: [
+      { name: 'Smeta', data: cData.map(k => cats[k].res) },
+      { name: 'Fakt', data: cData.map(k => cats[k].fakt) },
+      { name: 'F-2', data: cData.map(k => cats[k].f2) }
+    ],
+    chart: { type: 'bar', height: '100%', ...CHART_OPTS.chart },
+    plotOptions: { bar: { horizontal: false, columnWidth: '50%', borderRadius: 4 } },
+    colors: ['var(--pri)', 'var(--acc-grn)', 'var(--acc-amb)'],
+    xaxis: { categories: cData, labels: { style: { colors: 'var(--txt-mut)' } } },
+    yaxis: { labels: { formatter: (v) => fmtM(v), style: { colors: 'var(--txt-mut)' } } },
+    legend: { position: 'top', labels: { colors: 'var(--txt-mut)' } }
+  };
+  apexCharts['barOb'] = new ApexCharts(document.querySelector("#chartBarOb"), options);
+  apexCharts['barOb'].render();
+}
+
+function drawApexObPie(cats, catKeys) {
+  destroyChart('pieOb');
+  var cData = catKeys.filter(k => cats[k] && cats[k].res > 0);
+  var options = {
+    ...CHART_OPTS,
+    series: cData.map(k => cats[k].res),
+    chart: { type: 'donut', height: '100%', ...CHART_OPTS.chart },
+    labels: cData,
+    colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#6366f1'],
+    plotOptions: { pie: { donut: { size: '65%' } } },
+    stroke: { colors: ['var(--bg-surface)'], width: 2 },
+    legend: { position: 'bottom', labels: { colors: 'var(--txt-mut)' } }
+  };
+  apexCharts['pieOb'] = new ApexCharts(document.querySelector("#chartPieOb"), options);
+  apexCharts['pieOb'].render();
+}
+
+function drawApexObLine(oylar) {
+  destroyChart('lineOb');
+  var options = {
+    ...CHART_OPTS,
+    series: [{ name: 'F-2 Summasi', data: oylar.map(o => o.val) }],
+    chart: { type: 'area', height: '100%', ...CHART_OPTS.chart },
+    colors: ['var(--acc-amb)'],
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] } },
+    dataLabels: { enabled: false },
+    stroke: { curve: 'smooth', width: 3 },
+    xaxis: { categories: oylar.map(o => o.oy), labels: { style: { colors: 'var(--txt-mut)' } } },
+    yaxis: { labels: { formatter: (v) => fmtM(v), style: { colors: 'var(--txt-mut)' } } },
+  };
+  apexCharts['lineOb'] = new ApexCharts(document.querySelector("#chartLineOb"), options);
+  apexCharts['lineOb'].render();
+}
+
+/* FRAPPE GANTT INTEGRATION (Simulated Dates) */
+function drawFrappeGanttMain(obs) {
+  var ganttData = [];
+  var today = new Date();
+  var startYear = today.getFullYear();
+  
+  obs.forEach((o, i) => {
+    // Simulate dates: Every project spans Jan 1 to Dec 31
+    // And 'progress' defines the completion
+    ganttData.push({
+      id: 'Task ' + i,
+      name: shortN(o.nom),
+      start: `${startYear}-01-01`,
+      end: `${startYear}-12-31`,
+      progress: o.progress,
+      dependencies: '',
+      custom_class: o.progress > 80 ? 'gantt-high' : o.progress > 40 ? 'gantt-mid' : 'gantt-low'
+    });
+  });
+  
+  if(ganttData.length === 0) return;
+  
+  new Gantt("#ganttMain", ganttData, {
+    header_height: 50,
+    column_width: 30,
+    step: 24,
+    view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+    bar_height: 20,
+    bar_corner_radius: 3,
+    arrow_curve: 5,
+    padding: 18,
+    view_mode: 'Month',
+    date_format: 'YYYY-MM-DD',
+    custom_popup_html: function(task) {
+      return `
+        <div style="background:var(--bg-surface); padding:12px; border:1px solid var(--border-color); border-radius:8px; box-shadow:var(--shadow-glass); color:#fff;">
+          <div style="font-weight:700; margin-bottom:4px; font-size:14px;">${task.name}</div>
+          <div style="font-size:12px; color:var(--acc-grn)">Bajarildi: ${task.progress}%</div>
+        </div>
+      `;
+    }
+  });
+}
+
+/* UTILS */
+function g(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escA(s){ return esc(s).replace(/'/g,'&#39;'); }
+function shortN(s){ return s&&s.length>20?s.substring(0,19)+'…':s||''; }
+function fmtM(n){
+  n = Math.round(n||0);
+  if(Math.abs(n)>=1e9) return (n/1e9).toFixed(2)+' mlrd';
+  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(1)+' mln';
+  if(Math.abs(n)>=1e3) return Math.round(n/1e3).toLocaleString('ru')+' ming';
+  return n.toLocaleString('ru');
+}
+function fmtN(n){ return Math.round(n||0).toLocaleString('ru-RU'); }
+
+function setLang(lang) { /* Placeholder for Lang toggle, currently UZ hardcoded in strings */ alert('Hozirgi premium interfeys o`zbek tilida optimallashtirilgan.'); }
+function initLang() {}
+</script>
+</body>
+</html>
