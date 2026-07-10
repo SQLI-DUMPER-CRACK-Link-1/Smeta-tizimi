@@ -27,6 +27,9 @@ var CFG = {
   NARXLAR:  'NARXLAR',           // yangi narxlar varag'i
   SOZ_LOCK: 'SOZLAMALAR_ҚУЛФ',
   NARX_LOG: '_NARX_LOG',
+  TMP_SUF:   '_TMP_',
+  NAT_SUF:   '_NAT_',
+  SYS_FOLDER:'⚙️ Tizim Fayllari',
   RESURS:   'РЕСУРСЛАР',
   PLUS_SUF: '_LRV_PLUS',
   DASH:     'DASHBOARD',
@@ -218,3 +221,5 @@ function tizimMuzlatilganMi() {
     return false;
   }
 }
+
+// force push

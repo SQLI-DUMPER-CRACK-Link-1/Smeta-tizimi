@@ -15,11 +15,13 @@ function onOpen(){
     .addItem('④ Серверга йиғ (DASHBOARD)',        'uiServer')
     .addItem('ℹ️ Папкадаги объектларни кўрсат',   'uiRoyxat')
     .addSeparator()
-    .addItem('📊 Навбат холати',                   'uiNavbatHolat')
+    .addItem('📊 Навбат ҳолати',                   'uiNavbatHolat')
     .addItem('🧹 Вақтинча/дубликат файлларни тозалаш', 'uiTmpTozala')
     .addItem('🔄 Кешни янгила (барча объект)',     'uiKeshYangilash')
-    .addItem('🔓 Қулф холатини текшир',            'uiLockHolat')
+    .addItem('🔒 Қулф ҳолатини текшир',            'uiLockHolat')
     .addItem('📊 Нархлар варағини яратиш/янгилаш', 'uiNarxlarYarat')
+    .addSeparator()
+    .addItem('💾 Админ: Архив яратиш (Захира)',   'uiArxivYarat')
     .addSeparator()
     .addItem('🔬 Тизим диагностикаси',             'diagnostikaIshlat')
     .addToUi();
@@ -83,13 +85,13 @@ function uiPapkaBarcha(){
   try{
     if(!_tasdiq('ROOT папкадаги БАРЧА объект ФОН НАВБАТда ишланади.\n\n'
               + 'Ҳар объект алоҳида ишлайди — 6 дақиқа timeout ЙЎҚ.\n'
-              + 'Жараённи "📊 Навбат холати" дан кузатасиз. Давом?')) return;
+              + 'Жараённи "📊 Навбат ҳолати" дан кузатасиз. Давом?')) return;
     var r = navbatBoshla(null);
     SpreadsheetApp.getUi().alert(
       '✅ НАВБАТ БОШЛАНДИ\n\n'
       + (r.jami||0)+' объект фон навбатга қўйилди.\n'
       + 'Ҳар бири алоҳида trigger-да ишланади (timeout йўқ).\n\n'
-      + 'Кузатиш: 🏗️ СМЕТА → 📊 Навбат холати\n'
+      + 'Кузатиш: 🏗️ СМЕТА → 📊 Навбат ҳолати\n'
       + 'Тугагач DASHBOARD ва кеш автоматик янгиланади.'
     );
   }catch(e){ _err(e); }
@@ -235,3 +237,15 @@ function diagnostikaIshlat() {
   SpreadsheetApp.getUi().alert('Diagnostika tugadi. "_DIAGNOSTIKA" varag\'ini ko\'ring.');
 }
 
+/* Kunlik arxiv yaratishni qo'lda ishga tushirish */
+function uiArxivYarat(){
+  var ui = SpreadsheetApp.getUi();
+  var ans = ui.alert('Архив яратиш', 'Барча объектлар учун (смета ва ҳолат файлларидан) ҳозирнинг ўзида архив нусха олайми?\nБу жараён бироз вақт олиши мумкин.', ui.ButtonSet.YES_NO);
+  if(ans !== ui.Button.YES) return;
+  try {
+    var xabar = apiKunlikArxivYarat();
+    ui.alert('Архив яратилди', xabar, ui.ButtonSet.OK);
+  } catch(e) {
+    _err(e);
+  }
+}

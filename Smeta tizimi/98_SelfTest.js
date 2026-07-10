@@ -74,9 +74,10 @@ var _ST_KERAK_FN = [
   'nakrutkaHisob','apiShartnomaDashboard','shartnomaChelCh','apiTolovOl','apiTolovYoz','apiBuxDashboard',
   // Supabase
   'supabaseSozlash','_sbBor','supabaseObyektPush','supabaseDashboardPush','supabaseNarxlarPush',
-  'supabaseToliqSinx','supabaseSoatlikSinx','supabaseAnomaliyaPush','supabaseShartnomaPush',
+  'apiSupabaseSinxKursor','apiSupabaseSinxReset','apiSupabaseSozlamaOl','apiSupabaseSozlamaSaqla',
+  'supabaseSoatlikSinx','supabaseAnomaliyaPush','supabaseShartnomaPush',
   'supabaseMaterialKerakPush','supabaseTopilmaganPush','supabaseTolovPush','supabasePrixodPush',
-  'supabaseAktIshPush','supabaseTriggerOrnat','_sbDirty',
+  'supabaseAktPush','supabaseAktIshPush','supabaseTriggerOrnat','_sbDirty',
   // Ish turlar / maslahatchi / telegram
   'apiIshTurQidir','apiIshTurQosh','apiMaslahatObyekt','sozlamalarYaratSilent'
 ];
@@ -257,24 +258,52 @@ function selftestObyekt(obyekt){
 }
 
 
-/* ============ TO'LIQ TEST: tez + har obyekt + funksiyalar ============ */
-function selftestBarcha(){
-  Logger.log('🏗️ ТИЗИМ ТЎЛИҚ ТЕСТ — '+Utilities.formatDate(new Date(), _ST_TZ, 'yyyy-MM-dd HH:mm'));
+/* ============ TO'LIQ TEST: tez + har obyekt + funksiyalar ============
+ * ⚠️ 50+ obyekt 6 daqiqaga sig'maydi. Shuning uchun VAQT-CHEGARALI + DAVOM etadi:
+ *   selftestBarcha()    → boshidan (funksiyalar+tez+ obyektlar, ~4.5 daq)
+ *   selftestBarcha(20)  → 20-obyektdан davom (vaqt tugagach ko'rsatilgan raqamdан)
+ * Har run "давом этиш: selftestBarcha(N)" ni yozadi. */
+function selftestBarcha(startIdx){
+  startIdx = Number(startIdx)||0;
+  var t0=Date.now(), DEADLINE=4.5*60*1000;   // 4.5 daqiqa — 6 min limitdan xavfsiz
+  Logger.log('🏗️ ТИЗИМ ТЕСТ ('+(startIdx?('давоми: '+startIdx):'бошидан')+') — '+Utilities.formatDate(new Date(), _ST_TZ, 'yyyy-MM-dd HH:mm'));
   var jami={ok:0,ogoh:0,xato:0,skip:0};
   function yig(r){ jami.ok+=r.ok; jami.ogoh+=r.ogoh; jami.xato+=r.xato; jami.skip+=r.skip; }
 
-  yig(selftestFunksiyalar());
-  yig(selftestTez());
+  if(startIdx===0){ yig(selftestFunksiyalar()); yig(selftestTez()); }
 
   var obs=[];
   try{ obs=papkaSkan(); }catch(e){ Logger.log('papkaSkan xato: '+e); }
-  for(var i=0;i<obs.length;i++){
-    if(!_plusBormi(obs[i].obyekt, obs[i].folderId)) continue;   // LRV yo'q — chuqur test mantiqsiz
+  var i=startIdx, toxtadi=false;
+  for(; i<obs.length; i++){
+    if(Date.now()-t0 > DEADLINE){ toxtadi=true; break; }   // vaqt tugadi → keyingi run davom etadi
+    if(!_plusBormi(obs[i].obyekt, obs[i].folderId)) continue;
     yig(selftestObyekt(obs[i].obyekt));
   }
 
-  Logger.log('\n████████ УМУМИЙ ЯКУН ████████\n  ✅ OK='+jami.ok+'   ⚠️ ОГОҲ='+jami.ogoh+
-    '   ❌ ХАТО='+jami.xato+'   ⏭️ SKIP='+jami.skip+
-    '\n  '+(jami.xato===0?'Критик ХАТО йўқ — тизим соғлом.':'❗ '+jami.xato+' та ХАТО бор — юқорини текширинг.'));
-  return jami;
+  var yakun='\n████████ ЯКУН ████████\n  ✅ '+jami.ok+'  ⚠️ '+jami.ogoh+'  ❌ '+jami.xato+'  ⏭️ '+jami.skip+
+            '\n  Текширилди: '+i+'/'+obs.length+' обйект';
+  if(toxtadi) yakun+='\n  ⏳ ВАҚТ ТУГАДИ — ДАВОМ: editorда selftestBarcha('+i+') ни RUN қилинг';
+  else yakun+='\n  '+(jami.xato===0?'✅ Критик ХАТО йўқ — тизим соғлом.':'❗ '+jami.xato+' та ХАТО');
+  Logger.log(yakun);
+  return {jami:jami, keyingi: toxtadi?i:null, jamiObyekt:obs.length};
 }
+
+/* lrvOqi eski o'quvchilar bilan RAQAMLAB solishtiriladi � migratsiya darvozasi */
+function selftestLrvOqi(obyekt){
+  var plus=_plusTop(obyekt); if(!plus) return {ok:false, xato:'LRV_PLUS topilmadi'};
+  var rows=lrvOqiHammasi(plus,{faqatLeaf:true});
+  var smeta=0,fakt=0,f2=0;
+  rows.forEach(function(r){ smeta+=r.smeta; fakt+=r.stFakt; f2+=r.stF2; });
+  // DASHBOARD dagi qiymat bilan solishtir
+  var dash=_dash(_serverSS(sozAsosiy()));
+  var v=dash.getRange(2,1,dash.getLastRow()-1,11).getValues();
+  for(var i=0;i<v.length;i++){
+    if(String(v[i][0]).trim()!==obyekt) continue;
+    var dSm=_toNum(v[i][1]);
+    return {ok: Math.abs(dSm-smeta)<1, lrv:smeta, dashboard:dSm, farq:dSm-smeta,
+            fakt:fakt, f2:f2, qatorlar:rows.length};
+  }
+  return {ok:false, xato:'DASHBOARD da topilmadi'};
+}
+

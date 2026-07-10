@@ -27,12 +27,15 @@ var TG_API = 'https://api.telegram.org/bot';
  * Hamma narsa avtomat: Web App URL, Telegram token, webhook.
  * URL o'zgarsa — pastdagi qiymatni yangilab qayta Run qiling. */
 function TIZIM_SOZLASH(){
-  var TOKEN    = '8858015836:AAH3XaI6rjMfA_xMhCi22LkgNi29pPfazy4';
-  var ADMIN_ID = '1290590501';  // Anvar (@anvar_akhatkulov)
+  // ⚠️ XAVFSIZLIK: bot tokeni KODGA YOZILMAYDI (avval hardcode edi → sizib ketish xavfi).
+  // Token Script Property'да (TG_TOKEN). Bir marta o'rnatish: editorда tgTokenSet('BOT_TOKEN').
+  var TOKEN    = _tgToken();
+  if(!TOKEN){ throw '❌ Token yo\'q. Avval editorда: tgTokenSet("BOT_TOKEN") ни RUN qiling, keyin TIZIM_SOZLASH.'; }
+  var ADMIN_ID = _tgAdmins()[0] || '1290590501';  // birinchi admin (yoki propдан)
 
   // Har doim EXEC URL — Script Properties dan yoki hardcoded
   // ScriptApp.getService().getUrl() /dev qaytaradi — ishlatmaymiz
-  var WEBAPP = 'https://script.google.com/macros/s/AKfycbx8d54yKlQLFSPCYjNd66xKUSnxcbSuPRJhKhHVyyB_pu_k1ceXdEj-wLfuPCa2U0DgCw/exec';
+  var WEBAPP = 'https://script.google.com/macros/s/AKfycbx0tzNBlYPgaks51yZk6hU3d5UU32LjXvybSJWXekup7HxgjcCk86gVrCy_9X12dQIbTQ/exec';
   WEBAPP = WEBAPP.replace(/\?.*$/, '').replace(/\/dev$/, '/exec');
 
   var sp = PropertiesService.getScriptProperties();
@@ -221,6 +224,20 @@ function doPost(e){
     var raw=e.postData.contents;
     Logger.log('doPost kirdi: '+raw.slice(0,200));
     var upd=JSON.parse(raw);
+
+    // [Webhook: Akt -> Smeta ReverseSync]
+    if(upd.action === 'reverse_sync_fakt' && upd.obyekt && upd.rows){
+      var ans = {ok: false};
+      try {
+        if(typeof apiFaktSinxron === 'function'){
+          ans = apiFaktSinxron(upd.obyekt, upd.rows);
+        } else {
+          ans.error = 'apiFaktSinxron topilmadi';
+        }
+      } catch(ex){ ans.error = String(ex.message||ex); }
+      return ContentService.createTextOutput(JSON.stringify(ans)).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // ⚠️ DEDUP: Telegram javob kechiksa BIR XIL update ni QAYTA yuboradi →
     // menyu ketma-ket spam bo'lardi. update_id ni keshda belgilaymiz: takror → e'tibor yo'q.
     if(upd.update_id!==undefined){
@@ -278,15 +295,33 @@ function _tgOnMessage(msg){
   }
   if(text==='/start' || text==='/menu'){
     _tgMainMenu(chatId, role);
+    return;
   } else if(text==='/id'){
     _tgSend(chatId, 'Сизнинг ID: <code>'+userId+'</code>\nРол: <b>'+role+'</b>');
   } else if(text==='/dashboard' || text==='/jami'){
     _tgDashboard(chatId);
   } else if(text==='/objects' || text==='/obyektlar'){
     _tgObjectsList(chatId);
+  } else {
+    // ⚡ HAMMA OG'IR ISH FONГА (trigger) — webhook darrov ok qaytaradi (bloklanmaydi).
+    // Avval sklad (ovoz→AI) va AI-javob sinxron edi → 30-300 sek webhook bloklanardi →
+    // Telegram qayta yuboradi → sekin/javob yo'q. Endi navbatga qo'yamiz, fon-ijro javob beradi.
+    if (msg.voice || msg.audio) {
+      _tgSend(chatId, '🎤 Овозли хабар қабул қилинди, ишланмоқда...');
+      _tgFonQosh({kind:'sklad', chatId:String(chatId), msg:_tgSlimMsg(msg)});
+    } else if (text) {
+      var matnLow = text.toLowerCase();
+      var isSklad = (matnLow.includes('prixod') || matnLow.includes('rasxod') || matnLow.includes('keldi') || matnLow.includes('ketdi'));
+      if (isSklad) {
+        _tgSend(chatId, '📦 Склад хабари қабул қилинди, ишланмоқда...');
+        _tgFonQosh({kind:'sklad', chatId:String(chatId), msg:_tgSlimMsg(msg)});
+      } else {
+        _tgSend(chatId, '⏳ Таҳлил қилинмоқда, бир зумда жавоб бераман...');
+        _tgFonQosh({kind:'ai', chatId:String(chatId), text:text});
+      }
+    }
   }
-  // Boshqa matnga JAVOB YO'Q — spam/loop oldini oladi.
-  // (avval har xabarga menyu yuborardi → 512 marta spam)
+  // Boshqa xabarlarga JAVOB YO'Q — spam/loop oldini oladi.
 }
 
 /* ============ CALLBACK ISHLOVI (inline tugmalar) ============ */
@@ -303,6 +338,7 @@ function _tgOnCallback(cb){
   else if(data.indexOf('ob:')===0){ _tgObjectDetail(chatId, msgId, data.substring(3)); }
   else if(data==='akt'){ _tgAktEdit(chatId, msgId); }
   else if(data==='prixod'){ _tgPrixodEdit(chatId, msgId); }
+  else if(data==='ai_tab'){ _tgAiTabEdit(chatId, msgId); }
 }
 
 /* ============ AKT (Telegram) ============ */
@@ -352,6 +388,23 @@ function _tgPrixodEdit(chatId, msgId){
   ]});
 }
 
+function _tgAiTabEdit(chatId, msgId){
+  var t = "🤖 <b>AI YORDAMCHI (QO'LLANMA)</b>\n\n"
+    + "Men bilan shunchaki chatda gaplashishingiz mumkin! Savolingiz bo'lsa beravering, men Smetaga oid masalalarda yordam beraman.\n\n"
+    + "📦 <b>OMBOR (SKLAD) UCHUN QO'LLANMA:</b>\n"
+    + "Botga ovozli xabar yoki yozma tarzda 'Prixod...' yoki 'Rasxod...' deb yuborsangiz, men uni to'g'ridan to'g'ri Sklad exceliga yozib qo'yaman.\n\n"
+    + '✅ <b>Prixod namunasi:</b>\n'
+    + '<i>"Prixod, bugun beton zavodidan 20 kub m250 beton keldi"</i>\n'
+    + '(Sana, turi, nomi, hajmi va postavshik avtomatik yoziladi)\n\n'
+    + '✅ <b>Rasxod namunasi:</b>\n'
+    + '<i>"Rasxod qildik, Otabekka 50 ta shifer berdik, va subpudratchiga 2 tonna sement"</i>\n'
+    + '(Bitta xabardan ikkita narsani farqlab, alohida qator qilib yozadi)';
+    
+  _tgEdit(chatId, msgId, t, {inline_keyboard:[
+    [{text:'« Меню', callback_data:'menu'}]
+  ]});
+}
+
 /* ============ ASOSIY MENYU ============ */
 function _tgMenuKeyboard(role){
   var url=_webAppUrl();
@@ -372,8 +425,11 @@ function _tgMenuKeyboard(role){
   ]);
   rows.push([
     {text:'📜 Шартномалар', callback_data:'shart'},
-    {text:'📋 Актлар', callback_data:'akt'},
-    {text:'📦 Приход', callback_data:'prixod'}
+    {text:'📋 Актлар', callback_data:'akt'}
+  ]);
+  rows.push([
+    {text:'📦 Приход/Расход', callback_data:'prixod'},
+    {text:'🤖 AI Ёрдамчи', callback_data:'ai_tab'}
   ]);
   if(!hasUrl){
     rows.push([{text:'⚙️ URL sozlanmagan — tgDiag() ishga tushiring', callback_data:'menu'}]);
@@ -498,6 +554,53 @@ function _tgObjectDetail(chatId, msgId, nom){
   _tgEdit(chatId, msgId, t, {inline_keyboard:[
     [{text:'« Объектлар', callback_data:'objects'},{text:'« Меню', callback_data:'menu'}]
   ]});
+}
+
+/* ============ ⚡ FON-NAVBAT (webhook bloklanmasin) — AI javob + Sklad ============
+ * doPost darrov ok qaytaradi; og'ir ish (AI javob / sklad ovoz-tahlil) alohida
+ * trigger-ijroda (6 daqiqa) bajariladi. Navbat Script Property (TG_FON_Q) da. */
+function _tgSlimMsg(msg){
+  // Trigger'ga uzatish uchun msg'ning FAQAT kerakli qismini olamiz (JSON kичик bo'lsin).
+  return {
+    text: String(msg.text||''), caption: String(msg.caption||''),
+    voice: msg.voice ? {file_id:msg.voice.file_id, mime_type:msg.voice.mime_type||''} : null,
+    audio: msg.audio ? {file_id:msg.audio.file_id, mime_type:msg.audio.mime_type||''} : null
+  };
+}
+function _tgFonQosh(item){
+  var lock=LockService.getScriptLock();
+  try{ lock.waitLock(5000); }catch(e){}
+  try{
+    var sp=PropertiesService.getScriptProperties();
+    var q=[]; try{ q=JSON.parse(sp.getProperty('TG_FON_Q')||'[]'); }catch(e){}
+    item.ts=Date.now();
+    q.push(item);
+    if(q.length>30) q=q.slice(q.length-30);           // himoya
+    sp.setProperty('TG_FON_Q', JSON.stringify(q));
+  } finally { try{ lock.releaseLock(); }catch(e){} }
+  // Trigger allaqachon bo'lsa yangi yaratmaymiz (kvota tejash)
+  var bor=false, trs=ScriptApp.getProjectTriggers();
+  for(var i=0;i<trs.length;i++) if(trs[i].getHandlerFunction()==='_tgFonQadam'){ bor=true; break; }
+  if(!bor){ try{ ScriptApp.newTrigger('_tgFonQadam').timeBased().after(1000).create(); }catch(e){ Logger.log('_tgFonQosh trigger: '+e); } }
+}
+function _tgFonQadam(){
+  try{ ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction()==='_tgFonQadam') ScriptApp.deleteTrigger(t); }); }catch(e){}
+  var sp=PropertiesService.getScriptProperties();
+  var take=[];
+  var lock=LockService.getScriptLock();
+  try{ lock.waitLock(5000); }catch(e){}
+  try{
+    var q=[]; try{ q=JSON.parse(sp.getProperty('TG_FON_Q')||'[]'); }catch(e){}
+    take=q;
+    sp.deleteProperty('TG_FON_Q');
+  } finally { try{ lock.releaseLock(); }catch(e){} }
+  for(var i=0;i<take.length;i++){
+    var it=take[i];
+    try{
+      if(it.kind==='sklad'){ if(typeof apiSkladTelegramQabul==='function') apiSkladTelegramQabul(it.msg||{}, it.chatId); }
+      else { if(typeof tgAiJavob==='function') tgAiJavob(it.chatId, it.text); }
+    }catch(e){ try{ _tgSend(it.chatId, '❌ '+(e.message||e)); }catch(_){} }
+  }
 }
 
 /* ============ FORMAT ============ */

@@ -79,7 +79,16 @@ function apiBuxDashboard(){
   var out=[], jami={dog:0, bajarilgan:0, tolangan:0, debitor:0, avans:0};
   (d.shartnomalar||[]).forEach(function(g){
     if(g.no==='—') return;
-    var m=g.meta||{}, dog=_toNum(m.jami)||_toNum(g.jamiSmeta), baj=_toNum(g.jamiF2);
+    // ⚡⚡⚡ 2026-07-10 TUZATILDI: dog (m.jami) — foydalanuvchi qo'lda kiritgan
+    //   ЯКУНИЙ shartnoma summasi (НДС/накрутка BILAN). baj (Ф2) esa LRV'dan
+    //   ТОЗА (накрутkasiz) kelardi — baj/dog nisbati apples-to-oranges bo'lib,
+    //   bajarilgan% doim sun'iy KAM chiqardi (foydalanuvchi tasdiqlagan bug).
+    //   Endi: agar haqiqiy dogovor summasi (m.jami) bo'lsa — накрутkali F2
+    //   ekvivalentidan (jamiF2Nakr) foydalanamiz (bir xil qamrov). Fallback
+    //   (dogovor kiritilmagan, jamiSmeta — toza) holatda ikkalasi ham toza qoladi.
+    var m=g.meta||{}, dogRaw=_toNum(m.jami);
+    var dog = dogRaw || _toNum(g.jamiSmeta);
+    var baj = dogRaw ? _toNum(g.jamiF2Nakr!=null?g.jamiF2Nakr:g.jamiF2) : _toNum(g.jamiF2);
     var tl=(ty[g.no]&&ty[g.no].tolangan)||0;
     var debitor=baj-tl;                                 // bizga qarz (+) / oldindan (−)
     out.push({no:g.no, nomi:m.nomi||'', taraf:m.taraf||'',

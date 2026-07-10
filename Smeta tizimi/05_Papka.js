@@ -30,6 +30,13 @@ function papkaSkan(){
   return obyektlar;
 }
 
+function _getSysFolder(parentFolder) {
+  var fn = CFG.SYS_FOLDER || '⚙️ Tizim Fayllari';
+  var it = parentFolder.getFoldersByName(fn);
+  if (it.hasNext()) return it.next();
+  return parentFolder.createFolder(fn);
+}
+
 /* FAQAT BITTA obyekt papkasini skan qiladi — butun ROOT ni emas.
  * Navbat (har qadam 1 obyekt) va bitta-obyekt [Ишла] uchun: 9 papka o'rniga 1
  * papka Drive skani → ancha tez. Keshdan folderId oladi, topilmasa to'liq skan. */
@@ -37,20 +44,20 @@ function skanBitta(obyekt){
   try{
     var folderId='';
     var sk=(typeof _keshOlStale==='function') ? (_keshOlStale('skan')||[]) : [];
-    for(var i=0;i<sk.length;i++){ if(sk[i].obyekt===obyekt){ folderId=sk[i].folderId||''; break; } }
+    for(var i=0;i<sk.length;i++){ if(sk[i].obyekt.trim()===obyekt.trim()){ folderId=sk[i].folderId||''; break; } }
     if(folderId){
       var folder=DriveApp.getFolderById(folderId);
       var obs=_skanObyekt(folder, _boglashOl());
       if(obs && obs.length) {
         for(var k=0; k<obs.length; k++) {
-          if(obs[k].obyekt===obyekt) return obs[k];
+          if(obs[k].obyekt.trim()===obyekt.trim()) return obs[k];
         }
       }
     }
   }catch(e){ /* keshda yo'q yoki folder ochilmadi — to'liq skanga tushamiz */ }
   // Zaxira: to'liq skan (kesh bo'sh yoki papka ID eskirган)
   var obs=papkaSkan();
-  for(var j=0;j<obs.length;j++) if(obs[j].obyekt===obyekt) return obs[j];
+  for(var j=0;j<obs.length;j++) if(obs[j].obyekt.trim()===obyekt.trim()) return obs[j];
   return null;
 }
 
@@ -58,7 +65,8 @@ function _skanObyekt(folder, override){
   var nom = folder.getName().trim();
   override = override || {};
 
-  var cand=[], it=folder.getFiles();
+  var cand=[], it=folder.getFiles(), sysFolder=null;
+  var plusId=null;
   var allowedMimes = [
     MimeType.GOOGLE_SHEETS, 
     MimeType.MICROSOFT_EXCEL, 
@@ -68,8 +76,15 @@ function _skanObyekt(folder, override){
   ];
   while(it.hasNext()){
     var fi=it.next(), fn=fi.getName();
-    if(fn.toUpperCase().indexOf(CFG.PLUS_SUF.toUpperCase())>=0) continue;
-    if(fn.indexOf('_TMP_')===0 || fn.indexOf('_NAT_')===0 || fn.indexOf('(GS)')>=0) continue;
+    if(fn.toUpperCase().indexOf(CFG.PLUS_SUF.toUpperCase())>=0) {
+       plusId = fi.getId();
+       continue;
+    }
+    if(fn.indexOf('_TMP_')===0 || fn.indexOf('_NAT_')===0 || fn.indexOf('(GS)')>=0) {
+      if(!sysFolder) sysFolder = _getSysFolder(folder);
+      try { fi.moveTo(sysFolder); } catch(e){}
+      continue;
+    }
     var mt = fi.getMimeType();
     if(allowedMimes.indexOf(mt) === -1) continue;
     cand.push({id:fi.getId(), name:fn, file:fi});
@@ -78,37 +93,43 @@ function _skanObyekt(folder, override){
 
   var lokFiles=[], svod=null;
   var ovFolder = override[nom];
+  // НАРХ_ТАЙЁР: lokalka(lar) allaqachon narxlangan — svodka UMUMAN qidirilmaydi/so'ralmaydi,
+  // barcha fayllar lokalka deb hisoblanadi (engine o'z НАРХ ustunidan o'qiydi, §narxTayyor).
+  var narxTayyorFolder = !!_ovValFolder(override, nom, 'narxTayyor');
 
   // 1) qo'lda bog'lash (puzzle) - folder nomi bo'yicha
   if(ovFolder){
     for(var c=0;c<cand.length;c++){
       if(ovFolder.lokId  && cand[c].id===ovFolder.lokId)  lokFiles.push(cand[c].file);
-      if(ovFolder.svodId && cand[c].id===ovFolder.svodId) svod=cand[c].file;
+      if(!narxTayyorFolder && ovFolder.svodId && cand[c].id===ovFolder.svodId) svod=cand[c].file;
     }
   }
 
-  // 2) Svodni topish (kalit so'z bo'yicha)
-  for(var c=0;c<cand.length;c++){
-    var up=cand[c].name.toUpperCase(), fi2=cand[c].file;
-    if(!svod && _kw(up, CFG.SVOD_KW) && (!ovFolder || cand[c].id!==ovFolder.lokId)){ svod=fi2; continue; }
+  if(!narxTayyorFolder){
+    // 2) Svodni topish (kalit so'z bo'yicha)
+    for(var c=0;c<cand.length;c++){
+      var up=cand[c].name.toUpperCase(), fi2=cand[c].file;
+      if(!svod && _kw(up, CFG.SVOD_KW) && (!ovFolder || cand[c].id!==ovFolder.lokId)){ svod=fi2; continue; }
+    }
   }
 
   // 3) Qolgan barcha fayllarni Lokalka deb hisoblash
   for(var c=0;c<cand.length;c++){
     var id=cand[c].id;
     if(svod && svod.getId()===id) continue;
-    
+
     // Check if it's already in lokFiles (from manual override)
-    var isLok=false; 
+    var isLok=false;
     for(var i=0;i<lokFiles.length;i++){ if(lokFiles[i].getId()===id) { isLok=true; break; } }
     if(isLok) continue;
-    
+
     lokFiles.push(cand[c].file);
   }
-  
+
   // 4) Agar SVOD topilmagan bo'lsa, lekin bir nechta fayl bo'lsa
   // Eski mantiq bo'yicha bittasini svod deb olamiz (qanday nomlanganidan qat'iy nazar)
-  if(!svod && lokFiles.length > 1) {
+  // НАРХ_ТАЙЁР papkada bu hech qachon ishlamaydi — hammasi lokalka bo'lib qoladi.
+  if(!narxTayyorFolder && !svod && lokFiles.length > 1) {
      var potentialSvod = null;
      var pIdx = -1;
      // Agar nomida LOKAL so'zi yo'q bo'lgan bitta fayl bo'lsa, o'shani svod qilamiz
@@ -148,10 +169,11 @@ function _skanObyekt(folder, override){
       svodFile:   svod,
       lokName:    lokFiles[0] ? lokFiles[0].getName() : '(yo\'q)',
       svodName:   svod ? svod.getName() : '(yo\'q)',
-      format:     _normFormat((ov && ov.format) ? ov.format : 'TN'),
-      lokSheets:  (ov && ov.lokSheets)  ? ov.lokSheets.split(',').map(function(s){return s.trim();}).filter(String) : [],
+      format:     _normFormat(_ovValFolder(override, nom, 'format') || 'TN'),
+      lokSheets:  (ov && ov.lokSheets)  ? _sheetsParse(ov.lokSheets) : [],
       svodSheets: _svodSheetsFolder(override, nom),
       svodCols:   _svodColsFolder(override, nom),
+      narxTayyor: narxTayyorFolder,
       candidates: cand.map(function(x){ return {id:x.id, name:x.name}; })
     });
   } else {
@@ -164,10 +186,12 @@ function _skanObyekt(folder, override){
       var ov = override[subNom] || override[nom];
       
       // Agar override aynan shu subNom uchun bo'lsa va unda svodId bo'lsa, o'shani ishlatamiz
+      // Yoki bitta papkadagi boshqa lokalkadan meros olamiz
       var subSvod = svod;
-      if (override[subNom] && override[subNom].svodId) {
+      var inheritedSvodId = _ovValFolder(override, subNom, 'svodId');
+      if (inheritedSvodId) {
         for (var c = 0; c < cand.length; c++) {
-          if (cand[c].id === override[subNom].svodId) {
+          if (cand[c].id === inheritedSvodId) {
             subSvod = cand[c].file;
             break;
           }
@@ -182,10 +206,12 @@ function _skanObyekt(folder, override){
         svodFile:   subSvod,
         lokName:    lf.getName(),
         svodName:   subSvod ? subSvod.getName() : '(yo\'q)',
-        format:     _normFormat((ov && ov.format) ? ov.format : 'TN'),
-        lokSheets:  (ov && ov.lokSheets)  ? ov.lokSheets.split(',').map(function(s){return s.trim();}).filter(String) : [],
+        format:     _normFormat(_ovValFolder(override, subNom, 'format') || 'TN'),
+        lokSheets:  _lokSheetsFolder(override, subNom),
         svodSheets: _svodSheetsFolder(override, subNom),
         svodCols:   _svodColsFolder(override, subNom),
+        narxTayyor: narxTayyorFolder,
+        plusId:     plusId,
         candidates: cand.map(function(x){ return {id:x.id, name:x.name}; })
       });
     }
@@ -201,7 +227,8 @@ function _kw(s, arr){ for(var i=0;i<arr.length;i++) if(s.indexOf(arr[i])>=0) ret
  * SOZLAMALAR_BOGLASH ustunlari:
  *   A=ОБЪЕКТ  B=ЛОК_ID  C=ЛОК_НОМ  D=СВОД_ID  E=СВОД_НОМ  F=ФОРМАТ
  *   G=ЛОК_SHEETS  H=СВОД_SHEETS
- *   I=СВОД_НОМ_УСТ  J=СВОД_БИР_УСТ  K=СВОД_НАРХ_УСТ  L=СВОД_БЛОК_УСТ
+ *   I=СВОД_НОМ_УСТ  J=СВОД_БИР_УСТ  K=СВОД_НАРХ_УСТ  L=СВОД_БЛОК_УСТ  M=СВОД_QTY_УСТ  N=СВОД_СУММА_УСТ
+ *   O=НАРХ_ТАЙЁР (2026-07 — "1"/TRUE = lokalka allaqachon narxlangan, svodka UMUMAN kerak emas)
  *   (ustun raqamlari, 1-based; 0/bo'sh = format default ishlatiladi) */
 function _boglashOl(){
   var sh=SpreadsheetApp.getActive().getSheetByName(CFG.SOZ_BOG);
@@ -212,13 +239,15 @@ function _boglashOl(){
     // I-N (idx 8-13): СВОД_НОМ/БИР/НАРХ/БЛОК/QTY/СУММА ustun raqamlari (1-based)
     var sc={ nom:Number(v[i][8])||0, bir:Number(v[i][9])||0, narx:Number(v[i][10])||0,
              blok:Number(v[i][11])||0, qty:Number(v[i][12])||0, summa:Number(v[i][13])||0 };
+    var narxTayyorRaw=String(v[i][14]||'').trim().toUpperCase();
     m[nom]={
       lokId:    String(v[i][1]||'').trim(),
       svodId:   String(v[i][3]||'').trim(),
       format:   _normFormat(String(v[i][5]||'TN').trim().toUpperCase()),
       lokSheets: String(v[i][6]||'').trim(),
       svodSheets:String(v[i][7]||'').trim(),
-      svodCols: (sc.nom||sc.bir||sc.narx||sc.blok||sc.qty||sc.summa) ? sc : null
+      svodCols: (sc.nom||sc.bir||sc.narx||sc.blok||sc.qty||sc.summa) ? sc : null,
+      narxTayyor: (narxTayyorRaw==='1' || narxTayyorRaw==='TRUE')
     };
   }
   return m;
@@ -275,15 +304,48 @@ function _svodColsFolder(override, nomFull){
   }
   return null;
 }
-/* svodSheets (qaysi svod varaqlarini o'qish) — SVODKAga tegishli → papka bo'yicha meros.
- * Massiv qaytaradi (vergulli string parse qilinadi). */
-function _svodSheetsFolder(override, nomFull){
-  function parse(s){ return s ? String(s).split(',').map(function(x){return x.trim();}).filter(String) : []; }
-  if(!override) return [];
-  if(override[nomFull] && override[nomFull].svodSheets) return parse(override[nomFull].svodSheets);
+/* Umumiy qiymat (format, svodId) ni meros olish yordamchisi */
+function _ovValFolder(override, nomFull, key){
+  if(!override) return null;
+  if(override[nomFull] && override[nomFull][key]) return override[nomFull][key];
   var fk=_cfgNorm(_cfgKalit(nomFull));
   for(var k in override){
-    if(override[k] && override[k].svodSheets && _cfgNorm(_cfgKalit(k))===fk) return parse(override[k].svodSheets);
+    if(override[k] && override[k][key] && _cfgNorm(_cfgKalit(k))===fk) return override[k][key];
+  }
+  return null;
+}
+/* Sheets ro'yxatini parse qilish — YANGI format '|' bilan, ESKI saqlangan ma'lumot ','
+ * bilan turgan bo'lishi mumkin. '|' bo'lsa '|' bilan, aks holda ',' bilan bo'linadi.
+ * (Aks holda "ЛРВ1,ЛРВ2" bitta nom deb o'qilib, svod varaq filtri hech narsani
+ *  o'tkazmaydi → priceDB bo'sh → HAMMA NARX 0 bo'lardi.) */
+function _sheetsParse(s){
+  if(!s) return [];
+  s=String(s);
+  var sep = s.indexOf('|')>=0 ? '|' : ',';
+  return s.split(sep).map(function(x){return x.trim();}).filter(String);
+}
+
+/* svodSheets (qaysi svod varaqlarini o'qish) — SVODKAga tegishli → papka bo'yicha meros.
+ * Massiv qaytaradi. */
+function _svodSheetsFolder(override, nomFull){
+  if(!override) return [];
+  if(override[nomFull] && override[nomFull].svodSheets) return _sheetsParse(override[nomFull].svodSheets);
+  var fk=_cfgNorm(_cfgKalit(nomFull));
+  for(var k in override){
+    if(override[k] && override[k].svodSheets && _cfgNorm(_cfgKalit(k))===fk) return _sheetsParse(override[k].svodSheets);
+  }
+  return [];
+}
+
+/* lokSheets (qaysi lok varaqlarini ishlash) — obyekt bo'yicha; topilmasa papka merosi.
+ * ⚠️ Bu funksiya YO'Q edi (chaqirilgan-u, aniqlanmagan) → ko'p-lokalkali papkada
+ * papkaSkan ReferenceError bilan CRASH bo'lardi (butun tizim ishlamay qolardi). */
+function _lokSheetsFolder(override, nomFull){
+  if(!override) return [];
+  if(override[nomFull] && override[nomFull].lokSheets) return _sheetsParse(override[nomFull].lokSheets);
+  var fk=_cfgNorm(_cfgKalit(nomFull));
+  for(var k in override){
+    if(override[k] && override[k].lokSheets && _cfgNorm(_cfgKalit(k))===fk) return _sheetsParse(override[k].lokSheets);
   }
   return [];
 }
@@ -357,7 +419,8 @@ function _openAsSheet(file, folderId){
 
   // (2) Drive'даги mavjud _NAT_ (kesh bo'sh bo'lsa) + ORTIQCHA dublikatlarni darhol tozalash.
   var folder = DriveApp.getFolderById(folderRealId);
-  var it = folder.getFilesByName(natName), found = null;
+  var sysFolder = _getSysFolder(folder);
+  var it = sysFolder.getFilesByName(natName), found = null;
   while(it.hasNext()){
     var nf2 = it.next();
     if(!found && exTime <= nf2.getLastUpdated().getTime()) found = nf2;
@@ -369,7 +432,7 @@ function _openAsSheet(file, folderId){
   }
 
   // (3) Bir marta konvert + keshga yoz (keyingi runlar darrov ishlatadi)
-  var newId = _excelToNative(fid, folderRealId, natName);
+  var newId = _excelToNative(fid, sysFolder.getId(), natName);
   var when = Date.now();
   try{ when = DriveApp.getFileById(newId).getLastUpdated().getTime(); }catch(e){}
   _natKeshYoz(fid, newId, when);
@@ -435,13 +498,26 @@ function tmpTozala(){
   var subs=root.getFolders();
   while(subs.hasNext()){
     var folder=subs.next();
-    var byName={}, natByName={}, it=folder.getFiles();
+    var byName={}, natByName={};
+    
+    var it=folder.getFiles();
     while(it.hasNext()){
       var f=it.next(), nm=f.getName();
       if(nm.indexOf('_TMP_')===0){ try{ f.setTrashed(true); tmpN++; }catch(e){} continue; }
       if(nm.indexOf('_NAT_')===0){ (natByName[nm]=natByName[nm]||[]).push(f); continue; }
       if(nm.indexOf(CFG.PLUS_SUF)>=0){
         (byName[nm]=byName[nm]||[]).push(f);
+      }
+    }
+
+    var sysIt = folder.getFoldersByName(CFG.SYS_FOLDER || '⚙️ Tizim Fayllari');
+    if(sysIt.hasNext()){
+      var sysFolder = sysIt.next();
+      var sit = sysFolder.getFiles();
+      while(sit.hasNext()){
+        var sf=sit.next(), snm=sf.getName();
+        if(snm.indexOf('_TMP_')===0){ try{ sf.setTrashed(true); tmpN++; }catch(e){} continue; }
+        if(snm.indexOf('_NAT_')===0){ (natByName[snm]=natByName[snm]||[]).push(sf); continue; }
       }
     }
     // Dublikat LRV_PLUS: eng yangi qoladi, qolganлари chiqindi
@@ -487,6 +563,16 @@ function _plusFile(obyekt, folderId){
   var folder = DriveApp.getFolderById(folderId);
   var ex = folder.getFilesByName(nm);
   if(ex.hasNext()) return SpreadsheetApp.openById(ex.next().getId());
+  
+  // HIMOYA: Agar fayl qo'lda o'chirilgan (Korzinada) bo'lsa, uni tiklaymiz!
+  var q = "title = '" + nm.replace(/'/g,"\\'") + "' and trashed = true";
+  var trashed = folder.searchFiles(q);
+  if(trashed.hasNext()) {
+    var tf = trashed.next();
+    tf.setTrashed(false); // Korzinadan qaytarish
+    return SpreadsheetApp.openById(tf.getId());
+  }
+  
   var ss = SpreadsheetApp.create(nm);
   var file = DriveApp.getFileById(ss.getId());
   folder.addFile(file);

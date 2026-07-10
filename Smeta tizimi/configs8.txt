@@ -1,0 +1,3 @@
+SkanCache test:
+Skan cache length: 0
+[]

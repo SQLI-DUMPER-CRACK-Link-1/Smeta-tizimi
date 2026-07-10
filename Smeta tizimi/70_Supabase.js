@@ -53,12 +53,23 @@ function _sbYoz(table, rows, onConflict){
     'Content-Type':'application/json',
     'Prefer': onConflict ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
   };
-  for(var i=0;i<rows.length;i+=1000){                 // 1000 qatorlik bo'laklar
+  var requests = [];
+  for(var i=0;i<rows.length;i+=1000){
     var chunk=rows.slice(i,i+1000);
-    var resp=UrlFetchApp.fetch(base,{method:'post',headers:headers,
-      payload:JSON.stringify(chunk), muteHttpExceptions:true});
-    var code=resp.getResponseCode();
-    if(code>=300) throw 'Supabase '+table+' xato ('+code+'): '+resp.getContentText().slice(0,300);
+    requests.push({
+      url: base,
+      method: 'post',
+      headers: headers,
+      payload: JSON.stringify(chunk),
+      muteHttpExceptions: true
+    });
+  }
+  if (requests.length > 0) {
+    var responses = UrlFetchApp.fetchAll(requests);
+    for (var j=0; j<responses.length; j++) {
+      var code = responses[j].getResponseCode();
+      if(code>=300) throw 'Supabase '+table+' xato ('+code+'): '+responses[j].getContentText().slice(0,300);
+    }
   }
 }
 function _sbOchir(table, filter){                      // filter: "obyekt=eq.NAME"
@@ -101,7 +112,7 @@ function supabaseObyektPush(obyekt){
       if(n.type==='bl'||(n.type === 'mat' || n.type === 'ob') ){
         hrows.push({obyekt:obyekt,varaq:n.varaq,qator:n.row,tur:n.type,
           nom:n.nom,birlik:n.birlik||'',smeta_hajm:n.smetaHajm||0,
-          fakt:n.fakt||0,f2ol:n.f2ol||0,qoldiq:n.qoldiq||0,
+          fakt:n.fakt||0,f2ol:n.f2ol||0,qoldiq:n.qoldiq||0,narx:0,
           smeta_pul:n.smeta||0,st_fakt:n.stFakt||0,st_f2:n.stF2||0,
           kategoriya:'', razdel:razdel||'', updated_at:_sbISO()});
         walk(n.children, razdel);
@@ -110,7 +121,7 @@ function supabaseObyektPush(obyekt){
         var birNarx=(n.smetaHajm>0)?(_toNum(n.smeta)/n.smetaHajm):0;
         hrows.push({obyekt:obyekt,varaq:n.varaq,qator:n.row,tur:'rs',
           nom:n.nom,birlik:n.birlik||'',smeta_hajm:n.smetaHajm||0,
-          fakt:n.fakt||0,qoldiq:n.qoldiq||0,narx:birNarx,
+          fakt:n.fakt||0,f2ol:0,qoldiq:n.qoldiq||0,narx:birNarx,
           smeta_pul:n.smeta||0,st_fakt:n.stFakt||0,st_f2:n.stF2||0,
           kategoriya:n.kat||'', razdel:razdel||'', updated_at:_sbISO()});
       }
@@ -179,51 +190,84 @@ function supabaseTarixYoz(obyekt, edits, kim){
 }
 
 
-/* ============ TO'LIQ SINXRON (birinchi yuklash / qo'lda) ============ */
-function supabaseToliqSinx(){
+/* ============ KURSORLI TO'LIQ SINX (6-minut limitidan himoya) ============ */
+function apiSupabaseSinxKursor() {
   if (typeof tizimMuzlatilganMi === 'function' && tizimMuzlatilganMi()) {
-    Logger.log('Tizim to\'xtatib turilgan (PAUSED). Supabase to\'liq sinxronizatsiya bajarilmadi.');
-    return {ok:false, sabab:'Tizim to\'xtatilgan (PAUSED)'};
+    return {ok:false, xabar:'Tizim to\'xtatilgan (PAUSED)'};
   }
-  if(!_sbBor()) throw 'Avval: supabaseSozlash(url, key)';
-  var t0=Date.now(), log=[];
-  try{ supabaseDashboardPush(); log.push('✓ dashboard'); }
-  catch(e){ log.push('✗ dashboard: '+(e.message||e)); }
-
-  var obs=papkaSkan();
-  for(var i=0;i<obs.length;i++){
-    try{
-      if(_plusBormi(obs[i].obyekt, obs[i].folderId)){
-        supabaseObyektPush(obs[i].obyekt);
-        log.push('✓ '+obs[i].obyekt);
+  if(!_sbBor()) return {ok:false, xabar:'Avval: Supabase URL va Key kiriting'};
+  
+  var sp = PropertiesService.getScriptProperties();
+  var cursorStr = sp.getProperty('SB_SYNC_CURSOR');
+  var cursor = cursorStr ? parseInt(cursorStr, 10) : 0;
+  var log = JSON.parse(sp.getProperty('SB_SYNC_LOG') || '[]');
+  
+  var obs = papkaSkan();
+  var TOTAL_STEPS = obs.length + 2; // 0=dashboard, 1..N=obyektlar, N+1=globals
+  
+  var t0 = Date.now();
+  var MAX_TIME = 4.5 * 60 * 1000; // 4.5 minut
+  
+  while (cursor < TOTAL_STEPS) {
+    if (Date.now() - t0 > MAX_TIME) {
+      // Vaqt tugadi, pauza qilamiz
+      sp.setProperty('SB_SYNC_CURSOR', cursor.toString());
+      sp.setProperty('SB_SYNC_LOG', JSON.stringify(log));
+      var foiz = Math.round(cursor / TOTAL_STEPS * 100);
+      return {ok:true, continue:true, foiz:foiz, xabar:foiz + '% yakunlandi. Davom etmoqda...', log:log};
+    }
+    
+    try {
+      if (cursor === 0) {
+        supabaseDashboardPush();
+        log.push('✓ Dashboard');
+      } else if (cursor <= obs.length) {
+        var ob = obs[cursor-1];
+        if (_plusBormi(ob.obyekt, ob.folderId)) {
+          supabaseObyektPush(ob.obyekt);
+          supabaseMaterialKerakPush(ob.obyekt);
+          supabaseTopilmaganPush(ob.obyekt);
+          supabaseAnomaliyaPush(ob.obyekt);
+          log.push('✓ ' + ob.obyekt);
+        }
+      } else {
+        // N+1 qadam: Globals
+        try { supabaseNarxlarPush(); log.push('✓ narxlar'); } catch(e) { log.push('✗ narxlar: '+(e.message||e)); }
+        try { supabaseTolovPush(); log.push('✓ tolovlar'); } catch(e) { log.push('✗ tolovlar: '+(e.message||e)); }
+        try { supabaseShartnomaPush(); log.push('✓ shartnoma'); } catch(e) { log.push('✗ shartnoma: '+(e.message||e)); }
+        try { supabasePrixodPush(); log.push('✓ prixod'); } catch(e) { log.push('✗ prixod: '+(e.message||e)); }
+        try { supabaseAktPush(); log.push('✓ akt'); } catch(e) { log.push('✗ akt: '+(e.message||e)); }
+        try { supabaseAktIshPush(); log.push('✓ akt_ish'); } catch(e) { log.push('✗ akt_ish: '+(e.message||e)); }
+        _sbDirtyTozala();
       }
-    }catch(e){ log.push('✗ '+obs[i].obyekt+': '+(e.message||e)); }
+    } catch(e) {
+      log.push('✗ XATO (qadam ' + cursor + '): ' + (e.message||e));
+    }
+    
+    cursor++;
   }
-  for(var k=0;k<obs.length;k++){
-    try{
-      if(_plusBormi(obs[k].obyekt, obs[k].folderId)){
-        supabaseMaterialKerakPush(obs[k].obyekt);
-        supabaseTopilmaganPush(obs[k].obyekt);
-        supabaseAnomaliyaPush(obs[k].obyekt);
-      }
-    }catch(e){ log.push('✗ mat/miss '+obs[k].obyekt+': '+(e.message||e)); }
-  }
-  try{ supabaseNarxlarPush();   log.push('✓ narxlar'); }
-  catch(e){ log.push('✗ narxlar: '+(e.message||e)); }
-  try{ supabaseTolovPush();     log.push('✓ tolovlar'); }
-  catch(e){ log.push('✗ tolovlar: '+(e.message||e)); }
-  try{ supabaseShartnomaPush(); log.push('✓ shartnoma+bux'); }
-  catch(e){ log.push('✗ shartnoma: '+(e.message||e)); }
-  try{ supabasePrixodPush();    log.push('✓ prixod'); }
-  catch(e){ log.push('✗ prixod: '+(e.message||e)); }
-  try{ supabaseAktIshPush();    log.push('✓ akt_ish'); }
-  catch(e){ log.push('✗ akt_ish: '+(e.message||e)); }
+  
+  // Tugadi
+  sp.deleteProperty('SB_SYNC_CURSOR');
+  sp.deleteProperty('SB_SYNC_LOG');
+  return {ok:true, continue:false, foiz:100, xabar:'To\'liq sinxronizatsiya yakunlandi!', log:log};
+}
 
-  _sbDirtyTozala();                                   // to'liq sinx → dirty bayroqlar tozalandi
-  var sek=Math.round((Date.now()-t0)/1000);
-  var xabar=log.join('\n')+'\n\nJami: '+sek+' sek';
-  try{ SpreadsheetApp.getUi().alert('SUPABASE SINXRON\n\n'+xabar); }catch(e){}
-  return {ok:true, sek:sek, log:log};
+function apiSupabaseSinxReset() {
+  var sp = PropertiesService.getScriptProperties();
+  sp.deleteProperty('SB_SYNC_CURSOR');
+  sp.deleteProperty('SB_SYNC_LOG');
+  return {ok:true};
+}
+
+function apiSupabaseSozlamaOl() {
+  var c = _sbCfg();
+  return {url: c ? c.url : '', key: c ? c.key : ''};
+}
+
+function apiSupabaseSozlamaSaqla(url, key) {
+  supabaseSozlash(url, key);
+  return {ok:true};
 }
 
 
@@ -441,6 +485,44 @@ function supabaseAnomaliyaPush(obyekt){
 function _sbMlrd(v){ v=_toNum(v); return (Math.abs(v)>=1e9)?(v/1e9).toFixed(2)+' млрд':Math.round(v).toLocaleString(); }
 
 
+/* ============ AKT JADVALI (REYESTR) ============ */
+function supabaseAktPush(){
+  if(!_sbBor()) return;
+  try {
+    var akts = apiAktlarOl(0);
+    if(!akts || !akts.rows || !akts.rows.length) return;
+    var rows = akts.rows;
+    var res = [];
+    var seen = {};
+    for(var i=0; i<rows.length; i++){
+      var r = rows[i];
+      if(!r.id || seen[r.id]) continue;
+      seen[r.id] = true;
+      res.push({
+        act_id: r.id,
+        obyekt: r.obj || '',
+        work_name: r.work || '',
+        act_number: r.num || '',
+        start_date: r.start || '',
+        end_date: r.end || '',
+        status: r.status || '',
+        customer: '',
+        sub_name: '',
+        act_url: r.url || '',
+        ish_key: '',
+        smeta_ref: r.ref || '',
+        work_count: 0
+      });
+    }
+    for(var i=0; i<res.length; i+=500){
+      _sbYoz('akt', res.slice(i, i+500), 'act_id');
+    }
+  } catch(e) {
+    Logger.log('Supabase akt xato: '+e.message);
+    throw e;
+  }
+}
+
 /* ============ AKT_ISH BOG'LANISH JADVALI (N:M MIRROR) ============ */
 // REYESTR dagi SMETA_REF ustunini (obyekt||KOD yoki obyekt||nomKey) split qilib,
 // akt_ish jadvaliga yozamiz. Akt jadvali o'zi Akt generator/Supabase.js dan push qilinadi.
@@ -517,6 +599,7 @@ function supabaseSoatlikSinx(){
   try{ supabaseTolovPush();     log.push('✓ tolovlar'); }catch(e){ log.push('✗ tolovlar: '+(e.message||e)); }
   try{ supabaseShartnomaPush(); log.push('✓ shartnoma+bux'); }catch(e){ log.push('✗ shartnoma: '+(e.message||e)); }
   try{ supabasePrixodPush();    log.push('✓ prixod'); }catch(e){ log.push('✗ prixod: '+(e.message||e)); }
+  try{ supabaseAktPush();       log.push('✓ akt'); }catch(e){ log.push('✗ akt: '+(e.message||e)); }
   try{ supabaseAktIshPush();    log.push('✓ akt_ish'); }catch(e){ log.push('✗ akt_ish: '+(e.message||e)); }
 
   var dirty=_sbDirtyOl();

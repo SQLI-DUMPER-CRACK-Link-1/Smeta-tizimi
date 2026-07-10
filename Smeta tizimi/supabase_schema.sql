@@ -6,6 +6,31 @@
 -- Frontend authenticated foydalanuvchi sifatida faqat O'QIYDI.
 -- ============================================================
 
+-- Tizim toza o'rnatilishi uchun barcha eski jadvallarni o'chirib tashlaymiz 
+-- (Buning zarari yo'q, chunki GAS "Keshni yangilash" orqali hammasini noldan qayta yozadi)
+drop table if exists obyektlar cascade;
+drop table if exists holat cascade;
+drop table if exists oylik_f2 cascade;
+drop table if exists tarix cascade;
+drop table if exists narxlar cascade;
+drop table if exists material_kerak cascade;
+drop table if exists shartnoma cascade;
+drop table if exists tolovlar cascade;
+drop table if exists prixod cascade;
+drop table if exists rashod cascade;
+drop view if exists sklad_ostatka cascade;
+drop table if exists topilmaganlar cascade;
+drop table if exists akt cascade;
+drop table if exists akt_ish cascade;
+drop table if exists viborka_nazorat cascade;
+drop table if exists anomaliya cascade;
+drop table if exists system_config cascade;
+drop table if exists smeta_qatorlari cascade;
+drop table if exists nakrutka cascade;
+drop table if exists shartnomalar cascade;
+drop table if exists svodka_narxlari cascade;
+drop table if exists obyekt_stavkalari cascade;
+
 -- ---------- OBYEKTLAR (dashboard darajasi — tez panel + realtime) ----------
 create table if not exists obyektlar (
   nom        text primary key,

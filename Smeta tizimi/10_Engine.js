@@ -84,7 +84,7 @@ function _ishlaObyekt(ob){
   var kat = sozKategoriya();
   var faktMap = sozFaktNarx();
   if(!ob.lokFiles || !ob.lokFiles.length) throw 'локалка топилмади ('+ob.obyekt+')';
-  if(!ob.svodFile) throw 'свод топилмади ('+ob.obyekt+')';
+  if(!ob.narxTayyor && !ob.svodFile) throw 'ENGINE: svod topilmadi (' + ob.obyekt + ')';
 
   var fmt = _normFormat(ob.format || 'TN');
   var svodCfg = _svodCfg(ob);
@@ -95,16 +95,25 @@ function _ishlaObyekt(ob){
     lokSSArray.push(_openAsSheet(ob.lokFiles[lf], ob.folderId));
   }
   _tLog('lokFiles ochildi (' + lokSSArray.length + ' ta)');
-  var svodSS = _openAsSheet(ob.svodFile, ob.folderId); _tLog('svodSS ochildi');
   var savedOraliq = _oraliqlarOl(ob.obyekt);
-  var pdb  = _priceDB(svodSS, kat, svodCfg, fmt, ob.svodSheets||[], savedOraliq); _tLog('priceDB tayyor ('+pdb.n+')');
+  // НАРХ_ТАЙЁР: svodka UMUMAN ochilmaydi — lokalka o'z НАРХ ustunidan o'qiladi (_ishlaVaraq
+  // pNarx!==0 yo'li), pdb bo'sh qoladi (faqat pNarx===0 qatorlar uchun MISS/0, to'g'ri holat).
+  var svodSS = null, pdb;
+  if(ob.narxTayyor){
+    pdb = {byKey:{}, n:0};
+  } else {
+    svodSS = _openAsSheet(ob.svodFile, ob.folderId); _tLog('svodSS ochildi');
+    pdb = _priceDB(svodSS, kat, svodCfg, fmt, ob.svodSheets||[], savedOraliq); _tLog('priceDB tayyor ('+pdb.n+')');
+  }
   pdb.stavka = _stavkaOl(ob.obyekt);
   var nkMap = _narxlarKatMap();
   var plus = _plusFile(ob.obyekt, ob.folderId); _tLog('plusFile tayyor');
   if(typeof _progSet==='function') _progSet(ob.obyekt,'PRICE_DB','Narx bazasi tayyor: '+pdb.n+' pozitsiya');
 
-  var fmtLog = [[ob.obyekt, '—', '—', 'ФОРМАТ', 'обюект формати: '+fmt+', свод устунлари: '+
-    JSON.stringify(svodCfg)+', нарх базаси: '+pdb.n, '—', '—', '—']];
+  var fmtLog = [[ob.obyekt, '—', '—', 'ФОРМАТ', ob.narxTayyor
+    ? ('обюект формати: '+fmt+', НАРХ ТАЙЁР — свод йўқ, лока o\'z нархидан ишлайди')
+    : ('обюект формати: '+fmt+', свод устунлари: '+JSON.stringify(svodCfg)+', нарх базаси: '+pdb.n),
+    '—', '—', '—']];
 
   var sheets = [];
   for(var i=0; i<lokSSArray.length; i++){
@@ -115,11 +124,11 @@ function _ishlaObyekt(ob){
   var varaqlar = [];
   for(var s=0;s<sheets.length;s++){
     var src=sheets[s], snm=src.getName();
-    if(_skip(snm)) continue;
-    if(ob.lokSheets && ob.lokSheets.length > 0){
-      if(ob.lokSheets.indexOf(snm)<0) continue;
+    var hasLok = (ob.lokSheets && ob.lokSheets.length > 0);
+    if(hasLok){
+      if(ob.lokSheets.indexOf(snm.trim())<0) continue;
     } else {
-      if(!/(ЛРВ|LRV)/i.test(snm)) continue;
+      if(_skip(snm) || !/(ЛРВ|LRV)/i.test(snm)) continue;
     }
     if(src.getLastRow()<2) continue;
     varaqlar.push({idx:s, nom:snm});
@@ -130,8 +139,13 @@ function _ishlaObyekt(ob){
   var totalQ=state.totalQ||0, topilmadi=state.topilmadi||0, ochirilgan=state.ochirilgan||0;
   
   if (bajarilgan === 0) {
+    // ⚡ 2026-07-04: agar avvalgi (noto'g'ri варақлар tanlangan) urinishda LRV
+    // qo'shilmay, plusда faqat _NARX_LOG qolib ketgan bo'lsa — bu YAGONA varaq,
+    // o'chirish "You can't remove all the sheets in a document" bilan yiqilardi
+    // (LRV qo'shilishga ulgurmasdan). Endi himoyalangan: o'chira olmasa — jim
+    // qoladi, pastda _narxLog eskisiga qo'shib yozadi (keyingi run to'g'irlaydi).
     var logSh = plus.getSheetByName(CFG.NARX_LOG);
-    if (logSh) plus.deleteSheet(logSh);
+    if (logSh) { try{ plus.deleteSheet(logSh); }catch(e){} }
     if (fmtLog && fmtLog.length) _narxLog(plus, fmtLog);
   }
   
@@ -187,8 +201,13 @@ function _ishlaObyekt(ob){
 
   _ochirBoshVaraq(plus);
 
+  // ⚡ 2026-07-04: НАКРУТКА жадвали smetaning o'ziga (LRV_PLUS) yoziladi — Panel
+  // modalidan alohida, DASHBOARD'ga bog'liq emas (jonli cross-sheet formulalar).
+  if(typeof _nakrutkaSheetYoz==='function'){ try{ _nakrutkaSheetYoz(plus, ob.obyekt); }catch(e){ Logger.log('НАКРУТКА жадвали: '+e); } }
+
   for(var i=0; i<lokSSArray.length; i++){ _cleanupTmp(lokSSArray[i]); }
-  _cleanupTmp(svodSS); _tLog('tmp tozalandi');
+  if(svodSS) _cleanupTmp(svodSS);
+  _tLog('tmp tozalandi');
 
   SpreadsheetApp.flush(); _tLog('flush tayyor — YAKUNLANDI');
   if(typeof _holatInvalidate==='function'){ try{ _holatInvalidate(ob.obyekt); }catch(e){} }
@@ -208,7 +227,7 @@ function _ishlaObyekt(ob){
 function _ishlaQism(ob, partIndex){
   var sp=PropertiesService.getScriptProperties();
   if(!ob.lokFiles || !ob.lokFiles[partIndex]) throw 'qism fayli topilmadi: '+partIndex;
-  if(!ob.svodFile) throw 'свод топилмади ('+ob.obyekt+')';
+  if(!ob.narxTayyor && !ob.svodFile) throw 'ENGINE: svod topilmadi (' + ob.obyekt + ')';
   var _t0=Date.now();
   if(typeof _progSet==='function') _progSet(ob.obyekt,'QISM','Қисм '+(partIndex+1)+'/'+ob.lokFiles.length+' ишланмоқда');
 
@@ -223,9 +242,14 @@ function _ishlaQism(ob, partIndex){
   var a=sozAsosiy(), kat=sozKategoriya(), faktMap=sozFaktNarx();
   var fmt=_normFormat(ob.format||'TN'), svodCfg=_svodCfg(ob);
   var lokSS=_openAsSheet(ob.lokFiles[partIndex], ob.folderId);
-  var svodSS=_openAsSheet(ob.svodFile, ob.folderId);
   var savedOraliq=_oraliqlarOl(ob.obyekt);
-  var pdb=_priceDB(svodSS, kat, svodCfg, fmt, ob.svodSheets||[], savedOraliq);
+  var svodSS=null, pdb;
+  if(ob.narxTayyor){
+    pdb={byKey:{}, n:0};
+  } else {
+    svodSS=_openAsSheet(ob.svodFile, ob.folderId);
+    pdb=_priceDB(svodSS, kat, svodCfg, fmt, ob.svodSheets||[], savedOraliq);
+  }
   pdb.stavka=_stavkaOl(ob.obyekt);
   var nkMap=_narxlarKatMap();
   var plus=_plusFile(ob.obyekt, ob.folderId);
@@ -234,9 +258,12 @@ function _ishlaQism(ob, partIndex){
   var sheets=lokSS.getSheets(), varaqlar=[];
   for(var s=0;s<sheets.length;s++){
     var snm=sheets[s].getName();
-    if(_skip(snm)) continue;
-    if(ob.lokSheets && ob.lokSheets.length>0){ if(ob.lokSheets.indexOf(snm)<0) continue; }
-    else if(!/(ЛРВ|LRV)/i.test(snm)) continue;
+    var hasLok = (ob.lokSheets && ob.lokSheets.length>0);
+    if(hasLok){
+      if(ob.lokSheets.indexOf(snm.trim())<0) continue;
+    } else {
+      if(_skip(snm) || !/(ЛРВ|LRV)/i.test(snm)) continue;
+    }
     if(sheets[s].getLastRow()<2) continue;
     varaqlar.push({idx:s, nom:snm});
   }
@@ -253,7 +280,7 @@ function _ishlaQism(ob, partIndex){
     if(Date.now()-_t0>DEADLINE_MS && vi>bajarilgan){
       state.bajarilgan=vi; state.totalQ=totalQ; state.topilmadi=topilmadi; state.ochirilgan=ochirilgan;
       sp.setProperty(stateKey, JSON.stringify(state));
-      _cleanupTmp(lokSS); _cleanupTmp(svodSS);
+      _cleanupTmp(lokSS); if(svodSS) _cleanupTmp(svodSS);
       if(typeof _progSet==='function') _progSet(ob.obyekt,'PARTIAL','Қисм '+(partIndex+1)+' варақ '+vi+'/'+varaqlar.length+' — давом этади');
       return {partial:true, qism:partIndex, qator:totalQ};
     }
@@ -270,7 +297,7 @@ function _ishlaQism(ob, partIndex){
   counts[partIndex]=varaqlar.length;
   sp.setProperty(cntKey, JSON.stringify(counts));
   sp.deleteProperty(stateKey);
-  _cleanupTmp(lokSS); _cleanupTmp(svodSS);
+  _cleanupTmp(lokSS); if(svodSS) _cleanupTmp(svodSS);
   SpreadsheetApp.flush();
   if(typeof _progSet==='function') _progSet(ob.obyekt,'QISM_DONE','Қисм '+(partIndex+1)+' тайёр');
   return {partial:false, qism:partIndex, qator:totalQ};
@@ -363,7 +390,7 @@ function _faqatPlusYangila(sh, pdb, kat, a, obyekt, konstr, faktMap, nkMap){
   for(var i=0;i<n;i++){
     var r=start+i;
     var mkRaw=String(v[i][col.MARKER-1]||'').trim().toLowerCase();
-    var isQosh=/\+$/.test(mkRaw), base=mkRaw.replace(/\+$/,'');
+    var isQosh=/[+~]$/.test(mkRaw), base=mkRaw.replace(/[+~]$/,'');
     if(base==='bl'&&!isQosh) blRow=r;
     else if(base==='bl'&&isQosh){ blRow=r; yang++; }
     if(!isQosh) continue;
@@ -390,16 +417,12 @@ function _faqatPlusYangila(sh, pdb, kat, a, obyekt, konstr, faktMap, nkMap){
     else setForm(col.F,idx,'='+CL(col.E)+r);
     setForm(col.SMETA,idx,'=$'+CL(volCol)+r+'*$'+CL(col.NARX)+r);
     [col.CHEL,col.MASH,col.MAT,col.OB,col.BEZSKLAD,col.MK,col.KAB].forEach(function(c){ setCell(c,idx,''); });
-    var cat=(p.cat||'МАТ').toUpperCase(),mainC=(cat==='КАБ'||cat==='КАБЕЛ')?'МАТ':cat;
+    var mainC=(p.cat||'МАТ').toUpperCase();
     var ref='=$'+CL(col.SMETA)+r;
     if(mainC==='ЧЕЛ') setForm(col.CHEL,idx,ref);
     else if(mainC==='МАШ') setForm(col.MASH,idx,ref);
-    else if(mainC==='ОБ'||mainC==='ОБОР'||mainC==='ОБОРУД') setForm(col.OB,idx,ref);
-    else if(mainC==='МК'||mainC==='М/К') setForm(col.MK,idx,ref);
+    else if(mainC==='ОБ') setForm(col.OB,idx,ref);
     else setForm(col.MAT,idx,ref);
-    var nu=_norm(up.nom);
-    if(_hasKw(nu,kat.kw.KAB||[])) setForm(col.KAB,idx,ref);
-    if(_hasKw(nu,kat.kw.BEZSKLAD||[])) setForm(col.BEZSKLAD,idx,ref);
   }
   // 3) Yozish: har ustun BIR marta
   colsToUpdate.forEach(function(c){
@@ -407,6 +430,106 @@ function _faqatPlusYangila(sh, pdb, kat, a, obyekt, konstr, faktMap, nkMap){
     sh.getRange(start,c,n,1).setValues(out);
   });
   return yang;
+}
+
+
+/* ============ ⚡ TEZKOR NARX (faqat narx+kategoriya yangilash) ============
+ * ⚠️ Bu funksiya CHAQIRILARDI (30_Panel apiObyektTezkorIshla) lekin YO'Q edi →
+ *    "⚡ Тезкор (Нарх)" tugmasi har obyektга ReferenceError berardi (monitoringда 50+ "Xato").
+ * Maqsad: mavjud LRV_PLUS ni QAYTA QURMASDAN, faqat svodkadan narx (G) va kategoriya
+ * (J-P) ni yangilaydi. Struktura, FAKT, Ф2, hajm — TEGILMAYDI. To'liq [Ишла] dan ancha tez. */
+function _tezkorObyekt(ob){
+  if(ob.narxTayyor){
+    // НАРХ_ТАЙЁР obyektда svodka umuman yo'q — yangilanadigan narx manbai ham yo'q,
+    // shuning uchun tezkor narx ma'nosiz (LRV o'zining tayyor НАРХ ustunidan ishlaydi).
+    if(typeof _progSet==='function') _progSet(ob.obyekt,'DONE','Тезкор нарх керак эмас (тайёр)');
+    return {obyekt:ob.obyekt, ok:true, qator:0, topilmadi:0, tezkor:true, narxBaza:0,
+            xabar:'ℹ️ '+ob.obyekt+': бу объект аллақачон нархланган (свод йўқ) — тезкор нарх керак эмас'};
+  }
+  var a=sozAsosiy(), kat=sozKategoriya(), faktMap=sozFaktNarx();
+  var nkMap=_narxlarKatMap();
+  var fmt=_normFormat(ob.format||'TN'), svodCfg=_svodCfg(ob);
+  if(!ob.svodFile) throw 'свод топилмади ('+ob.obyekt+')';
+
+  // mavjud LRV_PLUS (yangi YARATILMAYDI)
+  var folder=DriveApp.getFolderById(ob.folderId);
+  var fit=folder.getFilesByName(ob.obyekt+CFG.PLUS_SUF);
+  if(!fit.hasNext()) throw 'LRV_PLUS йўқ — аввал тўлиқ «Ишла» қилинг.';
+  var plus=SpreadsheetApp.openById(fit.next().getId());
+
+  // narx bazasi (svoddan) — oraliq bilan
+  var svodSS=_openAsSheet(ob.svodFile, ob.folderId);
+  var savedOraliq=_oraliqlarOl(ob.obyekt);
+  var pdb=_priceDB(svodSS, kat, svodCfg, fmt, ob.svodSheets||[], savedOraliq);
+  pdb.stavka=_stavkaOl(ob.obyekt);
+
+  var sheets=plus.getSheets(), totalN=0, topilmadi=0, missLog=[];
+  for(var s=0;s<sheets.length;s++){
+    var sh=sheets[s], nm=sh.getName();
+    if(nm.indexOf(CFG.LRV_SHEET)!==0) continue;
+    var res=_narxYangilaVaraq(sh, pdb, kat, a, faktMap, nkMap, ob.obyekt, nm);
+    totalN+=res.n; topilmadi+=res.topilmadi; missLog=missLog.concat(res.log);
+  }
+  // ⚡ fix: tezkor (fast) narxlash ham to'liq Ишла kabi _NARX_LOG ga yozadi —
+  // avval bu yerda MISS faqat sonda (topilmadi) qolib, log sahifasida IZ QOLMASDI.
+  var oldLog=plus.getSheetByName(CFG.NARX_LOG); if(oldLog){ try{ plus.deleteSheet(oldLog); }catch(e){} }
+  var fmtLog=[[ob.obyekt,'—','—','ФОРМАТ','обюект формати: '+fmt+', свод устунлари: '+
+    JSON.stringify(svodCfg)+', нарх базаси: '+pdb.n+' (тезкор)','—','—','—']];
+  _narxLog(plus, fmtLog);
+  if(missLog.length) _narxLog(plus, missLog);
+  _cleanupTmp(svodSS);
+  SpreadsheetApp.flush();                          // formulalar qayta hisoblansin
+  try{ serverYozFile(ob.obyekt, plus, a); }catch(e){}   // dashboard yangilanadi
+  if(typeof _holatInvalidate==='function'){ try{ _holatInvalidate(ob.obyekt); }catch(e){} }
+  if(typeof _progSet==='function') _progSet(ob.obyekt,'DONE','Тезкор нарх янгиланди');
+  return {obyekt:ob.obyekt, ok:true, qator:totalN, topilmadi:topilmadi, tezkor:true, narxBaza:pdb.n,
+          xabar:'⚡ '+ob.obyekt+': '+totalN+' ресурс нархи янгиланди'+(topilmadi?(', '+topilmadi+' топилмади (_NARX_LOG)'):'')};
+}
+/* Bitta varaqда FAQAT narx(G)+kategoriya(J-P) ni yangilaydi. F/SMETA/FAKT/Ф2 tegilmaydi
+ * (SMETA formula NARX ga bog'liq → o'zi qayta hisoblanadi). rs/mat qatorlar (+ ham). */
+function _narxYangilaVaraq(sh, pdb, kat, a, faktMap, nkMap, obyekt, outName){
+  var col=CFG.C, CL=_cl;
+  var last=sh.getLastRow(), start=a.dataQator>0?a.dataQator:_autoData(sh);
+  if(last<start) return {n:0, topilmadi:0, log:[]};
+  var n=last-start+1;
+  var v=sh.getRange(start,1,n,col.MARKER).getValues();
+  var updates=[], topilmadi=0, log=[];
+  for(var i=0;i<n;i++){
+    var r=start+i;
+    var mk=String(v[i][col.MARKER-1]||'').trim().toLowerCase().replace(/[+~]$/,'');
+    if(mk!=='rs'&&mk!=='mat'&&mk!=='ob') continue;
+    var nom=String(v[i][col.NOM-1]||''), bir=String(v[i][col.BIRLIK-1]||''), kod=_kodOl(v[i][col.KOD-1]);
+    var p=_findPrice(nom,bir,kod,pdb,kat,faktMap,a,nkMap);
+    if(p.debug && p.debug.method==='MISS'){
+      topilmadi++;
+      log.push([obyekt,outName,r,mk,nom,bir,kod,'Свод топилмади: '+p.debug.detail]);
+    } else if(p.debug && p.debug.warn){
+      log.push([obyekt,outName,r,'⚠ '+mk+' ДОНА×QTY',nom,bir,kod,'дона×qty≠сумма — устун хато бўлиши мумкин']);
+    }
+    updates.push({i:i, r:r, p:p, nom:nom});
+  }
+  if(!updates.length) return {n:0, topilmadi:topilmadi, log:log};
+  var cols=[col.NARX,col.CHEL,col.MASH,col.MAT,col.OB,col.BEZSKLAD,col.MK,col.KAB];
+  var rng={};
+  cols.forEach(function(c){ rng[c]={f:sh.getRange(start,c,n,1).getFormulas(), v:sh.getRange(start,c,n,1).getValues()}; });
+  function setV(c,idx,val){ rng[c].v[idx][0]=val; rng[c].f[idx][0]=''; }
+  function setF(c,idx,fm){ rng[c].f[idx][0]=fm; rng[c].v[idx][0]=''; }
+  for(var u=0;u<updates.length;u++){
+    var up=updates[u], idx=up.i, r=up.r, p=up.p;
+    setV(col.NARX,idx,p.narx);
+    [col.CHEL,col.MASH,col.MAT,col.OB,col.BEZSKLAD,col.MK,col.KAB].forEach(function(c){ setV(c,idx,''); });
+    var mainC=(p.cat||'МАТ').toUpperCase();
+    var ref='=$'+CL(col.SMETA)+r;
+    if(mainC==='ЧЕЛ') setF(col.CHEL,idx,ref);
+    else if(mainC==='МАШ') setF(col.MASH,idx,ref);
+    else if(mainC==='ОБ') setF(col.OB,idx,ref);
+    else setF(col.MAT,idx,ref);
+  }
+  cols.forEach(function(c){
+    var out=[]; for(var i=0;i<n;i++) out.push([rng[c].f[i][0]!==''?rng[c].f[i][0]:rng[c].v[i][0]]);
+    sh.getRange(start,c,n,1).setValues(out);
+  });
+  return {n:updates.length, topilmadi:topilmadi, log:log};
 }
 
 
@@ -430,23 +553,31 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
   if(bak){ if(cur) plusSS.deleteSheet(cur); }
   else if(cur){ cur.setName(bakName); try{ cur.hideSheet(); }catch(e){} }
   var dst = src.copyTo(plusSS).setName(outName); _vt('copyTo');
+  try{ dst.setFrozenColumns(29); dst.setFrozenRows(7); }catch(e){}
+
+  // ⚡ Manba (NAT/lokalka)dagi BASIC FILTER nusxaga ham ko'chadi — natijada LRV_PLUS'da
+  // qatorlar yashirin qolib "struktura yo'q" bo'lib ko'rinardi (foydalanuvchi filtrlangan
+  // NAT bilan ishlaganda aynan shu bo'lgan). Filtrni olib tashlab, hamma qatorni ochamiz.
+  try{ var _flt=dst.getFilter(); if(_flt) _flt.remove(); }catch(e){}
+  try{ dst.showRows(1, dst.getMaxRows()); }catch(e){}
 
   var ochirilgan = _boshQatorlarOchir(dst); _vt('boshQatorlarOchir ('+ochirilgan+')');
 
   var last=dst.getLastRow();
   var startOld = a.dataQator>0 ? a.dataQator : _autoData(dst);
   if(last-startOld+1<1){ bakTugadi(); return {n:0, topilmadi:0, ochirilgan:ochirilgan, log:[]}; }
+  _vt('data boshi='+startOld);
 
   // 2 ta qator qo'shamiz: 1-si SARLAVHA (har doim ko'rinadi), 2-si ЖАМИ
-  dst.insertRowsBefore(startOld, 2);
+  dst.insertRowsBefore(startOld, 2); _vt('insertRows');
   var jamiRow = startOld + 1;        // ЖАМИ
   var start   = startOld + 2;        // ma'lumot boshlanishi
   last        = dst.getLastRow();
   var n       = last-start+1;
   if(n<1){ bakTugadi(); return {n:0, topilmadi:0, ochirilgan:ochirilgan, log:[]}; }
 
-  var data = dst.getRange(start,1,n,9).getValues();
-  var mm   = _mergedMap(dst, start, n);
+  var data = dst.getRange(start,1,n,9).getValues(); _vt('data o\'qildi ('+n+' qator)');
+  var mm   = _mergedMap(dst, start, n); _vt('mergedMap');
   var col=CFG.C, CL=_cl;
   var mefRows = (fmt==='ABC4') ? {} : mm.mmEf;
 
@@ -454,7 +585,7 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
   for(var i=0;i<n;i++){
     var r=start+i, A=data[i][0], B=data[i][1], C=data[i][2], D=data[i][3];
     var existRaw=String(data[i][8]||'').trim().toLowerCase();
-    var exist=existRaw.replace(/\+$/,'');
+    var exist=existRaw.replace(/[+~]$/,'');
     var nextA=(i+1<n)?data[i+1][0]:'';
     var nextC=(i+1<n)?data[i+1][2]:'';
     var tur=(['rz','bl','rs','mat','ob'].indexOf(exist)>=0)?exist:_classify(r,mm,A,C,nextA,nextC,fmt);
@@ -471,10 +602,9 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
       it.blRow=blRow; it.blNom=blNom; it.rzNom=rzNom; it.rzRow=rzRow;
       var kod=_kodOl(B);
       var pNarx = _toNum(data[i][col.NARX-1]);
-      var pSum  = _toNum(data[i][col.SMETA-1]);
-      if(pNarx > 0 && pSum > 0){
+      if(pNarx !== 0){
         it.narx=pNarx;
-        it.cat=_refine(_norm(nom),'МАТ',kat);
+        it.cat=(tur==='ob') ? 'ОБ' : 'МАТ';
         var birCat=_catBirlik(_normBirlik(bir),'',kat);
         if(birCat==='ЧЕЛ'||birCat==='МАШ') it.cat=birCat;
         var key=_normNomKey(nom)+'||'+_normBirlik(bir);
@@ -485,17 +615,19 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
         }
       } else {
         var p=_findPrice(nom,bir,kod,pdb,kat,faktMap,a,nkMap); it.narx=p.narx; it.cat=p.cat;
-        if(p.debug.method==='MISS'){ log.push([obyekt,outName,r,'rs',nom,bir,kod,p.debug.detail]); topilmadi++; }
-        else if(p.debug.warn){ log.push([obyekt,outName,r,'⚠ ДОНА×QTY',nom,bir,kod,'дона×qty≠сумма — устун хато бўлиши мумкин']); }
+        // ⚡ fix: 'rs' turdagi resurslar uchun ham MISS log yozilishi SHART — avval
+        // faqat 'mat'/'ob' logланарди, 'rs' (BL ostidagi ЧЕЛ/МАШ/материал) topilmasa
+        // JIMGINA 0 bo'lib qolardi (_NARX_LOG da izsiz). Endi barcha turlar logланади.
+        if(p.debug.method==='MISS'){ log.push([obyekt,outName,r,tur,nom,bir,kod,'Свод топилмади: '+p.debug.detail]); topilmadi++; }
+        else if(p.debug.warn){ log.push([obyekt,outName,r,'⚠ '+tur+' ДОНА×QTY',nom,bir,kod,'дона×qty≠сумма — устун хато бўлиши мумкин']); }
       }
     } else if((tur === 'mat' || tur === 'ob') ){
       it.rzNom=rzNom; it.rzRow=rzRow;
       var kodm=_kodOl(B);
       var pNarx = _toNum(data[i][col.NARX-1]);
-      var pSum  = _toNum(data[i][col.SMETA-1]);
-      if(pNarx > 0 && pSum > 0){
+      if(pNarx !== 0){
         it.narx=pNarx;
-        it.cat=_refine(_norm(nom),'МАТ',kat);
+        it.cat=(tur==='ob') ? 'ОБ' : 'МАТ';
         var birCat=_catBirlik(_normBirlik(bir),'',kat);
         if(birCat==='ЧЕЛ'||birCat==='МАШ') it.cat=birCat;
         var key=_normNomKey(nom)+'||'+_normBirlik(bir);
@@ -506,8 +638,10 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
         }
       } else {
         var pm=_findPrice(nom,bir,kodm,pdb,kat,faktMap,a,nkMap); it.narx=pm.narx; it.cat=pm.cat;
-        if(pm.debug.method==='MISS'){ log.push([obyekt,outName,r,'mat',nom,bir,kodm,pm.debug.detail]); topilmadi++; }
-        else if(pm.debug.warn){ log.push([obyekt,outName,r,'⚠ ДОНА×QTY',nom,bir,kodm,'дона×qty≠сумма — устун хато бўлиши мумкин']); }
+        // ⚡ fix: ТУР endi haqiqiy qiymat (tur) bilan yoziladi — avval qattiq kodlangan
+        // 'mat' literali 'ob' qatorlarni ham noto'g'ri 'mat' deb ko'rsatardi.
+        if(pm.debug.method==='MISS'){ log.push([obyekt,outName,r,tur,nom,bir,kodm,'Свод топилмади: '+pm.debug.detail]); topilmadi++; }
+        else if(pm.debug.warn){ log.push([obyekt,outName,r,'⚠ '+tur+' ДОНА×QTY',nom,bir,kodm,'дона×qty≠сумма — устун хато бўлиши мумкин']); }
       }
       
       // Standalone mat/ob qatori uchun qat'iy tekshiruv:
@@ -516,6 +650,23 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
         tur = 'ob';
         it.tur = 'ob';
       }
+    }
+
+    // ⚡⚡⚡ YAKUNIY KATEGORIYA QOIDASI (foydalanuvchi QAT'IY talabi — bir necha marta):
+    //   «ЧЕЛ-час va МАШ-час joyi ANIQ — birlikdan. Qolgan rs/mat/ob svodkadagi
+    //    oraliqqa ko'ra ajratiladi.»
+    //   Demak ЧЕЛ va МАШ — FAQAT birlik (чел-час/маш-час) orqali aniqlanadi. HECH BIR
+    //   boshqa manba (NARXLAR KAT `nkMap`, narx-baza oralig'i, _findPrice zaxirasi)
+    //   birligi чел/маш BO'LMAGAN qatorni ЧЕЛ/МАШ ga o'tkaza OLMAYDI. Aks holda
+    //   material (М3 РАСТВОР, ФБС bloklar) xato МАШ ustuniga tushib qolardi.
+    if(it.tur==='rs' || it.tur==='mat' || it.tur==='ob'){
+      var _birKat = _catBirlik(_normBirlik(it.birlik), it.nom, kat);
+      if(_birKat==='ЧЕЛ' || _birKat==='МАШ'){
+        it.cat = _birKat;                                   // чел-час/маш-час → MAJBURIY
+      } else if(it.cat==='ЧЕЛ' || it.cat==='МАШ'){
+        it.cat = 'МАТ';                                     // birlik чел/маш emas, lekin ЧЕЛ/МАШ berilgan → XATO → МАТ
+      }
+      // ОБ / М/К / КАБ / МАТ — tegilmaydi (oraliq/nkMap qaroriga ishonamiz)
     }
     info.push(it);
   }
@@ -566,17 +717,17 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
     var Q='',R='',S='',T='';
     if(it.tur==='bl'){
       Q=0; R='=$'+CL(col.E)+r+'-$'+CL(col.FAKT)+r;
-      S=_f2sum(r,0);   // F2OL (hajm) = Σ ОБЪЁМ ustunlari
+      S=_f2sum(r,0,_f2OyCols(dst));   // F2OL (hajm) = Σ ОБЪЁМ ustunlari
       T='=$'+CL(col.FAKT)+r+'-$'+CL(col.F2OL)+r;
     } else if((it.tur === 'mat' || it.tur === 'ob') ){
       Q=0; R='=$'+CL(col.E)+r+'-$'+CL(col.FAKT)+r;
-      S=_f2sum(r,0);   // F2OL (hajm) = Σ ОБЪЁМ ustunlari
+      S=_f2sum(r,0,_f2OyCols(dst));   // F2OL (hajm) = Σ ОБЪЁМ ustunlari
       T='=$'+CL(col.FAKT)+r+'-$'+CL(col.F2OL)+r;
     } else if(it.tur==='rs'){
       if(rsNormal) Q='='+CL(col.FAKT)+'$'+it.blRow+'*'+CL(col.E)+r;
       else         Q=0;
       R='=$'+CL(volCol)+r+'-$'+CL(col.FAKT)+r;
-      S=_f2sum(r,0);   // F2OL (hajm) = Σ ОБЪЁМ ustunlari
+      S=_f2sum(r,0,_f2OyCols(dst));   // F2OL (hajm) = Σ ОБЪЁМ ustunlari
       T='=$'+CL(col.FAKT)+r+'-$'+CL(col.F2OL)+r;
     }
 
@@ -591,7 +742,7 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
       blkZAC.push([
         '=$'+CL(col.SMETA)+r,                          // ST_RES  = smeta summa
         '=$'+CL(col.FAKT)+r+'*$'+CL(col.NARX)+r,        // ST_FAKT = FAKT × smeta narx
-        _f2sum(r,2),                                   // ST_F2   = Σ СУММА (fakticheskiy F2 narxida!)
+        _f2sum(r,2,_f2OyCols(dst)),                                   // ST_F2   = Σ СУММА (fakticheskiy F2 narxida!)
         '=$'+CL(col.F2MUM)+r+'*$'+CL(col.NARX)+r        // ST_OST  = qoldiq × smeta narx
       ]);
     } else if(it.tur==='rz' && it.c1){
@@ -614,7 +765,11 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
   _jamiQator(dst, jamiRow, start, last);
   dst.getRange(startOld, col.NARX, last - startOld + 1, 2)
      .setBorder(true, true, true, true, true, true, '#b7b7b7', SpreadsheetApp.BorderStyle.SOLID);
-  dst.getRange(start,col.NARX,n,col.ST_OST-col.NARX+1).setNumberFormat('#,##0');
+  // ⚡ 2026-07-04: '#,##0' (0 kasr) НАРХ/СУММА'ни butun so'mga yaxlitlab KO'RSATARDI —
+  // qiymatning o'zi to'liq saqlansa ham, foydalanuvchi tiyingacha aniq narxni EKRANDA
+  // ko'rolmasdi ("F2 ni tiyingacha kiritish" talabi). '#,##0.####' — bor bo'lsa 4
+  // kasrgacha ko'rsatadi, butun son bo'lsa ortiqcha nol qo'shmaydi.
+  dst.getRange(start,col.NARX,n,col.ST_OST-col.NARX+1).setNumberFormat('#,##0.####');
   dst.hideColumns(CFG.HIDE_FROM, CFG.HIDE_TO-CFG.HIDE_FROM+1);
   _ranglaQatorlar(dst, info, start, n);
   _vt('format+rang');
@@ -637,6 +792,17 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
   }
   _vt('qoshQayta');
 
+  // ⚡⚡⚡ 2026-07-05 KRITIK TUZATISH (F2 tiklanmasligi = axborot yo'qolishi!):
+  // Yangi _f2sum ANIQ oy kataklarini sanaydi. Lekin S(F2OL)/AB(ST_F2) formulalari
+  // YUQORIDA (700-728) — oylar HALI _oyKollarTikla bilan YARATILMASDAN OLDIN —
+  // yozilgani uchun '=0' bo'lib qolardi (eski range-formula avtomat moslashardi,
+  // yangisi YO'Q). Oylar tiklangach (yuqorida) S/AB ni MAVJUD oylar bilan QAYTA
+  // yozamiz — shundan keyingina F2 yig'indilari to'g'ri ko'rinadi.
+  if(faktSaved && faktSaved.oylarNomlar && faktSaved.oylarNomlar.length){
+    try { _oyYigindiFormulalarYangila(dst); } catch(eY){ Logger.log('F2 yig\'indi tikla: '+eY); }
+  }
+  _vt('F2 yigindi qayta');
+
   bakTugadi();
   _vt('VARAQ TAYYOR');
   return {n:n, topilmadi:topilmadi, ochirilgan:ochirilgan, log:log};
@@ -651,9 +817,31 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
  *   F2OL (hajm) = Σ ОБЪЁМ ustunlari (offset 0); ST_F2 (pul) = Σ СУММА ustunlari (offset 2). */
 var _F2_SUF_NARX  = ' ₊нарх';
 var _F2_SUF_SUMMA = ' ₊сумма';
-function _f2sum(r, offset){
-  var first=CFG.C.F2_BIRINCHI, rng='$'+_cl(first)+r+':$ZZ'+r;
-  return '=IFERROR(SUM(FILTER('+rng+', MOD(COLUMN('+rng+')-'+first+',3)='+offset+')),0)';
+/* Varaqning mavjud oy ОБЪЁМ ustun raqamlari — _f2sum uchun. Bitta ijro davomida
+ * memoize (har qator uchun _f2Oylar qayta o'qilmasin — tezlik). Oy qo'shilganda
+ * _f2OyColsInv(sh) bilan tozalanadi. */
+var _F2OC_MEMO = {};
+function _f2OyCols(sh){
+  try {
+    var k = sh.getSheetId();
+    if(_F2OC_MEMO[k]) return _F2OC_MEMO[k];
+    var c = _f2Oylar(sh).map(function(o){ return o.col; });
+    _F2OC_MEMO[k] = c;
+    return c;
+  } catch(e){ return []; }
+}
+function _f2OyColsInv(sh){ try { delete _F2OC_MEMO[sh.getSheetId()]; } catch(e){ _F2OC_MEMO={}; } }
+function _f2sum(r, offset, oyCols){
+  // ⚡⚡⚡ 2026-07-05 YAKUNIY TUZATISH (3-urinish): SUMPRODUCT/FILTER katta diapazon
+  // bilan grid o'lchamiga qoqilib "Array arguments ... different size" #N/A berardi
+  // (grid AE..EH gacha kengaymagan varaqlarda ham). Endi formula MAVJUD oy
+  // kataklarini ANIQ sanaydi: =SUM($AE58,$AH58,...) — grid o'lchamiga umuman
+  // bog'liq emas, 100% ishonchli. Yangi oy qo'shilganda _oyYigindiFormulalarYangila
+  // (apiOyQosh/apiHolatSaqla/apiF2Qolla yakunida doim chaqiriladi) formulani mavjud
+  // oylar bilan QAYTA yozadi — hech narsa tushib qolmaydi.
+  if(!oyCols || !oyCols.length) return '=0';
+  var cells = oyCols.map(function(c){ return '$'+_cl(c+offset)+r; });
+  return '=SUM('+cells.join(',')+')';
 }
 
 
@@ -681,6 +869,9 @@ function _oyKollarTikla(dst, oyNomlar, hdrRow, start, n){
     var cO=yangiCol, cN=yangiCol+1, cS=yangiCol+2;  // ОБЪЁМ, НАРХ, СУММА
     // Sarlavhalar (ОБЪЁМ=oy nomi, НАРХ/СУММА suffix bilan) - bitta diapazonda tezkor yozamiz
     var headerRange = dst.getRange(hdrRow, cO, 1, 3);
+    // ⚡ 2026-07-09: header MATN (@) formatda — aks holda Sheets "05.2026" ni RAQAM (5.2026)
+    //   deb qabul qilib, boshidagi nolni yeydi → keyin oy ustuni topilmay F2 0 yozilardi.
+    headerRange.setNumberFormat('@');
     headerRange.setValues([[oyNom, oyNom+_F2_SUF_NARX, oyNom+_F2_SUF_SUMMA]]);
     headerRange.setFontWeight('bold');
     headerRange.setBackgrounds([['#1f4e79', '#2d4a63', '#1f4e79']]);
@@ -691,10 +882,10 @@ function _oyKollarTikla(dst, oyNomlar, hdrRow, start, n){
     var marker=dst.getRange(start,col.MARKER,n,1).getValues();
     var blRow=0, vO=[], vN=[], vS=[];
     for(var i=0;i<n;i++){
-      var r=start+i, mk=String(marker[i][0]||'').trim().toLowerCase().replace(/\+$/,'');
+      var r=start+i, mk=String(marker[i][0]||'').trim().toLowerCase().replace(/[+~]$/,'');
       if(mk==='bl'){
         blRow=r;
-        vO.push([0]); vN.push(['']); vS.push(['']);          // bl: obyom kiritiladi, narx/summa bo'sh
+        vO.push([0]); vN.push(['=$'+CL(col.NARX)+r]); vS.push(['=$'+CL(cO)+r+'*$'+CL(cN)+r]); // bl uchun ham narx va summa kerak (F2 olingan)
       } else if(mk==='rs' && blRow){
         vO.push(['='+CL(cO)+'$'+blRow+'*'+CL(col.E)+r]);     // obyom = bl_obyom × norma
         vN.push(['=$'+CL(col.NARX)+r]);                      // narx = G (default smeta narx)
@@ -707,8 +898,11 @@ function _oyKollarTikla(dst, oyNomlar, hdrRow, start, n){
       }
     }
     dst.getRange(start,cO,n,1).setValues(vO).setNumberFormat('#,##0.####');
-    dst.getRange(start,cN,n,1).setValues(vN).setNumberFormat('#,##0');
-    dst.getRange(start,cS,n,1).setValues(vS).setNumberFormat('#,##0');
+    // ⚡ 2026-07-04: F2 oy НАРХ/СУММА ham '#,##0' (0 kasr) edi — foydalanuvchi
+    // tiyingacha aniq fakticheskiy narx kiritsa ham ekranda butun songa yaxlitlanib
+    // ko'rinardi (fix #64 maqsadiga zid). Endi '#,##0.####'.
+    dst.getRange(start,cN,n,1).setValues(vN).setNumberFormat('#,##0.####');
+    dst.getRange(start,cS,n,1).setValues(vS).setNumberFormat('#,##0.####');
     existing[oyNom]=cO;
     yangiCol+=3;
   }
@@ -744,24 +938,42 @@ function _oyFormulaToldur(dst, start, last){
 
     var blRow=0;
     for(var i=0;i<n;i++){
-      var r=start+i, mk=String(marker[i][0]||'').trim().toLowerCase().replace(/\+$/,'');
-      if(mk==='bl'){
-        blRow=r;
-      } else if(mk==='rs' && blRow){
-        var curF = allForms[i][offO];
-        var curV = allVals[i][offO];
-        var cur = curF || curV;
-        if(!cur || cur===0){
+      var r=start+i, mkRaw=String(marker[i][0]||'').trim().toLowerCase();
+      var isQosh=/[+~]$/.test(mkRaw), mk=mkRaw.replace(/[+~]$/,'');
+      if(mk==='bl') blRow=r;
+      else if(mk==='mat' || mk==='ob') blRow=0;
+      var leaf = (mk==='bl'||mk==='rs'||mk==='mat'||mk==='ob');
+      if(!leaf) continue;
+      // ⚡⚡ 2026-07-05 YURIDIK: qo'shimcha/zamena ('+') qatorlarga oy ustunlarida
+      // AVTO-FORMULA YOZILMAYDI — ularning qiymatlari F2 hujjatdan STATIK ko'chiriladi
+      // (foydalanuvchi talabi: "shunchaki ko'chirilishi kerak, formulasiz").
+      if(isQosh) continue;
+
+      // ОБЪЁМ — faqat rs: bo'sh/0 bo'lsa bl ga bog'langan norma formulasi
+      if(mk==='rs' && blRow){
+        var curO = allForms[i][offO] || allVals[i][offO];
+        if(!curO || curO===0){
           allForms[i][offO] = '=' + CL(cO) + '$' + blRow + '*' + CL(col.E) + r;
           allVals[i][offO] = '';
-          allForms[i][offN] = '=$' + CL(col.NARX) + r;
-          allVals[i][offN] = '';
+          changed = true;
+        }
+      }
+      // ⚡ 2026-07-05: НАРХ/СУММА endi bl/mat/ob uchun HAM to'ldiriladi (avval faqat
+      // rs edi) — eski oylarda bl qatorda СУММА formulasi yo'q bo'lgani uchun
+      // ST_F2 = Σ СУММА doim 0 bo'lib qolardi ("F2 olingan 0 so'm" muammosi).
+      var curN = allForms[i][offN] !== '' ? allForms[i][offN] : allVals[i][offN];
+      if(curN === '' || curN === null){
+        allForms[i][offN] = '=$' + CL(col.NARX) + r;
+        allVals[i][offN] = '';
+        changed = true;
+      }
+      if(allForms[i][offS] === ''){
+        var vS = allVals[i][offS];
+        if(vS === '' || vS === null || vS === 0){
           allForms[i][offS] = '=$' + CL(cO) + r + '*$' + CL(cN) + r;
           allVals[i][offS] = '';
           changed = true;
         }
-      } else {
-        if((mk === 'mat' || mk === 'ob') ) blRow=0;
       }
     }
   }
@@ -858,7 +1070,7 @@ function _qavatSaqla(sh){
   var qv=sh.getRange(start,col.QAVAT1,n,3).getValues();
   var arr=[], idx=-1, bor=false;
   for(var i=0;i<n;i++){
-    var m=String(mk[i][0]||'').replace(/\+$/,'').trim().toLowerCase();
+    var m=String(mk[i][0]||'').replace(/[+~]$/,'').trim().toLowerCase();
     if(m==='rz'){
       idx++;
       var q=[qv[i][0]||'', qv[i][1]||'', qv[i][2]||''];
@@ -935,8 +1147,15 @@ function _faktSaqla(sh){
     var allVals = sh.getRange(start, col.F2_BIRINCHI, n, numCols).getValues();
     var allForms = sh.getRange(start, col.F2_BIRINCHI, n, numCols).getFormulas();
     for(var oyNom in oyMap){
-      var mp=oyMap[oyNom], width=mp.n?(mp.n-mp.o+1):1;
+      // ⚡ 2026-07-05: 3 ustun (ОБЪЁМ|НАРХ|СУММА) — avval faqat 2 (obyom+narx) olinardi,
+      // СУММА saqlanmasdi → [Ишла] qayta qurganda F2 hujjatdagi ANIQ (statik) summa
+      // yo'qolib, =obyom×narx formula bilan almashardi (yaxlitlash farqi). Endi СУММА
+      // ham saqlanib-tiklanadi (yuridik aniqlik).
+      var mp=oyMap[oyNom];   // ⚠️ REGRESSIYA TUZATILDI: summa-saqlash qo'shilganda bu qator
+                             //    tushib qolib "Cannot read properties of undefined (reading 'o')"
+                             //    berardi (F2 ustunli varaqda [Ишла]da crash).
       var offset=mp.o-col.F2_BIRINCHI;
+      var width=Math.min(3, numCols-offset);
       var subV=[], subF=[];
       for(var r=0;r<n;r++){
         var rowV=[], rowF=[];
@@ -952,7 +1171,7 @@ function _faktSaqla(sh){
   }
   var data={}, occ={};
   for(var i=0;i<n;i++){
-    var mk=String(gMk[i][0]||'').trim().toLowerCase().replace(/\+$/,'');
+    var mk=String(gMk[i][0]||'').trim().toLowerCase().replace(/[+~]$/,'');
     if(mk!=='bl'&&(mk !== 'mat' && mk !== 'ob') &&mk!=='rs') continue;
     var nom=String(gId[i][0]||'').trim();
     var bir=String(gId[i][col.BIRLIK-col.NOM]||'').trim();
@@ -972,7 +1191,13 @@ function _faktSaqla(sh){
         var nxF=String(od.f[i][nOff]||'');
         nx=(nxF.charAt(0)==='=') ? 0 : _toNum(od.v[i][nOff]);
       }
-      if(ob||nx) oylar[oyNom]={obyom:ob, narx:nx};
+      // СУММА (offset 2) — F2 hujjatdagi ANIQ statik summa (formula bo'lmasa)
+      var sm=0;
+      if(od.v[i].length>2){
+        var smF=String(od.f[i][2]||'');
+        sm=(smF.charAt(0)==='=') ? 0 : _toNum(od.v[i][2]);
+      }
+      if(ob||nx||sm) oylar[oyNom]={obyom:ob, narx:nx, summa:sm};
     }
     if(fakt||Object.keys(oylar).length) data[key]={fakt:fakt, oylar:oylar};
   }
@@ -988,7 +1213,7 @@ function _faktQayta(dst, start, n, saved){
   // 1) MATCH: qaysi qatorda qanday update bor
   var updates={}, occ={};
   for(var i=0;i<n;i++){
-    var mk=String(markerG[i][0]||'').trim().toLowerCase().replace(/\+$/,'');
+    var mk=String(markerG[i][0]||'').trim().toLowerCase().replace(/[+~]$/,'');
     if(mk!=='bl'&&(mk !== 'mat' && mk !== 'ob') &&mk!=='rs') continue;
     var nom=String(g[i][0]||'').trim(), bir=String(g[i][1]||'').trim();
     if(!nom) continue;
@@ -1016,13 +1241,15 @@ function _faktQayta(dst, start, n, saved){
       var mp=oyMap[oyNom];
       var offO=mp.o-col.F2_BIRINCHI;
       var offN=mp.n?(mp.n-col.F2_BIRINCHI):-1;
-      
+      var offS=offO+2;   // СУММА offset (3-ustunli tizim)
+
       for(var i in updates){
         var ii=parseInt(i), s=updates[ii]; if(!s.oylar||!s.oylar[oyNom]) continue;
         var ov=s.oylar[oyNom];
         var ob=(ov&&typeof ov==='object')?ov.obyom:ov;
         var nx=(ov&&typeof ov==='object')?ov.narx:0;
-        
+        var sm=(ov&&typeof ov==='object')?ov.summa:0;
+
         if(ob){
           allVals[ii][offO]=ob;
           allForms[ii][offO]='';
@@ -1031,6 +1258,12 @@ function _faktQayta(dst, start, n, saved){
         if(nx&&mp.n&&offN>=0){
           allVals[ii][offN]=nx;
           allForms[ii][offN]='';
+          changed=true;
+        }
+        // СУММА statik tiklash (F2 hujjatdagi ANIQ qiymat) — yuridik aniqlik
+        if(sm && offS>=0 && offS<numCols){
+          allVals[ii][offS]=sm;
+          allForms[ii][offS]='';
           changed=true;
         }
       }
@@ -1067,8 +1300,9 @@ function _qoshSaqla(sh){
     var allVals = sh.getRange(start, col.F2_BIRINCHI, n, numCols).getValues();
     var allForms = sh.getRange(start, col.F2_BIRINCHI, n, numCols).getFormulas();
     for(var oy in oyMap){
-      var mp=oyMap[oy], width=mp.n?(mp.n-mp.o+1):1;
+      var mp=oyMap[oy];
       var offset=mp.o-col.F2_BIRINCHI;
+      var width=Math.min(3, numCols-offset);   // ⚡ ОБЪЁМ+НАРХ+СУММА (СУММА ham saqlanadi)
       var subV=[], subF=[];
       for(var r=0;r<n;r++){
         var rowV=[], rowF=[];
@@ -1085,7 +1319,7 @@ function _qoshSaqla(sh){
   var groups=[], cur=null, lastAsl=null;
   for(var i=0;i<n;i++){
     var mk=String(gMain[i][col.MARKER-1]||'').trim().toLowerCase();
-    var isQosh=/\+$/.test(mk);
+    var isQosh=/[+~]$/.test(mk);
     if(isQosh){
       var rd={A:gMain[i][col.NO-1], B:gMain[i][col.KOD-1], C:gMain[i][col.NOM-1],
               D:gMain[i][col.BIRLIK-1], E:gMain[i][col.E-1], marker:mk,
@@ -1094,7 +1328,8 @@ function _qoshSaqla(sh){
         var od=oyData[oy], mp=oyMap[oy];
         var obF=String(od.f[i][0]||''); var ob=(obF.charAt(0)==='=')?0:_toNum(od.v[i][0]);
         var nx=0; if(mp.n){ var nOff=mp.n-mp.o; var nxF=String(od.f[i][nOff]||''); nx=(nxF.charAt(0)==='=')?0:_toNum(od.v[i][nOff]); }
-        if(ob||nx) rd.oylar[oy]={obyom:ob, narx:nx};
+        var sm=0; if(od.v[i].length>2){ var smF=String(od.f[i][2]||''); sm=(smF.charAt(0)==='=')?0:_toNum(od.v[i][2]); }
+        if(ob||nx||sm) rd.oylar[oy]={obyom:ob, narx:nx, summa:sm};
       }
       if(!cur){
         cur={anchorNom:(lastAsl?lastAsl.nom:''), anchorBir:(lastAsl?lastAsl.bir:''), rows:[]};
@@ -1137,7 +1372,7 @@ function _qoshQayta(dst, saved, pdb, kat, a, obyekt, konstr, faktMap, nkMap){
     var mainData=[];
     for(var i=0;i<nQ;i++){
       var rd=grp.rows[i], r=base+i;
-      var mk=String(rd.marker), baseMk=mk.replace(/\+$/,'');
+      var mk=String(rd.marker), baseMk=mk.replace(/[+~]$/,'');
       var row=[]; for(var c=0;c<col.ST_OST;c++) row.push('');
       row[col.NO-1]=rd.A; row[col.KOD-1]=rd.B; row[col.NOM-1]=rd.C;
       row[col.BIRLIK-1]=rd.D; row[col.E-1]=rd.E; row[col.MARKER-1]=mk;
@@ -1146,7 +1381,7 @@ function _qoshQayta(dst, saved, pdb, kat, a, obyekt, konstr, faktMap, nkMap){
       } else if(baseMk==='bl'){
         row[col.FAKT-1]=rd.fakt||0;
         row[col.QOLDIQ-1]='=$'+CL(col.E)+r+'-$'+CL(col.FAKT)+r;
-        row[col.F2OL-1]=_f2sum(r,0);
+        row[col.F2OL-1]=_f2sum(r,0,_f2OyCols(dst));
         row[col.F2MUM-1]='=$'+CL(col.FAKT)+r+'-$'+CL(col.F2OL)+r;
         row[col.H_BL-1]=rd.C;
       } else {
@@ -1157,24 +1392,24 @@ function _qoshQayta(dst, saved, pdb, kat, a, obyekt, konstr, faktMap, nkMap){
         else row[col.F-1]='=$'+CL(col.E)+r;
         row[col.NARX-1]=p.narx;
         row[col.SMETA-1]='=$'+CL(volCol)+r+'*$'+CL(col.NARX)+r;
-        var cat=(p.cat||'МАТ').toUpperCase(),mainC=(cat==='КАБ'||cat==='КАБЕЛ')?'МАТ':cat;
+        var mainC=(p.cat||'МАТ').toUpperCase();
+        // ⚡ YAKUNIY KATEGORIYA QOIDASI (asosiy sikl bilan BIR XIL): ЧЕЛ/МАШ FAQAT birlikdan.
+        var _bK=_catBirlik(_normBirlik(String(rd.D||'')), String(rd.C||''), kat);
+        if(_bK==='ЧЕЛ'||_bK==='МАШ') mainC=_bK;
+        else if(mainC==='ЧЕЛ'||mainC==='МАШ') mainC='МАТ';
         var ref='=$'+CL(col.SMETA)+r;
         if(mainC==='ЧЕЛ') row[col.CHEL-1]=ref;
         else if(mainC==='МАШ') row[col.MASH-1]=ref;
-        else if(mainC==='ОБ'||mainC==='ОБОР'||mainC==='ОБОРУД') row[col.OB-1]=ref;
-        else if(mainC==='МК'||mainC==='М/К') row[col.MK-1]=ref;
+        else if(mainC==='ОБ') row[col.OB-1]=ref;
         else row[col.MAT-1]=ref;
-        var nu=_norm(rd.C||'');
-        if(_hasKw(nu,kat.kw.KAB||[])) row[col.KAB-1]=ref;
-        if(_hasKw(nu,kat.kw.BEZSKLAD||[])) row[col.BEZSKLAD-1]=ref;
         if(baseMk==='rs'&&blRow) row[col.FAKT-1]='='+CL(col.FAKT)+'$'+blRow+'*'+CL(col.E)+r;
         else row[col.FAKT-1]=rd.fakt||0;
         row[col.QOLDIQ-1]='=$'+CL(volCol)+r+'-$'+CL(col.FAKT)+r;
-        row[col.F2OL-1]=_f2sum(r,0);
+        row[col.F2OL-1]=_f2sum(r,0,_f2OyCols(dst));
         row[col.F2MUM-1]='=$'+CL(col.FAKT)+r+'-$'+CL(col.F2OL)+r;
         row[col.ST_RES-1]='=$'+CL(col.SMETA)+r;
         row[col.ST_FAKT-1]='=$'+CL(col.FAKT)+r+'*$'+CL(col.NARX)+r;
-        row[col.ST_F2-1]=_f2sum(r,2);
+        row[col.ST_F2-1]=_f2sum(r,2,_f2OyCols(dst));
         row[col.ST_OST-1]='=$'+CL(col.F2MUM)+r+'*$'+CL(col.NARX)+r;
         row[col.H_BL-1]=blRow?blNom:rd.C;
       }
@@ -1200,17 +1435,21 @@ function _qoshQayta(dst, saved, pdb, kat, a, obyekt, konstr, faktMap, nkMap){
     for(var i=0;i<nQ;i++) if(grp.rows[i].oylar&&Object.keys(grp.rows[i].oylar).length){ hasOy=true; break; }
     if(hasOy){
       for(var oyNom in oyMap){
-        var mp=oyMap[oyNom], oOut=[], nOut=[], oChg=false, nChg=false;
+        var mp=oyMap[oyNom], oOut=[], nOut=[], sOut=[], oChg=false, nChg=false, sChg=false;
         for(var i=0;i<nQ;i++){
           var ov=grp.rows[i].oylar&&grp.rows[i].oylar[oyNom];
           if(ov){
             var ob=(typeof ov==='object')?ov.obyom:ov, nx=(typeof ov==='object')?ov.narx:0;
+            var sm=(typeof ov==='object')?ov.summa:0;
             oOut.push([ob||'']); if(ob) oChg=true;
             nOut.push([nx||'']); if(nx) nChg=true;
-          } else { oOut.push(['']); nOut.push(['']); }
+            sOut.push([sm||'']); if(sm) sChg=true;
+          } else { oOut.push(['']); nOut.push(['']); sOut.push(['']); }
         }
         if(oChg) dst.getRange(base,mp.o,nQ,1).setValues(oOut);
         if(nChg&&mp.n) dst.getRange(base,mp.n,nQ,1).setValues(nOut);
+        // СУММА (mp.o+2) statik tiklash — yuridik aniqlik (qo'shimcha/zamena qatorlar uchun ham)
+        if(sChg) dst.getRange(base,mp.o+2,nQ,1).setValues(sOut);
       }
     }
     total+=nQ;
@@ -1223,12 +1462,21 @@ function _qoshQayta(dst, saved, pdb, kat, a, obyekt, konstr, faktMap, nkMap){
 function _jamiQator(dst, jamiRow, start, last){
   var col=CFG.C, CL=_cl, MC=CL(col.MARKER);
   function sumF(c){ return '=SUM('+CL(c)+start+':'+CL(c)+last+')'; }
-  // ⚠️ ST_* ustunlar uchun FAQAT LEAF (rs+mat). rz qatorlar ST_F2/ST_OST da leaf
+  // ⚠️ ST_* ustunlar uchun FAQAT LEAF (rs+mat+ob). rz qatorlar ST_F2/ST_OST da leaf
   //    yig'indisini saqlaydi (drill-down ko'rinishi) → oddiy SUM(barcha) ularni
   //    IKKI MARTA hisoblardi (leaf + rz=leaf yig'indisi = 2×). SUMIF bilan faqat leaf.
+  //    ⚡ 2026-07-04: "ob" ham qo'shildi — standalone ОБОРУДОВАНИЕ qatorlari avval
+  //    ST_RES/ST_FAKT/ST_F2/ST_OST ЖАМИ dan tushib qolardi (_sumif2col/_sumifLeaf
+  //    bilan bir xil bug — razdel darajasi bilan birga tuzatildi).
+  //    ⚡ 2026-07-05: "rs+/mat+/ob+" (қўшимча/замена) ham qo'shildi — SUMIF aniq matn
+  //    solishtirganini uchun '+' li markerlar ЖАМИ dan tushib qolardi (DASHBOARD
+  //    marker-normalize xatosi bilan bir xil ildiz). Bu MUHIM: kelajakda DASHBOARD
+  //    JAMI qatoridan o'qisa (faqatJami rejimi) — bu formula TO'LIQ bo'lishi shart.
   function leafF(c){
     var sr=CL(c)+start+':'+CL(c)+last, mr=MC+start+':'+MC+last;
-    return '=SUMIF('+mr+',"rs",'+sr+')+SUMIF('+mr+',"mat",'+sr+')';
+    return '=SUMIF('+mr+',"rs",'+sr+')+SUMIF('+mr+',"mat",'+sr+')+SUMIF('+mr+',"ob",'+sr+')'
+         +'+SUMIF('+mr+',"rs+",'+sr+')+SUMIF('+mr+',"mat+",'+sr+')+SUMIF('+mr+',"ob+",'+sr+')'
+         +'+SUMIF('+mr+',"rs~",'+sr+')+SUMIF('+mr+',"mat~",'+sr+')+SUMIF('+mr+',"ob~",'+sr+')';
   }
   dst.getRange(jamiRow, col.MARKER).setValue('ЖАМИ');
   dst.getRange(jamiRow, col.SMETA).setFormula(
@@ -1240,7 +1488,7 @@ function _jamiQator(dst, jamiRow, start, last){
   dst.getRange(jamiRow, col.ST_FAKT).setFormula(leafF(col.ST_FAKT));
   dst.getRange(jamiRow, col.ST_F2  ).setFormula(leafF(col.ST_F2));
   dst.getRange(jamiRow, col.ST_OST ).setFormula(leafF(col.ST_OST));
-  dst.getRange(jamiRow, col.SMETA, 1, col.ST_OST-col.SMETA+1).setNumberFormat('#,##0');
+  dst.getRange(jamiRow, col.SMETA, 1, col.ST_OST-col.SMETA+1).setNumberFormat('#,##0.####');
   dst.getRange(jamiRow, 1, 1, col.ST_OST).setFontWeight('bold').setBackground('#ffe599');
 }
 function _sarlavhaYoz(dst, start){
@@ -1349,12 +1597,35 @@ function _autoData(sh){
 
 /* ============ MARKIROVKA ============ */
 function _mergedMap(sh, start, n){
-  var merges=sh.getRange(start,1,n,6).getMergedRanges(), full={}, ef={}, mmEf={};
+  var full={}, ef={}, mmEf={}, end=start+n-1;
+  // ⚡ 2026-07-03 (Amfiteatr АРХИТЕКТУРНАЯ ЧАСТЬ 6-daqiqa timeout): getMergedRanges()
+  // minglab merged katakli varaqda (arxitektura smetalari — merge juda ko'p) daqiqalab
+  // qotadi. Advanced Sheets API BITTA chaqiriqda barcha merge'ni qaytaradi (millisekund).
+  // API ishlamasa — eski usulga qaytadi (xavfsiz fallback).
+  var merges=null;
+  try{
+    var ssId=sh.getParent().getId();
+    var shNm=sh.getName().replace(/'/g,"''");
+    var resp=Sheets.Spreadsheets.get(ssId, {ranges:["'"+shNm+"'"], fields:'sheets(merges)'});
+    var m0=(resp.sheets && resp.sheets[0] && resp.sheets[0].merges)||[];
+    merges=[];
+    for(var i=0;i<m0.length;i++){
+      var g=m0[i];
+      // API: startRowIndex/startColumnIndex 0-based inclusive, end* 0-based EXCLUSIVE
+      var r=(g.startRowIndex||0)+1, c1=(g.startColumnIndex||0)+1, c2=g.endColumnIndex||c1;
+      if(r<start || r>end || c1>6) continue;
+      merges.push({row:r, c1:c1, c2:c2});
+    }
+  }catch(e){ merges=null; }
+  if(merges===null){
+    var mr=sh.getRange(start,1,n,6).getMergedRanges();
+    merges=mr.map(function(m){ return {row:m.getRow(), c1:m.getColumn(), c2:m.getColumn()+m.getNumColumns()-1}; });
+  }
   for(var i=0;i<merges.length;i++){
-    var m=merges[i], r=m.getRow(), c1=m.getColumn(), c2=c1+m.getNumColumns()-1;
+    var r=merges[i].row, c1=merges[i].c1, c2=merges[i].c2;
     if(c1===1 && c2>=6) full[r]=true;
     else if(c1>=2 && c2>=6) ef[r]=true;
-    
+
     // ef (5-6) ni ham shu siklning o'zida olib ketamiz
     if(c1===5 && c2===6) mmEf[r]=true;
   }
@@ -1411,10 +1682,10 @@ function _oraliqlarOl(obyekt){
  * oraliqlar = [{varaq,qator,kat}] — tartiblangan.
  * row qaysi oraliqqa tushsa shu kat qaytadi. */
 function _oraliqKat(oraliqlar, varaqNom, row){
-  var kat='';
+  var kat='', vn=String(varaqNom||'').trim();
   for(var i=0;i<oraliqlar.length;i++){
     var o=oraliqlar[i];
-    if(o.varaq!==varaqNom) continue;
+    if(String(o.varaq||'').trim()!==vn) continue;
     if(o.qator<=row) kat=o.kat; else break;
   }
   return kat;
@@ -1426,75 +1697,121 @@ function _priceDB(svodSS, kat, sc, fmt, svodSheets, savedOraliq){
   var sheets = svodSS.getSheets();
   var byKey = {};
   var nKey = 0;
-  var hasRanges = savedOraliq && savedOraliq.length>0;
+  var hasGlobalRanges = savedOraliq && savedOraliq.length>0;
 
   for(var s=0;s<sheets.length;s++){
     var sh = sheets[s];
-    if(_skip(sh.getName())) continue;
-    if(svodSheets && svodSheets.length && svodSheets.indexOf(sh.getName())<0) continue;
+    var hasSvod = (svodSheets && svodSheets.length > 0);
+    if(hasSvod){
+      if(svodSheets.indexOf(sh.getName().trim())<0) continue;
+    } else {
+      if(_skip(sh.getName())) continue;
+    }
     var last = sh.getLastRow();
     if(last < 1) continue;
-    var maxc = Math.max(6, sc.NARX, sc.NOM, sc.BLOK, sc.KOD||0, sc.BIRLIK||0, sc.QTY||0, sc.SUMMA||0);
-    var v = sh.getRange(1,1,last,maxc).getValues();
+    var hasRanges = false;
+    if(hasGlobalRanges){
+      var shNm = sh.getName().trim();
+      for(var k=0; k<savedOraliq.length; k++){
+        if(String(savedOraliq[k].varaq||'').trim() === shNm){ hasRanges = true; break; }
+      }
+    }
+    var maxc = 8; // ensure we read enough columns
+    var vAll = sh.getRange(1,1,last,maxc).getValues();
+    
+    // Auto-detect columns for this specific sheet
+    var curSc = sc; // default to passed sc
+    var curFmt = fmt;
+    for(var ri=0; ri<Math.min(10, vAll.length); ri++){
+      var rowStr = vAll[ri].join(' ').toUpperCase();
+      if(rowStr.indexOf('НАИМЕНОВАНИЕ')>=0 && rowStr.indexOf('ЕД.ИЗМ')>=0){
+        if(rowStr.indexOf('КОД')>=0 || rowStr.indexOf('ОБОСНОВАНИЕ')>=0){ curSc = CFG.SVOD_ABC; curFmt = 'ABC4'; }
+        else { curSc = CFG.SVOD_TN; curFmt = 'TN'; }
+        break;
+      }
+    }
+    
+    var v = vAll;
     var cur = '';
     for(var i=0;i<v.length;i++){
-      var nom  = String(v[i][sc.NOM-1]||'').trim();
-      var narx = _toNum(v[i][sc.NARX-1]);    // DONA narx (1 ed)
-      var bir  = String(v[i][sc.BIRLIK-1]||'').trim();
-      var kod  = (sc.KOD && v[i][sc.KOD-1]!==null && v[i][sc.KOD-1]!==undefined && v[i][sc.KOD-1]!=='')
-                 ? String(v[i][sc.KOD-1]).trim().toUpperCase() : '';
+      var nom  = String(v[i][curSc.NOM-1]||'').trim();
+      var narx = _toNum(v[i][curSc.NARX-1]);    // DONA narx (1 ed)
+      var bir  = String(v[i][curSc.BIRLIK-1]||'').trim();
+      var kod  = (curSc.KOD && v[i][curSc.KOD-1]!==null && v[i][curSc.KOD-1]!==undefined && v[i][curSc.KOD-1]!=='')
+                 ? String(v[i][curSc.KOD-1]).trim().toUpperCase() : '';
       // TEKSHIRUV uchun: hajm (QTY) va jami (СУММА). Narx manbai EMAS — faqat
-      // дона×qty≈сумма nazorati (noto'g'ri ustun tanlanганини aniqlash).
-      var qty   = (sc.QTY>0)   ? _toNum(v[i][sc.QTY-1])   : 0;
-      var summa = (sc.SUMMA>0) ? _toNum(v[i][sc.SUMMA-1]) : 0;
+      var qty   = (curSc.QTY>0)   ? _toNum(v[i][curSc.QTY-1])   : 0;
+      var summa = (curSc.SUMMA>0) ? _toNum(v[i][curSc.SUMMA-1]) : 0;
       var cat  = '';
 
       /* ── SAQLANGAN ORALIQLAR BILAN ────────────────────────── */
       if(hasRanges){
-        var rKat=_oraliqKat(savedOraliq, sh.getName(), i+1);
-        if(!rKat) continue; // oraliq tashqarisida → o'tkazib yuboramiz
-
         // Svodka NARX ustuni = DONA narx, aynan olinadi (qty/bo'lish YO'Q).
         // Bo'lish mantiqi narxni 10x buzib yuborardi (120→550mlrd bug).
-        if(!nom||!bir||narx<=0) continue;
+        // ⚡ 0-NARX RESURS: ВОДА, ba'zi materiallar svodkada narxi 0 bilan turadi — ular
+        //   BOR (topilgan), narxi 0. Avval narx===0 → tashlanardi → keyin "MISS" bo'lardi.
+        //   Endi nom+birlik bo'lsa qo'shamiz (section/ИТОГО quyida chiqarib tashlanadi).
+        if(!nom||!bir) continue;
         var nU=_norm(nom), bU=_normBirlik(bir);
         if(nU.indexOf('ИТОГО')>=0||nU.indexOf('ЖАМИ')>=0||bU==='СУМ') continue;
 
-        // Birlik ЧЕЛ/МАШ → doim to'g'ri; qolgan → oraliq kategoriyasi
+        // ⚡ fix: ЧЕЛ-Ч/МАШ-Ч birlik bo'yicha ANIQ aniqlansa — oraliqqa MUTLAQO
+        //   qaramasdan shu kategoriyaga tushadi (svodkaning qaysi bo'limida bo'lishidan
+        //   qat'iy nazar). Oraliq (bo'lim) chegarasi FAQAT ЧЕЛ/МАШ BO'LMAGAN qatorlar
+        //   (mat/ob/boshqa rs) uchun ishlaydi — ular bo'lim asosida ЧЕЛ/МАШ/МАТ/ОБ ga
+        //   ajratiladi. Avval ЧЕЛ/МАШ resurs oraliq tashqarisida qolsa (masalan yangi
+        //   bo'lim — skvajina — hali oraliqqa kiritilmagan bo'lsa) BUTUNLAY tashlanib,
+        //   narxi topilmay 0 bo'lardi.
         var bCat=_catBirlik(bir, nom, kat);
-        if(bCat==='ЧЕЛ'||bCat==='МАШ') cat=bCat;
-        else if(rKat==='МАТ') cat=_refine(nU,'МАТ',kat); // КАБ/М/К ajratish
-        else cat=rKat;
+        if(bCat==='ЧЕЛ'||bCat==='МАШ'){
+          cat=bCat;
+        } else {
+          var rKat=_oraliqKat(savedOraliq, sh.getName(), i+1);
+          if(!rKat) continue; // oraliq tashqarisida → faqat mat/ob/boshqa rs uchun o'tkazib yuboramiz
+          cat=rKat;
+        }
 
       /* ── ABC4 AVTO-ANIQLASH (eski mantiq) ─────────────────── */
       } else if(fmt === 'ABC4'){
         var birUp = bir.toUpperCase();
         var nomUp = nom.toUpperCase();
-        if((!kod || narx<=0) && nomUp){
+        if((!kod || narx===0) && nomUp){
           if(nomUp.indexOf('МАШИНИСТ')>=0)                    { cur='МАШ'; continue; }
           if(kat.blok.OB   && nomUp.indexOf(kat.blok.OB)>=0)  { cur='ОБ';  continue; }
           if(kat.blok.CHEL && nomUp.indexOf(kat.blok.CHEL)>=0){ cur='ЧЕЛ'; continue; }
           if(kat.blok.MASH && nomUp.indexOf(kat.blok.MASH)>=0){ cur='МАШ'; continue; }
           if(kat.blok.MAT  && nomUp.indexOf(kat.blok.MAT)>=0) { cur='МАТ'; continue; }
           if(nomUp.indexOf('ИТОГО')>=0||nomUp.indexOf('ЖАМИ')>=0){ cur=''; continue; }
-          if(!kod && narx<=0) continue;
+          if(!kod && narx===0) continue;
         }
-        if(!nom || !bir || narx<=0) continue;
+        // ⚡ 0-NARX RESURS ham qo'shiladi (nom+birlik bor) — svodkada 0 turган ВОДА kabilar
+        // "topilgan, narx 0" bo'lsin, MISS emas. Section/ИТОГО yuqorida continue qilingan.
+        if(!nom || !bir) continue;
         var nomU2=_norm(nom), birU2=_normBirlik(bir);
         if(nomU2.indexOf('ИТОГО')>=0||nomU2.indexOf('ЖАМИ')>=0||birU2==='СУМ') continue;
         
         var bCat = _catBirlik(bir, nom, kat);
         if(bCat === 'ЧЕЛ' || bCat === 'МАШ') cat = bCat;
-        else cat = _refine(_norm(nom), cur||'МАТ', kat);
+        else cat = cur||'МАТ';
 
       /* ── TN AVTO-ANIQLASH (seksiya = НОМ ustunidagi narxsiz sarlavha) ─────── */
       } else {
-        var blokTxt = String(v[i][sc.BLOK-1]||'').toUpperCase();
-        // Seksiya sarlavhasi: NARX YO'Q (narx<=0) bo'lgan matnli qator.
-        // narx<=0 sharti SHART — aks holda resurs nomi ("ЗАТРАТЫ ТРУДА РАБОЧИХ...")
+        var blokTxt = String(v[i][sc.BLOK-1]||'').toUpperCase().trim();
+        // MERGED seksiya sarlavhasi (A1:F1 birlashtirilgan) — qiymat faqat chap-yuqori
+        // (A) katakда, BLOK ustuni bo'sh ko'rinadi → birinchi harfli katakdan olamiz.
+        if(narx===0 && !blokTxt){
+          for(var c0=0;c0<maxc;c0++){
+            var cv0=String(v[i][c0]||'').trim();
+            if(cv0 && /[А-ЯЁA-Z]/i.test(cv0)){ blokTxt=cv0.toUpperCase(); break; }
+          }
+        }
+        // Seksiya sarlavhasi: NARX YO'Q (narx===0) bo'lgan matnli qator.
+        // narx sharti SHART — aks holda resurs nomi ("ЗАТРАТЫ ТРУДА РАБОЧИХ...")
         // seksiya nomi ("ЗАТРАТЫ ТРУДА") bilan boshlangani uchun resurs ham seksiya
         // deb o'tkazib yuborilardi (narx yo'qolardi).
-        if(narx<=0 && blokTxt){
+        // ⚠️ `!kod && !bir` sharti EMAS — seksiya qatorida № yoki merged qiymat
+        // bo'lsa seksiya o'tkazib yuborilib, kategoriya butunlay adashardi.
+        if(narx===0 && blokTxt){
           if(blokTxt.indexOf('МАШИНИСТ')>=0)                     { cur='МАШ'; continue; }
           if(kat.blok.CHEL && blokTxt.indexOf(kat.blok.CHEL)>=0){ cur='ЧЕЛ'; continue; }
           if(kat.blok.MASH && blokTxt.indexOf(kat.blok.MASH)>=0){ cur='МАШ'; continue; }
@@ -1502,10 +1819,15 @@ function _priceDB(svodSS, kat, sc, fmt, svodSheets, savedOraliq){
           if(kat.blok.OB   && blokTxt.indexOf(kat.blok.OB)>=0)  { cur='ОБ';  continue; }
         }
         // NARX = dona narx, aynan olinadi (qty/bo'lish YO'Q — narxni buzardi)
-        if(!nom || narx<=0) continue;
+        // ⚡ 0-NARX RESURS: svodkada narxi 0 turган real resurs (ВОДА М3 kabi) — BOR (topilgan),
+        //   narx 0. Faqat REAL resurs bo'lsa (birlik bor, ИТОГО/ЖАМИ emas). Section yuqorida chiqarilgan.
+        if(!nom) continue;
+        var nUt=_norm(nom), bUt=_normBirlik(bir);
+        if(nUt.indexOf('ИТОГО')>=0||nUt.indexOf('ЖАМИ')>=0) continue;
+        if(narx===0 && (!bir || bUt==='СУМ')) continue;   // 0-narx faqat birlikli real resurs bo'lsa
         var bCat = _catBirlik(bir, nom, kat);
         if(bCat === 'ЧЕЛ' || bCat === 'МАШ') cat = bCat;
-        else cat = _refine(_norm(nom), cur||'МАТ', kat);
+        else cat = cur||'МАТ';
       }
 
       // DONA NARX KAFOLATI: dona × kol-vo ≈ summa bo'lishi SHART.
@@ -1514,10 +1836,10 @@ function _priceDB(svodSS, kat, sc, fmt, svodSheets, savedOraliq){
       // 13млн o'rniga 1.7млрд) matematik aniqlik bilan oldini oladi (fuzzy emas).
       // Mos kelmasa va summa≈narx ham emas → ogohlantirish (boshqa nomuvofiqlik).
       var warn=false;
-      if(narx>0 && qty>0 && summa>0){
+      if(narx!==0 && qty!==0 && summa!==0){
         var hisob=narx*qty;
-        if(Math.abs(hisob-summa) > summa*0.02){
-          if(Math.abs(narx-summa) <= summa*0.02 && qty>1){
+        if(Math.abs(hisob-summa) > Math.abs(summa)*0.02){
+          if(Math.abs(narx-summa) <= Math.abs(summa)*0.02 && Math.abs(qty)>1){
             narx = summa/qty;       // dona narx tiklandi (narx aslida JAMI summa edi)
           } else {
             warn=true;              // boshqa nomuvofiqlik — narx tekshirilsin
@@ -1531,7 +1853,19 @@ function _priceDB(svodSS, kat, sc, fmt, svodSheets, savedOraliq){
       else if(narx > ex.narx){ ex.narx=narx; ex.cat=cat; ex.warn=warn; }
     }
   }
-  return {byKey:byKey, n:nKey};
+  // ⚡ Tezlik (2026-07-03, Amfiteatr 6-daqiqa timeout): "ТРУДА РАБОЧИХ" zaxira moslik
+  // oldindan BIR MARTA indekslanadi. Avval _findPrice har MISS resurs uchun BUTUN
+  // byKey (minglab kalit) bo'ylab qidirardi (O(byKey) har chaqiriqda) — har bl guruhida
+  // shu resurs qatori takrorlanadigan katta obyektlarda (1000+ qator) bu O(qator×byKey)
+  // bo'lib, yagona sabab bo'lmasa ham, sezilarli sekinlashtirardi. Endi O(1) lookup.
+  var laborByUnit={};
+  for(var lk in byKey){
+    var lparts=lk.split('||'), lnom=lparts[0], lbir=lparts[1]||'';
+    if(lnom.indexOf('ТРУДАРАБОЧИХ')>=0 || lnom.indexOf('РАБОЧИХСТРОИТЕЛЕЙ')>=0){
+      if(!laborByUnit[lbir]) laborByUnit[lbir]=byKey[lk];
+    }
+  }
+  return {byKey:byKey, n:nKey, laborByUnit:laborByUnit};
 }
 /* NARXLAR varaqi REGISTRI — server faylidagi TASDIQLANGAN ma'lumot.
  * O'qiydi: A=НОМ B=БИРЛИК C=КАТ D=БЕЛГИЛАНГАН(tasdiqlangan narx).
@@ -1559,7 +1893,7 @@ function _catBirlik(birlik, nom, kat){
   if(nU.indexOf('ТРУДА МАШИНИСТОВ')>=0) return 'МАШ';
   if(b.indexOf('ЧЕЛ')>=0) return 'ЧЕЛ';
   if(b.indexOf('МАШ')>=0) return 'МАШ';
-  return _refine(_norm(nom), 'МАТ', kat);
+  return 'МАТ';
 }
 
 /* ============ HAR OBYEKT ЧЕЛ-Ч STAVKA (fiksirlangan mehnat haqi) ============
@@ -1644,33 +1978,35 @@ function _findPrice(nom, birlik, kod, pdb, kat, faktMap, a, nkMap){
     if(pdb.byKey[key].warn) debug.warn=true;   // дона×qty≠сумма — shubhali (LRV ko'rib chiq)
   } else if(nomU.indexOf('ТРУДА РАБОЧИХ')>=0){
     // Zaxira moslik (Fallback): ishchi kuchi nomidagi kichik farqlar uchun (masalan "С УЧЕТОМ СОЦСТРАХА" bor/yo'qligi)
+    // ⚡ O(1) — _priceDB da bir marta oldindan indekslangan (pdb.laborByUnit), katta
+    // obyektlarda har chaqiriqda butun byKey bo'ylab qidirish timeoutga sabab bo'lardi.
     var normB = _normBirlik(birlik);
-    for(var k in pdb.byKey){
-      var parts = k.split('||');
-      var kNom = parts[0];
-      var kBir = parts[1]||'';
-      if(kBir === normB && (kNom.indexOf('ТРУДАРАБОЧИХ')>=0 || kNom.indexOf('РАБОЧИХСТРОИТЕЛЕЙ')>=0)){
-        narx=pdb.byKey[k].narx; cat=pdb.byKey[k].cat; debug.method='LABOR_FALLBACK';
-        debug.detail='Matched ' + k + ' for ' + key;
-        if(pdb.byKey[k].warn) debug.warn=true;
-        break;
-      }
+    var lf = pdb.laborByUnit && pdb.laborByUnit[normB];
+    if(lf){
+      narx=lf.narx; cat=lf.cat; debug.method='LABOR_FALLBACK';
+      debug.detail='Matched (indexed) for ' + key;
+      if(lf.warn) debug.warn=true;
     }
   }
   // topilmasa: narx=0, debug.method='MISS' → _NARX_LOG ga tushadi
 
   // ── KATEGORIYA (narx topilmasa ham aniqlanadi — daraxt/rollup uchun) ──
-  if(!cat) cat=_refine(nomU,'МАТ',kat);
-  // BIRLIK HIMOYASI: birlik ЧЕЛ-Ч → ЧЕЛ, МАШ-Ч → МАШ (birlik aniq aytsa — haqiqat)
+  if(!cat) cat='МАТ';
   var birCat=_catBirlik(_normBirlik(birlik),'',kat);
-  if(birCat==='ЧЕЛ'||birCat==='МАШ') cat=birCat;
-  else if(cat==='МАШ' && birCat!=='МАШ') cat=_refine(nomU,'МАТ',kat);
   // NARXLAR KAT — faqat KATEGORIYA tuzatmasi (NARX EMAS; narx doim svodkadan).
+  //   ⚠️ ОБ/М-К/КАБ ni boyitishi mumkin, LEKIN ЧЕЛ/МАШ ni PASTKI birlik-qoidasi bekor
+  //   qiladi (nkMap materialni МАШ ga zaharlab qo'ymasin — РАСТВОР/ФБС muammosi shu edi).
   var reg=(nkMap && nkMap[key]) ? nkMap[key] : null;
   if(reg && reg.kat){
     if(reg.bel>0) cat=reg.kat;                          // tasdiqlangan kategoriya — to'liq
     else if(cat==='МАТ' && reg.kat!=='МАТ') cat=reg.kat; // tasdiqlanmagan — faqat МАТ ni boyitadi
   }
+  // ⚡⚡⚡ YAKUNIY, ENG OXIRGI SO'Z (foydalanuvchi QAT'IY qoidasi — 100 marta): ЧЕЛ va МАШ
+  //   FAQAT birlik (чел-час/маш-час) orqali. HAMMA manbadan (price-baza, NARXLAR KAT nkMap)
+  //   KEYIN qo'llanadi — hech narsa birligi чел/маш bo'lmagan qatorni ЧЕЛ/МАШ ga tusholmaydi,
+  //   va чел/маш birlik har doim majburiy ЧЕЛ/МАШ. ("ТРУДА МАШИНИСТОВ" nom bo'yicha МАШ — yuqorida).
+  if(birCat==='ЧЕЛ'||birCat==='МАШ') cat=birCat;
+  else if(cat==='ЧЕЛ'||cat==='МАШ') cat='МАТ';
 
   // ⚡ HAR OBYEKT FIKSIRLANGAN ЧЕЛ-Ч stavka (svodkadan USTUN).
   //   ⚠️ FAQAT "ЗАТРАТЫ ТРУДА РАБОЧИХ" nomli resurs uchun (mehnat soati narxi).
@@ -1730,14 +2066,7 @@ function _dice(aMap,aN,bMap,bN){
   for(var k in aMap){ if(bMap[k]) inter+=Math.min(aMap[k],bMap[k]); }
   return (2*inter)/(aN+bN);
 }
-function _refine(nomU, baseCat, kat){
-  if(baseCat!=='МАТ') return baseCat;
-  if(_hasKw(nomU,kat.kw.KAB)) return 'КАБ';
-  if(_hasKw(nomU,kat.kw.MK))  return 'М/К';
-  if(_hasKw(nomU,kat.kw.OB))  return 'ОБ';
-  return 'МАТ';
-}
-function _hasKw(s,arr){ for(var i=0;i<arr.length;i++) if(arr[i] && s.indexOf(arr[i])>=0) return true; return false; }
+
 
 
 /* ============ NORMALIZATSIYA ============ */
@@ -1782,18 +2111,30 @@ function _normNomKey(s){
 
 
 /* ============ SUMIF (rz uchun) ============ */
+// ⚡ 2026-07-04: "ob" (standalone ОБОРУДОВАНИЕ qatori, mat bilan bir xil darajada,
+// _ishlaVaraq'da cat==='ОБ' bo'lsa tur='ob' qilib belgilanadi) ham qo'shildi — avval
+// faqat "bl"+"mat" yig'ilardi, RZ ostida to'g'ridan-to'g'ri turgan ОБ qatorlari RZ
+// SMETA/ST_F2/ST_OST yig'indisidan TUSHIB QOLARDI (razdel/obyekt jami kamayardi,
+// F2/qoldiq foizi ham noto'g'ri chiqardi — YURIDIK/moliyaviy muhim).
+// ⚡ 2026-07-05: "bl+"/"mat+"/"ob+" (rz ostiga TO'G'RIDAN-TO'G'RI qo'shilgan
+// qo'shimcha/zamena ish) SUMIF'da ANIQ "bl" bilan mos kelmaydi — shu marker
+// variantlari ham qo'shildi (aks holda RZ jami qo'shimcha ishni tashlab ketardi).
 function _sumif2col(it, sumCol){
   if(!it.c1||!it.c2) return 0;
   var L=_cl, MC=L(CFG.C.MARKER), sr=L(sumCol)+it.c1+':'+L(sumCol)+it.c2;
   var mr=MC+it.c1+':'+MC+it.c2;
-  return '=SUMIF('+mr+',"bl",'+sr+')+SUMIF('+mr+',"mat",'+sr+')';
+  return '=SUMIF('+mr+',"bl",'+sr+')+SUMIF('+mr+',"mat",'+sr+')+SUMIF('+mr+',"ob",'+sr+')'
+       +'+SUMIF('+mr+',"bl+",'+sr+')+SUMIF('+mr+',"mat+",'+sr+')+SUMIF('+mr+',"ob+",'+sr+')'
+       +'+SUMIF('+mr+',"bl~",'+sr+')+SUMIF('+mr+',"mat~",'+sr+')+SUMIF('+mr+',"ob~",'+sr+')';
 }
-// rs + mat (leaf) qatorlar yig'indisi — rz darajada qolgan/F2 qiymatlar uchun
+// rs + mat + ob (leaf) qatorlar yig'indisi — rz darajada qolgan/F2 qiymatlar uchun
 function _sumifLeaf(it, sumCol){
   if(!it.c1||!it.c2) return 0;
   var L=_cl, MC=L(CFG.C.MARKER), sr=L(sumCol)+it.c1+':'+L(sumCol)+it.c2;
   var mr=MC+it.c1+':'+MC+it.c2;
-  return '=SUMIF('+mr+',"rs",'+sr+')+SUMIF('+mr+',"mat",'+sr+')';
+  return '=SUMIF('+mr+',"rs",'+sr+')+SUMIF('+mr+',"mat",'+sr+')+SUMIF('+mr+',"ob",'+sr+')'
+       +'+SUMIF('+mr+',"rs+",'+sr+')+SUMIF('+mr+',"mat+",'+sr+')+SUMIF('+mr+',"ob+",'+sr+')'
+       +'+SUMIF('+mr+',"rs~",'+sr+')+SUMIF('+mr+',"mat~",'+sr+')+SUMIF('+mr+',"ob~",'+sr+')';
 }
 
 
@@ -1807,15 +2148,12 @@ function _resurslarYig(plusSS){
     var nm=sheets[s].getName();
     if(nm.indexOf(CFG.LRV_SHEET)!==0) continue;
     lrvNames.push(nm);
-    var shi=sheets[s], last=shi.getLastRow();
-    if(last<2) continue;
-    var rng=shi.getRange(1,1,last,col.MARKER).getValues();
-    for(var i=0;i<rng.length;i++){
-      var g=String(rng[i][col.MARKER-1]||'').trim().toLowerCase();
-      if(g!=='rs'&&(g !== 'mat' && g !== 'ob') ) continue;
-      var nomFull=rng[i][col.NOM-1];
-      var bir=rng[i][col.BIRLIK-1];
-      var narx=rng[i][col.NARX-1];
+    var rows = lrvOqi(sheets[s], {faqatLeaf: true});
+    for(var i=0; i<rows.length; i++){
+      var r = rows[i];
+      var nomFull = r.nom;
+      var bir = r.birlik;
+      var narx = r.narx;
       if(!nomFull) continue;
       var key=_norm(nomFull)+'||'+_normBirlik(bir);
       if(!seen[key]){ seen[key]={nom:nomFull,bir:bir,narx:narx}; order.push(key); }
@@ -1832,8 +2170,8 @@ function _resurslarYig(plusSS){
     var hParts=[], sParts=[];
     for(var L2=0;L2<lrvNames.length;L2++){
       var lv=lrvNames[L2];
-      hParts.push(_sif2(lv,fCol,nomCol,crit,birCol,critB)+'+'+_sifMat(lv,fCol,nomCol,crit,birCol,critB));
-      sParts.push(_sif2(lv,smCol,nomCol,crit,birCol,critB)+'+'+_sifMat(lv,smCol,nomCol,crit,birCol,critB));
+      hParts.push(_sif2(lv,fCol,nomCol,crit,birCol,critB)+'+'+_sifMat(lv,fCol,nomCol,crit,birCol,critB)+'+'+_sifOb(lv,fCol,nomCol,crit,birCol,critB));
+      sParts.push(_sif2(lv,smCol,nomCol,crit,birCol,critB)+'+'+_sifMat(lv,smCol,nomCol,crit,birCol,critB)+'+'+_sifOb(lv,smCol,nomCol,crit,birCol,critB));
     }
     rows.push([rsc.nom, rsc.bir, rsc.narx, '='+hParts.join('+'), '='+sParts.join('+')]);
   }
@@ -1843,7 +2181,7 @@ function _resurslarYig(plusSS){
   sh.getRange(tot,4).setFormula('=SUM(D2:D'+(rows.length+1)+')');
   sh.getRange(tot,5).setFormula('=SUM(E2:E'+(rows.length+1)+')');
   sh.getRange(tot,1,1,5).setBackground('#ffe599');
-  if(rows.length) sh.getRange(2,3,rows.length+1,3).setNumberFormat('#,##0');
+  if(rows.length) sh.getRange(2,3,rows.length+1,3).setNumberFormat('#,##0.####');
   sh.setFrozenRows(1); sh.autoResizeColumns(1,5);
 }
 function _sif2(lv,sumCol,nomCol,crit,birCol,critB){
@@ -1859,6 +2197,15 @@ function _sifMat(lv,sumCol,nomCol,crit,birCol,critB){
   return "SUMIFS('"+lv+"'!"+sumCol+":"+sumCol+",'"+lv+"'!"+nomCol+":"+nomCol+","+crit
         +",'"+lv+"'!"+birCol+":"+birCol+","+critB
         +",'"+lv+"'!"+mc+":"+mc+',"mat")';
+}
+// ⚡ 2026-07-04: standalone ОБ (ob marker) qatorlar RESURSLAR yig'indisidan tushib
+// qolmasin — _sif2("rs")/_sifMat("mat") qatoriga uchinchi had sifatida qo'shiladi.
+function _sifOb(lv,sumCol,nomCol,crit,birCol,critB){
+  lv=String(lv||'').replace(/'/g,"''");
+  var mc=_cl(CFG.C.MARKER);
+  return "SUMIFS('"+lv+"'!"+sumCol+":"+sumCol+",'"+lv+"'!"+nomCol+":"+nomCol+","+crit
+        +",'"+lv+"'!"+birCol+":"+birCol+","+critB
+        +",'"+lv+"'!"+mc+":"+mc+',"ob")';
 }
 
 
@@ -1908,6 +2255,8 @@ function _oyYigindiFormulalarYangila(sh) {
   
   var marker = sh.getRange(start, col.MARKER, n, 1).getValues();
   var CL = _cl;
+  _f2OyColsInv(sh);                    // oy qo'shilgan bo'lishi mumkin — kesh yangilanadi
+  var _oyColsY = _f2OyCols(sh);        // mavjud oylar — _f2sum ANIQ kataklar bilan yozadi
   
   var vF2OL = [];
   var vF2MUM = [];
@@ -1916,11 +2265,11 @@ function _oyYigindiFormulalarYangila(sh) {
   
   for (var i = 0; i < n; i++) {
     var r = start + i;
-    var mk = String(marker[i][0] || '').trim().toLowerCase().replace(/\+$/,'');
+    var mk = String(marker[i][0] || '').trim().toLowerCase().replace(/[+~]$/,'');
     if (mk === 'bl' || mk === 'rs' || mk === 'mat' || mk === 'ob') {
-      vF2OL.push([_f2sum(r, 0)]);
+      vF2OL.push([_f2sum(r, 0, _oyColsY)]);
       vF2MUM.push(['=$' + CL(col.FAKT) + r + '-$' + CL(col.F2OL) + r]);
-      vST_F2.push([_f2sum(r, 2)]);
+      vST_F2.push([_f2sum(r, 2, _oyColsY)]);
       vST_OST.push(['=$' + CL(col.F2MUM) + r + '*$' + CL(col.NARX) + r]);
     } else {
       vF2OL.push(['']);

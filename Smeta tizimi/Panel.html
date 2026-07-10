@@ -119,6 +119,10 @@ select,input[type=text],input[type=number]{
 select:hover,input:hover{border-color:rgba(255,255,255,0.2)}
 select:focus,input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(56,189,248,.15);background:rgba(0,0,0,0.4)}
 input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
+/* НАКРУТКА inline — ҳар summa yonida avtomatik ko'rinadi (tugmasiz) */
+.nakr-inline{font-size:10px;color:#c084fc;background:rgba(192,132,252,.10);border:1px solid rgba(192,132,252,.28);
+  border-radius:6px;padding:0 5px;margin-left:5px;cursor:pointer;white-space:nowrap;font-weight:600;transition:.15s}
+.nakr-inline:hover{background:rgba(192,132,252,.22);color:#e9d5ff}
 
 /* TOOLBAR */
 .tbar{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;background:var(--bg2);padding:12px 16px;border-radius:var(--r);border:1px solid var(--line)}
@@ -284,6 +288,30 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
 .gantt .grid-row { fill: transparent; }
 .gantt .grid-row:nth-child(even) { fill: rgba(255,255,255,0.02); }
 .gantt .tick { stroke: var(--line2); }
+
+.r-node { margin-bottom: 8px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); overflow: hidden; }
+.r-node-head { display: flex; align-items: center; padding: 8px; background: rgba(0,0,0,0.2); gap: 8px; }
+.r-children { padding: 8px; padding-left: 24px; border-left: 2px solid var(--line2); margin-left: 12px; }
+.r-inp { background: transparent; border: none; color: var(--txt); font-size: 13px; font-weight: 600; outline: none; width: 150px; }
+.r-inp:focus { border-bottom: 1px solid var(--pri); }
+.r-lrv { display: flex; align-items: center; padding: 6px 8px; margin: 6px 8px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; font-size: 12px; color: var(--grn2); }
+.r-drop { padding: 12px; margin: 6px 8px; border: 1px dashed var(--txt4); border-radius: 4px; text-align: center; color: var(--txt4); font-size: 11px; background: rgba(0,0,0,0.1); }
+.r-lrv-drag { padding: 8px; background: var(--bg2); border: 1px solid var(--line); border-radius: 4px; cursor: grab; }
+.r-lrv-drag:active { cursor: grabbing; border-color: var(--pri); }
+
+/* Shartnoma UI */
+.sh-kpi-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.sh-kpi-card { background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: var(--r-sm); padding: 16px; text-align: center; }
+.sh-kpi-card .val { font-size: 24px; font-weight: 800; color: var(--pri); margin-top: 8px; }
+.sh-card { background: var(--surface); border: 1px solid var(--line2); border-radius: var(--r); padding: 20px; margin-bottom: 16px; box-shadow: var(--sh-sm); transition: 0.2s; }
+.sh-card:hover { border-color: rgba(255,255,255,0.2); box-shadow: var(--sh); }
+.sh-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.sh-no { font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px; }
+.sh-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.sh-kpi span { display: flex; flex-direction: column; background: rgba(0,0,0,0.3); padding: 10px 14px; border-radius: var(--r-sm); border: 1px solid var(--line); font-size: 11px; color: var(--txt3); }
+.sh-kpi span b { font-size: 15px; color: #fff; margin-top: 4px; font-weight: 700; }
+.sh-prog-wrap { height: 6px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.sh-prog-fill { height: 100%; background: linear-gradient(90deg, var(--pri), var(--cyan)); border-radius: 4px; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
 </style>
 </head>
 <body>
@@ -321,7 +349,10 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
   <button class="btn xs s sub-t" data-sub="puz" onclick="tabOch('puz')" data-i18n="tab-puz">Файл боғлаш</button>
   <button class="btn xs s sub-t" data-sub="ier" onclick="tabOch('ier')" data-i18n="tab-ier">Иерархия</button>
   <button class="btn xs s sub-t" data-sub="huj" onclick="tabOch('huj')" data-i18n="tab-huj">Ҳужжатлар</button>
+  <button class="btn xs s sub-t" data-sub="shsm" onclick="tabOch('shsm')">📝 Шахсий смета</button>
   <button class="btn xs s sub-t" data-sub="soz" onclick="tabOch('soz')" data-i18n="tab-soz">Созлама</button>
+  <button class="btn xs s sub-t" data-sub="supa" onclick="tabOch('supa')">🌐 Supabase</button>
+  <button class="btn xs s sub-t" data-sub="mon" onclick="tabOch('mon')">📈 Мониторинг</button>
 </div>
 
 <div id="body">
@@ -337,6 +368,7 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
     <button class="btn s" id="btnLock" onclick="lockToggle()" style="display:none" data-i18n="btn-lock">Қулфлаш</button>
     <div class="hgap"></div>
     <button class="btn s" id="btnTashxis" onclick="tashxisYukla()" style="display:none;font-size:11px" title="Narx/miqdor tashxisi — shishish, 0-narx, topilmaganlar" data-i18n="btn-tashxis">🔍 Ташхис</button>
+    <button class="btn s" id="btnNakrutka" onclick="_nakrToggle()" style="display:none;font-size:11px" title="Накрутка занжирини йиғиш/очиш (доим авто ҳисобланади)">💰 Накрутка</button>
     <button class="btn s" id="btnAi" onclick="aiTahlil(false)" style="display:none;font-size:11px" title="AI maslahatchi — holatdan xulosa" data-i18n="btn-ai">🤖 Таҳлил</button>
     <button class="btn s" id="btnOy" onclick="oyQosh()" style="display:none;font-size:11px" data-i18n="btn-oy">+ Ой</button>
     <button class="btn s" id="btnF2Imp" onclick="f2ImpOch()" style="display:none;font-size:11px;background:#4f46e5;border-color:#4f46e5;color:#fff">📄 Ф2 Импорт</button>
@@ -351,12 +383,14 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
   <div class="kpis" id="kpis"></div>
   <div id="aiBox" style="display:none;background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(16,185,129,.06));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:13px;line-height:1.6;color:var(--txt2);white-space:pre-wrap"></div>
   <div id="tashxisBox" style="display:none;background:rgba(15,23,42,.5);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:12px;max-height:420px;overflow:auto"></div>
+  <div id="nakrutkaBox" style="display:none;background:rgba(15,23,42,.5);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:12px;max-height:480px;overflow:auto"></div>
   <div id="catStats" style="display:none"></div>
   <div id="hMsg" style="display:none"></div>
   <div class="tree-actions" id="treeActions" style="display:none">
     <button class="tree-act-btn" data-i18n="tree-expand" onclick="treeBarcha('open')">▼ Barchasini yoy</button>
     <button class="tree-act-btn" data-i18n="tree-collapse" onclick="treeBarcha('close')">▶ Barchasini yig'</button>
-    <button class="tree-act-btn" onclick="toggleGantt()" style="background:rgba(56,189,248,0.1); color:var(--pri); border-color:var(--pri)">📅 Gantt Diagramma</button>
+    <button class="tree-act-btn" onclick="m29Yarat()" style="background:rgba(16,185,129,0.1); color:var(--grn); border-color:var(--grn)">🧾 M-29 Yuklash</button>
+    <button class="tree-act-btn" onclick="toggleGantt()" style="background:rgba(56,189,248,0.1); color:var(--pri); border-color:var(--pri)">📅 Gantt</button>
     <span id="searchInfo" style="font-size:10px;color:var(--txt4);margin-left:4px"></span>
   </div>
   <div id="ganttView" style="display:none; height:400px; overflow-y:auto; overflow-x:auto; margin-bottom: 16px;">
@@ -468,7 +502,8 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
 <div class="pane" id="pane-skan">
   <div class="tbar">
     <button class="btn s" data-i18n="btn-skan" onclick="skanQil()">↺ Скан</button>
-    <button class="btn grn" data-i18n="btn-all-ishla" onclick="barchaIshla()">⚡ Барчасини ишлаш</button>
+    <button class="btn s" onclick="barchaTezkorIshla()" title="Сводкадан нарх ва категорияларни янгилаш">⚡ Тезкор (Нарх)</button>
+    <button class="btn grn" onclick="barchaIshla()" title="Сводка ва барча ЛРВларни қайта ўқиш">🔄 Тўлиқ Ишлаш</button>
     <span id="skanMsg" style="font-size:11px;color:#60a5fa;flex:1"></span>
     <button class="btn s" style="font-size:11px" onclick="serverYig()">⬆ Серверга</button>
   </div>
@@ -506,7 +541,9 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
     <label style="font-size:11px;color:var(--txt2)">Номи
       <input id="shNomi" placeholder="Амфитеатр қурилиши" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
     <label style="font-size:11px;color:var(--txt2)">Тараф (буюртмачи)
-      <input id="shTaraf" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
+      <input id="shTaraf" list="tarafList" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)">
+      <datalist id="tarafList"></datalist>
+    </label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <label style="font-size:11px;color:var(--txt2)">Сумма (НДСсиз)
         <input id="shSumma" type="number" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></label>
@@ -558,6 +595,25 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
   </div>
 </div>
 
+<!-- Obyektni biriktirish modal -->
+<div class="modal-bg" id="obBogModal" style="display:none">
+  <div class="modal" style="max-width:400px">
+    <h3 id="obBogTitle">Объектни бириктириш</h3>
+    <div class="msg i" style="font-size:11px" id="obBogSub"></div>
+    <input type="hidden" id="obBogObyekt">
+    <label style="font-size:11px;color:var(--txt2)">Шартномани танланг:
+      <select id="obBogSelect" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)"></select>
+    </label>
+    <label style="font-size:11px;color:var(--txt2);margin-top:8px;display:block">Кўпайтма (сони):
+      <input type="number" id="obBogSoni" value="1" min="1" step="1" style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)">
+    </label>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn s" onclick="g('obBogModal').style.display='none'">Бекор</button>
+      <button class="btn grn" onclick="obBogSaqla()">Сақлаш</button>
+    </div>
+  </div>
+</div>
+
 <!-- Nakrutka modal -->
 <div class="modal-bg" id="nkModal" style="display:none">
   <div class="modal" style="max-width:560px">
@@ -568,6 +624,55 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
       <button class="btn s" onclick="g('nkModal').style.display='none'">Бекор</button>
       <button class="btn grn" onclick="nakrSaqla()">Сақлаш</button>
     </div>
+  </div>
+</div>
+
+<!-- ====== ШАХСИЙ СМЕТА ====== -->
+<div class="pane" id="pane-shsm">
+  <div class="msg i" style="line-height:1.5;max-width:700px">
+    <b>📝 Шахсий смета:</b> қутубхонада йиғилган иш турларидан (олдин ишланган объектлардан
+    автоматик тўпланган) қўлда янги смета йиғасиз — иш турини қидиринг, ҳажмини киритинг,
+    қўшинг. Тайёр бўлгач "Яратиш" — янги Google Sheets ҳужжат сифатида сақланади.
+  </div>
+  <div class="tbar" style="margin-top:10px">
+    <button class="btn grn" onclick="shsmYangiOch()">➕ Янги смета</button>
+    <button class="btn" onclick="shsmYukla()">↺ Рўйхатни янгилаш</button>
+  </div>
+  <div id="shsmList" style="margin-top:10px;max-width:700px"></div>
+
+  <div id="shsmBuilder" style="display:none;margin-top:14px;max-width:900px;border:1px solid var(--line2);border-radius:10px;padding:14px;background:rgba(15,23,42,.4)">
+    <div style="font-weight:700;color:var(--pri2);margin-bottom:10px">➕ Янги шахсий смета</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px">
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--txt3)">Смета номи
+        <input type="text" id="shsmNom" placeholder="масалан: Ёритиш иши" style="width:100%"></label>
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--txt3)">ЧЕЛ-Ч ставка (ишчи, сўм, ихтиёрий)
+        <input type="number" id="shsmChel" style="width:100%"></label>
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--txt3)">Заказчик
+        <input type="text" id="shsmZak" placeholder="Заказчик номи" style="width:100%"></label>
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--txt3)">Подрядчик
+        <input type="text" id="shsmPod" placeholder="Подрядчик номи" style="width:100%"></label>
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--txt3)">Заказчик Ф.И.Ш
+        <input type="text" id="shsmZakFio" style="width:100%"></label>
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--txt3)">Подрядчик Ф.И.Ш
+        <input type="text" id="shsmPodFio" style="width:100%"></label>
+    </div>
+
+    <div style="margin-top:14px;font-weight:700;color:var(--txt3);font-size:12px">Иш тури қидириш ва қўшиш:</div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" id="shsmQidir" placeholder="Иш тури номи ёки коди бўйича қидиринг..." style="flex:1" oninput="shsmQidirDeb()">
+    </div>
+    <div id="shsmQidirNat" style="max-height:220px;overflow:auto;margin-top:6px"></div>
+
+    <div style="margin-top:14px;font-weight:700;color:var(--txt3);font-size:12px">Танланган ишлар:</div>
+    <div id="shsmTanlangan" style="margin-top:6px">
+      <div class="msg i" style="font-size:11px">Ҳали иш танланмади</div>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button class="btn s" onclick="g('shsmBuilder').style.display='none'">Бекор</button>
+      <button class="btn grn" onclick="shsmYaratish()">✅ Сметани яратиш</button>
+    </div>
+    <div id="shsmMsg" style="margin-top:8px;font-size:12px"></div>
   </div>
 </div>
 
@@ -583,6 +688,101 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
     <button class="btn" data-i18n="btn-soz-save" onclick="sozSaqla()">Сақлаш</button>
     <span id="sozMsg" style="font-size:11px;color:#34d399"></span>
   </div>
+  <div class="msg i" style="margin-top:16px;line-height:1.5;max-width:640px;border:1px solid var(--line2);border-radius:10px;padding:12px">
+    <b>🤖 AI (Gemini) — markaziy kalit</b><br>
+    Bir marta kiritsangiz — AI chat, Telegram, tahlil, akt qoralama hammasi ishlaydi.
+    Kalit <code>SOZLAMALAR</code> varag'iga ham yoziladi (zaxira).
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
+      <label style="font-size:12px">Gemini API kalit
+        <input type="password" id="soz_aiKey" placeholder="AIza..." style="width:100%;margin-top:4px;padding:8px;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--txt)">
+      </label>
+      <button class="btn grn" onclick="aiKalitSaqla()">🔑 Сақлаш</button>
+    </div>
+    <div id="sozAiHolat" style="font-size:11px;color:var(--txt2);margin-top:6px"></div>
+  </div>
+</div>
+
+<!-- ====== SUPABASE ====== -->
+<div class="pane" id="pane-supa">
+  <div class="msg i" style="line-height:1.5;max-width:600px">
+    <b>🌐 Supabase (Ma'lumotlar bazasi)</b><br>
+    Smeta dasturini yirik tashqi baza (Supabase) bilan ulash orqali siz barcha smeta va fakt ma'lumotlaringizni SQL va BI dasturlar (Metabase kabi) uchun ochib berasiz.
+  </div>
+  
+  <div class="kpi" style="max-width:600px; padding:16px;">
+    <label>ULANISH SOZLAMALARI</label>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+      <input type="text" id="supaUrl" placeholder="Supabase Project URL (https://...)" style="width:100%">
+      <input type="password" id="supaKey" placeholder="Supabase Service Role Key (yoki anon key)" style="width:100%">
+    </div>
+    <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end">
+      <span id="supaSozMsg" style="font-size:12px; color:var(--txt3); margin-top:8px; flex:1"></span>
+      <button class="btn s" onclick="supaTest()">🔌 Ulanishni tekshirish</button>
+      <button class="btn grn" onclick="supaSaqla()">💾 Saqlash</button>
+    </div>
+  </div>
+
+  <div class="kpi" style="max-width:600px; padding:16px; margin-top:8px">
+    <label>TIZIMNI SINXRONIZATSIYA QILISH</label>
+    <div style="font-size:12px; color:var(--txt3); margin:8px 0; line-height:1.5">
+      <b>Diqqat:</b> Bu barcha papkalarni varaqlab (LRV PLUS), u yerdagi ma'lumotlarni bosqichma-bosqich yuboruvchi <b>og'ir jarayon</b> hisoblanadi. Limitga kirmaslik uchun avtomat to'xtab o'zini o'zi davom ettiradi. Oynani yopmang!
+    </div>
+    <div class="tbar" style="background:transparent; border:none; padding:0; margin-top:12px">
+      <button class="btn" onclick="supaSinxBoshla()">🔄 To'liq Sinxronizatsiya (Noldan)</button>
+      <button class="btn s" onclick="supaSinxToxtat()" style="color:var(--red)">⏹ To'xtatish</button>
+    </div>
+    <div style="margin-top:16px">
+      <div id="supaProgText" style="font-size:12px; font-weight:700; color:var(--pri); margin-bottom:6px">Kutilyapti...</div>
+      <div class="bl-pbar" style="width:100%; height:12px; border-radius:6px; background:rgba(0,0,0,0.4)">
+        <div id="supaProgBar" class="bl-pbar-fill" style="width:0%; background:linear-gradient(90deg,var(--pri-d),var(--pri)); border-radius:6px; transition:width 0.5s"></div>
+      </div>
+    </div>
+    <div id="supaLogBox" style="margin-top:12px; background:rgba(0,0,0,0.3); border:1px solid var(--line); border-radius:6px; padding:8px; height:150px; overflow-y:auto; font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--txt2); white-space:pre-wrap"></div>
+  </div>
+</div>
+
+<!-- ====== MONITORING ====== -->
+<div class="pane" id="pane-mon">
+  <div class="tbar">
+    <button class="btn" onclick="monYangila()">↺ Yangilash</button>
+    <button class="btn s" onclick="monToxtat()" style="color:var(--red)">⏹ Navbatni Favqulodda To'xtatish</button>
+    <span id="monAutoBadge" class="badge abc" style="margin-left:8px">Jonli Efir</span>
+  </div>
+  
+  <div class="msg i" style="max-width:700px; line-height:1.5">
+    <b>📈 Monitoring paneli:</b> Tizimda orqa fonda ishlayotgan barcha jarayonlarni (masalan: ommaviy kesh yangilash, arxivlash, PDF generatsiya) shu yerdan real vaqtda kuzata olasiz. 3 soniyada avtomatik yangilanadi.
+  </div>
+
+  <div class="kpis" style="max-width:700px">
+    <div class="kpi" id="monKpiRun">
+      <label>HOLAT</label>
+      <div class="kv" id="monHolat">Kutilyapti</div>
+    </div>
+    <div class="kpi" id="monKpiQol">
+      <label>NAVBATDAGI</label>
+      <div class="kv" id="monQolgan">0</div>
+      <div class="ks">ta vazifa qoldi</div>
+    </div>
+    <div class="kpi" id="monKpiFoiz">
+      <label>PROGRESS</label>
+      <div class="kv" id="monFoiz">0%</div>
+      <div class="kbar"><div class="kbar-fill" id="monFoizBar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div style="max-width:700px; margin-top:8px">
+    <div style="font-size:12px; font-weight:800; color:var(--txt3); margin-bottom:8px">SO'NGGI AMALLAR LOGI:</div>
+    <div id="monLogBox" style="background:rgba(0,0,0,0.4); border:1px solid var(--line); border-radius:8px; padding:12px; height:300px; overflow-y:auto; font-size:12px; font-family:'JetBrains Mono',monospace; color:var(--txt); display:flex; flex-direction:column; gap:6px">
+      (Log bo'sh)
+    </div>
+  </div>
+
+  <!-- ⚡ 2026-07-05: F2 ёзиш жонли назорати — chekka oyna o'rniga shu yerda -->
+  <div id="monF2Wrap" style="max-width:700px; margin-top:16px; display:none">
+    <div style="font-size:12px; font-weight:800; color:var(--pri2); margin-bottom:8px">📤 Ф2 ЁЗИШ — ЖОНЛИ НАЗОРАТ:</div>
+    <div id="monF2Hozir" style="background:rgba(99,102,241,.08); border:1px solid var(--pri); border-radius:8px; padding:10px 12px; font-size:13px; color:var(--amber2); margin-bottom:8px">⏳ Кутилмоқда...</div>
+    <div id="monF2Log" style="background:rgba(0,0,0,0.4); border:1px solid var(--line); border-radius:8px; padding:12px; max-height:260px; overflow-y:auto; font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--txt3); line-height:1.6"></div>
+  </div>
 </div>
 
 </div><!-- /body -->
@@ -593,6 +793,7 @@ input.num{width:100px;text-align:right;font-family:'JetBrains Mono',monospace;}
 var OBS=[], FMTMAP={}, PENDING={}, CUR_OB='', TREE_DATA=null;
 var IER_DATA=[];  // [{rzNom, d1..d5}] for current object in ier tab
 var WAPP_URL='';
+var _TAB_GRP={skan:1,puz:1,ier:1,huj:1,shsm:1,soz:1,supa:1,mon:1};   // 🗂 Бошқарув guruhi
 
 /* Rejim almashtirish — top-level navigatsiya.
  * WAPP_URL panelBoot (apiPanelInit) da o'rnatiladi; navTo da yo'q bo'lsa olinadi. */
@@ -608,7 +809,6 @@ function _doNav(p){
 }
 
 /* ── Tabs ─────────────────────────────────────── */
-var _TAB_GRP={skan:1,puz:1,ier:1,huj:1,soz:1};   // 🗂 Бошқарув guruhi
 function tabOch(t){
   if(t==='bosh') t='skan';
   var grp=_TAB_GRP[t];
@@ -629,6 +829,7 @@ function tabOch(t){
   if(t==='ier'){ _ierObToldir(); if(CUR_OB) document.getElementById('ierOb').value=CUR_OB; }
   if(t==='huj' && !_hujLoaded){ _hujLoaded=true; hujYukla(); }
   if(t==='shart' && !_shartLoaded) shartYukla();
+  if(t==='shsm' && !_shsmLoaded){ _shsmLoaded=true; shsmYukla(); }
 }
 
 /* ── ШАРТНОМА (dogovor qatlami) ─────────────────── */
@@ -650,90 +851,116 @@ function _fm0(v){ return (Math.round(v||0)).toLocaleString('ru-RU'); }
 function _shartRender(){
   if(!SH_DATA){ return; }
   var bogMap={}; // tezkor — obyekt select uchun keyin ham kerak
-  var h='';
   var list=SH_DATA.shartnomalar||[];
+  
+  var tSh=0, tSmeta=0, tF2=0, tFakt=0;
+  list.forEach(function(s){
+     if(s.no!=='—') tSh++;
+     tSmeta += (s.smeta||0) + (s.qoshSmeta||0);
+     tF2 += (s.jamiF2||0);
+     tFakt += (s.jamiFakt||0);
+  });
+  
+  var h='<div class="sh-kpi-board">'
+      +'<div class="sh-kpi-card"><div style="font-size:11px;color:var(--txt3)">Фаол шартномалар</div><div class="val" style="color:var(--pri)">'+tSh+' та</div></div>'
+      +'<div class="sh-kpi-card"><div style="font-size:11px;color:var(--txt3)">Умумий Смета (прямые+қўш)</div><div class="val" style="color:#c4b5fd">'+_fm0(tSmeta)+'</div></div>'
+      +'<div class="sh-kpi-card"><div style="font-size:11px;color:var(--txt3)">Умумий ФАКТ</div><div class="val" style="color:var(--grn2)">'+_fm0(tFakt)+'</div></div>'
+      +'<div class="sh-kpi-card"><div style="font-size:11px;color:var(--txt3)">Умумий Ф2 олинган</div><div class="val" style="color:var(--amber)">'+_fm0(tF2)+'</div></div>'
+      +'</div>';
+
   if(!list.length){ g('shartList').innerHTML='<div class="msg i">Шартнома йўқ — «＋ Янги шартнома» босинг.</div>'; return; }
+  
   list.forEach(function(S){
     var meta=S.meta||{};
     var nakr=S.nakrutka||{};
     var nomi=(S.no==='—')?'Бириктирилмаган объектлар':(meta.nomi||'');
+    var totalSmeta = (nakr.vsego||0)+S.qoshSmeta;
+    // ⚡ 2026-07-10 TUZATILDI: totalSmeta накрутkali (ВСЕГО, НДС билан), lekin
+    //   S.jamiF2 toza (накрутkasiz) edi — foiz sun'iy kam chiqardi. Endi server
+    //   hisoblagan накрутkali ekvivalent (jamiF2Nakr) ishlatiladi (bir xil qamrov).
+    var jamiF2ForProg = (S.jamiF2Nakr!=null) ? S.jamiF2Nakr : S.jamiF2;
+    var prog = totalSmeta > 0 ? Math.min(100, Math.round((jamiF2ForProg||0) / totalSmeta * 100)) : 0;
+    
     h+='<div class="sh-card">'
       +'<div class="sh-head">'
       +'<span class="sh-no">'+(S.no==='—'?'⚠ —':'📜 '+esc(S.no))+'</span>'
-      +'<span style="font-size:12px;color:var(--txt2)">'+esc(nomi)+'</span>'
-      +(meta.holat?'<span class="badge" style="font-size:9px">'+esc(meta.holat)+'</span>':'')
+      +'<span style="font-size:14px;color:var(--txt);font-weight:600">'+esc(nomi)+'</span>'
+      +(meta.holat?'<span class="badge" style="font-size:10px">'+esc(meta.holat)+'</span>':'')
       +'<span style="flex:1"></span>'
       +(S.no!=='—'
-        ?'<button class="btn xs s" onclick=\'nakrModalOch('+JSON.stringify(S.no)+')\'>⚙ Накрутка</button>'
-         +'<button class="btn xs s" onclick=\'shartModalOch('+JSON.stringify(S.no)+')\'>✎</button>'
-         +'<button class="btn xs s" style="color:#f87171" onclick=\'shartOchir('+JSON.stringify(S.no)+')\'>🗑</button>'
+        ?'<button class="btn xs s" onclick=\'nakrModalOch('+JSON.stringify(S.no).replace(/'/g, "&#39;")+')\'>⚙ Накрутка</button>'
+         +'<button class="btn xs s" onclick=\'shartModalOch('+JSON.stringify(S.no).replace(/'/g, "&#39;")+')\'>✎ Таҳрирлаш</button>'
+         +'<button class="btn xs s" style="color:#f87171;border-color:rgba(248,113,113,0.3)" onclick=\'shartOchir('+JSON.stringify(S.no).replace(/'/g, "&#39;")+')\'>🗑</button>'
         :'')
       +'</div>'
-      +(meta.chelCh?'<div style="font-size:10px;color:#93c5fd;margin-top:4px">💰 ЧЕЛ-Ч ставка (дogovor оиласи): <b>'+_fm0(meta.chelCh)+'</b> — барча объектларига</div>':'')
-      // KPI: прямые + ВСЕГО (nakrutka)
+      +(meta.chelCh?'<div style="font-size:11px;color:#93c5fd;margin-bottom:12px">💰 ЧЕЛ-Ч ставка (шартнома бўйича): <b>'+_fm0(meta.chelCh)+'</b> сўм</div>':'')
+      
       +'<div class="sh-kpi">'
       +'<span>СМЕТА (прямые) <b>'+_fm0(S.smeta)+'</b></span>'
-      +'<span>＋Қўшимча <b>'+_fm0(S.qoshSmeta)+'</b></span>'
-      +'<span style="color:#93c5fd">ВСЕГО смета (НДС б-н) <b>'+_fm0((nakr.vsego||0)+S.qoshSmeta)+'</b></span>'
-      +'<span style="color:var(--grn2,#34d399)">ФАКТ <b>'+_fm0(S.jamiFakt)+'</b></span>'
-      +'<span style="color:#fbbf24">Ф2 олинган <b>'+_fm0(S.jamiF2)+'</b></span>'
-      +(meta.jami?'<span style="color:#c4b5fd">Договор суммаси <b>'+_fm0(meta.jami)+'</b></span>':'')
-      +'</div>';
-    // Obyektlar jadvali
+      +'<span>＋ Қўшимча ишлар <b>'+_fm0(S.qoshSmeta)+'</b></span>'
+      +'<span>ВСЕГО (НДС б-н) <b style="color:#93c5fd">'+_fm0(totalSmeta)+'</b></span>'
+      +'<span>ФАКТ <b style="color:var(--grn2)">'+_fm0(S.jamiFakt)+'</b></span>'
+      +'<span>Ф2 олинган <b style="color:#fbbf24">'+_fm0(S.jamiF2)+'</b></span>'
+      +(meta.jami?'<span>Договор суммаси <b style="color:#c4b5fd">'+_fm0(meta.jami)+'</b></span>':'')
+      +'</div>'
+      
+      +(S.no!=='—' ? '<div style="font-size:10px;color:var(--txt3);display:flex;justify-content:space-between"><span>Ф2 Бажарилиш ҳолати:</span><span>'+prog+'%</span></div>'
+      +'<div class="sh-prog-wrap"><div class="sh-prog-fill" style="width:'+prog+'%"></div></div><br>' : '');
+
     if(S.obyektlar.length){
       h+='<table class="sh-tbl"><tr><th>Объект</th><th style="text-align:right">Смета</th>'
         +'<th style="text-align:right">Факт</th><th style="text-align:right">Ф2</th>'
-        +'<th style="text-align:right">Қолдиқ</th><th></th></tr>';
+        +'<th style="text-align:right">Қолдиқ</th><th style="text-align:right;width:90px">Амал</th></tr>';
       S.obyektlar.forEach(function(o){
         h+='<tr><td>'+esc(o.obyekt)+'</td><td class="num">'+_fm0(o.smeta)+'</td>'
           +'<td class="num">'+_fm0(o.fakt)+'</td><td class="num">'+_fm0(o.f2)+'</td>'
           +'<td class="num">'+_fm0(o.ost)+'</td>'
-          +'<td><button class="btn xs s" style="font-size:9px" onclick=\'obBogModal('+JSON.stringify(o.obyekt)+')\'>📜 бириктириш</button></td></tr>';
+          +'<td style="text-align:right"><button class="btn xs s" style="font-size:10px" data-ob="'+escAttr(o.obyektAsl)+'" data-no="'+escAttr(S.no)+'" data-soni="'+(o.soni||1)+'" onclick="obBogModalOch(this.dataset.ob, this.dataset.no, parseFloat(this.dataset.soni))">🔄 Ўтказиш</button></td></tr>';
       });
       h+='</table>';
     }
-    // Qo'shimcha ishlar
     if(S.qoshlar.length){
-      h+='<table class="sh-tbl"><tr><th>＋ Қўшимча иш (субподряд)</th><th style="text-align:right">Смета</th>'
-        +'<th style="text-align:right">Факт</th><th style="text-align:right">Ф2</th><th></th></tr>';
+      h+='<table class="sh-tbl" style="margin-top:8px"><tr><th>＋ Қўшимча иш (субподряд)</th><th style="text-align:right">Смета</th>'
+        +'<th style="text-align:right">Факт</th><th style="text-align:right">Ф2</th><th style="text-align:right;width:70px">Амал</th></tr>';
       S.qoshlar.forEach(function(q){
         h+='<tr><td style="color:#fcd34d">'+esc(q.nomi)+'</td><td class="num">'+_fm0(q.smeta)+'</td>'
           +'<td class="num">'+_fm0(q.fakt)+'</td><td class="num">'+_fm0(q.f2ol)+'</td>'
-          +'<td><button class="btn xs s" onclick="qoshIshTahrir('+q.row+')">✎</button>'
+          +'<td style="text-align:right"><button class="btn xs s" onclick="qoshIshTahrir('+q.row+')">✎</button>'
           +'<button class="btn xs s" style="color:#f87171" onclick="qoshIshOchir('+q.row+')">🗑</button></td></tr>';
       });
       h+='</table>';
     }
-    // НАКРУТКА — TO'LIQ podval zanjiri (har qator alohida, F2 hujjatidagidek)
     if(S.smeta>0){
       function nkr(nom,val,bold){
-        return '<tr'+(bold?' style="font-weight:800;color:var(--txt)"':'')+'>'
-          +'<td style="font-size:10px">'+nom+'</td><td class="num">'+_fm0(val)+'</td></tr>';
+        return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);'+(bold?'font-weight:800;color:var(--txt)':'')+'">'
+          +'<span>'+nom+'</span><span>'+_fm0(val)+'</span></div>';
       }
-      h+='<details style="margin-top:8px;font-size:10px;color:var(--txt3)" open>'
-        +'<summary style="cursor:pointer;font-weight:700">📋 НАКРУТКА тафсилоти — шартнома '+esc(S.no)+' учун (смета)</summary>'
-        +'<table class="sh-tbl" style="max-width:560px">'
+      h+='<details style="margin-top:12px;font-size:11px;color:var(--txt3);background:rgba(0,0,0,0.2);border-radius:var(--r-sm);padding:12px">'
+        +'<summary style="cursor:pointer;font-weight:700;color:var(--pri)">📋 Накрутка тафсилотини кўриш</summary>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px">'
+        +'<div>'
         +nkr('ИТОГО ПРЯМЫЕ ЗАТРАТЫ', nakr.pryamye, true)
-        +nkr('&nbsp;&nbsp;ЗАТРАТЫ ТРУДА (ЧЕЛ)', nakr.chel)
-        +nkr('&nbsp;&nbsp;МАШИНЫ И МЕХАНИЗМЫ (МАШ)', nakr.mash)
-        +nkr('&nbsp;&nbsp;МАТЕРИАЛЫ (МАТ)', nakr.mat)
-        +nkr('ТРАНСПОРТНЫЕ РАСХОДЫ НА МАТЕРИАЛЫ', nakr.trMat)
-        +nkr('СКЛАДСКИЕ РАСХОДЫ (МАТ + М/К)', nakr.sklMat)
+        +nkr('ЗАТРАТЫ ТРУДА (ЧЕЛ)', nakr.chel)
+        +nkr('МАШИНЫ И МЕХАНИЗМЫ (МАШ)', nakr.mash)
+        +nkr('МАТЕРИАЛЫ (МАТ)', nakr.mat)
+        +nkr('ТРАНСПОРТНЫЕ РАСХОДЫ', nakr.trMat)
+        +nkr('СКЛАДСКИЕ РАСХОДЫ', nakr.sklMat)
         +nkr('КАБЕЛИ И ПРОВОДА', nakr.kab)
         +nkr('ТРАНСПОРТ НА КАБЕЛИ', nakr.trKab)
-        +nkr('ИТОГО', nakr.itogo1, true)
+        +nkr('ИТОГО 1', nakr.itogo1, true)
+        +'</div><div>'
         +nkr('ПРОЧИЕ ЗАТРАТЫ ПОДРЯДЧИКА', nakr.prochie)
-        +nkr('ИТОГО', nakr.itogo2, true)
+        +nkr('ИТОГО 2', nakr.itogo2, true)
         +nkr('ОБОРУДОВАНИЯ', nakr.ob)
         +nkr('ТРАНСПОРТ НА ОБОРУДОВАНИЯ', nakr.trOb)
         +nkr('ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ', nakr.zagOb)
-        +nkr('ИТОГО', nakr.itogo3, true)
+        +nkr('ИТОГО 3', nakr.itogo3, true)
         +nkr('СТРАХОВАНИЕ ОБЪЕКТА', nakr.strax)
         +nkr('КОЭФФИЦИЕНТ РИСКА', nakr.risk)
-        +nkr('ИТОГО', nakr.itogo4, true)
+        +nkr('ИТОГО 4', nakr.itogo4, true)
         +nkr('НДС', nakr.nds)
-        +nkr('ВСЕГО СТОИМОСТЬ В ТЕКУЩИХ ЦЕНАХ', nakr.vsego, true)
-        +'</table></details>';
+        +nkr('ВСЕГО СТОИМОСТЬ', nakr.vsego, true)
+        +'</div></div></details>';
     }
     h+='</div>';
   });
@@ -744,7 +971,17 @@ function _shartRender(){
 function shartModalOch(no){
   g('shMMsg').textContent='';
   var S=null;
-  if(no && SH_DATA){ (SH_DATA.shartnomalar||[]).forEach(function(x){ if(x.no===no) S=x.meta; }); }
+  var taraflar = {};
+  if(SH_DATA){
+     (SH_DATA.shartnomalar||[]).forEach(function(x){
+        if(x.no===no) S=x.meta;
+        if(x.meta && x.meta.taraf) taraflar[x.meta.taraf]=1;
+     });
+  }
+  var tList = '';
+  Object.keys(taraflar).forEach(function(t){ tList+='<option value="'+escAttr(t)+'">'; });
+  if(g('tarafList')) g('tarafList').innerHTML = tList;
+
   g('shMTitle').textContent=S?'Шартнома таҳрири — '+no:'Янги шартнома';
   g('shNo').value=S?S.no:''; g('shNo').disabled=!!S;
   g('shNomi').value=S?S.nomi:''; g('shTaraf').value=S?S.taraf:'';
@@ -770,12 +1007,33 @@ function shartOchir(no){
 }
 
 /* — Obyektni shartnomaga biriktirish — */
-function obBogModal(obyekt){
+function obBogModalOch(obyekt, joriyNo, joriySoni){
   var nolar=(SH_DATA&&SH_DATA.shartnomalar||[]).map(function(s){return s.no;}).filter(function(n){return n!=='—';});
   if(!nolar.length){ toast('Аввал шартнома яратинг','err'); return; }
-  var tanlov=prompt('«'+obyekt+'» қайси шартномага?\nМавжуд: '+nolar.join(', ')+'\n(бўш = бириктиришни олиб ташлаш)');
-  if(tanlov===null) return;
-  run('apiShartnomaBogSaqla',[obyekt, tanlov.trim()],function(r){ toast(r.xabar,'ok'); shartYukla(true); });
+  
+  g('obBogTitle').textContent = 'Объектни ўтказиш';
+  g('obBogSub').textContent = '«'+obyekt+'» сметасини қайси шартномага бириктирмоқчисиз?';
+  g('obBogObyekt').value = obyekt;
+  if(g('obBogSoni')) g('obBogSoni').value = joriySoni || 1;
+  
+  var sel = g('obBogSelect');
+  sel.innerHTML = '<option value="">-- Бириктиришни бекор қилиш (—) --</option>';
+  nolar.forEach(function(no) {
+     var sName = '';
+     (SH_DATA.shartnomalar||[]).forEach(function(x){ if(x.no===no) sName=x.meta.nomi||''; });
+     var opt = new Option(no + (sName ? ' — ' + sName : ''), no);
+     if(no === joriyNo) opt.selected = true;
+     sel.add(opt);
+  });
+  g('obBogModal').style.display = 'flex';
+}
+
+function obBogSaqla(){
+  var obyekt = g('obBogObyekt').value;
+  var tanlov = g('obBogSelect').value;
+  var soni = g('obBogSoni') ? parseFloat(g('obBogSoni').value)||1 : 1;
+  g('obBogModal').style.display='none';
+  run('apiShartnomaBogSaqla',[obyekt, tanlov.trim(), soni],function(r){ toast(r.xabar,'ok'); shartYukla(true); });
 }
 
 /* — Qo'shimcha ish modal — */
@@ -852,37 +1110,70 @@ function skanQil(){
   run('apiPapkaSkan', null, function(obs){
     OBS=obs||[];
     _obToldir(); _ierObToldir();
-    run('apiBoglashOl', null, function(m){ FMTMAP=m||{}; });
+    run('apiBoglashOl', null, function(m){ FMTMAP=m||{}; }); setTimeout(reestrYukla, 500);
     _skanRender();
   });
 }
 function _skanRender(){
   var el=g('skanList'), h='';
   if(!OBS.length){ el.innerHTML='<div class="msg err">Объект топилмади.</div>'; return; }
-  h='<div class="skan-grid">';
+  h='<div class="skan-grid" style="display:flex; flex-direction:column; gap:16px;">';
+
+  var groups = {};
   OBS.forEach(function(o){
-    var isLocked=o.locked, plusBor=o.plusBor;
-    h+='<div class="skan-row" id="skanCard_'+escAttr(o.obyekt)+'">'
-      +'<div class="skan-hdr">'
-      +'<span class="skan-nom">'+esc(o.obyekt)+'</span>'
-      +(isLocked?'<span class="badge lock" style="font-size:9px">🔒 ҚУЛФ</span>':'')
-      +'<span class="badge '+(o.format==='ABC4'?'abc':'tn')+'" style="font-size:9px">'+esc(o.format)+'</span>'
-      +(plusBor?'<span style="font-size:9px;color:var(--grn2);background:rgba(16,185,129,.1);padding:2px 6px;border-radius:10px;border:1px solid rgba(16,185,129,.2)">✓ LRV</span>':'<span style="font-size:9px;color:var(--txt4)">— LRV yo\'q</span>')
-      +'</div>'
-      +'<div class="skan-files">'
-      +'<div class="skan-file"><div class="skan-file-lbl">Локалка</div><div class="skan-file-nom" title="'+escAttr(o.lokName)+'">'+esc(o.lokName)+'</div></div>'
-      +'<div class="skan-file"><div class="skan-file-lbl">Свод</div><div class="skan-file-nom" title="'+escAttr(o.svodName)+'">'+esc(o.svodName)+'</div></div>'
-      +'</div>'
-      +'<div class="skan-actions">'
-      +'<span class="skan-prog" id="skanProg_'+escAttr(o.obyekt)+'">—</span>'
-      +'<button class="btn xs s" data-ob="'+escAttr(o.obyekt)+'" onclick="stavkaModal(this.dataset.ob)" title="ЧЕЛ-Ч / МАШ-Ч фиксирланган нарх">💰 Ставка</button>'
-      +'<button class="btn xs s" data-ob="'+escAttr(o.obyekt)+'" onclick="oraliqModal(this.dataset.ob)" title="Seksiya oraliqlarini sozlash">⚙ Оралиқ</button>'
-      +'<button class="btn xs '+(isLocked?'s':'')+(plusBor?' s':'')+'" data-ob="'+escAttr(o.obyekt)+'" onclick="obyektIshla(this.dataset.ob)">'+(plusBor?'↺ Қайта':'▶ Ишла')+'</button>'
-      +'</div>'
-      +'</div>';
+    var k = String(o.obyekt).split(' - ')[0].trim();
+    if(!groups[k]) groups[k] = [];
+    groups[k].push(o);
   });
+
+  var singles = '';
+  for(var gName in groups){
+    var list = groups[gName];
+    if(list.length > 1){
+      h += '<details class="skan-group" style="background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);">'
+        + '<summary style="padding:12px;cursor:pointer;font-weight:700;color:var(--pri);list-style:none;display:flex;align-items:center;gap:8px;">'
+        + '<span style="font-size:16px">📁</span> ' + esc(gName) 
+        + ' <span style="font-size:11px;color:var(--txt4);margin-left:auto">(' + list.length + ' та смета)</span>'
+        + '</summary>'
+        + '<div style="padding:0 12px 12px; display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px;">';
+      list.forEach(function(o){ h += _renderObCard(o); });
+      h += '</div></details>';
+    } else {
+      singles += _renderObCard(list[0]);
+    }
+  }
+  
+  if (singles) {
+    h += '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px;">' + singles + '</div>';
+  }
+
   h+='</div>';
   el.innerHTML=h;
+}
+
+function _renderObCard(o){
+  var isLocked=o.locked, plusBor=o.plusBor;
+  var h='';
+  h+='<div class="skan-row" id="skanCard_'+escAttr(o.obyekt)+'">'
+    +'<div class="skan-hdr">'
+    +'<span class="skan-nom" title="'+escAttr(o.obyekt)+'">'+esc(o.obyekt)+'</span>'
+    +(isLocked?'<span class="badge lock" style="font-size:9px">🔒 ҚУЛФ</span>':'')
+    +'<span class="badge '+(o.format==='ABC4'?'abc':'tn')+'" style="font-size:9px">'+esc(o.format)+'</span>'
+    +(plusBor?'<span style="font-size:9px;color:var(--grn2);background:rgba(16,185,129,.1);padding:2px 6px;border-radius:10px;border:1px solid rgba(16,185,129,.2)">✓ LRV</span>':'<span style="font-size:9px;color:var(--txt4)">— LRV yo\'q</span>')
+    +'</div>'
+    +'<div class="skan-files">'
+    +'<div class="skan-file"><div class="skan-file-lbl">Локалка</div><div class="skan-file-nom" title="'+escAttr(o.lokName)+'">'+esc(o.lokName)+'</div></div>'
+    +'<div class="skan-file"><div class="skan-file-lbl">Свод</div><div class="skan-file-nom" title="'+escAttr(o.svodName)+'">'+esc(o.svodName)+'</div></div>'
+    +'</div>'
+    +'<div class="skan-actions">'
+    +'<span class="skan-prog" id="skanProg_'+escAttr(o.obyekt)+'">—</span>'
+    +'<button class="btn xs s" data-ob="'+escAttr(o.obyekt)+'" onclick="stavkaModal(this.dataset.ob)" title="ЧЕЛ-Ч / МАШ-Ч фиксирланган нарх">💰 Ставка</button>'
+    +'<button class="btn xs s" data-ob="'+escAttr(o.obyekt)+'" onclick="oraliqModal(this.dataset.ob)" title="Seksiya oraliqlarini sozlash">⚙ Оралиқ</button>'
+    +'<button class="btn xs s" data-ob="'+escAttr(o.obyekt)+'" onclick="obyektTezkorFonIshla(this.dataset.ob)" title="Фақат Сводка нархлари ва категорияни янгилаш (Тезкор)">⚡ Тез</button>'
+    +'<button class="btn xs '+(isLocked?'s':'')+(plusBor?' s':'')+'" data-ob="'+escAttr(o.obyekt)+'" onclick="obyektIshla(this.dataset.ob)" title="Тўлиқ қайта қуриш (LRV+Svodka)">🔄 Тўлиқ</button>'
+    +'</div>'
+    +'</div>';
+  return h;
 }
 function obyektIshla(ob){
   obyektFonIshla(ob);
@@ -890,7 +1181,7 @@ function obyektIshla(ob){
 /* BARCHASINI ISHLASH — fon-navbat (timeout yo'q, UI bloklanmaydi) */
 function barchaIshla(){
   var el=g('skanMsg');
-  if(!confirm('Барча объектлар фонда кетма-кет ишланади.\nҲар бири алоҳида (timeout йўқ). Давом?')) return;
+  if(!confirm('Барча объектлар фонда тўлиқ қайта ишланади.\n(Сводка + барча ЛРВлар). Давом этамизми?')) return;
   el.textContent='⟳ Навбат бошланмоқда...';
   run('apiBarchaFonIshla', null, function(r){
     if(r&&r.ok){
@@ -900,12 +1191,30 @@ function barchaIshla(){
   });
 }
 
+function barchaTezkorIshla(){
+  var el=g('skanMsg');
+  if(!confirm('Сводкадаги нарх ва категориялар ТЕЗКОР янгиланади.\nБарча ЛРВларни ўқиш ўтказиб юборилади. Давом этамизми?')) return;
+  el.textContent='⟳ Навбат бошланмоқда...';
+  run('apiBarchaTezkorIshla', null, function(r){
+    if(r&&r.ok){ toast('⚡ '+r.xabar,'ok'); _navbatPoll(); }
+    else { el.textContent='✗ '+(r&&r.xabar||'Xato'); }
+  });
+}
+
 /* Bitta ob'ektni fonda ishlash */
 function obyektFonIshla(ob){
   var p=g('skanProg_'+ob);
   if(p){ p.textContent='⟳ навбатда'; p.className='skan-prog run'; }
   run('apiObyektFonIshla', ob, function(r){
     if(r&&r.ok){ toast('⚡ '+ob+' навбатга қўйилди','ok'); _navbatPoll(); }
+  });
+}
+
+function obyektTezkorFonIshla(ob){
+  var p=g('skanProg_'+ob);
+  if(p){ p.textContent='⟳ навбатда (тезкор)'; p.className='skan-prog run'; }
+  run('apiObyektTezkorFonIshla', ob, function(r){
+    if(r&&r.ok){ toast('⚡ '+ob+' тезкор навбатга қўйилди','ok'); _navbatPoll(); }
   });
 }
 
@@ -940,45 +1249,79 @@ var _puz={};
 var FMTMAP={};  // {obyektNom: format}
 
 function _puzRender(){
-  var h='<div style="display:grid;grid-template-columns:160px 1fr 1fr 80px;gap:5px;padding:0 10px 4px;font-size:10px;color:var(--txt4);font-weight:600">'
-    +'<div>ОБЪЕКТ</div><div>ЛОКАЛКА</div><div>СВОД</div><div>ФОРМАТ</div></div>';
+  var groups = {};
+  var groupOrder = [];
   OBS.forEach(function(o){
-    var fmt=FMTMAP[o.obyekt]||o.format||'TN';
-    var e=_puz[o.obyekt]||{};
-    var lokSh=(e.lokSheets||o.lokSheets||[]).join(', ');
-    var svodSh=(e.svodSheets||o.svodSheets||[]).join(', ');
-    var lokId=e.lok||o.lokId||'', svodId=e.svod||o.svodId||'';
-    // oid HTML atributlar uchun (id="..."), onclickda ishlatilmaydi — apostrof xatosidan
-    // saqlanish uchun data-ob atributi ishlatiladi, JS tomonida this.dataset.ob o'qiladi
-    var oid=escAttr(o.obyekt);
-    h+='<div class="puz-row" id="puz_'+oid+'" style="grid-template-columns:160px 1fr 1fr 80px">'
-      +'<div>'
-        +'<div class="puz-nom">'+esc(o.obyekt)+'</div>'
-        +'<button class="btn xs grn" style="margin-top:4px;font-size:9px"'
-          +' data-ob="'+oid+'" onclick="puzNative(this.dataset.ob)"'
-          +' title="Excel → Google Sheets (katta fayllar uchun)">⚡ Doimiy GS</button>'
-        +'<span id="pnat_'+oid+'" style="font-size:9px;color:var(--txt4);display:block;margin-top:2px"></span>'
-      +'</div>'
-      +'<div>'
-        +'<select id="plok_'+oid+'" data-ob="'+oid+'" data-tip="lok" onchange="puzCh(this.dataset.ob,this.dataset.tip,this.value)">'+_candOpt(o,lokId)+'</select>'
-        +'<div style="display:flex;gap:4px;margin-top:4px;align-items:center">'
-          +'<button class="btn xs s" data-ob="'+oid+'" data-tip="lok" onclick="puzSheetSel(this.dataset.ob,this.dataset.tip)">🗂 Варақлар</button>'
-          +'<span id="ploksh_'+oid+'" style="font-size:10px;color:var(--pri2)">'+(lokSh||'ҳаммаси')+'</span>'
-        +'</div>'
-      +'</div>'
-      +'<div>'
-        +'<select id="psvod_'+oid+'" data-ob="'+oid+'" data-tip="svod" onchange="puzCh(this.dataset.ob,this.dataset.tip,this.value)">'+_candOpt(o,svodId)+'</select>'
-        +'<div style="display:flex;gap:4px;margin-top:4px;align-items:center">'
-          +'<button class="btn xs s" data-ob="'+oid+'" data-tip="svod" onclick="puzSheetSel(this.dataset.ob,this.dataset.tip)">🗂 Варақлар</button>'
-          +'<button class="btn xs s" data-ob="'+oid+'" onclick="svUstun(this.dataset.ob)" title="Свод устунларини белгилаш (НОМ/НАРХ)">🔬 Устун</button>'
-          +'<span id="psvodsh_'+oid+'" style="font-size:10px;color:var(--pri2)">'+(svodSh||'ҳаммаси')+'</span>'
-        +'</div>'
-      +'</div>'
-      +'<div><select data-ob="'+oid+'" onchange="puzFmt(this.dataset.ob,this.value)">'
-        +'<option value="TN"'+(fmt==='TN'?' selected':'')+'>TN</option>'
-        +'<option value="ABC4"'+(fmt==='ABC4'?' selected':'')+'>ABC4</option>'
-      +'</select></div>'
-    +'</div>';
+    var parent = o.obyekt.split(' - ')[0];
+    if(!groups[parent]) {
+      groups[parent] = { parent: parent, children: [] };
+      groupOrder.push(parent);
+    }
+    groups[parent].children.push(o);
+  });
+
+  var h = '';
+  groupOrder.forEach(function(pName){
+    var g = groups[pName];
+    var firstObj = g.children[0];
+    var fmt = FMTMAP[firstObj.obyekt] || firstObj.format || 'TN';
+    var e = _puz[firstObj.obyekt] || {};
+    var svodSh = (e.svodSheets || firstObj.svodSheets || []).join(', ');
+    var svodId = e.svod || firstObj.svodId || '';
+    var narxTayyor = (e.narxTayyor!=null) ? e.narxTayyor : !!firstObj.narxTayyor;
+    var firstOid = escAttr(firstObj.obyekt);
+
+    h += '<div style="border:1px solid var(--line2); border-radius:var(--r-md); padding:10px; margin-bottom:12px; background:var(--surface2)">'
+      + '<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:8px;">'
+      +   '<div style="font-weight:600; font-size:14px; color:var(--txt)">📁 ' + esc(pName) + ' <span style="font-size:11px;color:var(--txt4);font-weight:400">(' + g.children.length + ' та)</span></div>'
+      +   '<div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">'
+      +     '<label style="display:flex; gap:4px; align-items:center; font-size:10px; color:var(--txt3); cursor:pointer;" title="Локалка(лар) аллақачон нархланган — свод умуман керак эмас">'
+      +       '<input type="checkbox" id="pnt_'+firstOid+'" data-ob="'+firstOid+'"'+(narxTayyor?' checked':'')+' onchange="puzNarxTayyor(this.dataset.ob,this.checked)">'
+      +       ' НАРХ ТАЙЁР (свод керак эмас)'
+      +     '</label>'
+      +     '<div style="width:10px"></div>'
+      +     '<div id="psvodwrap_'+firstOid+'" style="display:'+(narxTayyor?'none':'flex')+'; gap:6px; align-items:center;">'
+      +       '<div style="font-size:10px; color:var(--txt3)">УМУМИЙ СВОДКА:</div>'
+      +       '<select id="psvod_'+firstOid+'" data-ob="'+firstOid+'" data-tip="svod" onchange="puzCh(this.dataset.ob,this.dataset.tip,this.value)">'+_candOpt(firstObj,svodId)+'</select>'
+      +       '<button class="btn xs s" data-ob="'+firstOid+'" data-tip="svod" onclick="puzSheetSel(this.dataset.ob,this.dataset.tip)">🗂 Варақлар</button>'
+      +       '<button class="btn xs s" data-ob="'+firstOid+'" onclick="svUstun(this.dataset.ob)" title="Свод устунларини белгилаш">🔬 Устун</button>'
+      +       '<span id="psvodsh_'+firstOid+'" style="font-size:10px;color:var(--pri2);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(svodSh||'ҳаммаси')+'">'+(svodSh||'ҳаммаси')+'</span>'
+      +     '</div>'
+      +     '<div style="width:10px"></div>'
+      +     '<div style="font-size:10px; color:var(--txt3)">ФОРМАТ:</div>'
+      +     '<select data-ob="'+firstOid+'" onchange="puzFmt(this.dataset.ob,this.value)">'
+      +       '<option value="TN"'+(fmt==='TN'?' selected':'')+'>TN</option>'
+      +       '<option value="ABC4"'+(fmt==='ABC4'?' selected':'')+'>ABC4</option>'
+      +     '</select>'
+      +   '</div>'
+      + '</div>';
+      
+    g.children.forEach(function(o){
+      var eC = _puz[o.obyekt] || {};
+      var lokSh = (eC.lokSheets || o.lokSheets || []).join(', ');
+      var lokId = eC.lok || o.lokId || '';
+      var oid = escAttr(o.obyekt);
+      var subName = o.obyekt.replace(pName + ' - ', '');
+      if (subName === pName) subName = 'Асосий смета';
+      
+      h += '<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; margin-left:10px; border-bottom:1px dashed var(--line);">'
+        +   '<div style="flex:1;">'
+        +     '<div style="font-size:12px; color:var(--txt2)">📄 ' + esc(subName) + '</div>'
+        +     '<div style="display:flex; gap:6px; margin-top:4px;">'
+        +       '<button class="btn xs grn" style="font-size:9px" data-ob="'+oid+'" onclick="puzNative(this.dataset.ob)">⚡ Doimiy GS</button>'
+        +       '<span id="pnat_'+oid+'" style="font-size:9px;color:var(--txt4);"></span>'
+        +     '</div>'
+        +   '</div>'
+        +   '<div style="display:flex; gap:6px; align-items:center;">'
+        +     '<div style="font-size:10px; color:var(--txt4)">Локалка:</div>'
+        +     '<select id="plok_'+oid+'" data-ob="'+oid+'" data-tip="lok" onchange="puzCh(this.dataset.ob,this.dataset.tip,this.value)">'+_candOpt(o,lokId)+'</select>'
+        +     '<button class="btn xs s" data-ob="'+oid+'" data-tip="lok" onclick="puzSheetSel(this.dataset.ob,this.dataset.tip)">🗂 Варақлар</button>'
+        +     '<span id="ploksh_'+oid+'" style="font-size:10px;color:var(--pri2);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(lokSh||'ҳаммаси')+'">'+(lokSh||'ҳаммаси')+'</span>'
+        +   '</div>'
+        + '</div>';
+    });
+    
+    h += '</div>';
   });
   g('puzList').innerHTML=h||'<div class="msg i">Скан қилинг</div>';
 }
@@ -989,14 +1332,61 @@ function _candOpt(o,selId){
   });
   return h;
 }
+function _syncSvod(ob){
+  var parent = ob.split(' - ')[0];
+  if(parent === ob) return;
+  var e = _puz[ob] || {};
+  var sId = e.svod, sSh = e.svodSheets, sFmt = e.fmt || FMTMAP[ob];
+  OBS.forEach(function(o){
+    if(o.obyekt !== ob && o.obyekt.indexOf(parent + ' - ') === 0){
+      var oe = _puz[o.obyekt] = _puz[o.obyekt] || {};
+      if(sId !== undefined) {
+        oe.svod = sId;
+        var elSvod = g('psvod_'+escAttr(o.obyekt));
+        if(elSvod) elSvod.value = sId;
+      }
+      if(sSh !== undefined) {
+        oe.svodSheets = sSh.slice();
+        var elSh = g('psvodsh_'+escAttr(o.obyekt));
+        if(elSh) {
+          elSh.textContent = sSh.length ? sSh.join(', ') : 'ҳаммаси';
+          elSh.title = sSh.length ? sSh.join(', ') : 'ҳаммаси';
+        }
+      }
+      if(sFmt !== undefined) {
+        oe.fmt = sFmt; FMTMAP[o.obyekt] = sFmt;
+        var elFmts = document.querySelectorAll('select[data-ob="'+escAttr(o.obyekt)+'"]');
+        elFmts.forEach(function(sel){ if(!sel.dataset.tip) sel.value = sFmt; });
+      }
+    }
+  });
+}
+
 function puzCh(ob,tip,v){
   _puz[ob]=_puz[ob]||{};
   _puz[ob][tip]=v;
   _puz[ob][tip+'Sheets']=[];   // fayl o'zgardi → varaq tanlovi reset
   var spId = tip==='lok' ? 'ploksh_'+ob : 'psvodsh_'+ob;
   if(g(spId)) g(spId).textContent='ҳаммаси';
+  if(tip==='svod') _syncSvod(ob);
 }
-function puzFmt(ob,fmt){ _puz[ob]=_puz[ob]||{}; _puz[ob].fmt=fmt; FMTMAP[ob]=fmt; }
+function puzFmt(ob,fmt){ _puz[ob]=_puz[ob]||{}; _puz[ob].fmt=fmt; FMTMAP[ob]=fmt; _syncSvod(ob); }
+
+/* НАРХ ТАЙЁР — lokalka(lar) allaqachon narxlangan, svodka UMUMAN kerak emas.
+ * Papka darajasida (guruh) — barcha bola obyektlarga ham qo'llanadi (format/svod kabi). */
+function puzNarxTayyor(ob, checked){
+  _puz[ob]=_puz[ob]||{};
+  _puz[ob].narxTayyor=checked;
+  var wrap=g('psvodwrap_'+ob);
+  if(wrap) wrap.style.display = checked ? 'none' : 'flex';
+  var parent = ob.split(' - ')[0];
+  OBS.forEach(function(o){
+    if(o.obyekt !== ob && (o.obyekt === parent || o.obyekt.indexOf(parent + ' - ') === 0)){
+      _puz[o.obyekt] = _puz[o.obyekt] || {};
+      _puz[o.obyekt].narxTayyor = checked;
+    }
+  });
+}
 
 /* ⚡ DOIMIY GS — Excel fayllarni native Google Sheets ga aylantiradi (bir marta).
  * Katta fayl uchun ham server tomonda tez. Keyin Varaqlar/Ишла darhol ishlaydi. */
@@ -1026,7 +1416,7 @@ function puzSheetSel(ob,tip){
                         :(e.svod||(OBS.find(function(o){return escAttr(o.obyekt)===ob;})||{}).svodId||'');
   if(!fileId){ toast('Аввал юқоридаги рўйхатдан файлни танланг','warn',3000); return; }
   _shCtx={ob:ob,tip:tip,all:[],sel: tip==='lok'?(e.lokSheets||[]):(e.svodSheets||[])};
-  g('shModal').style.display='flex';
+  g('varaqModal').style.display='flex';
   g('shList').innerHTML='<span class="spin">⟳</span> Юкланмоқда...';
   run('apiSheetlarOl',[fileId],function(names){
     if(!names||!names.length){
@@ -1053,6 +1443,88 @@ function _shRender(){
   g('shTitle').textContent=(_shCtx.tip==='lok'?'Локалка':'Свод')+' varaqlari';
   g('shInfo').textContent=_shCtx.sel.length?_shCtx.sel.length+' tanlangan':'barchasi ishlatiladi';
 }
+function _parentlarAniqla(obs){
+  var byFolder = {};
+  obs.forEach(function(o){ (byFolder[o.folderId] = byFolder[o.folderId] || []).push(o); });
+  var parents = [];
+  for (var fid in byFolder) {
+    if (byFolder[fid].length < 2) continue;
+    parents.push({ nom: byFolder[fid][0].obyekt.split(' - ')[0], soni: byFolder[fid].length });
+  }
+  return parents;
+}
+
+function _obToldir(){
+  var sel=g('selOb'), cur=sel.value;
+  sel.innerHTML='<option value="">— Объект танланг —</option>';
+  
+  var parentMap = {};
+  if(typeof OBS !== 'undefined' && OBS.length > 0) {
+    var parents = _parentlarAniqla(OBS);
+    parents.forEach(function(p) { parentMap[p.nom] = p; });
+  }
+
+  if(typeof REESTR_DATA !== 'undefined' && REESTR_DATA && REESTR_DATA.length > 0) {
+    REESTR_DATA.forEach(function(lot) {
+       var optgroup = document.createElement('optgroup');
+       optgroup.label = lot.nom;
+       
+       if(parentMap[lot.nom]) {
+           var p = parentMap[lot.nom];
+           var opt = document.createElement('option');
+           opt.value = p.nom;
+           opt.textContent = '📦 ' + p.nom + ' — ЖАМЛАНГАН (' + p.soni + ' бўлим)';
+           opt.style.fontWeight = 'bold';
+           opt.style.color = '#10b981';
+           optgroup.appendChild(opt);
+       }
+
+       (lot.children || []).forEach(function(ob) {
+          if (ob.lrv) {
+             var opt = document.createElement('option');
+             opt.value = ob.lrv.obyekt;
+             opt.textContent = ob.nom;
+             optgroup.appendChild(opt);
+          }
+       });
+       if(optgroup.children.length > 0) sel.appendChild(optgroup);
+    });
+  } else {
+    // Fallback to old behavior if Reestr is empty
+    var groups = {};
+    var singles = [];
+    OBS.forEach(function(o){
+      var parts = o.obyekt.split(' - ');
+      if(parts.length > 1) {
+        var pfx = parts[0];
+        if(!groups[pfx]) groups[pfx] = [];
+        groups[pfx].push(o);
+      } else { singles.push(o); }
+    });
+    for(var gName in groups) {
+      var optgroup = document.createElement('optgroup'); optgroup.label = gName;
+      if(parentMap[gName]) {
+          var p = parentMap[gName];
+          var opt = document.createElement('option');
+          opt.value = p.nom;
+          opt.textContent = '📦 ' + p.nom + ' — ЖАМЛАНГАН (' + p.soni + ' бўлим)';
+          opt.style.fontWeight = 'bold';
+          opt.style.color = '#10b981';
+          optgroup.appendChild(opt);
+      }
+      groups[gName].forEach(function(o){
+        var opt=document.createElement('option'); opt.value=o.obyekt; opt.textContent=o.obyekt.replace(gName+' - ','');
+        optgroup.appendChild(opt);
+      });
+      sel.appendChild(optgroup);
+    }
+    singles.forEach(function(o){
+      var opt=document.createElement('option'); opt.value=o.obyekt; opt.textContent=o.obyekt;
+      sel.appendChild(opt);
+    });
+  }
+  if(cur) sel.value=cur;
+}
 function shToggle(nm,chk){
   var i=_shCtx.sel.indexOf(nm);
   if(chk && i<0) _shCtx.sel.push(nm);
@@ -1069,10 +1541,14 @@ function shSaqla(){
   var ob=_shCtx.ob, tip=_shCtx.tip, sel=_shCtx.sel.slice();
   _puz[ob]=_puz[ob]||{}; _puz[ob][tip+'Sheets']=sel;
   var spId=tip==='lok'?'ploksh_'+ob:'psvodsh_'+ob;
-  if(g(spId)) g(spId).textContent=sel.length?sel.join(', '):'ҳаммаси';
+  if(g(spId)) {
+    g(spId).textContent=sel.length?sel.join(', '):'ҳаммаси';
+    g(spId).title=sel.length?sel.join(', '):'ҳаммаси';
+  }
+  if(tip==='svod') _syncSvod(ob);
   shYop();
 }
-function shYop(){ g('shModal').style.display='none'; }
+function shYop(){ g('varaqModal').style.display='none'; }
 
 /* ── 🔬 СВОД УСТУН БЕЛГИЛАШ ──────────────────────── */
 var _svCtx={ob:'', joriy:null};
@@ -1146,7 +1622,7 @@ function svYop(){ g('svModal').style.display='none'; }
 
 function puzSaqla(){
   var pairs=OBS.map(function(o){
-    var oid=escAttr(o.obyekt), e=_puz[oid]||{};
+    var e=_puz[o.obyekt]||{};
     return {
       obyekt:o.obyekt,
       lokId:     e.lok    || o.lokId    || '',
@@ -1156,7 +1632,8 @@ function puzSaqla(){
       format:    (e.fmt||FMTMAP[o.obyekt]||o.format||'TN').toUpperCase(),
       lokSheets: e.lokSheets  || o.lokSheets  || [],
       svodSheets:e.svodSheets || o.svodSheets || [],
-      svodCols:  o.svodCols   || null         // ustun xaritasini yo'qotmaymiz
+      svodCols:  o.svodCols   || null,        // ustun xaritasini yo'qotmaymiz
+      narxTayyor:(e.narxTayyor!=null ? e.narxTayyor : !!o.narxTayyor)
     };
   });
   var msgEl=g('puzMsg'); msgEl.textContent='⟳ Сақланмоқда...';
@@ -1164,7 +1641,7 @@ function puzSaqla(){
     var msg=(r&&r.xabar)?r.xabar:(r&&typeof r==='string'?r:'Сақланди');
     msgEl.textContent='✓ '+msg; _puz={};
     var freshObs=(r&&r.skan&&r.skan.length)?r.skan:null;
-    if(freshObs){ OBS=freshObs; _obToldir(); _ierObToldir(); _skanRender(); }
+    if(freshObs){ OBS=freshObs; _obToldir(); _ierObToldir(); _skanRender(); _puzRender(); }
     else { skanQil(); }
     run('apiBoglashOl',null,function(m){ FMTMAP=m||{}; _puzRender(); });
   }, function(e){
@@ -1173,23 +1650,13 @@ function puzSaqla(){
 }
 
 /* ── Holat ─────────────────────────────────────── */
-function _obToldir(){
-  var sel=g('selOb'), cur=sel.value;
-  sel.innerHTML='<option value="">— Объект танланг —</option>';
-  OBS.forEach(function(o){
-    var opt=document.createElement('option');
-    opt.value=o.obyekt; opt.textContent=o.obyekt+(o.locked?' 🔒':'');
-    sel.appendChild(opt);
-  });
-  if(cur) sel.value=cur;
-}
 
 function holatYukla(force){
   CUR_OB=g('selOb').value;
   if(!CUR_OB){
     g('tree').innerHTML=''; _kpi(null);
-    ['bFmt','bLock','btnLock','btnOy','btnF2Imp','btnAi','btnTashxis'].forEach(function(id){ g(id).style.display='none'; });
-    g('aiBox').style.display='none'; g('tashxisBox').style.display='none';
+    ['bFmt','bLock','btnLock','btnOy','btnF2Imp','btnAi','btnTashxis','btnNakrutka'].forEach(function(id){ g(id).style.display='none'; });
+    g('aiBox').style.display='none'; g('tashxisBox').style.display='none'; g('nakrutkaBox').style.display='none';
     return;
   }
   g('hMsg').style.display='none';
@@ -1216,13 +1683,72 @@ function holatYukla(force){
     g('btnF2Imp').style.display=data.locked?'none':'';
     g('btnAi').style.display='';
     g('btnTashxis').style.display='';
+    g('btnNakrutka').style.display='';
     g('aiBox').style.display='none';   // obyekt almashganda eski tahlilni yashiramiz
     g('tashxisBox').style.display='none';
-    _kpi(data.tree);
-    g('tree').innerHTML=_buildTree(data)||'<div class="msg i">Маълумот йўқ</div>';
+    g('nakrutkaBox').style.display='none';
+    // Накрутка коэффициентларини (kf) юклаб, кейин рендер — ҳар summa yonida
+    // автомат (тугмасиз) накрутка билан нарх кўрсатиш учун. kf енгил, кэшланади.
+    _nakrKfEnsure(CUR_OB, function(){
+      _kpi(data.tree);
+      g('tree').innerHTML=_buildTree(data)||'<div class="msg i">Маълumот йўқ</div>';
+      _nakrutkaAvto();   // ⚡ накрутка ДOИМ авто кўринади (тугма шарт эмас)
+    });
   }, function(err){
     g('tree').innerHTML='<div class="msg err">'+esc(err)+'</div>';
   });
+}
+
+/* ============ НАКРУТКА — MIJOZ ТАРАФ (JS) ҲИСОБ ============
+ * kf: ҳар категория (ЧЕЛ/МАШ/МАТ/ОБ/М-К/КАБ) учун АНИҚ кўпайтирувчи (сервердан бир
+ * марта). nk: % конфиг (батафсил рассшифровка учун). Формула ЧИЗИҚЛИ бўлгани учун
+ * ҳар summani × kf[категория] қилиб АНИҚ накрутка нархини оламиз — сервер/тугма шарт эмас. */
+var NAKR_KF=null, NAKR_NK=null, NAKR_OB='';
+function _nakrKfEnsure(ob, cb){
+  if(NAKR_OB===ob && NAKR_KF){ cb(); return; }
+  run('apiNakrutkaKoef', ob, function(r){
+    NAKR_KF=(r&&r.kf)||{}; NAKR_NK=(r&&r.nk)||{}; NAKR_OB=ob; cb();
+  }, function(){ NAKR_KF={}; NAKR_NK={}; NAKR_OB=ob; cb(); });
+}
+function _nakrKf(kat){ return (NAKR_KF && NAKR_KF[kat]) || 1; }
+/* Накрутка умуман созланганми (камида битта коэфф > 1) — бўлмаса ҳеч нарса кўрсатилмайди */
+function _hasNakr(){
+  if(!NAKR_KF) return false;
+  for(var k in NAKR_KF){ if(NAKR_KF[k]>1.0001) return true; }
+  return false;
+}
+/* Node барглари бўйича накрутка ҚЎШИМЧАСИ: Σ барг×(kf−1). Асосий суммага ҚЎШИЛАДИ —
+ * шунда «накрутка билан» ҳеч қачон асосийдан КАМ бўлмайди (аввал барглар бўйича
+ * тўлиқ қайта йиғиларди: категорияси/сметаси тўлиқ бўлмаган барглар ТУШИБ ҚОЛИБ,
+ * 10 млрд → 9.77 млрд каби камайиб кўринарди). field: 'smeta'|'stFakt'|'stF2'. */
+function _nakrExtra(node, field){
+  if(!node) return 0;
+  if(node.children && node.children.length) return node.children.reduce(function(s,c){ return s+_nakrExtra(c, field); }, 0);
+  var t=node.type;
+  if(t!=='bl' && t!=='rs' && t!=='mat' && t!=='ob') return 0;
+  var k=_nakrKf(node.kat||'МАТ')-1;
+  return k>0 ? (node[field||'smeta']||0)*k : 0;
+}
+/* Битта summa (категория + сумма) → накрутка билан. Inline кўрсатиш учун HTML қайтаради. */
+function _nakrChip(kat, summa, klik){
+  if(!_hasNakr() || !(summa>0)) return '';
+  var bilan = summa * _nakrKf(kat||'МАТ');
+  if(!(bilan>summa*1.0001)) return '';
+  var on = klik!==false ? ' onclick="event.stopPropagation();resursNakrutkaKor(\''+escAttr(kat||'МАТ')+'\','+summa+',\'\')"' : '';
+  return '<span class="nakr-inline" title="Накрутка билан нарх (транспорт/склад/прочие/НДС...). Бос → батафсил"'+on+'>🧮 '+fmt0(bilan)+'</span>';
+}
+/* Node (bl/rz — аралаш категория) накрутка чипи — асос + барглар бўйича қўшимча */
+function _nakrChipNode(node){
+  if(!_hasNakr()) return '';
+  var sof=node.smeta||0;
+  if(!(sof>0)){
+    (function w(n){ if(n.children&&n.children.length) n.children.forEach(w);
+      else if(n.type==='bl'||n.type==='rs'||n.type==='mat'||n.type==='ob') sof+=(n.smeta||0); })(node);
+  }
+  if(sof<=0) return '';
+  var bilan=sof+_nakrExtra(node,'smeta');
+  if(!(bilan>sof*1.0001)) return '';
+  return '<span class="nakr-inline" title="Накрутка билан жами (барча ресурслар бўйича)">🧮 '+fmt0(bilan)+'</span>';
 }
 
 /* 🤖 AI MASLAHATCHI — holatdan xulosa (Claude API orqali) */
@@ -1266,7 +1792,7 @@ function _tashxisRender(d){
   var h='<div style="font-weight:700;color:var(--pri2);margin-bottom:8px">🔍 Ташхис — '+esc(d.obyekt)
     +'<span style="float:right;font-weight:400;color:var(--txt4)">НАРХ_МАНТИҚ: '+esc(d.narxMantiq)+'</span></div>';
   // Jami + kategoriya
-  h+='<div style="margin-bottom:6px"><b>ЖАМИ СМЕТА:</b> <span style="color:var(--amber2);font-weight:700">'+fmt0(jami)+'</span> сўм · '+d.leaf+' ресурс</div>';
+  h+='<div style="margin-bottom:6px"><b>ЖАМИ СМЕТА (асл, қўшимчасиз):</b> <span style="color:var(--amber2);font-weight:700">'+fmt0(jami)+'</span> сўм · '+d.leaf+' ресурс</div>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
   ['ЧЕЛ','МАШ','МАТ','ОБ','М/К','КАБ','?'].forEach(function(k){
     var v=(d.katSum&&d.katSum[k])||0; if(!v) return;
@@ -1274,6 +1800,30 @@ function _tashxisRender(d){
       +esc(k)+': <b>'+fmt0(v)+'</b> ('+pct(v)+'%)</span>';
   });
   h+='</div>';
+  // Qo'shimcha ishlar (rs+/mat+/ob+) — smeta tashqarisida, ALOHIDA
+  if(d.qoshSmeta>0){
+    h+='<div style="background:rgba(252,229,205,.12);border:1px solid var(--amber);border-radius:8px;padding:8px 10px;margin-bottom:10px">'
+      +'➕ <b>ҚЎШИМЧА ИШЛАР (сметадан ташқари):</b> <span style="color:var(--amber2);font-weight:700">'+fmt0(d.qoshSmeta)+'</span> сўм</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+    ['ЧЕЛ','МАШ','МАТ','ОБ','М/К','КАБ','?'].forEach(function(k){
+      var v=(d.qoshKatSum&&d.qoshKatSum[k])||0; if(!v) return;
+      h+='<span style="background:rgba(252,229,205,.15);border:1px solid var(--amber);border-radius:6px;padding:3px 8px">'
+        +esc(k)+': <b>'+fmt0(v)+'</b></span>';
+    });
+    h+='</div>';
+  }
+  // 🔄 ЗАМЕНА (rs~/mat~/ob~) — almashtirilgan ishlar, qo'shimchadan ALOHIDA
+  if(d.zamenaSmeta>0){
+    h+='<div style="background:rgba(99,102,241,.12);border:1px solid var(--pri);border-radius:8px;padding:8px 10px;margin-bottom:10px">'
+      +'🔄 <b>ЗАМЕНА (алмаштирилган ишлар):</b> <span style="color:var(--pri2);font-weight:700">'+fmt0(d.zamenaSmeta)+'</span> сўм</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+    ['ЧЕЛ','МАШ','МАТ','ОБ','М/К','КАБ','?'].forEach(function(k){
+      var v=(d.zamenaKatSum&&d.zamenaKatSum[k])||0; if(!v) return;
+      h+='<span style="background:rgba(99,102,241,.15);border:1px solid var(--pri);border-radius:6px;padding:3px 8px">'
+        +esc(k)+': <b>'+fmt0(v)+'</b></span>';
+    });
+    h+='</div>';
+  }
   // FAKT-override ogohlantirish (shishishning asosiy nomzodi)
   if(d.faktSmeta>0){
     h+='<div style="background:rgba(245,158,11,.1);border:1px solid var(--amber);border-radius:8px;padding:8px 10px;margin-bottom:10px;color:var(--amber2)">'
@@ -1316,6 +1866,356 @@ function _tashxisRender(d){
   return h;
 }
 
+/* 💰 НАКРУТКА — smetani boshidan (ПРЯМЫЕ→...→ВСЕГО) hisoblab, xarajat/mijoz narxini ko'rsatadi */
+function nakrutkaYukla(){
+  if(!CUR_OB){ toast('Аввал объект танланг','warn'); return; }
+  var box=g('nakrutkaBox'), btn=g('btnNakrutka');
+  box.style.display='';
+  box.innerHTML='<span class="spin">⟳</span> Наркутка ҳисобланмоқда...';
+  btn.disabled=true;
+  run('apiObyektNakrutka', CUR_OB, function(d){
+    btn.disabled=false;
+    box.innerHTML=_nakrutkaRender(d);
+  }, function(e){
+    btn.disabled=false;
+    box.innerHTML='<span style="color:var(--red2)">✗ '+esc(e.message||e)+'</span>';
+  });
+}
+function _nakrutkaRender(d){
+  var nk=d.nakrutka;
+  function row(label, val, bold, indent){
+    return '<tr style="'+(bold?'font-weight:700;':'')+'border-top:1px solid rgba(255,255,255,.05)">'
+      +'<td style="padding:2px 4px'+(indent?';padding-left:18px':'')+'">'+esc(label)+'</td>'
+      +'<td style="padding:2px 4px;text-align:right'+(bold?';color:var(--amber2)':'')+'">'+fmt0(val)+'</td></tr>';
+  }
+  var h='<div style="font-weight:700;color:var(--pri2);margin-bottom:8px">💰 Наркутка — '+esc(d.obyekt)
+    +'<span style="float:right;font-weight:400;color:var(--txt4)">Шартнома: '+esc(d.shNo)+'</span></div>';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h+=row('ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ (ЧЕЛ)', nk.chel, false, true);
+  h+=row('ЗАТРАТЫ МАШИН И МЕХАНИЗМОВ (МАШ)', nk.mash, false, true);
+  h+=row('МАТЕРИАЛЫ (МАТ, ичида КАБ='+fmt0(nk.kab)+')', nk.mat, false, true);
+  h+=row('ОБОРУДОВАНИЕ (ОБ)', nk.ob, false, true);
+  h+=row('ИТОГО ПРЯМЫЕ ЗАТРАТЫ', nk.pryamye, true);
+  h+=row('Транспорт расходы на материалы 5%', nk.trMat, false, true);
+  h+=row('Складские расходы на материалы 2% + М/К 0,75%', nk.sklMat, false, true);
+  h+=row('Транспорт расходы на кабели и провода 1,5%', nk.trKab, false, true);
+  h+=row('ИТОГО (оборудсиз)', nk.itogo1, true);
+  h+=row('Прочие затраты и расходы подрядчика 18%', nk.prochie, false, true);
+  h+=row('ИТОГО', nk.itogo2, true);
+  h+=row('Транспорт расходы на оборудование 2%', nk.trOb, false, true);
+  h+=row('Заготовительно-складские расходы на оборуд. 1,2%', nk.zagOb, false, true);
+  h+=row('ИТОГО', nk.itogo3, true);
+  h+=row('Затраты на страхование объекта 0,32%', nk.strax, false, true);
+  h+=row('Коэффициент риска', nk.risk, false, true);
+  h+=row('ИТОГО', nk.itogo4, true);
+  h+=row('НДС 12%', nk.nds, false, true);
+  h+=row('ВСЕГО СТОИМОСТЬ СТРОИТЕЛЬСТВА В ТЕКУЩИХ ЦЕНАХ', nk.vsego, true);
+  h+='</table>';
+  var foyda=nk.vsego-nk.pryamye;
+  h+='<div style="margin-top:10px;padding:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:8px">'
+    +'<b>ЖАМИ ХАРАЖАТ (ПРЯМЫЕ):</b> '+fmt0(nk.pryamye)+' сўм<br>'
+    +'<b>МИЖОЗГА НАРХИ (ВСЕГО, НДС билан):</b> '+fmt0(nk.vsego)+' сўм<br>'
+    +'<b>НАКРУТКА СУММАСИ (фойда салоҳияти):</b> <span style="color:var(--grn)">'+fmt0(foyda)+' сўм ('+(nk.pryamye>0?Math.round(foyda/nk.pryamye*100):0)+'%)</span>'
+    +'</div>';
+  var kf=d.kf||{};
+  h+='<div style="margin-top:8px;font-size:11px;color:var(--txt4)">Ҳар категория учун АНИҚ кўпайтирувчи (формула бўйича, тахминий эмас): '
+    +'ЧЕЛ ×'+(kf.ЧЕЛ||1).toFixed(3)+' ('+fmt0(d.narxlar.chel.sof)+' → '+fmt0(d.narxlar.chel.bilan)+') · '
+    +'МАШ ×'+(kf.МАШ||1).toFixed(3)+' ('+fmt0(d.narxlar.mash.sof)+' → '+fmt0(d.narxlar.mash.bilan)+') · '
+    +'МАТ ×'+(kf.МАТ||1).toFixed(3)+' ('+fmt0(d.narxlar.mat.sof)+' → '+fmt0(d.narxlar.mat.bilan)+') · '
+    +'ОБ ×'+(kf.ОБ||1).toFixed(3)+' ('+fmt0(d.narxlar.ob.sof)+' → '+fmt0(d.narxlar.ob.bilan)+')</div>';
+  return h;
+}
+
+/* ⚡⚡ ЖОНЛИ НАКРУТКА (тугмасиз, серверсиз) — obyekt ochilганда AVTOMAT hisoblanadi.
+ * TREE_DATA barglaridan категория жамиларини (ЧЕЛ/МАШ/МАТ/ОБ/М-К/КАБ) йиғиб,
+ * _nakrHisobJS (сервер формуласи БИЛАН БИР ХИЛ) орқали тўлиқ занжирни дарҳол чиқаради.
+ * Ҳеч қандай тугма/сервер шарт эмас — доим кўринадиган қутида туради. */
+function _nakrCatsFromTree(tree, field, filt){
+  field = field || 'smeta';   // 'smeta' | 'stFakt' | 'stF2'
+  filt = filt || 'all';       // 'all' | 'asl'(zamena/qosh yo'q) | 'zamena' | 'qosh'
+  var c={chel:0,mash:0,mat:0,ob:0,mk:0,kab:0,bez:0};
+  function w(n){
+    if(n.children&&n.children.length){ n.children.forEach(w); return; }
+    if(n.type!=='rs'&&n.type!=='mat'&&n.type!=='ob') return;
+    // ⚡ marker filtri: asl=zamena/qo'shimchasiz; zamena=faqat ~; qosh=faqat +
+    if(filt==='asl'    && n.isQosh) return;
+    if(filt==='zamena' && !n.isZamena) return;
+    if(filt==='qosh'   && !(n.isQosh && !n.isZamena)) return;
+    var s=n[field]||0; if(!s) return;
+    var k=String(n.kat||'МАТ').toUpperCase();
+    if(k==='ЧЕЛ') c.chel+=s;
+    else if(k==='МАШ') c.mash+=s;
+    else if(k==='ОБ'||k.indexOf('ОБОР')===0) c.ob+=s;
+    else if(k==='М/К'||k==='МК'){ c.mat+=s; c.mk+=s; }
+    else if(k==='КАБ'||k.indexOf('КАБЕЛ')===0){ c.mat+=s; c.kab+=s; }
+    else if(k==='БЕЗ'){ c.mat+=s; c.bez+=s; }
+    else c.mat+=s;
+  }
+  (tree||[]).forEach(w);
+  return c;
+}
+/* Ikki cats obyektining farqi (Музлаган=Факт−Ф2, Остатка=Смета−Факт) */
+function _catsMinus(a,b){
+  var o={}; ['chel','mash','mat','ob','mk','kab','bez'].forEach(function(k){ o[k]=Math.max(0,(a[k]||0)-(b[k]||0)); });
+  return o;
+}
+function _nakrutkaAvto(){
+  var box=g('nakrutkaBox'); if(!box) return;
+  if(!TREE_DATA || !NAKR_NK || !_hasNakr()){ box.style.display='none'; return; }
+  // ⚡⚡ 2026-07-09: НАКРУТКА USTUN ШАКЛИДА — ҳар кўрсаткич (Смета/Факт/Ф2/Замена/Қўшимча).
+  //   Смета = FAQAT asl (zamena/qo'shimchasiz). Замена/Қўшимча — АЛОҲИДА устун.
+  var T=TREE_DATA.tree||[];
+  var cS =_nakrCatsFromTree(T, 'smeta', 'asl');    // asl smeta
+  var cSAll=_nakrCatsFromTree(T, 'smeta');          // asl+zamena+qo'shimcha (Остатка/қиёслаш учун emas)
+  var cF =_nakrCatsFromTree(T, 'stFakt');           // fakt (jami — barcha markerlar)
+  var cFAsl=_nakrCatsFromTree(T, 'stFakt', 'asl');  // fakt faqat asl smeta bo'yicha (Остатка учун bir xil qamrov)
+  var cF2=_nakrCatsFromTree(T, 'stF2');
+  var cZam=_nakrCatsFromTree(T, 'smeta', 'zamena');
+  var cQosh=_nakrCatsFromTree(T, 'smeta', 'qosh');
+  var cMuz=_catsMinus(cF, cF2);      // Музлаган = Факт−Ф2 (қилинган, лекин Ф2 га кирмаган)
+  var cOst=_catsMinus(cS, cFAsl);    // Остатка = Смета(асл)−Факт(асл) — bir xil qamrov
+  var cols=[
+    {nom:'💰 Смета (асл)', d:_nakrHisobJS(cS, NAKR_NK),  c:cS},
+    {nom:'🔄 Замена',      d:_nakrHisobJS(cZam, NAKR_NK), c:cZam},
+    {nom:'➕ Қўшимча',     d:_nakrHisobJS(cQosh, NAKR_NK),c:cQosh},
+    {nom:'✅ Факт',        d:_nakrHisobJS(cF, NAKR_NK),  c:cF},
+    {nom:'📤 Ф-2',         d:_nakrHisobJS(cF2, NAKR_NK), c:cF2},
+    {nom:'❄️ Музлаган',    d:_nakrHisobJS(cMuz, NAKR_NK),c:cMuz},
+    {nom:'📦 Остатка',     d:_nakrHisobJS(cOst, NAKR_NK),c:cOst}
+  ];
+  // Занжир қаторлари: [ном, олувчи(устун), калин?]
+  var qatorlar=[
+    ['ЗАТРАТЫ ТРУДА РАБОЧИХ (ЧЕЛ)', function(x){return x.c.chel;},   false],
+    ['ЗАТРАТЫ МАШИН (МАШ)',         function(x){return x.c.mash;},   false],
+    ['МАТЕРИАЛЫ (МАТ)',            function(x){return x.c.mat;},    false],
+    ['ОБОРУДОВАНИЕ (ОБ)',         function(x){return x.c.ob;},     false],
+    ['ИТОГО ПРЯМЫЕ ЗАТРАТЫ',      function(x){return x.d.pryamye;},true],
+    ['Транспорт на материалы 5%',  function(x){return x.d.trMat;},  false],
+    ['Складские 2% + М/К 0,75%',   function(x){return x.d.sklMat;}, false],
+    ['Транспорт на кабели 1,5%',   function(x){return x.d.trKab;},  false],
+    ['ИТОГО (оборудсиз)',          function(x){return x.d.itogo1;}, true],
+    ['Прочие затраты 18%',         function(x){return x.d.prochie;},false],
+    ['ИТОГО',                      function(x){return x.d.itogo2;}, true],
+    ['Транспорт на оборуд. 2%',    function(x){return x.d.trOb;},   false],
+    ['Загот.-складские 1,2%',      function(x){return x.d.zagOb;},  false],
+    ['ИТОГО',                      function(x){return x.d.itogo3;}, true],
+    ['Страхование 0,32%',          function(x){return x.d.strax;},  false],
+    ['Коэффициент риска',          function(x){return x.d.risk;},   false],
+    ['ИТОГО',                      function(x){return x.d.itogo4;}, true],
+    ['НДС 12%',                    function(x){return x.d.nds;},    false],
+    ['ВСЕГО — МИЖОЗГА НАРХ',       function(x){return x.d.vsego;},  true]
+  ];
+  var h='<div style="font-weight:700;color:var(--pri2);margin-bottom:8px">💰 Накрутка — барча кўрсаткич (жонли, авто)'
+    +'<span style="float:right;font-weight:400;color:var(--txt4);cursor:pointer" onclick="_nakrToggle()" title="Йиғиш/очиш">🔽</span></div>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px;white-space:nowrap">';
+  h+='<tr style="border-bottom:2px solid var(--line2)"><td style="padding:4px 6px;text-align:left;color:var(--txt4);font-size:11px">Позиция</td>';
+  cols.forEach(function(cc){ h+='<td style="padding:4px 8px;text-align:right;font-weight:700;color:var(--pri2)">'+cc.nom+'</td>'; });
+  h+='</tr>';
+  qatorlar.forEach(function(q){
+    var bold=q[2];
+    h+='<tr style="'+(bold?'font-weight:700;background:rgba(255,255,255,.03);':'')+'border-top:1px solid rgba(255,255,255,.05)">';
+    h+='<td style="padding:2px 6px;text-align:left'+(bold?'':';padding-left:14px;color:var(--txt3)')+'">'+esc(q[0])+'</td>';
+    cols.forEach(function(cc){ h+='<td style="padding:2px 8px;text-align:right'+(bold?';color:var(--amber2)':'')+'">'+fmt0(q[1](cc)||0)+'</td>'; });
+    h+='</tr>';
+  });
+  h+='<tr style="border-top:2px solid var(--line2);font-weight:700">'
+    +'<td style="padding:4px 6px;text-align:left;color:var(--grn)">НАКРУТКА (фойда)</td>';
+  cols.forEach(function(cc){ h+='<td style="padding:4px 8px;text-align:right;color:var(--grn)">'+fmt0(cc.d.vsego-cc.d.pryamye)+'</td>'; });
+  h+='</tr></table></div>';
+  h+='<div style="margin-top:6px;font-size:10.5px;color:var(--txt4)">Смета=FAQAT asl · Замена/Қўшимча АЛОҲИДА · Музлаган=Факт−Ф2 · Остатка=Смета(асл)−Факт(асл) · барча устун бир хил чизиқли накрутка формуласи (НДС билан)</div>';
+
+  box.innerHTML=h;
+  box.style.display='';
+}
+function _nakrToggle(){
+  var box=g('nakrutkaBox'); if(!box) return;
+  if(box.style.display==='none'){ _nakrutkaAvto(); }
+  else { box.style.display='none'; }
+}
+
+/* ⚡ Bitta resurs (rs/mat/ob) uchun накрутка билан нархни popup'da rasshifrovka
+ * qilib ko'rsatadi — inline накрутка чипини босганда очилади. МИJIZ ТАРАФ (JS)
+ * ҳисобланади — сервер чақируви ЙЎҚ (NAKR_NK аллақачон юкланган), дарҳол очилади. */
+function _nakrHisobJS(cats, nk){
+  var chel=cats.chel||0, mash=cats.mash||0, mat=cats.mat||0, ob=cats.ob||0, mk=cats.mk||0, kab=cats.kab||0, bez=cats.bez||0;
+  var P=function(k){ return (nk&&nk[k])||0; };
+  var pryamye = chel+mash+mat+ob;
+  var trMat   = (mat-kab)*P('ТРАНСПОРТ_МАТЕРИАЛ')/100;
+  var sklMat  = (mat-bez-mk)*P('СКЛАДСКИЕ_МАТЕРИАЛ')/100 + mk*P('СКЛАДСКИЕ_МК')/100;
+  var trKab   = kab*P('ТРАНСПОРТ_КАБЕЛЬ')/100;
+  var itogo1  = pryamye - ob + trMat + sklMat + trKab;
+  var prochie = itogo1*P('ПРОЧИЕ_ПОДРЯДЧИК')/100;
+  var itogo2  = itogo1 + prochie;
+  var trOb    = ob*P('ТРАНСПОРТ_ОБОРУД')/100;
+  var zagOb   = ob*P('ЗАГОТ_СКЛАД_ОБОРУД')/100;
+  var itogo3  = itogo2 + ob + trOb + zagOb;
+  var strax   = itogo3*P('СТРАХОВАНИЕ')/100;
+  var risk    = itogo3*P('РИСК')/100;
+  var itogo4  = itogo3 + strax + risk;
+  var nds     = itogo4*P('НДС')/100;
+  return {pryamye:pryamye, trMat:trMat, sklMat:sklMat, trKab:trKab, itogo1:itogo1,
+    prochie:prochie, itogo2:itogo2, trOb:trOb, zagOb:zagOb, itogo3:itogo3,
+    strax:strax, risk:risk, itogo4:itogo4, nds:nds, vsego:itogo4+nds};
+}
+function _katToCats(kat, narx){
+  var c={chel:0,mash:0,mat:0,ob:0,mk:0,kab:0,bez:0};
+  kat=String(kat||'МАТ').toUpperCase();
+  if(kat==='ЧЕЛ') c.chel=narx;
+  else if(kat==='МАШ') c.mash=narx;
+  else if(kat==='ОБ'||kat==='ОБОР') c.ob=narx;
+  else if(kat==='М/К'||kat==='МК'){ c.mat=narx; c.mk=narx; }
+  else if(kat==='КАБ'||kat==='КАБЕЛ'){ c.mat=narx; c.kab=narx; }
+  else c.mat=narx;
+  return c;
+}
+function resursNakrutkaKor(kategoriya, narx, nomi){
+  narx=Number(narx)||0;
+  if(narx<=0){ toast('Бу ресурс нархи 0','warn'); return; }
+  if(!NAKR_NK){ toast('Накрутка коэффициентлари ҳали юкланмаган','warn'); return; }
+  var n=_nakrHisobJS(_katToCats(kategoriya, narx), NAKR_NK);
+  var bilan=n.vsego, foiz=narx>0?Math.round((bilan-narx)/narx*100):0;
+  var old=g('resNakrModal'); if(old) old.remove();
+  var div=document.createElement('div');
+  div.id='resNakrModal';
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  function row(label,val,bold){
+    return '<tr style="'+(bold?'font-weight:700;':'')+'border-top:1px solid rgba(255,255,255,.06)">'
+      +'<td style="padding:2px 4px">'+esc(label)+'</td>'
+      +'<td style="padding:2px 4px;text-align:right'+(bold?';color:var(--amber2)':'')+'">'+fmt0(val)+'</td></tr>';
+  }
+  var t='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  t+=row('Асосий (соф) нарх', narx, true);
+  if(n.trMat) t+=row('Транспорт (материал)', n.trMat);
+  if(n.sklMat) t+=row('Складские', n.sklMat);
+  if(n.trKab) t+=row('Транспорт (кабель)', n.trKab);
+  if(n.prochie) t+=row('Прочие (подрядчик)', n.prochie);
+  if(n.trOb) t+=row('Транспорт (оборуд)', n.trOb);
+  if(n.zagOb) t+=row('Заготовительно-складские (оборуд)', n.zagOb);
+  if(n.strax) t+=row('Страхование', n.strax);
+  if(n.risk) t+=row('Риск', n.risk);
+  if(n.nds) t+=row('НДС', n.nds);
+  t+=row('ЯКУНИЙ (накрутка билан)', bilan, true);
+  t+='</table>';
+  div.innerHTML='<div style="background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:16px;max-width:420px;width:92%;max-height:80vh;overflow:auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<b style="color:var(--pri2)">🧮 Накрутка рассшифровкаси</b>'
+    +'<span style="cursor:pointer;color:var(--txt4)" onclick="g(\'resNakrModal\').remove()">✕</span></div>'
+    +(nomi?'<div style="color:var(--txt3);margin-bottom:6px;font-size:12px">'+esc(nomi)+' — категория: <b>'+esc(kategoriya)+'</b></div>':'')
+    +t
+    +'<div style="margin-top:8px;padding:8px;background:rgba(16,185,129,.08);border-radius:6px;text-align:center;font-size:12px">'
+    +'<b style="color:var(--grn)">+'+foiz+'%</b> накрутка — '+fmt0(narx)+' → '+fmt0(bilan)+' сўм</div></div>';
+  div.onclick=function(e){ if(e.target===div) div.remove(); };
+  document.body.appendChild(div);
+}
+
+/* ============ ШАХСИЙ СМЕТА ============
+ * Кутубхонада (олдин ишланган объектлардан автоматик тўпланган иш турлари,
+ * 15_IshTurlar.js) йиғилган ишлардан қўлда янги смета йиғиш — backend
+ * (apiShaxsiySmetaYarat/apiShaxsiySmetalar) аллақачон бор эди, лекин Panel
+ * UI'си йўқолиб қолган экан (2026-07-04 аниқланди) — шу ерда қайта қурилди. */
+var _shsmLoaded=false, _shsmSelected=[], _shsmDebTimer=null;
+
+function shsmYukla(){
+  var box=g('shsmList');
+  box.innerHTML='<span class="spin">⟳</span> Юкланмоқда...';
+  run('apiShaxsiySmetalar', null, function(list){
+    if(!list || !list.length){ box.innerHTML='<div class="msg i">Ҳали шахсий смета яратилмаган</div>'; return; }
+    var h='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="color:var(--txt4);text-align:left"><th style="padding:4px">Номи</th><th>Сана</th><th></th></tr>';
+    list.forEach(function(f){
+      h+='<tr style="border-top:1px solid var(--line)">'
+        +'<td style="padding:6px 4px">'+esc(f.nom)+'</td>'
+        +'<td style="color:var(--txt4)">'+esc(f.sana)+'</td>'
+        +'<td style="text-align:right"><a class="btn xs s" href="'+escAttr(f.url)+'" target="_blank">Очиш ↗</a></td>'
+        +'</tr>';
+    });
+    h+='</table>';
+    box.innerHTML=h;
+  }, function(e){ box.innerHTML='<div class="msg err">'+esc(e.message||e)+'</div>'; });
+}
+
+function shsmYangiOch(){
+  g('shsmBuilder').style.display='block';
+  ['shsmNom','shsmChel','shsmZak','shsmPod','shsmZakFio','shsmPodFio','shsmQidir'].forEach(function(id){ g(id).value=''; });
+  g('shsmQidirNat').innerHTML='';
+  _shsmSelected=[];
+  _shsmTanlanganChiz();
+  g('shsmMsg').innerHTML='';
+  g('shsmBuilder').scrollIntoView({behavior:'smooth'});
+}
+
+function shsmQidirDeb(){
+  clearTimeout(_shsmDebTimer);
+  _shsmDebTimer=setTimeout(shsmQidirBajar, 300);
+}
+function shsmQidirBajar(){
+  var q=g('shsmQidir').value.trim();
+  var box=g('shsmQidirNat');
+  if(!q){ box.innerHTML=''; return; }
+  box.innerHTML='<span class="spin">⟳</span>';
+  run('apiIshTurQidir', [q, 30], function(res){
+    if(!res || !res.length){ box.innerHTML='<div class="msg i" style="font-size:11px">Топилмади</div>'; return; }
+    var h='';
+    res.forEach(function(it, idx){
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:5px;border-bottom:1px solid var(--line);font-size:12px">'
+        +'<span style="flex:1"><b>'+esc(it.blKod||'')+'</b> '+esc(it.blNom)+' <span style="color:var(--txt4)">('+esc(it.blBirlik)+', '+(it.rs||[]).length+' ресурс)</span></span>'
+        +'<input type="number" step="0.001" placeholder="ҳажм" id="shsmHajm_'+idx+'" style="width:80px">'
+        +'<button class="btn xs grn" onclick="shsmTanla('+idx+')">＋ Қўш</button>'
+        +'</div>';
+    });
+    box.innerHTML=h;
+    box._items=res;
+  }, function(e){ box.innerHTML='<div class="msg err" style="font-size:11px">'+esc(e.message||e)+'</div>'; });
+}
+function shsmTanla(idx){
+  var box=g('shsmQidirNat');
+  var it=box._items && box._items[idx];
+  if(!it) return;
+  var hajm=Number(g('shsmHajm_'+idx).value)||0;
+  if(hajm<=0){ toast('Ҳажм киритинг','warn'); return; }
+  _shsmSelected.push({nom:it.blNom, birlik:it.blBirlik, kod:it.blKod, hajm:hajm, rs:it.rs||[]});
+  _shsmTanlanganChiz();
+  toast('✅ Қўшилди: '+it.blNom,'ok',2000);
+}
+function shsmOchir(i){
+  _shsmSelected.splice(i,1);
+  _shsmTanlanganChiz();
+}
+function _shsmTanlanganChiz(){
+  var box=g('shsmTanlangan');
+  if(!_shsmSelected.length){ box.innerHTML='<div class="msg i" style="font-size:11px">Ҳали иш танланмади</div>'; return; }
+  var h='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  _shsmSelected.forEach(function(x,i){
+    h+='<tr style="border-top:1px solid var(--line)">'
+      +'<td style="padding:5px 4px"><b>'+esc(x.kod||'')+'</b> '+esc(x.nom)+'</td>'
+      +'<td style="color:var(--txt4)">'+esc(x.birlik)+'</td>'
+      +'<td style="text-align:right">'+fmt2(x.hajm)+'</td>'
+      +'<td style="text-align:right"><span class="btn xs" onclick="shsmOchir('+i+')" style="color:var(--red2);cursor:pointer">✕</span></td>'
+      +'</tr>';
+  });
+  h+='</table>';
+  box.innerHTML=h;
+}
+function shsmYaratish(){
+  var nom=g('shsmNom').value.trim();
+  if(!nom){ toast('Смета номини киритинг','err'); return; }
+  if(!_shsmSelected.length){ toast('Камида битта иш тури танланг','err'); return; }
+  var config={
+    nom:nom, chelStavka:Number(g('shsmChel').value)||0,
+    zakazchik:g('shsmZak').value.trim(), podryad:g('shsmPod').value.trim(),
+    zakFio:g('shsmZakFio').value.trim(), podFio:g('shsmPodFio').value.trim()
+  };
+  g('shsmMsg').innerHTML='<span class="spin">⟳</span> Яратилмоқда...';
+  run('apiShaxsiySmetaYarat', [config, _shsmSelected], function(r){
+    g('shsmMsg').innerHTML='<span style="color:var(--grn)">✅ Яратилди: '+esc(r.nom)+' ('+r.ishlar+' та иш, '+fmt0(r.jami)+' сўм) — <a href="'+escAttr(r.url)+'" target="_blank">Очиш ↗</a></span>';
+    toast('✅ Смета яратилди','ok');
+    _shsmSelected=[]; _shsmTanlanganChiz();
+    shsmYukla();
+  }, function(e){
+    g('shsmMsg').innerHTML='<span style="color:var(--red2)">✗ '+esc(e.message||e)+'</span>';
+  });
+}
+
 /* KPI */
 function _kpi(tree){
   if(!tree){ g('kpis').innerHTML=''; g('catStats').style.display='none';
@@ -1328,22 +2228,77 @@ function _kpi(tree){
   // ⚠ MUHIM: har node FAQAT BIR MARTA walk qilinadi. Avval bolalar ustidan
   //   ikki marta forEach yurildi (walk(c) + forEach(walk)) → summalar 2x shishardi
   //   (501 mlrd → ~1 трлн). Endi bitta forEach.
+  // ⚡ ENG ISHONCHLI: agar server LRV_PLUS ЖАМИ qatorining haqiqiy summalarini bersa
+  //   (data.jami), KPI o'shani ko'rsatadi — panel == sheet KAFOLATLANADI (JS qayta
+  //   yig'ish emas). Aks holda (eski kesh) daraxtdan yig'iladi (zaxira).
+  var J = (TREE_DATA && TREE_DATA.jami) ? TREE_DATA.jami : null;
+  // ⚡ 2026-07-09 TUZATILDI: pul (stSm/stFk/stF2) — FAQAT БАРГ (rs/mat/ob) бўйича, xuddi
+  //   sheet ЖАМИ formulasi kabi (leafF = SUMIF rs+mat+ob). Avval bl.smeta (расценка jami)
+  //   yig'ilardi — u resurs bolalaridan KATTA (расценка to'liq ochilmagan) → 7.7→11.2 mlrd
+  //   TAKROR shishish. Ҳажм (sm/fk/f2 — foiz uchun) esa bl/mat darajasida qoladi.
+  // ⚡ 2026-07-09: СМЕТА = FAQAT asl. zamena(~)/qo'shimcha(+) ALOHIDA (foydalanuvchi: ular
+  //   smetaga qo'shilib qiymatni oshirib yuborardi). Fakt/Ф2 — hammasi (actual bajarilgan).
+  var stSmZ=0, stSmQ=0, stFkAsl=0, smAsl=0, fkAsl=0;   // ⚡ ASL bo'yicha alohida (Остатка uchun)
   function walk(n){
+    var kids = n.children && n.children.length;
     if(n.type==='bl'||n.type==='mat'){
       sm+=n.smetaHajm||0; fk+=n.fakt||0; f2+=n.f2ol||0;
-      stFk+=n.stFakt||0; stF2+=n.stF2||0; stSm+=n.smeta||0;
+      if(!n.isQosh){ smAsl+=n.smetaHajm||0; fkAsl+=n.fakt||0; }   // asl (zamena/qo'shimchasiz) hajm
     }
-    (n.children||[]).forEach(walk);
+    if(!kids && (n.type==='rs'||n.type==='mat'||n.type==='ob')){
+      var v=n.smeta||0;
+      if(n.isZamena) stSmZ+=v;
+      else if(n.isQosh) stSmQ+=v;
+      else { stSm+=v; stFkAsl+=n.stFakt||0; }   // asl smeta va asl fakt (pul)
+      stFk+=n.stFakt||0; stF2+=n.stF2||0;
+    }
+    if(kids) n.children.forEach(walk);
   }
   tree.forEach(walk);
+  // fakt/f2 (JAMI, actual) uchun sheet ЖАМИ (haqiqat manbai). stSm=ASL — jami.stSm ISHLATILMAYDI.
+  if(J){ stFk=J.stFk||0; stF2=J.stF2||0; sm=J.sm||sm; fk=J.fk||fk; f2=J.f2||f2; }
+  // ⚡ ОСТАТКА = asl_smeta − asl_fakt (bir xil qamrov — aks holda asl−jami_fakt manfiy→0 chiqardi!)
+  var stOst=Math.max(0, stSm - stFkAsl);
+  var ostHajm=Math.max(0, smAsl - fkAsl);
   var pF=sm>0?Math.min(100,Math.round(fk/sm*100)):0;
   var pF2=fk>0?Math.min(100,Math.round(f2/fk*100)):0;
-  var pSm=stSm>0?Math.min(100,Math.round(stFk/stSm*100)):0;
+  var pSm=stSm>0?Math.min(100,Math.round(stFkAsl/stSm*100)):0;
+
+  // ⚡ Накрутка билан жами (мижозга нарх) — барглар (rs/mat/ob) бўйича категорияли,
+  //   ЧИЗИҚЛИ формула туфайли аниқ. Ҳар KPI картада АВТОМАТ кўрсатилади (тугмасиз).
+  // ⚡ 2026-07-05: асос + қўшимча (kf−1) услуби — аввал барглар бўйича қайта
+  // йиғилгани учун (категорияси ноаниқ барглар тушиб қолиб) «накрутка билан»
+  // асосий сметадан КАМ кўринарди (10 млрд → 9.77 млрд). Энди asos + extra.
+  // ⚡ 2026-07-09: НАКРУТКА — ҳар KPI учун (мижозга нарх), накрутка КУТИСИ жадвали БИЛАН
+  //   БИР ХИЛ чизиқли формула. Смета=jami/barg, Факт=stFakt, Ф2=stF2, Музлаган=Факт−Ф2,
+  //   Остатка=Смета−Факт. Ҳар чип босилса — тўлиқ детал (кути) очилади.
+  var nkSm=0,nkFk=0,nkF2=0,nkMuz=0,nkOst=0;
+  if(_hasNakr() && NAKR_NK){
+    var _cS=_nakrCatsFromTree(tree,'smeta','asl');   // СМЕТА накрутка = FAQAT asl
+    var _cF=_nakrCatsFromTree(tree,'stFakt'), _cF2=_nakrCatsFromTree(tree,'stF2');
+    var _cFAsl=_nakrCatsFromTree(tree,'stFakt','asl');   // asl fakt (Остатка uchun — bir xil qamrov)
+    nkSm =_nakrHisobJS(_cS,NAKR_NK).vsego;
+    nkFk =_nakrHisobJS(_cF,NAKR_NK).vsego;
+    nkF2 =_nakrHisobJS(_cF2,NAKR_NK).vsego;
+    nkMuz=_nakrHisobJS(_catsMinus(_cF,_cF2),NAKR_NK).vsego;
+    nkOst=_nakrHisobJS(_catsMinus(_cS,_cFAsl),NAKR_NK).vsego;   // asl_smeta − asl_fakt
+  }
+  function nchip(v, klik){
+    if(!_hasNakr() || !(v>0)) return '';
+    var on = klik ? ' onclick="'+klik+'" style="cursor:pointer"' : ' style="cursor:default"';
+    return ' <span class="nakr-inline"'+on+' title="Накрутка билан (мижозга нарх)">🧮 '+fmt0(v)+'</span>';
+  }
+  // 🔄 zamena / ➕ qo'shimcha — asl smetadan ALOHIDA (KPI ostida)
+  var qzTxt='';
+  if(stSmZ>0) qzTxt+='<span style="color:var(--pri2)" title="Замена — алмаштирилган ишлар">🔄 '+fmt0(stSmZ)+'</span> ';
+  if(stSmQ>0) qzTxt+='<span style="color:var(--amber2)" title="Қўшимча ишлар">➕ '+fmt0(stSmQ)+'</span>';
+  if(qzTxt) qzTxt='<div style="font-size:10px;margin-top:2px">'+qzTxt+'</div>';
   g('kpis').innerHTML=
-    _kpiBox('💰 Умумий смета','',fmt0(stSm)+' сўм',pSm+'% бажарилди',pSm)+
-    _kpiBox('✅ Факт (пул)','ok',fmt0(stFk)+' сўм','Ҳажм: '+fmt2(fk)+' ('+pF+'%)',pF)+
-    _kpiBox('📤 Ф-2 олинган','warn',fmt0(stF2)+' сўм',pF2+'% фактдан',pF2)+
-    _kpiBox('⏳ Олиш мумкин','red',fmt0(stFk-stF2)+' сўм','Факт − Ф2 қолдиқ',100-pF2);
+    _kpiBox('💰 Умумий смета (асл)','',fmt0(stSm)+' сўм','<span title="Прямые затраты">'+pSm+'% бажарилди</span>'+nchip(nkSm,'_nakrToggle()')+qzTxt,pSm)+
+    _kpiBox('✅ Факт (пул)','ok',fmt0(stFk)+' сўм','Ҳажм: '+fmt2(fk)+' ('+pF+'%)'+nchip(nkFk,'_nakrToggle()'),pF)+
+    _kpiBox('📤 Ф-2 олинган','warn',fmt0(stF2)+' сўм',pF2+'% фактдан'+nchip(nkF2,'_nakrToggle()'),pF2)+
+    _kpiBox('❄️ Музлаган (Unbilled)','red',fmt0(stFk-stF2)+' сўм','Қилинган, лекин Ф-2 га кирмаган'+nchip(nkMuz,'_nakrToggle()'),100-pF2)+
+    _kpiBox('📦 Остатка (қилинмаган)','',fmt0(stOst)+' сўм','Ҳажм: '+fmt2(ostHajm)+' ('+(stSm>0?Math.round(stOst/stSm*100):0)+'%)'+nchip(nkOst,'_nakrToggle()'),(stSm>0?Math.round(stOst/stSm*100):0));
   if(g('treeActions')) g('treeActions').style.display='flex';
   // Cat stats — TREE_DATA ichida smeta bo'lsa
   _drawCatStats(stSm, stFk, stF2);
@@ -1493,12 +2448,18 @@ function _rzHtml(rz, id, oylar, locked){
     (c.children||[]).forEach(function(r2){if(r2.row>rzLastRow) rzLastRow=r2.row;});
   });
   var rzMon=(rz.smeta>0?'<span style="font-size:10px;color:var(--amber2);margin-left:8px" title="Смета суммаси">💰 '+fmt0(rz.smeta)+'</span>':'')
+           +_nakrChipNode(rz)
            +(rz.stFakt>0?'<span style="font-size:10px;color:var(--grn2);margin-left:6px" title="Факт суммаси">✓ '+fmt0(rz.stFakt)+'</span>':'')
            +(rz.stF2>0?'<span style="font-size:10px;color:var(--pri2);margin-left:6px" title="Ф2 олинган">📤 '+fmt0(rz.stF2)+'</span>':'')
-           +(rz.stOst>0?'<span style="font-size:10px;color:var(--txt4);margin-left:6px" title="Қолдиқ">⏳ '+fmt0(rz.stOst)+'</span>':'');
+           +(rz.stOst>0?'<span style="font-size:10px;color:var(--txt4);margin-left:6px" title="Қилинган, лекин Ф-2 га олинмаган">⏳ '+fmt0(rz.stOst)+'</span>':'')
+           +((rz.smeta-(rz.stFakt||0))>0.5?'<span style="font-size:10px;color:#94a3b8;margin-left:6px" title="Остатка — ҳали қилинмаган иш">📦 '+fmt0(rz.smeta-(rz.stFakt||0))+'</span>':'');
+  
+  var lok = rz.lokalka ? '<span style="font-size:9px;color:#7dd3fc;background:rgba(125,211,252,.1);border-radius:4px;padding:0 4px;margin-right:6px">'+esc(rz.lokalka.split(' - ').pop())+'</span>' : '';
+  
   var h='<div class="rz open" id="'+id+'">'
     +'<div class="rz-h" onclick="toggle(\''+id+'\')">'
     +'<span class="rz-arr">▶</span>'
+    +lok
     +'<span class="rz-nom">'+esc(rz.nom)+'</span>'
     +'<span style="font-size:10px;color:#374151;margin-left:6px">'+blCnt+' блок</span>'
     +rzMon
@@ -1516,6 +2477,7 @@ function _rzHtml(rz, id, oylar, locked){
 
 function _blHtml(bl, id, oylar, locked){
   var isQ=bl.isQosh;
+  var isZ=bl.isZamena;   // ~ = zamena (almashtirilgan ish/resurs)
   var pct=bl.smetaHajm>0?Math.min(100,Math.round((bl.fakt||0)/bl.smetaHajm*100)):0;
   var pctF2=bl.smetaHajm>0?Math.min(100,Math.round((bl.f2ol||0)/bl.smetaHajm*100)):0;
 
@@ -1525,9 +2487,10 @@ function _blHtml(bl, id, oylar, locked){
     +' data-smeta="'+bl.smetaHajm+'" data-fakt="'+(bl.fakt||0)+'">'
     +'<div class="bl-h">'
     +'<span class="bl-arr" onclick="toggle(\''+id+'\');event.stopPropagation()">▶</span>'
-    +'<span class="bl-nom" onclick="toggle(\''+id+'\');event.stopPropagation()">'+(isQ?'＋ ':'')+esc(bl.nom)+'</span>'
+    +'<span class="bl-nom" onclick="toggle(\''+id+'\');event.stopPropagation()">'+(isZ?'<span style="color:var(--pri2)" title="Замена — сметадаги ишни алмаштирган">🔄</span> ':(isQ?'<span style="color:var(--amber2)" title="Қўшимча иш — сметадан ташқари">➕</span> ':''))+esc(bl.nom)+'</span>'
     +'<span class="bl-bir">'+esc(bl.birlik)+'</span>'
-    +(bl.smeta>0?'<span class="bl-money has-val" title="Смета суммаси: '+fmt0(bl.smeta)+' сўм">'+fmt0(bl.smeta)+'</span>':'');
+    +(bl.smeta>0?'<span class="bl-money has-val" title="Смета суммаси: '+fmt0(bl.smeta)+' сўм">'+fmt0(bl.smeta)+'</span>':'')
+    +_nakrChipNode(bl);
 
   /* FAKT input — qulflangan bo'lsa ham doim ko'rinadi (faqat smeta skeleti qulflanadi) */
   h+='<span class="bl-inp">'
@@ -1559,6 +2522,7 @@ function _blHtml(bl, id, oylar, locked){
     +'<span class="bl-stat" style="color:var(--grn2)">✓ Факт <b>'+fmt0(bl.stFakt||0)+'</b></span>'
     +'<span class="bl-stat" style="color:var(--pri2)">📤 Ф2 <b>'+fmt0(bl.stF2||0)+'</b></span>'
     +'<span class="bl-stat" style="color:var(--txt4)">⏳ Қолдиқ <b>'+fmt0(stOst)+'</b></span>'
+    +'<span class="bl-stat" style="color:#94a3b8" title="Ҳали қилинмаган иш">📦 Остатка <b>'+fmt0(Math.max(0,(bl.smeta||0)-(bl.stFakt||0)))+'</b></span>'
     +'</div>';
 
   /* F2 oylar — qulflangan bo'lsa ham doim ko'rinadi */
@@ -1567,11 +2531,20 @@ function _blHtml(bl, id, oylar, locked){
     if(!locked) h+='<div style="font-size:10px;color:#475569;padding:4px 0">Ой йўқ — юқоридан «+ Ой» босинг</div>';
   } else {
     oylar.forEach(function(oy){
-      var oyVal=(bl.oylar&&bl.oylar[oy]!==undefined)?bl.oylar[oy]:0;
-      h+='<div class="inp-row">'
+      var ov=(bl.oylar&&bl.oylar[oy])||{obyom:0,narx:0,narxIsFormula:true};
+      var oyObyom=ov.obyom||0, oyNarx=ov.narx||0;
+      // НАРХ hali smeta narxi bo'yicha (formula) bo'lsa — input BO'SH ko'rinadi
+      // (placeholder'da smeta narxi ko'rsatiladi), foydalanuvchi tegmasa TEGILMAYDI.
+      // Qo'lda kiritilgan (fakticheskiy) narx bo'lsa — qiymat to'ldirilgan holda ko'rinadi.
+      var narxShown = ov.narxIsFormula ? '' : num2str(oyNarx);
+      var summaPrev = oyObyom*oyNarx;
+      h+='<div class="inp-row" data-oy-row="'+escAttr(oy)+'">'
         +'<span class="inp-lbl oy">📅 '+esc(oy)+'</span>'
-        +'<input class="num" type="number" step="0.001" value="'+num2str(oyVal)+'"'
+        +'<input class="num" type="number" step="0.001" value="'+num2str(oyObyom)+'" title="Ҳажм (объём)"'
         +' data-varaq="'+escAttr(bl.varaq||'')+'" data-row="'+bl.row+'" data-field="oy" data-oy="'+escAttr(oy)+'">'
+        +'<input class="num oy-narx" type="number" step="0.01" value="'+narxShown+'" placeholder="'+fmt0(oyNarx)+'" title="Факт нарх (сўм, киритилмаса — смета нархи)"'
+        +' data-varaq="'+escAttr(bl.varaq||'')+'" data-row="'+bl.row+'" data-field="oy-narx" data-oy="'+escAttr(oy)+'">'
+        +'<span class="oy-summa" style="font-size:10px;color:var(--amber2);min-width:70px;text-align:right" title="Сумма = ҳажм × нарх">'+fmt0(summaPrev)+'</span>'
         +'<div class="inp-actions">'
         +'<button class="btn xs s" data-action="oy-fakt" data-bl-id="'+id+'" data-oy="'+escAttr(oy)+'">= Факт</button>'
         +'</div>'
@@ -1595,14 +2568,26 @@ function _blHtml(bl, id, oylar, locked){
           :rs.kat==='ЧЕЛ'?'background:rgba(59,130,246,.12);color:var(--pri2)'
           :rs.kat==='МАШ'?'background:rgba(139,92,246,.14);color:#c4b5fd'
           :'background:rgba(255,255,255,.05);color:var(--txt4)')+'">'+esc(rs.kat)+'</span>'):'';
+      // ⚡ 2026-07-05 F2 TASVIRI: "100 m dan 85 m olindi" — jami hajm (F), F2 olingan
+      // hajm (S) va F2 summa (AB) har resurs qatorida yaqqol ko'rinadi
+      var rsJami = (rs.f>0 ? rs.f : rs.smetaHajm);
+      var f2Badge = '';
+      if(rs.f2ol>0 || rs.stF2>0){
+        var f2Pct = rsJami>0 ? Math.round(rs.f2ol/rsJami*100) : 0;
+        f2Badge = '<span class="rs-val" title="Ф2 олинган: '+fmt2(rs.f2ol)+' / '+fmt2(rsJami)+' '+escAttr(rs.birlik)+' ('+f2Pct+'%) · Ф2 сумма: '+fmt0(rs.stF2)+' сўм"'
+          +' style="color:#38bdf8;font-size:10px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:5px;padding:0 5px;margin-left:4px;white-space:nowrap">'
+          +'📤 '+fmt2(rs.f2ol)+'/'+fmt2(rsJami)+' ('+f2Pct+'%)'+(rs.stF2>0?' · '+fmt0(rs.stF2):'')+'</span>';
+      }
       h+='<div class="rs-row'+(rs.isQosh?' isq':'')+'">'
-        +'<span class="rs-nom">'+(rs.isQosh?'<span style="color:var(--amber2)">＋</span> ':'')+katBadge+esc(rs.nom)+'</span>'
+        +'<span class="rs-nom">'+(rs.isZamena?'<span style="color:var(--pri2)" title="Замена — сметадаги ресурсни алмаштирган">🔄</span> ':(rs.isQosh?'<span style="color:var(--amber2)">＋</span> ':''))+katBadge+esc(rs.nom)+'</span>'
         +'<span style="color:var(--txt4);min-width:32px;font-size:10px">'+esc(rs.birlik)+'</span>'
         +'<span class="rs-val" title="Ҳажм смета">'+fmt2(rs.smetaHajm)+'</span>'
         +'<span class="rs-val fakt" title="Ҳажм факт">'+fmt2(rs.fakt)+'</span>'
         +'<span class="rs-val" title="Ҳажм қолдиқ" style="color:var(--txt4)">'+fmt2(rs.qoldiq)+'</span>'
         +(rs.smeta>0?'<span class="rs-val" title="Смета суммаси (пул)" style="color:var(--amber2);margin-left:4px;font-size:10px">'+fmt0(rs.smeta)+'</span>':'')
         +(rs.stFakt>0?'<span class="rs-val" title="Факт суммаси (пул)" style="color:var(--grn2);font-size:10px">'+fmt0(rs.stFakt)+'</span>':'')
+        +f2Badge
+        +_nakrChip(rs.kat, rs.smeta)
         +'</div>';
     });
     h+='</div>';
@@ -1637,12 +2622,80 @@ function toggle(id){
 /* ── Pending ────────────────────────────────────── */
 function inputOzgardi(inp){
   var varaq=inp.dataset.varaq, row=parseInt(inp.dataset.row);
-  var val=parseFloat(inp.value); if(isNaN(val)) val=0;
   var field=inp.dataset.field, oy=inp.dataset.oy;
+  // НАРХ input bo'sh qoldirilsa — "смета нархидан фойдаланилсин" дегани (0 ЭМАС,
+  // умуман ЎЗГАРТИРИЛМАЙДИ). Faqat shu holat uchun bo'sh qatorni alohida ushlaymiz.
+  var narxBosh = (field==='oy-narx' && String(inp.value).trim()==='');
+  var val=parseFloat(inp.value); if(isNaN(val)) val=0;
+
+  // --- HARD LIMITS (Qat'iy Chegaralar) ---
+  var blEl = inp.closest('.bl');
+  if (blEl) {
+    var smetaHajm = parseFloat(blEl.dataset.smeta) || 0;
+    var isErr = false;
+    inp.style.outline = '';
+    
+    if (field === 'fakt' && smetaHajm > 0 && val > smetaHajm + 0.0001) {
+      inp.style.outline = '2px solid red';
+      isErr = true;
+      toast('Смета ҳажмидан (' + smetaHajm + ') ортиқча ФАКТ мумкин эмас! Доп-смета очинг.', 'err');
+    } else if (field === 'oy' && oy) {
+      var jamiOy = 0;
+      blEl.querySelectorAll('input[data-field="oy"]').forEach(function(oi){ jamiOy += parseFloat(oi.value)||0; });
+      var curFakt = parseFloat(blEl.querySelector('input[data-field="fakt"]').value);
+      if (isNaN(curFakt)) curFakt = parseFloat(blEl.dataset.fakt) || 0;
+      
+      if (jamiOy > curFakt + 0.0001) {
+        inp.style.outline = '2px solid red';
+        isErr = true;
+        toast('Диққат: Ф2 ҳажми (' + jamiOy + ') ФАКТдан (' + curFakt + ') ортиб кетди!', 'err');
+      }
+    }
+
+    if (isErr) {
+      inp.classList.add('val-err');
+    } else {
+      inp.classList.remove('val-err');
+    }
+    
+    // Xato bo'lsa Saqlash tugmasini bloklash
+    var errs = document.querySelectorAll('.val-err');
+    var saveBtn = document.querySelector('#sbar .btn.pri');
+    if (saveBtn) {
+      saveBtn.disabled = errs.length > 0;
+      if (errs.length > 0) g('sMsg').textContent = '❗ Хато қийматларни тўғирланг';
+      else g('sMsg').textContent = '';
+    }
+    if (isErr) return; // Noto'g'ri qiymat PENDING ga tushmaydi
+  }
+  // ----------------------------------------
+
   var key=varaq+'|'+row;
   if(!PENDING[key]) PENDING[key]={varaq:varaq, row:row, fakt:null, oylar:{}};
   if(field==='fakt') PENDING[key].fakt=val;
-  else if(field==='oy'&&oy){ PENDING[key].oylar[oy]=val; }
+  else if(field==='oy'&&oy){
+    PENDING[key].oylar[oy]=PENDING[key].oylar[oy]||{};
+    PENDING[key].oylar[oy].obyom=val;
+  } else if(field==='oy-narx'&&oy){
+    if(narxBosh){
+      // Bo'shatildi — НАРХ ustuniga tegilmaydi (smeta narxiga qaytmaydi, shunchaki o'zgartirilmaydi)
+      if(PENDING[key].oylar[oy]) delete PENDING[key].oylar[oy].narx;
+    } else {
+      PENDING[key].oylar[oy]=PENDING[key].oylar[oy]||{};
+      PENDING[key].oylar[oy].narx=val;
+    }
+  }
+  // Ҳажм×нарх — жонли СУММА preview
+  if((field==='oy'||field==='oy-narx') && oy){
+    var row2=inp.closest('.inp-row');
+    if(row2){
+      var oInp=row2.querySelector('input[data-field="oy"]'), nInp=row2.querySelector('input[data-field="oy-narx"]');
+      var oV=oInp?(parseFloat(oInp.value)||0):0;
+      var nV=nInp?(parseFloat(nInp.value)||parseFloat(nInp.placeholder)||0):0;
+      var sEl=row2.querySelector('.oy-summa');
+      if(sEl) sEl.textContent=fmt0(oV*nV);
+    }
+  }
   _pendSyn();
 }
 
@@ -1722,11 +2775,71 @@ function lockToggle(){
 /* ── Ierarxiya ─────────────────────────────────── */
 function _ierObToldir(){
   var sel=g('ierOb'), cur=sel.value;
+  if(!sel) return;
   sel.innerHTML='<option value="">— Объект танланг —</option>';
-  OBS.forEach(function(o){
-    var opt=document.createElement('option');
-    opt.value=o.obyekt; opt.textContent=o.obyekt; sel.appendChild(opt);
-  });
+
+  // ⚡⚡⚡ 2026-07-10 TUZATILDI: ko'p smetali (split/jamlangan) obyektlar учун Иерархия
+  //   селектор ФАҚАТ ҳар сублокални АЛОҲИДА кўрсатарди (ҳар бирида ЎЗ RZ реестри,
+  //   такрор иш) — Ҳолат tab'дагидек «📦 ЖАМЛАНГАН» (parent) вариант ЙЎҚ эди.
+  //   Фойдаланувчи «бу сметалар асли БИР объектники — биттада ишлайман» деган
+  //   талаби шу ерда — endi Ҳолат tab bilan BIR XIL _parentlarAniqla ishlatiladi.
+  var parentMap = {};
+  if(typeof OBS !== 'undefined' && OBS.length > 0){
+    _parentlarAniqla(OBS).forEach(function(p){ parentMap[p.nom] = p; });
+  }
+
+  if(typeof REESTR_DATA !== 'undefined' && REESTR_DATA && REESTR_DATA.length > 0) {
+    REESTR_DATA.forEach(function(lot) {
+       var optgroup = document.createElement('optgroup');
+       optgroup.label = lot.nom;
+       if(parentMap[lot.nom]){
+          var p=parentMap[lot.nom];
+          var pOpt=document.createElement('option');
+          pOpt.value=p.nom; pOpt.textContent='📦 '+p.nom+' — ЖАМЛАНГАН ('+p.soni+' бўлим)';
+          pOpt.style.fontWeight='bold'; pOpt.style.color='#10b981';
+          optgroup.appendChild(pOpt);
+       }
+       (lot.children || []).forEach(function(ob) {
+          if (ob.lrv) {
+             var opt = document.createElement('option');
+             opt.value = ob.lrv.obyekt;
+             opt.textContent = ob.nom;
+             optgroup.appendChild(opt);
+          }
+       });
+       if(optgroup.children.length > 0) sel.appendChild(optgroup);
+    });
+  } else {
+    var groups = {};
+    var singles = [];
+    OBS.forEach(function(o){
+      var parts = o.obyekt.split(' - ');
+      if(parts.length > 1) {
+        var pfx = parts[0];
+        if(!groups[pfx]) groups[pfx] = [];
+        groups[pfx].push(o);
+      } else { singles.push(o); }
+    });
+    for(var gName in groups) {
+      var optgroup = document.createElement('optgroup'); optgroup.label = gName;
+      if(parentMap[gName]){
+         var p2=parentMap[gName];
+         var pOpt2=document.createElement('option');
+         pOpt2.value=p2.nom; pOpt2.textContent='📦 '+p2.nom+' — ЖАМЛАНГАН ('+p2.soni+' бўлим)';
+         pOpt2.style.fontWeight='bold'; pOpt2.style.color='#10b981';
+         optgroup.appendChild(pOpt2);
+      }
+      groups[gName].forEach(function(o){
+        var opt=document.createElement('option'); opt.value=o.obyekt; opt.textContent=o.obyekt.replace(gName+' - ','');
+        optgroup.appendChild(opt);
+      });
+      sel.appendChild(optgroup);
+    }
+    singles.forEach(function(o){
+      var opt=document.createElement('option'); opt.value=o.obyekt; opt.textContent=o.obyekt;
+      sel.appendChild(opt);
+    });
+  }
   if(cur) sel.value=cur;
 }
 
@@ -1789,6 +2902,23 @@ function ierLrvGaYoz(){
   });
 }
 
+function m29Yarat(){
+  if(!CUR_OB) { toast('Obyektni tanlang!', 'err'); return; }
+  var m=prompt('Qaysi oy uchun M-29 hisoboti kerak? (Smetadagi ustun nomi, masalan "Июнь 2026"):');
+  if(!m) return;
+  toast('M-29 hisoboti yig\'ilmoqda, kuting...', 'ok');
+  run('apiM29Yarat', [CUR_OB, m.trim()], function(r){
+     if(r && r.url) {
+       toast('M-29 muvaffaqiyatli yaratildi!', 'ok');
+       window.open(r.url, '_blank');
+     } else {
+       toast('M-29: ' + (r.xabar||'Noma\'lum xato'), 'err');
+     }
+  }, function(e){
+     toast('M-29 xato: ' + (e.message||e), 'err');
+  });
+}
+
 /* ── Sozlama ─────────────────────────────────────── */
 function sozYukla(){
   run('apiSozlamaOl',null,function(o){
@@ -1797,6 +2927,19 @@ function sozYukla(){
       _sozRow('SERVER_ID','serverId','Dashboard ID (бўш=авто)',o.serverId,'text')+
       _sozRow('DATA_QATOR','dataQator','Маълумот қатори (0=авто)',o.dataQator,'number')+
       _sozRow('NARX_MANTIQ','narxMantiq','Нарх мантиқ (MAX/SVOD)',o.narxMantiq,'text');
+  });
+  run('apiAiKalitHolat',null,function(h){
+    var el=g('sozAiHolat'); if(!el)return;
+    if(h&&h.bor) el.innerHTML='✅ Kalit ulangan: <b>'+esc(h.mask)+'</b>'+(h.supabase?' | Supabase ✅':' | Supabase ⚠️ sozlanmagan');
+    else el.innerHTML='⚠️ AI kalit yo\'q — yuqorida kiriting yoki chatda <code>setkey:KALIT</code>';
+  });
+}
+function aiKalitSaqla(){
+  var k=gv('soz_aiKey'); if(!k||k.length<15){ toast('Kalit kamida 15 belgi','err'); return; }
+  run('apiAiKalitSaqla',[k],function(r){
+    toast('✅ '+(r.xabar||'Saqlandi'),'ok');
+    g('soz_aiKey').value='';
+    sozYukla();
   });
 }
 function _sozRow(l,id,hint,val,type){
@@ -2006,10 +3149,43 @@ function panelBoot(){
     _keshHolat=d.kesh||{};
     _obToldir(); _ierObToldir(); _skanRender();
     _keshBadgeRender();
+    _monReconnect();   // ⚡ panel qayta ochilsa — davom etayotgan fon ish (F2/навбат) monitoringiga qayta ulanadi
   }, function(e){
     // Zaxira — eski alohida yo'l
     skanQil(); keshBadgeYangilash();
+    _monReconnect();
   });
+}
+
+/* ⚡⚡ 2026-07-09: Panel yopilib qayta ochilganda — davom etayotgan fon ishlarga qayta
+ *   ulanish. Avval _f2FonTimer/_nbPoll faqat tugma bosilганда boshlanardi → panel
+ *   qayta kirilsa monitoring "yo'qolib" qolardi (foydalanuvchi shikoyati). Endi boot'da
+ *   server holatidan (apiF2QollaLog / apiNavbatHolat) tekshirib, jonli bo'lsa qayta ulaydi. */
+function _monReconnect(){
+  // 1) F2 fon yozish
+  try{
+    google.script.run.withSuccessHandler(function(res){
+      if(res && res.hozir){
+        var tugagan = (res.hozir.indexOf('✅ ТУГАДИ')===0 || res.hozir.indexOf('❌')===0);
+        _f2MonYangila(res.hozir, res.log||[]);
+        var w=g('monF2Wrap'); if(w) w.style.display='block';
+        if(!tugagan){
+          if(!_f2FonTimer) _f2FonPollStart(true);   // hali ishlayapti — tab almashtirmasdan qayta ulaymiz
+          toast('⚡ F2 фон иши давом этмоқда — Мониторинг табида','ok',5000);
+        }
+      }
+    }).apiF2QollaLog();
+  }catch(e){}
+  // 2) Навбат (Ишла)
+  try{
+    run('apiNavbatHolat', null, function(h){
+      if(h && h.running){
+        if(!_nbPoll) _navbatPoll();
+        if(!_monInterval){ monYangila(); _monInterval=setInterval(monYangila,3000); }
+        toast('⚡ Навбат ишламоқда: '+h.bajarilgan+'/'+h.jami+' ('+h.foiz+'%)','ok',5000);
+      }
+    });
+  }catch(e){}
 }
 
 function keshYangilashModal(){
@@ -2593,7 +3769,7 @@ function _hujModalYop(){ g('hujModal').style.display='none'; }
 </div>
 
 <!-- VARAQ TANLASH MODAL -->
-<div id="shModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);
+<div id="varaqModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);
   align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-lg);
     padding:20px;width:440px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:var(--sh)">
@@ -2978,12 +4154,23 @@ var _lastDropTime = 0;
 
 function f2ImpOch() {
    g('f2ImpModal').style.display='flex';
-   g('f2ImpChap').innerHTML='<div class="msg i">F2 файлини юқоридан танланг ва юкланг...</div>';
+   g('f2ImpChap').innerHTML='<div class="msg i"><span class="spin">⟳</span> LRV_PLUS ҳозирги ҳолати юкланмоқда...</div>';
    g('f2ImpOng').innerHTML='';
    _f2Data = []; _f2Mappings = []; _f2Dopps = [];
    _expandedNodeIds = {};
    _f2SelectedUids = [];
-   
+   // ⚡⚡ 2026-07-09: F2 импорт очилганда LRV_PLUS'нинг ЖОРИЙ ҳолатини МАЖБУРИЙ (кешсиз)
+   //   ўқиймиз. Аввал панель кешидан (эски TREE_DATA) оlinardi — фойдаланувчи sheet'да
+   //   қўлда ой/ишларни ўчирса ҳам, F2 импорт эски (ўчирилган) маълумотни кўрсатарди.
+   //   Энди панель АНИҚ ҳозирги LRV ҳолатини ўқийди (foydalanuvchi талаби).
+   run('apiHolatOl', [CUR_OB, true], function(fresh){
+      TREE_DATA = fresh;
+      try{ _kpi(TREE_DATA.tree); }catch(e){}
+      _f2ImpUIQur();
+   }, function(){ _f2ImpUIQur(); });   // xato bo'lsa ham davom (eski bilan)
+}
+function _f2ImpUIQur() {
+   g('f2ImpChap').innerHTML='<div class="msg i">F2 файлини юқоридан танланг ва юкланг...</div>';
    // Fayllarni yuklash
    g('f2ImpFaylSel').innerHTML = '<option>Қидирилмоқда...</option>';
    run('apiF2FayllarOl', [CUR_OB], function(r) {
@@ -2993,18 +4180,184 @@ function f2ImpOch() {
       r.fayllar.forEach(function(f){ h+='<option value="'+f.id+'">'+esc(f.name)+'</option>'; });
       g('f2ImpFaylSel').innerHTML = h;
    });
-   
-   // Oylarni yuklash
+   // Oylarni yuklash (JORIY TREE_DATA dan — o'chirilgan oy endi ko'rinmaydi)
    var ho = '';
    if(TREE_DATA && TREE_DATA.oylar) {
       TREE_DATA.oylar.forEach(function(o){ ho+='<option value="'+esc(o)+'">'+esc(o)+'</option>'; });
    }
    ho += '<option value="YANGI">+ Янги ой яратиш...</option>';
    g('f2ImpOySel').innerHTML = ho;
-   
    f2OngChiz();
 }
 function f2ImpYop() { g('f2ImpModal').style.display='none'; }
+
+/* ============================================================
+ * Ф2 ТАЙЁРЛАШ (teskari F2 import) — 2026-07-09
+ * Чапда жорий смета (ФАКТ билан бажарилган), ўнгда БЎШ — фойдаланувчи
+ * белгилаган (☑) ресурслар ФАКТ−аввалги Ф2 (F2MUM=қолдиқ) асосида ЖОНЛИ
+ * ўнг тарафда йиғилади (раздел→иш тури иерархияси билан). Ҳар қатор
+ * ТАҲРИРЛАНАДИ (қисман даъво). Икки амал: (а) ҳужжат яратиш (Google Sheet,
+ * КС-2 услубида) ва/ёки (б) тасдиқлаш — ФАҚАТ шунда LRV Ф2 устунларига ёзилади.
+ * ============================================================ */
+var _f2Tay = {};        // key "varaq||row" -> {checked,hajm,kod,nom,bir,narx,rzNom,blNom,type,f2mum,fakt,f2ol,varaq,row}
+function f2TayOch(){
+   if(!CUR_OB){ toast('Аввал объект танланг','warn'); return; }
+   if(!TREE_DATA || !TREE_DATA.tree){ toast('Смета ҳали юкланмаган','warn'); return; }
+   g('f2TayModal').style.display='flex';
+   _f2Tay={};
+   var flat=_f2TayFlatten();
+   flat.forEach(function(it){
+      var key=it.varaq+'||'+it.row;
+      _f2Tay[key]={checked: it.f2mum>0, hajm: Math.max(0,it.f2mum), kod:it.kod, nom:it.nom, bir:it.bir,
+         narx:it.narx, rzNom:it.rzNom, blNom:it.blNom, type:it.type, f2mum:it.f2mum, fakt:it.fakt, f2ol:it.f2ol,
+         varaq:it.varaq, row:it.row};
+   });
+   var ho=''; (TREE_DATA.oylar||[]).forEach(function(o){ ho+='<option value="'+esc(o)+'">'+esc(o)+'</option>'; });
+   ho+='<option value="YANGI">+ Янги ой яратиш...</option>';
+   g('f2TayOySel').innerHTML=ho;
+   f2TayChapChiz();
+   f2TayOngChiz();
+}
+function f2TayYop(){ g('f2TayModal').style.display='none'; }
+
+/* Daraxtni tekislab, faqat rs/mat/ob barglarini rzNom/blNom konteksti bilan qaytaradi */
+function _f2TayFlatten(){
+   var out=[];
+   function walk(nodes, rzNom, blNom){
+      (nodes||[]).forEach(function(n){
+         if(n.type==='rz'){ walk(n.children||[], n.nom, ''); return; }
+         if(n.type==='bl'){ walk(n.children||[], rzNom, n.nom); return; }
+         if(n.type==='rs'||n.type==='mat'||n.type==='ob'){
+            out.push({varaq:n.varaq, row:n.row, kod:n.kod||'', nom:n.nom||'', bir:n.birlik||'',
+               narx:n.narx||0, fakt:n.fakt||0, f2ol:n.f2ol||0, f2mum:n.f2mum||0, rzNom:rzNom, blNom:blNom, type:n.type});
+            if(n.children && n.children.length) walk(n.children, rzNom, blNom);
+         } else if(n.children && n.children.length){ walk(n.children, rzNom, blNom); }
+      });
+   }
+   walk(TREE_DATA.tree||[], '', '');
+   return out;
+}
+
+/* CHAP: joriy smeta — ҳар rs/mat/ob учун ☑ + таҳрирланадиган ҳажм input.
+ * Қолдиғи (f2mum) БОР қаторлар ажратилган (белги+ранг), йўқлари кулранг/ўчирилган. */
+function f2TayChapChiz(){
+   var box=g('f2TayChap'); if(!box) return;
+   var rzMap={}, rzOrder=[];
+   for(var k in _f2Tay){
+      var it=_f2Tay[k]; var rz=it.rzNom||'БЎЛИМ';
+      if(!rzMap[rz]){ rzMap[rz]={order:[], map:{}}; rzOrder.push(rz); }
+      var bl=it.blNom||'';
+      if(!rzMap[rz].map[bl]){ rzMap[rz].map[bl]=[]; rzMap[rz].order.push(bl); }
+      rzMap[rz].map[bl].push(k);
+   }
+   var h='';
+   rzOrder.forEach(function(rz){
+      h+='<div style="background:var(--bg3); padding:6px 8px; margin-top:10px; font-weight:bold; border-radius:4px">'+esc(rz)+'</div>';
+      rzMap[rz].order.forEach(function(bl){
+         if(bl) h+='<div style="padding:4px 8px;margin:4px 0 2px 8px;font-weight:600;color:var(--pri2);font-size:12px">'+esc(bl)+'</div>';
+         rzMap[rz].map[bl].forEach(function(k){
+            var it=_f2Tay[k]; var hasQ=it.f2mum>0;
+            var kSafe=k.replace(/'/g,"\\'");
+            h+='<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin:2px 0 2px 16px;border:1px dashed '+(hasQ?'var(--grn)':'var(--line)')+';border-radius:5px;background:'+(hasQ?'rgba(16,185,129,.06)':'transparent')+';opacity:'+(hasQ?'1':'.55')+';font-size:12px">'
+              +'<input type="checkbox" '+(it.checked?'checked':'')+' '+(hasQ?'':'disabled')+' onchange="f2TayToggle(\''+kSafe+'\', this.checked)">'
+              +'<span style="flex:1"><b>'+esc(it.kod)+'</b> '+esc(it.nom)+' <span style="color:var(--txt4)">('+esc(it.bir)+')</span></span>'
+              +'<span style="color:var(--txt3);white-space:nowrap" title="Факт / Аввал Ф2-га олинган">Ф:'+fmt2(it.fakt)+' · Ф2:'+fmt2(it.f2ol)+'</span>'
+              +'<span style="color:'+(hasQ?'var(--grn2)':'var(--txt4)')+';white-space:nowrap;font-weight:700">Қолдиқ:'+fmt2(it.f2mum)+'</span>'
+              +'<input type="number" step="0.001" value="'+it.hajm+'" '+(hasQ?'':'disabled')+' style="width:76px;font-size:11px;padding:2px 4px" onchange="f2TayHajmChange(\''+kSafe+'\', this.value)">'
+              +'</div>';
+         });
+      });
+   });
+   box.innerHTML = h || '<div class="msg i">Ресурс топилмади</div>';
+}
+
+function f2TayToggle(key, checked){ if(_f2Tay[key]){ _f2Tay[key].checked=checked; f2TayOngChiz(); } }
+function f2TayHajmChange(key, val){ if(_f2Tay[key]){ _f2Tay[key].hajm=Number(val)||0; f2TayOngChiz(); } }
+function f2TayHammaBelgila(flag){
+   for(var k in _f2Tay){ if(flag){ if(_f2Tay[k].f2mum>0) _f2Tay[k].checked=true; } else _f2Tay[k].checked=false; }
+   f2TayChapChiz(); f2TayOngChiz();
+}
+
+/* O'NG: belgilangan qatorlardan jonli yig'iladigan YANGI Ф2 hujjati preview */
+function f2TayOngChiz(){
+   var box=g('f2TayOng'); if(!box) return;
+   var rzMap={}, rzOrder=[], jami=0, soni=0;
+   for(var k in _f2Tay){
+      var it=_f2Tay[k]; if(!it.checked || !(it.hajm>0)) continue;
+      var rz=it.rzNom||'БЎЛИМ';
+      if(!rzMap[rz]){ rzMap[rz]={order:[], map:{}, summa:0}; rzOrder.push(rz); }
+      var bl=it.blNom||'';
+      if(!rzMap[rz].map[bl]){ rzMap[rz].map[bl]=[]; rzMap[rz].order.push(bl); }
+      var summa=it.hajm*it.narx;
+      rzMap[rz].map[bl].push({it:it, summa:summa});
+      rzMap[rz].summa+=summa; jami+=summa; soni++;
+   }
+   var h='';
+   if(!rzOrder.length){ h='<div class="msg i">Чапдан ресурс белгиланг — шу ерда жонли кўринади</div>'; }
+   rzOrder.forEach(function(rz){
+      h+='<div style="background:var(--bg3);padding:6px 8px;margin-top:10px;border-radius:4px;display:flex;justify-content:space-between"><b>'+esc(rz)+'</b><span style="color:var(--amber2)">'+fmt0(rzMap[rz].summa)+'</span></div>';
+      rzMap[rz].order.forEach(function(bl){
+         if(bl) h+='<div style="padding:4px 8px;margin:4px 0 2px 8px;font-weight:600;color:var(--pri2);font-size:12px">'+esc(bl)+'</div>';
+         rzMap[rz].map[bl].forEach(function(x){
+            h+='<div style="display:flex;justify-content:space-between;padding:4px 8px;margin:2px 0 2px 16px;border:1px solid var(--grn);border-radius:5px;background:rgba(16,185,129,.06);font-size:12px">'
+              +'<span><b>'+esc(x.it.kod)+'</b> '+esc(x.it.nom)+' — '+fmt2(x.it.hajm)+' '+esc(x.it.bir)+'</span>'
+              +'<span style="color:var(--grn2);font-weight:700">'+fmt0(x.summa)+'</span></div>';
+         });
+      });
+   });
+   box.innerHTML=h;
+   g('f2TayJami').textContent = soni>0 ? ('Жами: '+soni+' та · '+fmt0(jami)+' сўм') : '';
+}
+
+function _f2TayOyNomOl(){
+   var oyNom=g('f2TayOySel').value;
+   if(oyNom==='YANGI'){
+      oyNom=prompt('Янги ой номини киритинг (масалан: Июль 2026)');
+      if(!oyNom) return null;
+   }
+   return String(oyNom).trim();
+}
+function _f2TaySelectedItems(){
+   var out=[];
+   for(var k in _f2Tay){ var it=_f2Tay[k]; if(it.checked && it.hajm>0) out.push(it); }
+   return out;
+}
+function f2TayHujjatYarat(){
+   var items=_f2TaySelectedItems();
+   if(!items.length){ toast('Ҳеч нарса белгиланмади','warn'); return; }
+   var oyNom=_f2TayOyNomOl(); if(!oyNom) return;
+   toast('📄 Ҳужжат яратилмоқда...','ok',3000);
+   run('apiF2TayyorHujjatYarat', [CUR_OB, oyNom, items], function(r){
+      if(r && r.ok){
+         toast('✅ Ҳужжат яратилди: '+r.soni+' та позиция, '+fmt0(r.jami)+' сўм','ok',6000);
+         window.open(r.url, '_blank');
+      } else toast('❌ '+((r&&r.xabar)||'Хато'), 'err');
+   }, function(e){ toast('❌ '+(e.message||e), 'err'); });
+}
+function f2TayTasdiqla(){
+   var items=_f2TaySelectedItems();
+   if(!items.length){ toast('Ҳеч нарса белгиланмади','warn'); return; }
+   var oyNom=_f2TayOyNomOl(); if(!oyNom) return;
+   if(!confirm(oyNom+' ойига жами '+items.length+' та позицияни LRV\'га ёзишни тасдиқлайсизми? Бу маълумотлар тўғридан-тўғри сметага ёзилади.')) return;
+   run('apiOyQosh', [CUR_OB, oyNom], function(){
+      var edits=items.map(function(it){
+         return {varaq:it.varaq, row:it.row, oylar:_oyObjClient(oyNom, it.hajm, it.narx, it.hajm*it.narx)};
+      });
+      run('apiHolatSaqla', [CUR_OB, edits], function(r){
+         toast('✅ '+oyNom+' ойига ёзилди: '+(r&&r.jami||items.length)+' та қиймат','ok',5000);
+         f2TayYop();
+         holatYukla(true);
+      }, function(e){ toast('❌ Сақлашда хато: '+(e.message||e), 'err'); });
+   }, function(e){ toast('❌ Ой устуни яратилмади: '+(e.message||e), 'err'); });
+}
+/* apiHolatSaqla kutgan {oyNom:{obyom,narx,summa}} obyektini quradi (server _oyObj bilan bir xil) */
+function _oyObjClient(oyNom, hajm, narx, summa){
+   var o={}, v={obyom:Number(hajm)||0};
+   if(Number(narx)>0) v.narx=Number(narx);
+   if(Number(summa)>0) v.summa=Number(summa);
+   o[oyNom]=v;
+   return o;
+}
 
 var _curF2Fid = '';
 
@@ -3083,9 +4436,39 @@ function f2UstunOch() {
          _buildColOptions('f2ColKod', r.maxCol, r.cols.kod);
          _buildColOptions('f2ColNom', r.maxCol, r.cols.nom);
          _buildColOptions('f2ColBir', r.maxCol, r.cols.bir);
-         _buildColOptions('f2ColHajm', r.maxCol, r.cols.hajm);
+         _buildColOptions('f2ColNorma', r.maxCol, r.cols.norma);
+         _buildColOptions('f2ColObyom', r.maxCol, r.cols.obyom);
          _buildColOptions('f2ColNarx', r.maxCol, r.cols.narx);
-         g('f2ImpChap').innerHTML='<div class="msg i">👆 Юқорида устунларни текшириб, <b>[Дарахтни Қуриш]</b> тугмасини босинг.</div>';
+         _buildColOptions('f2ColSum', r.maxCol, r.cols.sum);
+         // ⚡ XOM KO'RINISH — foydalanuvchi aynan qaysi ustunda nima turishini VIZUAL ko'radi
+         var pv = '';
+         if(r.preview && r.preview.length){
+            pv = '<div style="margin-top:10px;overflow:auto;max-height:300px;border:1px solid var(--line);border-radius:6px">'
+               +'<table style="border-collapse:collapse;font-size:10px;white-space:nowrap">'
+               +'<tr style="position:sticky;top:0;background:var(--bg3)"><th style="padding:2px 5px;color:var(--txt4)">қатор</th>'
+               +['A','B','C','D','E','F','G','H','I','J'].map(function(L,ix){
+                     var lbl=L; if(ix===1)lbl='B·шифр'; if(ix===2)lbl='C·ном'; if(ix===3)lbl='D·бирлик';
+                     if(ix===4)lbl='E·норма'; if(ix===5)lbl='F·обём'; if(ix===6)lbl='G·нарх'; if(ix===7)lbl='H·сумма';
+                     return '<th style="padding:2px 5px;border-left:1px solid var(--line);color:var(--pri2)">'+lbl+'</th>';
+                  }).join('')
+               +'</tr>';
+            r.preview.forEach(function(row){
+               pv += '<tr><td style="padding:2px 5px;color:var(--txt4)">'+row.r+'</td>';
+               for(var ci=0; ci<10; ci++){
+                  var val = row.cells[ci]!==undefined ? row.cells[ci] : '';
+                  var hl = (ci>=1 && ci<=7) ? 'color:var(--txt2)' : 'color:var(--txt4)';
+                  pv += '<td style="padding:2px 5px;border-left:1px solid var(--line);max-width:160px;overflow:hidden;text-overflow:ellipsis;'+hl+'" title="'+escAttr(val)+'">'+esc(val.length>22?val.slice(0,22)+'…':val)+'</td>';
+               }
+               pv += '</tr>';
+            });
+            pv += '</table></div>';
+         }
+         g('f2ImpChap').innerHTML =
+            '<div class="msg '+(r.hasMarker?'ok':'i')+'">'
+            +(r.hasMarker?'✅ <b>Marker устуни бор</b> — тип 100% аниқ. ':'ℹ️ ')
+            +'Устунлар: <b>E=НОРМА</b> (ресурс расходи), <b>F=ОБЪЁМ</b>. Ресурс (rs) қаторда F тўла, материал/иш турида F бўш (унда E=обём). '
+            +'Қуйида файлнинг <b>хом кўриниши</b> — устунлар тўғри белгиланганини текшириб <b>[Дарахтни Қуриш]</b> босинг.</div>'
+            + pv;
       } else {
          _f2Data = r.tree || [];
          f2ChapChiz();
@@ -3109,8 +4492,10 @@ function f2DaraxtQur() {
       kod: g('f2ColKod').value,
       nom: g('f2ColNom').value,
       bir: g('f2ColBir').value,
-      hajm: g('f2ColHajm').value,
-      narx: g('f2ColNarx').value
+      norma: g('f2ColNorma').value,
+      obyom: g('f2ColObyom').value,
+      narx: g('f2ColNarx').value,
+      sum: g('f2ColSum').value
    };
    g('f2ImpChap').innerHTML='<div class="msg i"><span class="spin">⟳</span> Дарахт қурилмоқда...</div>';
    run('apiF2FaylOqi', [_curF2Fid, varaq, colConfig], function(r) {
@@ -3118,7 +4503,158 @@ function f2DaraxtQur() {
       _f2Data = r.tree || [];
       f2ChapChiz();
       g('btnF2Saqla').style.display = 'inline-block';
+      // f2AvtoMoslash(true); // O'chirildi (foydalanuvchi talabi)
    });
+}
+
+/* ============ 🤖 АВТО МОСЛАШТИРИШ ============
+ * F2 файлидаги ва смета дарахтидаги қаторларни АВТОМАТИК боғлайди — фақат
+ * АНИҚ мос келганда (бир хил КОД, ёки бир хил номи+бирлиги — CONSTANTA
+ * қоидаси, нархлашдаги каби фuzzy/тахминий мослик ЙЎҚ). Ноаниқ (бир нечта
+ * номзод ёки ҳеч қайси мос келмаса) — қўлда (drag-drop / +Доп) қолдирилади.
+ * Шунда фойдаланувчи фақат МУРАККАБ ҳолатларни қўлда ҳал қилса бас. */
+var _LAT2CYR_JS={A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',N:'Н',O:'О',P:'Р',T:'Т',V:'В',X:'Х',Y:'У'};
+function _f2NormNom(s){
+   s=String(s==null?'':s).toUpperCase();
+   var out=''; for(var i=0;i<s.length;i++){ var ch=s.charAt(i); out+=(_LAT2CYR_JS[ch]||ch); }
+   out=out.replace(/Ё/g,'Е');
+   return out.replace(/[^0-9А-Я]/g,'');
+}
+function _f2NormBir(s){
+   var raw=String(s==null?'':s).toUpperCase()
+      .replace(/³/g,'3').replace(/²/g,'2').replace(/¹/g,'1')
+      .replace(/Ё/g,'Е').replace(/[\s.,\-\/]+/g,'');
+   var out=''; for(var i=0;i<raw.length;i++){ var ch=raw.charAt(i); out+=(_LAT2CYR_JS[ch]||ch); }
+   return out;
+}
+function _f2NormKod(s){ return String(s==null?'':s).trim().toUpperCase().replace(/\s+/g,''); }
+
+/* ⚡ 2026-07-05 KATEGORIYA: birlik YETAKCHI (qoida #9) — чел-час→ЧЕЛ, маш-час→МАШ
+ * MAJBURIY (qulflanadi, foydalanuvchi adasholmaydi); qolganlari МАТ/ОБ/М-К/КАБ
+ * ro'yxatidan tanlanadi (standart МАТ). */
+function _f2KatAutoJS(bir){
+   var b = String(bir||'').toUpperCase();
+   if(b.indexOf('ЧЕЛ')>=0 || b.indexOf('CHEL')>=0) return {kat:'ЧЕЛ', lock:true};
+   if(b.indexOf('МАШ')>=0 || b.indexOf('MASH')>=0) return {kat:'МАШ', lock:true};
+   return {kat:'МАТ', lock:false};
+}
+function f2KatSet(uid, val){
+   var d = _f2Dopps.find(function(x){ return x.uid===uid; });
+   if(d) d.kat = val;
+}
+/* Dop qatori uchun kategoriya belgisi: qulflangan badge yoki tanlash select */
+function _f2KatSelect(d){
+   var a = _f2KatAutoJS(d.bir);
+   var cur = d.kat || a.kat;
+   if(a.lock) return '<span style="font-size:10px;background:rgba(99,102,241,.15);border:1px solid var(--pri);border-radius:4px;padding:1px 6px;margin-left:6px" title="Бирлик ('+esc(d.bir)+') бўйича автомат — ўзгартириб бўлмайди">'+cur+' 🔒</span>';
+   var ops = ['МАТ','ОБ','М/К','КАБ'], h = '<select style="font-size:10px;padding:1px 3px;margin-left:6px;background:var(--bg2);color:var(--txt);border:1px solid var(--line)" title="Категорияни танланг (МАТ/ОБ/М-К/КАБ)" onclick="event.stopPropagation()" onchange="f2KatSet(\''+d.uid+'\', this.value)">';
+   ops.forEach(function(o){ h += '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+o+'</option>'; });
+   return h + '</select>';
+}
+
+/* Смета дарахтини КОД ва НОМ+БИРЛИК бўйича индекслайди (кеш — ҳар safar
+ * қайта қурилмайди, faqat TREE_DATA/дарахт ўзгарганда). f2AvtoMoslash ва
+ * "🔍 номзодлар" (тавсия) иккаласи ҳам shu indexdan foydalanadi. */
+var _f2ByKod={}, _f2ByNomBir={};
+function _f2BuildIdx(){
+   _f2ByKod={}; _f2ByNomBir={};
+   if(!TREE_DATA || !TREE_DATA.tree) return;
+   function idx(nodes){
+      nodes.forEach(function(n){
+         if(n.type && n.type!=='rz'){
+            var k=_f2NormKod(n.kod);
+            if(k){ (_f2ByKod[k]=_f2ByKod[k]||[]).push(n); }
+            var nb=_f2NormNom(n.nom)+'||'+_f2NormBir(n.birlik);
+            (_f2ByNomBir[nb]=_f2ByNomBir[nb]||[]).push(n);
+         }
+         if(n.children) idx(n.children);
+      });
+   }
+   idx(TREE_DATA.tree);
+}
+function _f2SmetaTaken(varaq,row){ return _f2Mappings.some(function(m){return m.varaq===varaq && m.row===row;}); }
+/* Berilgan F2 tuguni uchun smetadagi ANIQ (kod yoki nom+birlik bo'yicha)
+ * nomzodlarni qaytaradi — bir nechta bo'lishi mumkin (foydalanuvchi tanlaydi). */
+function _f2Candidates(fNode){
+   var kK=_f2NormKod(fNode.kod);
+   var cands=(_f2ByKod[kK]||[]).filter(function(c){ return c.type===fNode.type || (fNode.type!=='bl' && c.type!=='bl'); });
+   if(!cands.length){
+      var nb=_f2NormNom(fNode.nom)+'||'+_f2NormBir(fNode.bir);
+      cands=(_f2ByNomBir[nb]||[]).filter(function(c){ return c.type===fNode.type || (fNode.type!=='bl' && c.type!=='bl'); });
+   }
+   return cands.filter(function(c){ return !_f2SmetaTaken(c.varaq,c.row); });
+}
+
+function f2AvtoMoslash(indamay){
+   if(!TREE_DATA || !TREE_DATA.tree || !TREE_DATA.tree.length){ if(!indamay) toast('Смета дарахти юкланмаган','warn'); return; }
+   if(!_f2Data.length){ if(!indamay) toast('Аввал F2 файлидан дарахт қуринг','warn'); return; }
+
+   _f2BuildIdx();
+   var byKod=_f2ByKod, byNomBir=_f2ByNomBir;
+
+   function alreadyMapped(uid){ return _f2Mappings.some(function(m){return m.uid===uid;}) || _f2Dopps.some(function(m){return m.uid===uid;}); }
+   function smetaTaken(varaq,row){ return _f2SmetaTaken(varaq,row); }
+   function findUnique(cands){
+      if(!cands||!cands.length) return null;
+      var free=cands.filter(function(c){ return !smetaTaken(c.varaq,c.row); });
+      return free.length===1 ? free[0] : null;   // faqat BITTA nomzod bo'lsagina — aniq
+   }
+
+   var moslashti=0, otkazib=0;
+
+   function processBl(fBl){
+      if(alreadyMapped(fBl.uid)) return;
+      var kK=_f2NormKod(fBl.kod), sMatch=findUnique(byKod[kK]);
+      if(!sMatch){ 
+         var nb=_f2NormNom(fBl.nom)+'||'+_f2NormBir(fBl.bir); 
+         sMatch=findUnique((byNomBir[nb]||[]).filter(function(c){
+            var isExactMatch = false;
+            if (c && _f2NormKod(fBl.kod) === _f2NormKod(c.kod) && _f2NormNom(fBl.nom) === _f2NormNom(c.nom) && _f2NormBir(fBl.bir) === _f2NormBir(c.birlik)) {
+               isExactMatch = true;
+            }
+            return isExactMatch && c.type==='bl';
+         })); 
+      }
+      if(!sMatch || sMatch.type!=='bl'){ otkazib++; return; }
+      _f2Mappings.push({uid:fBl.uid, varaq:sMatch.varaq, row:sMatch.row, kod:fBl.kod, hajm:fBl.hajm, narx:fBl.narx||0, summa:fBl.summa||0});
+      moslashti++;
+      // Shu BL ichidagi resurslarni ham (kod bo'yicha, faqat shu bl bolalari ichida) moslashtiramiz
+      if(fBl.children && fBl.children.length && sMatch.children){
+         fBl.children.forEach(function(fRs){
+            if(fRs.type!=='rs' && fRs.type!=='mat' && fRs.type!=='ob') return;
+            if(alreadyMapped(fRs.uid)) return;
+            var fk=_f2NormKod(fRs.kod);
+            var sRs=sMatch.children.find(function(c){ return _f2NormKod(c.kod)===fk && fk; });
+            if(!sRs){
+               var nb2=_f2NormNom(fRs.nom)+'||'+_f2NormBir(fRs.bir);
+               var candRs=sMatch.children.filter(function(c){ return (_f2NormNom(c.nom)+'||'+_f2NormBir(c.birlik))===nb2; });
+               if(candRs.length===1) sRs=candRs[0];
+            }
+            if(sRs){ _f2Mappings.push({uid:fRs.uid, varaq:sRs.varaq, row:sRs.row, kod:fRs.kod, hajm:fRs.hajm, narx:fRs.narx||0, summa:fRs.summa||0}); moslashti++; }
+            else otkazib++;
+         });
+      }
+   }
+   function processStandalone(fNode){
+      if(alreadyMapped(fNode.uid)) return;
+      var nb=_f2NormNom(fNode.nom)+'||'+_f2NormBir(fNode.bir);
+      var sMatch=findUnique((byNomBir[nb]||[]).filter(function(c){return c.type===fNode.type;}));
+      if(sMatch){ _f2Mappings.push({uid:fNode.uid, varaq:sMatch.varaq, row:sMatch.row, kod:fNode.kod, hajm:fNode.hajm, narx:fNode.narx||0, summa:fNode.summa||0}); moslashti++; }
+      else otkazib++;
+   }
+   function walk(nodes){
+      nodes.forEach(function(n){
+         if(n.type==='bl') processBl(n);
+         else if(n.type==='mat' || n.type==='ob' || n.type==='rs') processStandalone(n);
+         if(n.children && n.type==='rz') walk(n.children);   // rz ichidagi to'g'ridan-to'g'ri bolalar
+      });
+   }
+   walk(_f2Data);
+
+   f2ChapChiz(); f2OngChiz();
+   if(moslashti || !indamay){
+      toast('🤖 Авто мослаштириш: '+moslashti+' та аниқ мос топилди'+(otkazib?(', '+otkazib+' та қўлда керак'):''), 'ok', 4000);
+   }
 }
 
 function f2Toggle(id, ev) {
@@ -3155,7 +4691,21 @@ function f2ChapChiz() {
       var cId = 'f2cc_' + node.uid;
       
       if(node.type === 'rz') {
-         var isExpanded = _expandedNodeIds[cId] === true;
+         
+      var tCat = (node.type === 'bl' || node.type === 'rz') ? '' : node.type;
+      var br = String(node.bir||'').toUpperCase();
+      if(br.indexOf('МАШ')>-1) tCat = 'mash';
+      else if(br.indexOf('ЧЕЛ')>-1 || br.indexOf('КИШ')>-1) tCat = 'chel';
+      var selHtml = '';
+      if(tCat) {
+         selHtml = '<select class="f2-cat-sel" data-uid="'+node.uid+'" style="margin-left:10px; padding:2px; font-size:11px; border:1px solid var(--line2); border-radius:4px; background:var(--bg2); color:var(--txt)" '+(tCat==='mash'||tCat==='chel'?'disabled':'')+'>';
+         var opts = {mat:'МАТ', ob:'ОБОР', rs:'ИШ/РС', mash:'МАШ', chel:'ЧЕЛ'};
+         for(var k in opts) {
+            selHtml += '<option value="'+k+'" '+(tCat===k?'selected':'')+'>'+opts[k]+'</option>';
+         }
+         selHtml += '</select>';
+      }
+      var isExpanded = _expandedNodeIds[cId] === true;
          var disp = isExpanded ? 'block' : 'none';
          var arrIcon = isExpanded ? '▼' : '▶';
          
@@ -3189,11 +4739,23 @@ function f2ChapChiz() {
       h += '<div style="flex:1">';
       h += '<div style="margin-bottom:4px">';
       if(hasChildren) h += '<span id="'+cId+'_arr" style="display:inline-block; width:16px; font-size:10px; color:var(--txt3)">'+arrIcon+'</span>';
-      h += '<b style="color:'+tColor+'">'+esc(node.kod)+'</b> '+esc(node.nom)+'</div>';
-      h += '<div style="color:var(--txt3)">Бирлик: <b>'+esc(node.bir)+'</b> | Ҳажм: <b style="color:var(--grn);font-size:14px">'+node.hajm+'</b></div>';
+      h += '<b style="color:'+tColor+'">'+esc(node.kod)+'</b> '+esc(node.nom)+selHtml+'</div>';
+      h += '<div style="color:var(--txt3)">Бирлик: <b>'+esc(node.bir)+'</b> | Ҳажм: <b style="color:var(--grn);font-size:14px">'+node.hajm+'</b>'
+        +(node.narx>0?' | Нарх: <b style="color:var(--amber2)">'+fmt0(node.narx)+'</b> | Сумма: <b style="color:var(--amber2)">'+fmt0(node.hajm*node.narx)+'</b>':'')+'</div>';
       h += '</div>';
       
       if(!isMapped) {
+         var cands = TREE_DATA ? _f2Candidates(node) : [];
+         if(cands.length){
+            h += '<div style="position:relative" onclick="event.stopPropagation()">';
+            h += '<button class="btn s" onclick="f2NomzodOch(this,\''+node.uid+'\')" style="background:#6366f1; color:#fff; border:none" title="Смета ичида шу иш/ресурс аниқ мос келадиган жойлар">🔍 '+cands.length+' та жой</button>';
+            h += '<div class="f2-nomzod-list" style="display:none; position:absolute; z-index:50; top:100%; left:0; background:var(--bg2); border:1px solid var(--pri); border-radius:6px; padding:6px; min-width:260px; max-height:220px; overflow:auto; box-shadow:0 4px 12px rgba(0,0,0,.4)">';
+            cands.slice(0,20).forEach(function(c){
+               h += '<div style="padding:5px 6px; border-bottom:1px solid var(--line); cursor:pointer; font-size:11px" onmouseover="this.style.background=\'rgba(99,102,241,.15)\'" onmouseout="this.style.background=\'\'" onclick="f2TanlaNomzod(\''+node.uid+'\',\''+escAttr(c.varaq)+'\','+c.row+',\''+c.type+'\')">'
+                 +'<b>'+esc(c.kod||'')+'</b> '+esc(c.nom)+' <span style="color:var(--txt4)">('+esc(c.varaq)+'!'+c.row+')</span></div>';
+            });
+            h += '</div></div>';
+         }
          h += '<button class="btn s" onclick="event.stopPropagation(); f2DopQil(\''+node.uid+'\')" style="background:#eab308; color:#000; border:none" title="Қўшимча иш сифатида қўшиш">+ Доп</button>';
       } else {
          h += '<span style="color:var(--grn); font-weight:bold; font-size:16px">✓</span>';
@@ -3253,15 +4815,25 @@ function f2OngChiz() {
       
       h += '<div style="margin-bottom:4px">';
       if(hasChildren) h += '<span id="'+cId+'_arr" style="display:inline-block; width:16px; font-size:10px; color:var(--txt3)">'+arrIcon+'</span>';
-      h += '<b style="color:'+tColor+'">'+esc(node.kod)+'</b> '+esc(node.nom)+'</div>';
-      h += '<div style="color:var(--txt3)">Смета: <b style="color:var(--txt)">'+(node.smetaHajm||0)+'</b> | Қолдиқ: <b style="color:var(--red2)">'+qoldiq+'</b></div>';
+      h += '<b style="color:'+tColor+'">'+esc(node.kod)+'</b> '+esc(node.nom)
+         + ' <button class="btn xs" style="font-size:9px; padding:1px 5px" onclick="event.stopPropagation(); f2InsertHere(\''+esc(node.varaq)+'\', '+node.row+')" title="Ф2 тарафида белгиланган (☑) элемент(лар)ни АЙНАН шу қатордан кейин қўйиш">📍 бу ерга</button></div>';
+      // ⚡ 2026-07-05: ОЛДИН ОЛИНГАН жами Ф2 (ҳажм + сумма) — импортдан аввал кўриниб
+      // туради (фойдаланувчи: "смета тарафида олдин олинган жами Ф2 кўриниб турсин")
+      var f2Old = '';
+      if((node.f2ol||0) > 0 || (node.stF2||0) > 0){
+         var jamiH = (node.f>0 ? node.f : (node.smetaHajm||0));
+         var f2P = jamiH>0 ? Math.round((node.f2ol||0)/jamiH*100) : 0;
+         f2Old = ' | <span style="color:#38bdf8" title="Аллақачон Ф2 га олинган (аввалги ойлар жами)">📤 Ф2: <b>'+fmt2(node.f2ol||0)+'</b> ('+f2P+'%)'+((node.stF2||0)>0?' · <b>'+fmt0(node.stF2)+'</b> сўм':'')+'</span>';
+      }
+      h += '<div style="color:var(--txt3)">Смета: <b style="color:var(--txt)">'+(node.smetaHajm||0)+'</b> | Қолдиқ: <b style="color:var(--red2)">'+qoldiq+'</b>'+f2Old+'</div>';
       
       var maps = _f2Mappings.filter(function(m){return m.varaq===node.varaq && m.row===node.row;});
       if(maps.length > 0) {
          h += '<div style="margin-top:8px; padding:6px; background:rgba(16,185,129,0.1); border:1px solid var(--grn); border-radius:4px" onclick="event.stopPropagation()">';
          maps.forEach(function(m) {
+            var narxTxt = (m.narx>0) ? (' · нарх: <b>'+fmt0(m.narx)+'</b> сўм (= '+fmt0(m.hajm*m.narx)+' сумма)') : ' · нарх: смета бўйича';
             h += '<div style="display:flex; justify-content:space-between; align-items:center; color:var(--grn); margin-bottom:2px">';
-            h += '<span>+ <b>'+m.hajm+'</b> (F2: '+esc(m.kod)+')</span>';
+            h += '<span>+ <b>'+m.hajm+'</b> (F2: '+esc(m.kod)+')'+narxTxt+'</span>';
             h += '<button class="btn xs red" onclick="f2MapOchir(\''+m.uid+'\')">✕</button>';
             h += '</div>';
          });
@@ -3274,21 +4846,48 @@ function f2OngChiz() {
          node.children.forEach(function(c){ drawSmetaNode(c, level+1); });
          h += '</div>';
       }
+      
+      var inlineDops = _f2Dopps.filter(function(d){ return d.varaq===node.varaq && d.droppedOnRow === node.row; });
+      if(inlineDops.length > 0) {
+         h += '<div style="margin-top:8px; padding:6px; background:rgba(234,179,8,0.1); border:1px dashed #eab308; border-radius:4px" onclick="event.stopPropagation()">';
+         inlineDops.forEach(function(d) {
+            var amal = 'ҚЎШИМЧА';
+            if(d.action === 'zamena_add') amal = '🔄 ЗАМЕНА';
+            else if(d.action === 'add_rs') amal = '➕ РС ҚЎШИШ';
+            else if(d.action === 'add_bl') amal = '➕ ИШ ҚЎШИШ';
+            var sumTxt = (d.summa>0) ? ' · <b title="Актдаги ТАЙЁР сумма — статик ёзилади">'+fmt0(d.summa)+' сўм</b>' : '';
+            h += '<div style="display:flex; justify-content:space-between; align-items:center; color:#ca8a04; margin-bottom:2px">';
+            h += '<span><b>'+amal+'</b>: '+esc(d.kod)+' - '+esc(d.nom)+' (+'+d.hajm+')'+sumTxt+_f2KatSelect(d)+'</span>';
+            h += '<button class="btn xs red" onclick="f2MapOchir(\''+d.uid+'\')">✕</button>';
+            h += '</div>';
+         });
+         h += '</div>';
+      }
+
+      // ⚡⚡ 2026-07-09: DROP-ZONE — шу қатор ОРАСИГА (кейинига) аниқ қўйиш. F2 дан тортиб
+      //   шу чизиққа ташласангиз — айнан шу жойга янги иш/ресурс қўшилади.
+      h += '<div style="height:5px; margin:1px 0 1px '+(level>1?'20px':'0')+'; border-radius:3px; transition:all .08s" '
+        + 'ondragover="event.preventDefault(); this.style.height=\'20px\'; this.style.background=\'var(--pri)\'; this.style.boxShadow=\'0 0 6px var(--pri)\'" '
+        + 'ondragleave="this.style.height=\'5px\'; this.style.background=\'transparent\'; this.style.boxShadow=\'none\'" '
+        + 'ondrop="this.style.height=\'5px\'; this.style.background=\'transparent\'; this.style.boxShadow=\'none\'; f2Drop(event, \''+esc(node.varaq)+'\', '+node.row+', \'gap\')" '
+        + 'title="⬇ Шу қатор орасига (кейинига) қўйиш"></div>';
    }
 
    TREE_DATA.tree.forEach(function(rz) { drawSmetaNode(rz, 0); });
    
-   h += '<div style="background:rgba(234,179,8,0.2); padding:8px; margin-top:20px; font-weight:bold; color:#eab308; border-radius:4px">Қўшимча Ишлар (Доп)</div>';
-   if(_f2Dopps.length === 0) h += '<div style="font-size:12px; color:var(--txt3); padding:10px">Йўқ</div>';
-   _f2Dopps.forEach(function(d) {
-       h += '<div style="padding:8px; margin:6px 0; border:1px solid #eab308; border-radius:6px; font-size:12px; background:rgba(234,179,8,0.05); display:flex; justify-content:space-between; align-items:center">';
-       h += '<div>';
-       h += '<div style="margin-bottom:4px"><b style="color:#eab308">'+esc(d.kod)+'</b> '+esc(d.nom)+'</div>';
-       h += '<div style="color:var(--grn)">Ҳажм: <b>+'+d.hajm+' '+esc(d.bir)+'</b></div>';
-       h += '</div>';
-       h += '<button class="btn s red" onclick="f2MapOchir(\''+d.uid+'\')">✕</button>';
-       h += '</div>';
-   });
+   var bottomDops = _f2Dopps.filter(function(d){ return !d.droppedOnRow; });
+   if(bottomDops.length > 0) {
+      h += '<div style="background:rgba(234,179,8,0.2); padding:8px; margin-top:20px; font-weight:bold; color:#eab308; border-radius:4px">Бошқа Қўшимча Ишлар (Доп)</div>';
+      bottomDops.forEach(function(d) {
+          h += '<div style="padding:8px; margin:6px 0; border:1px solid #eab308; border-radius:6px; font-size:12px; background:rgba(234,179,8,0.05); display:flex; justify-content:space-between; align-items:center">';
+          h += '<div>';
+          h += '<div style="margin-bottom:4px"><b style="color:#eab308">'+esc(d.kod)+'</b> '+esc(d.nom)+_f2KatSelect(d)+'</div>';
+          h += '<div style="color:var(--grn)">Ҳажм: <b>+'+d.hajm+' '+esc(d.bir)+'</b>'+(d.summa>0?' · Сумма (акт): <b>'+fmt0(d.summa)+'</b>':'')+'</div>';
+          h += '</div>';
+          h += '<button class="btn s red" onclick="f2MapOchir(\''+d.uid+'\')">✕</button>';
+          h += '</div>';
+      });
+   }
    
    g('f2ImpOng').innerHTML = h;
 }
@@ -3316,14 +4915,53 @@ function _findF2Node(uid, nodes) {
    return null;
 }
 
+/* Berilgan varaq va blRow ga ega bl ning ota-razdelining eng oxirgi qator raqami.
+ * TREE_DATA.tree dan izlanadi. Topilmasa 0 qaytaradi (add_bl eng oxirga qo'yadi). */
+function _findParentRzLastRow(varaq, blRow) {
+   if (!TREE_DATA || !TREE_DATA.tree) return 0;
+   var result = 0;
+   function scanRz(nodes) {
+      for (var i = 0; i < nodes.length; i++) {
+         var n = nodes[i];
+         if (n.type === 'rz' && n.children) {
+            // Bu rz ichida berilgan bl bormi?
+            var found = n.children.some(function(c){ return c.varaq === varaq && c.row === blRow; });
+            if (found) {
+               // Rz ning barcha avlodlari ichidan max row
+               var maxRow = 0;
+               function getMax(node) { if(node.row > maxRow) maxRow = node.row; if(node.children) node.children.forEach(getMax); }
+               n.children.forEach(getMax);
+               result = maxRow;
+               return true; // topildi
+            }
+         }
+         if (n.children && scanRz(n.children)) return true;
+      }
+      return false;
+   }
+   scanRz(TREE_DATA.tree);
+   return result;
+}
+
 function applySingleDrop(d, varaq, targetRow, targetType) {
    var uid = d.uid;
    var isMapped = _f2Mappings.find(function(m){return m.uid===uid;}) || _f2Dopps.find(function(m){return m.uid===uid;});
    if(isMapped) return false;
-   
+
+   // ⚡⚡ 2026-07-09: GAP — қаторлар ОРАСИГА аниқ жойга қўйиш (drop-zone/тугма). targetRow =
+   //   шу қатордан КЕЙИН қўйилади (apiBlQosh afterRow). bl→иш тури; rs/mat/ob→ўзини ичига
+   //   олган иш тури (мустақил жойлашади, қиймат+категория сақланади).
+   if(targetType === 'gap') {
+      var kids = (d.type==='bl') ? d.children : [d];
+      _f2Dopps.push({uid: uid, varaq: varaq, action: 'add_bl', targetRow: targetRow,
+         kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, norma: d.norma||0, narx: d.narx||0,
+         summa: d.summa||0, kat: _f2KatAutoJS(d.bir).kat, children: kids, droppedOnRow: targetRow});
+      return true;
+   }
+
    if(targetType === 'rz') {
       if(d.type === 'bl') {
-         _f2Dopps.push({uid: uid, varaq: varaq, action: 'add_bl', targetRow: targetRow, kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, narx: d.narx||0, children: d.children});
+         _f2Dopps.push({uid: uid, varaq: varaq, action: 'add_bl', targetRow: targetRow, kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, norma: d.norma||0, narx: d.narx||0, summa: d.summa||0, kat: _f2KatAutoJS(d.bir).kat, children: d.children});
          return true;
       } else {
          toast("Раздел ичига фақат Иш тури (bl) ташланади", "err");
@@ -3332,8 +4970,6 @@ function applySingleDrop(d, varaq, targetRow, targetType) {
    } 
    else if(targetType === 'bl') {
       if(d.type === 'bl') {
-         _f2Mappings.push({uid: uid, varaq: varaq, row: targetRow, kod: d.kod, hajm: d.hajm});
-         
          var sBl = null;
          function findSBl(nodes) {
             for(var i=0; i<nodes.length; i++) {
@@ -3343,37 +4979,132 @@ function applySingleDrop(d, varaq, targetRow, targetType) {
             }
          }
          findSBl(TREE_DATA.tree);
+
          
+         var isExactMatch = false;
+         if (sBl && _f2NormKod(d.kod) === _f2NormKod(sBl.kod) && _f2NormNom(d.nom) === _f2NormNom(sBl.nom) && _f2NormBir(d.bir) === _f2NormBir(sBl.birlik)) {
+            isExactMatch = true;
+         }
+
+         if (isExactMatch) {
+            // Aynan bir xil ish turi — oddiy moslash, savol so'rash shart emas
+            _f2Mappings.push({uid: uid, varaq: varaq, row: targetRow, kod: d.kod, hajm: d.hajm, narx: d.narx||0, summa: d.summa||0});
+
          if(sBl && d.children && d.children.length > 0) {
             d.children.forEach(function(fRs) {
                if(fRs.type !== 'rs' && fRs.type !== 'mat' && fRs.type !== 'ob') return;
-               
-               var sRs = sBl.children ? sBl.children.find(function(c) { 
+               var sRs = sBl.children ? sBl.children.find(function(c) {
                   var cKod = String(c.kod).replace(/\s+/g,'').toLowerCase();
                   var fKod = String(fRs.kod).replace(/\s+/g,'').toLowerCase();
                   if(cKod && fKod && cKod===fKod) return true;
                   return false;
                }) : null;
-               
                if(sRs) {
-                  _f2Mappings.push({uid: fRs.uid, varaq: varaq, row: sRs.row, kod: fRs.kod, hajm: fRs.hajm});
+                  _f2Mappings.push({uid: fRs.uid, varaq: varaq, row: sRs.row, kod: fRs.kod, hajm: fRs.hajm, narx: fRs.narx||0, summa: fRs.summa||0});
                } else {
-                  _f2Dopps.push({uid: fRs.uid, varaq: varaq, action: 'add_rs', targetRow: targetRow, kod: fRs.kod, nom: fRs.nom, bir: fRs.bir, hajm: fRs.hajm, narx: fRs.narx||0});
+                  _f2Dopps.push({uid: fRs.uid, varaq: varaq, action: 'add_rs', targetRow: targetRow, kod: fRs.kod, nom: fRs.nom, bir: fRs.bir, hajm: fRs.hajm, norma: fRs.norma||0, narx: fRs.narx||0, summa: fRs.summa||0, kat: _f2KatAutoJS(fRs.bir).kat, droppedOnRow: targetRow});
                }
             });
          }
          return true;
+         } else {
+            // Turli ish turi ustiga tashlanganida — ZAMENA MODAL SO'RASH
+            // applySingleDrop sinxron, shuning uchun pending callback pattern
+            var _d=d, _sBl=sBl, _varaq=varaq, _targetRow=targetRow;
+            var insertRow = _targetRow;
+            if (_sBl) {
+               var findMR = function(node) { if(node.row>insertRow) insertRow=node.row; if(node.children) node.children.forEach(findMR); };
+               findMR(_sBl);
+            }
+            _zamenaPending = {
+               onZamen: function() {
+                  var childs = (_d.children && _d.children.length>0) ? _d.children : (_sBl && _sBl.children ? _sBl.children : []);
+                  _f2Dopps.push({uid:_d.uid, varaq:_varaq, action:'zamena_add', targetRow:insertRow, kod:_d.kod, nom:_d.nom, bir:_d.bir, hajm:_d.hajm, norma:_d.norma||0, narx:_d.narx||0, summa:_d.summa||0, kat:_f2KatAutoJS(_d.bir).kat, children:childs, droppedOnRow:_targetRow});
+                  f2OngChiz(); f2ChapChiz(); },
+               onQoshimcha: function() {
+                  // Yangi ish turi — rz oxiriga (smetadan tashqari qo'shimcha)
+                  // Ota-razdel (rz) ning eng oxirgi qatorini topamiz
+                  var rzLastRow = _findParentRzLastRow(_varaq, _targetRow);
+                  var childs = (_d.children && _d.children.length>0) ? _d.children : [];
+                  _f2Dopps.push({uid:_d.uid, varaq:_varaq, action:'add_bl', targetRow:rzLastRow, kod:_d.kod, nom:_d.nom, bir:_d.bir, hajm:_d.hajm, norma:_d.norma||0, narx:_d.narx||0, summa:_d.summa||0, kat:_f2KatAutoJS(_d.bir).kat, children:childs, droppedOnRow:_targetRow});
+                  f2OngChiz(); f2ChapChiz(); } }; _zamenaSoraModal(_d.nom, _sBl ? _sBl.nom : '');
+            return true; // modal yopilgandan keyin callback ishga tushadi
+         }
       } else if(d.type === 'rs' || d.type === 'mat' || d.type === 'ob') {
-         _f2Dopps.push({uid: uid, varaq: varaq, action: 'add_rs', targetRow: targetRow, kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, narx: d.narx||0});
+         _f2Dopps.push({uid: uid, varaq: varaq, action: 'add_rs', targetRow: targetRow, kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, norma: d.norma||0, narx: d.narx||0, summa: d.summa||0, kat: _f2KatAutoJS(d.bir).kat, droppedOnRow: targetRow});
          return true;
       }
    }
    else {
       if(d.type === 'bl') { toast("Иш турини ресурс устига ташлаб бўлмайди", "err"); return false; }
-      _f2Mappings.push({uid: uid, varaq: varaq, row: targetRow, kod: d.kod, hajm: d.hajm});
+      // ⚡⚡⚡ 2026-07-05: RESURS/MATERIAL ustiga tashlashda ham EXACT tekshiruv —
+      // avval HAR QANDAY (nomi farqli — ПК vs ПБ plita, boshqa diametr armatura)
+      // resurs ham jimgina MAPPING bo'lib eski qator ustiga obyom yozilardi.
+      // Endi: nom+birlik(+kod) AYNAN mos → mapping; FARQ bo'lsa → ZAMENA modal
+      // (zamena → shu qatorning OSTIGA yangi rs+ ; qo'shimcha → xuddi shunday).
+      var sRs = null;
+      (function findR(nodes){
+         for(var i=0;i<nodes.length;i++){
+            if(nodes[i].varaq===varaq && nodes[i].row===targetRow){ sRs=nodes[i]; return; }
+            if(nodes[i].children){ findR(nodes[i].children); if(sRs) return; }
+         }
+      })(TREE_DATA.tree);
+      var rsMos = sRs && _f2NormNom(d.nom)===_f2NormNom(sRs.nom) && _f2NormBir(d.bir)===_f2NormBir(sRs.birlik);
+      if(rsMos){
+         _f2Mappings.push({uid: uid, varaq: varaq, row: targetRow, kod: d.kod, hajm: d.hajm, narx: d.narx||0, summa: d.summa||0});
+         return true;
+      }
+      // Farqli resurs — zamena/qo'shimcha so'raymiz. Ikkalasida ham yangi rs+
+      // AYNAN shu resurs qatorining OSTIGA (blRow=uning bl otasi orqali apiRsQosh
+      // o'zi bl oxiriga qo'yadi; targetRow sifatida shu rs qatorini beramiz —
+      // server undan yuqoridagi bl'ni topadi... apiRsQosh blRow talab qiladi,
+      // shuning uchun rs otasining row'ini topamiz)
+      var otaBl = null;
+      (function findBl(nodes){
+         for(var i=0;i<nodes.length;i++){
+            var nd=nodes[i];
+            if(nd.type==='bl' && nd.varaq===varaq && nd.children &&
+               nd.children.some(function(c){return c.row===targetRow;})){ otaBl=nd; return; }
+            if(nd.children){ findBl(nd.children); if(otaBl) return; }
+         }
+      })(TREE_DATA.tree);
+      var blRowT = otaBl ? otaBl.row : targetRow;
+      var _d2=d, _v2=varaq;
+      _zamenaPending = {
+         onZamen: function(){
+            // 🔄 ЗАМЕНА — eski resurs o'rniga, alohida markirovka (rs~)
+            _f2Dopps.push({uid:_d2.uid, varaq:_v2, action:'add_rs', targetRow:blRowT, kod:_d2.kod, nom:_d2.nom, bir:_d2.bir, hajm:_d2.hajm, norma:_d2.norma||0, narx:_d2.narx||0, summa:_d2.summa||0, kat:_f2KatAutoJS(_d2.bir).kat, zamena:true, droppedOnRow:targetRow});
+            f2OngChiz(); f2ChapChiz();
+         },
+         onQoshimcha: function(){
+            // ➕ ҚЎШИМЧА — smetada yo'q yangi resurs (rs+)
+            _f2Dopps.push({uid:_d2.uid, varaq:_v2, action:'add_rs', targetRow:blRowT, kod:_d2.kod, nom:_d2.nom, bir:_d2.bir, hajm:_d2.hajm, norma:_d2.norma||0, narx:_d2.narx||0, summa:_d2.summa||0, kat:_f2KatAutoJS(_d2.bir).kat, zamena:false, droppedOnRow:targetRow});
+            f2OngChiz(); f2ChapChiz();
+         }
+      };
+      _zamenaSoraModal(d.nom, sRs ? sRs.nom : '');
       return true;
    }
    return false;
+}
+
+/* ⚡⚡ 2026-07-09: TUGMA билан "орасига қўйиш" — Ф2 тарафида белгиланган (☑) элемент(лар)ни
+ *   айнан шу қатордан КЕЙИН жойлаштиради (drag-drop муқобили, аниқроқ/мобил қулай). */
+function f2InsertHere(varaq, afterRow){
+   var uids = (_f2SelectedUids && _f2SelectedUids.length) ? _f2SelectedUids.slice() : [];
+   if(!uids.length){ toast('Аввал Ф2 тарафида элемент(лар)ни ☑ белгиланг, кейин 📍 босинг','warn',4500); return; }
+   // тартиб (юқоридан пастга) — Ф2 дарахти бўйича
+   var sorted=[];
+   (function collect(nodes){ nodes.forEach(function(n){ if(uids.indexOf(n.uid)>=0) sorted.push(n.uid); if(n.children) collect(n.children); }); })(_f2Data);
+   var n=0;
+   sorted.forEach(function(u){
+      var d=_findF2Node(u, _f2Data);
+      if(d && applySingleDrop(d, varaq, afterRow, 'gap')) n++;
+   });
+   _f2SelectedUids=[];
+   try{ f2ChapChiz(); }catch(e){}
+   f2OngChiz();
+   if(n) toast('📍 '+n+' та элемент шу жойга қўшилди','ok',3000);
 }
 
 function f2Drop(ev, varaq, targetRow, targetType) {
@@ -3467,24 +5198,80 @@ function f2Drop(ev, varaq, targetRow, targetType) {
    f2ChapChiz(); f2OngChiz();
 }
 
+/* Смета разделлари рўйхати (F2 да смэтада ЙЎҚ ишни қайси разделга қўшишни танлаш учун) */
+function _smetaRazdellar(){
+   var out=[];
+   ((TREE_DATA && TREE_DATA.tree) || []).forEach(function(n){
+      if(n.type==='rz'){
+         var lastRow = n.row || 0;
+         (n.children||[]).forEach(function(c){
+            if(c.row>lastRow) lastRow=c.row;
+            (c.children||[]).forEach(function(r2){ if(r2.row>lastRow) lastRow=r2.row; });
+         });
+         out.push({nom:n.nom||'(номсиз)', varaq:n.varaq||'', lastRow:lastRow, row:n.row||0});
+      }
+   });
+   return out;
+}
+
+/* ⚡ 2026-07-04: F2 да смэтада ЙЎҚ ишни "+ Доп" қилса — ФОЙДАЛАНУВЧИ РАЗДЕЛНИ ТАНЛАЙДИ
+ * (аввал доим targetRow=0 бўлиб охирига қўшиларди, разделга кирмасди). Модал очилади. */
 function f2DopQil(uid) {
    var d = _findF2Node(uid, _f2Data);
-   if(d) {
-      var firstVaraq = (TREE_DATA && TREE_DATA.tree && TREE_DATA.tree[0] && TREE_DATA.tree[0].children && TREE_DATA.tree[0].children[0]) ? TREE_DATA.tree[0].children[0].varaq : '';
-      _f2Dopps.push({
-         uid: uid, 
-         varaq: firstVaraq, 
-         action: 'add_bl', 
-         targetRow: 0, 
-         kod: d.kod, 
-         nom: d.nom, 
-         bir: d.bir, 
-         hajm: d.hajm, 
-         narx: d.narx||0, 
-         children: d.children
-      });
-      f2ChapChiz(); f2OngChiz();
-   }
+   if(!d) return;
+   var rzList = _smetaRazdellar();
+   if(!rzList.length){ toast('Смета разделлари топилмади — аввал [Ишла] қилинг','warn'); return; }
+
+   var old=g('f2RazdelModal'); if(old) old.remove();
+   var div=document.createElement('div');
+   div.id='f2RazdelModal';
+   div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center';
+   var lst='';
+   rzList.forEach(function(rz,i){
+      lst += '<div class="f2rz-opt" data-i="'+i+'" style="padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12px"'
+         +' onmouseover="this.style.background=\'rgba(99,102,241,.15)\'" onmouseout="this.style.background=\'\'">'
+         +'📂 '+esc(rz.nom)+' <span style="color:var(--txt4);font-size:10px">('+esc(rz.varaq)+')</span></div>';
+   });
+   div.innerHTML='<div style="background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:16px;max-width:520px;width:94%;max-height:80vh;overflow:auto">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+      +'<b style="color:var(--pri2)">📂 Қайси разделга қўшилсин?</b>'
+      +'<span style="cursor:pointer;color:var(--txt4)" onclick="g(\'f2RazdelModal\').remove()">✕</span></div>'
+      +'<div style="font-size:11px;color:var(--txt3);margin-bottom:8px">Иш: <b>'+esc(d.nom)+'</b> (смэтада йўқ — янги қўшимча иш сифатида танланган раздел ичига қўшилади)</div>'
+      +'<div>'+lst+'</div></div>';
+   div.onclick=function(e){ if(e.target===div) div.remove(); };
+   document.body.appendChild(div);
+   div.querySelectorAll('.f2rz-opt').forEach(function(el){
+      el.onclick=function(){
+         var rz=rzList[parseInt(el.dataset.i)];
+         _f2Dopps.push({
+            uid: uid, varaq: rz.varaq, action: 'add_bl',
+            targetRow: rz.lastRow,   // razdel oxiriga — apiBlQosh afterRow shu qatordan keyin insert qiladi
+            kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, narx: d.narx||0,
+            summa: d.summa||0, kat: _f2KatAutoJS(d.bir).kat, children: d.children
+         });
+         g('f2RazdelModal').remove();
+         toast('✅ "'+esc(rz.nom)+'" разделига қўшилди','ok',2500);
+         f2ChapChiz(); f2OngChiz();
+      };
+   });
+}
+
+/* 🔍 Номзодлар рўйхатини очиш/ёпиш (F2 қатори учун смета ичидаги мос жойлар) */
+function f2NomzodOch(btn, uid){
+   document.querySelectorAll('.f2-nomzod-list').forEach(function(el){
+      if(el!==btn.nextElementSibling) el.style.display='none';
+   });
+   var list=btn.nextElementSibling;
+   if(list) list.style.display = (list.style.display==='none') ? 'block' : 'none';
+}
+/* Тавсия рўйхатидан бирини танлаш — тўғридан-тўғри боғлайди (drag-drop билан бир хил натижа) */
+function f2TanlaNomzod(fUid, varaq, row, type){
+   var d = _findF2Node(fUid, _f2Data);
+   if(!d) return;
+   var isMapped = _f2Mappings.find(function(m){return m.uid===fUid;}) || _f2Dopps.find(function(m){return m.uid===fUid;});
+   if(isMapped){ toast('Бу қатор аллақачон боғланган','warn'); return; }
+   var ok = applySingleDrop(d, varaq, row, type);
+   if(ok){ toast('✓ Боғланди: '+d.nom, 'ok', 2000); f2ChapChiz(); f2OngChiz(); }
 }
 
 function f2MapOchir(uid) {
@@ -3503,25 +5290,244 @@ function f2ImpSaqla() {
    
    if(!confirm(oyNom + ' ойига жами ' + (_f2Mappings.length + _f2Dopps.length) + ' та позицияни сақлашни тасдиқлайсизми? Бу маълумотлар тўғридан-тўғри сметага ёзилади.')) return;
    
-   g('btnF2Saqla').textContent = 'Сақланмоқда...';
+   // ⚡ 2026-07-05 ASINXRON: navbatga qo'yiladi, modal DARHOL yopiladi (brauzer
+   // bloklanmaydi, 6-daqiqa timeout foydalanuvchiga ta'sir qilmaydi). Jarayon
+   // fonda; holati toast'da har 4 soniyada ko'rsatiladi, tugagach daraxt yangilanadi.
+   g('btnF2Saqla').textContent = 'Навбатга қўйилмоқда...';
    g('btnF2Saqla').disabled = true;
-   
-   run('apiF2Qolla', [CUR_OB, oyNom, _f2Mappings, _f2Dopps], function(r) {
+
+   run('apiF2QollaNavbatga', [CUR_OB, oyNom, _f2Mappings, _f2Dopps], function(r) {
       g('btnF2Saqla').innerHTML = '💾 Сметага қўллаш (Сақлаш)';
       g('btnF2Saqla').disabled = false;
-      if(r.ok) {
-         toast('✅ '+r.xabar, 'ok');
+      if(r && r.ok) {
+         toast(r.xabar, 'ok', 5000);
          f2ImpYop();
-         holatYukla(true);
+         _f2FonPollStart();
       } else {
-         toast('❌ '+r.xabar, 'err');
+         toast('❌ '+(r && r.xabar || 'Хато'), 'err');
       }
    });
 }
+
+/* Fon F2 yozish holatini kuzatish — jonli monitoring oynasi (лог билан) */
+var _f2FonTimer = null;
+function _f2FonPollStart(noSwitch){
+   if(_f2FonTimer) clearInterval(_f2FonTimer);
+   if(noSwitch){ var w=g('monF2Wrap'); if(w) w.style.display='block'; }  // reconnect: tab almashtirmasdan
+   else _f2MonOch();
+   var urin = 0;
+   _f2FonTimer = setInterval(function(){
+      urin++;
+      if(urin > 200){ clearInterval(_f2FonTimer); _f2FonTimer = null; return; }  // maks 10 daqiqa
+      google.script.run.withSuccessHandler(function(res){
+         if(!res) return;
+         var hozir = res.hozir || '', log = res.log || [];
+         _f2MonYangila(hozir, log);
+         if(hozir.indexOf('✅ ТУГАДИ') === 0 || hozir.indexOf('❌') === 0){
+            clearInterval(_f2FonTimer); _f2FonTimer = null;
+            toast(hozir, hozir.indexOf('✅') === 0 ? 'ok' : 'err', 10000);
+            if(hozir.indexOf('✅') === 0) holatYukla(true);
+         }
+      }).apiF2QollaLog();
+   }, 3000);
+}
+/* ⚡ 2026-07-05: F2 monitoring endi MONITORING TABIDA (chekka suzuvchi oyna emas —
+ * foydalanuvchi "tushunarsiz" dedi). F2 saqlash boshlanganda avtomat mon tabga o'tadi. */
+function _f2MonOch(){
+   try { tabOch('mon'); } catch(e){}
+   var w=g('monF2Wrap'); if(w) w.style.display='block';
+   var h=g('monF2Hozir'); if(h) h.textContent='⏳ Бошланмоқда...';
+   var l=g('monF2Log'); if(l) l.innerHTML='';
+}
+function _f2MonYangila(hozir, log){
+   var hb=g('monF2Hozir'); if(hb) hb.textContent = hozir || '...';
+   var lb=g('monF2Log');
+   if(lb && log && log.length){
+      lb.innerHTML = log.map(function(l){
+         var c = l.indexOf('❌')>=0?'var(--red2)':((l.indexOf('✓')>=0||l.indexOf('✅')>=0)?'var(--grn2)':'var(--txt3)');
+         return '<div style="color:'+c+'">'+esc(l)+'</div>';
+      }).join('');
+      lb.scrollTop = lb.scrollHeight;
+   }
+}
+
+/* ── Supabase Boshqaruv ──────────────────────────── */
+function supaTest() {
+  var url = g('supaUrl').value.trim();
+  var key = g('supaKey').value.trim();
+  if(!url || !key) { alert('URL va Key kiriting'); return; }
+  g('supaSozMsg').textContent = 'Tekshirilmoqda...';
+  run('apiSupabaseSozlamaSaqla', [url, key], function(r) {
+    if(r.ok) {
+      run('supabaseTest', null, function(res) {
+        g('supaSozMsg').textContent = res;
+      }, function(e) {
+        g('supaSozMsg').textContent = 'Xato: ' + (e.message||e);
+      });
+    }
+  });
+}
+
+function supaSaqla() {
+  var url = g('supaUrl').value.trim();
+  var key = g('supaKey').value.trim();
+  g('supaSozMsg').textContent = 'Saqlanmoqda...';
+  run('apiSupabaseSozlamaSaqla', [url, key], function(r) {
+    if(r.ok) g('supaSozMsg').textContent = 'Saqlandi!';
+  });
+}
+
+function supaSinxBoshla() {
+  if(!confirm("Barcha ma'lumotlarni noldan qayta Supabasega yozishni boshlaymizmi? Bu uzoq vaqt oladi.")) return;
+  run('apiSupabaseSinxReset', null, function(r) {
+    g('supaProgText').textContent = '0% yakunlandi. Davom etmoqda...';
+    g('supaProgBar').style.width = '0%';
+    g('supaLogBox').textContent = '';
+    _supaToxtat = false;
+    _supaSinxQadam();
+  });
+}
+
+var _supaToxtat = false;
+function supaSinxToxtat() {
+  _supaToxtat = true;
+  g('supaProgText').textContent = "To'xtatilmoqda...";
+}
+
+function _supaSinxQadam() {
+  if(_supaToxtat) {
+    _supaToxtat = false;
+    g('supaProgText').textContent = "To'xtatildi.";
+    return;
+  }
+  g('supaProgText').textContent = "Sinxronizatsiya davom etmoqda... Iltimos kutib turing.";
+  run('apiSupabaseSinxKursor', null, function(r) {
+    if(r.ok) {
+      g('supaProgText').textContent = r.xabar;
+      g('supaProgBar').style.width = r.foiz + '%';
+      if(r.log && r.log.length > 0) {
+        g('supaLogBox').textContent = r.log.join('\n') + '\n\n' + g('supaLogBox').textContent;
+      }
+      if(r.continue) {
+        setTimeout(_supaSinxQadam, 1000);
+      } else {
+        g('supaProgText').textContent = "✅ " + r.xabar;
+      }
+    } else {
+      g('supaProgText').textContent = "❌ Xato: " + (r.xabar||'Noma\'lum xato');
+    }
+  }, function(e) {
+    g('supaProgText').textContent = "❌ Tarmoq xatosi: " + (e.message||e) + ". Qayta urinilmoqda...";
+    setTimeout(_supaSinxQadam, 5000); // retry
+  });
+}
+
+/* ── Monitoring Boshqaruv ─────────────────────────── */
+var _monInterval = null;
+function monYangila() {
+  run('apiNavbatHolat', null, function(h) {
+    g('monHolat').textContent = h.running ? 'ISHDA ⚡' : 'KUTISHDA';
+    g('monKpiRun').className = h.running ? 'kpi ok' : 'kpi';
+    
+    g('monQolgan').textContent = h.qolgan || '0';
+    g('monKpiQol').className = (h.qolgan > 0) ? 'kpi warn' : 'kpi';
+    
+    g('monFoiz').textContent = h.foiz + '%';
+    g('monFoizBar').style.width = h.foiz + '%';
+    
+    if(h.log && h.log.length > 0) {
+      var logHtml = h.log.map(function(l) {
+        // Navbat log maydonlari: {ob, ok, xato, xabar, sek} — avval msg/error o'qilardi (yo'q) → doim "Xato"
+        var nm = l.ob ? ('<b>['+l.ob+']</b> ') : '';
+        var sek = (l.sek!=null && l.sek>0) ? (' <span style="opacity:.6">('+l.sek+'s)</span>') : '';
+        return l.ok
+          ? ('<div style="color:var(--grn)">✓ ' + nm + (l.xabar||l.msg||'OK') + sek + '</div>')
+          : ('<div style="color:var(--red)">✗ ' + nm + (l.xato||l.error||l.xabar||'Номаълум хато') + sek + '</div>'); }).join('');
+      g('monLogBox').innerHTML = logHtml;
+    } else {
+      g('monLogBox').innerHTML = '<div style="color:var(--txt4)">(Log bo\'sh)</div>';
+    }
+  });
+}
+
+function monToxtat() {
+  if(!confirm("Navbatni favqulodda to'xtatish chala ishlarga sabab bo'lishi mumkin. Tasdiqlaysizmi?")) return;
+  run('apiNavbatToxtat', null, function(r) {
+    if(r.ok) {
+      toast('✅ Navbat to\'xtatildi', 'ok');
+      monYangila();
+    }
+  });
+}
+
+// Intercept tabOch to handle initial loads for new tabs
+var _origTabOch = tabOch;
+tabOch = function(t) {
+  _origTabOch(t);
+  if(t === 'supa') {
+    run('apiSupabaseSozlamaOl', null, function(r) {
+      g('supaUrl').value = r.url || '';
+      g('supaKey').value = r.key || '';
+    });
+  }
+  if(t === 'mon') {
+    monYangila();
+    if(!_monInterval) _monInterval = setInterval(monYangila, 3000);
+  } else {
+    if(_monInterval) { clearInterval(_monInterval); _monInterval = null; }
+  }
+};
 </script>
 
 
 <!-- F2 IMPORT MODAL -->
+<!-- ====== ZAMENA SAVOL MODAL ====== -->
+<div id="zamenaModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center;">
+  <div style="background:var(--bg2,#1e293b); border:1px solid var(--line2,#334155); border-radius:14px; padding:28px 30px; max-width:480px; width:94%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+    <div style="font-size:18px; font-weight:700; color:var(--txt,#f1f5f9); margin-bottom:6px;">🔄 Amalni tanlang</div>
+    <div style="font-size:12px; color:var(--txt3,#94a3b8); margin-bottom:18px; line-height:1.6;">
+      Siz smetadagi "<b id="zmSmetaNom" style="color:var(--pri2,#a5b4fc)"></b>" ish turi ustiga<br>
+      F2 dan "<b id="zmF2Nom" style="color:var(--amber2,#fcd34d)"></b>" ni tashladingiz.
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button onclick="zamenaTanlov('zamen')" style="background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:9px; padding:13px 16px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; text-align:left; line-height:1.5;">
+        🔄 <b>Zamena — shu ish turi o'rnida</b><br>
+        <span style="font-size:11px; font-weight:400; opacity:.85;">"<span id="zmSmetaNom2"></span>" tagiga qo'shiladi — bor ish turi bajarilmay, o'rniga bu ish qilindi</span>
+      </button>
+      <button onclick="zamenaTanlov('qoshimcha')" style="background:rgba(16,185,129,0.15); border:1px solid var(--grn,#10b981); border-radius:9px; padding:13px 16px; color:var(--grn2,#34d399); font-size:13px; font-weight:600; cursor:pointer; text-align:left; line-height:1.5;">
+        ➕ <b>Qo'shimcha — razdel oxiriga yangi ish turi</b><br>
+        <span style="font-size:11px; font-weight:400; opacity:.85;">Smetada bunday ish yo'q edi — yangi, alohida ish sifatida razdelga qo'shiladi (rs/mat/ob bilan birga)</span>
+      </button>
+      <button onclick="zamenaTanlov('bekor')" style="background:transparent; border:1px solid var(--line,#1e293b); border-radius:9px; padding:9px 16px; color:var(--txt4,#64748b); font-size:12px; cursor:pointer;">
+        ✕ Bekor qilish
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _zamenaPending = null;
+
+function _zamenaSoraModal(f2Nom, smetaNom) {
+  g('zmF2Nom').textContent = f2Nom || '?';
+  g('zmSmetaNom').textContent = smetaNom || '?';
+  // ikkinchi yerda ham nom ko'rinadigan span
+  var s2 = g('zmSmetaNom2'); if(s2) s2.textContent = smetaNom || '?';
+  var m = g('zamenaModal');
+  m.style.display = 'flex';
+}
+
+function zamenaTanlov(tanlov) {
+  g('zamenaModal').style.display = 'none';
+  if (!_zamenaPending) return;
+  var cb = _zamenaPending;
+  _zamenaPending = null;
+  if (tanlov === 'zamen') { cb.onZamen(); }
+  else if (tanlov === 'qoshimcha') { cb.onQoshimcha(); }
+  // 'bekor' — hech nima qilmaymiz
+}
+</script>
+
 <div id="f2ImpModal" class="modal-bg" style="display:none">
   <div class="m-box" style="max-width:98%; width:98%; height:95vh; display:flex; flex-direction:column; background:var(--bg); border-radius:12px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.5); overflow:hidden;">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:15px; margin-bottom:15px">
@@ -3555,12 +5561,15 @@ function f2ImpSaqla() {
         <div style="font-size:11px; font-weight:bold">Шифр/Код:<br><select id="f2ColKod" style="width:90px; padding:4px"></select></div>
         <div style="font-size:11px; font-weight:bold">Номи:<br><select id="f2ColNom" style="width:90px; padding:4px"></select></div>
         <div style="font-size:11px; font-weight:bold">Бирлик:<br><select id="f2ColBir" style="width:90px; padding:4px"></select></div>
-        <div style="font-size:11px; font-weight:bold">Ҳажми:<br><select id="f2ColHajm" style="width:90px; padding:4px"></select></div>
-        <div style="font-size:11px; font-weight:bold">Нархи:<br><select id="f2ColNarx" style="width:90px; padding:4px"></select></div>
+        <div style="font-size:11px; font-weight:bold" title="E устун — ресурс(rs) учун НОРМА (расход), материал/иш турида ОБЪЁМ">Норма (E):<br><select id="f2ColNorma" style="width:90px; padding:4px"></select></div>
+        <div style="font-size:11px; font-weight:bold" title="F устун — ресурс(rs) учун ОБЪЁМ (тўла), материал/иш турида БЎШ бўлади">Обём (F):<br><select id="f2ColObyom" style="width:90px; padding:4px"></select></div>
+        <div style="font-size:11px; font-weight:bold">Нархи (G):<br><select id="f2ColNarx" style="width:90px; padding:4px"></select></div>
+        <div style="font-size:11px; font-weight:bold" title="Актдаги ТАЙЁР сумма устуни — формула эмас, айнан шу қиймат статик ёзилади (яхлитлаш фарқисиз)">Сумма (аниқ):<br><select id="f2ColSum" style="width:90px; padding:4px"></select></div>
         <button class="btn s grn" onclick="f2DaraxtQur()" style="margin-left:10px; font-weight:bold">✅ Дарахтни Қуриш</button>
       </div>
+      <button class="btn s" onclick="f2AvtoMoslash(false)" title="Фақат АНИҚ мос келганларни (бир хил код ёки бир хил номи+бирлиги) автоматик боғлайди — ноаниқларга тегмайди" style="background:#7c3aed;border-color:#7c3aed;color:#fff;font-weight:bold">🤖 Авто мослаштириш</button>
     </div>
-    
+
     <div style="flex:1; display:flex; gap:20px; min-height:0">
       <!-- LEFT: F2 Tree -->
       <div style="flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:8px; overflow:auto; padding:15px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.2)" id="f2ImpChap">
@@ -3574,5 +5583,292 @@ function f2ImpSaqla() {
     </div>
   </div>
 </div>
+<!-- ══════════════ TITAN AI WIDGET v2.0 ══════════════ -->
+<style>
+/* ── FLOAT BUTTON ── */
+#ai-btn{position:fixed;bottom:24px;right:24px;width:58px;height:58px;
+  background:linear-gradient(135deg,#1d4ed8,#38bdf8);
+  border-radius:50%;box-shadow:0 0 24px rgba(56,189,248,.4),0 8px 32px rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;cursor:pointer;z-index:9999;
+  border:2px solid rgba(255,255,255,.15);
+  transition:.3s cubic-bezier(.4,0,.2,1)}
+#ai-btn:hover{transform:scale(1.12) translateY(-4px);box-shadow:0 0 36px rgba(56,189,248,.6),0 12px 40px rgba(0,0,0,.6)}
+#ai-btn:active{transform:scale(.94)}
+.ai-badge{position:absolute;top:-3px;right:-3px;background:#ef4444;color:#fff;
+  font-size:9px;font-weight:900;padding:2px 5px;border-radius:9px;
+  border:2px solid #0f1117;display:none;min-width:16px;text-align:center}
+/* ── PANEL ── */
+#ai-panel{position:fixed;bottom:96px;right:24px;width:500px;height:660px;
+  background:rgba(10,12,18,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(56,189,248,.18);border-radius:16px;
+  box-shadow:0 24px 80px rgba(0,0,0,.9),0 0 60px rgba(56,189,248,.08);
+  display:flex;flex-direction:column;overflow:hidden;z-index:9998;
+  transform-origin:bottom right;transition:.3s cubic-bezier(.4,0,.2,1);
+  opacity:0;transform:scale(.82) translateY(24px);pointer-events:none}
+#ai-panel.open{opacity:1;transform:scale(1) translateY(0);pointer-events:auto}
+/* ── HEADER ── */
+#ai-hdr{padding:12px 16px;background:rgba(0,0,0,.4);border-bottom:1px solid rgba(56,189,248,.12);
+  display:flex;align-items:center;gap:10px;flex-shrink:0}
+#ai-hdr-title{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+#ai-hdr-title h3{font-size:14px;font-weight:800;color:#f0f9ff;margin:0;white-space:nowrap}
+.ai-pro-badge{font-size:9px;font-weight:900;background:linear-gradient(90deg,#1d4ed8,#38bdf8);
+  color:#fff;padding:2px 7px;border-radius:8px;letter-spacing:.5px}
+#ai-ctx-badge{font-size:10px;padding:3px 8px;background:rgba(56,189,248,.12);
+  color:#38bdf8;border-radius:10px;border:1px solid rgba(56,189,248,.25);
+  font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  max-width:180px;flex-shrink:1}
+.ai-hdr-btn{background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;
+  font-size:16px;padding:4px;border-radius:6px;transition:.15s;flex-shrink:0;line-height:1}
+.ai-hdr-btn:hover{color:#ef4444;background:rgba(239,68,68,.1)}
+/* ── MESSAGES ── */
+#ai-chat{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+  scroll-behavior:smooth}
+#ai-chat::-webkit-scrollbar{width:4px}
+#ai-chat::-webkit-scrollbar-track{background:transparent}
+#ai-chat::-webkit-scrollbar-thumb{background:rgba(56,189,248,.2);border-radius:2px}
+.ai-msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:13px;
+  line-height:1.6;word-break:break-word;position:relative}
+.ai-msg.ai{background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.15);
+  color:#e0f2fe;align-self:flex-start;border-bottom-left-radius:4px}
+.ai-msg.usr{background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;
+  align-self:flex-end;border-bottom-right-radius:4px;box-shadow:0 4px 16px rgba(29,78,216,.3)}
+.ai-msg.err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  color:#fca5a5;align-self:flex-start}
+.ai-copy{position:absolute;top:6px;right:6px;font-size:11px;background:rgba(255,255,255,.08);
+  border:none;color:rgba(255,255,255,.4);padding:2px 6px;border-radius:5px;
+  cursor:pointer;opacity:0;transition:.15s}
+.ai-msg.ai:hover .ai-copy{opacity:1}
+.ai-copy:hover{color:#38bdf8!important;opacity:1!important}
+.ai-dots{display:inline-flex;gap:4px;align-items:center;padding:8px 4px}
+.ai-dots span{width:7px;height:7px;border-radius:50%;background:#38bdf8;opacity:.3;
+  animation:aidot 1.2s ease-in-out infinite}
+.ai-dots span:nth-child(2){animation-delay:.2s}
+.ai-dots span:nth-child(3){animation-delay:.4s}
+@keyframes aidot{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.ai-msg.ai strong{color:#bfdbfe;font-weight:700}
+.ai-msg.ai em{color:#a5f3fc;font-style:italic}
+.ai-msg.ai code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;
+  font-family:monospace;font-size:12px;color:#fde68a}
+.ai-msg.ai ul{margin:6px 0;padding-left:16px}
+.ai-msg.ai li{margin:2px 0}
+.ai-msg.ai h2{font-size:13px;font-weight:800;color:#93c5fd;margin:8px 0 4px}
+.ai-msg.ai h3{font-size:12px;font-weight:700;color:#7dd3fc;margin:6px 0 2px}
+.ai-msg.ai table{border-collapse:collapse;width:100%;font-size:11px;margin:6px 0}
+.ai-msg.ai th{background:rgba(56,189,248,.15);padding:4px 8px;text-align:left;color:#93c5fd;border:1px solid rgba(56,189,248,.15)}
+.ai-msg.ai td{padding:3px 8px;border:1px solid rgba(255,255,255,.06);color:#cbd5e1}
+.ai-msg.ai tr:nth-child(even) td{background:rgba(255,255,255,.03)}
+.ai-act-preview{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);
+  border-radius:10px;padding:10px;margin-top:8px}
+.ai-act-confirm{display:flex;gap:8px;margin-top:8px}
+.ai-act-confirm button{flex:1;padding:7px;border:none;border-radius:8px;cursor:pointer;
+  font-size:12px;font-weight:700;transition:.15s}
+.ai-act-ok{background:#16a34a;color:#fff}
+.ai-act-ok:hover{background:#15803d}
+.ai-act-cancel{background:rgba(255,255,255,.08);color:#9ca3af}
+.ai-act-cancel:hover{background:rgba(255,255,255,.15);color:#fff}
+/* ── CHIPS ── */
+#ai-chips{padding:6px 12px;display:flex;gap:6px;flex-wrap:wrap;
+  border-top:1px solid rgba(255,255,255,.05);background:rgba(0,0,0,.3);flex-shrink:0}
+.ai-chip{font-size:11px;padding:4px 10px;border-radius:12px;cursor:pointer;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:#94a3b8;transition:.15s;white-space:nowrap;user-select:none}
+.ai-chip:hover{background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.3);color:#38bdf8}
+.ai-chip.akt:hover{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.3);color:#4ade80}
+/* ── INPUT ── */
+#ai-inp-area{padding:10px 12px;background:rgba(0,0,0,.5);
+  border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+#ai-top-row{display:flex;align-items:center;gap:8px}
+#ai-date-inp{padding:3px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.05);color:#94a3b8;font-size:11px;outline:none;margin-left:auto}
+#ai-inp-row{display:flex;gap:8px;align-items:flex-end}
+#ai-input{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:9px 14px;color:#f0f9ff;font-size:13px;outline:none;
+  transition:.2s;resize:none;font-family:inherit;line-height:1.4;min-height:38px;max-height:100px}
+#ai-input:focus{border-color:rgba(56,189,248,.5);background:rgba(0,0,0,.5)}
+#ai-send{width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,#1d4ed8,#38bdf8);color:#fff;
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:.2s;flex-shrink:0;font-size:16px}
+#ai-send:hover{transform:scale(1.08);box-shadow:0 4px 16px rgba(56,189,248,.4)}
+#ai-send:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+#ai-clr{background:none;border:none;color:rgba(255,255,255,.25);cursor:pointer;
+  font-size:14px;padding:2px 6px;border-radius:5px;transition:.15s}
+#ai-clr:hover{color:#ef4444;background:rgba(239,68,68,.1)}
+</style>
+
+<div id="ai-btn" onclick="aiToggle()" title="Titan AI yordamchisi">
+  &#x1F916;<div class="ai-badge" id="ai-badge">!</div>
+</div>
+
+<div id="ai-panel">
+  <div id="ai-hdr">
+    <div id="ai-hdr-title">
+      <h3>&#x26A1; Titan AI</h3>
+      <span class="ai-pro-badge">v2</span>
+    </div>
+    <span id="ai-ctx-badge">&#x2014;</span>
+    <button class="ai-hdr-btn" onclick="aiClearHistory()" title="Tarixni tozalash">&#x21BA;</button>
+    <button class="ai-hdr-btn" onclick="aiToggle()" title="Yopish">&#x2715;</button>
+  </div>
+  <div id="ai-chat">
+    <div class="ai-msg ai"><strong>Salom!</strong> Men bu tizimning AI yordamchisiman.<br><br>Savol bering yoki quyidagi tugmalardan birini bosing &#x1F447;</div>
+  </div>
+  <div id="ai-chips">
+    <span class="ai-chip" onclick="aiChip('Umumiy tahlil qilib ber')">&#x1F4CA; Tahlil</span>
+    <span class="ai-chip" onclick="aiChip('Muammolar va xavflarni ko&#x27;rsat')">&#x26A0;&#xFE0F; Muammolar</span>
+    <span class="ai-chip" onclick="aiChip('Topilmagan narxlar va nol narxli resurslar')">&#x1F4B0; Narxlar</span>
+    <span class="ai-chip" onclick="aiChip('F2 oylik dinamikasi')">&#x1F4C8; F2</span>
+    <span class="ai-chip" onclick="aiChip('Qoldiq ishlar qachon tugaydi?')">&#x1F3D7;&#xFE0F; Qoldiq</span>
+    <span class="ai-chip akt" onclick="aiChip('akt yoz ')">&#x1F4C4; Akt yoz</span>
+  </div>
+  <div id="ai-inp-area">
+    <div id="ai-top-row">
+      <span style="font-size:11px;color:#4b5563">&#x1F4CD;</span>
+      <span id="ai-ctx-badge2" style="font-size:11px;color:#38bdf8;font-weight:700">&#x2014;</span>
+      <input type="date" id="ai-date-inp" title="Akt sanasi">
+      <button id="ai-clr" onclick="aiClearHistory()" title="Tozalash">&#x1F5D1;</button>
+    </div>
+    <div id="ai-inp-row">
+      <textarea id="ai-input" rows="1" placeholder="Savol yozing... (Enter = yuborish, Shift+Enter = yangi qator)"
+        oninput="aiAutoResize(this)"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}"
+      ></textarea>
+      <button id="ai-send" onclick="aiSend()">&#x27A4;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _aiOpen=false,_aiHistory=[],_aiLoading=false,_aiPendActs=null;
+
+function aiToggle(){
+  _aiOpen=!_aiOpen;
+  document.getElementById('ai-panel').classList.toggle('open',_aiOpen);
+  if(_aiOpen){document.getElementById('ai-badge').style.display='none';document.getElementById('ai-input').focus();_aiCtxSync();}
+}
+function _aiCtxSync(){
+  var l=CUR_OB||'— barcha obyektlar';
+  document.getElementById('ai-ctx-badge').textContent=l;
+  document.getElementById('ai-ctx-badge2').textContent=l;
+}
+function _aiMd(raw){
+  if(!raw) return '';
+  var s=raw
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+    .replace(/((?:<li>[^]*?<\/li>\n?)+)/g,'<ul>$1</ul>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/\n/g,'<br>');
+  return '<p>'+s+'</p>';
+}
+function _aiEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _aiAppend(html,type,raw){
+  var chat=document.getElementById('ai-chat'),div=document.createElement('div');
+  div.className='ai-msg '+(type||'ai');
+  if(type==='typing'){
+    div.innerHTML='<div class="ai-dots"><span></span><span></span><span></span></div>';
+    div.id='ai-typing';chat.appendChild(div);chat.scrollTop=chat.scrollHeight;return div;
+  }
+  div.innerHTML=html;
+  if(type==='ai'&&raw){
+    var btn=document.createElement('button');btn.className='ai-copy';btn.textContent='⎋';btn.title='Nusxa olish';
+    (function(t){btn.onclick=function(){navigator.clipboard&&navigator.clipboard.writeText(t).then(function(){btn.textContent='✓';setTimeout(function(){btn.textContent='⎋';},1200);});};})(raw);
+    div.appendChild(btn);
+  }
+  chat.appendChild(div);chat.scrollTop=chat.scrollHeight;
+  if(!_aiOpen&&type!=='usr') document.getElementById('ai-badge').style.display='block';
+  return div;
+}
+function _aiRemoveTyping(){var t=document.getElementById('ai-typing');if(t)t.remove();}
+function _aiDone(){_aiLoading=false;document.getElementById('ai-send').disabled=false;document.getElementById('ai-input').focus();}
+
+function aiSend(){
+  if(_aiLoading) return;
+  var inp=document.getElementById('ai-input'),text=(inp.value||'').trim();
+  if(!text) return;
+  _aiCtxSync();
+
+  if(_aiPendActs&&/^ha$|^tasdiq|^yoz$|^ok$|^confirm/i.test(text)){
+    _aiAppend(_aiEsc(text),'usr');inp.value='';aiAutoResize(inp);_aiConfirmAct();return;
+  }
+  if(_aiPendActs&&/^yo.q$|^bekor|^cancel/i.test(text)){
+    _aiPendActs=null;_aiAppend('Akt bekor qilindi.','ai');inp.value='';aiAutoResize(inp);return;
+  }
+
+  var dateVal=document.getElementById('ai-date-inp').value;
+  _aiAppend(_aiEsc(text),'usr');
+  inp.value='';aiAutoResize(inp);
+  _aiHistory.push({role:'user',text:text});
+  if(_aiHistory.length>12) _aiHistory=_aiHistory.slice(-12);
+  _aiLoading=true;document.getElementById('ai-send').disabled=true;
+  _aiAppend('','typing');
+
+  var isAkt=/akt\s+yoz|dalolatnoma|akt\s+yarat|akt\s+ber|aosr/i.test(text);
+  if(isAkt){
+    google.script.run
+      .withSuccessHandler(function(res){_aiRemoveTyping();_aiDone();
+        if(res.error){_aiAppend('&#x274C; '+_aiEsc(res.error),'err');return;}
+        if(res.preview&&res.acts&&res.acts.length){
+          _aiPendActs=res.acts;
+          var html=_aiMd(res.text)+'<div class="ai-act-preview">'+
+            '<div style="font-size:11px;color:#4ade80;margin-bottom:8px">REYESTR ga yozilsinmi?</div>'+
+            '<div class="ai-act-confirm">'+
+            '<button class="ai-act-ok" onclick="aiActOk()">&#x2705; Ha, yoz</button>'+
+            '<button class="ai-act-cancel" onclick="aiActNo()">&#x274C; Yo\'q</button>'+
+            '</div></div>';
+          _aiAppend(html,'ai',res.text);
+        } else {
+          _aiAppend(_aiMd(res.text||''),'ai',res.text||'');
+        }
+        _aiHistory.push({role:'model',text:res.text||''});
+        if(res.actsCreated) try{holatYukla(true);}catch(e){}
+      })
+      .withFailureHandler(function(e){_aiRemoveTyping();_aiDone();_aiAppend('&#x274C; '+_aiEsc(e.message||e),'err');})
+      .apiTitanAktYarat({obyekt:CUR_OB,text:text,startDate:dateVal,confirm:false});
+  } else {
+    google.script.run
+      .withSuccessHandler(function(res){_aiRemoveTyping();_aiDone();
+        if(res.error){_aiAppend('&#x274C; '+_aiEsc(res.error),'err');return;}
+        var txt=res.text||'';
+        _aiAppend(_aiMd(txt),'ai',txt);
+        _aiHistory.push({role:'model',text:txt});
+      })
+      .withFailureHandler(function(e){_aiRemoveTyping();_aiDone();_aiAppend('&#x274C; Server xato: '+_aiEsc(e.message||e),'err');})
+      .apiTitanAi({obyekt:CUR_OB,text:text,history:_aiHistory.slice(0,-1),mode:'auto'});
+  }
+}
+
+function _aiConfirmAct(){
+  if(!_aiPendActs) return;
+  var acts=_aiPendActs;_aiPendActs=null;
+  _aiLoading=true;document.getElementById('ai-send').disabled=true;_aiAppend('','typing');
+  google.script.run
+    .withSuccessHandler(function(res){_aiRemoveTyping();_aiDone();
+      if(res.error){_aiAppend('&#x274C; '+_aiEsc(res.error),'err');return;}
+      _aiAppend(_aiMd(res.text||''),'ai',res.text||'');
+      if(res.actsCreated) try{holatYukla(true);}catch(e){}
+    })
+    .withFailureHandler(function(e){_aiRemoveTyping();_aiDone();_aiAppend('&#x274C; '+_aiEsc(e.message),'err');})
+    .apiTitanAktYarat({obyekt:CUR_OB,text:'',startDate:'',confirm:true,actData:acts});
+}
+function aiActOk(){_aiConfirmAct();}
+function aiActNo(){_aiPendActs=null;_aiAppend('Akt bekor qilindi.','ai');}
+
+function aiChip(t){document.getElementById('ai-input').value=t;aiAutoResize(document.getElementById('ai-input'));document.getElementById('ai-input').focus();}
+function aiAutoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';}
+function aiClearHistory(){
+  _aiHistory=[];_aiPendActs=null;
+  document.getElementById('ai-chat').innerHTML='<div class="ai-msg ai">Suhbat tozalandi &#x1F44B;</div>';
+}
+function aiContextUpdate(){_aiCtxSync();}
+function toggleAiPanel(){aiToggle();}
+function updateAiContext(){_aiCtxSync();}
+</script>
 </body>
 </html>
+<!-- dummy -->

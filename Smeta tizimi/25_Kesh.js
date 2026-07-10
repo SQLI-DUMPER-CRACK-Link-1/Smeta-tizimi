@@ -301,6 +301,9 @@ function apiKeshSkanYangilash(){
         lokSheets: o.lokSheets||[],
         svodSheets:o.svodSheets||[],
         svodCols:  o.svodCols||null,     // har svodka ustun xaritasi
+        narxTayyor:!!o.narxTayyor,       // ⚡ 2026-07-04: kesh whitelist'da yo'q edi —
+                                          // saqlangandan keyin checkbox qayta kirganda
+                                          // doim o'chib qolardi (Файл боғлаш)
         plusId:    plusId,
         plusBor:   !!plusId,
         locked:    lockMi(o.obyekt),

@@ -42,7 +42,7 @@ function _ishTurlarYig(plus, obyekt, fmt){
     var curBl = null, curRs = [];
 
     for(var i = 0; i < n; i++){
-      var mk = String(v[i][col.MARKER-1]||'').trim().toLowerCase().replace(/\+$/,'');
+      var mk = String(v[i][col.MARKER-1]||'').trim().toLowerCase().replace(/[+~]$/,'');
 
       if(mk === 'rz'){
         _itkFlush(items, curBl, curRs, obyekt, fmt);
@@ -260,7 +260,9 @@ function apiIshTurQosh(params){
   var oylar = _f2Oylar(sh);
 
   // BATCH: barcha qatorlarni xotirada qurib, bitta yozish
-  var width = col.ST_OST;
+    var maxCol = col.ST_OST;
+  if(oylar.length > 0) maxCol = oylar[oylar.length-1].col + 2;
+  var width = maxCol;
   var allData = [];
 
   // BL+ qatori
@@ -269,9 +271,15 @@ function apiIshTurQosh(params){
   blData[col.BIRLIK-1]=it.blBirlik; blData[col.E-1]=hajm; blData[col.F-1]=hajm;
   blData[col.MARKER-1]='bl+'; blData[col.FAKT-1]=0;
   blData[col.QOLDIQ-1]='=$'+CL(col.E)+blRow+'-$'+CL(col.FAKT)+blRow;
-  blData[col.F2OL-1]=_f2sum(blRow,0);
+  blData[col.F2OL-1]=_f2sum(blRow,0,_f2OyCols(sh));
   blData[col.F2MUM-1]='=$'+CL(col.FAKT)+blRow+'-$'+CL(col.F2OL)+blRow;
-  if(col.H_BL) blData[col.H_BL-1]=it.blNom;
+    if(col.H_BL) blData[col.H_BL-1]=it.blNom;
+  for(var o=0;o<oylar.length;o++){
+    var oc = oylar[o].col;
+    blData[oc-1]=0;
+    blData[oc]='=$'+CL(col.NARX)+blRow;
+    blData[oc+1]='=$'+CL(oc)+blRow+'*$'+CL(oc+1)+blRow;
+  }
   allData.push(blData);
 
   // RS+ qatorlar
@@ -295,13 +303,18 @@ function apiIshTurQosh(params){
     else row[col.MAT-1]=ref;
     row[col.FAKT-1]='='+CL(col.FAKT)+'$'+blRow+'*'+CL(col.E)+r;
     row[col.QOLDIQ-1]='=$'+CL(col.F)+r+'-$'+CL(col.FAKT)+r;
-    row[col.F2OL-1]=_f2sum(r,0);
+    row[col.F2OL-1]=_f2sum(r,0,_f2OyCols(sh));
     row[col.F2MUM-1]='=$'+CL(col.FAKT)+r+'-$'+CL(col.F2OL)+r;
     row[col.ST_RES-1]='=$'+CL(col.SMETA)+r;
     row[col.ST_FAKT-1]='=$'+CL(col.FAKT)+r+'*$'+CL(col.NARX)+r;
-    row[col.ST_F2-1]=_f2sum(r,2);
+    row[col.ST_F2-1]=_f2sum(r,2,_f2OyCols(sh));
     row[col.ST_OST-1]='=$'+CL(col.F2MUM)+r+'*$'+CL(col.NARX)+r;
-    for(var o=0;o<oylar.length;o++) row[oylar[o].col-1]='='+CL(oylar[o].col)+'$'+blRow+'*'+CL(col.E)+r;
+        for(var o=0;o<oylar.length;o++){
+      var oc = oylar[o].col;
+      row[oc-1]='='+CL(oc)+'$'+blRow+'*'+CL(col.E)+r;
+      row[oc]='=$'+CL(col.NARX)+r;
+      row[oc+1]='=$'+CL(oc)+r+'*$'+CL(oc+1)+r;
+    }
     allData.push(row);
   }
 
@@ -386,7 +399,7 @@ function apiIshTurAfterRow(obyekt, varaq, blRow){
   var v = sh.getRange(blRow+1, col.MARKER, n, 1).getValues();
   var lastChild = blRow;
   for(var i = 0; i < v.length; i++){
-    var mk = String(v[i][0]||'').trim().toLowerCase().replace(/\+$/,'');
+    var mk = String(v[i][0]||'').trim().toLowerCase().replace(/[+~]$/,'');
     if(mk === 'bl' || mk === 'rz') break;
     if(mk === 'rs' || (mk === 'mat' || mk === 'ob')) lastChild = blRow + 1 + i;
   }

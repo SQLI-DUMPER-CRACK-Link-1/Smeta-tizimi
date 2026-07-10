@@ -11,7 +11,10 @@
 
 var _HUJ = {
   akt:     '1Co9bC9dEdJUG9wTEiQjUJ4KH-aCScQihkQ_9-MHQbP0',
-  prixod:  '1vchaALFe0FmKzt4b_w1ZMA3GZO44jedF16dbSpd6pTo',
+  // 2026-07-03: hamkasb egalik qilgan "Navoiy park" (1DQPR05...) dan foydalanuvchining
+  // o'z nusxasiga ("Copy of Navoiy park") o'tkazildi — Telegram AI sklad (86_Sklad.js,
+  // SKLAD_FILE_ID) ham SHU faylga yozadi, endi Panel va Telegram bitta manbadan ishlaydi.
+  prixod:  '10IWmAQTD384T7gRwSmipoEVtAqfa3J80z3B718U-lBw',
   viborka: '17PbwnwpQGhGPU_OMgnl605VmuRXzeFFSgG2QXdem_xY'
 };
 
@@ -520,21 +523,21 @@ function apiAktMassUlash(obyekt, aktRows, workKeys){
 /* ============ PRIXOD — KO'RISH ============ */
 function apiPrixodOl(limit, qidiruv){
   var ss=_hujOpen('prixod');
-  var sh=ss.getSheets()[0];
-  var last=sh.getLastRow(), lastC=Math.max(sh.getLastColumn(),14);
+  var sh=ss.getSheetByName('Приход') || ss.getSheets()[0];
+  var last=sh.getLastRow(), lastC=Math.max(sh.getLastColumn(), 8);
   if(last<2) return {rows:[], jami:0};
   var v=sh.getRange(2,1,last-1,lastC).getValues();
   var rows=[], q=qidiruv?String(qidiruv).toUpperCase().trim():'';
-  // Ustunlar: 0=№ 1=Наименование 2=Раздел 3=Ед.изм 4=Объем 5=Дата 7=Поставшик 9=Цена 13=остатка
+  // Yangi Ustunlar: 0=№ 1=тип 2=дата 3=наименование 4=ед.изм 5=объем 6=счет 7=поставщик
   for(var i=0;i<v.length;i++){
-    var nom=String(v[i][1]||'').trim();
+    var nom=String(v[i][3]||'').trim();
     if(!nom) continue;
-    if(q && nom.toUpperCase().indexOf(q)<0 && String(v[i][2]||'').toUpperCase().indexOf(q)<0) continue;
+    if(q && nom.toUpperCase().indexOf(q)<0 && String(v[i][1]||'').toUpperCase().indexOf(q)<0) continue;
     rows.push({
-      nom:nom, razdel:String(v[i][2]||'').trim(), birlik:String(v[i][3]||'').trim(),
-      hajm:_toNum(v[i][4]), sana:_hujDate(v[i][5]),
-      postavshik:String(v[i][7]||'').trim(), narx:_toNum(v[i][9]),
-      ostatka:_toNum(v[i][13]), row:i+2
+      nom:nom, razdel:String(v[i][1]||'').trim(), birlik:String(v[i][4]||'').trim(),
+      hajm:_toNum(v[i][5]), sana:_hujDate(v[i][2]),
+      postavshik:String(v[i][7]||'').trim(), narx: 0, // Narx yo'q
+      ostatka: 0, row:i+2 // Qoldiq endi alohida "Остаток" varag'ida
     });
   }
   rows.reverse();
@@ -547,17 +550,17 @@ function apiPrixodOl(limit, qidiruv){
  * data = {nom, razdel, birlik, hajm, sana, postavshik, narx, obyekt} */
 function apiPrixodYoz(data){
   var ss=_hujOpen('prixod');
-  var sh=ss.getSheets()[0];
-  var lastC=Math.max(sh.getLastColumn(),15);
+  var sh=ss.getSheetByName('Приход') || ss.getSheets()[0];
+  var lastC=Math.max(sh.getLastColumn(), 8);
   var row=new Array(lastC).fill('');
-  row[1]=String(data.nom||'');
-  row[2]=String(data.razdel||'Прочее');
-  row[3]=String(data.birlik||'шт');
-  row[4]=_toNum(data.hajm);
-  row[5]=data.sana||Utilities.formatDate(new Date(),'GMT+5','dd.MM.yyyy');
-  row[7]=String(data.postavshik||'');
-  if(data.narx) row[9]=_toNum(data.narx);
-  row[14]=String(data.obyekt||''); // 14-ustunga Obyekt
+  row[0] = sh.getLastRow(); // tartib raqam
+  row[1] = String(data.razdel||'Прочее'); // tip material
+  row[2] = data.sana||Utilities.formatDate(new Date(),'GMT+5','dd.MM.yyyy'); // data
+  row[3] = String(data.nom||''); // nom
+  row[4] = String(data.birlik||'шт'); // birlik
+  row[5] = _toNum(data.hajm); // obyom
+  row[6] = ''; // schot faktura
+  row[7] = String(data.postavshik||''); // postavshik
   sh.appendRow(row);
   SpreadsheetApp.flush();
   try{ _sbDirty(data.obyekt); }catch(e){}
@@ -568,20 +571,22 @@ function apiPrixodYoz(data){
  * data = {nom, birlik, hajm, sana, obyekt, ish, izoh} */
 function apiRashodYoz(data){
   var ss=_hujOpen('prixod');
-  var sh=ss.getSheetByName('Rashod');
+  var sh=ss.getSheetByName('Расход');
   if(!sh) {
-    sh=ss.insertSheet('Rashod');
-    sh.appendRow(['№','Материал','Бирлик','Ҳажм','Сана','Объект','Иш/Олувчи','Изоҳ']);
+    sh=ss.insertSheet('Расход');
+    sh.appendRow(['№','Тип материала','Дата','Наименование','Ед.изм','Кол-во','Прораб/brigada','Субподрядные организации','Блок']);
   }
-  var row=new Array(8).fill('');
-  row[0]=sh.getLastRow();
-  row[1]=String(data.nom||'');
-  row[2]=String(data.birlik||'шт');
-  row[3]=_toNum(data.hajm);
-  row[4]=data.sana||Utilities.formatDate(new Date(),'GMT+5','dd.MM.yyyy');
-  row[5]=String(data.obyekt||'');
-  row[6]=String(data.ish||'');
-  row[7]=String(data.izoh||'');
+  var lastC=Math.max(sh.getLastColumn(), 9);
+  var row=new Array(lastC).fill('');
+  row[0] = sh.getLastRow();
+  row[1] = 'Материал'; // tip
+  row[2] = data.sana||Utilities.formatDate(new Date(),'GMT+5','dd.MM.yyyy');
+  row[3] = String(data.nom||''); // nom
+  row[4] = String(data.birlik||'шт'); // birlik
+  row[5] = _toNum(data.hajm); // obyom
+  row[6] = String(data.ish||''); // prorab
+  row[7] = String(data.izoh||''); // subpodryad / izoh
+  row[8] = String(data.obyekt||''); // blok (obyekt)
   sh.appendRow(row);
   SpreadsheetApp.flush();
   try{ _sbDirty(data.obyekt); }catch(e){}
@@ -686,78 +691,44 @@ function apiRashodYozMass(data){
 /* SKLAD OSTATKA (Agregat) */
 function apiSkladOl(qidiruv) {
   var ss=_hujOpen('prixod');
-  var shP=ss.getSheets()[0];
-  var shR=ss.getSheetByName('Rashod');
+  var sh = ss.getSheetByName('Остаток');
+  if(!sh) return {rows:[], jami:0, url:_hujUrl('prixod')};
   
-  var matMap = {};
+  var last = sh.getLastRow();
+  var lastC = Math.max(sh.getLastColumn(), 7);
+  if(last < 2) return {rows:[], jami:0, url:_hujUrl('prixod')};
   
-  // Kirim (Prixod) va gorizontal Chiqim
-  if(shP.getLastRow() >= 2) {
-    var lastC = Math.max(shP.getLastColumn(), 20); // At least 20 to check for rashods
-    var vP = shP.getRange(2,1,shP.getLastRow()-1, lastC).getValues();
-    for(var i=0;i<vP.length;i++){
-      var nom=String(vP[i][1]||'').trim(); if(!nom) continue;
-      var birlik=String(vP[i][3]||'').trim();
-      var key = _normNomKey(nom) + '||' + birlik.toUpperCase();
-      if(!matMap[key]) matMap[key] = {nom:nom, razdel:String(vP[i][2]||'').trim(), birlik:birlik, kirim:0, chiqim:0, qoldiq:0, summa:0, history:[]};
-      var hajm = _toNum(vP[i][4]);
-      var narx = _toNum(vP[i][9]);
-      matMap[key].kirim += hajm;
-      matMap[key].summa += (hajm * narx);
-      matMap[key].history.push({
-        type: 'kirim',
-        row: i + 2,
-        sana: String(vP[i][5]||''),
-        hajm: hajm,
-        narx: narx,
-        obyekt: String(vP[i][14]||''), // Obyekt (agar 14-ustun) yoki Postavshik
-        postavshik: String(vP[i][7]||'')
-      });
-      
-      // Gorizontal Rashodlarni o'qish (ustun 15 dan boshlab 4 tadan: Hajm, Obyekt, Sana, Ish/Izoh)
-      var qolganKirim = hajm;
-      for (var c = 15; c < lastC - 3; c += 4) {
-        var rHajm = _toNum(vP[i][c]);
-        if (rHajm > 0) {
-          matMap[key].chiqim += rHajm;
-          qolganKirim -= rHajm;
-          matMap[key].history.push({
-            type: 'chiqim',
-            parentRow: i + 2,
-            hajm: rHajm,
-            obyekt: String(vP[i][c+1]||''),
-            sana: String(vP[i][c+2]||''),
-            ish: String(vP[i][c+3]||'')
-          });
-        }
-      }
-      // Bu alohida kirimning o'z qoldig'ini (shu qatordagi) saqlaymiz, FIFO uchun kerak bo'ladi
-      matMap[key].history[matMap[key].history.length - 1].qoldiqKirim = qolganKirim;
-    }
-  }
-  
-
-  
+  var v = sh.getRange(2,1,last-1, lastC).getValues();
   var q = qidiruv ? String(qidiruv).toUpperCase().trim() : '';
+  
   var result = [];
-  for(var k in matMap){
-    var m = matMap[k];
-    m.qoldiq = m.kirim - m.chiqim;
-    m.ort_narx = m.kirim > 0 ? (m.summa / m.kirim) : 0;
-    
-    // Tarixni sana bo'yicha saralash
-    m.history.sort(function(a,b) {
-      // Sana odatda dd.MM.yyyy formatida bo'ladi
-      var d1 = a.sana.split('.').reverse().join('');
-      var d2 = b.sana.split('.').reverse().join('');
-      return d1.localeCompare(d2);
-    });
-
-    if(q && m.nom.toUpperCase().indexOf(q)<0 && m.razdel.toUpperCase().indexOf(q)<0) continue;
-    result.push(m);
+  
+  // A=№, B=Наименование, C=Ед.изм, D=Остаток на начало, E=Приход, F=Расход, G=Остаток на конец
+  for(var i=0; i<v.length; i++){
+     var nom = String(v[i][1]||'').trim();
+     if(!nom) continue;
+     if(q && nom.toUpperCase().indexOf(q) < 0) continue;
+     
+     var birlik = String(v[i][2]||'').trim();
+     var qoldiqBosh = _toNum(v[i][3]);
+     var kirim = _toNum(v[i][4]);
+     var chiqim = _toNum(v[i][5]);
+     var qoldiq = _toNum(v[i][6]);
+     
+     result.push({
+        nom: nom,
+        razdel: 'Материал',
+        birlik: birlik,
+        qoldiqBosh: qoldiqBosh,
+        kirim: kirim,
+        chiqim: chiqim,
+        qoldiq: qoldiq,
+        summa: 0, 
+        ort_narx: 0,
+        history: [] // Tarix endi alohida "Приход" va "Расход" varaqlarida
+     });
   }
   
-  result.sort(function(a,b) { return a.nom.localeCompare(b.nom); });
   return {rows:result, jami:result.length, url:_hujUrl('prixod')};
 }
 

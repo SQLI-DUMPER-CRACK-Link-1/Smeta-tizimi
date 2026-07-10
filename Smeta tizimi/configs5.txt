@@ -1,0 +1,5 @@
+Pricing test:
+TypeError: Cannot read properties of undefined (reading 'CHEL')
+    at _priceDB (10_Engine:1499:23)
+    at doGet (30_Panel:47:17)
+    at __GS_INTERNAL_top_function_call__.gs:1:8

@@ -19,38 +19,36 @@ function serverYozFile(obyekt, plusSS, a){
   var srv = _serverSS(a);
   var dash = _dash(srv);
 
-  // LRV_PLUS leaf (rs+mat) qatorlardan jami (hisoblangan qiymatlar)
-  var sheets=plusSS.getSheets();
-  var col=CFG.C, smeta=0, cats=[0,0,0,0,0,0,0], faktPul=0, f2Pul=0, ostPul=0, leaf=0;
-  for(var s=0;s<sheets.length;s++){
-    var nm=sheets[s].getName();
-    if(nm.indexOf(CFG.LRV_SHEET)!==0) continue;
-    var sh=sheets[s], last=sh.getLastRow();
-    if(last<2) continue;
-    // I (marker) .. AC (stoimost ostatka) — bitta o'qishda hammasi
-    var width=col.ST_OST-col.MARKER+1;            // I..AC
-    var g=sh.getRange(1,col.MARKER,last,width).getValues();
-    var iMark=0;
-    var iChel=col.CHEL-col.MARKER, iMash=col.MASH-col.MARKER, iMat=col.MAT-col.MARKER,
-        iOb=col.OB-col.MARKER, iBez=col.BEZSKLAD-col.MARKER, iMk=col.MK-col.MARKER, iKab=col.KAB-col.MARKER;
-    var iZ=col.ST_RES-col.MARKER, iAA=col.ST_FAKT-col.MARKER, iAB=col.ST_F2-col.MARKER, iAC=col.ST_OST-col.MARKER;
-    for(var i=0;i<g.length;i++){
-      var m=String(g[i][iMark]||'').trim().toLowerCase();
-      if(m!=='rs'&&(m !== 'mat' && m !== 'ob') ) continue;
-      leaf++;
-      smeta+=_n(g[i][iZ]);                         // Z = smeta summa
-      faktPul+=_n(g[i][iAA]);                      // AA = fakt summa
-      f2Pul+=_n(g[i][iAB]);                        // AB = F2 summa
-      ostPul+=_n(g[i][iAC]);                       // AC = ostatka summa
-      // 7 kategoriya (smeta bo'yicha)
-      cats[0]+=_n(g[i][iChel]); cats[1]+=_n(g[i][iMash]); cats[2]+=_n(g[i][iMat]);
-      cats[3]+=_n(g[i][iOb]); cats[4]+=_n(g[i][iBez]); cats[5]+=_n(g[i][iMk]); cats[6]+=_n(g[i][iKab]);
-    }
+  var smeta=0, cats=[0,0,0,0,0,0,0], faktPul=0, f2Pul=0, ostPul=0, leaf=0;
+  
+  // Yagona o'qish qatlami orqali faqat JAMI qatorlarni o'qiymiz
+  var rows = lrvOqiHammasi(plusSS, {faqatJami: true});
+  
+  for(var i=0; i<rows.length; i++){
+    var r = rows[i];
+    smeta += r.smeta;
+    faktPul += r.stFakt;
+    f2Pul += r.stF2;
+    ostPul += r.stOst;
+    cats[0] += r.cats['ЧЕЛ'];
+    cats[1] += r.cats['МАШ'];
+    cats[2] += r.cats['МАТ'];
+    cats[3] += r.cats['ОБ'];
+    cats[4] += r.cats['БЕЗ'];
+    cats[5] += r.cats['М/К'];
+    cats[6] += r.cats['КАБ'];
   }
+  
+  // Haqiqiy leaf sonini aniq hisoblash (DASHBOARD uchun)
+  var allLeafs = lrvOqiHammasi(plusSS, {faqatLeaf: true});
+  leaf = allLeafs.length;
 
   var stamp=Utilities.formatDate(new Date(), Session.getScriptTimeZone()||'Asia/Tashkent','yyyy-MM-dd HH:mm');
-  // ЧЕЛ МАШ МАТ ОБ М/К КАБ (БЕЗ СКЛАД ni alohida ko'rsatmaymiz, MAT ichida)
-  var row=[obyekt, smeta, cats[0],cats[1],cats[2],cats[3],cats[5],cats[6],
+  // ⚡ 2026-07-10 TUZATILDI: izoh "БЕЗ СКЛАД ni MAT ichida ko'rsatamiz" derdi, lekin
+  //   cats[4] (БЕЗ) qatorga UMUMAN qo'shilmasdi — pul Boss dashboardda yo'qolib
+  //   qolardi (izoh bilan kod mos kelmasdi). Endi haqiqatan cats[2]+cats[4] (MAT+БЕЗ).
+  // ЧЕЛ МАШ МАТ(+БЕЗ) ОБ М/К КАБ
+  var row=[obyekt, smeta, cats[0],cats[1],cats[2]+cats[4],cats[3],cats[5],cats[6],
            faktPul, f2Pul, ostPul, leaf, stamp];
   _upsert(dash, obyekt, row);
   _jami(dash); _fmt(dash);

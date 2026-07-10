@@ -25,7 +25,7 @@ var _NB_WD   = '_navbatWatchdog';
 var _NB_DEADLINE_MS = 4.3*60*1000;  // 4.3 daqiqa — 6 min limitdan xavfsiz chekka
 
 /* ============ BITTA TUGMA: BARCHASINI AVTO ISHLA ============ */
-function navbatBoshla(faqatBitta){
+function navbatBoshla(faqatBitta, mode){
   var sp=PropertiesService.getScriptProperties();
   var obs=papkaSkan();
   var omap={}; obs.forEach(function(o){ omap[o.obyekt]=o; });
@@ -37,7 +37,9 @@ function navbatBoshla(faqatBitta){
   baseList.forEach(function(nom){
     var o=omap[nom];
     var nParts=(o && o.lokFiles && o.lokFiles.length) || 1;
-    if(nParts>1 && !lockMi(nom)){
+    if(mode === 'tezkor'){
+      royxat.push(nom+'@@TEZKOR');
+    } else if(nParts>1 && !lockMi(nom)){
       for(var p=0;p<nParts;p++) royxat.push(nom+'@@P'+p);
       royxat.push(nom+'@@COMBINE');
     } else {
@@ -48,12 +50,33 @@ function navbatBoshla(faqatBitta){
   
   if(faqatBitta && sp.getProperty(_NB_RUN) === '1') {
     var mavjud = JSON.parse(sp.getProperty(_NB_KEY) || '[]');
-    var added = 0;
-    royxat.forEach(function(r) { 
+    // ⚡ fix: agar bu obyekt shu partiyada ALLAQACHON muvaffaqiyatli ishlangan bo'lsa
+    // (_NB_LOG da ok:true bilan bor, lekin _NB_KEY dan chiqarib yuborilgan), qayta
+    // qo'shilmaydi. Aks holda ikki marta ishlanardi — 2-marta GAS ichki sheet-keshi
+    // eskirgani uchun "A sheet with ID ... does not exist" kabi tasodifiy xato berardi
+    // (ma'lumotga zarar yo'q, shunchaki keraksiz qayta urinish edi).
+    var oldLog=[]; try{ oldLog=JSON.parse(sp.getProperty(_NB_LOG)||'[]'); }catch(e){}
+    var tayyor={};
+    oldLog.forEach(function(l){ if(l && l.ok && !l.qisman && l.ob) tayyor[l.ob]=true; });
+    var added = 0, otkazildi = 0;
+    royxat.forEach(function(r) {
+       var obNomi=String(r).split('@@')[0];
+       if(tayyor[obNomi]){ otkazildi++; return; }
        if(mavjud.indexOf(r) === -1) { mavjud.push(r); added++; }
     });
     sp.setProperty(_NB_KEY, JSON.stringify(mavjud));
-    return {ok:true, jami:mavjud.length, xabar: faqatBitta + ' навбатга қўшилди (Жами: ' + mavjud.length + ')'};
+    // ⚡ Trigger o'lganmi tekshiramiz (oldingi ijro timeout'da o'lgan bo'lishi mumkin) —
+    // bo'lmasa darhol qayta yaratamiz, foydalanuvchi 10-daqiqa watchdog'ni kutib o'tirmasin.
+    var trBor=false, trs0=ScriptApp.getProjectTriggers();
+    for(var ti=0;ti<trs0.length;ti++) if(trs0[ti].getHandlerFunction()===_NB_FN){ trBor=true; break; }
+    if(!trBor && mavjud.length){
+      var ts0=parseInt(sp.getProperty(_NB_TS)||'0',10);
+      if(Date.now()-ts0 > 6.5*60*1000){   // oxirgi qadam 6.5+ daqiqa oldin — ijro aniq o'lgan
+        ScriptApp.newTrigger(_NB_FN).timeBased().after(2000).create();
+      }
+    }
+    return {ok:true, jami:mavjud.length, xabar: faqatBitta + ' навбатга қўшилди (Жами: ' + mavjud.length + ')' +
+      (otkazildi ? (' — '+otkazildi+' та шу партияда аллақачон тайёр, ўтказиб юборилди') : '')};
   } else {
     sp.setProperty(_NB_KEY, JSON.stringify(royxat));
     sp.setProperty(_NB_LOG, JSON.stringify([]));
@@ -94,10 +117,14 @@ function _navbatQadam(){
   var navbat=JSON.parse(sp.getProperty(_NB_KEY)||'[]');
   if(!navbat.length){ _navbatTugadi(); return; }
 
-  var item=String(navbat.shift());
-  sp.setProperty(_NB_KEY, JSON.stringify(navbat));  // darhol saqlash (xato bo'lsa ham o'tadi)
+  // ⚡ PEEK (shift EMAS): item navbat BOSHIDA QOLADI — ijro 6-daqiqa limitda o'lsa ham
+  // yo'qolmaydi. Avval shift qilinardi → timeout'da obyekt JIMGINA tushib qolardi
+  // (natija ham yozilmasdi), watchdog navbatni bo'sh ko'rib "tugadi" derdi — foydalanuvchi
+  // "hech narsa qilmayapti" deb ko'rardi (Amfiteatr АРХ.ЧАСТЬ aynan shunday yo'qolgan).
+  // Endi: timeout → item joyida → watchdog qayta uradi → 3 urinishdan keyin skip-log.
+  var item=String(navbat[0]);
 
-  // Urinishlar limiti — bitta obyekt 3 marta yiqilsa skip (navbat qotmasin)
+  // Urinishlar limiti — bitta obyekt 3 marta yiqilsa (timeout ham) skip (navbat qotmasin)
   var tryMap={};
   try{ tryMap=JSON.parse(sp.getProperty(_NB_TRY)||'{}'); }catch(e){}
   tryMap[item]=(tryMap[item]||0)+1;
@@ -106,15 +133,43 @@ function _navbatQadam(){
   // BOSQICHLI + KO'P-LRV: item turi — oddiy 'ob', per-qism 'ob@@P<n>', birlashtir 'ob@@COMBINE'
   var ob=String(item).split('@@')[0].split('||')[0];
   var _mPart=String(item).match(/@@P(\d+)/);
-  var mode = /@@COMBINE$/.test(item) ? 'combine' : (_mPart ? 'qism' : 'full');
+  var isTezkor = /@@TEZKOR$/.test(item);
+  var mode = isTezkor ? 'tezkor' : (/@@COMBINE$/.test(item) ? 'combine' : (_mPart ? 'qism' : 'full'));
   var partIndex = _mPart ? parseInt(_mPart[1],10) : -1;
 
-  var t0=Date.now(), natija=null;
-  if(tryMap[item]>3){
-    natija={ob:ob, ok:false, xato:'3 marta urinish muvaffaqiyatsiz — o\'tkazib yuborildi', sek:0};
+  var t0=Date.now(), natija=null, qoldir=false;  // qoldir=true → item navbat boshida qoladi (davom etadi)
+  
+  if (String(item).indexOf('F2@@') === 0) {
+    if(tryMap[item]>3){
+      natija={ob:item, ok:false, sek:0, xato:'F2 3 марта уриниш муваффақиятсиз'};
+    } else {
+      var pts = item.split('@@');
+      var f2Ob = pts[1], f2Oy = pts[2], f2Fid = pts[3];
+      try {
+        var f2File = DriveApp.getFileById(f2Fid);
+        var f2Data = JSON.parse(f2File.getBlob().getDataAsString());
+        natija = apiF2Qolla(f2Ob, f2Oy, f2Data.edits, f2Data.dopps);
+        natija.ob = f2Ob + ' (F2 '+f2Oy+')';
+        natija.sek = Math.round((Date.now()-t0)/1000);
+        f2File.setTrashed(true);
+      } catch(ex) {
+        natija = {ob: f2Ob + ' (F2)', ok:false, sek: Math.round((Date.now()-t0)/1000), xato: ex.message||ex};
+      }
+    }
+    // Davom etamiz
+  } else if(tryMap[item]>3){
+    natija={ob:ob, ok:false, sek:0,
+            xato:'3 марта уриниш муваффақиятсиз (таймаут бўлиши мумкин) — ўтказиб юборилди. '+
+                 'Обект жуда катта бўлса: «⚡ Doimiy GS» қилиб, кейин қайта [Ишла] уриниб кўринг.'};
   } else {
     try{
-      if(mode==='combine'){
+      if(mode==='tezkor'){
+        var rTez = apiObyektTezkorIshla(ob, true);
+        var missTez=(rTez&&rTez.topilmadi)||0;
+        natija={ob:ob, ok:true, qator:(rTez&&rTez.qator)||0,
+                xabar:'⚡ Тезкор янгиланди (Сводка)'+(missTez?(' — ⚠ '+missTez+' та нарх топилмади (_NARX_LOG)'):''),
+                sek:Math.round((Date.now()-t0)/1000)};
+      } else if(mode==='combine'){
         var tc=skanBitta(ob); if(!tc) throw 'Объект топилмади: '+ob;
         var rc=_birlashtir(tc);
         natija={ob:ob, ok:true, qator:0, xabar:'✅ Бирлаштирилди ('+(rc.varaq||0)+' варақ)',
@@ -126,8 +181,7 @@ function _navbatQadam(){
         } else {
           var rq=_ishlaQism(tq, partIndex);
           if(rq && rq.partial){
-            navbat.unshift(item);
-            sp.setProperty(_NB_KEY, JSON.stringify(navbat));
+            qoldir=true;   // item navbat boshida qoladi — keyingi trigger davom ettiradi
             natija={ob:ob, ok:true, qisman:true, qator:(rq.qator||0),
                     xabar:'Қисм '+(partIndex+1)+' давом этади...', sek:Math.round((Date.now()-t0)/1000)};
           } else {
@@ -138,14 +192,15 @@ function _navbatQadam(){
       } else {
         var r=apiObyektIshla(ob, true);
         if(r && r.partial){
-          // VARAQ BO'LINISHI: hali tugatilmagan — shu obyektni navbat BOSHIGA qaytaramiz
-          navbat.unshift(item);
-          sp.setProperty(_NB_KEY, JSON.stringify(navbat));
+          // VARAQ BO'LINISHI: hali tugatilmagan — item navbat boshida qoladi
+          qoldir=true;
           natija={ob:ob, ok:true, qisman:true, qator:(r.qator||0),
                   xabar:'Varaq '+(r.varaq||'?')+' tayyor, davom etadi...',
                   sek:Math.round((Date.now()-t0)/1000)};
         } else {
+          var missFull=(r&&r.topilmadi)||0;
           natija={ob:ob, ok:true, qator:(r&&r.qator)||0, locked:(r&&r.locked)||false,
+                  xabar: missFull ? ('⚠ '+missFull+' та нарх топилмади (_NARX_LOG)') : undefined,
                   sek:Math.round((Date.now()-t0)/1000)};
         }
       }
@@ -153,14 +208,29 @@ function _navbatQadam(){
       // (partial resume 3-urinish limitiга urilib o'lmasligi uchun)
       tryMap[item]=0; sp.setProperty(_NB_TRY, JSON.stringify(tryMap));
     }catch(e){
-      natija={ob:ob, ok:false, xato:String(e&&e.message?e.message:e),
+      var emsg=String(e&&e.message?e.message:e);
+      // ⚡ fix: "sheet with ID ... does not exist" — GAS ichki sahifa keshi eskirgani
+      // (odatda shu obyekt duplikat navbatda ikki marta ishlanganda chiqadi — yuqoridagi
+      // "allaqachon tayyor" filtri buni oldini oladi, lekin eski/qo'lda holatlar uchun
+      // ham tushunarli izoh bilan chiqsin). Ma'lumotga zarar YO'Q — xavfsiz qayta urinish.
+      if(/sheet with id.*does not exist/i.test(emsg)){
+        emsg='Обект шу партияда бошқа жараён томонидан аллақачон ишланган бўлиши мумкин ' +
+             '(сахифа маълумоти эскирган) — маълумотга зарар йўқ, хавфсиз. Керак бўлса ' +
+             'қайта [Ишла] босинг. (техник: '+emsg+')';
+      }
+      natija={ob:ob, ok:false, xato:emsg,
               sek:Math.round((Date.now()-t0)/1000)};
     }
   }
   _navbatLogQosh(natija);
 
-  // Navbatda hali bor (yoki partial qaytdi) → keyingi trigger
+  // Item taqdiri: partial (qoldir) → boshida qoladi; aks holda (ok/xato/skip) chiqariladi.
+  // Qayta o'qiymiz — jarayon davomida foydalanuvchi yangi obyekt qo'shgan bo'lishi mumkin.
   navbat=JSON.parse(sp.getProperty(_NB_KEY)||'[]');
+  if(!qoldir && navbat.length && String(navbat[0])===item){
+    navbat.shift();
+    sp.setProperty(_NB_KEY, JSON.stringify(navbat));
+  }
   if(navbat.length){
     ScriptApp.newTrigger(_NB_FN).timeBased().after(2000).create();
   } else {
@@ -270,21 +340,31 @@ function apiObyektFonIshla(obyekt){
 function apiBarchaFonIshla(){
   return navbatBoshla(null);
 }
-
+/* Panel API: barchasini TEZKOR fon-navbatda */
+function apiBarchaTezkorIshla(){
+  return navbatBoshla(null, 'tezkor');
+}
+/* Panel API: bitta ob'ektni TEZKOR fon-navbatda */
+function apiObyektTezkorFonIshla(obyekt){
+  return navbatBoshla(obyekt, 'tezkor');
+}
 
 /* ============ AVTOMATIK TRIGGERLAR ============
  * Bir marta ishga tushiring: triggerlarOrnat()
- * — Har kuni 06:00 da DASHBOARD + skan kesh avtomatik yangilanadi. */
+ * — Har kuni 06:00 da DASHBOARD + skan kesh avtomatik yangilanadi. 
+ * — Har kuni 03:00 da Arxiv zaxirasi olinadi. */
 function triggerlarOrnat(){
   // Eski avtomatik triggerlarni o'chiramiz (navbatga tegmaymiz)
   var trs=ScriptApp.getProjectTriggers();
   for(var i=0;i<trs.length;i++){
     var fn=trs[i].getHandlerFunction();
-    if(fn==='avtoYangilash') { try{ScriptApp.deleteTrigger(trs[i]);}catch(e){} }
+    if(fn==='avtoYangilash' || fn==='apiKunlikArxivYarat') { try{ScriptApp.deleteTrigger(trs[i]);}catch(e){} }
   }
-  // Har kuni ertalab 6 da
+  // Har kuni ertalab 6 da Dashboard
   ScriptApp.newTrigger('avtoYangilash').timeBased().everyDays(1).atHour(6).create();
-  return 'Avtomatik trigger o\'rnatildi: har kuni 06:00 da dashboard+kesh yangilanadi';
+  // Har kuni kechasi 3 da Arxiv
+  ScriptApp.newTrigger('apiKunlikArxivYarat').timeBased().everyDays(1).atHour(3).create();
+  return 'Avtomatik trigger o\'rnatildi: 06:00 dashboard, 03:00 arxiv';
 }
 
 /* Trigger chaqiradi — dashboard + skan/holat/boss keshini yangilaydi (LRV qayta ishlamaydi) */
@@ -305,4 +385,89 @@ function triggerlarRoyxat(){
   var out=trs.map(function(t){ return t.getHandlerFunction()+' ('+t.getEventType()+')'; });
   Logger.log('Triggerlar: '+(out.length?out.join(', '):'yo\'q'));
   return out;
+}
+
+/* ============ KUNLIK ARXIV ZAXIRASI ============ */
+function apiKunlikArxivYarat(){
+  var sp = PropertiesService.getScriptProperties();
+  var cursorStr = sp.getProperty('ARXIV_CURSOR');
+  var cursor = cursorStr ? parseInt(cursorStr, 10) : 0;
+  
+  var obs = papkaSkan();
+  var sanaSuffix = Utilities.formatDate(new Date(), 'Asia/Tashkent', '(yyyy-MM-dd HH-mm)');
+  var jamiNusxa = 0;
+  var startTime = new Date().getTime();
+  
+  // 1. Papkalar ro'yxatini yig'amiz (dublikatlarsiz)
+  var uniqueFolders = [];
+  var seen = {};
+  for(var i=0; i<obs.length; i++){
+    var fid = obs[i].folderId;
+    if(!seen[fid]) {
+      seen[fid] = true;
+      uniqueFolders.push(fid);
+    }
+  }
+  
+  var qilinganFayllar = {}; 
+  
+  // 2. Kursor joyidan boshlab arxivlaymiz
+  for(var i=cursor; i<uniqueFolders.length; i++){
+    
+    // 3. Timeout himoyasi (4.5 daqiqa)
+    if(new Date().getTime() - startTime > 4.5 * 60 * 1000){
+      sp.setProperty('ARXIV_CURSOR', String(i));
+      return "⏳ Limit sababli " + jamiNusxa + " ta fayl arxivlandi.\nYana " + (uniqueFolders.length - i) + " ta papka qoldi.\nIltimos, MENU dan yana bir marta 'Архив яратиш' ni bosing!";
+    }
+    
+    var folderId = uniqueFolders[i];
+    try {
+      var folder = DriveApp.getFolderById(folderId);
+      var fileIter = folder.searchFiles("title contains '" + CFG.PLUS_SUF + "' and trashed = false");
+      var arxivFolder = null;
+      
+      while(fileIter.hasNext()){
+        var file = fileIter.next();
+        var fid = file.getId();
+        if(qilinganFayllar[fid]) continue;
+        qilinganFayllar[fid] = true;
+        
+        if(!arxivFolder){
+          var arxivFolders = folder.getFoldersByName('Arxiv');
+          if(arxivFolders.hasNext()) arxivFolder = arxivFolders.next();
+          else arxivFolder = folder.createFolder('Arxiv');
+        }
+        
+        var originalName = file.getName();
+        var newName = originalName + ' ' + sanaSuffix;
+        file.makeCopy(newName, arxivFolder);
+        jamiNusxa++;
+      }
+      
+      if(arxivFolder){
+        _arxivEskilarniTozala(arxivFolder, 3);
+      }
+      
+    } catch(e) {
+      Logger.log("Arxiv xato papkada ("+folderId+"): "+e);
+    }
+  }
+  
+  // Barcha ish yakunlandi, kursorni tozalaymiz
+  sp.deleteProperty('ARXIV_CURSOR');
+  var xulosa = cursor > 0 ? "✅ Arxivlash TO'LIQ yakunlandi!" : "✅ Arxiv yaratildi!";
+  return xulosa + "\nJami " + uniqueFolders.length + " ta papkada " + jamiNusxa + " ta fayl nusxalandi.";
+}
+
+function _arxivEskilarniTozala(folder, kun){
+  var cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - kun);
+  
+  var iter = folder.getFiles();
+  while(iter.hasNext()){
+    var f = iter.next();
+    if(f.getDateCreated() < cutoff){
+      try { f.setTrashed(true); } catch(e){}
+    }
+  }
 }

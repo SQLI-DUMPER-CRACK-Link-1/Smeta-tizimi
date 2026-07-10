@@ -8,28 +8,27 @@ function getLogsForDebug() {
 }
 
 /**
- * Supabase loyihasini ulash va tekshirish uchun yordamchi funksiya.
- * Supabase-dan olingan URL va Service Role kalitlarini quyiga yozib,
- * ushbu funksiyani Apps Script muharririda tanlab RUN tugmasini bosing.
+ * Supabase ulanishini TEKSHIRADI (diagnostika).
+ * ⚠️ XAVFSIZLIK: service_role kalit KODGA YOZILMAYDI (avval hardcode edi → sizib ketish xavfi).
+ * Kalit faqat Script Property'да (SUPABASE_URL / SUPABASE_KEY) saqlanadi.
+ * Yangi kalit o'rnatish (bir marta): editorда → supabaseSozlash('https://xxx.supabase.co','service_role_key')
+ * Keyin shu funksiyani RUN qilib ulanishni tekshiring.
  */
 function debugSupabaseUlash() {
-  var url = "https://tuoyrzadkgoltpqkdiyx.supabase.co"; // masalan: https://xyz.supabase.co (buni ham almashtiring)
-  var serviceKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1b3lyemFka2dvbHRwcWtkaXl4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDU5NzY5NSwiZXhwIjoyMDk2MTczNjk1fQ.tzmDyce0aYtFNlOT1FrV5L6eyDITgp3Y5hAh1AFBmwY"; // service_role kaliti (secret API key)
-  
-  if (url === "YOUR_SUPABASE_PROJECT_URL") {
-    Logger.log("Iltimos, avval haqiqiy Supabase URL va service_role kalitlarini yozing!");
-    return;
+  var cfg = (typeof _sbCfg === 'function') ? _sbCfg() : null;
+  if (!cfg) {
+    Logger.log("❌ Supabase sozlanmagan. Avval editorда RUN qiling:\n" +
+               "   supabaseSozlash('https://SIZNING.supabase.co', 'SERVICE_ROLE_KEY')");
+    return "Sozlanmagan — supabaseSozlash(url,key) ni ishga tushiring.";
   }
-  
-  var res = supabaseSozlash(url, serviceKey);
-  Logger.log(res);
-  
+  Logger.log("URL: " + cfg.url + "  (kalit propда, uzunligi: " + String(cfg.key||'').length + ")");
   try {
     var testRes = supabaseTest();
-    Logger.log("TEST NATIJASI: " + testRes);
-    Logger.log("✓ Muvaffaqiyatli ulandi! Endi 'supabaseToliqSinx()' funksiyasini ishga tushirsangiz bo'ladi.");
+    Logger.log("✓ TEST: " + testRes + "\nEndi supabaseToliqSinx() ni ishga tushirsangiz bo'ladi.");
+    return testRes;
   } catch(e) {
-    Logger.log("✗ Ulanishda xato yuz berdi: " + e);
+    Logger.log("✗ Ulanishda xato: " + e);
+    return "Xato: " + e;
   }
 }
 
@@ -105,3 +104,69 @@ function debugOptimallashtirFayl() {
 }
 
 
+/* ============ DIAGNOSTIKA: narx topilmayotgan material uchun ============ */
+function diagNarxQidirish(){
+  var logContent = [];
+  function log(msg){ logContent.push(msg); }
+  
+  var QIDIRUV = '1ПП';  // <-- qisqartirib qidiramiz
+  
+  var obs = papkaSkan();
+  log('=== AGGRESSIVE DIAGNOSTIKA: "1ПП" qatnashgan obyektlar ===');
+  
+  for(var oi=0; oi<obs.length; oi++){
+    var ob = obs[oi];
+    if(ob.obyekt.indexOf("Suniy ko'l") < 0 && ob.obyekt.indexOf("СКВАЖИНА") < 0) continue;
+    
+    log('\n────── OBYEKT: ' + ob.obyekt + ' ──────');
+    
+    if(ob.svodFile){
+      var svodSS;
+      try{ svodSS = _openAsSheet(ob.svodFile, ob.folderId); }catch(e){ continue; }
+      log('  Svod fayl nomi: ' + svodSS.getName());
+      
+      var sheets = svodSS.getSheets();
+      for(var s=0; s<sheets.length; s++){
+        var sh = sheets[s];
+        var shName = sh.getName();
+        var last = sh.getLastRow();
+        if(last < 1) continue;
+        var maxc = sh.getLastColumn();
+        if(maxc < 1) continue;
+        var v = sh.getRange(1,1,last,maxc).getValues();
+        
+        for(var i=0; i<v.length; i++){
+          for(var j=0; j<v[i].length; j++){
+            var cellVal = String(v[i][j]||'').toUpperCase();
+            if(cellVal.indexOf('1ПП') >= 0 || cellVal.indexOf('1PP') >= 0){
+              log('    🔥 TOPIB OLINDI! Svodka fayli: ' + svodSS.getName() + ' | Varaq: "' + shName + '" | Qator: ' + (i+1) + ' | Ustun: ' + (j+1) + ' | QIYMAT: "' + String(v[i][j]) + '"');
+            }
+          }
+        }
+      }
+      _cleanupTmp(svodSS);
+    }
+  }
+  log('\n=== DIAGNOSTIKA TUGADI ===');
+  
+  var name = "diag_log_" + new Date().getTime() + ".txt";
+  DriveApp.createFile(name, logContent.join('\n'));
+}
+
+function _diagCharCodes(s){
+  var out = [];
+  for(var i=0; i<Math.min(s.length,40); i++){
+    out.push(s.charAt(i)+'('+s.charCodeAt(i)+')');
+  }
+  return out.join(' ');
+}
+
+
+function debugTestSuniyKol() {
+  var folders = DriveApp.getFoldersByName("Suniy ko'l");
+  if (!folders.hasNext()) return "Folder not found";
+  var f = folders.next();
+  var obs = _skanObyekt(f, {});
+  var res = obs.map(function(o) { return o.obyekt + " | svod=" + (o.svodFile ? o.svodFile.getName() : "NULL"); });
+  return JSON.stringify(res, null, 2);
+}
