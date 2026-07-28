@@ -20,29 +20,27 @@ export type TreeNode = {
 };
 
 export type ObyektInfo = {
-  id: string;
   nom: string;
-  url: string; // Spreadsheet URL
-  subObyektlar?: ObyektInfo[];
-};
-
-export type DashboardKpi = {
-  smetaJami: number;
-  fakt: number;
-  f2Olingan: number;
-  qoldiq: number;
-};
-
-export type ObyektStats = {
-  nom: string;
+  isGroup?: boolean;
   smeta: number;
   fakt: number;
-  foiz: number;
-  holat: 'ok' | 'warn' | 'danger';
+  f2: number;
+  qoldiq: number;
+  progress: number;
+  f2pct: number;
+  subItems?: ObyektInfo[];
 };
 
-// Based on apiBossData response
-export type BossData = {
-  kpi: DashboardKpi;
-  obyektlar: ObyektStats[];
-};
+export interface BossData {
+  objects: ObyektInfo[];
+  jami: {
+    smeta: number;
+    fakt: number;
+    f2: number;
+    qoldiq: number;
+    progress: number;
+    f2pct: number;
+  };
+  oylar: any[];
+  sana: string;
+}

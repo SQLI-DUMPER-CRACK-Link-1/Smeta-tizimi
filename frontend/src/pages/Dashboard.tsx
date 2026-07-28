@@ -45,10 +45,10 @@ export function Dashboard() {
   }
 
   const kpis = [
-    { title: 'Smeta Jami (so\'m)', value: data.kpi.smetaJami, icon: <Wallet size={24} />, color: 'bg-accent' },
-    { title: 'Fakt (Bajarilgan)', value: data.kpi.fakt, icon: <TrendingUp size={24} />, color: 'bg-ok' },
-    { title: 'F2 Olingan', value: data.kpi.f2Olingan, icon: <CheckCircle size={24} />, color: 'bg-t-rs' },
-    { title: 'Qoldiq', value: data.kpi.qoldiq, icon: <Clock size={24} />, color: 'bg-warn' },
+    { title: 'Smeta Jami (so\'m)', value: data.jami.smeta, icon: <Wallet size={24} />, color: 'bg-accent' },
+    { title: 'Fakt (Bajarilgan)', value: data.jami.fakt, icon: <TrendingUp size={24} />, color: 'bg-ok' },
+    { title: 'F2 Olingan', value: data.jami.f2, icon: <CheckCircle size={24} />, color: 'bg-t-rs' },
+    { title: 'Qoldiq', value: data.jami.qoldiq, icon: <Clock size={24} />, color: 'bg-warn' },
   ];
 
   return (
@@ -72,36 +72,36 @@ export function Dashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {data.obyektlar?.map((obj, i) => (
+              {data.objects?.map((obj, i) => (
                 <tr key={i} className="hover:bg-surface-2/30 transition-colors">
                   <td className="px-6 py-4 font-medium text-white">{obj.nom}</td>
                   <td className="px-6 py-4 text-right tabular-nums text-text-dim">{formatSum(obj.smeta)}</td>
                   <td className="px-6 py-4 text-right tabular-nums text-white">{formatSum(obj.fakt)}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3 justify-end">
-                      <span className="tabular-nums font-medium w-12 text-right">{formatPercent(obj.foiz)}</span>
+                      <span className="tabular-nums font-medium w-12 text-right">{formatPercent(obj.progress || 0)}</span>
                       <div className="w-24 h-2 bg-surface-2 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full rounded-full transition-all duration-1000 ${obj.foiz > 90 ? 'bg-ok' : 'bg-accent'}`}
-                          style={{ width: `${Math.min(obj.foiz, 100)}%` }}
+                          className={`h-full rounded-full transition-all duration-1000 ${obj.progress > 90 ? 'bg-ok' : 'bg-accent'}`}
+                          style={{ width: `${Math.min(obj.progress || 0, 100)}%` }}
                         />
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                      obj.holat === 'ok' ? 'bg-ok/10 text-ok border-ok/20' : 
-                      obj.holat === 'warn' ? 'bg-warn/10 text-warn border-warn/20' : 
+                      (obj.progress || 0) > 90 ? 'bg-ok/10 text-ok border-ok/20' : 
+                      (obj.progress || 0) > 50 ? 'bg-warn/10 text-warn border-warn/20' : 
                       'bg-danger/10 text-danger border-danger/20'
                     }`}>
-                      {obj.holat.toUpperCase()}
+                      {((obj.progress || 0) > 90 ? 'ok' : (obj.progress || 0) > 50 ? 'warn' : 'xavf').toUpperCase()}
                     </span>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {(!data.obyektlar || data.obyektlar.length === 0) && (
+          {(!data.objects || data.objects.length === 0) && (
              <div className="p-12 text-center text-text-dim">
                 Hech qanday obyekt topilmadi.
              </div>
