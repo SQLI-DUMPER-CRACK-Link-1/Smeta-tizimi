@@ -1,13 +1,10 @@
 import { useObyektlar } from '../api/hooks';
-import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { Card, CardContent } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
 import { RefreshCw, Folder } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { formatSum } from '../lib/format';
 
 export function Obyektlar() {
   const { data, isLoading, error, refetch, isRefetching } = useObyektlar();
-  const queryClient = useQueryClient();
 
   if (isLoading && !isRefetching) {
     return (

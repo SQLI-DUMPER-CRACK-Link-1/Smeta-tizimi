@@ -1,10 +1,10 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { TreeNode } from '../../api/types';
+import type { TreeNode } from '../../api/types';
 import { flattenTree, getAllKeys } from './utils';
 import { formatSum } from '../../lib/format';
 import { Badge } from '../ui/Badge';
-import { ChevronRight, ChevronDown, RefreshCw, RefreshCcw, Plus } from 'lucide-react';
+import { ChevronRight, ChevronDown, RefreshCcw, Plus } from 'lucide-react';
 
 export function SmetaTree({ data }: { data: TreeNode[] }) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
@@ -91,7 +91,7 @@ export function SmetaTree({ data }: { data: TreeNode[] }) {
                     {node.qoshimcha && <Plus size={14} className="text-ok flex-shrink-0" />}
                     
                     {/* Type Badge */}
-                    <Badge variant={node.tip} className="flex-shrink-0 w-8 justify-center uppercase">{node.tip}</Badge>
+                    <Badge variant={node.tip as any} className="flex-shrink-0 w-8 justify-center uppercase">{node.tip}</Badge>
                     
                     {/* Kod (Shifr) */}
                     {node.kod && <span className="text-text-dim font-mono text-xs flex-shrink-0 w-24 truncate">{node.kod}</span>}

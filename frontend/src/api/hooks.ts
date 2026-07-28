@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { gas } from './client';
-import { BossData, TreeNode, ObyektInfo } from './types';
+import type { BossData, TreeNode, ObyektInfo } from './types';
 
 export function useObyektlar() {
   return useQuery({

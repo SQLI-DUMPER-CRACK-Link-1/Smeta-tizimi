@@ -1,4 +1,4 @@
-import { TreeNode } from '../../api/types';
+import type { TreeNode } from '../../api/types';
 
 export type FlatNode = {
   node: TreeNode;

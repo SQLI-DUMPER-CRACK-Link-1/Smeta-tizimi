@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { LayoutDashboard, FolderTree, FileSpreadsheet } from 'lucide-react';
 
 export function Sidebar({ currentTab, onTabChange }: { currentTab: string, onTabChange: (t: string) => void }) {
@@ -39,7 +39,7 @@ export function Sidebar({ currentTab, onTabChange }: { currentTab: string, onTab
   );
 }
 
-export function Topbar({ activeObject, onObjectChange }: { activeObject: string, onObjectChange: (o: string) => void }) {
+export function Topbar() {
   return (
     <header className="h-16 flex items-center px-6 border-b border-border bg-surface/50 backdrop-blur-sm sticky top-0 z-10 flex-shrink-0">
       <div className="flex items-center gap-4 flex-1">
@@ -61,7 +61,7 @@ export function Shell({ children, currentTab, onTabChange }: { children: ReactNo
     <div className="flex h-screen w-screen overflow-hidden bg-bg text-text selection:bg-accent/30">
       <Sidebar currentTab={currentTab} onTabChange={onTabChange} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar activeObject="" onObjectChange={() => {}} />
+        <Topbar />
         <main className="flex-1 overflow-auto p-6">
           {children}
         </main>
