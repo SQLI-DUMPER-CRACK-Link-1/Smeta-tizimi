@@ -1,0 +1,746 @@
+[
+  {
+    "nom": "apiAiAktDraft",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiAiAktTahlil",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAiAktYoz",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiAiAnomaliya",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAiHisobot",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAiKalitFromText",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAiKalitHolat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiAiKalitSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAiKalitSaqlaBase",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiAiKalitSheetdanTikla",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiAiPrognoz",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAiSmartF2",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiAktBoglanmagan",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiAktCoverage",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAktIshlar",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAktMassUlash",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiAktMassUlashTree",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAktNomzodlar",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAktSmetadan",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiAktSmetadanKop",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiAktUlash",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiAktYoz",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAktlarOl",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiAnthropicKalitSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiAntigravityExport",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiBarchaFonIshla",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBarchaIshla",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBarchaTezkorIshla",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBlQosh",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiBoglashOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBoglashSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiBossData",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBossInit",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBossObyekt",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiBossTahlilBoshla",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBossTahlilHolatOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBossTahlilNatijaOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiBuxDashboard",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiDarajalarBarchaOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiDarajalarLrvGaYoz",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiDarajalarLrvGaYozBarcha",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiDarajalarOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiDarajalarSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiDebitorAging",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiDeepseekKalitSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiF2BoglanishBekorQil",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiF2FaylOqi",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiF2FaylYukla",
+    "argSoni": 5
+  },
+  {
+    "nom": "apiF2FayllarOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiF2JobHolat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiF2LokalkaRoyxat",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiF2OyOchirish",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiF2OySkan",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiF2Qolla",
+    "argSoni": 6
+  },
+  {
+    "nom": "apiF2QollaLog",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiF2QollaNavbatga",
+    "argSoni": 5
+  },
+  {
+    "nom": "apiF2QollaProgress",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiF2TayyorHujjatYarat",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiF2VaraklarOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiFaktSinxron",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiGrafikHolatOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiGrafikNatijaOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiGrafikSozlamaOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiGrafikYangilashBoshla",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiGroqKalitSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiHolatOl",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiHolatOlLokalka",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiHolatSaqla",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiHujjatLokalTuzat",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiHujjatlarRoyxat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiIshTurAfterRow",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiIshTurBarchasi",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiIshTurQidir",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiIshTurQosh",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiJarvisFaktDraft",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiJarvisFaktSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiKategoriyaOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiKategoriyaSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiKeshBittaYangilash",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiKeshHolat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiKeshOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiKeshSkanYangilash",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiKeshWarmUp",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiKeshYangilash",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiKunlikArxivYarat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiLockBos",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiLockOch",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiLockOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiM29Yarat",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiMarkerQayta",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiMaslahatDashboard",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiMaslahatObyekt",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiNakrutkaKoef",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiNakrutkaOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiNakrutkaSaqla",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiNarxBelgilanganSaqla",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiNarxKatSaqla",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiNarxSanaQosh",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiNarxlarOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiNarxlarSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiNarxlarYarat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiNativeGaAylantir",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiNavbatHolat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiNavbatToxtat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiObyektDiagnostika",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiObyektFayllarniTekshir",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiObyektFonIshla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiObyektIshla",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiObyektNakrutka",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiObyektTezkorFonIshla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiObyektTezkorIshla",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiOpenaiKalitSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiOraliqlarOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiOraliqlarSaqla",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiOraliqlarSkan",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiOyQosh",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiPanelInit",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiPapkaSkan",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiPrixodNomTaklif",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiPrixodOl",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiPrixodYoz",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiProgressOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiQoshIshOchir",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiQoshIshOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiQoshIshSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiRashodYoz",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiRashodYozMass",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiRazdelShYasat",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiRazdelShYasatBarcha",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiRazdellarShYasaVaOch",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiRazdellarTolaQaytaQur",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiReestrOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiReestrSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiResursNakrutka",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiRsQosh",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiRzQosh",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiServerYig",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiSetPrimaryProv",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiShartnomaBogFullOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiShartnomaBogOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiShartnomaBogSaqla",
+    "argSoni": 3
+  },
+  {
+    "nom": "apiShartnomaDashboard",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiShartnomaOchir",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiShartnomaOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiShartnomaSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiShaxsiySmetaYarat",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiShaxsiySmetalar",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiSheetlarOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiSkladOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiSkladQoldiq",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiSkladTelegramQabul",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiSkladgaYozish",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiSmetaAi",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiSmetaSavol",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiSmetaSuperAi",
+    "argSoni": 4
+  },
+  {
+    "nom": "apiSozlamaOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiSozlamaSaqla",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiStavkaOl",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiStavkaSaqla",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiSupabaseSinxKursor",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiSupabaseSinxReset",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiSupabaseSozlamaOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiSupabaseSozlamaSaqla",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiSvodOldindan",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiSvodUstunSaqla",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiTashxis",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTitanAi",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTitanAktYarat",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTitanData",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTitanSmart",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTizimHolatOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiTizimHolatOzgartir",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTolaDiagnostika",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTolovOchir",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTolovOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiTolovTahrir",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTolovYoz",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTopilmaganlar",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiTriggerlarRoyxat",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiViborkaOl",
+    "argSoni": 2
+  },
+  {
+    "nom": "apiWebApiFunksiyalar",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiWebApiLog",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiWebApiSalom",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiXarajatOchir",
+    "argSoni": 1
+  },
+  {
+    "nom": "apiXarajatOl",
+    "argSoni": 0
+  },
+  {
+    "nom": "apiXarajatYoz",
+    "argSoni": 1
+  }
+]
