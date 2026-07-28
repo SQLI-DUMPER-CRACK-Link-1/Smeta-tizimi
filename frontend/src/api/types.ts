@@ -19,28 +19,37 @@ export type TreeNode = {
   children: TreeNode[];
 };
 
-export type ObyektInfo = {
+export type PapkaObyekt = {
+  obyekt: string;
+  folderId: string;
+  lokId: string;
+  lokName: string;
+  svodId: string;
+  svodName: string;
+  format: string;
+  lokSheets: string[];
+  svodSheets: string[];
+};
+
+export type BossObyekt = {
   nom: string;
   isGroup?: boolean;
-  smeta: number;
-  fakt: number;
-  f2: number;
-  qoldiq: number;
-  progress: number;
-  f2pct: number;
-  subItems?: ObyektInfo[];
+  subItems?: BossObyekt[];
+  smeta: number; smetaToza: number; fakt: number; f2: number;
+  qoldiq: number; progress: number; f2pct: number; leaf: number;
+};
+
+export type BossJami = {
+  smeta: number; smetaToza: number; fakt: number; f2: number;
+  qoldiq: number; progress: number; f2pct: number; leaf: number;
+  chel: number; mash: number; mat: number; ob: number;
+  mk: number; kab: number; sub: number;
+  tolangan: number; debitor: number; avans: number;
 };
 
 export interface BossData {
-  objects: ObyektInfo[];
-  jami: {
-    smeta: number;
-    fakt: number;
-    f2: number;
-    qoldiq: number;
-    progress: number;
-    f2pct: number;
-  };
-  oylar: any[];
+  objects: BossObyekt[];
+  jami: BossJami;
+  oylar: unknown[];
   sana: string;
 }

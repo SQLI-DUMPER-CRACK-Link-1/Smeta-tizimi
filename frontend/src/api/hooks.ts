@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { gas } from './client';
-import type { BossData, TreeNode, ObyektInfo } from './types';
+import type { BossData, TreeNode, PapkaObyekt } from './types';
 
 export function useObyektlar() {
   return useQuery({
     queryKey: ['obyektlar'],
-    queryFn: () => gas<ObyektInfo[]>('apiPapkaSkan'),
+    queryFn: () => gas<PapkaObyekt[]>('apiPapkaSkan'),
     staleTime: 10 * 60 * 1000, // 10 minutes cache as requested
   });
 }

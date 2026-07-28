@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHolat, useObyektlar } from '../api/hooks';
 import { SmetaTree } from '../components/tree/SmetaTree';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -9,9 +9,11 @@ export function Holat() {
   const [selectedObyekt, setSelectedObyekt] = useState<string>('');
 
   // Auto-select first object if none selected
-  if (!selectedObyekt && obyektlar && obyektlar.length > 0) {
-    setSelectedObyekt(obyektlar[0].id || obyektlar[0].nom);
-  }
+  useEffect(() => {
+    if (!selectedObyekt && obyektlar?.length) {
+      setSelectedObyekt(obyektlar[0].obyekt);
+    }
+  }, [obyektlar, selectedObyekt]);
 
   const { data: holatData, isLoading: isHolatLoading, error } = useHolat(selectedObyekt);
 
@@ -37,7 +39,7 @@ export function Holat() {
               className="bg-surface border border-border rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-accent min-w-[200px]"
             >
               {obyektlar?.map(obj => (
-                <option key={obj.id || obj.nom} value={obj.id || obj.nom}>{obj.nom}</option>
+                <option key={obj.obyekt} value={obj.obyekt}>{obj.obyekt}</option>
               ))}
             </select>
           )}

@@ -42,7 +42,7 @@ export function Obyektlar() {
               <div className="w-12 h-12 rounded-xl bg-accent/10 text-accent flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Folder size={24} />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{(obj as any).obyekt || obj.nom}</h3>
+              <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{obj.obyekt}</h3>
               
               <div className="space-y-3 mt-4 pt-4 border-t border-border">
                 {/* Fallbacks in case apiPapkaSkan doesn't return these yet */}
