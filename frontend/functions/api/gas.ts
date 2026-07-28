@@ -11,22 +11,7 @@ export const onRequestPost: PagesFunction<{
 
   return new Response(await r.text(), {
     headers: {
-      'Content-Type': 'application/json',
-      // CORS headers, just in case someone accesses directly
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      'Content-Type': 'application/json'
     },
-  });
-};
-
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS'
-    }
   });
 };

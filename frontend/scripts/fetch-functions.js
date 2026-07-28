@@ -1,7 +1,13 @@
 import fs from 'fs';
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbx0tzNBlYPgaks51yZk6hU3d5UU32LjXvybSJWXekup7HxgjcCk86gVrCy_9X12dQIbTQ/exec";
-const GAS_TOKEN = "6db28061340748baa2d17f5c62dcfde307627fee";
+const GAS_URL = process.env.GAS_URL;
+const GAS_TOKEN = process.env.GAS_TOKEN;
+
+if (!GAS_URL || !GAS_TOKEN) {
+  console.error('GAS_URL va GAS_TOKEN muhit o\'zgaruvchilari kerak.');
+  console.error('Masalan: GAS_TOKEN=xxx GAS_URL=yyy node scripts/fetch-functions.js');
+  process.exit(1);
+}
 
 async function run() {
   try {
