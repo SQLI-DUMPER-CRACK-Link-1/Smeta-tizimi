@@ -17,6 +17,10 @@
       --text-secondary: #5f6368;
     }
     
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       margin: 0;
@@ -27,7 +31,7 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      box-sizing: border-box;
+      overflow-x: hidden;
     }
 
     /* Tabs */
@@ -70,6 +74,9 @@
     }
     .tab-content.active {
       display: block;
+    }
+    #tab-ai.active {
+      display: flex;
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(5px); }
@@ -216,7 +223,7 @@
 
   <div class="tabs">
     <div class="tab active" onclick="switchTab('asosiy')">Asosiy</div>
-    <div class="tab" onclick="switchTab('ommaviy')">Ommaviy</div>
+    <div class="tab" onclick="switchTab('ai')">🤖 AI Yordamchi</div>
     <div class="tab" onclick="switchTab('tools')">Sozlamalar</div>
   </div>
 
@@ -224,33 +231,38 @@
     
     <!-- ASOSIY TAB -->
     <div id="tab-asosiy" class="tab-content active">
-      <div class="section">
-        <h4 class="section-title">Tanlangan Qator (Active Row)</h4>
-        <button class="btn" onclick="runAction('openFolderPickerForActiveRow', this)">📁 Folder tanlash</button>
-        <button class="btn primary" onclick="runAction('createActForActiveRow', this)">⚡ Akt yaratish</button>
-        <button class="btn" onclick="runAction('syncActForActiveRow', this)">🔄 Aktni yangilash (Sync)</button>
-        <button class="btn" onclick="runAction('moveActForActiveRow', this)">📦 Folderga ko'chirish</button>
-      </div>
-    </div>
-
-    <!-- OMMAVIY TAB -->
-    <div id="tab-ommaviy" class="tab-content">
       <div class="section" id="bulk-buttons">
-        <h4 class="section-title">Ommaviy Harakatlar</h4>
+        <h4 class="section-title">Asosiy Harakatlar</h4>
         
-        <div style="margin-bottom: 16px; font-size: 13px;">
-          <div style="margin-bottom: 6px; font-weight: 500;">Qamrovni tanlang:</div>
-          <label style="display: block; margin-bottom: 4px; cursor: pointer;">
-            <input type="radio" name="bulkScope" value="selected" checked> Faqat belgilangan qatorlar
+        <div style="margin-bottom: 12px; font-size: 13px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+          <span style="font-weight: 500; color: var(--text);">Qamrov:</span>
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <input type="radio" name="bulkScope" value="selected" checked> Belgilangan qatorlar
           </label>
-          <label style="display: block; cursor: pointer;">
-            <input type="radio" name="bulkScope" value="visible"> Barcha ochiq qatorlar (Filtrdagi)
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <input type="radio" name="bulkScope" value="visible"> Barcha ochiq qatorlar
           </label>
         </div>
 
-        <button class="btn primary" onclick="startBulk('create')">⚡ Yaratish</button>
-        <button class="btn" onclick="startBulk('sync')">🔄 Yangilash</button>
-        <button class="btn" onclick="startBulk('move')">📦 Ko'chirish</button>
+        <button class="btn" onclick="runAction('openFolderPickerForActiveRow', this)">📁 Folder tanlash</button>
+        <button class="btn primary" onclick="startBulk('create')">⚡ Akt yaratish</button>
+        <button class="btn" onclick="startBulk('sync')">🔄 Aktni yangilash (Sync)</button>
+        <button class="btn" onclick="startBulk('move')">📦 Folderga ko'chirish</button>
+        
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+          <h4 style="margin: 0 0 10px 0; font-size: 13px; color: var(--text);">Pechat Uchun Yig'ish (Birlashtirish)</h4>
+          <button class="btn" style="background: #00695c; color: white;" onclick="startPrintMerge('excel')">🖨️ Yagona Excel Kitob</button>
+          <button class="btn" style="background: #c62828; color: white;" onclick="startPrintMerge('pdf')">🖨️ Yagona PDF</button>
+          
+          <h4 style="margin: 15px 0 10px 0; font-size: 13px; color: var(--text);">Yig'ma Exceldan Asliga Qaytarish</h4>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <select id="merge-url-select" style="flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box;">
+              <option value="">Yuklanmoqda...</option>
+            </select>
+            <button class="btn" style="padding: 0 12px;" onclick="loadRecentPrintFiles()" title="Ro'yxatni yangilash">🔄</button>
+          </div>
+          <button class="btn" style="background: #fbc02d; color: black; font-weight: bold;" onclick="runReverseSync()" id="btn-reverse-sync">⬅️ Asliga Qaytarish (Sync)</button>
+        </div>
       </div>
 
       <div class="section progress-container" id="bulk-progress">
@@ -262,6 +274,34 @@
         <div class="log-area" id="bulk-log"></div>
         <br>
         <button class="btn" onclick="cancelBulk()" id="bulk-cancel">To'xtatish</button>
+      </div>
+    </div>
+
+    <!-- AI YORDAMCHI TAB -->
+    <div id="tab-ai" class="tab-content" style="height: 100%; flex-direction: column;">
+      <div id="chat-history" style="flex: 1; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 10px; min-height: 250px; font-size: 13px; word-wrap: break-word;">
+        <div style="margin-bottom: 10px;"><b>🤖 Titan AI:</b> Salom! Nima ish qildingiz? Menga matn yoki rasm orqali aytsangiz, kerakli aktlarni o'zim avtomat yaratib beraman.</div>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn" style="flex: 1; padding: 6px 10px; margin: 0; background: #c62828; color: white;" onclick="runAction('abortAllRequests', this)" title="Orqa fonda qotib qolgan barcha AI jarayonlarini (zombilarni) to'xtatish">🔴 Barcha AI jarayonlarini to'xtatish (Qotib qolganda)</button>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <select id="ai-object-select" style="flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; margin: 0; min-width: 0; width: 100%;">
+            <option value="">-- Obyekt --</option>
+          </select>
+        </div>
+        
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span style="font-size: 12px; font-weight: 500;">📅 Sana:</span>
+          <input type="date" id="ai-start-date" style="flex: 1; padding: 4px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px;">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <textarea id="ai-prompt" style="flex: 1; height: 60px; resize: none; padding: 8px; border: 1px solid var(--border); border-radius: 4px;" placeholder="Bu yerga yozing (masalan: 5-qavatga M200 dan beton quydik)..."></textarea>
+        <button class="btn primary" style="width: 60px; height: 60px; margin: 0; padding: 0;" onclick="sendToAi()" id="btn-send-ai">Yuborish</button>
       </div>
     </div>
 
@@ -278,6 +318,7 @@
       
       <div class="section">
         <h4 class="section-title">Tizim</h4>
+        <button class="btn" style="background: #e8f0fe; color: #1a73e8; border: 1px solid #1a73e8; font-weight: bold;" onclick="askGeminiKey()">🔑 Gemini API ulash</button>
         <button class="btn" onclick="runAction('da_refreshAll', this)">📊 Dashboard Yangilash</button>
         <button class="btn" onclick="runAction('importRootToReyestr', this)">📥 Root import qilish</button>
         <button class="btn" onclick="runAction('setupAll', this)">✅ Setup qilish</button>
@@ -339,13 +380,16 @@
 
     // Bulk Operations
     let bulkMode = '';
-    let rowsData = []; // [{row: 2, retries: 0}]
+    let chunkedData = []; 
+    let totalRows = 0;
     let currentIndex = 0;
     let completedCount = 0;
     let activeWorkers = 0;
     let isCancelled = false;
 
-    const MAX_CONCURRENT = 3;
+    const CHUNK_SIZE_CREATE = 5;
+    const CHUNK_SIZE_SYNC = 20;
+    const MAX_CONCURRENT = 1; // Server-side batching is fast, sequential is safer for quotas
     const MAX_RETRIES = 3;
 
     const titles = { 'create': 'Ommaviy Yaratish', 'sync': 'Ommaviy Yangilash', 'move': 'Ommaviy Ko\'chirish' };
@@ -367,7 +411,8 @@
 
       bulkMode = mode;
       isCancelled = false;
-      rowsData = [];
+      chunkedData = [];
+      totalRows = 0;
       currentIndex = 0;
       completedCount = 0;
       activeWorkers = 0;
@@ -387,8 +432,14 @@
             document.getElementById('bulk-cancel').innerText = 'Orqaga';
             return;
           }
-          rowsData = rows.map(r => ({ row: r, retries: 0 }));
-          logMsg(`Topildi: ${rows.length} ta qator. Bir vaqtda ${MAX_CONCURRENT} ta qator ishlanadi.`);
+          
+          totalRows = rows.length;
+          let chunkSize = (mode === 'create') ? CHUNK_SIZE_CREATE : CHUNK_SIZE_SYNC;
+          for (let i = 0; i < rows.length; i += chunkSize) {
+            chunkedData.push({ batch: rows.slice(i, i + chunkSize), retries: 0 });
+          }
+          
+          logMsg(`Topildi: ${totalRows} ta qator. Ular ${chunkedData.length} ta porsiyaga bo'linib ishlanadi.`);
           processNext();
         })
         .withFailureHandler(err => {
@@ -397,6 +448,65 @@
           document.getElementById('bulk-cancel').innerText = 'Orqaga';
         })
         .getVisibleRowsForBulk(mode, scope);
+    }
+
+    function startPrintMerge(type) {
+      const scope = document.querySelector('input[name="bulkScope"]:checked').value;
+      document.getElementById('bulk-buttons').style.display = 'none';
+      document.getElementById('bulk-progress').style.display = 'block';
+      document.getElementById('bulk-log').innerHTML = '';
+      
+      const titleStr = type === 'excel' ? 'Excel Kitob Yaratilmoqda' : 'Yagona PDF Yaratilmoqda';
+      document.getElementById('bulk-title').innerText = titleStr;
+      document.getElementById('bulk-status').innerText = 'Qatorlar tahlil qilinmoqda...';
+      document.getElementById('bulk-bar').style.width = '10%';
+      document.getElementById('bulk-cancel').innerText = 'To\'xtatish';
+      
+      isCancelled = false;
+      
+      google.script.run
+        .withSuccessHandler(rows => {
+          if (!rows || rows.length === 0) {
+            document.getElementById('bulk-status').innerText = 'Hech qanday qator topilmadi yoki Aktlar yaratilmagan!';
+            document.getElementById('bulk-cancel').innerText = 'Orqaga';
+            return;
+          }
+          
+          logMsg(`${rows.length} ta akt topildi. Birlashtirish boshlandi. Bu biroz vaqt olishi mumkin...`);
+          document.getElementById('bulk-status').innerText = 'Hujjatlar birlashtirilmoqda...';
+          document.getElementById('bulk-bar').style.width = '40%';
+          
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res.error) {
+                logMsg(`Xatolik: ${res.error}`, true);
+                document.getElementById('bulk-status').innerText = 'Xatolik yuz berdi.';
+              } else {
+                document.getElementById('bulk-bar').style.width = '100%';
+                document.getElementById('bulk-status').innerText = 'Muvaffaqiyatli yakunlandi!';
+                logMsg(`Muvaffaqiyatli: Yaratilgan faylni ochish uchun quyidagi havolaga bosing:`);
+                const html = `<a href="${res.url}" target="_blank" style="color:#2196f3; font-weight:bold;">Faylni Ochish (Yangi Oynada)</a>`;
+                const log = document.getElementById('bulk-log');
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                log.appendChild(div);
+                showToast('Yagona fayl muvaffaqiyatli yaratildi!', 'success');
+              }
+              document.getElementById('bulk-cancel').innerText = 'Yopish';
+            })
+            .withFailureHandler(err => {
+              logMsg(`Jiddiy xatolik: ${err.message}`, true);
+              document.getElementById('bulk-status').innerText = 'Xatolik yuz berdi.';
+              document.getElementById('bulk-cancel').innerText = 'Yopish';
+            })
+            .executePrintMerge(rows, type);
+        })
+        .withFailureHandler(err => {
+          document.getElementById('bulk-status').innerText = 'Xatolik yuz berdi.';
+          logMsg(err.message, true);
+          document.getElementById('bulk-cancel').innerText = 'Orqaga';
+        })
+        .getVisibleRowsForBulk('merge', scope);
     }
 
     function cancelBulk() {
@@ -416,7 +526,7 @@
         return;
       }
       
-      if (currentIndex >= rowsData.length && activeWorkers === 0) {
+      if (currentIndex >= chunkedData.length && activeWorkers === 0) {
         document.getElementById('bulk-status').innerText = 'Barcha qatorlar yakunlandi!';
         document.getElementById('bulk-bar').style.width = '100%';
         logMsg('Muvaffaqiyatli tugatildi.');
@@ -425,9 +535,9 @@
         return;
       }
 
-      while (activeWorkers < MAX_CONCURRENT && currentIndex < rowsData.length) {
+      while (activeWorkers < MAX_CONCURRENT && currentIndex < chunkedData.length) {
         if (isCancelled) break;
-        const taskObj = rowsData[currentIndex++];
+        const taskObj = chunkedData[currentIndex++];
         runTask(taskObj);
       }
     }
@@ -439,20 +549,27 @@
       google.script.run
         .withSuccessHandler(res => {
           activeWorkers--;
-          if (res.error) {
-            handleTaskFailure(taskObj, res.error);
+          
+          if (res && res.error) {
+             handleTaskFailure(taskObj, res.error);
           } else {
-            completedCount++;
-            logMsg(`Qator ${taskObj.row}: OK`);
-            updateProgressUI();
-            processNext();
+             taskObj.batch.forEach(r => {
+                if (res && res[r] && res[r].error) {
+                  logMsg(`Qator ${r}: Xatolik - ${res[r].error}`, true);
+                } else {
+                  logMsg(`Qator ${r}: Muvaffaqiyatli`);
+                }
+                completedCount++;
+             });
+             updateProgressUI();
+             processNext();
           }
         })
         .withFailureHandler(err => {
           activeWorkers--;
           handleTaskFailure(taskObj, err.message);
         })
-        .executeBulkRowAction(bulkMode, taskObj.row);
+        .executeBulkBatchAction(bulkMode, taskObj.batch);
     }
     
     function handleTaskFailure(taskObj, errorMsg) {
@@ -460,24 +577,242 @@
          processNext();
          return;
       }
+      let bStart = taskObj.batch[0];
+      let bEnd = taskObj.batch[taskObj.batch.length-1];
+      
       if (taskObj.retries < MAX_RETRIES) {
          taskObj.retries++;
-         logMsg(`Qator ${taskObj.row}: Xato (${errorMsg}). Qayta urinilmoqda (${taskObj.retries}/${MAX_RETRIES})...`, true);
+         logMsg(`Guruh [${bStart}-${bEnd}]: Xatolik berdi (${errorMsg}). Qayta urinilmoqda (${taskObj.retries}/${MAX_RETRIES})...`, true);
          setTimeout(() => {
            if (!isCancelled) runTask(taskObj);
          }, 2000);
       } else {
-         completedCount++; // Mark done but failed
-         logMsg(`Qator ${taskObj.row}: Muaffaqiyatsiz (${errorMsg})`, true);
+         taskObj.batch.forEach(r => completedCount++); // Mark as done to fill progress bar
+         logMsg(`Guruh [${bStart}-${bEnd}]: Batamom muvaffaqiyatsiz bo'ldi (${errorMsg})`, true);
          updateProgressUI();
          processNext();
       }
     }
     
     function updateProgressUI() {
-       const pct = rowsData.length === 0 ? 0 : Math.floor((completedCount / rowsData.length) * 100);
+       const pct = totalRows === 0 ? 0 : Math.floor((completedCount / totalRows) * 100);
        document.getElementById('bulk-bar').style.width = pct + '%';
-       document.getElementById('bulk-status').innerText = `Tugatildi: ${completedCount} / ${rowsData.length} (Jarayonda: ${activeWorkers})`;
+       document.getElementById('bulk-status').innerText = `Tugatildi: ${completedCount} / ${totalRows} ta qator`;
+    }
+    function askGeminiKey() {
+      const key = prompt("Iltimos, Gemini API kalitingizni kiriting:");
+      if (key) {
+        google.script.run
+          .withSuccessHandler(res => showToast(res.message, res.success ? 'success' : 'error'))
+          .withFailureHandler(err => showToast(err.message, 'error'))
+          .saveGeminiKey(key);
+      }
+    }
+
+    function updateImageLabel(clear = false) {
+      // Rasm funksiyasi o'chirildi
+    }
+
+    function appendChatMessage(sender, msg, isAi = false) {
+      const hist = document.getElementById('chat-history');
+      const div = document.createElement('div');
+      div.style.marginBottom = '10px';
+      if (isAi) {
+        div.style.color = '#0b5394';
+        div.innerHTML = `<b>🤖 ${sender}:</b> ${msg}`;
+      } else {
+        div.style.color = '#333';
+        div.innerHTML = `<b>👤 ${sender}:</b> ${msg}`;
+      }
+      hist.appendChild(div);
+      hist.scrollTop = hist.scrollHeight;
+    }
+
+    // --- AI OBJECT LIST ---
+    function loadAiObjects() {
+      const sel = document.getElementById('ai-object-select');
+      if(!sel) return;
+      google.script.run.withSuccessHandler(objs => {
+        sel.innerHTML = '<option value="">-- Tanlang --</option>';
+        objs.forEach(o => {
+          sel.innerHTML += `<option value="${o}">${o}</option>`;
+        });
+      }).getAvailableObjects();
+    }
+    document.addEventListener("DOMContentLoaded", () => {
+      loadRecentPrintFiles();
+      loadAiObjects();
+      
+      // Enter bilan yuborish
+      const aiPrompt = document.getElementById('ai-prompt');
+      if (aiPrompt) {
+        aiPrompt.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendToAi();
+          }
+        });
+      }
+    });
+    function sendToAi() {
+      const input = document.getElementById('ai-prompt');
+      const btn = document.getElementById('btn-send-ai');
+      const dateInput = document.getElementById('ai-start-date');
+      const objInput = document.getElementById('ai-object-select');
+      
+      const text = input.value.trim();
+      const startDate = dateInput.value; // yyyy-mm-dd
+      const selObj = objInput ? objInput.value : "";
+
+      if (!text) return;
+
+      btn.disabled = true;
+      btn.innerText = "Kuting...";
+
+      let displayMsg = text;
+      if (selObj) {
+        displayMsg = `[📁 Obyekt: ${selObj}]\n` + displayMsg;
+      }
+      if (startDate) {
+        const parts = startDate.split('-');
+        displayMsg += `\n[📅 Boshlanish: ${parts[2]}.${parts[1]}.${parts[0]}]`;
+      }
+      appendChatMessage("Siz", displayMsg.replace(/\n/g, "<br>"));
+      input.value = "";
+      updateImageLabel(true);
+
+      const processRequest = () => {
+        window.aiChatHistory = window.aiChatHistory || [];
+        const reqId = 'req_' + Date.now();
+        const req = {
+          reqId: reqId,
+          text: text,
+          images: null, // Rasm yo'q
+          obyekt: selObj,
+          startDate: startDate,
+          history: window.aiChatHistory
+        };
+        
+        const logId = 'ai-log-' + reqId;
+        const abortBtnId = 'ai-abort-' + reqId;
+        
+        const logHtml = `
+          <div style="background:#1e1e1e; color:#00ff00; padding:10px; border-radius:5px; font-family:'Courier New', monospace; font-size:12px; margin-top:10px; border:1px solid #333; max-height:250px; overflow-y:auto; box-shadow:inset 0 0 10px rgba(0,0,0,0.5);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #444; padding-bottom:5px; margin-bottom:5px;">
+              <span style="color:#aaa;">🖥️ Terminal.exe - AI jarayoni</span>
+              <button id="${abortBtnId}" style="background:#cc0000; color:white; border:none; padding:2px 8px; border-radius:3px; cursor:pointer; font-size:11px;">🔴 To'xtatish</button>
+            </div>
+            <div id="${logId}">⏳ Jarayon ishga tushirildi...</div>
+          </div>
+        `;
+        
+        appendChatMessage("Titan AI", logHtml, true);
+        
+        // Add abort event listener
+        setTimeout(() => {
+          const abtn = document.getElementById(abortBtnId);
+          if(abtn) {
+            abtn.addEventListener('click', () => {
+              abtn.innerText = "To'xtatilmoqda...";
+              abtn.disabled = true;
+              google.script.run.abortRequest(reqId);
+            });
+          }
+        }, 100);
+        
+        const pollTimer = setInterval(() => {
+           google.script.run.withSuccessHandler(logs => {
+             const el = document.getElementById(logId);
+             if (el && logs) {
+               el.innerHTML = logs.replace(/\n/g, '<br>');
+               // Auto-scroll to bottom
+               el.parentElement.scrollTop = el.parentElement.scrollHeight;
+             }
+           }).getReqLogs(reqId);
+        }, 1500);
+
+        google.script.run
+          .withSuccessHandler(res => {
+            clearInterval(pollTimer);
+            const el = document.getElementById(logId);
+            if(el) el.style.display = 'none';
+            
+            btn.disabled = false;
+            btn.innerText = "Yuborish";
+            if (res.success) {
+              appendChatMessage("Titan AI", res.message, true);
+              showToast("Bajarildi", 'success');
+              // O'zgarishlarni ko'rish uchun refresh qilish
+              runAction('da_refreshAll', document.createElement('button'));
+              
+              // Xotirani yangilash
+              window.aiChatHistory.push({role: 'user', text: text});
+              window.aiChatHistory.push({role: 'model', text: res.message});
+              if (window.aiChatHistory.length > 10) window.aiChatHistory = window.aiChatHistory.slice(-10);
+            } else {
+              appendChatMessage("Titan AI", `⚠️ Xatolik: ${res.error || res.message}`, true);
+            }
+          })
+          .withFailureHandler(err => {
+            clearInterval(pollTimer);
+            const el = document.getElementById(logId);
+            if(el) el.style.display = 'none';
+            
+            btn.disabled = false;
+            btn.innerText = "Yuborish";
+            appendChatMessage("Titan AI", `❌ Tizim xatosi: ${err.message}`, true);
+          })
+          .aktAiChat(req);
+      };
+      processRequest();
+    }
+
+    function loadRecentPrintFiles() {
+      const select = document.getElementById('merge-url-select');
+      select.innerHTML = '<option value="">Yuklanmoqda...</option>';
+      
+      google.script.run
+        .withSuccessHandler(files => {
+          select.innerHTML = '<option value="">-- Tanlang (yoki oxirgi yaralganni kutish) --</option>';
+          files.forEach(f => {
+            const date = new Date(f.date).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            select.innerHTML += `<option value="${f.url}">${f.name} (${date})</option>`;
+          });
+        })
+        .withFailureHandler(err => {
+          select.innerHTML = `<option value="">Xatolik: ${err.message}</option>`;
+        })
+        .getRecentPrintFiles();
+    }
+
+    // Sahifa yuklanganda fayllar ro'yxatini yuklaymiz
+    document.addEventListener("DOMContentLoaded", loadRecentPrintFiles);
+
+    function runReverseSync() {
+      const select = document.getElementById('merge-url-select');
+      const url = select.value; // Agar bo'sh bo'lsa, backend oxirgi yig'mani oladi
+      const btn = document.getElementById('btn-reverse-sync');
+      
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span> Qaytarilmoqda...`;
+      
+      google.script.run
+        .withSuccessHandler(res => {
+          btn.disabled = false;
+          btn.innerHTML = `⬅️ Asliga Qaytarish (Sync)`;
+          if (res.success) {
+            showToast(res.message, 'success');
+            urlInput.value = ""; // Tozalash
+          } else {
+            showToast("Xatolik: " + res.error, "error");
+          }
+        })
+        .withFailureHandler(err => {
+          btn.disabled = false;
+          btn.innerHTML = `⬅️ Asliga Qaytarish (Sync)`;
+          showToast("Tizim xatosi: " + err.message, "error");
+        })
+        .reverseSyncFromMerged(url);
     }
   </script>
 </body>

@@ -46,6 +46,7 @@ const CONFIG = {
   // toggles stored in DocumentProperties
   PROP_AUTO_ENABLED: "AKT_AUTO_ENABLED",
   PROP_MONITOR_ENABLED: "AKT_MONITOR_ENABLED",
+  PROP_TEMPLATE_ID: "AKT_LIGHTWEIGHT_TEMPLATE_ID"
 };
 
 /************* REYESTR COLUMNS *************/
@@ -134,7 +135,7 @@ function onOpen() {
 
 function openUnifiedApp_() {
   const tpl = HtmlService.createTemplateFromFile("UnifiedApp");
-  const html = tpl.evaluate().setTitle("Akt Generator").setWidth(300);
+  const html = tpl.evaluate().setTitle("Akt Generator");
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
@@ -191,6 +192,82 @@ function applyReyestrDesign_() {
       .build();
     sh.getRange(2, map[REY.STATUS], sh.getMaxRows() - 1, 1).setDataValidation(rule);
   }
+
+  // --- CONDITIONAL FORMATTING ---
+  const lastCol = sh.getLastColumn();
+  const lastRow = sh.getMaxRows();
+  if (lastCol > 0 && lastRow > 1) {
+    const range = sh.getRange(2, 1, lastRow - 1, lastCol);
+    const rules = [];
+
+    const statusCol = map[REY.STATUS] ? colIndexToLetter_(map[REY.STATUS]) : null;
+    const errorCol = map[REY.ERROR] ? colIndexToLetter_(map[REY.ERROR]) : null;
+    const commCol = map[REY.COMM_STATUS] ? colIndexToLetter_(map[REY.COMM_STATUS]) : null;
+
+    // 1. RED rules (Errors, Rejections, Primichaniya)
+    if (errorCol) {
+      rules.push(SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(`=AND(NOT(ISBLANK($${errorCol}2)), $${errorCol}2<>"")`)
+        .setBackground("#fce8e6")
+        .setFontColor("#c5221f")
+        .setRanges([range])
+        .build());
+    }
+    if (statusCol) {
+      rules.push(SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(`=$${statusCol}2="ERROR"`)
+        .setBackground("#fce8e6")
+        .setFontColor("#c5221f")
+        .setRanges([range])
+        .build());
+    }
+    if (commCol) {
+      rules.push(SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(`=$${commCol}2="Возврат на доработку"`)
+        .setBackground("#fce8e6")
+        .setFontColor("#c5221f")
+        .setRanges([range])
+        .build());
+    }
+
+    // 2. GREEN rules (Success, Done)
+    if (commCol) {
+      rules.push(SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(`=$${commCol}2="Подписано обеими сторонами"`)
+        .setBackground("#e6f4ea")
+        .setFontColor("#137333")
+        .setRanges([range])
+        .build());
+    }
+    if (statusCol) {
+      rules.push(SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(`=OR($${statusCol}2="CREATED", $${statusCol}2="IMPORTED_NEW")`)
+        .setBackground("#e6f4ea")
+        .setFontColor("#137333")
+        .setRanges([range])
+        .build());
+    }
+
+    // 3. BLUE rules (In Progress, Synced, Sent)
+    if (commCol) {
+      rules.push(SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(`=OR($${commCol}2="Отправлено подрядчиком", $${commCol}2="Подписано подрядчиком", $${commCol}2="Подписано заказчиком")`)
+        .setBackground("#e8f0fe")
+        .setFontColor("#1967d2")
+        .setRanges([range])
+        .build());
+    }
+    if (statusCol) {
+      rules.push(SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(`=OR($${statusCol}2="SYNCED", $${statusCol}2="MOVED", $${statusCol}2="IMPORTED_UPDATE")`)
+        .setBackground("#e8f0fe")
+        .setFontColor("#1967d2")
+        .setRanges([range])
+        .build());
+    }
+
+    sh.setConditionalFormatRules(rules);
+  }
 }
 
 /************* AUTO TOGGLE *************/
@@ -220,8 +297,22 @@ function autoOnEdit(e) {
     const sh = e.range.getSheet();
     if (sh.getName() !== CONFIG.REYESTR_SHEET) return;
 
-    const row = e.range.getRow();
-    if (row <= 1) return;
+    const startRow = e.range.getRow();
+    const endRow = e.range.getLastRow();
+    if (startRow <= 1 && endRow <= 1) return;
+    
+    const actualStart = Math.max(2, startRow);
+    const rowCount = endRow - actualStart + 1;
+    
+    // 30 soniyalik limitga urilmaslik uchun himoya
+    if (rowCount > 5) {
+       sh.getParent().toast(
+         "Siz juda ko'p qatorni birdaniga tahrirladingiz. Avto-sinxronizatsiya o'chirildi (limitga urilmaslik uchun). Iltimos, Boshqaruv Panelidagi 'Ommaviy Yangilash' dan foydalaning.",
+         "⚠️ Avtomatika to'xtatildi",
+         10
+       );
+       return;
+    }
 
     const changed = changedHeaders_(sh, e.range);
 
@@ -237,38 +328,41 @@ function autoOnEdit(e) {
     if (!lock.tryLock(2000)) return;
 
     try {
-      const rowObj = readRow_(sh, row);
+      // Barcha tahrirlangan qatorlarni aylanib chiqamiz
+      for (let row = actualStart; row <= endRow; row++) {
+        const rowObj = readRow_(sh, row);
 
-      const hasAct = !!String(rowObj[REY.ACT_FILE_URL] || "").trim();
-      const targetId = String(rowObj[REY.TARGET_FOLDER_ID] || "").trim();
+        const hasAct = !!String(rowObj[REY.ACT_FILE_URL] || "").trim();
+        const targetId = String(rowObj[REY.TARGET_FOLDER_ID] || "").trim();
 
-      // auto create
-      if (!hasAct && targetId && isRowReadyForCreate_(rowObj)) {
-        createActFromRow_(sh, row, rowObj);
-        return;
-      }
+        // auto create
+        if (!hasAct && targetId && isRowReadyForCreate_(rowObj)) {
+          createActFromRow_(sh, row, rowObj);
+          continue;
+        }
 
-      // auto move if folder id changed and act exists
-      if (hasAct && changed.includes(REY.TARGET_FOLDER_ID)) {
-        moveActToTarget_(sh, row, rowObj);
-        return;
-      }
+        // auto move if folder id changed and act exists
+        if (hasAct && changed.includes(REY.TARGET_FOLDER_ID)) {
+          moveActToTarget_(sh, row, rowObj);
+          continue;
+        }
 
-      // auto sync on important changes
-      if (hasAct) {
-        const needsSync = changed.some(h => [
-          REY.ACT_NUMBER, REY.WORK_NAME, REY.OBJECT_NAME,
-          REY.GEN_NAME, REY.SUB_NAME,
-          REY.CUSTOMER_ORG, REY.PROJECT_ORG,
-          REY.GEN_FIO, REY.GEN_POS,
-          REY.SUB_FIO, REY.SUB_POS,
-          REY.TEX_FIO, REY.TEX_POS,
-          REY.PROJ_FIO, REY.PROJ_POS,
-          REY.PROGRESS, REY.PROJECT_DOC, REY.MATERIAL, REY.DEVIATION,
-          REY.START_DATE, REY.END_DATE, REY.NEXT_WORK
-        ].includes(h));
+        // auto sync on important changes
+        if (hasAct) {
+          const needsSync = changed.some(h => [
+            REY.ACT_NUMBER, REY.WORK_NAME, REY.OBJECT_NAME,
+            REY.GEN_NAME, REY.SUB_NAME,
+            REY.CUSTOMER_ORG, REY.PROJECT_ORG,
+            REY.GEN_FIO, REY.GEN_POS,
+            REY.SUB_FIO, REY.SUB_POS,
+            REY.TEX_FIO, REY.TEX_POS,
+            REY.PROJ_FIO, REY.PROJ_POS,
+            REY.PROGRESS, REY.PROJECT_DOC, REY.MATERIAL, REY.DEVIATION,
+            REY.START_DATE, REY.END_DATE, REY.NEXT_WORK
+          ].includes(h));
 
-        if (needsSync) syncMasterToAct_(sh, row, readRow_(sh, row));
+          if (needsSync) syncMasterToAct_(sh, row, readRow_(sh, row));
+        }
       }
     } finally {
       lock.releaseLock();
@@ -377,22 +471,120 @@ function getVisibleRowsForBulk(mode, scope) {
     } else if (mode === 'move') {
       const targetId = !!String(o[REY.TARGET_FOLDER_ID] || "").trim();
       if (hasAct && targetId) toProcess.push(row);
+    } else if (mode === 'merge') {
+      if (hasAct) toProcess.push(row);
     }
   }
   return toProcess;
 }
 
-function executeBulkRowAction(mode, row) {
+function executeBulkBatchAction(mode, rowsBatch) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(CONFIG.REYESTR_SHEET);
-  const o = readRow_(sh, row);
+  const results = {};
+  
+  // Xotiradan o'qish uchun butun jadvalni olamiz
+  const dataRange = sh.getDataRange().getValues();
+  const headers = dataRange[0].map(h => String(h || "").trim());
+  
+  for (const row of rowsBatch) {
+    try {
+      const obj = {};
+      const values = dataRange[row - 1] || [];
+      headers.forEach((h, i) => { if (h) obj[h] = values[i]; });
+      
+      if (mode === 'create') createActFromRow_(sh, row, obj);
+      else if (mode === 'sync') syncMasterToAct_(sh, row, obj);
+      else if (mode === 'move') moveActToTarget_(sh, row, obj);
+      
+      // Ma'lumotlarga moslab qator qalinligini moslash (Auto-resize)
+      sh.autoResizeRows(row, 1);
+      
+      results[row] = { success: true };
+    } catch (e) {
+      results[row] = { error: String(e && e.message ? e.message : e) };
+    }
+  }
+  return results;
+}
+
+function executePrintMerge(rows, type) {
   try {
-    if (mode === 'create') createActFromRow_(sh, row, o);
-    else if (mode === 'sync') syncMasterToAct_(sh, row, o);
-    else if (mode === 'move') moveActToTarget_(sh, row, o);
-    return { success: true };
-  } catch (e) {
-    return { error: String(e && e.message ? e.message : e) };
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName(CONFIG.REYESTR_SHEET);
+    
+    // Yaratiladigan yangi kitobning papkasi qayerda?
+    // Biz uni Root yoki birinchi aktning papkasida yaratishimiz mumkin
+    const rootFolder = DriveApp.getFolderById(CONFIG.ROOT_FOLDER_ID);
+    const dateStr = Utilities.formatDate(new Date(), 'Asia/Tashkent', 'yyyy-MM-dd_HH-mm');
+    const mergeName = 'Pechat_Kitobi_' + dateStr;
+    
+    const mergeSS = SpreadsheetApp.create(mergeName);
+    const mergeFile = DriveApp.getFileById(mergeSS.getId());
+    mergeFile.moveTo(rootFolder);
+    
+    let isFirst = true;
+    let successCount = 0;
+    
+    for (const row of rows) {
+      const rowObj = readRow_(sh, row);
+      const actUrl = String(rowObj[REY.ACT_FILE_URL] || "").trim();
+      if (!actUrl) continue;
+      
+      const actId = extractSpreadsheetIdFromUrl_(actUrl);
+      if (!actId) continue;
+      
+      try {
+        const actSS = SpreadsheetApp.openById(actId);
+        const actSheets = actSS.getSheets();
+        if (actSheets.length === 0) continue;
+        
+        const actNum = String(rowObj[REY.ACT_NUMBER] || "Akt");
+        // Hujjatdan "АКТ" yoki birinchi varaqni ko'chiramiz
+        let targetSheet = actSS.getSheetByName("АКТ")
+                       || actSS.getSheetByName(CONFIG.TEMPLATE_WITH_SUB) 
+                       || actSS.getSheetByName(CONFIG.TEMPLATE_NO_SUB) 
+                       || actSheets[0];
+                       
+        const copiedSheet = targetSheet.copyTo(mergeSS);
+        copiedSheet.setName('Akt_' + actNum + '_' + row); // Nom noyob bo'lishi kerak
+        copiedSheet.showSheet(); // Agar adashib yashirin bo'lsa, ko'rsatib qo'yamiz
+        successCount++;
+        
+      } catch (e) {
+        // Skip inaccessible files
+      }
+    }
+    
+    if (successCount === 0) {
+      mergeFile.setTrashed(true);
+      return { error: "Birlashtirish uchun hech qanday tayyor akt topilmadi yoki ularni o'qib bo'lmadi." };
+    }
+    
+    // Dastlabki bo'sh varaqni (Sheet1) o'chirish
+    const sheet1 = mergeSS.getSheets()[0];
+    if (sheet1.getName().indexOf('Akt_') === -1 && mergeSS.getSheets().length > 1) {
+      mergeSS.deleteSheet(sheet1);
+    }
+    
+    if (type === 'excel') {
+      PropertiesService.getDocumentProperties().setProperty('LAST_MERGED_EXCEL_URL', mergeSS.getUrl());
+      return { url: mergeSS.getUrl() };
+    } 
+    else if (type === 'pdf') {
+      const url = "https://docs.google.com/spreadsheets/d/" + mergeSS.getId() + "/export?exportFormat=pdf&format=pdf&portrait=true&size=A4&fitw=true&gridlines=false";
+      const blob = UrlFetchApp.fetch(url, {
+        headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
+        muteHttpExceptions: true
+      }).getBlob().setName(mergeName + ".pdf");
+      
+      const pdfFile = rootFolder.createFile(blob);
+      mergeFile.setTrashed(true); // Vaqtinchalik excelni o'chirish
+      
+      return { url: pdfFile.getUrl() };
+    }
+  } catch (err) {
+    return { error: String(err) };
   }
 }
 
@@ -415,6 +607,48 @@ function isRowReadyForCreate_(o) {
   return true;
 }
 
+/************* TEMPLATE SETUP (STANDALONE) *************/
+function getOrInitializeTemplateId_() {
+  const p = PropertiesService.getDocumentProperties();
+  let tid = p.getProperty(CONFIG.PROP_TEMPLATE_ID);
+  
+  if (tid) {
+    try {
+      DriveApp.getFileById(tid);
+      return tid;
+    } catch(e) {
+      tid = null;
+    }
+  }
+
+  const masterSS = SpreadsheetApp.openById(CONFIG.MASTER_SPREADSHEET_ID);
+  const root = DriveApp.getFolderById(CONFIG.ROOT_FOLDER_ID);
+  
+  const newSS = SpreadsheetApp.create("AKT_SYSTEM_TEMPLATES (Do not delete)");
+  const newFile = DriveApp.getFileById(newSS.getId());
+  newFile.moveTo(root);
+
+  const tplSub = masterSS.getSheetByName(CONFIG.TEMPLATE_WITH_SUB);
+  const tplNoSub = masterSS.getSheetByName(CONFIG.TEMPLATE_NO_SUB);
+  
+  if (tplSub) {
+    const s = tplSub.copyTo(newSS);
+    s.setName(CONFIG.TEMPLATE_WITH_SUB);
+  }
+  if (tplNoSub) {
+    const s = tplNoSub.copyTo(newSS);
+    s.setName(CONFIG.TEMPLATE_NO_SUB);
+  }
+  
+  const sheet1 = newSS.getSheets()[0];
+  if (sheet1 && newSS.getSheets().length > 1) newSS.deleteSheet(sheet1);
+  
+  tid = newSS.getId();
+  p.setProperty(CONFIG.PROP_TEMPLATE_ID, tid);
+  
+  return tid;
+}
+
 /************* CREATE *************/
 function createActFromRow_(sh, row, rowObj) {
   try {
@@ -431,9 +665,11 @@ function createActFromRow_(sh, row, rowObj) {
 
     const fname = buildUniqueFileName_(rowObj);
 
-    const masterSS = SpreadsheetApp.openById(CONFIG.MASTER_SPREADSHEET_ID);
-    const masterFile = DriveApp.getFileById(masterSS.getId());
-    const newFile = masterFile.makeCopy(fname, folder);
+    // Oldingiday butun boshli ulkan Master fayldan nusxa olinmaydi!
+    // Faqatgina juda yengil bo'lgan izolyatsiyalangan shablon faylidan nusxa olinadi.
+    const tplId = getOrInitializeTemplateId_();
+    const tplFile = DriveApp.getFileById(tplId);
+    const newFile = tplFile.makeCopy(fname, folder);
 
     const actSS = SpreadsheetApp.openById(newFile.getId());
     keepOnlyTemplateSheet_(actSS, tplName);
@@ -679,6 +915,16 @@ function readRow_(sheet, row) {
   return obj;
 }
 
+function colIndexToLetter_(index) {
+  let temp, letter = '';
+  while (index > 0) {
+    temp = (index - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    index = (index - temp - 1) / 26;
+  }
+  return letter;
+}
+
 function writeRow_(sheet, row, kv, opts) {
   const map = headerMap_(sheet);
   const formulaKeys = (opts && opts.formulaKeys) ? opts.formulaKeys : [];
@@ -719,7 +965,7 @@ function formatRuMonthDate_(val) {
   const d = parseToDate_(val);
   const str = String(val || "").trim();
   if (!d) {
-    if (str.indexOf('_') !== -1 || str === '') {
+    if (str === '') {
        return "«___» ____________ 202_ г.";
     }
     return str;

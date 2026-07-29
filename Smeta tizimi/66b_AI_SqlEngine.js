@@ -20,9 +20,22 @@ var AI_GROUP_MAX     = 60;    /* guruh (obyekt/material) satrlari */
 /* ── Savol niyatini aniqlash ─────────────────────────────────── */
 function _aiSqlNiyat(text, obyekt){
   var t = String(text||'').toLowerCase();
+  var boshqaObyektBor = false;
+  try {
+    if (typeof _aiObyektlar === 'function') {
+      var obList = _aiObyektlar();
+      for (var i=0; i<obList.length; i++) {
+        var oLow = String(obList[i]).toLowerCase();
+        if (oLow && oLow !== String(obyekt).toLowerCase() && t.indexOf(oLow) > -1) {
+          boshqaObyektBor = true; break;
+        }
+      }
+    }
+  } catch(e) {}
+  
   return {
     obyekt: obyekt,
-    portfel: !obyekt || /barcha|hamma|portfel|obyektlar|qaysi obyekt|taqqos|solishtir|eng ko.p|eng kam/.test(t),
+    portfel: !obyekt || boshqaObyektBor || /barcha|hamma|portfel|obyektlar|umumiy|butun|tizim|qaysi obyekt|taqqos|solishtir|eng ko.p|eng kam/.test(t),
     solishtir: /qaysi|eng ko.p|eng kam|taqqos|solishtir|ортик|кам|katta|kichik/.test(t),
     wantFakt:  /ishlatil|sarf|fakt|bajaril|использ|расход/.test(t),
     wantSmeta: /kerak|reja|smeta|план|plan/.test(t) && !/ishlatil|fakt|sarf/.test(t),

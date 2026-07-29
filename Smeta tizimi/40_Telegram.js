@@ -222,6 +222,16 @@ function doPost(e){
       return _ok();
     }
     var raw=e.postData.contents;
+
+    // [WEB API v2] — sayt chaqiruvi. Logdan OLDIN, chunki body ichida token bor.
+    if(raw.indexOf('"__api"') > -1){
+      try{ return webApiIshlov(JSON.parse(raw)); }
+      catch(exApi){
+        return ContentService.createTextOutput(JSON.stringify({ok:false,error:'JSON parse: '+exApi}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     Logger.log('doPost kirdi: '+raw.slice(0,200));
     var upd=JSON.parse(raw);
 

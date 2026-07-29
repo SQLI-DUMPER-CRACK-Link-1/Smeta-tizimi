@@ -82,6 +82,39 @@ function apiPrixodNomTaklif(qidiruv, limit){
   return _skladNomTaklif(qidiruv, limit);
 }
 
+/* ⚡ 2026-07-13 YANGI: BOSS PANEL uchun ombor QOLDIG'I xulosasi. Приход/Расход
+ * varaqlarini (har biri xom TRANZAKSIYA jurnali) nom+birlik bo'yicha jamlab,
+ * joriy qoldiqni (kirim-chiqim) hisoblaydi. Eng kam qoldiqlilar birinchi —
+ * "tez tugaydigan material" xavfini ko'rsatish uchun. */
+function apiSkladQoldiq(){
+  try{
+    var ss=SpreadsheetApp.openById(SKLAD_FILE_ID);
+    var map={};
+    function oqi(sheetName, isKirim){
+      var sh=ss.getSheetByName(sheetName); if(!sh) return;
+      var last=sh.getLastRow(); if(last<2) return;
+      var v=sh.getRange(2,1,last-1,6).getValues(); // A..F: №,тип,Дата,Наименование,Ед.изм,Кол-во
+      v.forEach(function(r){
+        var nom=String(r[3]||'').trim(); if(!nom) return;
+        var bir=String(r[4]||'').trim();
+        var qty=Number(r[5])||0;
+        var key=nom.toUpperCase()+'||'+bir.toUpperCase();
+        if(!map[key]) map[key]={nom:nom, birlik:bir, kirim:0, chiqim:0};
+        if(isKirim) map[key].kirim+=qty; else map[key].chiqim+=qty;
+      });
+    }
+    oqi('Приход', true);
+    oqi('Расход', false);
+    var out=Object.keys(map).map(function(k){
+      var m=map[k];
+      return {nom:m.nom, birlik:m.birlik, kirim:Math.round(m.kirim*1000)/1000,
+        chiqim:Math.round(m.chiqim*1000)/1000, qoldiq:Math.round((m.kirim-m.chiqim)*1000)/1000};
+    });
+    out.sort(function(a,b){ return a.qoldiq-b.qoldiq; });
+    return {ok:true, materiallar:out, jami:out.length};
+  }catch(e){ return {ok:false, xabar:String(e.message||e)}; }
+}
+
 /**
  * AI tomonidan qaytarilgan JSON ma'lumotni varaqqa yozish
  * @param {Object} data - AI qaytargan JSON

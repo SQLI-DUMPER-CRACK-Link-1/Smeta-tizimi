@@ -1,5 +1,5 @@
 /*******************************************************
- * 65_TitanAI.js — TITAN AI v2.0 (to'liq tizim integratsiya)
+ * 65_TitanAI.js — JARVIS AI (to'liq tizim integratsiya)
  *
  * Arxitektura:
  *   apiTitanAi(req)       — yagona kirish, history + context + Gemini
@@ -26,7 +26,7 @@ var TITAN_MAX_HIST = 6;
 
 /* ─── TIZIM PROMPTI ──────────────────────────────────── */
 var _TITAN_SYS =
-  'Sen — "Navoiy Yangi O\'zbekiston bog\'i" qurilish loyihasining raqamli muhandis yordamchisisisan.\n'+
+  'Sen — "Navoiy Yangi O\'zbekiston bog\'i" qurilish loyihasining raqamli muhandis yordamchisisisan (Isming: Jarvis AI).\n'+
   'Tizim: LRV_PLUS smeta, FAKT (bajarilgan hajm), F2 (oylik akt), DASHBOARD, SHARTNOMA.\n'+
   'JAVOB QOIDALARI:\n'+
   '1. Faqat o\'zbek tilida (texnik atamalar ru aralash — ok).\n'+
@@ -59,6 +59,51 @@ function apiTitanAi(req) {
       return apiAiKalitSaqla(text.replace(/^setkey:\s*/i,'').trim());
     }
 
+    if (/^\/testgroq/i.test(text)) {
+      if(typeof _groqGwKey !== 'function' || !_groqGwKey()) return {text: "Groq kaliti ulanmagan!"};
+      try {
+        var tTest = groqCall({
+          system: "Sen qisqa va londa javob beruvchi yordamchisan.",
+          contents: [{ role: 'user', parts: [{ text: "Salom! Groq ishlayaptimi?" }] }]
+        });
+        return {text: "✅ Groq 100% ISHLAYAPTI!\nJavob: " + tTest, intent: "system"};
+      } catch (ex) {
+        return {text: "❌ Groq XATO BERDI:\n" + String(ex.message||ex), intent: "system"};
+      }
+    }
+
+    /* ⚡⚡⚡ 2026-07-18 ONI (INSTANT) YO'L — LLM UMUMAN CHAQIRILMAYDI.
+     * Foydalanuvchi «salom» yozganda ham tashqi AI'ga so'rov ketardi va 60 soniya
+     * kutilardi. Salomlashish / «kimsan» / «nima qila olasan» kabi xabarlarga javob
+     * TIZIMNING O'ZIDA bor — ularni DARHOL (0 soniya) qaytaramiz. Bu eng ko'p
+     * uchraydigan xabar turi, shuning uchun sezilarli tezlik beradi. */
+    var _t0=String(text).toLowerCase().replace(/[!.,?]+/g,' ').trim();
+    if(/^(salom|assalom\w*|assalomu\s*alaykum|hayrli\s*(kun|tong|kech)|hi|hello|привет|салом)\b/.test(_t0) && _t0.length<40){
+      return {intent:'system', text:
+        '**Salom!** Men Jarvis — shu tizimning muhandis-yordamchisiman.\n\n'+
+        'Menga shunday savollar bering (aniq raqam bilan javob beraman):\n'+
+        '• *«Amfiteatrda bu oy qancha fakt bajarildi?»*\n'+
+        '• *«Qaysi obyektda Ф2 orqada qolgan?»*\n'+
+        '• *«Shebenni qancha ishlatdik, narxi qancha?»*\n'+
+        '• *«Suniy ko\'lda qoldiq qancha?»*\n\n'+
+        'Yoki pastdagi tugmalardan foydalaning: 📊 Tahlil · ⚠ Muammolar · 💰 Narxlar · 📄 F2 · 🧾 Akt yoz'};
+    }
+    if(/^(kimsan|kim\s*san|sen\s*kimsan|o'?zingni\s*tanit|nima\s*qila\s*olasan|nimalarni\s*bilasan|yordam|help)\b/.test(_t0)){
+      return {intent:'system', text:
+        '**Jarvis — qurilish smeta tizimining AI muhandisi.**\n\n'+
+        '**Bilaman:** har obyektning smeta/fakt/Ф2/qoldiq raqamlarini, накрутка hisobini, '+
+        'shartnoma va to\'lovlarni, sklad qoldig\'ini, resurs narxlarini.\n\n'+
+        '**Qila olaman:**\n'+
+        '• Aniq raqamli hisobot (manbasi bilan)\n'+
+        '• Akt (далолатнома) qoralamasini tuzish\n'+
+        '• ФАКТ yozishni taklif qilish (siz tasdiqlaysiz)\n'+
+        '• Anomaliya va muammolarni ko\'rsatish\n\n'+
+        '**Muhim:** men raqamni O\'YLAB TOPMAYMAN — faqat tizimdagi haqiqiy ma\'lumotni o\'qib beraman.'};
+    }
+    if(/^(rahmat|tashakkur|zo'?r|yaxshi|ok|okay|спасибо)\b/.test(_t0) && _t0.length<25){
+      return {intent:'system', text:'Doim xizmatdaman! Yana savol bo\'lsa — yozing. 👷'};
+    }
+
     var apiKey = (typeof _aiGwKey === 'function') ? _aiGwKey() : _titanKey();
     if (!apiKey) return {
       text: '⚙️ **Gemini API kaliti kerak**\n\n'+
@@ -68,6 +113,12 @@ function apiTitanAi(req) {
     };
 
     var intent = _titanIntent(text, mode);
+    
+    // FAKT YOZISH INTENT INTERCEPT 
+    if (intent === 'FAKT_YOZISH') {
+      return apiJarvisFaktDraft(req);
+    }
+
     var ctx    = _titanCtx(obyekt, intent);
 
     // SQL/SUPABASE DALIL INJECTION
@@ -171,6 +222,7 @@ function _titanIntent(text, mode){
   if(mode && mode!=='auto') return mode.toUpperCase();
   var t=text.toLowerCase();
   if(/akt\s+yoz|dalolatnoma|akt\s+yarat|akt\s+ber|aosr/i.test(t)) return 'AKT';
+  if(/fakt\s+yoz|qildik|bajardik|foizini\s+yopdik|kiritdik/i.test(t)) return 'FAKT_YOZISH';
   if(/anomaliya|muammo|xavf|oshdi|smetadan/i.test(t)) return 'ANOMALIYA';
   if(/shartnoma|dogovor|to.lov|moliya|debitor|avans/i.test(t)) return 'SHARTNOMA';
   if(/narx|topilmagan|miss|qimmat|nol narx/i.test(t)) return 'NARX';
@@ -184,7 +236,15 @@ function _titanIntent(text, mode){
 function _titanCtx(obyekt, intent){
   var L=[], label='';
 
-  if(!obyekt || intent==='DASHBOARD'){
+  // ⚡ 2026-07-12 TUZATILDI: avval `!obyekt` bo'lsagina ham (intentdan qat'iy nazar)
+  // BUTUN PARK dashboardi (apiBossData — barcha shartnoma/buxgalteriya jamlanmasi)
+  // yuklanardi. Natija: oddiy "salom" kabi obyektsiz umumiy xabarga ham keraksiz
+  // og'ir ma'lumot ulanardi — javob SEKINLASHARDI va mavzudan chetga chiqardi
+  // ("salom desam ham keraksiz narsalar tashlayapti" shikoyati). Endi DASHBOARD
+  // faqat ANIQ shu niyat so'ralganda (_titanIntent'dagi kalit so'zlar) yuklanadi;
+  // obyektsiz+DASHBOARD-emas holatda — LLM hech qanday og'ir kontekstsiz, oddiy
+  // suhbat rejimida javob beradi (tezroq, aniqroq).
+  if(intent==='DASHBOARD'){
     try{
       var d=apiBossData(), j=d.jami||{};
       L.push('## DASHBOARD');
@@ -197,6 +257,11 @@ function _titanCtx(obyekt, intent){
       label='Dashboard';
     }catch(e){L.push('(Dashboard yuklanmadi: '+e.message+')');}
     return {text:L.join('\n'),label:label};
+  }
+  if(!obyekt){
+    // Obyekt tanlanmagan va DASHBOARD ham so'ralmagan (masalan oddiy salomlashish) —
+    // hech qanday og'ir ma'lumot yuklamaymiz, LLM tizim promptidagi umumiy bilim bilan javob beradi.
+    return {text:'', label:''};
   }
 
   label=obyekt;
@@ -280,14 +345,19 @@ function _titanCall(apiKey, sysPr, userText, history){
   });
   contents.push({role:'user',parts:[{text:userText}]});
 
+  // ⚡ 2026-07-12: bu — INTERAKTIV chat (foydalanuvchi jonli kutadi). maxWaitMs
+  // qo'yilmasa, Groq+Gemini fallback zanjiri (429/limit holatida) 5-10 daqiqagacha
+  // osilib qolishi mumkin edi ("salom" desa ham shuncha kutish shikoyati). Endi
+  // ~25 soniyada aniq xato bilan qaytadi — foydalanuvchi qayta urinib ko'radi.
   var resText = aiCall({
     system: sysPr,
     contents: contents,
     temp: TITAN_TEMP,
     maxTok: TITAN_MAX_TOK,
-    model: TITAN_MODEL
+    model: TITAN_MODEL,
+    maxWaitMs: 25000
   });
-  
+
   return resText || '(AI bo\'sh javob qaytardi)';
 }
 
@@ -345,10 +415,158 @@ function _tBar(pct,len){
 
 /* ── ORQAGA MOSLIK (eski apiSmetaSuperAi) ────────────────── */
 function apiSmetaSuperAi(obyekt,text,checkedWorks,startDate){
-  if(checkedWorks&&checkedWorks.length>0){
+  if(!text && checkedWorks && checkedWorks.length) 
     return apiTitanAktYarat({obyekt:obyekt,text:text+' Tanlangan: '+checkedWorks.join(', '),startDate:startDate,confirm:false});
-  }
+
   var res=apiTitanAi({obyekt:obyekt,text:text,history:[],mode:'auto'});
-  if(res.error) return {error:res.error};
-  return {text:res.text,actsCreated:false};
+  return res.text||'';
+}
+
+/* ══════════════════════════════════════════════════════════
+ * FAKT YOZISH - CONVERSATIONAL DATA ENTRY
+ * ══════════════════════════════════════════════════════════ */
+function apiJarvisFaktDraft(req) {
+  var obyekt = String(req.obyekt||'').trim();
+  var text = String(req.text||'').trim();
+  if (!obyekt) return {text: "Fakt yozish uchun obyekt tanlanishi shart."};
+
+  // 1) Obyektdagi hamma qatorlarni tortib olamiz (API)
+  var bd = null;
+  try { bd = apiBossObyekt(obyekt); } catch(e) { return {text: "Baza o'qishda xatolik: " + e}; }
+  if(!bd || !bd.rzList) return {text: "Obyekt ma'lumotlari topilmadi."};
+
+  var L = [];
+  L.push('Obyekt: ' + obyekt);
+  L.push('Smetadagi joriy qatorlar (faqat to\'liq bajarilmagan ishlar ko\'rsatilmoqda):');
+  L.push('ID | RAZDEL | ISH NOMI | SMETA | FAKT | QOLDIQ');
+  
+  // Faqat ost>0 bo'lgan qatorlarni jo'natamiz (tokens tejash uchun)
+  // BossObyekt da rows yo'q, faqat rzList. Shuning uchun Smeta Excel ni to'g'ridan to'g'ri o'qiymiz
+  var smetaData = [];
+  try {
+     var ss = null;
+     var p = PropertiesService.getScriptProperties();
+     var parkStr = p.getProperty('SMETA_PARK');
+     if(parkStr){
+       var park = JSON.parse(parkStr);
+       var fid = park[obyekt];
+       if(fid) {
+         ss = SpreadsheetApp.openById(fid);
+         var sh = ss.getSheetByName('Смета');
+         if(sh) {
+            var v = sh.getDataRange().getValues();
+            var h = v[3]||v[2]||[];
+            var colId = h.indexOf('№/№'), colNom = h.indexOf('Обоснование, наименование'), colRz = h.indexOf('РАЗДЕЛ');
+            var colSm = h.indexOf('ВСЕГО'), colFk = h.indexOf('ФАКТ');
+            if(colId>-1 && colNom>-1 && colSm>-1) {
+               for(var i=4; i<v.length; i++) {
+                 var r=v[i];
+                 var id = String(r[colId]||'').trim();
+                 if(!id) continue;
+                 var sm = Number(r[colSm])||0;
+                 var fk = colFk>-1 ? (Number(r[colFk])||0) : 0;
+                 var qoldiq = sm - fk;
+                 if(qoldiq > 0) {
+                   smetaData.push({ id: id, razdel: r[colRz]||'', nom: String(r[colNom]).substring(0,100), smeta: sm, qoldiq: qoldiq, rowIdx: i+1 });
+                   L.push(id + ' | ' + (r[colRz]||'') + ' | ' + String(r[colNom]).substring(0,50) + ' | ' + sm + ' | ' + fk + ' | ' + qoldiq);
+                 }
+               }
+            }
+         }
+       }
+     }
+  } catch(e) { L.push("Baza xatosi: "+e.message); }
+
+  if(smetaData.length===0) {
+    return {text: "Barcha ishlar 100% qilingan yoki smeta o'qilmadi."};
+  }
+
+  // LLM dan JSON so'rash
+  var sysPr = 'Sen Jarvis AI san. Foydalanuvchi qaysi ishlarni bajarganini aytadi.\n'+
+              'Pastdagi ro\'yxatdan u aytgan ishlarni topib, JSON Array qaytar.\n'+
+              'Agar "hamma", "barchasi" desa, ushbu razdeldagi (yoki umuman) barcha ishlarning faktiga uning qoldig\'ini (QOLDIQ) yoz.\n'+
+              'Agar foiz aytsa, smetaning shu foizini hisobla.\n'+
+              'JSON Format:\n'+
+              '[\n  { "id": "1", "nom": "Beton...", "faktYangi": 15.5 },\n  ...\n]\n'+
+              'Faqat JSON, matn yozma!';
+              
+  var reqText = _TITAN_SYS + '\n\n' + sysPr + '\n\nMA\'LUMOT:\n' + L.join('\n');
+
+  var resText = aiCall({
+      system: sysPr,
+      user: text,
+      temp: 0.1,
+      maxTok: 2048,
+      model: TITAN_MODEL,
+      json: true,
+      contents: [{ role:'user', parts:[{text: reqText + '\n\nBUYRUQ:\n' + text}] }]
+  });
+
+  var drafts = [];
+  try { drafts = JSON.parse(resText); } catch(e) { return {text: "Tushunib bo'lmadi. Boshqa so'z bilan tushuntiring."}; }
+  if(!Array.isArray(drafts)) drafts=[drafts];
+
+  if(drafts.length === 0) return {text: "Siz aytgan ishlarga mos qator topilmadi."};
+
+  // Faqat ID orqali validatsiya
+  var finalDrafts = [];
+  drafts.forEach(function(d){
+     var orig = smetaData.filter(function(s){ return String(s.id) === String(d.id); })[0];
+     if(orig) {
+        finalDrafts.push({
+           id: orig.id,
+           rowIdx: orig.rowIdx,
+           nom: orig.nom,
+           qoldiq: orig.qoldiq,
+           faktYangi: d.faktYangi
+        });
+     }
+  });
+
+  if(finalDrafts.length === 0) return {text: "Javob validatsiyadan o'tmadi. ID lar mos kelmadi."};
+
+  return {
+    intent: 'FAKT_YOZISH',
+    text: "Quyidagi ishlarni bazaga yozish uchun qoralama tayyorlandi. Iltimos, tekshirib chiqing:",
+    faktDrafts: finalDrafts,
+    preview: true
+  };
+}
+
+function apiJarvisFaktSaqla(req) {
+  var obyekt = req.obyekt;
+  var drafts = req.drafts || [];
+  if(!obyekt || !drafts.length) return {error: "Ma'lumot to'liq emas."};
+
+  try {
+     var ss = null;
+     var p = PropertiesService.getScriptProperties();
+     var parkStr = p.getProperty('SMETA_PARK');
+     var park = JSON.parse(parkStr);
+     var fid = park[obyekt];
+     if(!fid) return {error: "Obyekt fayli topilmadi."};
+     ss = SpreadsheetApp.openById(fid);
+     var sh = ss.getSheetByName('Смета');
+     if(!sh) return {error: "Smeta varag'i topilmadi."};
+
+     var v = sh.getDataRange().getValues();
+     var h = v[3]||v[2]||[];
+     var colFk = h.indexOf('ФАКТ');
+     if(colFk === -1) return {error: "Smetada FAKT ustuni topilmadi."};
+
+     var count = 0;
+     drafts.forEach(function(d){
+        if(d.rowIdx && d.faktYangi > 0) {
+           var joriy = Number(sh.getRange(d.rowIdx, colFk+1).getValue()) || 0;
+           sh.getRange(d.rowIdx, colFk+1).setValue(joriy + d.faktYangi);
+           count++;
+        }
+     });
+     
+     // Svod va Holat invalidatsiyasi
+     if(typeof _holatInvalidate === 'function') _holatInvalidate(obyekt);
+     
+     return {text: "✅ " + count + " ta qator bo'yicha fakt ma'lumotlari muvaffaqiyatli saqlandi!"};
+
+  } catch(e) { return {error: String(e.message||e)}; }
 }

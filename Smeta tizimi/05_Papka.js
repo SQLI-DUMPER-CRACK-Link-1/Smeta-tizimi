@@ -61,6 +61,86 @@ function skanBitta(obyekt){
   return null;
 }
 
+/* ⚡ 2026-07-13 YANGI: DIAGNOSTIKA — foydalanuvchi papkadagi fayllar bor-u, lekin
+ * biror sub-obyekt Panelда/«Ишла» ro'yxatida ko'rinmay qolgan holatlarni (masalan
+ * fayl tasodifan "СВОДКА" deb noto'g'ri tanlanib, lokalka ro'yxatidan chiqib
+ * ketishi) o'zi tekshira olishi uchun. Papka nomi (obyekt ROOT papkasi, ko'p
+ * smetali bo'lsa ham xuddi shu — masalan "Amfiteatr") bo'yicha HAR bir faylning
+ * qanday tasniflangani (LOKALKA/СВОДКА/СИСТЕМА/e'tiborsiz) va sababini qaytaradi. */
+function apiObyektFayllarniTekshir(papkaNomi){
+  papkaNomi = String(papkaNomi||'').trim();
+  if(!papkaNomi) return {ok:false, xabar:'Папка номини киритинг'};
+  var a=sozAsosiy(), root;
+  try { root = DriveApp.getFolderById(a.rootId); } catch(e){ return {ok:false, xabar:'ROOT папка хатоси: '+e}; }
+
+  var target=null, subs=root.getFolders();
+  while(subs.hasNext()){
+    var f=subs.next();
+    if(f.getName().trim()===papkaNomi){ target=f; break; }
+  }
+  if(!target) return {ok:false, xabar:'"'+papkaNomi+'" номли папка топилмади (ROOT остида)'};
+
+  var override=_boglashOl();
+  var ovFolder=override[papkaNomi];
+  var narxTayyorFolder=!!_ovValFolder(override, papkaNomi, 'narxTayyor');
+  var allowedMimes = [
+    MimeType.GOOGLE_SHEETS, MimeType.MICROSOFT_EXCEL, MimeType.MICROSOFT_EXCEL_LEGACY,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel', 'application/vnd.ms-excel.sheet.macroEnabled.12',
+    'application/vnd.ms-excel.sheet.binary.macroEnabled.12'
+  ];
+
+  var report=[], it=target.getFiles();
+  while(it.hasNext()){
+    var fi=it.next(), fn=fi.getName();
+    var row={nom:fn, id:fi.getId(), holat:'', sabab:''};
+    if(fn.toUpperCase().indexOf(CFG.PLUS_SUF.toUpperCase())>=0){
+      row.holat='LRV_PLUS'; row.sabab='Номида "'+CFG.PLUS_SUF+'" бор — ишчи файл, обyekt сифатида ҳисобланмайди.';
+    } else if(fn.indexOf('_TMP_')===0 || fn.indexOf('_NAT_')===0 || fn.indexOf('(GS)')>=0){
+      row.holat='ТИЗИМ (кўчирилади)'; row.sabab='Номи "_TMP_"/"_NAT_" билан бошланади ёки "(GS)" бор — ⚙️ Tizim Fayllari папкасига кўчирилади.';
+    } else {
+      var mt=fi.getMimeType();
+      if(allowedMimes.indexOf(mt)===-1){
+        row.holat='Е\'ТИБОРСИЗ'; row.sabab='MIME тури рухсат этилганлар рўйхатида йўқ: '+mt;
+      } else if(ovFolder && ovFolder.svodId===fi.getId()){
+        row.holat='СВОДКА (қўлда боғланган)'; row.sabab='Созламалар→Боғлаш жадвалида СВОД_ID сифатида кўрсатилган.';
+      } else if(ovFolder && ovFolder.lokId===fi.getId()){
+        row.holat='ЛОКАЛКА (қўлда боғланган)'; row.sabab='Созламалар→Боғлаш жадвалида ЛОК_ID сифатида кўрсатилган.';
+      } else if(!narxTayyorFolder && _kw(fn.toUpperCase(), CFG.SVOD_KW)){
+        row.holat='СВОДКА (калит сўз)'; row.sabab='Номида СВОД/ЦЕН/ПРАЙС каби калит сўз бор.';
+      } else {
+        row.holat='ЛОКАЛКА (номзод)'; row.sabab='Юқоридаги ҳеч бирига мос келмади — лекин агар папкада СВОДКА умуман топилмаса ва 2+ файл бўлса, ЗАХИРА қоида (алфавит бўйича биринчиси) буни СВОДКА қилиб қўйиши МУМКИН.';
+      }
+    }
+    report.push(row);
+  }
+
+  // Haqiqiy _skanObyekt natijasi bilan solishtirish — qaysi fayl aynan SVOD bo'lib tanlangani
+  var realResult = _skanObyekt(target, override);
+  var yakuniyObyektlar = (realResult||[]).map(function(r){ return r.obyekt; });
+  var yakuniySvod = (realResult && realResult[0]) ? realResult[0].svodName : '(aniqlanmadi)';
+
+  // ⚡ 2026-07-13: RAW override (qo'lda bog'lash) qiymatlarini ID→NOM'ga hal qilib
+  // ko'rsatamiz — bu "nima uchun aynan shu fayl svod/lokalka bo'lib qoldi" savoliga
+  // TO'G'RIDAN-TO'G'RI javob beradi (Созламалар jadvaliga kirmasdan).
+  var ovInfo = null;
+  if(ovFolder){
+    var idToName={};
+    report.forEach(function(r){ idToName[r.id]=r.nom; });
+    ovInfo = {
+      lokId: ovFolder.lokId||'', lokNom: ovFolder.lokId ? (idToName[ovFolder.lokId]||'(papkada topilmadi — ID eskirgan bo\'lishi mumkin)') : '(bo\'sh)',
+      svodId: ovFolder.svodId||'', svodNom: ovFolder.svodId ? (idToName[ovFolder.svodId]||'(papkada topilmadi — ID eskirgan bo\'lishi mumkin)') : '(bo\'sh)',
+      format: ovFolder.format||'', narxTayyor: !!narxTayyorFolder
+    };
+  }
+
+  return {ok:true, papka:papkaNomi, fayllar:report, yakuniySvod:yakuniySvod,
+    yakuniyObyektlar:yakuniyObyektlar, override:ovInfo,
+    xabar:report.length+' та файл текширилди. Якуний СВОДКА: '+yakuniySvod+
+      '. Аниқланган суб-объектлар: '+yakuniyObyektlar.length+
+      (ovInfo?' · Қўлда боғлаш: ЛОК='+ovInfo.lokNom+', СВОД='+ovInfo.svodNom:' · Қўлда боғлаш йўқ')};
+}
+
 function _skanObyekt(folder, override){
   var nom = folder.getName().trim();
   override = override || {};
@@ -72,7 +152,9 @@ function _skanObyekt(folder, override){
     MimeType.MICROSOFT_EXCEL, 
     MimeType.MICROSOFT_EXCEL_LEGACY,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-excel'
+    'application/vnd.ms-excel',
+    'application/vnd.ms-excel.sheet.macroEnabled.12',
+    'application/vnd.ms-excel.sheet.binary.macroEnabled.12'
   ];
   while(it.hasNext()){
     var fi=it.next(), fn=fi.getName();
@@ -129,14 +211,26 @@ function _skanObyekt(folder, override){
   // 4) Agar SVOD topilmagan bo'lsa, lekin bir nechta fayl bo'lsa
   // Eski mantiq bo'yicha bittasini svod deb olamiz (qanday nomlanganidan qat'iy nazar)
   // НАРХ_ТАЙЁР papkada bu hech qachon ishlamaydi — hammasi lokalka bo'lib qoladi.
+  // ⚡⚡⚡ 2026-07-13 KRITIK BARQARORLASHTIRISH: `lokFiles[0]` — Drive'ning
+  // `folder.getFiles()` iteratori TARTIBI hech qachon KAFOLATLANMAGAN (bir xil
+  // papka ikki marta skanlansa, ayniqsa ichida fayl sони/tarkibi o'zgargan bo'lsa —
+  // masalan qandaydir fayl _TMP_/_NAT_ tizim papkasiga ko'chirilgach — TARTIB
+  // O'ZGARISHI MUMKIN). Natijada HAR SAFAR BOSHQA fayl "тасодифан svodka" deb
+  // tanlanib, o'sha lokalka BUTUNLAY obyekt ro'yxatidan (demak "Ишла" ro'yxatidan
+  // ham) g'oyib bo'lib qolardi — "avval ko'rinardi, hozir ko'rinmayapti, hech
+  // narsa o'zgartirmagan edim" shikoyatining ILDIZI aynan shu edi. Endi tanlov
+  // FAYL NOMI bo'yicha ALFAVIT tartibida — barqaror, takrorlanuvchi va nomi
+  // bo'yicha bashorat qilса bo'ladigan.
   if(!narxTayyorFolder && !svod && lokFiles.length > 1) {
      var potentialSvod = null;
      var pIdx = -1;
+     var lokSorted = lokFiles.map(function(f,idx){ return {f:f, idx:idx, nm:f.getName()}; })
+        .sort(function(a,b){ return a.nm<b.nm?-1:(a.nm>b.nm?1:0); });
      // Agar nomida LOKAL so'zi yo'q bo'lgan bitta fayl bo'lsa, o'shani svod qilamiz
-     for(var i=0; i<lokFiles.length; i++) {
-        if(!_kw(lokFiles[i].getName().toUpperCase(), CFG.LOK_KW)) {
-           potentialSvod = lokFiles[i];
-           pIdx = i;
+     for(var i=0; i<lokSorted.length; i++) {
+        if(!_kw(lokSorted[i].nm.toUpperCase(), CFG.LOK_KW)) {
+           potentialSvod = lokSorted[i].f;
+           pIdx = lokSorted[i].idx;
            break;
         }
      }
@@ -144,8 +238,8 @@ function _skanObyekt(folder, override){
         svod = potentialSvod;
         lokFiles.splice(pIdx, 1);
      } else {
-        svod = lokFiles[0];
-        lokFiles.splice(0, 1);
+        svod = lokSorted[0].f;
+        lokFiles.splice(lokSorted[0].idx, 1);
      }
   }
 
@@ -198,6 +292,8 @@ function _skanObyekt(folder, override){
         }
       }
 
+      var subNarxTayyor = !!_ovValFolder(override, subNom, 'narxTayyor') || narxTayyorFolder;
+
       results.push({
         obyekt:     subNom,
         folderId:   folder.getId(),
@@ -210,7 +306,7 @@ function _skanObyekt(folder, override){
         lokSheets:  _lokSheetsFolder(override, subNom),
         svodSheets: _svodSheetsFolder(override, subNom),
         svodCols:   _svodColsFolder(override, subNom),
-        narxTayyor: narxTayyorFolder,
+        narxTayyor: subNarxTayyor,
         plusId:     plusId,
         candidates: cand.map(function(x){ return {id:x.id, name:x.name}; })
       });
@@ -220,7 +316,23 @@ function _skanObyekt(folder, override){
   return results;
 }
 
-function _kw(s, arr){ for(var i=0;i<arr.length;i++) if(s.indexOf(arr[i])>=0) return true; return false; }
+/* ⚡ 2026-07-13 KRITIK TUZATISH: avval oddiy substring qidiruv edi — qisqa
+ * kalit so'zlar ("ЦЕН","ЛОК") boshqa so'zlar ICHIDA tasodifan uchrab qolishi
+ * mumkin (masalan "СЦЕНА" — sahna — "ЦЕН" ni o'z ichiga oladi!). Bunday holda
+ * "110081...АРХИТЕКТУРНАЯ ЧАСТЬ - СЦЕНА.xls" каби oddiy lokalka fayl XATO
+ * равишда СВОДКА (narx-kalit) deb tanilib, obyekt ro'yxatidan g'oyib bo'lardi.
+ * Endi so'z FAQAT boshida (probel/raqam/tire/qatordan keyin, harf EMAS) mos
+ * kelsa hisobga olinadi. */
+function _kw(s, arr){
+  for(var i=0;i<arr.length;i++){
+    var k=arr[i], idx=-1;
+    while((idx=s.indexOf(k, idx+1))>=0){
+      var prevCh = idx>0 ? s.charAt(idx-1) : '';
+      if(!/[A-ZА-ЯЁ]/i.test(prevCh)) return true;
+    }
+  }
+  return false;
+}
 
 
 /* PUZZLE BOG'LASH override.
@@ -505,7 +617,7 @@ function tmpTozala(){
       var f=it.next(), nm=f.getName();
       if(nm.indexOf('_TMP_')===0){ try{ f.setTrashed(true); tmpN++; }catch(e){} continue; }
       if(nm.indexOf('_NAT_')===0){ (natByName[nm]=natByName[nm]||[]).push(f); continue; }
-      if(nm.indexOf(CFG.PLUS_SUF)>=0){
+      if(nm.indexOf(CFG.PLUS_SUF)>=0 || nm.indexOf(' - Ф2 тайёр (')>=0){
         (byName[nm]=byName[nm]||[]).push(f);
       }
     }
@@ -535,7 +647,7 @@ function tmpTozala(){
       for(var k=1; k<na.length; k++){ try{ na[k].setTrashed(true); natN++; }catch(e){} }
     }
   }
-  var msg='Тозаланди: '+tmpN+' та _TMP_ , '+dupN+' та дубликат LRV_PLUS, '+natN+' та ортиқча _NAT_ нусха';
+  var msg='Тозаланди: '+tmpN+' та _TMP_ , '+dupN+' та дубликат LRV_PLUS/Ф2-тайёр, '+natN+' та ортиқча _NAT_ нусха';
   Logger.log(msg);
   // Skan keshini yangilaymiz — plusId eskirgan bo'lishi mumkin
   try{ apiKeshSkanYangilash(); }catch(e){}
@@ -563,19 +675,36 @@ function _plusFile(obyekt, folderId){
   var folder = DriveApp.getFolderById(folderId);
   var ex = folder.getFilesByName(nm);
   if(ex.hasNext()) return SpreadsheetApp.openById(ex.next().getId());
-  
-  // HIMOYA: Agar fayl qo'lda o'chirilgan (Korzinada) bo'lsa, uni tiklaymiz!
-  var q = "title = '" + nm.replace(/'/g,"\\'") + "' and trashed = true";
-  var trashed = folder.searchFiles(q);
-  if(trashed.hasNext()) {
-    var tf = trashed.next();
-    tf.setTrashed(false); // Korzinadan qaytarish
-    return SpreadsheetApp.openById(tf.getId());
+
+  // ⚡ 2026-07-12 TUZATILDI: ikkita ijro (masalan Навбат trigger + qo'lda "Ишла"/
+  // Ф2 тайёрлаш, yoki chunking davomida ikkita so'rov) shu obyekt uchun BIR VAQTDA
+  // shu yerga kelsa — ikkalasi ham yuqoridagi getFilesByName'da "topilmadi" deb
+  // ko'rib, ikkalasi ham SpreadsheetApp.create qilib, IKKI XIL ID'li bir xil nomli
+  // LRV_PLUS yaratib qo'yardi (Game Club/Yevropa Oshxonasi'da 2-3 taga ko'paygani
+  // shu edi). Qulf: ikkinchi chaqiruv birinchisi tugaguncha kutadi, so'ng
+  // getFilesByName'ni QAYTA tekshiradi — endi topadi va yangisini yaratmaydi.
+  var lock = LockService.getScriptLock();
+  var gotLock = false;
+  try{ gotLock = lock.tryLock(20000); }catch(e){}
+  try{
+    ex = folder.getFilesByName(nm);
+    if(ex.hasNext()) return SpreadsheetApp.openById(ex.next().getId());
+
+    // HIMOYA: Agar fayl qo'lda o'chirilgan (Korzinada) bo'lsa, uni tiklaymiz!
+    var q = "title = '" + nm.replace(/'/g,"\\'") + "' and trashed = true";
+    var trashed = folder.searchFiles(q);
+    if(trashed.hasNext()) {
+      var tf = trashed.next();
+      tf.setTrashed(false); // Korzinadan qaytarish
+      return SpreadsheetApp.openById(tf.getId());
+    }
+
+    var ss = SpreadsheetApp.create(nm);
+    var file = DriveApp.getFileById(ss.getId());
+    folder.addFile(file);
+    try { DriveApp.getRootFolder().removeFile(file); } catch(e){}
+    return ss;
+  } finally {
+    if(gotLock) try{ lock.releaseLock(); }catch(e){}
   }
-  
-  var ss = SpreadsheetApp.create(nm);
-  var file = DriveApp.getFileById(ss.getId());
-  folder.addFile(file);
-  try { DriveApp.getRootFolder().removeFile(file); } catch(e){}
-  return ss;
 }

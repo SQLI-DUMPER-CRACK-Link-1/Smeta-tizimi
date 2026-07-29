@@ -568,6 +568,38 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
   if(last-startOld+1<1){ bakTugadi(); return {n:0, topilmadi:0, ochirilgan:ochirilgan, log:[]}; }
   _vt('data boshi='+startOld);
 
+  // ⚡ 2026-07-12 YANGI: RAZDELSIZ LOKALKA. Ba'zi qisqa varaqlar (masalan bitta
+  // muhandislik bo'limiga bag'ishlangan "01-17 ВИДЕОНАБЛЮДЕНИЕ" kabi resurs
+  // vedomosti) ICHIDA UMUMAN 'rz' qatori bo'lmaydi — butun varaq o'zi BITTA
+  // bo'lim. Avval bunday holatda barcha ishlar rzNom='' (nomsiz) bo'lib
+  // hierarxiyada yo'qolib ketardi. Endi: shu joyda (hali haqiqiy header
+  // insert qilinmasdan) butun ma'lumot tanasi tekshiriladi — birorta ham
+  // 'rz' topilmasa, sarlavha maydonidan (yoki varaq nomidan) nom olib DATA
+  // BOSHIGA haqiqiy 'rz' qator qo'shiladi (xuddi qo'lda apiRzQosh qilgandek).
+  (function _sintetikRzTekshir(){
+    var n0 = last - startOld + 1; if(n0<1) return;
+    var data0 = dst.getRange(startOld,1,n0,9).getValues();
+    var mm0 = _mergedMap(dst, startOld, n0);
+    for(var i0=0;i0<n0;i0++){
+      var r0=startOld+i0;
+      var exist0=String(data0[i0][8]||'').trim().toLowerCase().replace(/[+~]$/,'');
+      if(exist0==='rz') return;   // bor — hech narsa qilmaymiz
+      if(['bl','rs','mat','ob'].indexOf(exist0)>=0) continue;
+      var nA0=(i0+1<n0)?data0[i0+1][0]:'', nC0=(i0+1<n0)?data0[i0+1][2]:'';
+      var t0=_classify(r0, mm0, data0[i0][0], data0[i0][2], nA0, nC0, fmt, data0[i0][1], data0[i0][3], data0[i0][4]);
+      if(t0==='rz') return;   // bor — hech narsa qilmaymiz
+    }
+    // Hech qanday 'rz' topilmadi — sintetik razdel qo'shamiz
+    var rzNom0 = _sintetikRzNomi(dst, startOld, outName);
+    dst.insertRowsBefore(startOld,1);
+    dst.getRange(startOld,3).setValue(rzNom0);
+    dst.getRange(startOld,9).setValue('rz');
+    try{ dst.getRange(startOld,1,1,6).setBackground(CFG.RANG.rz||'#FFFF00'); }catch(e){}
+    try{ dst.getRange(startOld,3).setFontWeight('bold'); }catch(e){}
+    last = dst.getLastRow();
+    _vt('sintetik razdel qo\'shildi: '+rzNom0);
+  })();
+
   // 2 ta qator qo'shamiz: 1-si SARLAVHA (har doim ko'rinadi), 2-si ЖАМИ
   dst.insertRowsBefore(startOld, 2); _vt('insertRows');
   var jamiRow = startOld + 1;        // ЖАМИ
@@ -588,7 +620,7 @@ function _ishlaVaraq(src, plusSS, outName, obyekt, konstr, pdb, kat, a, fmt, fak
     var exist=existRaw.replace(/[+~]$/,'');
     var nextA=(i+1<n)?data[i+1][0]:'';
     var nextC=(i+1<n)?data[i+1][2]:'';
-    var tur=(['rz','bl','rs','mat','ob'].indexOf(exist)>=0)?exist:_classify(r,mm,A,C,nextA,nextC,fmt);
+    var tur=(['rz','bl','rs','mat','ob'].indexOf(exist)>=0)?exist:_classify(r,mm,A,C,nextA,nextC,fmt,B,D,data[i][4]);
 
     var nom = _nomOl(tur, A, B, C);
     var bir = String(D||'').trim();
@@ -936,12 +968,23 @@ function _oyFormulaToldur(dst, start, last){
     var offN = cN - col.F2_BIRINCHI;
     var offS = cS - col.F2_BIRINCHI;
 
-    var blRow=0;
+    var blRow=0, blAktStatik=false;
     for(var i=0;i<n;i++){
       var r=start+i, mkRaw=String(marker[i][0]||'').trim().toLowerCase();
       var isQosh=/[+~]$/.test(mkRaw), mk=mkRaw.replace(/[+~]$/,'');
-      if(mk==='bl') blRow=r;
-      else if(mk==='mat' || mk==='ob') blRow=0;
+      if(mk==='bl'){
+        blRow=r;
+        // ⚡⚡⚡ 2026-07-13 CONST (foydalanuvchi qat'iy qarori): «Ф2 summasi Ф2ning O'Z
+        // narxida hisoblanishi SHART, smeta narxida EMAS». Agar bl (ish tur)ning shu
+        // oy СУММА katagi STATIK son bo'lsa — bu AKT IMPORTidan kelgan (akt o'z jami
+        // summasini olib turibdi). Bunday bl ning moslashtirilmagan rs bolalariga
+        // ОБЪЁМ avto-taqsimot formulasi (=oyBl×norma) YOZILMAYDI — aks holda bolalar
+        // SMETA narxida (С=О×Нsmeta) hisoblanib, jami akt summasidan SHISHIB ketardi
+        // (ПРЯМЫЕ ЗАТРАТЫ 2.11mlrd akt → 2.43mlrd panel farqining ildizi).
+        // Akt bolalari moslashtirilgan bo'lsa — ular O'Z STATIK akt qiymatini oladi.
+        blAktStatik = (allForms[i][offS]==='' && _toNum(allVals[i][offS])!==0);
+      }
+      else if(mk==='mat' || mk==='ob'){ blRow=0; blAktStatik=false; }
       var leaf = (mk==='bl'||mk==='rs'||mk==='mat'||mk==='ob');
       if(!leaf) continue;
       // ⚡⚡ 2026-07-05 YURIDIK: qo'shimcha/zamena ('+') qatorlarga oy ustunlarida
@@ -950,7 +993,8 @@ function _oyFormulaToldur(dst, start, last){
       if(isQosh) continue;
 
       // ОБЪЁМ — faqat rs: bo'sh/0 bo'lsa bl ga bog'langan norma formulasi
-      if(mk==='rs' && blRow){
+      // (⚡ 2026-07-13: akt-statik bl ostidagi bolalarga YOZILMAYDI — yuqoridagi izoh)
+      if(mk==='rs' && blRow && !blAktStatik){
         var curO = allForms[i][offO] || allVals[i][offO];
         if(!curO || curO===0){
           allForms[i][offO] = '=' + CL(cO) + '$' + blRow + '*' + CL(col.E) + r;
@@ -1561,7 +1605,7 @@ function markirovkaQaytaObyekt(obyektNom){
     var data=sh.getRange(start,1,n,6).getValues(), mm=_mergedMap(sh,start,n), out=[];
     for(var i=0;i<n;i++){
       var nA=(i+1<n)?data[i+1][0]:'', nC=(i+1<n)?data[i+1][2]:'';
-      out.push([_classify(start+i,mm,data[i][0],data[i][2],nA,nC,fmt)]);
+      out.push([_classify(start+i,mm,data[i][0],data[i][2],nA,nC,fmt,data[i][1],data[i][3],data[i][4])]);
     }
     sh.getRange(start,CFG.C.MARKER,n,1).setValues(out); cnt+=n;
   }
@@ -1631,7 +1675,34 @@ function _mergedMap(sh, start, n){
   }
   return {full:full, ef:ef, mmEf:mmEf};
 }
-function _classify(r, mm, A, C, nextA, nextC, fmt){
+/* Razdelsiz varaq uchun sintetik nom: sarlavha maydonidan ("ЛОКАЛЬНАЯ РЕСУРСНАЯ
+ * ВЕДОМОСТЬ №..." qatoridan keyingi birinchi mazmunli qator — odatda bo'lim nomi,
+ * masalan "ВИДЕОНАБЛЮДЕНИЕ") qidiradi; topilmasa varaq (sheet) nomiga tayanadi. */
+function _sintetikRzNomi(dst, startOld, outName){
+  try{
+    var hCnt = Math.max(0, startOld-1);
+    if(hCnt>0){
+      var hdr = dst.getRange(1,1,hCnt,8).getValues();
+      var vIdx=-1;
+      for(var i=0;i<hdr.length;i++){
+        var rowTxt = hdr[i].join(' ').toUpperCase();
+        if(/ЛОКАЛЬН.{0,4}(РЕСУРСН|СМЕТ).{0,4}(ВЕДОМОСТ|РАСЧЕТ)/.test(rowTxt) || /ВЕДОМОСТЬ\s*№/.test(rowTxt)){ vIdx=i; break; }
+      }
+      if(vIdx>=0){
+        for(var j=vIdx+1;j<hdr.length;j++){
+          var line = hdr[j].map(function(c){return String(c==null?'':c).trim();}).filter(String).join(' ').trim();
+          if(!line) continue;
+          var up=line.toUpperCase();
+          if(/^(ОТКОРРЕКТ|ОСНОВАНИЕ|СОГЛАСОВАНО|УТВЕРЖДАЮ|СОСТАВИЛ|ПРОВЕРИЛ|№)/.test(up)) continue;
+          return line.length>60 ? line.slice(0,60) : line;
+        }
+      }
+    }
+  }catch(e){}
+  return String(outName||'').replace(/^\d+[-_.]?/,'').replace(/_/g,' ').trim() || 'РАЗДЕЛ';
+}
+
+function _classify(r, mm, A, C, nextA, nextC, fmt, B, D, E){
   if(fmt === 'ABC4'){
     if(_isFr(A)) return 'rs';
     var Cm = String(C||'').trim().length>4;
@@ -1640,11 +1711,44 @@ function _classify(r, mm, A, C, nextA, nextC, fmt){
     if(String(C||'').trim() || String(A||'').trim()) return 'rz';
     return '';
   }
+  var sA=String(A==null?'':A).trim(), sB=String(B==null?'':B).trim(),
+      sC=String(C==null?'':C).trim(), sD=String(D==null?'':D).trim(),
+      sE=String(E==null?'':E).trim();
+  // ⚡ 2026-07-12: YIG'INDI/IMZO qatorlari — HECH QAYSI tur emas. Avval ИТОГО (A:F
+  //   merge bilan) 'rz' bo'lib bo'sh soxta razdel, imzo qatorlari ham rz/mat bo'lib
+  //   chalkashtirardi («keraksiz narsalarni razdel deb yozib tashlayapdi»).
+  var _jUp=(sA+' '+sB+' '+sC).trim().toUpperCase();
+  if(/^(ИТОГО|ВСЕГО|ЖАМИ|ПОДЫТОГ|НДС|СОСТАВИЛ|ПРОВЕРИЛ|ПОДРЯДЧИК|ЗАКАЗЧИК|ДИРЕКТОР|ГЛ\.?\s*БУХ|ОСНОВАНИЕ|№)/.test(_jUp)) return '';
+  // ⚡ 2026-07-12: sarlavha ostidagi USTUN-RAQAMLASH qatori (1|2|3|4|5...) — avval
+  //   C="3" tufayli 'rz' bo'lib, Panel daraxtida "3" nomli soxta razdel paydo bo'lardi
+  //   (foydalanuvchi Amfiteatr skrinshotida ko'rsatdi). Sarlavha qatorining o'zi ham
+  //   (ОБОСНОВАНИЕ|НАИМЕНОВАНИЕ...) tur olmasligi kerak.
+  if(/^\d+$/.test(sB) && /^\d+$/.test(sC)) return '';
+  if(sC.indexOf('НАИМЕНОВАНИЕ')>=0 && (sD.indexOf('ЕД')>=0||sB.indexOf('ОБОСНОВ')>=0||sB.indexOf('ШИФР')>=0)) return '';
+  
+  // ⚡ 2026-07-13 UNIVERSAL RAZDEL: D (Бирлик) ва E (Миқдор/Норма) мутлақо бўш бўлса — бу РАЗДЕЛ.
+  // ABC ва TN форматларида иш/материал ҳеч қачон бирликсиз ва ҳажмсиз бўлмайди.
+  if(!sD && !sE) {
+      var txt = (sA + ' ' + sB + ' ' + sC).trim().toUpperCase();
+      if(txt.length > 2 && /[А-ЯЁA-Z]/i.test(txt)) return 'rz';
+  }
+
   if(mm.full[r]) return 'rz';
-  if(mm.ef[r])   return _isFr(nextA)?'bl':'mat';
+  if(mm.ef[r]){
+    if(_isFr(nextA)) return 'bl';
+    if(!sC && !sD && !sE && sB && /[А-ЯЁA-Z]/i.test(sB) && !/^\d+[\.,]?\d*$/.test(sB)) return 'rz';
+    return 'mat';
+  }
   if(_isFr(A))   return 'rs';
-  if(String(C||'').trim() || (String(A||'').trim() && !_isWhole(A))) return 'rz';
-  if(_isWhole(A) && String(C||'').trim()) return 'bl';
+  // ⚡ merge'siz variant: faqat B'da matn (A/C/D/E bo'sh), kod ko'rinishida emas → razdel
+  if(!sA && !sC && !sD && !sE && sB.length>2 && /[А-ЯЁA-Z]/i.test(sB) && !/^[EЕ]\d/i.test(sB) && !/^\d/.test(sB)) return 'rz';
+  // ⚡ merge'siz ish/material: A=butun raqam + C nom + birlik(D) yoki hajm(E) BOR —
+  //   bu hech qachon razdel emas! Keyingi qator kasr (1.1) yoki ЗАТРАТЫ ТРУДА bo'lsa
+  //   'bl', aks holda 'mat'. (Avval quyidagi rz-qoida bunday qatorlarni XATO 'rz'
+  //   qilardi — ishlar razdel bo'lib yozilardi.)
+  if(_isWhole(A) && sC && (sD||sE)) return (_isFr(nextA)||_isZtr(nextC)) ? 'bl' : 'mat';
+  if(sC || (sA && !_isWhole(A))) return 'rz';
+  if(_isWhole(A) && sC) return 'bl';
   return '';
 }
 function _isFr(v){ var s=String(v==null?'':v).trim(); return /^\d+\s*[\.,]\s*\d/.test(s); }

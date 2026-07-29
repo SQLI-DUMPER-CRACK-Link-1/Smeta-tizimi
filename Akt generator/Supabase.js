@@ -31,12 +31,23 @@ function _aktSbYoz(table, rows, onConflict){
   var base=c.url+'/rest/v1/'+table+(onConflict?('?on_conflict='+encodeURIComponent(onConflict)):'');
   var headers={'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json',
     'Prefer': onConflict ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'};
+  var requests = [];
   for(var i=0;i<rows.length;i+=1000){
     var chunk=rows.slice(i,i+1000);
-    var resp=UrlFetchApp.fetch(base,{method:'post',headers:headers,
-      payload:JSON.stringify(chunk), muteHttpExceptions:true});
-    if(resp.getResponseCode()>=300)
-      throw 'Supabase '+table+' xato ('+resp.getResponseCode()+'): '+resp.getContentText().slice(0,300);
+    requests.push({
+      url: base,
+      method: 'post',
+      headers: headers,
+      payload: JSON.stringify(chunk),
+      muteHttpExceptions: true
+    });
+  }
+  if (requests.length > 0) {
+    var responses = UrlFetchApp.fetchAll(requests);
+    for (var j=0; j<responses.length; j++) {
+      if(responses[j].getResponseCode()>=300)
+        throw 'Supabase '+table+' xato ('+responses[j].getResponseCode()+'): '+responses[j].getContentText().slice(0,300);
+    }
   }
 }
 

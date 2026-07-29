@@ -71,7 +71,8 @@ var _ST_KERAK_FN = [
   'apiPrixodOl','apiPrixodYoz','apiRashodYozMass','apiSkladOl','apiViborkaOl','_hujOpen','_aktSheet',
   // Shartnoma / buxgalteriya
   'apiShartnomaOl','apiShartnomaSaqla','apiShartnomaBogOl','apiQoshIshOl','apiNakrutkaOl',
-  'nakrutkaHisob','apiShartnomaDashboard','shartnomaChelCh','apiTolovOl','apiTolovYoz','apiBuxDashboard',
+  'nakrutkaHisob','apiShartnomaDashboard','shartnomaChelCh','apiTolovOl','apiTolovYoz','apiTolovTahrir','apiTolovOchir','apiBuxDashboard',
+  'apiXarajatYoz','apiXarajatOl','apiXarajatOchir',
   // Supabase
   'supabaseSozlash','_sbBor','supabaseObyektPush','supabaseDashboardPush','supabaseNarxlarPush',
   'apiSupabaseSinxKursor','apiSupabaseSinxReset','apiSupabaseSozlamaOl','apiSupabaseSozlamaSaqla',

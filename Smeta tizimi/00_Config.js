@@ -65,7 +65,11 @@ var CFG = {
   RANG_QOSH: '#FCE5CD',
   RANG_LOCK: '#E0E0E0',
 
-  SVOD_KW: ['СВОД','SVOD','СВОДК','СВОДН','СМЕТН','ЦЕН','ПРАЙС','PRICE'],
+  // ⚡ 2026-07-13: "ЦЕН" olib tashlandi — juda qisqa/umumiy bo'lgani uchun
+  // "СЦЕНА" (sahna), "ЦЕНТР" (markaz) kabi ODDIY qurilish so'zlariga XATO mos
+  // kelib, ular bilan bog'liq lokalka fayllarni noto'g'ri СВОДКА deb belgilardi
+  // (Amfiteatr "110081...СЦЕНА" muammosi). Qolgan so'zlar aniq/xavfsiz.
+  SVOD_KW: ['СВОД','SVOD','СВОДК','СВОДН','СМЕТН','ПРАЙС','PRICE'],
   LOK_KW:  ['ЛОКАЛ','LOKAL','LRV','ЛРВ','ЛОК','LOC','РЕСУРСН','ВЕДОМ'],
 
   SKIP_SHEETS: ['РЕСУРСЛАР','_NARX_LOG','_KESH','SOZLAMALAR','SOZLAMALAR_KATEGORIYA','SOZLAMALAR_НАРХ',

@@ -623,4 +623,6 @@ function _writeObjectSheet(ss, objName, materials) {
   sheet.setColumnWidth(8,  110);
   sheet.setColumnWidth(9,  320);
   sheet.setFrozenRows(2);
+
+  try { CacheService.getDocumentCache().remove("VIBORKA_STATS"); } catch(e) {}
 }

@@ -43,6 +43,13 @@
 **8. ISH TUGAGACH:** (a) `selftestFunksiyalar()` toza, (b) `clasp pull` bilan merge tekshir,
    (c) keyin push, (d) `selftestBarcha()` jonli tekshir.
 
+**9. MATERIALLARNI KATEGORIYAGA AJRATISH (MASH/CHEL/MAT/OB):** (2026-06-30 qat'iy qoida)
+   - Hech qachon material nomidan so'z qidirib (masalan "Kabel", "Mashinist") taxmin qilmang (`_refine` funksiyasi butunlay o'chirib tashlandi va QAYTARILMASIN).
+   - Agar lokalkadagi birlik `чел-час` bo'lsa -> Qat'iy **CHEL** ustuniga.
+   - Agar lokalkadagi birlik `маш-час` bo'lsa -> Qat'iy **MASH** ustuniga.
+   - Boshqa BARCHA birliklar (шт, м3, т...) FAQATGINA Svodkadagi oraliq (range) joylashuviga qarab MAT yoki OB ga bo'linadi. 
+   - Agar biror material Svodkada MASH deb xato kiritilgan bo'lsa ham yoki Narxlar bazasida (nkMap) MASH deb tasdiqlangan bo'lsa ham, uning haqiqiy birligi `маш-час` bo'lmasa u QAT'IYAN MASH ustuniga kiritilmaydi.
+
 ---
 
 ## 0. UMUMIY MANZARA

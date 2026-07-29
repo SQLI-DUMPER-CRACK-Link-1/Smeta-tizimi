@@ -227,6 +227,12 @@ function _drawBtn(sheet,row,col,icon,title,sub,bgColor,fnName) {
 // STATISTIKA
 // ════════════════════════════════════════════════════════════
 function _calcStats(ss) {
+  var cache = CacheService.getDocumentCache();
+  var cached = cache.get("VIBORKA_STATS");
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
   var stats = {
     totalMaterials:0,deficitCount:0,closedCount:0,overCount:0,
     totalPlan:0,totalKeldi:0,totalSmeta:0,totalFakt:0,
@@ -341,6 +347,8 @@ function _calcStats(ss) {
     var o=objectMap[name];
     if (o.plan>0) stats.objectProgress.push({name:name,plan:o.plan,fakt:o.fakt});
   });
+
+  try { cache.put("VIBORKA_STATS", JSON.stringify(stats), 900); } catch(e) {}
 
   return stats;
 }

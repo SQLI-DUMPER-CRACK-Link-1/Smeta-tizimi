@@ -375,6 +375,9 @@ function avtoYangilash(){
   }
   try{ serverYigPapka(); }catch(e){ Logger.log('avtoYangilash server: '+e); }
   try{ _keshWarmUp(); }catch(e){ Logger.log('avtoYangilash warmup: '+e); }
+  // ⚡ 2026-07-10: Грaфик работ — oxirgi saqlangan sozlamalar bo'yicha fon jarayonini
+  //   boshlaydi (toza FAKT bilan), shunda foydalanuvchi kirganda TAYYOR turadi.
+  if(typeof _grafikAvtoYangilash==='function'){ try{ _grafikAvtoYangilash(); }catch(e){ Logger.log('grafik avto: '+e); } }
   if(typeof supabaseDashboardPush==='function'){ try{ supabaseDashboardPush(); }catch(e){ Logger.log('SB dash: '+e); } }
   if(typeof supabaseNarxlarPush==='function'){ try{ supabaseNarxlarPush(); }catch(e){} }
 }

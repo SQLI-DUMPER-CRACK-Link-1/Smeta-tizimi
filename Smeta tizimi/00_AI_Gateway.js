@@ -58,34 +58,29 @@ function aiGwHolat(){
   return msg;
 }
 
-/* --- API kalit (BUTUN TIZIM — bitta nom, bitta manba) --- */
-function _aiGwKey(){
-  return PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY')
-      || PropertiesService.getUserProperties().getProperty('GEMINI_API_KEY') || '';
+/* --- API kalitlar (Universal Jarvis AI) --- */
+function _uniKey(prov){
+  var nm = prov.toUpperCase() + '_API_KEY';
+  return PropertiesService.getScriptProperties().getProperty(nm)
+      || PropertiesService.getUserProperties().getProperty(nm) || '';
 }
-/* Global alias — barcha AI modullar shuni ishlatadi */
-function _aiKey(){ return _aiGwKey(); }
+function _aiGwKey(){ return _uniKey('GEMINI'); }
+function _groqGwKey(){ return _uniKey('GROQ'); }
 
-/* --- Groq API kalit (ixtiyoriy — bo'lsa matnli AI + ovoz shu orqali, tezroq) --- */
-function _groqGwKey(){
-  return PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY')
-      || PropertiesService.getUserProperties().getProperty('GROQ_API_KEY') || '';
-}
-
-/**
- * Groq API kalit saqlash (console.groq.com → API Keys, "gsk_..." bilan boshlanadi).
- */
-function apiGroqKalitSaqla(key){
+function apiAiKalitSaqlaBase(prov, key){
   key = String(key||'').trim();
   if(key.length < 15) throw new Error("Noto'g'ri kalit (kamida 15 belgi)");
-  PropertiesService.getScriptProperties().setProperty('GROQ_API_KEY', key);
-  try{ PropertiesService.getUserProperties().setProperty('GROQ_API_KEY', key); }catch(e){}
-  return {
-    ok: true,
-    mask: _aiKalitMask(key),
-    xabar: '✅ Groq kaliti saqlandi. Matnli AI va ovozli xabarlar endi Groq orqali (tezroq) ishlaydi, Gemini zaxira sifatida qoladi.'
-  };
+  var nm = prov.toUpperCase() + '_API_KEY';
+  PropertiesService.getScriptProperties().setProperty(nm, key);
+  try{ PropertiesService.getUserProperties().setProperty(nm, key); }catch(e){}
+  if(prov.toUpperCase()==='GEMINI') _aiKalitSheetYoz(key);
+  return { ok: true, mask: _aiKalitMask(key), xabar: '✅ ' + prov + ' kaliti saqlandi.' };
 }
+function apiAiKalitSaqla(key){ return apiAiKalitSaqlaBase('GEMINI', key); }
+function apiGroqKalitSaqla(key){ return apiAiKalitSaqlaBase('GROQ', key); }
+function apiOpenaiKalitSaqla(key){ return apiAiKalitSaqlaBase('OPENAI', key); }
+function apiAnthropicKalitSaqla(key){ return apiAiKalitSaqlaBase('ANTHROPIC', key); }
+function apiDeepseekKalitSaqla(key){ return apiAiKalitSaqlaBase('DEEPSEEK', key); }
 
 function _aiKalitMask(k){
   k = String(k||'');
@@ -120,23 +115,6 @@ function _aiKalitSheetOqi(){
   return '';
 }
 
-/**
- * Markaziy API kalit saqlash — Panel, SmetaAI, chat setkey: hammasi shu yerda.
- * Script Property + User Property + SOZLAMALAR varaq.
- */
-function apiAiKalitSaqla(key){
-  key = String(key||'').trim();
-  if(key.length < 15) throw new Error("Noto'g'ri kalit (kamida 15 belgi)");
-  PropertiesService.getScriptProperties().setProperty('GEMINI_API_KEY', key);
-  try{ PropertiesService.getUserProperties().setProperty('GEMINI_API_KEY', key); }catch(e){}
-  _aiKalitSheetYoz(key);
-  return {
-    ok: true,
-    mask: _aiKalitMask(key),
-    xabar: '✅ Gemini kaliti saqlandi. AI chat, Telegram, tahlil — hammasi ishlaydi.'
-  };
-}
-
 /** Kalit holati (masklangan) — UI uchun */
 function apiAiKalitHolat(){
   var k = _aiGwKey();
@@ -144,21 +122,31 @@ function apiAiKalitHolat(){
   if(k && !_aiGwKey()){
     try{ PropertiesService.getScriptProperties().setProperty('GEMINI_API_KEY', k); }catch(e){}
   }
-  var gk = _groqGwKey();
   return {
     bor: !!k,
     mask: k ? _aiKalitMask(k) : '',
     supabase: (typeof _sbBor === 'function') ? !!_sbBor() : false,
     gateway: true,
-    groqBor: !!gk,
-    groqMask: gk ? _aiKalitMask(gk) : ''
+    groqBor: !!_uniKey('GROQ'), groqMask: _uniKey('GROQ') ? _aiKalitMask(_uniKey('GROQ')) : '',
+    openaiBor: !!_uniKey('OPENAI'), openaiMask: _uniKey('OPENAI') ? _aiKalitMask(_uniKey('OPENAI')) : '',
+    anthropicBor: !!_uniKey('ANTHROPIC'), anthropicMask: _uniKey('ANTHROPIC') ? _aiKalitMask(_uniKey('ANTHROPIC')) : '',
+    deepseekBor: !!_uniKey('DEEPSEEK'), deepseekMask: _uniKey('DEEPSEEK') ? _aiKalitMask(_uniKey('DEEPSEEK')) : '',
+    primary: PropertiesService.getScriptProperties().getProperty('AI_PRIMARY_PROV') || 'GEMINI'
   };
 }
 
-/** Chat: setkey:KALIT (Gemini) yoki setgroqkey:KALIT (Groq) */
+function apiSetPrimaryProv(prov){
+  PropertiesService.getScriptProperties().setProperty('AI_PRIMARY_PROV', String(prov).toUpperCase());
+  return {ok:true, xabar: 'Asosiy AI provayderi ' + prov + ' etib belgilandi.'};
+}
+
+/** Chat: setkey:KALIT va hk */
 function apiAiKalitFromText(text){
   var t = String(text||'');
   if(/^setgroqkey:/i.test(t)) return apiGroqKalitSaqla(t.replace(/^setgroqkey:\s*/i,'').trim());
+  if(/^setopenaikey:/i.test(t)) return apiOpenaiKalitSaqla(t.replace(/^setopenaikey:\s*/i,'').trim());
+  if(/^setclaude:/i.test(t)) return apiAnthropicKalitSaqla(t.replace(/^setclaude:\s*/i,'').trim());
+  if(/^setdeepseek:/i.test(t)) return apiDeepseekKalitSaqla(t.replace(/^setdeepseek:\s*/i,'').trim());
   if(/^setkey:/i.test(t)) return apiAiKalitSaqla(t.replace(/^setkey:\s*/i,'').trim());
   return null;
 }
@@ -222,10 +210,19 @@ function aiFetchRaw(model, payload, opts){
   var fb=PropertiesService.getScriptProperties().getProperty('AI_MODEL_FALLBACK')||'gemini-2.0-flash';
   var models=[model]; if(fb && fb!==model && opts.fallback!==false) models.push(fb);
   var lastErr='HTTP ?';
+  // ⚡ 2026-07-12: INTERAKTIV chat (Panel/SmetaAI chatida foydalanuvchi jonli kutadi)
+  // uchun umumiy KUTISH BYUDJETI. Fon vazifalari (Telegram/kunlik AI) uchun standart
+  // backoff jadvali (5s→55s ×5 urinish ×2 model = ~4.5 daqiqagacha) to'g'ri, lekin
+  // interaktiv chatda bu «5-10 daqiqa osilib qolish» shikoyatining aynan sababi edi
+  // (Groq ham muvaffaqiyatsiz bo'lsa, Gemini ustiga yana shuncha vaqt qo'shiladi).
+  // opts.maxWaitMs berilsa — shu vaqt tugagach DARHOL aniq xato bilan to'xtaydi.
+  var t0=Date.now(), maxWait=opts.maxWaitMs>0?opts.maxWaitMs:0;
+  function vaqtTugadimi(){ return maxWait>0 && (Date.now()-t0)>=maxWait; }
 
   for(var mi=0; mi<models.length; mi++){
     var url='https://generativelanguage.googleapis.com/v1beta/models/'+models[mi]+':generateContent?key='+key;
     for(var i=0;i<maxRetry;i++){
+      if(vaqtTugadimi()) throw new Error('AI javob bermayapti (кутиш вақти тугади, '+(maxWait/1000)+' сония). Кейинроқ уриниб кўринг.');
       _aiThrottleKut();
       _aiRpdInc();
       var resp;
@@ -234,7 +231,7 @@ function aiFetchRaw(model, payload, opts){
           payload:JSON.stringify(payload), muteHttpExceptions:true});
       }catch(netErr){
         lastErr='network: '+(netErr.message||netErr);
-        if(i<maxRetry-1){ Utilities.sleep(_aiBackoff(null,i)); continue; }
+        if(i<maxRetry-1 && !vaqtTugadimi()){ Utilities.sleep(_aiBackoff(null,i)); continue; }
         break;
       }
       var code=resp.getResponseCode();
@@ -248,11 +245,12 @@ function aiFetchRaw(model, payload, opts){
       var qaytarsa = (code===429 || code===500 || code===503 ||
                      /overload|unavailable|exhaust|rate limit|quota|try again|resource has been/i.test(em));
       if(qaytarsa){
-        if(i<maxRetry-1){ Utilities.sleep(_aiBackoff(json,i)); continue; }
+        if(i<maxRetry-1 && !vaqtTugadimi()){ Utilities.sleep(_aiBackoff(json,i)); continue; }
         break;
       }
       throw new Error('Gemini ('+code+'): '+em);
     }
+    if(vaqtTugadimi()) break;
   }
   throw new Error('Gemini band/limitda — qayta urinishlar tugadi. Keyinroq urining yoki intervalni oshiring (aiGwSozla). Oxirgi: '+lastErr);
 }
@@ -279,8 +277,12 @@ function groqFetchRaw(model, messages, opts){
   };
   if(opts.json) body.response_format={ type:'json_object' };
   var lastErr='HTTP ?';
+  // ⚡ 2026-07-12: interaktiv chat uchun umumiy kutish byudjeti (aiFetchRaw bilan bir xil)
+  var t0=Date.now(), maxWait=opts.maxWaitMs>0?opts.maxWaitMs:0;
+  function vaqtTugadimi(){ return maxWait>0 && (Date.now()-t0)>=maxWait; }
 
   for(var i=0;i<maxRetry;i++){
+    if(vaqtTugadimi()) throw new Error('Groq javob bermayapti (кутиш вақти тугади).');
     var resp;
     try{
       resp=UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -290,7 +292,7 @@ function groqFetchRaw(model, messages, opts){
       });
     }catch(netErr){
       lastErr='network: '+(netErr.message||netErr);
-      if(i<maxRetry-1){ Utilities.sleep(1500*(i+1)); continue; }
+      if(i<maxRetry-1 && !vaqtTugadimi()){ Utilities.sleep(1500*(i+1)); continue; }
       break;
     }
     var code=resp.getResponseCode();
@@ -304,7 +306,7 @@ function groqFetchRaw(model, messages, opts){
       var waitMs=3000*(i+1);
       try{ var ra=resp.getHeaders()['Retry-After']||resp.getHeaders()['retry-after'];
            if(ra){ var s=parseInt(ra,10); if(!isNaN(s)) waitMs=Math.max(waitMs, s*1000+300); } }catch(e){}
-      if(i<maxRetry-1){ Utilities.sleep(Math.min(waitMs,20000)); continue; }
+      if(i<maxRetry-1 && !vaqtTugadimi()){ Utilities.sleep(Math.min(waitMs,20000)); continue; }
       break;
     }
     throw new Error('Groq ('+code+'): '+em);
@@ -318,13 +320,24 @@ function groqCall(o){
   var model=o.groqModel||GROQ_TEXT_MODEL;
   var messages=[];
   if(o.system) messages.push({ role:'system', content:String(o.system) });
-  var userText;
-  if(o.parts && o.parts.length){
-    userText=o.parts.filter(function(p){return p && p.text!=null;}).map(function(p){return p.text;}).join('\n');
+  if (o.contents && o.contents.length) {
+    o.contents.forEach(function(c) {
+      var role = (c.role === 'model') ? 'assistant' : 'user';
+      var txt = '';
+      if (c.parts && c.parts.length) {
+        txt = c.parts.filter(function(p){return p && p.text!=null;}).map(function(p){return p.text;}).join('\n');
+      }
+      messages.push({ role: role, content: txt });
+    });
   } else {
-    userText=String(o.user||'');
+    var userText;
+    if(o.parts && o.parts.length){
+      userText=o.parts.filter(function(p){return p && p.text!=null;}).map(function(p){return p.text;}).join('\n');
+    } else {
+      userText=String(o.user||'');
+    }
+    messages.push({ role:'user', content:userText });
   }
-  messages.push({ role:'user', content:userText });
   var r=groqFetchRaw(model, messages, o);
   return r.text||'';
 }
@@ -347,36 +360,162 @@ function groqTranscribeAudio(blob, opts){
 }
 
 /* ==============================================================
+ * UNIVERSAL API GATEWAY (OpenAI, DeepSeek, Anthropic)
+ * ============================================================== */
+function openaiCompatibleFetch(url, key, model, messages, opts) {
+  opts=opts||{};
+  var body = { model: model, messages: messages, temperature: (opts.temp!=null?opts.temp:0.25), max_tokens: opts.maxTok||2048 };
+  if(opts.json && url.indexOf('anthropic')===-1) body.response_format={ type:'json_object' };
+  var t0=Date.now(), maxWait=opts.maxWaitMs>0?opts.maxWaitMs:0;
+  function vaqtTugadimi(){ return maxWait>0 && (Date.now()-t0)>=maxWait; }
+  for(var i=0;i<3;i++){
+    if(vaqtTugadimi()) throw new Error('API Timeout');
+    var resp;
+    try{
+      resp=UrlFetchApp.fetch(url, { method:'post', contentType:'application/json', headers:{ Authorization:'Bearer '+key }, payload: JSON.stringify(body), muteHttpExceptions:true });
+    }catch(e){ if(i<2 && !vaqtTugadimi()){ Utilities.sleep(1500*(i+1)); continue; } break; }
+    var code=resp.getResponseCode();
+    var json=null; try{ json=JSON.parse(resp.getContentText()); }catch(e){}
+    if(code===200 && json && json.choices && json.choices.length){
+      return { code:200, json:json, text:String(json.choices[0].message.content||'').trim() };
+    }
+    if(i<2 && !vaqtTugadimi()){ Utilities.sleep(3000*(i+1)); continue; }
+    var em=(json&&json.error&&json.error.message)?json.error.message:('HTTP '+code);
+    throw new Error('API Error ('+code+'): '+em);
+  }
+  throw new Error('API band/limitda');
+}
+
+function anthropicFetch(key, model, systemText, messages, opts) {
+  opts=opts||{};
+  var body = { model: model, max_tokens: opts.maxTok||2048, temperature: (opts.temp!=null?opts.temp:0.25), messages: messages };
+  if(systemText) body.system = systemText;
+  var t0=Date.now(), maxWait=opts.maxWaitMs>0?opts.maxWaitMs:0;
+  function vaqtTugadimi(){ return maxWait>0 && (Date.now()-t0)>=maxWait; }
+  for(var i=0;i<3;i++){
+    if(vaqtTugadimi()) throw new Error('Anthropic Timeout');
+    var resp;
+    try{
+      resp=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+        method:'post', contentType:'application/json',
+        headers:{ 'x-api-key':key, 'anthropic-version':'2023-06-01' },
+        payload: JSON.stringify(body), muteHttpExceptions:true
+      });
+    }catch(e){ if(i<2 && !vaqtTugadimi()){ Utilities.sleep(1500*(i+1)); continue; } break; }
+    var code=resp.getResponseCode();
+    var json=null; try{ json=JSON.parse(resp.getContentText()); }catch(e){}
+    if(code===200 && json && json.content && json.content.length){
+      return { code:200, json:json, text:String(json.content[0].text||'').trim() };
+    }
+    if(i<2 && !vaqtTugadimi()){ Utilities.sleep(3000*(i+1)); continue; }
+    var em=(json&&json.error&&json.error.message)?json.error.message:('HTTP '+code);
+    throw new Error('Anthropic Error ('+code+'): '+em);
+  }
+  throw new Error('Anthropic band/limitda');
+}
+
+function uniCallText(o, url, key, defaultModel, isAnthropic) {
+  var model = o.model || defaultModel;
+  var messages = [];
+  var sys = '';
+  if(o.system) {
+    if(isAnthropic) sys = String(o.system);
+    else messages.push({ role:'system', content:String(o.system) });
+  }
+  if (o.contents && o.contents.length) {
+    o.contents.forEach(function(c) {
+      var role = (c.role === 'model') ? 'assistant' : 'user';
+      var txt = '';
+      if (c.parts && c.parts.length) {
+        txt = c.parts.filter(function(p){return p && p.text!=null;}).map(function(p){return p.text;}).join('\n');
+      }
+      if(txt) messages.push({ role: role, content: txt });
+    });
+  } else {
+    var userText;
+    if(o.parts && o.parts.length){
+      userText=o.parts.filter(function(p){return p && p.text!=null;}).map(function(p){return p.text;}).join('\n');
+    } else {
+      userText=String(o.user||'');
+    }
+    if(userText) messages.push({ role:'user', content:userText });
+  }
+  if(isAnthropic) return anthropicFetch(key, model, sys, messages, o).text||'';
+  return openaiCompatibleFetch(url, key, model, messages, o).text||'';
+}
+
+/* ==============================================================
  * YUQORI DARAJA — oddiy matn/JSON so'rov (kesh ixtiyoriy)
- * o = { system, user, parts?, model?, temp?, maxTok?, json?, cacheKey?, cacheTtl?, forceGemini? }
- * Sof matnli (parts ichida inlineData/inline_data yo'q) so'rovlar, Groq kaliti
- * ulangan bo'lsa, AVVAL Groq'ga boradi (tezroq, bepul limiti kengroq); xato/limit
- * bo'lsa jimgina Gemini'ga (aiFetchRaw) qaytadi — chaqiruvchi kod bilmaydi ham.
+ * UNIVERSAL ROUTER (Jarvis AI Gateway)
  * ============================================================== */
 function aiCall(o){
   o=o||{};
-  var model=o.model||(typeof GEMINI_MODEL!=='undefined'?GEMINI_MODEL:'gemini-2.5-flash');
-  var ck = o.cacheKey ? ('aigw_'+_aiHash(model+'|'+o.cacheKey)) : null;
+  var ck = o.cacheKey ? ('aigw_'+_aiHash((o.model||'auto')+'|'+o.cacheKey)) : null;
   if(ck){ try{ var c=CacheService.getScriptCache().get(ck); if(c) return c; }catch(e){} }
 
-  var hasInline=(o.parts||[]).some(function(p){ return p && (p.inlineData||p.inline_data); });
-  var text=null;
-
-  if(!hasInline && !o.forceGemini && _groqGwKey()){
-    try{ text=groqCall(o); }
-    catch(gErr){ try{ Logger.log('Groq xato — Gemini\'ga qaytildi: '+gErr); }catch(e){} text=null; }
+  var hasInline = false;
+  if (o.contents) {
+    hasInline = o.contents.some(function(c) {
+      return (c.parts || []).some(function(p) { return p && (p.inlineData || p.inline_data); });
+    });
+  } else {
+    hasInline = (o.parts||[]).some(function(p){ return p && (p.inlineData||p.inline_data); });
   }
 
-  if(!text){
-    var contents = o.contents || [{ role:'user', parts:(o.parts || [{ text:String(o.user||'') }]) }];
-    var payload = {
-      contents: contents,
-      generationConfig:{ temperature:(o.temp!=null?o.temp:0.25), maxOutputTokens:o.maxTok||2048 }
-    };
-    if(o.system) payload.system_instruction={ parts:[{ text:o.system }] };
-    if(o.json)   payload.generationConfig.responseMimeType='application/json';
-    var r=aiFetchRaw(model, payload, o);
-    text=r.text||'';
+  var text=null;
+  var primary = String(PropertiesService.getScriptProperties().getProperty('AI_PRIMARY_PROV') || 'GEMINI').toUpperCase();
+
+  // Try models in this order (Primary first, then fallbacks)
+  var order = [primary];
+  var all = ['GROQ', 'DEEPSEEK', 'OPENAI', 'ANTHROPIC', 'GEMINI'];
+  for(var i=0; i<all.length; i++) { if(all[i]!==primary) order.push(all[i]); }
+
+  // ⚡⚡⚡ 2026-07-18 TEZLIK INQILOBI (foydalanuvchi: «жавоб 60 сониядан кейин келяпти»).
+  // ILDIZ SABAB: primary=GEMINI birinchi sinalardi; u sekinlashsa/xato bersa, faqat
+  // SHUNDAN KEYIN GROQ'ga o'tardi — kutish vaqtlari QO'SHILARDI (~60s).
+  // YECHIM: SOF MATNLI chat uchun GROQ (LPU — o'nlab marta tez) BIRINCHI bo'ladi,
+  // Gemini esa zaxira sifatida qoladi. Rasm/ovoz (inlineData) baribir Gemini'ga
+  // boradi (quyidagi shart). Foydalanuvchi «Асосий AI» tanlovi rasm/ovoz va
+  // GROQ ulanmagan holatlar uchun kuchda qoladi.
+  // Diqqat: chat `model:TITAN_MODEL` (gemini-...) uzatadi — bu ANIQ provayder tanlovi
+  // emas, shunchaki default. Shuning uchun gemini-* modellar ham GROQ'ga yo'naltiriladi.
+  var _modelGemini = !o.model || /gemini/i.test(String(o.model));
+  if(!hasInline && !o.forceGemini && _modelGemini && _uniKey('GROQ')){
+     order = ['GROQ'];
+     for(var i2=0;i2<all.length;i2++){ if(all[i2]!=='GROQ') order.push(all[i2]); }
+  }
+
+  if(hasInline || o.forceGemini) {
+     order = ['GEMINI']; // inline vision/audio strictly goes to Gemini for now
+  }
+
+  for(var i=0; i<order.length; i++){
+     var prov = order[i];
+     var key = _uniKey(prov);
+     if(!key) continue;
+
+     try {
+       if(prov === 'GROQ') text = uniCallText(o, 'https://api.groq.com/openai/v1/chat/completions', key, GROQ_TEXT_MODEL, false);
+       else if(prov === 'DEEPSEEK') text = uniCallText(o, 'https://api.deepseek.com/chat/completions', key, 'deepseek-chat', false);
+       else if(prov === 'OPENAI') text = uniCallText(o, 'https://api.openai.com/v1/chat/completions', key, 'gpt-4o', false);
+       else if(prov === 'ANTHROPIC') text = uniCallText(o, null, key, 'claude-3-5-sonnet-20241022', true);
+       else if(prov === 'GEMINI') {
+          var model = o.model || (typeof GEMINI_MODEL!=='undefined'?GEMINI_MODEL:'gemini-2.5-flash');
+          var contents = o.contents || [{ role:'user', parts:(o.parts || [{ text:String(o.user||'') }]) }];
+          var payload = {
+            contents: contents,
+            generationConfig:{ temperature:(o.temp!=null?o.temp:0.25), maxOutputTokens:o.maxTok||2048 }
+          };
+          if(o.system) payload.system_instruction={ parts:[{ text:o.system }] };
+          if(o.json)   payload.generationConfig.responseMimeType='application/json';
+          var r = aiFetchRaw(model, payload, o);
+          text = r.text||'';
+       }
+       if(text) break; // success
+     } catch (err) {
+       try{ Logger.log('Provider ' + prov + ' failed: ' + err); }catch(e){}
+       // continue to next fallback
+     }
   }
 
   if(ck && text){ try{ CacheService.getScriptCache().put(ck, text, o.cacheTtl||21600); }catch(e){} }

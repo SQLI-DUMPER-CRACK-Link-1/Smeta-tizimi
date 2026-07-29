@@ -46,7 +46,10 @@ function _aiGen(systemPrompt, userText, opts){
       system: systemPrompt,
       temp: opts.temp != null ? opts.temp : AI_DATA_TEMP,
       maxTok: opts.maxTok || 2048,
-      json: opts.json
+      json: opts.json,
+      // ⚡ 2026-07-12: faqat CHAQIRUVCHI aniq belgilasa (interaktiv chat) kutish
+      // byudjeti qo'llanadi — fon vazifalar (Telegram/kunlik AI) eski xatti-harakatni saqlaydi.
+      maxWaitMs: opts.maxWaitMs
     });
   }
 
@@ -149,8 +152,9 @@ function apiTitanData(req){
       'SQL BAZA ('+ev.manba+', '+ev.totalRows+' xom qator, '+ev.count+' guruh):\n'+
       (ev.text || '(mos qator topilmadi)')+'\n\n'+
       'AVVALO **JAMI YIG\'INDI** dagi raqamni javob qilib ayt. Keyin qisqa izoh.';
+    // ⚡ 2026-07-12: interaktiv chat — 25s'dan keyin aniq xato (osilib qolmasin)
     var ans = _aiGen(_AI_DATA_SYS, prompt, { temp:AI_DATA_TEMP, maxTok:1800,
-      cacheKey: 'data|'+obyekt+'|'+terms.join(',')+'|'+text.slice(0,80) });
+      cacheKey: 'data|'+obyekt+'|'+terms.join(',')+'|'+text.slice(0,80), maxWaitMs:25000 });
 
     return { text:ans, intent:'DATA', obyekt:obyekt, terms:terms, topildi:ev.count,
       totalRows: ev.totalRows||0, jami: ev.jami, manba:ev.manba };
@@ -220,8 +224,16 @@ function _aiTerms(text){
   var stop = {};
   var STOP = ('qancha necha qanch nech ishlatilgan ishlatildi sarflandi kerak keldi kelgan qoldi qoldiq narx narxdan '+
     'narxi qiymati pul bor bormi nima qaysi obyekt obyektda uchun yoki bu shu menga ayt aytib ber '+
-    'hisobla jami umumiy holat сколько').split(/\s+/);
+    'hisobla jami umumiy holat smeta smetani smetada berilgan organib rganib chiq qarab korib topib bopdi ketgan ketdi qilingan lrv сколько').split(/\s+/);
   STOP.forEach(function(w){ stop[w]=1; });
+
+  try {
+    if (typeof _aiObyektlar === 'function') {
+      _aiObyektlar().forEach(function(o){
+        String(o).split(/[\s\-]+/).forEach(function(p){ stop[_aiLower(p)] = 1; });
+      });
+    }
+  } catch(e){}
 
   var terms = [], seen = {};
   // 1) marka/o'lcham tokenlari (M200, М300, O12, B25, 100x100) — eng muhim

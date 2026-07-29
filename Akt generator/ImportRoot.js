@@ -78,11 +78,15 @@ function import_scanFolder_(folder, relPath, rootName, reyestrSheet, stats) {
       [REY.TARGET_FOLDER_PATH]: displayPath,
       [REY.ACT_FOLDER_ID]: folderId,
       [REY.FOUND_FOLDER]: folderHyper,
-      [REY.STATUS]: existingRow ? "IMPORTED_UPDATE" : "IMPORTED_NEW",
       [REY.LAST_SYNC]: new Date(),
-      [REY.ERROR]: "",
       ...data
     };
+
+    if (!existingRow) {
+      payload[REY.STATUS] = "IMPORTED_NEW";
+      payload[REY.ERROR] = "";
+      payload[REY.COMM_STATUS] = "Не отправлено";
+    }
 
     if (existingRow) {
       writeRow_(reyestrSheet, existingRow, payload, { formulaKeys: [REY.FOUND_FOLDER] });

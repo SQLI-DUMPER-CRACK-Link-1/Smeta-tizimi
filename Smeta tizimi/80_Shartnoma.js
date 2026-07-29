@@ -119,7 +119,9 @@ function _nakrOl(shNo){
     for(var j=0;j<v.length;j++){
       var k=String(v[j][0]||'').trim();
       if(!k) continue;
-      m[k]=_toNum(v[j][1]);                                  // umumiy default (B)
+      // ⚡ 2026-07-15: B katak BO'SH bo'lsa hard-default SAQLANADI (avval _toNum('')=0
+      // bo'lib, foydalanuvchi B ni tozalab qo'ysa koeffitsient jimgina 0 bo'lardi).
+      if(v[j][1]!=='' && v[j][1]!==null && v[j][1]!==undefined) m[k]=_toNum(v[j][1]);
       if(shCol){
         var ov=v[j][shCol-1];
         if(ov!=='' && ov!==null && ov!==undefined) m[k]=_toNum(ov);  // shartnoma override
@@ -622,14 +624,15 @@ function apiShartnomaDashboard(){
   var dash=_dash(_serverSS(a));
   var obRows=[];
   if(dash.getLastRow()>=2){
-    var v=dash.getRange(2,1,dash.getLastRow()-1,11).getValues();
+    var v=dash.getRange(2,1,dash.getLastRow()-1,12).getValues();
     for(var i=0;i<v.length;i++){
       var nom=String(v[i][0]||'').trim();
       if(!nom || nom.toUpperCase()==='ЖАМИ') continue;
       obRows.push({obyekt:nom, smeta:_toNum(v[i][1]),
         chel:_toNum(v[i][2]), mash:_toNum(v[i][3]), mat:_toNum(v[i][4]),
         ob:_toNum(v[i][5]), mk:_toNum(v[i][6]), kab:_toNum(v[i][7]),
-        fakt:_toNum(v[i][8]), f2:_toNum(v[i][9]), ost:_toNum(v[i][10])});
+        fakt:_toNum(v[i][8]), f2:_toNum(v[i][9]), ost:_toNum(v[i][10]),
+        leaf:_toNum(v[i][11])});
     }
   }
 
@@ -641,7 +644,7 @@ function apiShartnomaDashboard(){
       for(var s=0;s<shList.length;s++) if(shList[s].no===no){ meta=shList[s]; break; }
       grp[no]={no:no, meta:meta, obyektlar:[], qoshlar:[],
         cats:{chel:0,mash:0,mat:0,ob:0,mk:0,kab:0,bez:0},
-        smeta:0, fakt:0, f2:0, ost:0, qoshSmeta:0, qoshFakt:0, qoshF2:0, qoshF2mum:0};
+        smeta:0, fakt:0, f2:0, ost:0, leaf:0, qoshSmeta:0, qoshFakt:0, qoshF2:0, qoshF2mum:0};
     }
     return grp[no];
   }
@@ -669,6 +672,7 @@ function apiShartnomaDashboard(){
     var vFakt = r.fakt * soni;
     var vF2 = r.f2 * soni;
     var vOst = r.ost * soni;
+    var vLeaf = r.leaf * soni;
     
     // Jamlash: agar obyektlar bitta papkadan bo'lsa (kalit bir xil), ularni qo'shib yuboramiz
     var gName = kalit + (soni>1 ? ' (x'+soni+')' : '');
@@ -691,6 +695,7 @@ function apiShartnomaDashboard(){
       existing.fakt += vFakt;
       existing.f2 += vF2;
       existing.ost += vOst;
+      existing.leaf += vLeaf;
     } else {
       var mR = {
         obyekt: gName,
@@ -705,12 +710,13 @@ function apiShartnomaDashboard(){
         kab: vKab,
         fakt: vFakt,
         f2: vF2,
-        ost: vOst
+        ost: vOst,
+        leaf: vLeaf
       };
       G.obyektlar.push(mR);
     }
     
-    G.smeta+=vSmeta; G.fakt+=vFakt; G.f2+=vF2; G.ost+=vOst;
+    G.smeta+=vSmeta; G.fakt+=vFakt; G.f2+=vF2; G.ost+=vOst; G.leaf+=vLeaf;
     G.cats.chel+=vChel; G.cats.mash+=vMash; G.cats.mat+=vMat;
     G.cats.ob+=vOb; G.cats.mk+=vMk; G.cats.kab+=vKab;
   }
@@ -741,8 +747,15 @@ function apiShartnomaDashboard(){
     //   mumkin — lekin toza/накрутkali aralashishidan ANCHA to'g'ri.)
     var _nkRatio = G3.nakrutka.pryamye>0 ? (G3.nakrutka.vsego/G3.nakrutka.pryamye) : 1;
     G3.nkRatio = _nkRatio;
-    G3.jamiFaktNakr = G3.jamiFakt * _nkRatio;
-    G3.jamiF2Nakr = G3.jamiF2 * _nkRatio;
+    // ⚡⚡⚡ 2026-07-15 TUZATILDI (mantiqiy xato): avval nkRatio JAMIga (LRV toza
+    // summa + ҚЎШИМЧА ИШЛАР) ko'paytirilardi. Lekin қўшимча иш (subpodryad —
+    // masalan Бронза VIP ART 6.5 mlrd) foydalanuvchi QO'LDA kiritgan YAKUNIY
+    // shartnoma summasi — unda накрутка/НДС allaqachon ICHIDA. Uni yana ~1.4-1.6x
+    // koeffitsientga ko'paytirish ФАКТ/Ф2 ni milliardlab oshirib ko'rsatardi.
+    // Endi nkRatio FAQAT LRV'dan kelgan toza (прямые) qismga qo'llanadi,
+    // qo'shimcha ishlar o'z qiymatida qo'shiladi.
+    G3.jamiFaktNakr = G3.fakt * _nkRatio + G3.qoshFakt;
+    G3.jamiF2Nakr = G3.f2 * _nkRatio + G3.qoshF2;
     out.push(G3);
   }
   // Tartib: avval shartnomalilar, '—' oxirida

@@ -25,6 +25,8 @@
   textarea{flex:1;height:46px;resize:none;border:1px solid var(--bd);border-radius:9px;padding:8px;font-family:inherit;font-size:13px}
   button.send{background:var(--p);color:#fff;border:0;border-radius:9px;padding:0 14px;height:46px;font-weight:600;cursor:pointer}
   button.send:disabled{background:#9bb}
+  .icon-btn{background:transparent;border:0;font-size:18px;cursor:pointer;padding:0 8px;border-radius:50%;height:46px;display:flex;align-items:center;justify-content:center;transition:0.2s}
+  .icon-btn:hover{background:rgba(0,0,0,0.05)}
 </style>
 </head>
 <body>
@@ -53,7 +55,9 @@
   </div>
 
   <div class="bar">
-    <textarea id="q" placeholder="Yozing... (Enter — yuborish)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+    <button class="icon-btn" id="ttsBtn" onclick="toggleTts()" title="Ovozli o'qish (yoqish)">🔇</button>
+    <textarea id="q" placeholder="Yozing yoki gapiring... (Enter — yuborish)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+    <button class="icon-btn" id="micBtn" onclick="toggleMic()" title="Ovozli kiritish">🎤</button>
     <button class="send" id="snd" onclick="send()">▶</button>
   </div>
 
@@ -64,6 +68,67 @@
   function add(t,c){var d=document.createElement('div');d.className='m '+c;d.innerHTML=(c==='u'?'<b>👤 Siz:</b><br>':'')+md(t);
     document.getElementById('log').appendChild(d);d.scrollIntoView();return d;}
   function quick(t){document.getElementById('q').value=t;send();}
+
+  // --- OVOZLI YORDAMCHI (TTS & STT) ---
+  var ttsEnabled = false;
+  function toggleTts(){
+    ttsEnabled = !ttsEnabled;
+    document.getElementById('ttsBtn').innerText = ttsEnabled ? '🔊' : '🔇';
+    document.getElementById('ttsBtn').title = ttsEnabled ? 'Ovozli o\'qish (o\'chirish)' : 'Ovozli o\'qish (yoqish)';
+    if(!ttsEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
+  }
+  function speakText(text){
+    if(!ttsEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var clean = text.replace(/[*_#`~>]/g, '').replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '').trim();
+    if(!clean) return;
+    var ut = new SpeechSynthesisUtterance(clean);
+    ut.lang = 'uz-UZ';
+    ut.rate = 1.05;
+    window.speechSynthesis.speak(ut);
+  }
+  var recognition, isRecording = false;
+  function initMic(){
+    if(!window.SpeechRecognition && !window.webkitSpeechRecognition){
+      add("Brauzeringiz ovozli kiritishni qo'llab-quvvatlamaydi (Chrome, Edge yoki Yandex tavsiya etiladi).", 'e'); return false;
+    }
+    if(!recognition){
+      var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRec();
+      recognition.lang = 'uz-UZ';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = function() {
+        isRecording = true;
+        var b = document.getElementById('micBtn');
+        b.style.background = '#ea4335'; b.style.color = '#fff'; b.innerText = '🔴';
+      };
+      recognition.onresult = function(event) {
+        var t = event.results[0][0].transcript;
+        var q = document.getElementById('q');
+        q.value = (q.value + ' ' + t).trim();
+      };
+      recognition.onerror = function(event) {
+        isRecording = false; resetMicBtn();
+        if(event.error !== 'no-speech') add("Mikrofon xatosi: " + event.error, 'e');
+      };
+      recognition.onend = function() {
+        isRecording = false; resetMicBtn();
+        var q = document.getElementById('q');
+        if(q.value.trim().length > 0) send(); // avtomat yuborish!
+      };
+    }
+    return true;
+  }
+  function resetMicBtn() {
+    var b = document.getElementById('micBtn');
+    b.style.background = 'transparent'; b.style.color = 'inherit'; b.innerText = '🎤';
+  }
+  function toggleMic(){
+    if(!initMic()) return;
+    if(isRecording) recognition.stop(); else recognition.start();
+  }
+  // -------------------------------------
 
   google.script.run.withSuccessHandler(function(d){
     var s=document.getElementById('obj');((d&&d.objects)||[]).forEach(function(o){var op=document.createElement('option');op.value=o.nom;op.textContent=o.nom;s.appendChild(op);});
@@ -105,18 +170,41 @@
       qi.value=''; return;
     }
     add(txt+(obj?('  ['+obj+']'):''),'u'); history.push({role:'user',text:txt});
-    qi.value=''; var btn=document.getElementById('snd');btn.disabled=true;btn.innerText='...';
-    var wait=add('⏳ SQL + AI...','sys');
+    qi.value=''; var btn=document.getElementById('snd');
+    if(btn){ btn.disabled=true; btn.innerText='...'; }
+    qi.disabled = true;
+    var wait=add('⏳ O\'ylanmoqda, iltimos kuting...','sys');
+    var _done=false;
+    // ⚡ 35 soniyalik client-side timeout — GAS 6 daqiqa osilib qolishini oldini oladi
+    var _timer=setTimeout(function(){
+      if(_done)return; _done=true;
+      if(wait&&wait.parentNode) wait.parentNode.removeChild(wait);
+      if(btn){btn.disabled=false;btn.innerText='▶';}
+      qi.disabled=false;
+      add('⚠️ Server javob bermadi (35s). GAS serveri band bo\'lishi mumkin — yana urinib ko\'ring.','e');
+      qi.focus();
+    }, 35000);
     google.script.run
       .withSuccessHandler(function(res){
-        wait.remove();btn.disabled=false;btn.innerText='▶';
+        if(_done)return; _done=true; clearTimeout(_timer);
+        if(wait && wait.parentNode) wait.parentNode.removeChild(wait);
+        if(btn){ btn.disabled=false; btn.innerText='▶'; }
+        qi.disabled=false; qi.focus();
+        
         var msg=(res&&res.text)||'(bo\'sh)';
         var d=add(msg, res&&res.error?'e':'a');
         history.push({role:'model',text:msg});
+        try{ speakText(msg); }catch(e){ console.error(e); }
         if(res&&res.drafts&&res.drafts.length){ showWriteBtn(d, res.drafts, res.obyekt||obj); }
         if(res&&res.manba) add('— manba: '+res.manba+(res.totalRows?' | '+res.totalRows+' qator':'') ,'sys');
       })
-      .withFailureHandler(function(e){wait.remove();btn.disabled=false;btn.innerText='▶';add('❌ '+e.message,'e');})
+      .withFailureHandler(function(e){
+        if(_done)return; _done=true; clearTimeout(_timer);
+        if(wait && wait.parentNode) wait.parentNode.removeChild(wait);
+        if(btn){ btn.disabled=false; btn.innerText='▶'; }
+        qi.disabled=false;
+        add('❌ Tarmoq xatosi: '+e.message,'e');
+      })
       .apiSmetaAi({text:txt, obyekt:obj, history:history.slice(-8)});
   }
 </script>

@@ -12,3 +12,6 @@ frontend/**
 .git/**
 .claude/**
 node_modules/**
+
+test*.js
+fix*.js
