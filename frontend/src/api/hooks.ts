@@ -5,6 +5,7 @@ import { yangiUid } from '../_shared/idempotent';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
+  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat,
 } from './types';
 
 export function useObyektlar() {
@@ -270,5 +271,65 @@ export function useSkladYoz() {
       operatsiya: 'prixod' | 'rasxod';
     }) => gas<{ ok: boolean; xabar?: string; error?: string }>('apiSkladgaYozish', data, operatsiya),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['skladQoldiq'] }); },
+  });
+}
+
+/* ============ Ф2 ИМПОРТ ============ */
+
+export function useF2Lokalkalar(obyekt: string) {
+  return useQuery({
+    queryKey: ['f2lok', obyekt],
+    queryFn: () => gas<{ ok: boolean; parent: string; kop: boolean; lokalkalar: string[] }>('apiF2LokalkaRoyxat', obyekt),
+    enabled: !!obyekt,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Kompyuterdan fayl yuklash — base64 bo'lib GAS'ga boradi */
+export function useF2FaylYukla() {
+  return useMutation({
+    mutationFn: ({ obyekt, base64, mimeType, filename, oyNom }: {
+      obyekt: string; base64: string; mimeType: string; filename: string; oyNom: string;
+    }) => gas<{ ok: boolean; fileId?: string; name?: string; xabar?: string }>(
+      'apiF2FaylYukla', obyekt, base64, mimeType, filename, oyNom),
+  });
+}
+
+/** Yuklangan faylni daraxt qilib o'qish */
+export function useF2FaylOqi() {
+  return useMutation({
+    mutationFn: ({ fileId, varaq }: { fileId: string; varaq?: string }) =>
+      gas<{ ok: boolean; tree?: AktNode[]; xabar?: string }>('apiF2FaylOqi', fileId, varaq || ''),
+  });
+}
+
+/** ⭐ Avto-moslashtirish — dvigatel GAS'da (35_F2Moslash.js), saytda TAKRORLANMAYDI */
+export function useF2AvtoMoslash() {
+  return useMutation({
+    mutationFn: ({ aktTree, obyekt, lokalka }: { aktTree: AktNode[]; obyekt: string; lokalka?: string }) =>
+      gas<F2MoslashNatija>('apiF2AvtoMoslash', aktTree, obyekt, { lokalka: lokalka || '' }),
+  });
+}
+
+/** Fon rejimida yozish — kompyuter o'chsa ham davom etadi */
+export function useF2Yoz() {
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
+      obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
+    }) => gas<{ ok: boolean; fon?: boolean; xabar?: string }>(
+      'apiF2QollaNavbatga', obyekt, oyNom, edits, dopps, aktJami),
+  });
+}
+
+/** Yozuv holati — 3 soniyada bir so'raladi, tugagach to'xtaydi */
+export function useF2JobHolat(faol: boolean) {
+  return useQuery({
+    queryKey: ['f2job'],
+    queryFn: () => gas<F2JobHolat>('apiF2JobHolat'),
+    enabled: faol,
+    refetchInterval: (q) => {
+      const s = q.state.data?.job?.status;
+      return s && s !== 'tugadi' && s !== 'xato' ? 3000 : false;
+    },
   });
 }

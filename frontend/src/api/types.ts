@@ -139,3 +139,43 @@ export type Tolov = {
   izoh: string;
   row: number;
 };
+
+/* ---------- Ф2 импорт (30_Panel.js + 35_F2Moslash.js) ---------- */
+export type AktNode = {
+  uid: string;
+  type: 'rz' | 'bl' | 'rs' | 'mat' | 'ob';
+  nom: string;
+  kod?: string;
+  bir?: string;
+  hajm?: number;
+  narx?: number;
+  summa?: number;
+  children?: AktNode[];
+};
+
+/** apiF2AvtoMoslash natijasi */
+export type F2Moslik = {
+  uid: string; varaq: string; row: number;
+  kod: string; hajm: number; narx: number; summa: number;
+};
+
+export type F2MoslashNatija = {
+  mosliklar: F2Moslik[];
+  sabablar: Record<string, string>;
+  rzDiag: { nom: string; ok: boolean }[];
+  stat: {
+    moslashti: number; otkazib: number; scopeHit: number; fuzzyHit: number;
+    kanonHit: number; birlikBlok: number; zamenaShubha: number;
+    yetimUrindi: number; yetimMos: number;
+    lokalka: string; lokAuto: boolean; rzMos: number; rzJami: number; ms: number;
+  };
+};
+
+export type F2JobHolat = {
+  job: {
+    status?: string; obyekt?: string; oyNom?: string;
+    done?: number; total?: number; boshlandi?: number; xabar?: string;
+  } | null;
+  hozir?: string;
+  log?: string[];
+};

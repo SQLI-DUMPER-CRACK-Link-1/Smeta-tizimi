@@ -1,0 +1,343 @@
+import { useMemo, useRef, useState } from 'react';
+import {
+  useObyektlar, useF2Lokalkalar, useF2FaylYukla, useF2FaylOqi,
+  useF2AvtoMoslash, useF2Yoz, useF2JobHolat,
+} from '../../api/hooks';
+import {
+  Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
+} from '../../umumiy/ui/Sahifa';
+import { FmtN } from '../../lib/format';
+import { toast } from '../../umumiy/ui/Toast';
+import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send } from 'lucide-react';
+import type { AktNode, F2Moslik, F2MoslashNatija } from '../../api/types';
+
+/* Akt daraxtidagi BARCHA barg (leaf) tugunlar — jami summa faqat shulardan.
+ * ⚠️ bl summasi bolalarining yig'indisi bo'lgani uchun uni QO'SHSAK ikki marta
+ * hisoblanadi (ilgari «akt 171M, yozildi 227M» xatosi shundan chiqqan). */
+function barglar(nodes: AktNode[] = []): AktNode[] {
+  const out: AktNode[] = [];
+  const yur = (ns: AktNode[]) => ns.forEach((n) => {
+    const bolalar = n.children ?? [];
+    if (n.type !== 'rz' && bolalar.length === 0) out.push(n);
+    if (bolalar.length) yur(bolalar);
+  });
+  yur(nodes);
+  return out;
+}
+
+const QADAMLAR = ['Fayl', 'Moslashtirish', 'Tekshirish', 'Yozish'];
+
+export function F2Import() {
+  const obyektlar = useObyektlar();
+  const [obyekt, setObyekt] = useState('');
+  const [oyNom, setOyNom] = useState(() => {
+    const d = new Date();
+    return `${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  });
+  const [lokalka, setLokalka] = useState('');
+  const [qadam, setQadam] = useState(0);
+  const [aktTree, setAktTree] = useState<AktNode[] | null>(null);
+  const [natija, setNatija] = useState<F2MoslashNatija | null>(null);
+  const [yozishBoshlandi, setYozishBoshlandi] = useState(false);
+  const faylRef = useRef<HTMLInputElement>(null);
+
+  const loklar = useF2Lokalkalar(obyekt);
+  const yukla = useF2FaylYukla();
+  const oqi = useF2FaylOqi();
+  const moslash = useF2AvtoMoslash();
+  const yoz = useF2Yoz();
+  const job = useF2JobHolat(yozishBoshlandi);
+
+  const obNomlari = useMemo(
+    () => Array.from(new Set((obyektlar.data ?? []).map((o) => o.obyekt.split(' - ')[0]))),
+    [obyektlar.data],
+  );
+
+  const aktBarglar = useMemo(() => barglar(aktTree ?? []), [aktTree]);
+  const aktJami = useMemo(() => aktBarglar.reduce((a, n) => a + (n.summa || 0), 0), [aktBarglar]);
+
+  /** Bog'langan qatorlar summasi */
+  const boglanganJami = useMemo(
+    () => (natija?.mosliklar ?? []).reduce((a, m) => a + (m.summa || 0), 0),
+    [natija],
+  );
+  /** Bog'lanmagan barglar — ular ➕ qo'shimcha bo'lib ketadi */
+  const boglanmagan = useMemo(() => {
+    const mos = new Set((natija?.mosliklar ?? []).map((m) => m.uid));
+    return aktBarglar.filter((n) => !mos.has(n.uid));
+  }, [aktBarglar, natija]);
+  const dopJami = useMemo(() => boglanmagan.reduce((a, n) => a + (n.summa || 0), 0), [boglanmagan]);
+
+  const farq = aktJami - (boglanganJami + dopJami);
+  const constOk = Math.abs(farq) < 1;
+
+  /* ---------- 1. Fayl ---------- */
+  async function faylTanlandi(f: File) {
+    if (!obyekt) { toast('Avval obyektni tanlang'); return; }
+    try {
+      const base64 = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result).split(',')[1] ?? '');
+        r.onerror = rej;
+        r.readAsDataURL(f);
+      });
+      const u = await yukla.mutateAsync({
+        obyekt, base64, mimeType: f.type || 'application/vnd.ms-excel', filename: f.name, oyNom,
+      });
+      if (!u.ok || !u.fileId) { toast(u.xabar || 'Fayl yuklanmadi'); return; }
+      const o = await oqi.mutateAsync({ fileId: u.fileId });
+      if (!o.ok || !o.tree) { toast(o.xabar || "Fayl o'qilmadi"); return; }
+      setAktTree(o.tree);
+      setQadam(1);
+      toast(`Oʻqildi: ${barglar(o.tree).length} ta qator`);
+    } catch (e: any) { toast(`Xato: ${e.message}`); }
+  }
+
+  /* ---------- 2. Moslashtirish ---------- */
+  async function moslashtir() {
+    if (!aktTree) return;
+    try {
+      const r = await moslash.mutateAsync({ aktTree, obyekt, lokalka });
+      setNatija(r);
+      setQadam(2);
+    } catch (e: any) { toast(`Moslashtirishda xato: ${e.message}`); }
+  }
+
+  /* ---------- 4. Yozish ---------- */
+  async function yozish() {
+    if (!natija) return;
+    const dopps = boglanmagan.map((n) => ({
+      uid: n.uid, nom: n.nom, kod: n.kod || '', bir: n.bir || '',
+      hajm: n.hajm || 0, narx: n.narx || 0, summa: n.summa || 0,
+      type: n.type, tur: n.type === 'bl' ? 'bl' : n.type, kat: '', action: 'dop',
+    }));
+    try {
+      const r = await yoz.mutateAsync({
+        obyekt, oyNom, edits: natija.mosliklar as F2Moslik[], dopps, aktJami,
+      });
+      if (!r.ok) { toast(r.xabar || 'Navbatga qo\'shilmadi'); return; }
+      setYozishBoshlandi(true);
+      setQadam(3);
+    } catch (e: any) { toast(`Xato: ${e.message}`); }
+  }
+
+  const j = job.data?.job;
+  const foiz = j?.total ? Math.round(((j.done || 0) / j.total) * 100) : 0;
+
+  return (
+    <Sahifa
+      sarlavha="Ф2 импорт"
+      tavsif="Akt faylini smetaga bog'lash — summa tiyingacha mos tushishi shart"
+    >
+      {/* Qadamlar */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        {QADAMLAR.map((nom, i) => (
+          <div key={nom} className="flex items-center gap-2">
+            <span className={`h-7 px-3 inline-flex items-center gap-2 rounded-full text-[12px] font-medium border
+              ${i === qadam ? 'bg-accent text-white border-transparent'
+                : i < qadam ? 'bg-ok/10 text-ok border-ok/25'
+                : 'karta text-text-mute'}`}>
+              {i < qadam ? <CheckCircle2 size={13} /> : <span className="tabular-nums">{i + 1}</span>}
+              {nom}
+            </span>
+            {i < QADAMLAR.length - 1 && <span className="text-text-mute">→</span>}
+          </div>
+        ))}
+      </div>
+
+      {/* ---------- QADAM 1 ---------- */}
+      {qadam === 0 && (
+        <div className="karta p-5 space-y-4 max-w-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Maydon nom="Obyekt">
+              <Tanlov
+                qiymat={obyekt}
+                ozgardi={(v) => { setObyekt(v); setLokalka(''); }}
+                variantlar={['', ...obNomlari]}
+              />
+            </Maydon>
+            <Maydon nom="Oy" izoh="MM.YYYY">
+              <Kiritma qiymat={oyNom} ozgardi={setOyNom} placeholder="07.2026" />
+            </Maydon>
+          </div>
+
+          {loklar.data?.kop && (
+            <Maydon nom="Lokalka" izoh="Bo'sh qoldirsangiz tizim o'zi aniqlaydi — tavsiya etiladi">
+              <Tanlov qiymat={lokalka} ozgardi={setLokalka} variantlar={['', ...(loklar.data.lokalkalar || [])]} />
+            </Maydon>
+          )}
+
+          <div
+            onClick={() => obyekt && faylRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) faylTanlandi(f); }}
+            className={`rounded-[10px] border-2 border-dashed p-10 text-center transition-colors
+              ${obyekt ? 'border-border hover:border-[var(--accent)]/60 cursor-pointer' : 'border-border opacity-50 cursor-not-allowed'}`}
+          >
+            <Upload size={32} className="mx-auto text-text-mute mb-3" strokeWidth={1.5} />
+            <p className="text-text font-medium">
+              {yukla.isPending || oqi.isPending ? 'Yuklanmoqda…' : 'Faylni bu yerga tashlang'}
+            </p>
+            <p className="text-sm text-text-dim mt-1">
+              {obyekt ? 'yoki bosing — .xlsx, .xls, Google Sheets' : 'Avval obyektni tanlang'}
+            </p>
+          </div>
+          <input
+            ref={faylRef} type="file" hidden
+            accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) faylTanlandi(f); e.target.value = ''; }}
+          />
+        </div>
+      )}
+
+      {/* ---------- QADAM 2 ---------- */}
+      {qadam === 1 && aktTree && (
+        <div className="space-y-4 max-w-2xl">
+          <div className="grid grid-cols-3 gap-4">
+            <KpiKarta nom="Qatorlar" qiymat={aktBarglar.length} />
+            <KpiKarta nom="Akt jami" qiymat={<FmtN val={aktJami} qisqa />} ost="so'm" />
+            <KpiKarta nom="Razdellar" qiymat={aktTree.filter((n) => n.type === 'rz').length} />
+          </div>
+          <div className="karta p-5">
+            <p className="text-sm text-text-dim mb-4">
+              Moslashtirish <strong className="text-text">serverda</strong> bajariladi — panel bilan
+              bir xil dvigatel. Birlik qalqoni, marka farqi (ПК↔ПБ) va qat'iy unikallik qoidalari amal qiladi.
+            </p>
+            <Tugma tur="primary" onBos={moslashtir} band={moslash.isPending} ikonka={<Wand2 size={16} />}>
+              {moslash.isPending ? 'Moslashtirilmoqda…' : 'Avto-moslashtirish'}
+            </Tugma>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- QADAM 3 ---------- */}
+      {qadam === 2 && natija && (
+        <div className="space-y-4 max-w-3xl">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiKarta nom="Bog'landi" qiymat={natija.stat.moslashti} ost={`${natija.stat.scopeHit} ta razdel ichida`} />
+            <KpiKarta nom="Qo'shimcha bo'ladi" qiymat={boglanmagan.length} ost="smetada topilmadi" />
+            <KpiKarta nom="Razdel mosligi" qiymat={`${natija.stat.rzMos}/${natija.stat.rzJami}`} />
+            <KpiKarta nom="Vaqt" qiymat={`${(natija.stat.ms / 1000).toFixed(1)} s`} />
+          </div>
+
+          {/* CONSTANTA nazorati */}
+          <div className={`karta p-5 ${constOk ? '' : 'border-danger/40'}`}>
+            <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim mb-3">Solishtiruv</h4>
+            <Juft nom="Akt jami" qiymat={<FmtN val={aktJami} />} />
+            <Juft nom="Bog'langan" qiymat={<FmtN val={boglanganJami} />} />
+            <Juft nom="Qo'shimcha" qiymat={<FmtN val={dopJami} />} />
+            <Juft
+              nom="Farq"
+              qiymat={
+                <span className={constOk ? 'text-ok' : 'text-danger'}>
+                  <FmtN val={farq} /> {constOk ? '✅' : '⛔'}
+                </span>
+              }
+            />
+            {!constOk && (
+              <p className="text-sm text-danger mt-3">
+                Farq nolga teng emas — yozish bloklandi. Akt fayli noto'g'ri o'qilgan bo'lishi mumkin.
+              </p>
+            )}
+          </div>
+
+          {/* Himoyalar */}
+          {(natija.stat.birlikBlok > 0 || natija.stat.zamenaShubha > 0) && (
+            <div className="rounded-[10px] border border-warn/25 bg-warn/[.08] p-4 space-y-2">
+              <div className="flex gap-2 items-center">
+                <AlertTriangle size={16} className="text-warn" />
+                <span className="text-sm font-medium text-text">Qo'lda tekshirish tavsiya etiladi</span>
+              </div>
+              {natija.stat.birlikBlok > 0 && (
+                <p className="text-sm text-text-dim">
+                  <Nishon matn={`${natija.stat.birlikBlok} ta`} tur="warn" /> birlik farqli (Т↔КГ kabi) —
+                  1000 barobar xato xavfi bo'lgani uchun avtomat bog'lanmadi.
+                </p>
+              )}
+              {natija.stat.zamenaShubha > 0 && (
+                <p className="text-sm text-text-dim">
+                  <Nishon matn={`${natija.stat.zamenaShubha} ta`} tur="warn" /> marka farqli (ПК↔ПБ kabi) —
+                  ehtimoliy zamena, qo'lda hal qiling.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Bog'lanmaganlar sababi bilan */}
+          {boglanmagan.length > 0 && (
+            <div className="karta overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-[var(--surface-2)]/50">
+                <span className="text-[11px] uppercase tracking-[0.04em] text-text-dim">
+                  Bog'lanmagan — qo'shimcha bo'lib yoziladi ({boglanmagan.length})
+                </span>
+              </div>
+              <div className="max-h-72 overflow-y-auto divide-y divide-border">
+                {boglanmagan.slice(0, 100).map((n) => (
+                  <div key={n.uid} className="px-4 py-2.5 flex items-start justify-between gap-4 text-sm">
+                    <div className="min-w-0">
+                      <div className="text-text truncate" title={n.nom}>{n.nom}</div>
+                      <div className="text-[11px] text-text-mute">
+                        {natija.sabablar[n.uid] || 'smetada mos qator topilmadi'}
+                      </div>
+                    </div>
+                    <span className="tabular-nums text-text-dim flex-shrink-0"><FmtN val={n.summa} /></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Tugma onBos={() => setQadam(1)}>Orqaga</Tugma>
+            <Tugma tur="primary" onBos={yozish} band={yoz.isPending || !constOk} ikonka={<Send size={16} />}>
+              Smetaga yozish
+            </Tugma>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- QADAM 4 ---------- */}
+      {qadam === 3 && (
+        <div className="karta p-6 max-w-2xl space-y-4">
+          <div className="flex items-center gap-3">
+            <FileSpreadsheet size={20} className="text-accent" />
+            <h3 className="text-[17px] font-semibold text-text">
+              {j?.status === 'tugadi' ? 'Yozildi' : j?.status === 'xato' ? 'Xato' : 'Yozilmoqda'}
+            </h3>
+          </div>
+
+          <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
+            <div
+              className="h-full bg-accent rounded-full transition-all duration-500"
+              style={{ width: `${j?.status === 'tugadi' ? 100 : foiz}%` }}
+            />
+          </div>
+
+          <p className="text-sm text-text-dim tabular-nums">
+            {j?.done ?? 0} / {j?.total ?? 0} qator{j?.xabar ? ` · ${j.xabar}` : ''}
+          </p>
+
+          <div className="rounded-[10px] bg-ok/[.08] border border-ok/25 p-3 text-sm text-text-dim">
+            ✅ Kompyuterni o'chirsangiz ham yozuv davom etadi. Keyin qaytib kelib shu sahifadan kuzatasiz.
+          </div>
+
+          {job.error && <XatoHolat xato={job.error} qayta={() => job.refetch()} />}
+
+          {(j?.status === 'tugadi' || j?.status === 'xato') && (
+            <Tugma
+              tur="primary"
+              onBos={() => {
+                setYozishBoshlandi(false); setQadam(0);
+                setAktTree(null); setNatija(null);
+              }}
+            >
+              Yangi Ф2 import
+            </Tugma>
+          )}
+        </div>
+      )}
+    </Sahifa>
+  );
+}
+
+export default F2Import;

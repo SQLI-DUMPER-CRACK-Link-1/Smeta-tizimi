@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useObyektlar } from '../../api/hooks';
-import { Card, CardContent } from '../../umumiy/ui/Card';
-import { Skeleton } from '../../umumiy/ui/Skeleton';
-import { motion } from 'framer-motion';
-import { RefreshCw, Folder, ChevronDown, ChevronRight, FileSpreadsheet } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Folder, ChevronDown, FileSpreadsheet, Plus } from 'lucide-react';
 import type { PapkaObyekt } from '../../api/types';
+import { Sahifa, Holatlar } from '../../umumiy/ui/Sahifa';
 
 export function Obyektlar() {
-  const { data, isLoading, error, refetch, isRefetching } = useObyektlar();
+  const soragan = useObyektlar();
+  const { data, refetch, isFetching, dataUpdatedAt } = soragan;
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
 
@@ -30,138 +30,124 @@ export function Obyektlar() {
     }));
   }, [data]);
 
-  const toggleGroup = (baseName: string) => {
+  const toggleGroup = (baseName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setExpandedGroups(prev => ({
       ...prev,
       [baseName]: !prev[baseName]
     }));
   };
 
-  if (isLoading && !isRefetching) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
-      </div>
-    );
-  }
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05 }
+    }
+  };
 
-  if (error) {
-    return <div className="text-danger p-4 rounded-lg bg-danger/10 border border-danger/20">Xatolik: {error.message}</div>;
-  }
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
-};
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Obyektlar Ro'yxati</h2>
-          <p className="text-text-dim text-sm mt-1">Smetalar papkasidagi jami obyektlar ({groupedData.length}) / lokalkalar ({data?.length || 0})</p>
-        </div>
-        <button 
-          onClick={() => refetch()}
-          disabled={isRefetching}
-          className="flex items-center gap-2 px-4 py-2 bg-surface-2 hover:bg-surface border border-border rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-        >
-          <RefreshCw size={16} className={isRefetching ? 'animate-spin' : ''} />
-          Yangilash
+    <Sahifa
+      sarlavha="Obyektlar Ro'yxati"
+      tavsif={`Smetalar papkasidagi jami obyektlar (${groupedData.length}) / lokalkalar (${data?.length || 0})`}
+      yangilangan={dataUpdatedAt}
+      onYangila={() => refetch()}
+      yangilanmoqda={isFetching}
+      amallar={
+        <button className="h-9 px-3 inline-flex items-center gap-2 rounded-[10px] bg-accent text-white hover:bg-accent/90 transition-colors text-sm font-medium">
+          <Plus size={16} />
+          Yangi obyekt
         </button>
-      </div>
-
-      <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
+      }
+    >
+      <Holatlar
+        soragan={soragan}
+        bosh={{ matn: "Papka bo'sh", izoh: "Google Drive'da hali smeta fayllari yo'q" }}
       >
-        {groupedData.map((group, i) => {
-          const isExpanded = expandedGroups[group.baseName];
-          const hasMultiple = group.items.length > 1;
+        {() => (
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+          >
+            {groupedData.map((group, i) => {
+              const isExpanded = expandedGroups[group.baseName];
+              const hasMultiple = group.items.length > 1;
 
-          return (
-            <motion.div
-              key={i}
-              variants={itemVariants}
-              className={`transition-all duration-200 cursor-pointer hover:opacity-90 ${isExpanded && hasMultiple ? 'row-span-2' : ''}`}
-              /* Bitta lokalkali obyekt → to'g'ridan-to'g'ri smetaga.
-               * Ko'p lokalkali → avval ro'yxat ochiladi, keyin ichidan tanlanadi. */
-              onClick={() =>
-                hasMultiple
-                  ? toggleGroup(group.baseName)
-                  : navigate(`/admin/holat/${encodeURIComponent(group.items[0].obyekt)}`)
-              }
-            >
-              <Card 
-                className={`h-full ${hasMultiple ? 'hover:border-accent/50' : ''} ${isExpanded && hasMultiple ? 'border-accent/30' : ''}`}
-              >
-              <CardContent className="p-6 h-full flex flex-col">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform ${hasMultiple ? 'bg-accent/10 text-accent group-hover:scale-110' : 'bg-surface-2 text-text-dim'}`}>
-                    {hasMultiple ? <Folder size={24} /> : <FileSpreadsheet size={24} />}
-                  </div>
-                  {hasMultiple && (
-                    <div className="text-text-dim">
-                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+              return (
+                <motion.div
+                  key={i}
+                  variants={itemVariants}
+                  className={`karta transition-all duration-200 cursor-pointer overflow-hidden flex flex-col hover:border-[var(--accent)]/50 ${isExpanded && hasMultiple ? 'row-span-2 shadow-lg shadow-[var(--accent)]/5 border-[var(--accent)]/30' : ''}`}
+                  onClick={() =>
+                    hasMultiple
+                      ? toggleGroup(group.baseName, { stopPropagation: () => {} } as any)
+                      : navigate(`/admin/holat/${encodeURIComponent(group.items[0].obyekt)}`)
+                  }
+                >
+                  <div className="p-6 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`w-12 h-12 rounded-[12px] flex items-center justify-center transition-transform ${hasMultiple ? 'bg-accent/10 text-accent group-hover:scale-110' : 'bg-[var(--surface-2)] text-text-dim'}`}>
+                        {hasMultiple ? <Folder size={24} /> : <FileSpreadsheet size={24} />}
+                      </div>
+                      {hasMultiple && (
+                        <div className={`text-text-dim transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                          <ChevronDown size={20} />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                
-                <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{group.baseName}</h3>
-                
-                <div className="mt-auto pt-4 border-t border-border">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-dim">Lokalkalar:</span>
-                    <span className="font-medium text-white">{group.items.length} ta</span>
+                    
+                    <h3 className="text-[17px] font-semibold text-text mb-2 line-clamp-2 leading-snug">{group.baseName}</h3>
+                    
+                    <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                      <span className="text-sm text-text-dim font-medium flex items-center gap-1">
+                        {hasMultiple ? `${group.items.length} ta lokalka` : "Smeta hujjati"}
+                      </span>
+                      {hasMultiple && (
+                        <span className="text-xs bg-[var(--surface-2)] px-2 py-1 rounded-[6px] text-text-mute font-mono">Papkali</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                {isExpanded && hasMultiple && (
-                  <div className="mt-4 space-y-2 border-t border-border/50 pt-4 overflow-y-auto max-h-[150px] pr-2 custom-scrollbar">
-                    {group.items.map((item, idx) => {
-                      const subName = item.obyekt.split(' - ').slice(1).join(' - ') || 'Asosiy smeta';
-                      return (
-                        <button
-                          key={idx}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/admin/holat/${encodeURIComponent(item.obyekt)}`);
-                          }}
-                          title={`${subName} — smetani ochish`}
-                          className="w-full text-left text-sm p-2 rounded-md bg-surface-2/50 border border-border/50
-                                     text-text-dim hover:text-text hover:border-[var(--accent)]/50
-                                     transition-colors duration-[120ms] flex items-center gap-2 cursor-pointer"
-                        >
-                          <FileSpreadsheet size={14} className="text-accent/70 flex-shrink-0" />
-                          <span className="truncate">{subName}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </motion.div>
-      
-      {groupedData.length === 0 && (
-        <div className="text-center py-20 text-text-dim border-2 border-dashed border-border rounded-xl">
-           <Folder size={48} className="mx-auto mb-4 opacity-20" />
-           <p>Obyektlar topilmadi.</p>
-        </div>
-      )}
-    </div>
+                  
+                  <AnimatePresence>
+                    {isExpanded && hasMultiple && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="border-t border-border bg-[var(--surface-2)]/30"
+                      >
+                        <ul className="py-2 px-4 space-y-1">
+                          {group.items.map((item, j) => (
+                            <li key={j}>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/holat/${encodeURIComponent(item.obyekt)}`);
+                                }}
+                                className="w-full text-left px-3 py-2.5 rounded-[8px] text-sm text-text-dim hover:text-text hover:bg-[var(--surface-2)] transition-colors flex items-center gap-3 truncate group/btn"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-border group-hover/btn:bg-accent transition-colors flex-shrink-0" />
+                                <span className="truncate">{item.obyekt.replace(group.baseName + ' - ', '')}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+      </Holatlar>
+    </Sahifa>
   );
 }

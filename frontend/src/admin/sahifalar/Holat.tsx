@@ -6,8 +6,9 @@ import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
 import { Skeleton } from '../../umumiy/ui/Skeleton';
 import { SaveModal } from '../../umumiy/ui/SaveModal';
 import { ZamenaModal } from '../../umumiy/ui/ZamenaModal';
+import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
-import { FileSpreadsheet, Edit3, Eye, RefreshCcw } from 'lucide-react';
+import { Edit3, Eye } from 'lucide-react';
 import { yangiUid } from '../../_shared/idempotent';
 
 export type EditState = {
@@ -198,64 +199,51 @@ export function Holat() {
   };
 
   return (
-    <div className="h-full flex flex-col max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6 flex-shrink-0">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <FileSpreadsheet className="text-accent" />
-            Smeta Holati
-          </h2>
-          <p className="text-text-dim text-sm mt-1">Obyektning to'liq ierarxik smetasi va bajarilish holati</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          {dataUpdatedAt > 0 && !isHolatLoading && (
-            <div className="flex items-center gap-2 text-xs text-text-dim mr-2 bg-surface-2 px-2 py-1 rounded-md border border-border">
-              <span>Yangilangan: {new Date(dataUpdatedAt).toLocaleTimeString()}</span>
-              <button 
-                onClick={() => refetch()} 
-                disabled={isRefetching || isEditMode}
-                className={`p-1 hover:text-white transition-colors ${isRefetching ? 'animate-spin text-accent' : ''}`}
-                title="Yangilash"
-              >
-                <RefreshCcw size={14} />
-              </button>
-            </div>
-          )}
-
+    <Sahifa
+      sarlavha="Smeta Holati"
+      tavsif="Obyektning to'liq ierarxik smetasi va bajarilish holati"
+      yangilangan={dataUpdatedAt}
+      onYangila={() => refetch()}
+      yangilanmoqda={isRefetching || isHolatLoading}
+      amallar={
+        <>
           {selectedObyekt && (
             <button
               onClick={toggleEditMode}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              disabled={isHolatLoading}
+              className={`h-9 px-3 inline-flex items-center gap-2 rounded-[10px] text-sm font-medium transition-colors ${
                 isEditMode 
                   ? 'bg-accent text-white hover:bg-accent/90' 
-                  : 'bg-surface border border-border text-text hover:bg-surface-2'
+                  : 'karta text-text hover:border-[var(--accent)]/50'
               }`}
             >
               {isEditMode ? <><Eye size={16} /> Ko'rish</> : <><Edit3 size={16} /> Tahrirlash</>}
             </button>
           )}
 
-          <span className="text-sm text-text-dim ml-4">Obyekt:</span>
-          {isObyektlarLoading ? (
-             <Skeleton className="h-9 w-48 rounded-md" />
-          ) : (
-            <select 
-              value={selectedObyekt} 
-              onChange={e => setSelectedObyekt(e.target.value)}
-              className="bg-surface border border-border rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-accent min-w-[200px]"
-            >
-              {obyektlar?.map(obj => (
-                <option key={obj.obyekt} value={obj.obyekt}>{obj.obyekt}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
-
+          <div className="flex items-center gap-2 border-l border-border pl-3 ml-1">
+            <span className="text-sm text-text-dim">Obyekt:</span>
+            {isObyektlarLoading ? (
+               <Skeleton className="h-9 w-48 rounded-[10px]" />
+            ) : (
+              <select 
+                value={selectedObyekt} 
+                onChange={e => setSelectedObyekt(e.target.value)}
+                disabled={isEditMode}
+                className="karta h-9 px-3 text-sm text-text focus:outline-none focus:border-accent min-w-[200px]"
+              >
+                {obyektlar?.map(obj => (
+                  <option key={obj.obyekt} value={obj.obyekt}>{obj.obyekt}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        </>
+      }
+    >
       <div className="flex-1 min-h-0 flex flex-col">
         {isEditMode && Object.keys(edits).length > 0 && (
-          <div className="bg-surface-2 border border-border p-3 rounded-lg mb-4 flex items-center justify-between flex-shrink-0 shadow-lg">
+          <div className="bg-[var(--surface-2)] border border-border p-3 rounded-lg mb-4 flex items-center justify-between flex-shrink-0 shadow-lg">
             <div className="flex items-center gap-3">
               <span className="text-warn">⚠</span>
               <span className="text-white font-medium">{Object.keys(edits).length} ta qator o'zgardi</span>
@@ -292,7 +280,7 @@ export function Holat() {
                 <Skeleton className="h-8 w-24 rounded" />
               </div>
             ))}
-            <div className="absolute inset-0 flex items-center justify-center bg-surface/50 backdrop-blur-sm">
+            <div className="absolute inset-0 flex items-center justify-center bg-[var(--surface)]/50 backdrop-blur-sm">
               <div className="bg-surface border border-border px-6 py-4 rounded-lg shadow-xl text-center">
                 <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
                 <p className="font-medium text-white">Smeta daraxti o'qilmoqda...</p>
@@ -332,12 +320,16 @@ export function Holat() {
 
       <ZamenaModal
         isOpen={isZamenaModalOpen}
-        onClose={() => setIsZamenaModalOpen(false)}
+        onClose={() => {
+          setIsZamenaModalOpen(false);
+          setDragSource(null);
+          setDragTarget(null);
+        }}
         onConfirm={handleZamenaConfirm}
         source={dragSource}
         target={dragTarget}
         isSaving={blQosh.isPending || rsQosh.isPending}
       />
-    </div>
+    </Sahifa>
   );
 }
