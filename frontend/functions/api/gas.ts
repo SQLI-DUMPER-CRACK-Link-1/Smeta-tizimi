@@ -12,7 +12,7 @@ export const onRequestPost: PagesFunction<{
     }
 
     const YOZUVCHI = /^api(HolatSaqla|BlQosh|RsQosh|OyQosh|F2Qolla|F2QollaNavbatga|ShartnomaSaqla|ShartnomaOchir|Lock)/;
-    if (sess.rol === 'boss' && YOZUVCHI.test(fn)) {
+    if ((sess.rol === 'boss' || sess.rol === 'rahbar') && YOZUVCHI.test(fn)) {
       return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' }, { status: 403 });
     }
 
@@ -25,7 +25,7 @@ export const onRequestPost: PagesFunction<{
     const r = await fetch(ctx.env.GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ __api: 1, token: ctx.env.GAS_TOKEN, fn, args: args ?? [] }),
+      body: JSON.stringify({ __api: 1, token: ctx.env.GAS_TOKEN, fn, args: args ?? [], kim: sess.email || '' }),
     });
 
     const text = await r.text();
