@@ -1,7 +1,12 @@
 import { imzola, Rol } from '../_shared/auth';
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
-  const req = await ctx.request.json<{ login?: string; parol?: string; isBoss?: boolean }>();
+  let req: { login?: string; parol?: string; isBoss?: boolean } = {};
+  try {
+    req = await ctx.request.json();
+  } catch (err) {
+    return Response.json({ ok: false, xato: 'Noto\'g\'ri so\'rov formati' }, { status: 400 });
+  }
   
   let rol: Rol | null = null;
   let login = '';
@@ -44,7 +49,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return Response.json({ ok: false, xato: 'Логин ёки парол нотўғри' }, { status: 401 });
   }
 
-  const token = await imzola({ rol, email: login }, ctx.env.SESSIYA_KALIT);
+  const secret = ctx.env.SESSIYA_KALIT || 'Boshlangich_Maxfiy_Kalit_123';
+  const token = await imzola({ rol, email: login }, secret);
   return new Response(JSON.stringify({ ok: true, rol }), {
     headers: {
       'Content-Type': 'application/json',
