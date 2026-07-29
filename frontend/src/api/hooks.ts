@@ -498,3 +498,15 @@ export function useXarajatOchir() {
     },
   });
 }
+
+/* ============ Ф2 ТАЙЁРЛАШ (smetadan yangi hujjat) ============ */
+
+export function useF2HujjatYarat() {
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom, items }: {
+      obyekt: string; oyNom: string;
+      items: { rzNom: string; blNom: string; type: string; kod: string; nom: string; bir: string; hajm: number; narx: number }[];
+    }) => gas<{ ok: boolean; url?: string; fileId?: string; name?: string; jami?: number; soni?: number }>(
+      'apiF2TayyorHujjatYarat', obyekt, oyNom, items),
+  });
+}

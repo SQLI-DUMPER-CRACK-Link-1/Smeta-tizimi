@@ -3,7 +3,7 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers } from 'lucide-react';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity } from 'lucide-react';
 
 // --- AURORA BACKGROUND (Kuchaytirilgan, yorug'lashtirilgan) ---
 function AuroraBackground({ children }: { children: React.ReactNode }) {
@@ -89,6 +89,49 @@ function FinancialChart({ objects }: { objects: any[] }) {
             </div>
           );
         })}
+      </div>
+    </GlassCard>
+  );
+}
+
+// --- PROFIT AND LOSS (Rentabellik Tahlili) ---
+function ProfitAndLoss({ jami }: { jami: any }) {
+  const umumiyXarajat = (jami.chel || 0) + (jami.mash || 0) + (jami.mat || 0) + (jami.ob || 0) + (jami.mk || 0) + (jami.kab || 0) + (jami.sub || 0);
+  const sofFoyda = (jami.smeta || 0) - umumiyXarajat;
+  const rentabellik = jami.smeta > 0 ? (sofFoyda / jami.smeta) * 100 : 0;
+  
+  const realFoyda = (jami.tolangan || 0) - (umumiyXarajat > 0 ? (umumiyXarajat * (jami.progress/100)) : 0); // Keltirilgan foyda
+  
+  return (
+    <GlassCard className="p-6 h-[320px] flex flex-col relative overflow-hidden group">
+      <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-accent/10 rounded-full blur-3xl group-hover:bg-accent/20 transition-all duration-700 pointer-events-none" />
+      <h3 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
+        <PieChart size={20} className="text-emerald-400" />
+        Rentabellik va Foyda (Prognoz)
+      </h3>
+      
+      <div className="flex-1 flex flex-col justify-center gap-5 z-10">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Kutilayotgan Sof Foyda</div>
+          <div className="text-3xl font-extrabold font-mono text-emerald-400 drop-shadow-md">
+            <FmtN val={sofFoyda} />
+          </div>
+        </div>
+        
+        <div className="flex gap-4">
+          <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center">
+            <div className="text-[10px] text-slate-400 uppercase mb-1">Rentabellik</div>
+            <div className="text-xl font-bold font-mono text-white flex items-center gap-1">
+              {rentabellik.toFixed(1)}% <Activity size={14} className="text-accent" />
+            </div>
+          </div>
+          <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center" title="Tushgan puldan qilingan ish hajmi xarajati ayirmasi">
+            <div className="text-[10px] text-slate-400 uppercase mb-1">Joriy Holat (Kesh)</div>
+            <div className={`text-lg font-bold font-mono ${realFoyda >= 0 ? 'text-ok' : 'text-danger'}`}>
+              <FmtN val={realFoyda} qisqa />
+            </div>
+          </div>
+        </div>
       </div>
     </GlassCard>
   );
@@ -373,10 +416,14 @@ export default function Umumiy() {
           ))}
         </div>
 
-        {/* Chart */}
-        <div className="mb-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }}>
+        {/* Chart va Tahlil Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          <motion.div className="lg:col-span-2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4, duration: 0.6 }}>
             <FinancialChart objects={data.objects || []} />
+          </motion.div>
+          
+          <motion.div className="lg:col-span-1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
+            <ProfitAndLoss jami={data.jami} />
           </motion.div>
         </div>
 
