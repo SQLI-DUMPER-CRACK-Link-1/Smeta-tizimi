@@ -277,9 +277,49 @@ Faza 3 endi «8000 satr mantiqni ko'chirish» emas, «UI qurish» bo'ladi —
 ya'ni **3–4 sessiya emas, 2–3 sessiya**. Va panel ham shundan foyda ko'radi:
 `Panel.html` yengillashadi.
 
-> ⏳ **Vaqt jihati:** `apiF2AvtoMoslash` hali YOZILMAGAN. Claude uni Faza 2
-> davomida yozadi. Antigravity Faza 3 ga yetganda tayyor bo'ladi.
-> Shu paytgacha F2 ekraniga tegma.
+### ✅ 2026-07-29 — TAYYOR. Faza 3 ni boshlash mumkin.
+
+Fayl: `Smeta tizimi/35_F2Moslash.js` (server'ga push qilingan).
+
+```ts
+apiF2AvtoMoslash(
+  aktTree: AktNode[],      // apiF2FaylOqi natijasi
+  obyekt: string,
+  opts?: { lokalka?: string }   // '' yoki 'AVTO' → tizim o'zi aniqlaydi
+): {
+  mosliklar: Array<{
+    uid: string;     // akt tugunining uid'i
+    varaq: string;   // LRV varaq ("sub||varaq" bo'lishi mumkin)
+    row: number;     // LRV qatori
+    kod: string; hajm: number; narx: number; summa: number;
+  }>;
+  sabablar: Record<string, string>;   // uid → nega topilmadi (matn)
+  rzDiag: Array<{ nom: string; ok: boolean }>;   // razdel mosligi
+  stat: {
+    moslashti: number; otkazib: number;
+    scopeHit: number;      // razdel doirasida aniq topilgan
+    fuzzyHit: number;      // nom o'xshashligi bo'yicha
+    kanonHit: number;      // kod-kanon orqali (ikki xil yozuv)
+    birlikBlok: number;    // birlik farqli — bloklandi (Т↔КГ)
+    zamenaShubha: number;  // marka farqli (ПК↔ПБ) — qo'lda
+    yetimUrindi: number; yetimMos: number;   // ish topilmasa bolalari
+    lokalka: string; lokAuto: boolean;
+    rzMos: number; rzJami: number;
+    ms: number;
+  };
+}
+```
+
+**UI uchun muhim:**
+- `sabablar[uid]` — har bog'lanmagan qator ostida **ko'rsatilsin**. Bu
+  foydalanuvchining eng katta shikoyati edi («nega bog'lanmagani ko'rinmaydi»)
+- `stat.birlikBlok` va `stat.zamenaShubha` — bular **xato emas**, himoya.
+  Ularni qizil emas, sariq «qo'lda tekshiring» ko'rinishida bering
+- `rzDiag` → «🗂 Раздел мослиги: 44/47» ko'rsatkichi
+
+⛔ **Algoritmni saytda takrorlamang.** Bu funksiya barcha himoyalarni
+o'z ichiga oladi: birlik qalqoni, grade-farq, qat'iy unikallik, kod-kanon,
+yetim-resurs qutqarish, razdel doirasi.
 
 ---
 
@@ -305,3 +345,47 @@ Sodda bo'lishi uchun hamma joyda POST ishlating.
 |---|---|---|
 | 2026-07-28 | 1 | Birinchi shartnoma. `79_WebAPI.js`, `doGet?action=api2`, `doPost{__api:1}` |
 | 2026-07-28 | 1.1 | 7-bo'lim: F2 moslashtirish saytga ko'chirilmaydi → `apiF2AvtoMoslash` GAS'da. 8-bo'lim: POST majburiyligi |
+
+---
+
+## 10. ⚠️ 2026-07-29 KASHFIYOT — panelda IKKI HIMOYA O'LIK EDI
+
+Dvigatelni serverga ko'chirishda topildi. `Panel.html` da:
+
+```js
+function _tokenlar(s){
+   s=_f2NormNom(s).replace(/[.,;:()\/\-]+/g,' ');
+   return s.split(/\s+/).filter(function(t){ return t.length>=2; });
+}
+```
+
+Lekin `_f2NormNom` **probellarni ham** olib tashlaydi (`[^0-9А-Я]`). Ya'ni
+`split(/\s+/)` bo'linadigan narsa topmaydi — natija **doim bitta uzun token**:
+
+```
+«БЕТОН М300 ТЯЖЕЛЫЙ»  →  ["БЕТОНМ300ТЯЖЕЛЫЙ"]     ← 1 ta token
+```
+
+Oqibati:
+
+| Himoya | Nima bo'lgan |
+|---|---|
+| **FUZZY** (nom o'xshashligi) | `if(ftok.length<2) return null` → **hech qachon ishlamagan** |
+| **GRADE-FARQ** (ПК↔ПБ) | 2-3 harfli marka topilmagan → **hech qachon ishlamagan** |
+
+Ya'ni foydalanuvchi maxsus so'ragan «ПК плита лойиҳада, биз ПБ ишлатдик —
+тизим сезмасдан боғлаб юборади» himoyasi **kodda bor, lekin ishlamagan**.
+
+Server versiyasida tuzatildi: avval xom matn so'zlarga bo'linadi, keyin
+har so'z alohida normallashtiriladi:
+
+```
+«БЕТОН М300 ТЯЖЕЛЫЙ»  →  ["БЕТОН","М300","ТЯЖЕЛЫЙ"]
+```
+
+`f2MoslashSelfTest()` da isbotlangan (18/18): ПК↔ПБ endi **bog'lanmaydi**.
+
+> ⚠️ **Oqibat:** server natijasi paneldan **farq qilishi mumkin** — ba'zi
+> mosliklar qo'shiladi (fuzzy tirildi), ba'zilari olib tashlanadi (grade-farq
+> tirildi). Ikkinchisi — **xavfsizlik yaxshilanishi**. Haqiqiy akt bilan
+> solishtirish `GAS/_f2lab` stendida qilinadi.

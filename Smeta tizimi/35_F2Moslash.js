@@ -595,6 +595,66 @@ function f2MoslashSelfTest(){
   T('aynan kodsiz',       _f2mAynanMi('', 'БЕТОН', 'М3', 'Е1-1', 'БЕТОН', 'М3'), 'true');
   T('aynan kod farqli',   _f2mAynanMi('А1', 'БЕТОН', 'М3', 'Б2', 'БЕТОН', 'М3'), 'false');
 
+  /* ---- DVIGATEL XATTI-HARAKATI (normalizator emas — haqiqiy moslashtirish) ---- */
+
+  function rz(nom, kids){ return {type:'rz', nom:nom, lokalka:'L1', children:kids}; }
+  function lrv(o){
+    return {type:o.t||'mat', nom:o.nom, kod:o.kod||'', birlik:o.bir||'',
+            narx:o.narx||0, varaq:'V1', row:o.row, children:o.kids||[]};
+  }
+  function akt(o){
+    return {type:o.t||'mat', uid:o.uid, nom:o.nom, kod:o.kod||'', bir:o.bir||'',
+            hajm:o.hajm||1, narx:o.narx||0, summa:o.summa||0, children:o.kids||[]};
+  }
+  function mosMi(aktT, lrvT, uid){
+    var r = f2MoslashEngine(aktT, lrvT, {lokalka:'L1'});
+    for (var i = 0; i < r.mosliklar.length; i++) if (r.mosliklar[i].uid === uid) return r.mosliklar[i].row;
+    return 0;
+  }
+
+  // 1) Aynan mos — bog'lanishi SHART
+  T('аниқ мослик',
+    mosMi([rz('ФУНДАМЕНТЫ', [akt({uid:'a1', nom:'ЦЕМЕНТ М400', kod:'С124', bir:'Т'})])],
+          [rz('ФУНДАМЕНТЫ', [lrv({nom:'ЦЕМЕНТ М400', kod:'С124', bir:'Т', row:10})])], 'a1'), 10);
+
+  // 2) БИРЛИК ҚАЛҚОНИ — Т ↔ КГ bog'lanmasin (1000x xato)
+  T('бирлик қалқони Т↔КГ',
+    mosMi([rz('ФУНДАМЕНТЫ', [akt({uid:'a2', nom:'ПРОВОЛОКА ВЯЗАЛЬНАЯ', kod:'С101', bir:'Т'})])],
+          [rz('ФУНДАМЕНТЫ', [lrv({nom:'ПРОВОЛОКА ВЯЗАЛЬНАЯ', kod:'С101', bir:'КГ', row:11})])], 'a2'), 0);
+
+  // 3) GRADE-FARQ — ПК ↔ ПБ boshqa mahsulot (panelda bu himoya O'LIK edi)
+  T('grade-фарқ ПК↔ПБ',
+    mosMi([rz('ПЕРЕКРЫТИЯ', [akt({uid:'a3', nom:'ПЛИТА ПБ 59-12', bir:'ШТ'})])],
+          [rz('ПЕРЕКРЫТИЯ', [lrv({nom:'ПЛИТА ПК 59-12', bir:'ШТ', row:12})])], 'a3'), 0);
+
+  // 4) Ikkilanish — ikki HAR XIL nomzod bo'lsa bog'lanmasin
+  T('икки хил номзод — боғланмайди',
+    mosMi([rz('ЗЕМРАБОТЫ', [akt({uid:'a4', nom:'ГРУНТ', kod:'К1', bir:'М3'})])],
+          [rz('ЗЕМРАБОТЫ', [lrv({nom:'ГРУНТ', kod:'К1', bir:'М3', narx:100, row:13}),
+                            lrv({nom:'ГРУНТ', kod:'К1', bir:'М3', narx:250, row:14})])], 'a4'), 0);
+
+  // 5) Ekvivalent nomzodlar (kod+nom+birlik+narx AYNAN teng) — birinchi bo'shi
+  T('эквивалент номзодлар',
+    mosMi([rz('ЗЕМРАБОТЫ', [akt({uid:'a5', nom:'ГРУНТ', kod:'К1', bir:'М3'})])],
+          [rz('ЗЕМРАБОТЫ', [lrv({nom:'ГРУНТ', kod:'К1', bir:'М3', narx:100, row:15}),
+                            lrv({nom:'ГРУНТ', kod:'К1', bir:'М3', narx:100, row:16})])], 'a5'), 15);
+
+  // 6) KOD-KANON — ikki xil yozuv bir xil rascenka
+  T('код-канон Е1101-002-09↔E11-1-2-9',
+    mosMi([rz('КОЛОННЫ', [akt({uid:'a6', t:'bl', nom:'МОНТАЖ КОЛОНН', kod:'Е1101-002-09 ДОП. 3', bir:'ШТ'})])],
+          [rz('КОЛОННЫ', [lrv({t:'bl', nom:'УСТАНОВКА КОЛОНН', kod:'E11-1-2-9', bir:'ШТ', row:17})])], 'a6'), 17);
+
+  // 7) ЕТИМ РЕСУРС: ish topilmasa ham bolasi qutqarilsin (2.57 mlrd yo'qolishi)
+  T('етим ресурс қутқарилди',
+    mosMi([rz('КР-5', [akt({uid:'b1', t:'bl', nom:'НОМАЪЛУМ ИШ', kod:'ZZZ99', bir:'М3',
+                            kids:[akt({uid:'r1', t:'rs', nom:'ЦЕМЕНТ М500', kod:'С777', bir:'Т'})]})])],
+          [rz('КР-5', [lrv({nom:'ЦЕМЕНТ М500', kod:'С777', bir:'Т', row:18})])], 'r1'), 18);
+
+  // 8) CHIZMA-VARAQ kodi bo'yicha razdel doirasi (nomlar mos kelmasa ham)
+  T('чизма-варақ КР-5 доираси',
+    mosMi([rz('РАЗДЕЛ: ФУНДАМЕНТЫ (ЛИСТ КР-5)', [akt({uid:'c1', nom:'АРМАТУРА А500', kod:'А5', bir:'Т'})])],
+          [rz('ФУНДАМЕНТ ЛЕНТОЧНЫЙ ФЛ-2 (КР-5)', [lrv({nom:'АРМАТУРА А500', kod:'А5', bir:'Т', row:19})])], 'c1'), 19);
+
   var xul = ok + '/' + jami + ' тест ўтди';
   Logger.log(xul + '\n' + x.join('\n'));
   return {ok: ok, jami: jami, xulosa: xul, satrlar: x};
