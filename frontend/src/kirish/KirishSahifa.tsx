@@ -40,6 +40,28 @@ export default function KirishSahifa() {
     }
   };
 
+  const handleBossLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const r = await fetch('/api/kirish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isBoss: true }),
+      });
+      const data = await r.json();
+      if (data.ok && data.rol === 'boss') {
+        navigate('/boss');
+      } else {
+        setError('Xato yuz berdi');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-bg flex items-center justify-center">
       {/* 3D Background */}
@@ -109,6 +131,21 @@ export default function KirishSahifa() {
               {loading ? 'Текширилмоқда...' : 'Кириш →'}
             </button>
           </form>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-border"></div>
+            <span className="text-text-dim text-sm">ёки</span>
+            <div className="flex-1 h-px bg-border"></div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleBossLogin}
+            disabled={loading}
+            className="w-full bg-surface-2 border border-border hover:bg-surface-3 text-text rounded-lg py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            Раҳбар кириши (паролсиз)
+          </button>
         </motion.div>
       </div>
     </div>

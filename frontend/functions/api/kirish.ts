@@ -1,34 +1,41 @@
 import { imzola, Rol } from '../_shared/auth';
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
-  const req = await ctx.request.json<{ login?: string; parol?: string }>();
-  const login = req?.login || '';
-  const parol = req?.parol || '';
-
-  if (!login || !parol) {
-    return Response.json({ ok: false, xato: 'Логин ва паролни киритинг' }, { status: 400 });
-  }
-
-  let rol: Rol | null = null;
+  const req = await ctx.request.json<{ login?: string; parol?: string; isBoss?: boolean }>();
   
-  try {
-    const r = await fetch(ctx.env.GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ 
-        __api: 1, 
-        token: ctx.env.GAS_TOKEN, 
-        fn: 'apiKirishTekshir', 
-        args: [login, parol] 
-      }),
-    });
-    
-    const data = await r.json<{ ok: boolean; data: string | null }>();
-    if (data.ok && data.data) {
-      rol = data.data as Rol;
+  let rol: Rol | null = null;
+  let login = '';
+
+  if (req.isBoss) {
+    rol = 'boss';
+    login = 'boss';
+  } else {
+    login = req.login || '';
+    const parol = req.parol || '';
+
+    if (!login || !parol) {
+      return Response.json({ ok: false, xato: 'Логин ва паролни киритинг' }, { status: 400 });
     }
-  } catch (err) {
-    console.error('GAS ga bog\'lanishda xato:', err);
+    
+    try {
+      const r = await fetch(ctx.env.GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ 
+          __api: 1, 
+          token: ctx.env.GAS_TOKEN, 
+          fn: 'apiKirishTekshir', 
+          args: [login, parol] 
+        }),
+      });
+      
+      const data = await r.json<{ ok: boolean; data: string | null }>();
+      if (data.ok && data.data) {
+        rol = data.data as Rol;
+      }
+    } catch (err) {
+      console.error('GAS ga bog\'lanishda xato:', err);
+    }
   }
 
   if (!rol) {
