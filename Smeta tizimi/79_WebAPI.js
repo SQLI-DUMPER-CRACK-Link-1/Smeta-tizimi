@@ -96,11 +96,17 @@ function webApiIshlov(req){
 
     var ms = Date.now() - t0;
     _wapiLog(fn, 'OK', ms);
+    if (ms > 10000 && typeof globalThis.apiXatoYoz === 'function') {
+      globalThis.apiXatoYoz('WEB_API', 'Sekin so\'rov (>10s): ' + ms + 'ms', 'Tizim', { fn: fn, tokenLength: (req.token||'').length });
+    }
     return _wapiJavob({ok:true, fn:fn, ms:ms, data:(natija===undefined?null:natija)});
 
   }catch(err){
     var ms2 = Date.now() - t0;
     _wapiLog(fn, 'XATO', ms2);
+    if (typeof globalThis.apiXatoYoz === 'function') {
+      globalThis.apiXatoYoz('WEB_API', 'So\'rov xatosi', 'Tizim', { fn: fn, xato: String(err) });
+    }
     return _wapiJavob({
       ok:false, fn:fn, ms:ms2,
       error: String((err && err.message) || err),

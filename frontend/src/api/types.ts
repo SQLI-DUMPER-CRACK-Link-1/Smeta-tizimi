@@ -75,6 +75,7 @@ export type BlQosh = {
   zamena?: boolean;
   droppedOnRow?: number;
   f?: number;
+  f2Uid?: string;
 };
 
 export type RsQosh = {
@@ -88,4 +89,5 @@ export type RsQosh = {
   norm?: number;
   kat?: string;
   f?: number;
+  f2Uid?: string;
 };

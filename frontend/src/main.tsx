@@ -4,6 +4,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
 
+// Xatolarni avtomatik GAS ga yuborish
+function xatoYubor(manba: string, xabar: string, url?: string, line?: number) {
+  fetch('/api/xato', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ manba, xabar, url, line })
+  }).catch(() => {});
+}
+
+window.addEventListener('error', e => xatoYubor('js', e.message, e.filename, e.lineno));
+window.addEventListener('unhandledrejection', e => xatoYubor('promise', String(e.reason)));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

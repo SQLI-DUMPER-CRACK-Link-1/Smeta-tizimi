@@ -7,6 +7,7 @@ import { SaveModal } from '../../umumiy/ui/SaveModal';
 import { ZamenaModal } from '../../umumiy/ui/ZamenaModal';
 import { toast } from '../../umumiy/ui/Toast';
 import { FileSpreadsheet, Edit3, Eye } from 'lucide-react';
+import { yangiUid } from '../../_shared/idempotent';
 
 export type EditState = {
   edit: Edit;
@@ -110,6 +111,7 @@ export function Holat() {
     try {
       const isIsh = dragSource.type === 'bl';
       const isZamena = !!dragTarget;
+      const f2Uid = yangiUid();
       
       const payload: any = {
         obyekt: selectedObyekt,
@@ -120,6 +122,7 @@ export function Holat() {
         birlik: dragSource.birlik,
         hajm: dragSource.smetaHajm,
         tur: dragSource.type,
+        f2Uid: f2Uid,
       };
 
       if (isZamena) {
@@ -143,6 +146,7 @@ export function Holat() {
               narx: child.narx,
               norm: child.smetaHajm, 
               f: child.fakt,
+              f2Uid: yangiUid(),
             });
           }
         }
@@ -157,6 +161,7 @@ export function Holat() {
           narx: dragSource.narx,
           norm: dragSource.smetaHajm,
           f: dragSource.fakt,
+          f2Uid: yangiUid(),
         });
       }
 
