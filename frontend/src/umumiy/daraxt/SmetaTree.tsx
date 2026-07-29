@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import type { TreeNode } from '../../api/types';
 import type { EditState } from '../../admin/sahifalar/Holat';
 import { flattenTree, getAllKeys } from './utils';
-import { formatSum } from '../../lib/format';
+import { FmtN } from '../../lib/format';
 import { Badge } from '../ui/Badge';
 import { ChevronRight, ChevronDown, RefreshCcw, Plus } from 'lucide-react';
 
@@ -152,7 +152,7 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                 
                 {/* Data Columns */}
                 <div className="flex items-center h-full pr-4 flex-shrink-0 font-medium tabular-nums text-xs">
-                  <div className="w-24 text-right text-text-dim">{formatSum(node.smetaHajm)}</div>
+                  <div className="w-24 text-right text-text-dim"><FmtN val={node.smetaHajm} /></div>
                   <div className="w-24 text-right">
                     {isEditMode ? (
                       <input
@@ -182,12 +182,12 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                         title={isOverLimit ? `Smetadan oshiq: ${currentFakt} > ${node.smetaHajm}` : ''}
                       />
                     ) : (
-                      <span className={isOverLimit ? 'text-danger' : 'text-ok'}>{formatSum(node.fakt)}</span>
+                      <FmtN val={node.fakt} cl={isOverLimit ? 'text-danger' : 'text-ok'} />
                     )}
                   </div>
-                  <div className="w-24 text-right text-text-dim">{formatSum(node.narx)}</div>
-                  <div className="w-32 text-right text-white">{formatSum(node.smeta)}</div>
-                  <div className="w-24 text-right text-t-rs">{formatSum(node.f2ol)}</div>
+                  <div className="w-24 text-right text-text-dim"><FmtN val={node.narx} /></div>
+                  <div className="w-32 text-right text-white"><FmtN val={node.smeta} /></div>
+                  <div className="w-24 text-right text-t-rs"><FmtN val={node.f2ol} /></div>
                 </div>
               </div>
             );

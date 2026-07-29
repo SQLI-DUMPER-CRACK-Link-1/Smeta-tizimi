@@ -28,7 +28,7 @@ export default function AdminShell() {
             }
           >
             <Building2 className="w-5 h-5" />
-            <span>Объектлар</span>
+            <span>Obyektlar</span>
           </NavLink>
         </nav>
 

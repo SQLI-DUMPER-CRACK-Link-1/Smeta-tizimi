@@ -2,7 +2,7 @@ import { useBossData } from '../../api/hooks';
 import { Card, CardContent } from '../../umumiy/ui/Card';
 import { Skeleton } from '../../umumiy/ui/Skeleton';
 import { CountUp } from '../../umumiy/ui/CountUp';
-import { formatSum, formatPercent } from '../../lib/format';
+import { formatSum, formatPercent, FmtN } from '../../lib/format';
 import { Wallet, TrendingUp, CheckCircle, Clock } from 'lucide-react';
 
 function KpiCard({ title, value, icon, color }: { title: string, value: number, icon: React.ReactNode, color: string }) {
@@ -75,8 +75,8 @@ export default function Umumiy() {
               {data.objects?.map((obj, i) => (
                 <tr key={i} className="hover:bg-surface-2/30 transition-colors">
                   <td className="px-6 py-4 font-medium text-white">{obj.nom}</td>
-                  <td className="px-6 py-4 text-right tabular-nums text-text-dim">{formatSum(obj.smeta)}</td>
-                  <td className="px-6 py-4 text-right tabular-nums text-white">{formatSum(obj.fakt)}</td>
+                  <td className="px-6 py-4 text-right tabular-nums text-text-dim"><FmtN val={obj.smeta} /></td>
+                  <td className="px-6 py-4 text-right tabular-nums text-white"><FmtN val={obj.fakt} /></td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3 justify-end">
                       <span className="tabular-nums font-medium w-12 text-right">{formatPercent(obj.progress || 0)}</span>

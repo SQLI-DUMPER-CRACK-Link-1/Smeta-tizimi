@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import type { TreeNode } from '../../api/types';
-import { formatSum } from '../../lib/format';
+import { FmtN } from '../../lib/format';
 
 interface EditState {
   edit: { fakt?: number };
@@ -51,7 +51,7 @@ export function SaveModal({ isOpen, onClose, onSave, edits, isSaving, obyekt }: 
             <div>
               <span className="text-text-dim w-32 inline-block">FAKT o'zgarishi:</span>
               <span className={`font-medium ${totalDiff > 0 ? 'text-ok' : totalDiff < 0 ? 'text-warn' : 'text-white'}`}>
-                {totalDiff > 0 ? '+' : ''}{formatSum(totalDiff)} so'm
+                {totalDiff > 0 ? <span className="text-ok">+</span> : null}<FmtN val={totalDiff} /> so'm
               </span>
             </div>
           </div>
@@ -72,14 +72,17 @@ export function SaveModal({ isOpen, onClose, onSave, edits, isSaving, obyekt }: 
                           <span className="text-white">{node.nom}</span>
                         </td>
                         <td className="px-4 py-2 text-right num text-text-dim w-24">
-                          {formatSum(node.fakt)}
+                          <FmtN val={node.fakt} />
                         </td>
                         <td className="px-2 py-2 text-center text-text-mute w-8">→</td>
                         <td className="px-4 py-2 text-right num text-white font-medium w-24">
-                          {formatSum(newVal)}
+                          <FmtN val={newVal} />
                         </td>
-                        <td className={`px-4 py-2 text-right num font-medium w-32 ${diff > 0 ? 'text-ok' : diff < 0 ? 'text-warn' : 'text-text-mute'}`}>
-                          {diff > 0 ? '+' : ''}{formatSum(diff)}
+                        <td className="px-4 py-2 text-right w-32">
+                          <div className="flex items-center justify-end gap-1 font-medium mt-1">
+                            {diff > 0 ? <span className="text-ok">+</span> : null}
+                            <FmtN val={diff} cl={diff > 0 ? 'text-ok' : 'text-danger'} />
+                          </div>
                         </td>
                       </tr>
                     );

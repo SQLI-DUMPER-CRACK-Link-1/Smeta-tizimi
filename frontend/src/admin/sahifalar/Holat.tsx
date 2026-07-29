@@ -6,7 +6,7 @@ import { Skeleton } from '../../umumiy/ui/Skeleton';
 import { SaveModal } from '../../umumiy/ui/SaveModal';
 import { ZamenaModal } from '../../umumiy/ui/ZamenaModal';
 import { toast } from '../../umumiy/ui/Toast';
-import { FileSpreadsheet, Edit3, Eye } from 'lucide-react';
+import { FileSpreadsheet, Edit3, Eye, RefreshCcw } from 'lucide-react';
 import { yangiUid } from '../../_shared/idempotent';
 
 export type EditState = {
@@ -35,7 +35,7 @@ export function Holat() {
     }
   }, [obyektlar, selectedObyekt]);
 
-  const { data: holatData, isLoading: isHolatLoading, error } = useHolat(selectedObyekt);
+  const { data: holatData, isLoading: isHolatLoading, error, dataUpdatedAt, isRefetching, refetch } = useHolat(selectedObyekt);
   const { data: lockStatus } = useLockStatus(selectedObyekt);
   const { mutateAsync: acquireLock } = useLockAcquire();
   const { mutateAsync: releaseLock } = useLockRelease();
@@ -187,6 +187,20 @@ export function Holat() {
         </div>
         
         <div className="flex items-center gap-3">
+          {dataUpdatedAt > 0 && !isHolatLoading && (
+            <div className="flex items-center gap-2 text-xs text-text-dim mr-2 bg-surface-2 px-2 py-1 rounded-md border border-border">
+              <span>Yangilangan: {new Date(dataUpdatedAt).toLocaleTimeString()}</span>
+              <button 
+                onClick={() => refetch()} 
+                disabled={isRefetching || isEditMode}
+                className={`p-1 hover:text-white transition-colors ${isRefetching ? 'animate-spin text-accent' : ''}`}
+                title="Yangilash"
+              >
+                <RefreshCcw size={14} />
+              </button>
+            </div>
+          )}
+
           {selectedObyekt && (
             <button
               onClick={toggleEditMode}

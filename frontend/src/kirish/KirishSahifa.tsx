@@ -80,7 +80,7 @@ export default function KirishSahifa() {
           className="text-center mb-8"
         >
           <h1 className="text-5xl font-bold text-white tracking-tight mb-2">SMETA GAS</h1>
-          <p className="text-text-dim">Қурилиш сметаси бошқарув тизими</p>
+          <p className="text-text-dim">Qurilish smetasi boshqaruv tizimi</p>
         </motion.div>
 
         <motion.div

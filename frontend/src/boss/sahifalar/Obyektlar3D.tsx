@@ -76,7 +76,7 @@ function BarChart({ data }: { data: any[] }) {
         ]}>
           <div className="bg-glass backdrop-blur-md text-white p-2 rounded shadow-lg border border-glass-border text-sm pointer-events-none whitespace-nowrap">
             <div className="font-bold">{data[hovered].nomi || 'Nomsiz obyekt'}</div>
-            <div className="text-text-dim text-xs mt-1">Смета: {((data[hovered].smeta || 0) / 1e9).toFixed(2)} mlrd</div>
+            <div className="text-text-dim text-xs mt-1">Smeta: {((data[hovered].smeta || 0) / 1e9).toFixed(2)} mlrd</div>
           </div>
         </Html>
       )}

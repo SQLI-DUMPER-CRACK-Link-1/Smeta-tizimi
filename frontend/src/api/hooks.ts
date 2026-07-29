@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gas } from './client';
+import { navbatgaQoshish } from '../_shared/navbat';
 import type { BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh } from './types';
 
 export function useObyektlar() {
@@ -53,7 +54,12 @@ export function useHolatSaqla(obyekt: string) {
   const qc = useQueryClient();
   
   return useMutation({
-    mutationFn: (edits: Edit[]) => gas<{jami:number, qatorlar:number}>('apiHolatSaqla', obyekt, edits),
+    mutationFn: async (edits: Edit[]) => {
+      // Navbatga qo'shamiz (Faza 3 offline qatlam)
+      const f2Uid = edits[0]?.varaq || 'saqlash'; // vaqtincha uid uchun
+      await navbatgaQoshish('apiHolatSaqla', [obyekt, edits], f2Uid + Date.now());
+      return { jami: edits.length, qatorlar: edits.length };
+    },
     onMutate: async (edits) => {
       await qc.cancelQueries({ queryKey: ['holat', obyekt] });
       const oldingi = qc.getQueryData<{ tree: TreeNode[], lokalkalar: string[] }>(['holat', obyekt, false]);

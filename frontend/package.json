@@ -16,6 +16,7 @@
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-virtual": "^3.14.8",
     "framer-motion": "^12.43.0",
+    "idb-keyval": "^6.3.0",
     "lucide-react": "^1.27.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
