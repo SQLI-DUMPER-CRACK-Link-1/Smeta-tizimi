@@ -52,6 +52,56 @@ const HOLAT_NOMI: Record<string, string> = {
   RUXSAT_YOQ: 'Ruxsat yo‘q',
 };
 
+/**
+ * EKG — kardiogramma uslubidagi jarayon chizig'i.
+ * X = vaqt (chapda eng eskisi), Y = davomiylik (log shkala — 20 ms va 20 s
+ * bitta grafikka sig'ishi uchun). Har nuqta hover'da tafsilot beradi.
+ */
+function Ekg({ yozuvlar }: { yozuvlar: ApiLogYozuv[] }) {
+  const W = 1000, H = 120, P = 8;
+  const nuqtalar = [...yozuvlar].reverse();          // chapda eskisi
+  const maxMs = Math.max(1000, ...nuqtalar.map((y) => y.ms || 0));
+  const lg = (ms: number) => Math.log10(Math.max(1, ms) + 1) / Math.log10(maxMs + 1);
+
+  const dx = nuqtalar.length > 1 ? (W - P * 2) / (nuqtalar.length - 1) : 0;
+  const xy = nuqtalar.map((y, i) => {
+    const x = P + i * dx;
+    const h = lg(y.ms || 0) * (H - P * 2);
+    return { x, y: H - P - h, d: y };
+  });
+
+  /* Kardiogramma ko'rinishi: har nuqtaga tik ko'tarilib, tik tushadi */
+  const yol = xy.map((p, i) => {
+    const bazaY = H - P;
+    const oldingi = i === 0 ? `M ${P} ${bazaY}` : '';
+    return `${oldingi} L ${p.x - dx * 0.25} ${bazaY} L ${p.x} ${p.y} L ${p.x + dx * 0.25} ${bazaY}`;
+  }).join(' ');
+
+  return (
+    <div className="overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[120px]" preserveAspectRatio="none">
+        <line x1={P} y1={H - P} x2={W - P} y2={H - P} stroke="var(--border)" strokeWidth="1" />
+        <path d={yol} fill="none" stroke="var(--accent)" strokeWidth="1.5"
+              strokeLinejoin="round" opacity="0.75" vectorEffect="non-scaling-stroke" />
+        {xy.map((p, i) => {
+          const xato = p.d.h !== 'OK';
+          const sekin = (p.d.ms || 0) > SEKIN_MS;
+          const rang = xato ? 'var(--danger)' : sekin ? 'var(--warn)' : 'var(--ok)';
+          return (
+            <g key={i}>
+              <circle cx={p.x} cy={p.y} r={xato || sekin ? 3.5 : 2.5} fill={rang}
+                      vectorEffect="non-scaling-stroke" />
+              <title>
+                {`${amalNomi(p.d.fn)}\n${p.d.ms >= 1000 ? (p.d.ms / 1000).toFixed(1) + ' s' : p.d.ms + ' ms'}\n${HOLAT_NOMI[p.d.h] ?? p.d.h}\n${p.d.t}`}
+              </title>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export function Monitoring() {
   const soragan = useApiLog();
   const yozuvlar = soragan.data ?? [];
@@ -120,6 +170,22 @@ export function Monitoring() {
       onYangila={() => soragan.refetch()}
       yangilanmoqda={soragan.isFetching}
     >
+      {/* ⚡ EKG — vaqt bo'yicha jarayon. Har chaqiruv bitta cho'qqi:
+          balandligi = davomiylik, rangi = natija. Sekinlari darhol ko'zga tashlanadi. */}
+      {yozuvlar.length > 1 && (
+        <div className="karta p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] uppercase tracking-[0.04em] text-text-dim">Jarayon (oxirgidan eskisiga)</span>
+            <div className="flex items-center gap-3 text-[11px] text-text-mute">
+              <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-ok inline-block" /> tez</span>
+              <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-warn inline-block" /> sekin</span>
+              <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-danger inline-block" /> xato</span>
+            </div>
+          </div>
+          <Ekg yozuvlar={yozuvlar} />
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         <KpiKarta nom="Chaqiruvlar" qiymat={stat.n} />
         <KpiKarta nom="Xatolar" qiymat={stat.xato} ost={stat.xato ? 'tekshirish kerak' : 'muammo yo‘q'} />

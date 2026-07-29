@@ -685,3 +685,103 @@ function apiF2Varaqlar(fileId){
     return {ok:false, xabar:'Файлни очиб бўлмади: '+String(e.message||e)};
   }
 }
+
+/* ============ 6. Ф2 = 0 MUAMMOSI — DIAGNOSTIKA ============ */
+
+/**
+ * «Ф2 киритилган ойлар 0 кўрсатади» муаммосини аниқлаш.
+ * Занжир: ой устунлари → ST_F2 формуласи → ЖАМИ қатор → _SERVER_DASHBOARD → Boss.
+ * Ҳар бўғинни алоҳида ўлчаб, қайси жойда узилганини кўрсатади.
+ *
+ * @param {string} obyekt
+ */
+function apiF2NolDiagnostika(obyekt){
+  var out = {obyekt: obyekt, varaqlar: [], dashboard: null, xulosa: ''};
+  try{
+    var col = CFG.C;
+    var subs = _subObyektlar(obyekt) || [obyekt];
+
+    subs.forEach(function(sub){
+      var plus = _plusTop(sub);
+      if(!plus){ out.varaqlar.push({sub: sub, xato: 'LRV_PLUS топилмади'}); return; }
+
+      plus.getSheets().forEach(function(sh){
+        var nom = sh.getName();
+        if(nom.charAt(0) === '_') return;
+        var last = sh.getLastRow();
+        if(last < 2) return;
+
+        // Oy ustunlari (F2_BIRINCHI dan boshlab, har oy 3 ustun: ОБЪЁМ|НАРХ|СУММА)
+        var oylar = [];
+        try{ oylar = _f2Oylar(sh) || []; }catch(e){}
+
+        // ЖАМИ qatorlari va ulardagi ST_F2
+        var stF2Jami = 0, jamiSoni = 0, formula = '', qiymat = 0;
+        var mk = sh.getRange(1, col.MARKER, last, 1).getValues();
+        for(var i = 0; i < mk.length; i++){
+          var m = String(mk[i][0] || '').trim().toLowerCase();
+          if(m !== 'rz') continue;
+          var r = i + 1;
+          jamiSoni++;
+          var v = sh.getRange(r, col.ST_F2).getValue();
+          if(!formula){ formula = String(sh.getRange(r, col.ST_F2).getFormula() || '(формула йўқ)'); }
+          stF2Jami += (Number(v) || 0);
+        }
+
+        // Oy ustunlaridagi XOM summa (formuladan mustaqil)
+        var xomF2 = 0;
+        if(oylar.length){
+          oylar.forEach(function(o){
+            var sumCol = o.col + 2;   // ОБЪЁМ|НАРХ|СУММА
+            if(sumCol > sh.getLastColumn()) return;
+            var vals = sh.getRange(2, sumCol, last - 1, 1).getValues();
+            for(var k = 0; k < vals.length; k++) xomF2 += (Number(vals[k][0]) || 0);
+          });
+        }
+
+        out.varaqlar.push({
+          sub: sub, varaq: nom,
+          oylarSoni: oylar.length,
+          oylar: oylar.map(function(o){ return o.nom + '@' + o.col; }),
+          jamiQatorlar: jamiSoni,
+          stF2_formula: formula.slice(0, 120),
+          stF2_yigindi: Math.round(stF2Jami),
+          oyUstunlari_xomYigindi: Math.round(xomF2),
+          mos: Math.abs(stF2Jami - xomF2) < 1
+        });
+      });
+    });
+
+    // Dashboard qatori
+    try{
+      var srv = _serverSS(sozAsosiy());
+      var dash = _dash(srv);
+      var dv = dash.getRange(2, 1, Math.max(1, dash.getLastRow() - 1), 13).getValues();
+      for(var d = 0; d < dv.length; d++){
+        if(String(dv[d][0] || '').trim() === obyekt){
+          out.dashboard = {smeta: dv[d][1], fakt: dv[d][8], f2: dv[d][9], ost: dv[d][10], yangilandi: dv[d][12]};
+          break;
+        }
+      }
+    }catch(e){ out.dashboard = {xato: String(e.message || e)}; }
+
+    // Xulosa
+    var xomJami = 0, stJami = 0;
+    out.varaqlar.forEach(function(v){
+      xomJami += (v.oyUstunlari_xomYigindi || 0);
+      stJami  += (v.stF2_yigindi || 0);
+    });
+    if(!xomJami)                      out.xulosa = '❌ Ой устунларида Ф2 СУММАСИ УМУМАН ЙЎҚ — Ф2 ёзилмаган ёки бошқа устунга ёзилган';
+    else if(Math.abs(stJami) < 1)     out.xulosa = '❌ Ой устунларида ' + Math.round(xomJami) + ' бор, лекин ST_F2 ФОРМУЛАСИ 0 — формула ой устунларини қамрамайди';
+    else if(!out.dashboard)           out.xulosa = '❌ ST_F2 = ' + Math.round(stJami) + ', лекин DASHBOARD да бу объект қатори ЙЎҚ';
+    else if(!Number(out.dashboard.f2)) out.xulosa = '❌ ST_F2 = ' + Math.round(stJami) + ', лекин DASHBOARD f2 = 0 — сервер қайта йиғилмаган (serverYigPapka)';
+    else                              out.xulosa = '✅ Занжир бутун: ой=' + Math.round(xomJami) + ' → ST_F2=' + Math.round(stJami) + ' → dashboard=' + Math.round(out.dashboard.f2);
+
+    Logger.log(JSON.stringify(out, null, 1));
+    return out;
+  }catch(e){
+    out.xulosa = 'ХАТО: ' + String(e.message || e);
+    Logger.log(out.xulosa);
+    return out;
+  }
+}

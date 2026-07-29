@@ -5,7 +5,7 @@ import { yangiUid } from '../_shared/idempotent';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
-  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator, F2UstunConfig, F2Varaq,
+  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator, F2UstunConfig, F2Varaq, BuxDashboard, Xarajat,
 } from './types';
 
 export function useObyektlar() {
@@ -455,5 +455,46 @@ export function useF2Daraxt() {
       fileId: string; varaq: string;
       colConfig: { kod: number; nom: number; bir: number; norma: number; obyom: number; narx: number; sum: number };
     }) => gas<F2UstunConfig>('apiF2FaylOqi', fileId, varaq, colConfig),
+  });
+}
+
+/* ============ BUXGALTERIYA ============ */
+
+export function useBuxDashboard() {
+  return useQuery({
+    queryKey: ['buxDash'],
+    queryFn: () => gas<BuxDashboard>('apiBuxDashboard'),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useXarajatlar() {
+  return useQuery({
+    queryKey: ['xarajatlar'],
+    queryFn: () => gas<Xarajat[]>('apiXarajatOl'),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useXarajatYoz() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { sana?: string; toifa: string; summa: number; izoh?: string; row?: number }) =>
+      gas<any>('apiXarajatYoz', d),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['xarajatlar'] });
+      qc.invalidateQueries({ queryKey: ['buxDash'] });
+    },
+  });
+}
+
+export function useXarajatOchir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (row: number) => gas<any>('apiXarajatOchir', row),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['xarajatlar'] });
+      qc.invalidateQueries({ queryKey: ['buxDash'] });
+    },
   });
 }

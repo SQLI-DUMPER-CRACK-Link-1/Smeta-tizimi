@@ -223,3 +223,16 @@ export type F2UstunConfig = {
 };
 
 export type F2Varaq = { nom: string; qatorlar: number; ustunlar: number };
+
+/* ---------- Buxgalteriya (85_Buxgalteriya.js) ---------- */
+export type BuxQator = {
+  no: string; nomi: string; taraf: string;
+  dog_summa: number; bajarilgan: number; tolangan: number;
+  debitor: number; avans: number;
+  bajarilgan_pct: number; tolangan_pct: number; holat: string;
+};
+export type BuxDashboard = {
+  qatorlar: BuxQator[];
+  jami: { dog: number; bajarilgan: number; tolangan: number; debitor: number; avans: number };
+};
+export type Xarajat = { row: number; sana: string; toifa: string; summa: number; izoh: string };

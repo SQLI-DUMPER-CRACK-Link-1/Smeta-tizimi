@@ -15,6 +15,7 @@ import { Monitoring } from './admin/sahifalar/Monitoring';
  import { F2Import } from './admin/sahifalar/F2Import';
 import { Narxlar } from './admin/sahifalar/Narxlar';
 import { Ierarxiya } from './admin/sahifalar/Ierarxiya';
+import { Buxgalteriya } from './admin/sahifalar/Buxgalteriya';
 import { CommandPalette } from './umumiy/ui/CommandPalette';
 import { AiHelper } from './umumiy/ui/AiHelper';
 
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="obyektlar" element={<Obyektlar />} />
           <Route path="holat/:id" element={<Holat />} />
           <Route path="f2" element={<F2Import />} />
+          <Route path="buxgalteriya" element={<Buxgalteriya />} />
           <Route path="shartnoma" element={<Shartnoma />} />
           <Route path="narxlar" element={<Narxlar />} />
           <Route path="ierarxiya" element={<Ierarxiya />} />
