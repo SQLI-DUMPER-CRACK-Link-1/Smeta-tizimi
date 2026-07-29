@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  useObyektlar, useF2Lokalkalar, useF2FaylYukla, useF2FaylOqi,
-  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar,
+  useObyektlar, useF2Lokalkalar, useF2FaylYukla,
+  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt,
 } from '../../api/hooks';
 import {
   Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
@@ -39,12 +39,18 @@ export function F2Import() {
   const [aktTree, setAktTree] = useState<AktNode[] | null>(null);
   const [natija, setNatija] = useState<F2MoslashNatija | null>(null);
   const [yozishBoshlandi, setYozishBoshlandi] = useState(false);
+  const [fid, setFid] = useState('');
+  const [faylNomi, setFaylNomi] = useState('');
+  const [varaq, setVaraq] = useState('');
+  const [cfg, setCfg] = useState<{kod:number;nom:number;bir:number;norma:number;obyom:number;narx:number;sum:number} | null>(null);
   const faylRef = useRef<HTMLInputElement>(null);
 
   const loklar = useF2Lokalkalar(obyekt);
   const fayllar = useF2Fayllar(obyekt);
   const yukla = useF2FaylYukla();
-  const oqi = useF2FaylOqi();
+  const varaqlar = useF2Varaqlar(fid);
+  const ustun = useF2Ustunlar();
+  const daraxt = useF2Daraxt();
   const moslash = useF2AvtoMoslash();
   const yoz = useF2Yoz();
   const job = useF2JobHolat(yozishBoshlandi);
@@ -72,14 +78,38 @@ export function F2Import() {
   const farq = aktJami - (boglanganJami + dopJami);
   const constOk = Math.abs(farq) < 1;
 
-  /* ---------- 1a. Drive'dagi tayyor fayldan o'qish ---------- */
-  async function driveFayldanOqi(fileId: string, nom: string) {
+  /* ---------- 1a. Faylni tanlash — varaq bosqichiga o'tadi ----------
+   * ⚠️ apiF2FaylOqi IKKI BOSQICHLI. Avval bir marta chaqirib `tree` kutilgani
+   * uchun har doim «fayl o'qilmadi» chiqardi (u `mode:'config'` qaytaradi). */
+  function faylTanla(fileId: string, nom: string) {
+    setFid(fileId);
+    setFaylNomi(nom);
+    setVaraq('');
+    setCfg(null);
+  }
+
+  /** Varaq tanlandi → ustunlarni tahlil qilamiz */
+  async function varaqTanla(v: string) {
+    setVaraq(v);
+    setCfg(null);
     try {
-      const o = await oqi.mutateAsync({ fileId });
-      if (!o.ok || !o.tree) { toast(o.xabar || "Fayl o'qilmadi"); return; }
-      setAktTree(o.tree);
+      const r = await ustun.mutateAsync({ fileId: fid, varaq: v });
+      if (!r.ok) { toast(r.xabar || "Varaq o'qilmadi"); return; }
+      if (r.tree) { setAktTree(r.tree); setQadam(1); return; }   // config kerak emas
+      if (r.cols) setCfg(r.cols);
+      else toast('Ustunlar aniqlanmadi');
+    } catch (e: any) { toast(`Xato: ${e.message}`); }
+  }
+
+  /** Ustunlar tasdiqlandi → daraxt quriladi */
+  async function daraxtQur() {
+    if (!cfg) return;
+    try {
+      const r = await daraxt.mutateAsync({ fileId: fid, varaq, colConfig: cfg });
+      if (!r.ok || !r.tree) { toast(r.xabar || "Daraxt qurilmadi"); return; }
+      setAktTree(r.tree);
       setQadam(1);
-      toast(`${nom}: ${barglar(o.tree).length} ta qator o'qildi`);
+      toast(`${faylNomi}: ${barglar(r.tree).length} ta qator o'qildi`);
     } catch (e: any) { toast(`Xato: ${e.message}`); }
   }
 
@@ -97,11 +127,9 @@ export function F2Import() {
         obyekt, base64, mimeType: f.type || 'application/vnd.ms-excel', filename: f.name, oyNom,
       });
       if (!u.ok || !u.fileId) { toast(u.xabar || 'Fayl yuklanmadi'); return; }
-      const o = await oqi.mutateAsync({ fileId: u.fileId });
-      if (!o.ok || !o.tree) { toast(o.xabar || "Fayl o'qilmadi"); return; }
-      setAktTree(o.tree);
-      setQadam(1);
-      toast(`Oʻqildi: ${barglar(o.tree).length} ta qator`);
+      fayllar.refetch();
+      faylTanla(u.fileId, u.name || f.name);
+      toast('Yuklandi — endi varaqni tanlang');
     } catch (e: any) { toast(`Xato: ${e.message}`); }
   }
 
@@ -207,19 +235,16 @@ export function F2Import() {
                   {(fayllar.data?.fayllar ?? []).map((f) => (
                     <button
                       key={f.id}
-                      onClick={() => driveFayldanOqi(f.id, f.name)}
-                      disabled={oqi.isPending}
-                      className="w-full text-left px-4 py-3 flex items-center gap-3 text-sm
-                                 hover:bg-[var(--surface-2)]/60 transition-colors duration-[120ms]
-                                 cursor-pointer disabled:opacity-50"
+                      onClick={() => faylTanla(f.id, f.name)}
+                      className={`w-full text-left px-4 py-3 flex items-center gap-3 text-sm
+                                 transition-colors duration-[120ms] cursor-pointer
+                                 ${fid === f.id ? 'bg-[var(--accent)]/10' : 'hover:bg-[var(--surface-2)]/60'}`}
                     >
-                      <FileSpreadsheet size={16} className="text-accent flex-shrink-0" />
-                      <span className="text-text truncate flex-1" title={f.name}>{f.name}</span>
-                      {oqi.isPending ? (
-                        <span className="text-[11px] text-text-mute">o'qilmoqda…</span>
-                      ) : (
-                        <span className="text-[11px] text-text-mute">tanlash →</span>
-                      )}
+                      <FileSpreadsheet size={16} className={fid === f.id ? 'text-accent' : 'text-text-dim'} />
+                      <span className={`truncate flex-1 ${fid === f.id ? 'text-accent' : 'text-text'}`} title={f.name}>
+                        {f.name}
+                      </span>
+                      <span className="text-[11px] text-text-mute">{fid === f.id ? '✓ tanlandi' : 'tanlash →'}</span>
                     </button>
                   ))}
                 </div>
@@ -243,7 +268,7 @@ export function F2Import() {
           >
             <Upload size={28} className="mx-auto text-text-mute mb-2" strokeWidth={1.5} />
             <p className="text-text text-sm font-medium">
-              {yukla.isPending || oqi.isPending ? 'Yuklanmoqda…' : 'Faylni bu yerga tashlang'}
+              {yukla.isPending ? 'Yuklanmoqda…' : 'Faylni bu yerga tashlang'}
             </p>
             <p className="text-[12px] text-text-dim mt-1">
               {obyekt ? '.xlsx, .xls, Google Sheets — Drive papkasiga ham saqlanadi' : 'Avval obyektni tanlang'}
@@ -254,6 +279,66 @@ export function F2Import() {
             accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) faylTanlandi(f); e.target.value = ''; }}
           />
+
+          {/* ---- Varaq tanlash ---- */}
+          {fid && (
+            <section className="pt-2 border-t border-border">
+              <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim mb-2">
+                Varaq — «{faylNomi}»
+              </h4>
+              {varaqlar.isLoading ? (
+                <div className="skel h-9 rounded" />
+              ) : !varaqlar.data?.ok ? (
+                <p className="text-sm text-danger">{varaqlar.data?.xabar || "Varaqlar o'qilmadi"}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(varaqlar.data.varaqlar ?? []).map((v) => (
+                    <button
+                      key={v.nom}
+                      onClick={() => varaqTanla(v.nom)}
+                      disabled={ustun.isPending}
+                      className={`h-9 px-3 rounded-[10px] border text-sm transition-colors cursor-pointer
+                        ${varaq === v.nom ? 'bg-accent text-white border-transparent' : 'karta text-text hover:border-[var(--accent)]/50'}
+                        disabled:opacity-50`}
+                    >
+                      {v.nom}
+                      <span className="ml-2 text-[11px] opacity-70 tabular-nums">{v.qatorlar}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {ustun.isPending && <p className="text-sm text-text-dim mt-2">Tuzilishi tahlil qilinmoqda…</p>}
+            </section>
+          )}
+
+          {/* ---- Ustunlarni tasdiqlash ---- */}
+          {cfg && (
+            <section className="pt-2 border-t border-border space-y-3">
+              <div>
+                <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim">Ustunlar</h4>
+                <p className="text-sm text-text-dim mt-1">
+                  Tizim avtomat aniqladi. Noto'g'ri bo'lsa raqamni o'zgartiring (1 = A ustun).
+                </p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {([
+                  ['kod', 'Shifr'], ['nom', 'Nomi'], ['bir', 'Birlik'], ['norma', 'Norma'],
+                  ['obyom', "Hajm"], ['narx', 'Narx'], ['sum', 'Summa'],
+                ] as const).map(([k, nom]) => (
+                  <Maydon key={k} nom={nom}>
+                    <Kiritma
+                      tur="number"
+                      qiymat={cfg[k] ?? 0}
+                      ozgardi={(v) => setCfg({ ...cfg, [k]: Number(v) || 0 })}
+                    />
+                  </Maydon>
+                ))}
+              </div>
+              <Tugma tur="primary" onBos={daraxtQur} band={daraxt.isPending}>
+                {daraxt.isPending ? 'Daraxt qurilmoqda…' : 'Davom etish'}
+              </Tugma>
+            </section>
+          )}
         </div>
       )}
 

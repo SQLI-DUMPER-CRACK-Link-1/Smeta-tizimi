@@ -5,7 +5,7 @@ import { yangiUid } from '../_shared/idempotent';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
-  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator,
+  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator, F2UstunConfig, F2Varaq,
 } from './types';
 
 export function useObyektlar() {
@@ -423,5 +423,37 @@ export function useRazdelYasat() {
   return useMutation({
     mutationFn: (obyekt: string) => gas<{ ok: boolean; xabar: string }>('apiRazdelShYasat', obyekt),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['darajalar'] }),
+  });
+}
+
+/** Fayldagi varaqlar ro'yxati (35_F2Moslash.js) */
+export function useF2Varaqlar(fileId: string) {
+  return useQuery({
+    queryKey: ['f2varaqlar', fileId],
+    queryFn: () => gas<{ ok: boolean; varaqlar?: F2Varaq[]; nom?: string; xabar?: string }>('apiF2Varaqlar', fileId),
+    enabled: !!fileId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * ⚠️ apiF2FaylOqi IKKI BOSQICHLI:
+ *   colConfig = null   → {mode:'config', cols:{...}, preview}  — ustunlarni tahlil qiladi
+ *   colConfig = {...}  → {ok, tree}                            — daraxt quradi
+ * Avval bir marta chaqirib `tree` kutilgani uchun «fayl o'qilmadi» chiqardi.
+ */
+export function useF2Ustunlar() {
+  return useMutation({
+    mutationFn: ({ fileId, varaq }: { fileId: string; varaq: string }) =>
+      gas<F2UstunConfig>('apiF2FaylOqi', fileId, varaq, null),
+  });
+}
+
+export function useF2Daraxt() {
+  return useMutation({
+    mutationFn: ({ fileId, varaq, colConfig }: {
+      fileId: string; varaq: string;
+      colConfig: { kod: number; nom: number; bir: number; norma: number; obyom: number; narx: number; sum: number };
+    }) => gas<F2UstunConfig>('apiF2FaylOqi', fileId, varaq, colConfig),
   });
 }

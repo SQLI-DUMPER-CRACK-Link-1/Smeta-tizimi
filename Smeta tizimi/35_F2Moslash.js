@@ -659,3 +659,29 @@ function f2MoslashSelfTest(){
   Logger.log(xul + '\n' + x.join('\n'));
   return {ok: ok, jami: jami, xulosa: xul, satrlar: x};
 }
+
+/* ============ 5. YORDAMCHI — SAYT UCHUN ============ */
+
+/**
+ * Fayldagi varaqlar ro'yxati. Sayt Ф2 importida foydalanuvchi qaysi varaqni
+ * o'qishni tanlashi uchun kerak (panelda bu ro'yxat boshqa yo'l bilan olinardi).
+ * @param {string} fileId
+ * @return {{ok:boolean, varaqlar?:Array, xabar?:string}}
+ */
+function apiF2Varaqlar(fileId){
+  try{
+    var ss = SpreadsheetApp.openById(fileId);
+    var out = ss.getSheets().map(function(sh){
+      return {
+        nom: sh.getName(),
+        qatorlar: sh.getLastRow(),
+        ustunlar: sh.getLastColumn(),
+        yashirin: sh.isSheetHidden()
+      };
+    }).filter(function(v){ return !v.yashirin && v.qatorlar > 1; });
+    if(!out.length) return {ok:false, xabar:'Файлда тўлдирилган варақ топилмади'};
+    return {ok:true, varaqlar:out, nom:ss.getName()};
+  }catch(e){
+    return {ok:false, xabar:'Файлни очиб бўлмади: '+String(e.message||e)};
+  }
+}

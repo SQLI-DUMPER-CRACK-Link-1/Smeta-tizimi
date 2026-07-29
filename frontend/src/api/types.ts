@@ -208,3 +208,18 @@ export type DarajaQator = {
   d1: string; d2: string; d3: string;
   d4?: string; d5?: string;
 };
+
+/** apiF2FaylOqi ustun-tahlil rejimi (colConfig=null bo'lganda) */
+export type F2UstunConfig = {
+  ok: boolean;
+  mode?: 'config';
+  hasMarker?: boolean;
+  cols?: { kod: number; nom: number; bir: number; norma: number; obyom: number; narx: number; sum: number };
+  maxCol?: number;
+  hdrQator?: number;
+  preview?: { r: number; cells: string[]; mk: string }[];
+  tree?: AktNode[];
+  xabar?: string;
+};
+
+export type F2Varaq = { nom: string; qatorlar: number; ustunlar: number };
