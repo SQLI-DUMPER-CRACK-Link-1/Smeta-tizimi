@@ -5,7 +5,7 @@ import { yangiUid } from '../_shared/idempotent';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
-  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob,
+  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator,
 } from './types';
 
 export function useObyektlar() {
@@ -372,5 +372,47 @@ export function useNarxKat() {
     mutationFn: ({ nom, birlik, yangiKat }: { nom: string; birlik: string; yangiKat: string }) =>
       gas<any>('apiNarxKatSaqla', nom, birlik, yangiKat),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['narxlar'] }),
+  });
+}
+
+/* ============ IERARXIYA (Д1–Д3 tasnifi) ============ */
+
+/** Bitta obyektning barcha razdellari — tasniflanmaganlar ham */
+export function useDarajalar(obyekt: string) {
+  return useQuery({
+    queryKey: ['darajalar', obyekt],
+    queryFn: () => gas<DarajaQator[]>('apiDarajalarOl', obyekt),
+    enabled: !!obyekt,
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Barcha obyektlar bo'yicha TASNIFLANGAN qatorlar — takliflar uchun manba */
+export function useDarajalarBarcha() {
+  return useQuery({
+    queryKey: ['darajalarBarcha'],
+    queryFn: () => gas<{ obyekt: string; rzNom: string; d1: string; d2: string; d3: string }[]>('apiDarajalarBarchaOl'),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+/** Saqlash — LRV_PLUS ga ham avtomat yoziladi */
+export function useDarajalarSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rows: (DarajaQator & { obyekt: string })[]) => gas<string>('apiDarajalarSaqla', rows),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['darajalar'] });
+      qc.invalidateQueries({ queryKey: ['darajalarBarcha'] });
+    },
+  });
+}
+
+/** РАЗДЕЛЛАР reestrini obyekt smetalaridan qayta yig'ish */
+export function useRazdelYasat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (obyekt: string) => gas<{ ok: boolean; xabar: string }>('apiRazdelShYasat', obyekt),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['darajalar'] }),
   });
 }

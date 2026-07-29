@@ -200,3 +200,11 @@ export type NarxlarJavob = {
   objects: string[];
   sanalar: string[];
 };
+
+/* ---------- Ierarxiya / РАЗДЕЛЛАР reestri ---------- */
+export type DarajaQator = {
+  smeta: string;
+  rzNom: string;
+  d1: string; d2: string; d3: string;
+  d4?: string; d5?: string;
+};
