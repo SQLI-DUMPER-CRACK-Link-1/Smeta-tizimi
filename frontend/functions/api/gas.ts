@@ -1,8 +1,20 @@
+import { tekshir } from '../_shared/auth';
+
 export const onRequestPost: PagesFunction<{
-  GAS_URL: string; GAS_TOKEN: string;
+  GAS_URL: string; GAS_TOKEN: string; SESSIYA_KALIT: string;
 }> = async (ctx) => {
   try {
     const { fn, args } = await ctx.request.json<{ fn: string; args?: unknown[] }>();
+
+    const sess = await tekshir(ctx.request.headers.get('Cookie'), ctx.env.SESSIYA_KALIT);
+    if (!sess) {
+      return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });
+    }
+
+    const YOZUVCHI = /^api(HolatSaqla|BlQosh|RsQosh|OyQosh|F2Qolla|F2QollaNavbatga|ShartnomaSaqla|ShartnomaOchir|Lock)/;
+    if (sess.rol === 'boss' && YOZUVCHI.test(fn)) {
+      return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' }, { status: 403 });
+    }
 
     if (!ctx.env.GAS_URL) {
       return new Response(JSON.stringify({ ok: false, error: 'Cloudflare muhitida GAS_URL kiritilmagan (Environment Variables)' }), {
