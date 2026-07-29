@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useHolat, useObyektlar, useLockAcquire, useLockRelease, useLockStatus, useHolatSaqla, useBlQosh, useRsQosh } from '../../api/hooks';
 import type { Edit, TreeNode } from '../../api/types';
 import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
@@ -28,12 +29,17 @@ export function Holat() {
   const [dragSource, setDragSource] = useState<TreeNode | null>(null);
   const [dragTarget, setDragTarget] = useState<TreeNode | null>(null);
 
-  // Auto-select first object if none selected
+  /* Manzildagi obyekt ustuvor: /admin/holat/<nom> — Obyektlar sahifasidan
+   * kartaga bosilganda shu yerga tushadi. Manzil bo'lmasa — birinchisi. */
+  const { id: yoldagiObyekt } = useParams<{ id: string }>();
   useEffect(() => {
-    if (!selectedObyekt && obyektlar?.length) {
-      setSelectedObyekt(obyektlar[0].obyekt);
+    if (yoldagiObyekt) {
+      const nom = decodeURIComponent(yoldagiObyekt);
+      if (nom !== selectedObyekt) setSelectedObyekt(nom);
+      return;
     }
-  }, [obyektlar, selectedObyekt]);
+    if (!selectedObyekt && obyektlar?.length) setSelectedObyekt(obyektlar[0].obyekt);
+  }, [yoldagiObyekt, obyektlar, selectedObyekt]);
 
   const { data: holatData, isLoading: isHolatLoading, error, dataUpdatedAt, isRefetching, refetch } = useHolat(selectedObyekt);
   const { data: lockStatus } = useLockStatus(selectedObyekt);

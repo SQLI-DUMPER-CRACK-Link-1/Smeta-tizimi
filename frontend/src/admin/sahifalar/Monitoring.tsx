@@ -6,6 +6,52 @@ import type { ApiLogYozuv } from '../../api/types';
 /** 10 soniyadan sekin chaqiruv — diqqat talab qiladi (14 §9.2). */
 const SEKIN_MS = 10_000;
 
+/**
+ * API funksiya nomini odam tiliga o'giradi.
+ * Foydalanuvchi `apiPapkaSkan` emas, «Obyektlar ro'yxati o'qildi» ni ko'rishi kerak.
+ */
+const AMAL: Record<string, string> = {
+  apiPapkaSkan: "Obyektlar ro'yxati o'qildi",
+  apiBossData: 'Umumiy hisobot yig‘ildi',
+  apiBossObyekt: 'Obyekt hisoboti o‘qildi',
+  apiHolatOl: 'Smeta daraxti o‘qildi',
+  apiHolatOlLokalka: 'Lokalka smetasi o‘qildi',
+  apiHolatSaqla: 'Smeta o‘zgarishlari saqlandi',
+  apiBlQosh: 'Yangi ish qatori qo‘shildi',
+  apiRsQosh: 'Yangi resurs qo‘shildi',
+  apiOyQosh: 'Yangi oy ustuni yaratildi',
+  apiShartnomaOl: 'Shartnomalar o‘qildi',
+  apiShartnomaSaqla: 'Shartnoma saqlandi',
+  apiShartnomaOchir: 'Shartnoma o‘chirildi',
+  apiShartnomaDashboard: 'Shartnoma jamlanmasi',
+  apiSkladQoldiq: 'Sklad qoldig‘i hisoblandi',
+  apiSkladOl: 'Sklad ro‘yxati o‘qildi',
+  apiTolovOl: 'To‘lovlar o‘qildi',
+  apiF2FaylOqi: 'Ф2 fayli o‘qildi',
+  apiF2AvtoMoslash: 'Ф2 avto-moslashtirish',
+  apiF2QollaNavbatga: 'Ф2 yozuvi navbatga qo‘yildi',
+  apiF2JobHolat: 'Ф2 yozuv holati so‘raldi',
+  apiTitanAi: 'Jarvis AI savoliga javob',
+  apiKirishTekshir: 'Tizimga kirish tekshirildi',
+  apiWebApiSalom: 'Ulanish tekshiruvi',
+  apiWebApiLog: 'Monitoring o‘qildi',
+  apiXatoYoz: 'Xato qayd etildi',
+  apiLockOl: 'Bandlik tekshirildi',
+  apiLockBos: 'Obyekt band qilindi',
+  apiLockOch: 'Obyekt bo‘shatildi',
+};
+
+function amalNomi(fn: string): string {
+  return AMAL[fn] ?? fn.replace(/^api/, '').replace(/([A-Z])/g, ' $1').trim();
+}
+
+const HOLAT_NOMI: Record<string, string> = {
+  OK: 'Bajarildi',
+  XATO: 'Xato',
+  AUTH_FAIL: 'Kirish rad etildi',
+  RUXSAT_YOQ: 'Ruxsat yo‘q',
+};
+
 export function Monitoring() {
   const soragan = useApiLog();
   const yozuvlar = soragan.data ?? [];
@@ -34,15 +80,24 @@ export function Monitoring() {
         );
       },
     },
-    { kalit: 'fn', nom: 'Funksiya', chiz: (y) => <span className="text-text font-mono text-[12px]">{y.fn}</span> },
+    {
+      kalit: 'fn',
+      nom: 'Nima bo‘ldi',
+      chiz: (y) => (
+        <div className="min-w-0">
+          <div className="text-text truncate">{amalNomi(y.fn)}</div>
+          <div className="text-[11px] text-text-mute font-mono truncate">{y.fn}</div>
+        </div>
+      ),
+    },
     {
       kalit: 'h',
-      nom: 'Holat',
-      en: '140px',
+      nom: 'Natija',
+      en: '150px',
       chiz: (y) =>
-        y.h === 'OK' ? <Nishon matn="OK" tur="ok" />
-        : y.h === 'XATO' ? <Nishon matn="Xato" tur="danger" />
-        : <Nishon matn={y.h} tur="warn" />,
+        y.h === 'OK' ? <Nishon matn={HOLAT_NOMI.OK} tur="ok" />
+        : y.h === 'XATO' ? <Nishon matn={HOLAT_NOMI.XATO} tur="danger" />
+        : <Nishon matn={HOLAT_NOMI[y.h] ?? y.h} tur="warn" />,
     },
     {
       kalit: 'ms',
@@ -60,7 +115,7 @@ export function Monitoring() {
   return (
     <Sahifa
       sarlavha="Monitoring"
-      tavsif="Saytdan GAS'ga qilingan oxirgi 50 ta chaqiruv"
+      tavsif="Tizimda oxirgi 50 ta amal — nima bo'ldi, qancha vaqt oldi, xato bormi"
       yangilangan={soragan.dataUpdatedAt}
       onYangila={() => soragan.refetch()}
       yangilanmoqda={soragan.isFetching}

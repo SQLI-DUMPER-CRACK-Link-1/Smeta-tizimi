@@ -15,7 +15,16 @@ export function AiHelper() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'ai', text: 'Salom! Man loyihaning AI yordamchisiman. Istalgan obyekt haqida yoki tizim bo\'yicha savol berishingiz mumkin.' }
+    {
+      id: '1',
+      role: 'ai',
+      text:
+        'Salom! Men **Jarvis** — shu tizimning yordamchisiman.\n\n' +
+        'Aniq raqam bilan javob beraman. Masalan:\n\n' +
+        '- Amfiteatrda bu oy qancha fakt bajarildi?\n' +
+        '- Qaysi obyektda F2 orqada qolgan?\n' +
+        '- Suniy ko\'lda qoldiq qancha?',
+    }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedObyekt, setSelectedObyekt] = useState<string>('');
@@ -60,9 +69,14 @@ export function AiHelper() {
         mode: 'auto'
       });
 
-      // res.reply, res.source bo'lishi kutilmoqda (TitanAI API'siga qarab)
-      const aiText = typeof res === 'string' ? res : (res?.reply || JSON.stringify(res));
-      
+      /* ⚠️ GAS `{intent, text}` qaytaradi — `reply` EMAS. Avval `reply` qidirilgani
+       * uchun topilmay, xom JSON ekranga chiqib qolgan edi («{"intent":"system",…}»
+       * va ko'rinib qolgan `\n` belgilari). Endi to'g'ri maydon o'qiladi. */
+      const aiText =
+        typeof res === 'string'
+          ? res
+          : (res?.text || res?.reply || res?.javob || res?.error || 'Javob bo\'sh keldi');
+
       setMessages(prev => [...prev, { 
         id: (Date.now() + 1).toString(), 
         role: 'ai', 
@@ -93,7 +107,7 @@ export function AiHelper() {
           
           {/* Tooltip */}
           <div className="absolute right-full mr-4 bg-surface-2 border border-border text-white text-sm px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
-            AI Yordamchi
+            Jarvis AI
           </div>
         </button>
       )}
@@ -108,7 +122,7 @@ export function AiHelper() {
                 <Bot size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-white text-sm">Titan AI</h3>
+                <h3 className="font-semibold text-white text-sm">Jarvis AI</h3>
                 <p className="text-xs text-text-dim flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-ok"></span> Online
                 </p>

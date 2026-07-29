@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useObyektlar } from '../../api/hooks';
 import { Card, CardContent } from '../../umumiy/ui/Card';
 import { Skeleton } from '../../umumiy/ui/Skeleton';
@@ -9,6 +10,7 @@ import type { PapkaObyekt } from '../../api/types';
 export function Obyektlar() {
   const { data, isLoading, error, refetch, isRefetching } = useObyektlar();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const navigate = useNavigate();
 
   const groupedData = useMemo(() => {
     if (!data) return [];
@@ -91,8 +93,14 @@ const itemVariants = {
             <motion.div
               key={i}
               variants={itemVariants}
-              className={`transition-all duration-200 ${hasMultiple ? 'cursor-pointer hover:opacity-90' : ''} ${isExpanded && hasMultiple ? 'row-span-2' : ''}`}
-              onClick={() => hasMultiple && toggleGroup(group.baseName)}
+              className={`transition-all duration-200 cursor-pointer hover:opacity-90 ${isExpanded && hasMultiple ? 'row-span-2' : ''}`}
+              /* Bitta lokalkali obyekt → to'g'ridan-to'g'ri smetaga.
+               * Ko'p lokalkali → avval ro'yxat ochiladi, keyin ichidan tanlanadi. */
+              onClick={() =>
+                hasMultiple
+                  ? toggleGroup(group.baseName)
+                  : navigate(`/admin/holat/${encodeURIComponent(group.items[0].obyekt)}`)
+              }
             >
               <Card 
                 className={`h-full ${hasMultiple ? 'hover:border-accent/50' : ''} ${isExpanded && hasMultiple ? 'border-accent/30' : ''}`}
@@ -123,10 +131,20 @@ const itemVariants = {
                     {group.items.map((item, idx) => {
                       const subName = item.obyekt.split(' - ').slice(1).join(' - ') || 'Asosiy smeta';
                       return (
-                        <div key={idx} className="text-sm p-2 rounded-md bg-surface-2/50 border border-border/50 text-text-mute flex items-center gap-2">
+                        <button
+                          key={idx}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/holat/${encodeURIComponent(item.obyekt)}`);
+                          }}
+                          title={`${subName} — smetani ochish`}
+                          className="w-full text-left text-sm p-2 rounded-md bg-surface-2/50 border border-border/50
+                                     text-text-dim hover:text-text hover:border-[var(--accent)]/50
+                                     transition-colors duration-[120ms] flex items-center gap-2 cursor-pointer"
+                        >
                           <FileSpreadsheet size={14} className="text-accent/70 flex-shrink-0" />
-                          <span className="truncate" title={subName}>{subName}</span>
-                        </div>
+                          <span className="truncate">{subName}</span>
+                        </button>
                       );
                     })}
                   </div>
