@@ -1,8 +1,9 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LogOut, Building2, FileSignature, Package, Activity } from 'lucide-react';
+import { LogOut, Building2, FileInput, FileSignature, Package, Activity } from 'lucide-react';
 
 const MENYU = [
   { yol: '/admin/obyektlar',  nom: 'Obyektlar',   Ikonka: Building2 },
+  { yol: '/admin/f2',         nom: 'Ф2 импорт',    Ikonka: FileInput },
   { yol: '/admin/shartnoma',  nom: 'Shartnomalar', Ikonka: FileSignature },
   { yol: '/admin/sklad',      nom: 'Sklad',        Ikonka: Package },
   { yol: '/admin/monitoring', nom: 'Monitoring',   Ikonka: Activity },
