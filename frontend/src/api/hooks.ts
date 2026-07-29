@@ -333,3 +333,14 @@ export function useF2JobHolat(faol: boolean) {
     },
   });
 }
+
+/** Drive'dagi obyekt papkasidagi tayyor Ф2 fayllar */
+export function useF2Fayllar(obyekt: string) {
+  return useQuery({
+    queryKey: ['f2fayllar', obyekt],
+    queryFn: () => gas<{ ok: boolean; fayllar: { id: string; name: string; url?: string }[]; xabar?: string }>(
+      'apiF2FayllarOl', obyekt),
+    enabled: !!obyekt,
+    staleTime: 2 * 60 * 1000,
+  });
+}

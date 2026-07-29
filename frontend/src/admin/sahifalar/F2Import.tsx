@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla, useF2FaylOqi,
-  useF2AvtoMoslash, useF2Yoz, useF2JobHolat,
+  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar,
 } from '../../api/hooks';
 import {
   Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
@@ -42,6 +42,7 @@ export function F2Import() {
   const faylRef = useRef<HTMLInputElement>(null);
 
   const loklar = useF2Lokalkalar(obyekt);
+  const fayllar = useF2Fayllar(obyekt);
   const yukla = useF2FaylYukla();
   const oqi = useF2FaylOqi();
   const moslash = useF2AvtoMoslash();
@@ -71,7 +72,18 @@ export function F2Import() {
   const farq = aktJami - (boglanganJami + dopJami);
   const constOk = Math.abs(farq) < 1;
 
-  /* ---------- 1. Fayl ---------- */
+  /* ---------- 1a. Drive'dagi tayyor fayldan o'qish ---------- */
+  async function driveFayldanOqi(fileId: string, nom: string) {
+    try {
+      const o = await oqi.mutateAsync({ fileId });
+      if (!o.ok || !o.tree) { toast(o.xabar || "Fayl o'qilmadi"); return; }
+      setAktTree(o.tree);
+      setQadam(1);
+      toast(`${nom}: ${barglar(o.tree).length} ta qator o'qildi`);
+    } catch (e: any) { toast(`Xato: ${e.message}`); }
+  }
+
+  /* ---------- 1b. Kompyuterdan yuklash ---------- */
   async function faylTanlandi(f: File) {
     if (!obyekt) { toast('Avval obyektni tanlang'); return; }
     try {
@@ -167,19 +179,74 @@ export function F2Import() {
             </Maydon>
           )}
 
+          {/* ⭐ Drive'dagi TAYYOR Ф2 fayllar — asosiy yo'l.
+              Har safar kompyuterdan tashlash shart emas. */}
+          {obyekt && (
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim">
+                  Drive papkasidagi Ф2 fayllar
+                </h4>
+                {fayllar.isFetching && <span className="text-[11px] text-text-mute">qidirilmoqda…</span>}
+              </div>
+
+              {fayllar.isLoading ? (
+                <div className="karta divide-y divide-border">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="px-4 py-3"><div className="skel h-3 rounded w-2/3" /></div>
+                  ))}
+                </div>
+              ) : (fayllar.data?.fayllar ?? []).length === 0 ? (
+                <div className="karta p-4 text-sm text-text-dim">
+                  Bu obyekt papkasida Ф2 fayl topilmadi.
+                  {fayllar.data?.xabar && <span className="text-text-mute"> ({fayllar.data.xabar})</span>}
+                  <span className="block mt-1">Pastdan kompyuterdan yuklashingiz mumkin.</span>
+                </div>
+              ) : (
+                <div className="karta divide-y divide-border max-h-64 overflow-y-auto">
+                  {(fayllar.data?.fayllar ?? []).map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => driveFayldanOqi(f.id, f.name)}
+                      disabled={oqi.isPending}
+                      className="w-full text-left px-4 py-3 flex items-center gap-3 text-sm
+                                 hover:bg-[var(--surface-2)]/60 transition-colors duration-[120ms]
+                                 cursor-pointer disabled:opacity-50"
+                    >
+                      <FileSpreadsheet size={16} className="text-accent flex-shrink-0" />
+                      <span className="text-text truncate flex-1" title={f.name}>{f.name}</span>
+                      {oqi.isPending ? (
+                        <span className="text-[11px] text-text-mute">o'qilmoqda…</span>
+                      ) : (
+                        <span className="text-[11px] text-text-mute">tanlash →</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Muqobil yo'l — kompyuterdan */}
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[11px] uppercase tracking-[0.04em] text-text-mute">yoki kompyuterdan</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
           <div
             onClick={() => obyekt && faylRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) faylTanlandi(f); }}
-            className={`rounded-[10px] border-2 border-dashed p-10 text-center transition-colors
+            className={`rounded-[10px] border-2 border-dashed p-8 text-center transition-colors
               ${obyekt ? 'border-border hover:border-[var(--accent)]/60 cursor-pointer' : 'border-border opacity-50 cursor-not-allowed'}`}
           >
-            <Upload size={32} className="mx-auto text-text-mute mb-3" strokeWidth={1.5} />
-            <p className="text-text font-medium">
+            <Upload size={28} className="mx-auto text-text-mute mb-2" strokeWidth={1.5} />
+            <p className="text-text text-sm font-medium">
               {yukla.isPending || oqi.isPending ? 'Yuklanmoqda…' : 'Faylni bu yerga tashlang'}
             </p>
-            <p className="text-sm text-text-dim mt-1">
-              {obyekt ? 'yoki bosing — .xlsx, .xls, Google Sheets' : 'Avval obyektni tanlang'}
+            <p className="text-[12px] text-text-dim mt-1">
+              {obyekt ? '.xlsx, .xls, Google Sheets — Drive papkasiga ham saqlanadi' : 'Avval obyektni tanlang'}
             </p>
           </div>
           <input
