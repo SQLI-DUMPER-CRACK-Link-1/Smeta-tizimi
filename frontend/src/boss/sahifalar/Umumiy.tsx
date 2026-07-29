@@ -3,7 +3,7 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity } from 'lucide-react';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X } from 'lucide-react';
 
 // --- AURORA BACKGROUND (Kuchaytirilgan, yorug'lashtirilgan) ---
 function AuroraBackground({ children }: { children: React.ReactNode }) {
@@ -21,15 +21,18 @@ function AuroraBackground({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="relative w-full h-full min-h-screen bg-slate-900 overflow-hidden text-white font-sans selection:bg-accent/30">
+    <div className="relative w-full h-full min-h-screen bg-[#020617] overflow-hidden text-white font-sans selection:bg-accent/30">
+      {/* 3D Background Image */}
+      <div className="absolute inset-0 z-0 bg-[url('/bg-3d.jpg')] bg-cover bg-center opacity-40 mix-blend-screen pointer-events-none" />
+
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <motion.div
           animate={{ x: `${mousePosition.x}%`, y: `${mousePosition.y}%` }}
           transition={{ type: 'spring', damping: 80, stiffness: 40, mass: 1 }}
-          className="absolute -top-[75%] -left-[75%] w-[150vw] h-[150vw] rounded-full bg-accent/30 blur-[150px] mix-blend-screen opacity-70"
+          className="absolute -top-[75%] -left-[75%] w-[150vw] h-[150vw] rounded-full bg-accent/20 blur-[150px] mix-blend-screen opacity-50"
         />
         <div className="absolute top-[10%] right-[5%] w-[70vw] h-[70vw] rounded-full bg-indigo-500/20 blur-[180px] mix-blend-screen animate-pulse duration-[8000ms]" />
-        <div className="absolute -bottom-[20%] left-[10%] w-[80vw] h-[80vw] rounded-full bg-emerald-500/15 blur-[160px] mix-blend-screen" />
+        <div className="absolute -bottom-[20%] left-[10%] w-[80vw] h-[80vw] rounded-full bg-emerald-500/10 blur-[160px] mix-blend-screen" />
       </div>
 
       <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.05] pointer-events-none" />
@@ -41,9 +44,9 @@ function AuroraBackground({ children }: { children: React.ReactNode }) {
   );
 }
 
-function GlassCard({ children, className = '' }: { children: React.ReactNode, className?: string }) {
+function GlassCard({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
   return (
-    <div className={`bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl overflow-hidden ${className}`}>
+    <div onClick={onClick} className={`bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl overflow-hidden ${className}`}>
       {children}
     </div>
   );
@@ -297,8 +300,66 @@ function ShartnomaRow({ shartnoma }: { shartnoma: any }) {
   );
 }
 
+// --- KPI MODAL (Tafsilotlar) ---
+function KpiModal({ kpi, onClose }: { kpi: any, onClose: () => void }) {
+  if (!kpi) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+      <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative bg-[#0F172A]/90 border border-white/20 shadow-2xl rounded-3xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden z-10 backdrop-blur-2xl">
+        
+        {/* Glow effect in modal */}
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-accent/20 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5 relative z-10">
+           <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+             <div className={`p-2 rounded-xl bg-white/5 ${kpi.color}`}>
+               <kpi.icon size={24} />
+             </div>
+             {kpi.nom} <span className="text-sm font-normal text-slate-400 ml-2">({kpi.items.length} ta shartnoma)</span>
+           </h3>
+           <button onClick={onClose} className="text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-red-500/80 hover:text-white rounded-xl p-2 shadow-sm"><X size={20} /></button>
+        </div>
+        
+        <div className="p-0 overflow-y-auto flex-1 scrollbar-thin relative z-10">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-black/40 sticky top-0 backdrop-blur-xl shadow-sm z-20">
+              <tr>
+                 <th className="py-4 px-6 text-xs text-white/50 font-bold uppercase tracking-wider">Obyekt / Shartnoma Nomi</th>
+                 <th className="py-4 px-6 text-xs text-white/50 font-bold uppercase tracking-wider text-right">Qiymat</th>
+                 <th className="py-4 px-6 text-xs text-white/50 font-bold uppercase tracking-wider text-right">Ulush</th>
+              </tr>
+            </thead>
+            <tbody>
+              {kpi.items.sort((a:any, b:any) => b.val - a.val).map((item:any, idx:number) => (
+                <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.04] transition-colors">
+                  <td className="py-4 px-6 font-medium text-white/80">{item.nom}</td>
+                  <td className={`py-4 px-6 text-right font-mono font-bold ${kpi.color}`}><FmtN val={item.val} /></td>
+                  <td className="py-4 px-6 text-right">
+                     <div className="flex items-center gap-2 justify-end">
+                       <div className="w-16 h-1.5 bg-black/50 rounded-full overflow-hidden shadow-inner">
+                         <div className={`h-full ${kpi.color.replace('text-', 'bg-')}`} style={{ width: `${kpi.total > 0 ? (item.val / kpi.total) * 100 : 0}%` }} />
+                       </div>
+                       <span className="text-xs text-white/40 font-mono w-10 text-right">{kpi.total > 0 ? ((item.val / kpi.total) * 100).toFixed(1) : 0}%</span>
+                     </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-6 bg-black/60 border-t border-white/10 flex justify-between items-center relative z-10 backdrop-blur-xl">
+          <span className="text-slate-400 font-bold tracking-widest uppercase text-sm">Jami Summa:</span>
+          <span className={`text-3xl font-mono font-black ${kpi.color} drop-shadow-md`}><FmtN val={kpi.total} /></span>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Umumiy() {
   const { data, isLoading, error, refetch, isFetching, dataUpdatedAt } = useBossData();
+  const [activeKpi, setActiveKpi] = useState<any>(null);
 
   if (isLoading) {
     return (
@@ -363,13 +424,19 @@ export default function Umumiy() {
         {/* Top KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {[
-            { nom: "Smeta Jami", qiymat: data.jami.smeta, pct: null, color: "text-white", icon: Wallet, desc: "Barcha obyektlar yig'indisi" },
-            { nom: "Bajarilgan (Fakt)", qiymat: data.jami.fakt, pct: data.jami.progress, color: "text-ok", bg: "bg-ok", icon: TrendingUp, desc: "Amalda qilingan ishlar" },
-            { nom: "Tasdiqlangan (F2)", qiymat: data.jami.f2, pct: data.jami.f2pct, color: "text-t-rs", bg: "bg-t-rs", icon: CheckCircle, desc: "Buyurtmachi tasdiqlagan" },
-            { nom: "Qoldiq", qiymat: data.jami.qoldiq, pct: null, color: "text-slate-300", icon: Clock, desc: "Smetadan qolgan miqdor" },
+            { id: "smeta", nom: "Smeta Jami", qiymat: data.jami.smeta, pct: null, color: "text-white", icon: Wallet, desc: "Barcha obyektlar yig'indisi" },
+            { id: "fakt", nom: "Bajarilgan (Fakt)", qiymat: data.jami.fakt, pct: data.jami.progress, color: "text-ok", bg: "bg-ok", icon: TrendingUp, desc: "Amalda qilingan ishlar" },
+            { id: "f2", nom: "Tasdiqlangan (F2)", qiymat: data.jami.f2, pct: data.jami.f2pct, color: "text-t-rs", bg: "bg-t-rs", icon: CheckCircle, desc: "Buyurtmachi tasdiqlagan" },
+            { id: "qoldiq", nom: "Qoldiq", qiymat: data.jami.qoldiq, pct: null, color: "text-slate-300", icon: Clock, desc: "Smetadan qolgan miqdor" },
           ].map((kpi, idx) => (
             <motion.div key={`kpi1-${idx}`} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1, duration: 0.6, type: "spring" }}>
-              <GlassCard className="p-6 relative group cursor-default hover:bg-white/10 transition-colors border-white/10">
+              <GlassCard 
+                className="p-6 relative group cursor-pointer hover:bg-white/10 transition-colors border-white/10 ring-0 hover:ring-2 hover:ring-accent/50 transform hover:-translate-y-1 active:translate-y-0 duration-200"
+                onClick={() => setActiveKpi({
+                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat,
+                  items: data.objects.filter(o => (o as any)[kpi.id] > 0).map(o => ({ nom: o.nom, val: (o as any)[kpi.id] }))
+                })}
+              >
                 <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-colors" />
                 <h3 className="text-slate-400 font-semibold flex items-center justify-between mb-3 tracking-wide text-sm uppercase">
                   <div className="flex items-center gap-2">
@@ -399,17 +466,23 @@ export default function Umumiy() {
         {/* Second Row KPIs: Moliya va Xarajatlar */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           {[
-            { nom: "Tushum (To'langan)", qiymat: data.jami.tolangan, color: "text-emerald-400", icon: ArrowDownToLine, border: "border-emerald-500/30", bg: "bg-emerald-500/5" },
-            { nom: "Debitor (Qarz)", qiymat: data.jami.debitor, color: "text-red-400", icon: ArrowUpFromLine, border: "border-red-500/30", bg: "bg-red-500/5" },
-            { nom: "Avans", qiymat: data.jami.avans, color: "text-amber-400", icon: Layers, border: "border-amber-500/30", bg: "bg-amber-500/5" },
-            { nom: "Material", qiymat: data.jami.mat, color: "text-t-mat", icon: Wrench, border: "border-white/10", bg: "bg-white/5" },
-            { nom: "Ish Haqi (Oylik)", qiymat: data.jami.chel, color: "text-blue-400", icon: HardHat, border: "border-white/10", bg: "bg-white/5" },
-            { nom: "Texnika (Mashina)", qiymat: data.jami.mash, color: "text-purple-400", icon: Truck, border: "border-white/10", bg: "bg-white/5" },
+            { id: "tolangan", nom: "Tushum (To'langan)", qiymat: data.jami.tolangan, color: "text-emerald-400", icon: ArrowDownToLine, border: "border-emerald-500/30", bg: "bg-emerald-500/5" },
+            { id: "debitor", nom: "Debitor (Qarz)", qiymat: data.jami.debitor, color: "text-red-400", icon: ArrowUpFromLine, border: "border-red-500/30", bg: "bg-red-500/5" },
+            { id: "avans", nom: "Avans", qiymat: data.jami.avans, color: "text-amber-400", icon: Layers, border: "border-amber-500/30", bg: "bg-amber-500/5" },
+            { id: "mat", nom: "Material", qiymat: data.jami.mat, color: "text-t-mat", icon: Wrench, border: "border-white/10", bg: "bg-white/5" },
+            { id: "chel", nom: "Ish Haqi (Oylik)", qiymat: data.jami.chel, color: "text-blue-400", icon: HardHat, border: "border-white/10", bg: "bg-white/5" },
+            { id: "mash", nom: "Texnika (Mashina)", qiymat: data.jami.mash, color: "text-purple-400", icon: Truck, border: "border-white/10", bg: "bg-white/5" },
           ].map((kpi, idx) => (
             <motion.div key={`kpi2-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + idx * 0.05, duration: 0.4 }}>
-              <div className={`p-4 rounded-xl border ${kpi.border} ${kpi.bg} backdrop-blur-md flex flex-col items-center text-center group hover:bg-white/10 transition-colors`}>
-                <kpi.icon size={20} className={`${kpi.color} mb-2 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all`} />
-                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{kpi.nom}</div>
+              <div 
+                className={`p-4 rounded-xl border ${kpi.border} ${kpi.bg} backdrop-blur-md flex flex-col items-center text-center group cursor-pointer hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transform hover:-translate-y-1 active:translate-y-0 transition-all duration-200`}
+                onClick={() => setActiveKpi({
+                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat,
+                  items: data.objects.filter(o => (o as any)[kpi.id] > 0).map(o => ({ nom: o.nom, val: (o as any)[kpi.id] }))
+                })}
+              >
+                <kpi.icon size={20} className={`${kpi.color} mb-2 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`} />
+                <div className="text-[11px] font-bold text-slate-300 uppercase tracking-widest mb-1 group-hover:text-white transition-colors">{kpi.nom}</div>
                 <div className={`text-lg font-mono font-bold ${kpi.color}`}><FmtN val={kpi.qiymat} qisqa /></div>
               </div>
             </motion.div>
@@ -450,6 +523,11 @@ export default function Umumiy() {
             </table>
           </GlassCard>
         </motion.div>
+
+        {/* Modal Window for Clicked KPIs */}
+        <AnimatePresence>
+          {activeKpi && <KpiModal kpi={activeKpi} onClose={() => setActiveKpi(null)} />}
+        </AnimatePresence>
 
       </div>
     </AuroraBackground>
