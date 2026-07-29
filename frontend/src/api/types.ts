@@ -16,6 +16,9 @@ export type TreeNode = {
   qavat3?: string;
   zamena?: boolean;
   qoshimcha?: boolean;
+  varaq?: string;
+  row?: number;
+  oylar?: Record<string, number>;
   children: TreeNode[];
 };
 
@@ -53,3 +56,37 @@ export interface BossData {
   oylar: unknown[];
   sana: string;
 }
+
+export type Edit = {
+  varaq: string;
+  row: number;
+  fakt?: number;
+  oylar?: Record<string, number>;
+};
+
+export type BlQosh = {
+  obyekt: string;
+  varaq: string;
+  afterRow: number;
+  nom: string;
+  kod?: string;
+  birlik?: string;
+  hajm: number;
+  tur?: 'bl' | 'mat' | 'ob';
+  zamena?: boolean;
+  droppedOnRow?: number;
+  f?: number;
+};
+
+export type RsQosh = {
+  obyekt: string;
+  varaq: string;
+  blRow: number;
+  nom: string;
+  kod?: string;
+  birlik?: string;
+  narx?: number;
+  norm?: number;
+  kat?: string;
+  f?: number;
+};

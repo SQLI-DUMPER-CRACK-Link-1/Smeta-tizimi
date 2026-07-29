@@ -1,13 +1,23 @@
 import { useState, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { TreeNode } from '../../api/types';
+import type { EditState } from '../../pages/Holat';
 import { flattenTree, getAllKeys } from './utils';
 import { formatSum } from '../../lib/format';
 import { Badge } from '../ui/Badge';
 import { ChevronRight, ChevronDown, RefreshCcw, Plus } from 'lucide-react';
 
-export function SmetaTree({ data }: { data: TreeNode[] }) {
+interface SmetaTreeProps {
+  data: TreeNode[];
+  isEditMode?: boolean;
+  edits?: Record<string, EditState>;
+  setEdits?: React.Dispatch<React.SetStateAction<Record<string, EditState>>>;
+  onNodeDrop?: (source: TreeNode, target?: TreeNode) => void;
+}
+
+export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
+  const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
 
   const flatNodes = useMemo(() => flattenTree(data, expandedMap), [data, expandedMap]);
@@ -48,7 +58,21 @@ export function SmetaTree({ data }: { data: TreeNode[] }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto" ref={parentRef}>
+      <div 
+        className="flex-1 overflow-auto" 
+        ref={parentRef}
+        onDragOver={(e) => {
+          if (!isEditMode) return;
+          e.preventDefault();
+        }}
+        onDrop={(e) => {
+          if (!isEditMode || !draggedNode) return;
+          e.preventDefault();
+          // Drop on empty space (qoshimcha)
+          if (onNodeDrop) onNodeDrop(draggedNode);
+          setDraggedNode(null);
+        }}
+      >
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -59,11 +83,32 @@ export function SmetaTree({ data }: { data: TreeNode[] }) {
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const row = flatNodes[virtualRow.index];
             const node = row.node;
+            const isEdited = !!edits[node.uid];
+            const currentFakt = edits[node.uid]?.edit.fakt ?? node.fakt;
+            const isOverLimit = currentFakt > node.smeta;
             
             return (
               <div
                 key={virtualRow.index}
-                className="absolute top-0 left-0 w-full flex items-center border-b border-border/50 hover:bg-surface-2/30 transition-colors text-sm group"
+                draggable={isEditMode}
+                onDragStart={(e) => {
+                  if (!isEditMode) return;
+                  setDraggedNode(node);
+                  e.dataTransfer.effectAllowed = 'copyMove';
+                }}
+                onDragOver={(e) => {
+                  if (!isEditMode) return;
+                  e.preventDefault();
+                  e.stopPropagation(); // Prevent bubbling to empty space drop
+                }}
+                onDrop={(e) => {
+                  if (!isEditMode || !draggedNode) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (onNodeDrop) onNodeDrop(draggedNode, node);
+                  setDraggedNode(null);
+                }}
+                className={`absolute top-0 left-0 w-full flex items-center border-b border-border/50 hover:bg-surface-2/30 transition-colors text-sm group ${isEdited ? 'shadow-[inset_3px_0_0_var(--warn)] bg-warn/5' : ''}`}
                 style={{
                   height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start}px)`,
@@ -107,7 +152,38 @@ export function SmetaTree({ data }: { data: TreeNode[] }) {
                 {/* Data Columns */}
                 <div className="flex items-center h-full pr-4 flex-shrink-0 font-medium tabular-nums text-xs">
                   <div className="w-24 text-right text-text-dim">{formatSum(node.smeta)}</div>
-                  <div className="w-24 text-right text-ok">{formatSum(node.fakt)}</div>
+                  <div className="w-24 text-right">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={currentFakt}
+                        onChange={(e) => {
+                          const valStr = e.target.value.replace(/,/g, '.');
+                          const val = Number(valStr);
+                          if (isNaN(val)) return;
+                          
+                          if (setEdits && node.varaq && node.row) {
+                            setEdits(prev => ({
+                              ...prev,
+                              [node.uid]: {
+                                node,
+                                edit: {
+                                  ...(prev[node.uid]?.edit || {}),
+                                  varaq: node.varaq!,
+                                  row: node.row!,
+                                  fakt: val
+                                }
+                              }
+                            }));
+                          }
+                        }}
+                        className={`w-full text-right bg-surface-2 border rounded px-2 py-1 text-sm focus:outline-none focus:border-accent ${isOverLimit ? 'border-danger text-danger' : 'border-border text-white'}`}
+                        title={isOverLimit ? `Smetadan oshiq: ${currentFakt} > ${node.smeta}` : ''}
+                      />
+                    ) : (
+                      <span className={isOverLimit ? 'text-danger' : 'text-ok'}>{formatSum(node.fakt)}</span>
+                    )}
+                  </div>
                   <div className="w-24 text-right text-text-dim">{formatSum(node.narx)}</div>
                   <div className="w-32 text-right text-white">{formatSum(node.summa)}</div>
                   <div className="w-24 text-right text-t-rs">{formatSum(node.f2ol)}</div>
