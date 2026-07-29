@@ -3,7 +3,7 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText } from 'lucide-react';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers } from 'lucide-react';
 
 // --- AURORA BACKGROUND (Kuchaytirilgan, yorug'lashtirilgan) ---
 function AuroraBackground({ children }: { children: React.ReactNode }) {
@@ -318,43 +318,57 @@ export default function Umumiy() {
         </header>
 
         {/* Top KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {[
-            { nom: "Smeta Jami", qiymat: data.jami.smeta, pct: null, color: "text-white", icon: Wallet },
-            { nom: "Bajarilgan (Fakt)", qiymat: data.jami.fakt, pct: data.jami.progress, color: "text-ok", bg: "bg-ok", icon: TrendingUp },
-            { nom: "Tasdiqlangan (F2)", qiymat: data.jami.f2, pct: data.jami.f2pct, color: "text-t-rs", bg: "bg-t-rs", icon: CheckCircle },
-            { nom: "Qoldiq", qiymat: data.jami.qoldiq, pct: null, color: "text-slate-300", icon: Clock },
+            { nom: "Smeta Jami", qiymat: data.jami.smeta, pct: null, color: "text-white", icon: Wallet, desc: "Barcha obyektlar yig'indisi" },
+            { nom: "Bajarilgan (Fakt)", qiymat: data.jami.fakt, pct: data.jami.progress, color: "text-ok", bg: "bg-ok", icon: TrendingUp, desc: "Amalda qilingan ishlar" },
+            { nom: "Tasdiqlangan (F2)", qiymat: data.jami.f2, pct: data.jami.f2pct, color: "text-t-rs", bg: "bg-t-rs", icon: CheckCircle, desc: "Buyurtmachi tasdiqlagan" },
+            { nom: "Qoldiq", qiymat: data.jami.qoldiq, pct: null, color: "text-slate-300", icon: Clock, desc: "Smetadan qolgan miqdor" },
           ].map((kpi, idx) => (
-            <motion.div 
-              key={idx}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1, duration: 0.6, type: "spring" }}
-            >
+            <motion.div key={`kpi1-${idx}`} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1, duration: 0.6, type: "spring" }}>
               <GlassCard className="p-6 relative group cursor-default hover:bg-white/10 transition-colors border-white/10">
                 <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-colors" />
-                
-                <h3 className="text-slate-400 font-semibold flex items-center gap-2 mb-3 tracking-wide text-sm uppercase">
-                  <kpi.icon size={18} className={kpi.color} />
-                  {kpi.nom}
+                <h3 className="text-slate-400 font-semibold flex items-center justify-between mb-3 tracking-wide text-sm uppercase">
+                  <div className="flex items-center gap-2">
+                    <kpi.icon size={18} className={kpi.color} />
+                    {kpi.nom}
+                  </div>
+                  <div title={kpi.desc} className="cursor-help">
+                    <Info size={14} className="text-slate-600 group-hover:text-slate-400 transition-colors" />
+                  </div>
                 </h3>
-                
                 <div className={`text-3xl font-bold tracking-tight font-mono ${kpi.color}`}>
                   <FmtN val={kpi.qiymat} />
                 </div>
-                
                 {kpi.pct !== null && (
                   <div className="mt-5 flex items-center gap-3">
                     <div className="flex-1 h-1.5 bg-black/50 rounded-full overflow-hidden shadow-inner">
-                      <motion.div 
-                        initial={{ width: 0 }} animate={{ width: `${Math.min(kpi.pct, 100)}%` }} transition={{ duration: 1, delay: 0.5 }}
-                        className={`h-full ${kpi.bg} rounded-full`} 
-                      />
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(kpi.pct, 100)}%` }} transition={{ duration: 1, delay: 0.5 }} className={`h-full ${kpi.bg} rounded-full`} />
                     </div>
                     <span className={`text-sm font-bold ${kpi.color}`}>{formatPercent(kpi.pct)}</span>
                   </div>
                 )}
               </GlassCard>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Second Row KPIs: Moliya va Xarajatlar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          {[
+            { nom: "Tushum (To'langan)", qiymat: data.jami.tolangan, color: "text-emerald-400", icon: ArrowDownToLine, border: "border-emerald-500/30", bg: "bg-emerald-500/5" },
+            { nom: "Debitor (Qarz)", qiymat: data.jami.debitor, color: "text-red-400", icon: ArrowUpFromLine, border: "border-red-500/30", bg: "bg-red-500/5" },
+            { nom: "Avans", qiymat: data.jami.avans, color: "text-amber-400", icon: Layers, border: "border-amber-500/30", bg: "bg-amber-500/5" },
+            { nom: "Material", qiymat: data.jami.mat, color: "text-t-mat", icon: Wrench, border: "border-white/10", bg: "bg-white/5" },
+            { nom: "Ish Haqi (Oylik)", qiymat: data.jami.chel, color: "text-blue-400", icon: HardHat, border: "border-white/10", bg: "bg-white/5" },
+            { nom: "Texnika (Mashina)", qiymat: data.jami.mash, color: "text-purple-400", icon: Truck, border: "border-white/10", bg: "bg-white/5" },
+          ].map((kpi, idx) => (
+            <motion.div key={`kpi2-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + idx * 0.05, duration: 0.4 }}>
+              <div className={`p-4 rounded-xl border ${kpi.border} ${kpi.bg} backdrop-blur-md flex flex-col items-center text-center group hover:bg-white/10 transition-colors`}>
+                <kpi.icon size={20} className={`${kpi.color} mb-2 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all`} />
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{kpi.nom}</div>
+                <div className={`text-lg font-mono font-bold ${kpi.color}`}><FmtN val={kpi.qiymat} qisqa /></div>
+              </div>
             </motion.div>
           ))}
         </div>
