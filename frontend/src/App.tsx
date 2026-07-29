@@ -47,6 +47,7 @@ export default function App() {
           </Suspense>
         }>
           <Route index element={<Umumiy />} />
+          <Route path="holat/:id" element={<Holat />} />
         </Route>
 
         {/* Fallback */}

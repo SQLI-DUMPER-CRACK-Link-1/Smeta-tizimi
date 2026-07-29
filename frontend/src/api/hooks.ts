@@ -255,3 +255,20 @@ export function useShartnomaBog() {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+/** Skladga kirim (prixod) yoki chiqim (rasxod) yozish — 86_Sklad.js */
+export function useSkladYoz() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ data, operatsiya }: {
+      data: {
+        nomi: string; birligi: string; obyomi: number;
+        turi?: string; sanasi?: string;
+        postavshik?: string; qabul_qiluvchi?: string;
+        qabul_turi?: 'prarab' | 'subpudrat' | 'blok';
+      };
+      operatsiya: 'prixod' | 'rasxod';
+    }) => gas<{ ok: boolean; xabar?: string; error?: string }>('apiSkladgaYozish', data, operatsiya),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['skladQoldiq'] }); },
+  });
+}
