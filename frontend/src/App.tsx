@@ -9,6 +9,11 @@ const BossShell = lazy(() => import('./boss/BossShell'));
 // Admin pages
 import { Obyektlar } from './admin/sahifalar/Obyektlar';
 import { Holat } from './admin/sahifalar/Holat';
+import { Shartnoma } from './admin/sahifalar/Shartnoma';
+import { Sklad } from './admin/sahifalar/Sklad';
+import { Monitoring } from './admin/sahifalar/Monitoring';
+import { CommandPalette } from './umumiy/ui/CommandPalette';
+import { AiHelper } from './umumiy/ui/AiHelper';
 
 // Boss pages
 const Umumiy = lazy(() => import('./boss/sahifalar/Umumiy'));
@@ -16,6 +21,8 @@ const Umumiy = lazy(() => import('./boss/sahifalar/Umumiy'));
 export default function App() {
   return (
     <BrowserRouter>
+      <CommandPalette />
+      <AiHelper />
       <Routes>
         <Route path="/" element={<KirishSahifa />} />
         
@@ -28,6 +35,9 @@ export default function App() {
           <Route index element={<Navigate to="/admin/obyektlar" replace />} />
           <Route path="obyektlar" element={<Obyektlar />} />
           <Route path="holat/:id" element={<Holat />} />
+          <Route path="shartnoma" element={<Shartnoma />} />
+          <Route path="sklad" element={<Sklad />} />
+          <Route path="monitoring" element={<Monitoring />} />
         </Route>
 
         {/* Boss shell and routes */}

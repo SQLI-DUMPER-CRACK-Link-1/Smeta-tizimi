@@ -1,7 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gas } from './client';
 import { navbatgaQoshish } from '../_shared/navbat';
-import type { BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh } from './types';
+import { yangiUid } from '../_shared/idempotent';
+import type {
+  BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
+  Shartnoma, SkladQoldiq, ApiLogYozuv,
+} from './types';
 
 export function useObyektlar() {
   return useQuery({
@@ -56,15 +60,32 @@ export function useHolatSaqla(obyekt: string) {
   return useMutation({
     mutationFn: async (edits: Edit[]) => {
       // Navbatga qo'shamiz (Faza 3 offline qatlam)
-      const f2Uid = edits[0]?.varaq || 'saqlash'; // vaqtincha uid uchun
-      await navbatgaQoshish('apiHolatSaqla', [obyekt, edits], f2Uid + Date.now());
+      const oldingi = qc.getQueryData<{ tree: TreeNode[], lokalkalar: string[] }>(['holat', obyekt, false]);
+      
+      const orqaga = edits.map(e => {
+        let eskiFakt: number | undefined;
+        const qidir = (nodes: TreeNode[]) => {
+          for (const n of nodes) {
+            if (n.varaq === e.varaq && n.row === e.row) {
+              eskiFakt = n.fakt;
+              return;
+            }
+            if (n.children) qidir(n.children);
+          }
+        };
+        if (oldingi?.tree) qidir(oldingi.tree);
+        return { ...e, fakt: eskiFakt }; 
+      });
+
+      const f2Uid = edits[0]?.varaq || 'saqlash'; 
+      await navbatgaQoshish('apiHolatSaqla', [obyekt, edits], f2Uid + Date.now(), orqaga);
       return { jami: edits.length, qatorlar: edits.length };
     },
     onMutate: async (edits) => {
       await qc.cancelQueries({ queryKey: ['holat', obyekt] });
       const oldingi = qc.getQueryData<{ tree: TreeNode[], lokalkalar: string[] }>(['holat', obyekt, false]);
       
-      // Update cache locally for instant UI update
+      // Optimistik UI
       if (oldingi && oldingi.tree) {
         const newTree = JSON.parse(JSON.stringify(oldingi.tree));
         
@@ -99,18 +120,110 @@ export function useHolatSaqla(obyekt: string) {
 
 export function useBlQosh() {
   return useMutation({
-    mutationFn: (params: BlQosh) => gas<number>('apiBlQosh', params)
+    mutationFn: (params: BlQosh) => {
+      const payload = { ...params, f2Uid: params.f2Uid || yangiUid() };
+      return gas<number>('apiBlQosh', payload);
+    }
   });
 }
 
 export function useRsQosh() {
   return useMutation({
-    mutationFn: (params: RsQosh) => gas<number>('apiRsQosh', params)
+    mutationFn: (params: RsQosh) => {
+      const payload = { ...params, f2Uid: params.f2Uid || yangiUid() };
+      return gas<number>('apiRsQosh', payload);
+    }
   });
 }
 
 export function useOyQosh() {
   return useMutation({
     mutationFn: ({ obyekt, oyNom }: { obyekt: string, oyNom: string }) => gas<string>('apiOyQosh', obyekt, oyNom)
+  });
+}
+
+// Panel.html dan import qilingan funksiyalar (Shartnomalar, To'lovlar, Qo'shimcha ishlar)
+
+export function useShartnomaDashboard() {
+  return useQuery({
+    queryKey: ['shartnomalar'],
+    queryFn: () => gas<any>('apiShartnomaDashboard'),
+  });
+}
+
+export function useShartnomaSaqla() {
+  return useMutation({
+    mutationFn: (data: any) => gas<any>('apiShartnomaSaqla', data)
+  });
+}
+
+export function useShartnomaOchir() {
+  return useMutation({
+    mutationFn: (no: string) => gas<any>('apiShartnomaOchir', no)
+  });
+}
+
+export function useShartnomaBogSaqla() {
+  return useMutation({
+    mutationFn: ({ obyekt, tanlov, soni }: { obyekt: string, tanlov: string, soni: number }) => 
+      gas<any>('apiShartnomaBogSaqla', obyekt, tanlov, soni)
+  });
+}
+
+export function useQoshIshSaqla() {
+  return useMutation({
+    mutationFn: (data: any) => gas<any>('apiQoshIshSaqla', data)
+  });
+}
+
+export function useQoshIshOchir() {
+  return useMutation({
+    mutationFn: (row: number) => gas<any>('apiQoshIshOchir', row)
+  });
+}
+
+export function useTolovOl() {
+  return useQuery({
+    queryKey: ['tolovlar'],
+    queryFn: () => gas<any>('apiTolovOl'),
+  });
+}
+
+export function useTolovSaqla() {
+  return useMutation({
+    mutationFn: (data: any) => gas<any>('apiTolovSaqla', data)
+  });
+}
+
+export function useTolovOchir() {
+  return useMutation({
+    mutationFn: (row: number) => gas<any>('apiTolovOchir', row)
+  });
+}
+
+/* ============ Shartnoma / Sklad / Monitoring ============ */
+
+export function useShartnomalar() {
+  return useQuery({
+    queryKey: ['shartnomalar'],
+    queryFn: () => gas<Shartnoma[]>('apiShartnomaOl'),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useSkladQoldiq() {
+  return useQuery({
+    queryKey: ['skladQoldiq'],
+    queryFn: () => gas<SkladQoldiq>('apiSkladQoldiq'),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useApiLog() {
+  return useQuery({
+    queryKey: ['apiLog'],
+    queryFn: () => gas<ApiLogYozuv[]>('apiWebApiLog'),
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000,
   });
 }

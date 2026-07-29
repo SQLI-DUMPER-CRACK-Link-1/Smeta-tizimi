@@ -87,9 +87,25 @@ export function Holat() {
 
   const handleSave = async () => {
     const editsToSave = Object.values(edits).map(e => e.edit);
+    if (editsToSave.length === 0) return;
+    
+    // Undo uchun eski holatni saqlab qo'yamiz (faktlar)
+    const orqaga = editsToSave.map(e => {
+       const n = holatData?.tree?.find(t => t.varaq === e.varaq && t.row === e.row);
+       return { ...e, fakt: n?.fakt };
+    });
+
     try {
       const r = await saqla.mutateAsync(editsToSave);
-      toast(`Muvaffaqiyatli saqlandi: ${r.qatorlar} qator`, 'ok');
+      toast(`Muvaffaqiyatli saqlandi: ${r.qatorlar} qator`, 'ok', async () => {
+         // Bekor qilish tugmasi bosilganda
+         try {
+           await saqla.mutateAsync(orqaga);
+           toast('O\'zgarishlar bekor qilindi', 'ok');
+         } catch(e: any) {
+           toast('Bekor qilishda xatolik: ' + e.message, 'danger');
+         }
+      });
       setIsSaveModalOpen(false);
       setEdits({});
       setIsEditMode(false);
@@ -243,6 +259,16 @@ export function Holat() {
               <button onClick={() => setIsSaveModalOpen(true)} className="px-4 py-1.5 text-sm font-medium text-white bg-accent hover:bg-accent/90 rounded-md shadow-sm">💾 Saqlash</button>
             </div>
           </div>
+        )}
+        
+        {/* Presence yozuvi */}
+        {lockStatus?.status === 'locked' && !isEditMode && (
+           <div className="bg-surface border border-border px-4 py-2 rounded-lg mb-4 flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-warn animate-pulse"></div>
+              <span className="text-sm text-text-dim">
+                <strong className="text-white">👤 {lockStatus.user || 'Kimdir'}</strong> hozir tahrirlamoqda.
+              </span>
+           </div>
         )}
         
         {!selectedObyekt ? (

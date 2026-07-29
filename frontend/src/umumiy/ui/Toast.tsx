@@ -7,13 +7,14 @@ export type ToastType = 'ok' | 'danger';
 interface ToastEvent {
   message: string;
   type: ToastType;
+  onUndo?: () => void;
 }
 
 let toastListener: ((toast: ToastEvent) => void) | null = null;
 
-export const toast = (message: string, type: ToastType = 'ok') => {
+export const toast = (message: string, type: ToastType = 'ok', onUndo?: () => void) => {
   if (toastListener) {
-    toastListener({ message, type });
+    toastListener({ message, type, onUndo });
   }
 };
 
@@ -26,7 +27,7 @@ export function ToastContainer() {
       setToasts((prev) => [...prev, { ...t, id }]);
       setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
-      }, 3000);
+      }, t.onUndo ? 10000 : 3000);
     };
     return () => {
       toastListener = null;
@@ -48,9 +49,20 @@ export function ToastContainer() {
           >
             {t.type === 'ok' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
             <span className="text-white font-medium text-sm">{t.message}</span>
+            {t.onUndo && (
+              <button
+                onClick={() => {
+                  t.onUndo!();
+                  setToasts((prev) => prev.filter((toast) => toast.id !== t.id));
+                }}
+                className="ml-4 px-2 py-1 text-xs font-medium bg-surface rounded border border-border hover:bg-surface-2 transition-colors text-white"
+              >
+                ↩ Bekor qilish
+              </button>
+            )}
             <button
               onClick={() => setToasts((prev) => prev.filter((toast) => toast.id !== t.id))}
-              className="ml-2 p-1 rounded hover:bg-white/10 transition-colors text-text-dim hover:text-white"
+              className={`${t.onUndo ? 'ml-2' : 'ml-auto'} p-1 rounded hover:bg-white/10 transition-colors text-text-dim hover:text-white`}
             >
               <X size={16} />
             </button>

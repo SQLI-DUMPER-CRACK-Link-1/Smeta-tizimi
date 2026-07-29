@@ -9,17 +9,19 @@ export interface NavbatBuyrugi {
   vaqt: number;
   holat: 'kutmoqda' | 'xato';
   xatoXabar?: string;
+  orqaga?: any; // Undo uchun
 }
 
 const NAVBAT_KEY = 'smeta_offline_navbat';
 
-export async function navbatgaQoshish(fn: string, args: any[], uid: string): Promise<void> {
+export async function navbatgaQoshish(fn: string, args: any[], uid: string, orqaga?: any): Promise<void> {
   const buyruq: NavbatBuyrugi = {
     id: uid,
     fn,
     args,
     vaqt: Date.now(),
-    holat: 'kutmoqda'
+    holat: 'kutmoqda',
+    orqaga
   };
 
   await update(NAVBAT_KEY, (val) => {

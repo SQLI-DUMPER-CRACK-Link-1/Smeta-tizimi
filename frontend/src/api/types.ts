@@ -91,3 +91,40 @@ export type RsQosh = {
   f?: number;
   f2Uid?: string;
 };
+
+/* ---------- Shartnoma (80_Shartnoma.js → apiShartnomaOl) ---------- */
+export type Shartnoma = {
+  no: string;
+  nomi: string;
+  taraf: string;
+  summa: number;
+  nds: number;
+  jami: number;
+  holat: string;
+  izoh: string;
+  chelCh: number;
+};
+
+/* ---------- Sklad (86_Sklad.js → apiSkladQoldiq) ---------- */
+export type SkladMaterial = {
+  nom: string;
+  birlik: string;
+  kirim: number;
+  chiqim: number;
+  qoldiq: number;
+};
+
+export type SkladQoldiq = {
+  ok: boolean;
+  materiallar: SkladMaterial[];
+  jami: number;
+  xabar?: string;
+};
+
+/* ---------- Monitoring (79_WebAPI.js → apiWebApiLog) ---------- */
+export type ApiLogYozuv = {
+  t: string;    // ISO vaqt
+  fn: string;   // funksiya nomi
+  h: string;    // 'OK' | 'XATO' | 'AUTH_FAIL' | 'RUXSAT_YOQ'
+  ms: number;
+};

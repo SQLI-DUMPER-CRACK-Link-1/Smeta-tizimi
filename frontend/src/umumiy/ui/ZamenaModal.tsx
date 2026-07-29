@@ -17,7 +17,7 @@ export function ZamenaModal({ isOpen, onClose, onConfirm, source, target, isSavi
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-surface-3 rounded-[--r-lg] shadow-[--shadow-float] w-full max-w-[700px] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="karta w-full max-w-[700px] flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">

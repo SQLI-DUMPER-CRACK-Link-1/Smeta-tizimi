@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useObyektlar } from '../../api/hooks';
 import { Card, CardContent } from '../../umumiy/ui/Card';
 import { Skeleton } from '../../umumiy/ui/Skeleton';
+import { motion } from 'framer-motion';
 import { RefreshCw, Folder, ChevronDown, ChevronRight, FileSpreadsheet } from 'lucide-react';
 import type { PapkaObyekt } from '../../api/types';
 
@@ -46,11 +47,24 @@ export function Obyektlar() {
     return <div className="text-danger p-4 rounded-lg bg-danger/10 border border-danger/20">Xatolik: {error.message}</div>;
   }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Obyektlar Ro'yxati</h2>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Obyektlar Ro'yxati</h2>
           <p className="text-text-dim text-sm mt-1">Smetalar papkasidagi jami obyektlar ({groupedData.length}) / lokalkalar ({data?.length || 0})</p>
         </div>
         <button 
@@ -63,14 +77,20 @@ export function Obyektlar() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
         {groupedData.map((group, i) => {
           const isExpanded = expandedGroups[group.baseName];
           const hasMultiple = group.items.length > 1;
 
           return (
-            <div
+            <motion.div
               key={i}
+              variants={itemVariants}
               className={`transition-all duration-200 ${hasMultiple ? 'cursor-pointer hover:opacity-90' : ''} ${isExpanded && hasMultiple ? 'row-span-2' : ''}`}
               onClick={() => hasMultiple && toggleGroup(group.baseName)}
             >
@@ -113,10 +133,10 @@ export function Obyektlar() {
                 )}
               </CardContent>
               </Card>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
       
       {groupedData.length === 0 && (
         <div className="text-center py-20 text-text-dim border-2 border-dashed border-border rounded-xl">
