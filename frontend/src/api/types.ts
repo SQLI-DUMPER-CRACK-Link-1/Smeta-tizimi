@@ -128,3 +128,14 @@ export type ApiLogYozuv = {
   h: string;    // 'OK' | 'XATO' | 'AUTH_FAIL' | 'RUXSAT_YOQ'
   ms: number;
 };
+
+/* ---------- To'lov (85_Buxgalteriya.js → apiTolovOl) ---------- */
+export type Tolov = {
+  sana: string;
+  shNo: string;
+  obyekt: string;
+  summa: number;
+  tur: string;
+  izoh: string;
+  row: number;
+};

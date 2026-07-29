@@ -6,9 +6,9 @@
  * qoidalar avtomat bajariladi (skeleton, bo'sh holat, xato kartasi,
  * sticky sarlavha, .num raqamlar, stagger animatsiya, ma'lumot yoshi).
  */
-import { motion } from 'framer-motion';
-import type { ReactNode } from 'react';
-import { RefreshCw, AlertTriangle, Inbox } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, type ReactNode } from 'react';
+import { RefreshCw, AlertTriangle, Inbox, X } from 'lucide-react';
 
 /* ---------- Sahifa karkasi ---------- */
 
@@ -242,5 +242,153 @@ export function Qidiruv({ qiymat, ozgardi, placeholder = 'Qidirish…' }: {
       placeholder={placeholder}
       className="input h-9 px-3 text-sm w-64 max-w-full"
     />
+  );
+}
+
+/* ---------- Yon panel (drawer) ---------- */
+
+/**
+ * O'ngdan chiquvchi batafsil panel. Modal emas — foydalanuvchi ro'yxatni
+ * ko'rib turgan holda tafsilotni o'qiydi (06 §7.4 ruhida).
+ */
+export function Yon({
+  ochiq, yop, sarlavha, tavsif, past, children,
+}: {
+  ochiq: boolean;
+  yop: () => void;
+  sarlavha: string;
+  tavsif?: ReactNode;
+  past?: ReactNode;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    if (!ochiq) return;
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') yop(); };
+    addEventListener('keydown', h);
+    return () => removeEventListener('keydown', h);
+  }, [ochiq, yop]);
+
+  return (
+    <AnimatePresence>
+      {ochiq && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={yop}
+            className="fixed inset-0 bg-black/60 backdrop-blur-[3px] z-40"
+          />
+          <motion.aside
+            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed right-0 top-0 bottom-0 w-full sm:w-[520px] max-w-full z-50
+                       bg-[var(--surface)] border-l border-border flex flex-col"
+          >
+            <header className="flex-shrink-0 px-5 py-4 border-b border-border flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-[17px] font-semibold text-text truncate">{sarlavha}</h3>
+                {tavsif && <div className="text-sm text-text-dim mt-0.5">{tavsif}</div>}
+              </div>
+              <button
+                onClick={yop}
+                aria-label="Yopish"
+                className="h-8 w-8 grid place-items-center rounded-lg text-text-dim
+                           hover:bg-[var(--surface-2)] hover:text-text transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">{children}</div>
+            {past && <footer className="flex-shrink-0 px-5 py-4 border-t border-border">{past}</footer>}
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ---------- Forma elementlari ---------- */
+
+export function Maydon({ nom, children, izoh }: { nom: string; children: ReactNode; izoh?: string }) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] uppercase tracking-[0.04em] text-text-dim mb-1.5">{nom}</span>
+      {children}
+      {izoh && <span className="block text-[11px] text-text-mute mt-1">{izoh}</span>}
+    </label>
+  );
+}
+
+export function Kiritma({
+  qiymat, ozgardi, tur = 'text', placeholder, ozgarmas,
+}: {
+  qiymat: string | number;
+  ozgardi: (v: string) => void;
+  tur?: 'text' | 'number' | 'date';
+  placeholder?: string;
+  ozgarmas?: boolean;
+}) {
+  return (
+    <input
+      type={tur}
+      value={qiymat}
+      disabled={ozgarmas}
+      placeholder={placeholder}
+      onChange={(e) => ozgardi(e.target.value)}
+      className={`input h-9 px-3 text-sm w-full ${tur === 'number' ? 'text-right tabular-nums' : ''}
+                  ${ozgarmas ? 'opacity-60 cursor-not-allowed' : ''}`}
+    />
+  );
+}
+
+export function Tanlov({ qiymat, ozgardi, variantlar }: {
+  qiymat: string; ozgardi: (v: string) => void; variantlar: string[];
+}) {
+  return (
+    <select
+      value={qiymat}
+      onChange={(e) => ozgardi(e.target.value)}
+      className="input h-9 px-3 text-sm w-full cursor-pointer"
+    >
+      {variantlar.map((v) => <option key={v} value={v}>{v}</option>)}
+    </select>
+  );
+}
+
+export function Tugma({
+  children, onBos, tur = 'secondary', band, ikonka,
+}: {
+  children: ReactNode;
+  onBos?: () => void;
+  tur?: 'primary' | 'secondary' | 'danger';
+  band?: boolean;
+  ikonka?: ReactNode;
+}) {
+  const uslub = {
+    primary: 'bg-accent text-white hover:bg-accent/90 border-transparent',
+    secondary: 'karta text-text hover:border-[var(--accent)]/50',
+    danger: 'bg-danger/10 text-danger border-danger/25 hover:bg-danger/15',
+  }[tur];
+  return (
+    <button
+      onClick={onBos}
+      disabled={band}
+      className={`h-9 px-4 inline-flex items-center justify-center gap-2 rounded-[10px] border
+                  text-sm font-medium transition-colors duration-[120ms] cursor-pointer
+                  active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed ${uslub}`}
+    >
+      {band ? <span className="opacity-70">…</span> : ikonka}
+      {children}
+    </button>
+  );
+}
+
+/** Kalit → qiymat juftliklari (batafsil panelda) */
+export function Juft({ nom, qiymat }: { nom: string; qiymat: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2 border-b border-border last:border-0">
+      <span className="text-sm text-text-dim flex-shrink-0">{nom}</span>
+      <span className="text-sm text-text text-right tabular-nums min-w-0 break-words">{qiymat}</span>
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import { navbatgaQoshish } from '../_shared/navbat';
 import { yangiUid } from '../_shared/idempotent';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
-  Shartnoma, SkladQoldiq, ApiLogYozuv,
+  Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
 } from './types';
 
 export function useObyektlar() {
@@ -144,10 +144,14 @@ export function useOyQosh() {
 
 // Panel.html dan import qilingan funksiyalar (Shartnomalar, To'lovlar, Qo'shimcha ishlar)
 
+/* ⚠️ Kalit `shartnomaDash` — avval `shartnomalar` edi, ya'ni `useShartnomalar`
+ * bilan BIR XIL kalitda ikki xil ma'lumot saqlanardi (kesh to'qnashuvi:
+ * qaysi biri oxirgi yozsa, ikkinchisi uning ma'lumotini o'qirdi). */
 export function useShartnomaDashboard() {
   return useQuery({
-    queryKey: ['shartnomalar'],
+    queryKey: ['shartnomaDash'],
     queryFn: () => gas<any>('apiShartnomaDashboard'),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -189,9 +193,16 @@ export function useTolovOl() {
   });
 }
 
+/* ⚠️ GAS'da `apiTolovSaqla` YO'Q — funksiya nomi `apiTolovYoz`.
+ * Avvalgi nom bilan chaqirilsa server «функция мавжуд эмас» qaytarardi. */
 export function useTolovSaqla() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => gas<any>('apiTolovSaqla', data)
+    mutationFn: (data: any) => gas<any>('apiTolovYoz', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tolovlar'] });
+      qc.invalidateQueries({ queryKey: ['shartnomalar'] });
+    },
   });
 }
 
@@ -225,5 +236,22 @@ export function useApiLog() {
     queryFn: () => gas<ApiLogYozuv[]>('apiWebApiLog'),
     staleTime: 15 * 1000,
     refetchInterval: 30 * 1000,
+  });
+}
+
+export function useTolovlar() {
+  return useQuery({
+    queryKey: ['tolovlar'],
+    queryFn: () => gas<Tolov[]>('apiTolovOl'),
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Obyekt → shartnoma № bog'lanishi (apiShartnomaBogOl) */
+export function useShartnomaBog() {
+  return useQuery({
+    queryKey: ['shartnomaBog'],
+    queryFn: () => gas<Record<string, string>>('apiShartnomaBogOl'),
+    staleTime: 5 * 60 * 1000,
   });
 }
