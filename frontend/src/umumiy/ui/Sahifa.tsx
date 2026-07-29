@@ -12,8 +12,14 @@ import { RefreshCw, AlertTriangle, Inbox, X } from 'lucide-react';
 
 /* ---------- Sahifa karkasi ---------- */
 
-export function Sahifa({
-  sarlavha, tavsif, amallar, yangilangan, onYangila, yangilanmoqda, children,
+/**
+ * Ikki xil ishlatiladi:
+ *   1) oddiy:      <Sahifa …>{<div/>}</Sahifa>
+ *   2) so'rov bilan: <Sahifa … soragan={q}>{(d) => <div/>}</Sahifa>
+ *      — bu holda yuklanmoqda/bo'sh/xato holatlari AVTOMAT hal qilinadi.
+ */
+export function Sahifa<T = unknown>({
+  sarlavha, tavsif, amallar, yangilangan, onYangila, yangilanmoqda, soragan, bosh, children,
 }: {
   sarlavha: string;
   tavsif?: string;
@@ -21,8 +27,13 @@ export function Sahifa({
   yangilangan?: number | null;
   onYangila?: () => void;
   yangilanmoqda?: boolean;
-  children: ReactNode;
+  soragan?: { data?: T; isLoading: boolean; error: unknown; refetch?: () => void };
+  bosh?: { matn: string; izoh?: string; amal?: ReactNode };
+  children: ReactNode | ((data: T) => ReactNode);
 }) {
+  const ichki = soragan
+    ? <Holatlar soragan={soragan} bosh={bosh}>{(d) => (children as (data: T) => ReactNode)(d)}</Holatlar>
+    : (children as ReactNode);
   return (
     <motion.div
       initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
@@ -53,7 +64,7 @@ export function Sahifa({
           {amallar}
         </div>
       </header>
-      <div className="flex-1 overflow-auto px-6 pb-6">{children}</div>
+      <div className="flex-1 overflow-auto px-6 pb-6">{ichki}</div>
     </motion.div>
   );
 }
