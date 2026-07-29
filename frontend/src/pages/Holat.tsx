@@ -5,6 +5,7 @@ import { SmetaTree } from '../components/tree/SmetaTree';
 import { Skeleton } from '../components/ui/Skeleton';
 import { SaveModal } from '../components/ui/SaveModal';
 import { ZamenaModal } from '../components/ui/ZamenaModal';
+import { toast } from '../components/ui/Toast';
 import { FileSpreadsheet, Edit3, Eye } from 'lucide-react';
 
 export type EditState = {
@@ -71,14 +72,14 @@ export function Holat() {
       await releaseLock({ obyekt: selectedObyekt, reason: 'Tahrirlash yakunlandi' });
     } else {
       if (lockStatus?.status === 'locked') {
-        alert(`Obyekt band: ${lockStatus.user}`);
+        toast(`Obyekt band: ${lockStatus.user}`, 'danger');
         return;
       }
       try {
         await acquireLock({ obyekt: selectedObyekt, reason: 'Smeta tahrirlash' });
         setIsEditMode(true);
       } catch (err: any) {
-        alert('Band qilishda xatolik: ' + err.message);
+        toast('Band qilishda xatolik: ' + err.message, 'danger');
       }
     }
   };
@@ -87,13 +88,13 @@ export function Holat() {
     const editsToSave = Object.values(edits).map(e => e.edit);
     try {
       const r = await saqla.mutateAsync(editsToSave);
-      alert(`Muvaffaqiyatli saqlandi: ${r.qatorlar} qator`);
+      toast(`Muvaffaqiyatli saqlandi: ${r.qatorlar} qator`, 'ok');
       setIsSaveModalOpen(false);
       setEdits({});
       setIsEditMode(false);
       await releaseLock({ obyekt: selectedObyekt, reason: 'Saqlash yakunlandi' });
     } catch (err: any) {
-      alert(`Saqlashda xatolik: ${err.message}`);
+      toast(`Saqlashda xatolik: ${err.message}`, 'danger');
     }
   };
 
@@ -107,7 +108,7 @@ export function Holat() {
     if (!dragSource || !dragSource.varaq || !dragSource.row) return;
     
     try {
-      const isIsh = dragSource.tip === 'bl';
+      const isIsh = dragSource.type === 'bl';
       const isZamena = !!dragTarget;
       
       const payload: any = {
@@ -117,8 +118,8 @@ export function Holat() {
         nom: dragSource.nom,
         kod: dragSource.kod,
         birlik: dragSource.birlik,
-        hajm: dragSource.smeta,
-        tur: dragSource.tip,
+        hajm: dragSource.smetaHajm,
+        tur: dragSource.type,
       };
 
       if (isZamena) {
@@ -140,7 +141,7 @@ export function Holat() {
               kod: child.kod,
               birlik: child.birlik,
               narx: child.narx,
-              norm: child.smeta, // Assuming norm relates to smeta volume here, simplified
+              norm: child.smetaHajm, 
               f: child.fakt,
             });
           }
@@ -154,18 +155,18 @@ export function Holat() {
           kod: dragSource.kod,
           birlik: dragSource.birlik,
           narx: dragSource.narx,
-          norm: dragSource.smeta,
+          norm: dragSource.smetaHajm,
           f: dragSource.fakt,
         });
       }
 
-      alert("Qo'shish muvaffaqiyatli bajarildi!");
+      toast("Qo'shish muvaffaqiyatli bajarildi!", 'ok');
       setIsZamenaModalOpen(false);
       setDragSource(null);
       setDragTarget(null);
       
     } catch (err: any) {
-      alert("Xatolik: " + err.message);
+      toast("Xatolik: " + err.message, 'danger');
     }
   };
 

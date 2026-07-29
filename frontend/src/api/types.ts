@@ -1,25 +1,24 @@
 export type TreeNode = {
-  uid: string;
-  tip: 'rz' | 'bl' | 'rs' | 'mat' | 'ob';
+  type: 'rz' | 'bl' | 'rs' | 'mat' | 'ob';
   nom: string;
-  kod: string;
-  birlik: string;
-  smeta: number;
-  fakt: number;
+  varaq: string;
+  row: number;
+  kat?: string;
+  kod?: string;
+  birlik?: string;
+  smetaHajm: number;   // HAJM
+  smeta: number;       // PUL
   narx: number;
-  summa?: number;
+  fakt: number;
   qoldiq: number;
   f2ol: number;
   f2mum: number;
-  qavat1?: string;
-  qavat2?: string;
-  qavat3?: string;
-  zamena?: boolean;
-  qoshimcha?: boolean;
-  varaq?: string;
-  row?: number;
+  stFakt?: number; stF2?: number; stOst?: number;
   oylar?: Record<string, number>;
-  children: TreeNode[];
+  isQosh?: boolean;
+  isZamena?: boolean;
+  d1?: string; d2?: string; d3?: string;
+  children?: TreeNode[];
 };
 
 export type PapkaObyekt = {

@@ -54,12 +54,30 @@ export function useHolatSaqla(obyekt: string) {
   
   return useMutation({
     mutationFn: (edits: Edit[]) => gas<{jami:number, qatorlar:number}>('apiHolatSaqla', obyekt, edits),
-    onMutate: async () => {
+    onMutate: async (edits) => {
       await qc.cancelQueries({ queryKey: ['holat', obyekt] });
-      const oldingi = qc.getQueryData(['holat', obyekt, false]);
+      const oldingi = qc.getQueryData<{ tree: TreeNode[], lokalkalar: string[] }>(['holat', obyekt, false]);
       
-      // We don't do full optimistic update here for now because tree manipulation is complex 
-      // and we want exact truth from the server, but we will rely on onSettled to refresh.
+      // Update cache locally for instant UI update
+      if (oldingi && oldingi.tree) {
+        const newTree = JSON.parse(JSON.stringify(oldingi.tree));
+        
+        const updateTree = (nodes: TreeNode[]) => {
+          for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
+            const edit = edits.find(e => e.varaq === node.varaq && e.row === node.row);
+            if (edit && edit.fakt !== undefined) {
+              node.fakt = edit.fakt;
+            }
+            if (node.children) {
+              updateTree(node.children);
+            }
+          }
+        };
+        
+        updateTree(newTree);
+        qc.setQueryData(['holat', obyekt, false], { ...oldingi, tree: newTree });
+      }
       
       return { oldingi };
     },
@@ -67,6 +85,7 @@ export function useHolatSaqla(obyekt: string) {
       qc.setQueryData(['holat', obyekt, false], ctx?.oldingi);
     },
     onSettled: () => {
+      // Invalidate but don't block the UI, it will happen in background
       qc.invalidateQueries({ queryKey: ['holat', obyekt] });
     },
   });

@@ -17,9 +17,10 @@ export function flattenTree(
   let result: FlatNode[] = [];
   
   for (const node of nodes) {
-    const currentPath = [...path, node.uid];
-    const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = !!expandedMap[node.uid];
+    const key = `${node.varaq}#${node.row}`;
+    const currentPath = [...path, key];
+    const hasChildren = !!(node.children && node.children.length > 0);
+    const isExpanded = !!expandedMap[key];
     
     result.push({
       node,
@@ -30,7 +31,7 @@ export function flattenTree(
     });
     
     if (hasChildren && isExpanded) {
-      result = result.concat(flattenTree(node.children, expandedMap, depth + 1, currentPath));
+      result = result.concat(flattenTree(node.children!, expandedMap, depth + 1, currentPath));
     }
   }
   
@@ -40,7 +41,7 @@ export function flattenTree(
 export function getAllKeys(nodes: TreeNode[]): string[] {
   let keys: string[] = [];
   for (const node of nodes) {
-    keys.push(node.uid);
+    keys.push(`${node.varaq}#${node.row}`);
     if (node.children) keys = keys.concat(getAllKeys(node.children));
   }
   return keys;

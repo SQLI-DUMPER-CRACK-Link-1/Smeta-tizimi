@@ -29,8 +29,8 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
     overscan: 20,
   });
 
-  const toggleExpand = (uid: string) => {
-    setExpandedMap(prev => ({ ...prev, [uid]: !prev[uid] }));
+  const toggleExpand = (key: string) => {
+    setExpandedMap(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const expandAll = () => {
@@ -83,9 +83,10 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const row = flatNodes[virtualRow.index];
             const node = row.node;
-            const isEdited = !!edits[node.uid];
-            const currentFakt = edits[node.uid]?.edit.fakt ?? node.fakt;
-            const isOverLimit = currentFakt > node.smeta;
+            const key = `${node.varaq}#${node.row}`;
+            const isEdited = !!edits[key];
+            const currentFakt = edits[key]?.edit.fakt ?? node.fakt;
+            const isOverLimit = currentFakt > node.smetaHajm;
             
             return (
               <div
@@ -123,7 +124,7 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                     {/* Expand/Collapse Chevron */}
                     <div className="w-5 flex items-center justify-center flex-shrink-0">
                       {row.hasChildren ? (
-                        <button onClick={() => toggleExpand(node.uid)} className="p-0.5 hover:bg-surface-2 rounded text-text-dim hover:text-white">
+                        <button onClick={() => toggleExpand(`${node.varaq}#${node.row}`)} className="p-0.5 hover:bg-surface-2 rounded text-text-dim hover:text-white">
                           {row.isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                         </button>
                       ) : (
@@ -132,11 +133,11 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                     </div>
                     
                     {/* Zamena/Qoshimcha icons */}
-                    {node.zamena && <RefreshCcw size={14} className="text-[#a855f7] flex-shrink-0" />}
-                    {node.qoshimcha && <Plus size={14} className="text-ok flex-shrink-0" />}
+                    {node.isZamena && <RefreshCcw size={14} className="text-[#a855f7] flex-shrink-0" />}
+                    {node.isQosh && <Plus size={14} className="text-ok flex-shrink-0" />}
                     
                     {/* Type Badge */}
-                    <Badge variant={node.tip as any} className="flex-shrink-0 w-8 justify-center uppercase">{node.tip}</Badge>
+                    <Badge variant={node.type as any} className="flex-shrink-0 w-8 justify-center uppercase">{node.type}</Badge>
                     
                     {/* Kod (Shifr) */}
                     {node.kod && <span className="text-text-dim font-mono text-xs flex-shrink-0 w-24 truncate">{node.kod}</span>}
@@ -151,7 +152,7 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                 
                 {/* Data Columns */}
                 <div className="flex items-center h-full pr-4 flex-shrink-0 font-medium tabular-nums text-xs">
-                  <div className="w-24 text-right text-text-dim">{formatSum(node.smeta)}</div>
+                  <div className="w-24 text-right text-text-dim">{formatSum(node.smetaHajm)}</div>
                   <div className="w-24 text-right">
                     {isEditMode ? (
                       <input
@@ -165,10 +166,10 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                           if (setEdits && node.varaq && node.row) {
                             setEdits(prev => ({
                               ...prev,
-                              [node.uid]: {
+                              [key]: {
                                 node,
                                 edit: {
-                                  ...(prev[node.uid]?.edit || {}),
+                                  ...(prev[key]?.edit || {}),
                                   varaq: node.varaq!,
                                   row: node.row!,
                                   fakt: val
@@ -178,14 +179,14 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                           }
                         }}
                         className={`w-full text-right bg-surface-2 border rounded px-2 py-1 text-sm focus:outline-none focus:border-accent ${isOverLimit ? 'border-danger text-danger' : 'border-border text-white'}`}
-                        title={isOverLimit ? `Smetadan oshiq: ${currentFakt} > ${node.smeta}` : ''}
+                        title={isOverLimit ? `Smetadan oshiq: ${currentFakt} > ${node.smetaHajm}` : ''}
                       />
                     ) : (
                       <span className={isOverLimit ? 'text-danger' : 'text-ok'}>{formatSum(node.fakt)}</span>
                     )}
                   </div>
                   <div className="w-24 text-right text-text-dim">{formatSum(node.narx)}</div>
-                  <div className="w-32 text-right text-white">{formatSum(node.summa)}</div>
+                  <div className="w-32 text-right text-white">{formatSum(node.smeta)}</div>
                   <div className="w-24 text-right text-t-rs">{formatSum(node.f2ol)}</div>
                 </div>
               </div>

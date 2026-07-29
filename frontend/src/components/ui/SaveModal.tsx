@@ -62,7 +62,7 @@ export function SaveModal({ isOpen, onClose, onSave, edits, isSaving, obyekt }: 
                     const newVal = edit.fakt ?? node.fakt;
                     const diff = newVal - node.fakt;
                     return (
-                      <tr key={node.uid} className="hover:bg-surface-2/30">
+                      <tr key={`${node.varaq}#${node.row}`} className="hover:bg-surface-2/30">
                         <td className="px-4 py-2 truncate max-w-[200px]" title={node.nom}>
                           <span className="text-white">{node.nom}</span>
                         </td>
