@@ -41,16 +41,33 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     return Response.redirect(`${url.origin}/?xato=tekshiruv`, 302);
   }
 
-  // Ruxsat ro'yxati
+  // Ruxsat ro'yxati (Endi Google Sheets'dan tekshiriladi)
   const email = info.email.toLowerCase();
-  const xarita = new Map<string, Rol>(
-    ctx.env.RUXSAT.split(',').map(p => {
-      const [e, r] = p.trim().split(':');
-      return [e.toLowerCase(), r as Rol];
-    })
-  );
   
-  const rol = xarita.get(email);
+  // GAS ga so'rov yuborish
+  let rol: Rol | null = null;
+  try {
+    const superadminFallback = ctx.env.RUXSAT ? ctx.env.RUXSAT.split(':')[0].trim() : '';
+    
+    const r = await fetch(ctx.env.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ 
+        __api: 1, 
+        token: ctx.env.GAS_TOKEN, 
+        fn: 'apiXodimRolOl', 
+        args: [email, superadminFallback] 
+      }),
+    });
+    
+    const data = await r.json<{ ok: boolean; data: string | null }>();
+    if (data.ok && data.data) {
+      rol = data.data as Rol;
+    }
+  } catch (err) {
+    console.error('GAS ga bog\'lanishda xato:', err);
+  }
+
   if (!rol) {
     return Response.redirect(`${url.origin}/?xato=ruxsat`, 302);
   }
