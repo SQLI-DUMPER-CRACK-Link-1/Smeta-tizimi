@@ -59,18 +59,21 @@ function GlassCard({ children, className = '' }: { children: React.ReactNode, cl
 
 // --- CUSTOM SVG CHART ---
 function FinancialChart({ objects }: { objects: any[] }) {
-  if (!objects || objects.length === 0) return null;
-  const maxSmeta = Math.max(...objects.map(o => o.smeta || 0));
+  // Barcha sub obyektlarni bitta yassi ro'yxatga yig'amiz (Subpodryadlarni olib tashlaymiz)
+  const allSubItems = objects.flatMap(sh => sh.subItems || []).filter(o => !o.nom.startsWith('👷'));
+  
+  if (!allSubItems || allSubItems.length === 0) return null;
+  const maxSmeta = Math.max(...allSubItems.map(o => o.smeta || 0));
 
   return (
     <GlassCard className="p-6 h-[300px] flex flex-col">
       <h3 className="text-lg font-semibold text-white/90 mb-6 flex items-center gap-2">
         <TrendingUp size={20} className="text-accent" />
-        Moliyaviy Oqim (Top 10 obyekt)
+        Moliyaviy Oqim (Top Obyektlar)
       </h3>
       
       <div className="flex-1 flex items-end gap-3 w-full overflow-x-auto pb-2 scrollbar-thin">
-        {objects.slice(0, 10).map((obj, idx) => {
+        {allSubItems.sort((a, b) => b.smeta - a.smeta).slice(0, 15).map((obj, idx) => {
           const hSmeta = Math.max(5, ((obj.smeta || 0) / maxSmeta) * 100);
           const hFakt = Math.max(0, ((obj.fakt || 0) / maxSmeta) * 100);
           const hF2 = Math.max(0, ((obj.f2 || 0) / maxSmeta) * 100);
@@ -80,29 +83,30 @@ function FinancialChart({ objects }: { objects: any[] }) {
               <div className="w-full h-[150px] relative flex justify-center items-end bg-white/5 rounded-t-lg overflow-hidden">
                 {/* Smeta */}
                 <motion.div 
-                  initial={{ height: 0 }} animate={{ height: `${hSmeta}%` }} transition={{ duration: 1, delay: idx * 0.05 }}
+                  initial={{ height: 0 }} animate={{ height: `${hSmeta}%` }} transition={{ duration: 1, delay: idx * 0.03 }}
                   className="absolute bottom-0 w-full bg-white/10"
                 />
                 {/* Fakt */}
                 <motion.div 
-                  initial={{ height: 0 }} animate={{ height: `${hFakt}%` }} transition={{ duration: 1, delay: 0.2 + idx * 0.05 }}
+                  initial={{ height: 0 }} animate={{ height: `${hFakt}%` }} transition={{ duration: 1, delay: 0.2 + idx * 0.03 }}
                   className="absolute bottom-0 w-full bg-ok/40"
                 />
                 {/* F2 */}
                 <motion.div 
-                  initial={{ height: 0 }} animate={{ height: `${hF2}%` }} transition={{ duration: 1, delay: 0.4 + idx * 0.05 }}
+                  initial={{ height: 0 }} animate={{ height: `${hF2}%` }} transition={{ duration: 1, delay: 0.4 + idx * 0.03 }}
                   className="absolute bottom-0 w-full bg-t-rs/60"
                 />
               </div>
-              <span className="text-[10px] text-white/40 truncate w-full text-center group-hover:text-white/80 transition-colors">
-                {obj.nom.split(' ')[0]}
+              <span className="text-[10px] text-white/40 truncate w-full text-center group-hover:text-white/80 transition-colors" title={obj.nom}>
+                {obj.nom.substring(0, 8)}...
               </span>
               
               {/* Tooltip on Hover */}
-              <div className="absolute -top-16 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 backdrop-blur-md px-3 py-2 rounded-xl text-xs whitespace-nowrap z-20 pointer-events-none border border-white/10 shadow-xl">
-                <div className="font-bold text-white mb-1">{obj.nom}</div>
+              <div className="absolute -top-20 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 backdrop-blur-md px-3 py-2 rounded-xl text-xs whitespace-nowrap z-20 pointer-events-none border border-white/10 shadow-xl">
+                <div className="font-bold text-white mb-1 max-w-[200px] truncate">{obj.nom}</div>
                 <div className="text-white/60">Smeta: <FmtN val={obj.smeta} qisqa /></div>
                 <div className="text-ok">Fakt: <FmtN val={obj.fakt} qisqa /></div>
+                <div className="text-t-rs">F2: <FmtN val={obj.f2} qisqa /></div>
               </div>
             </div>
           );
@@ -233,27 +237,45 @@ export default function Umumiy() {
             initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5, duration: 0.6 }}
             className="flex flex-col h-[500px]"
           >
-            <h3 className="text-xl font-bold text-white/90 mb-4 px-2">Barcha Obyektlar</h3>
+            <h3 className="text-xl font-bold text-white/90 mb-4 px-2">Obyektlar va Shartnomalar</h3>
             <GlassCard className="flex-1 overflow-y-auto p-2 scrollbar-thin flex flex-col gap-2">
-              {(data.objects || []).map((obj, i) => (
-                <div 
-                  key={i} 
-                  onClick={() => navigate('/boss/holat/' + obj.nom)}
-                  className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer flex items-center justify-between group"
-                >
-                  <div className="flex-1 min-w-0 pr-4">
-                    <h4 className="font-semibold text-white/90 truncate group-hover:text-accent transition-colors">{obj.nom}</h4>
-                    <div className="flex gap-4 mt-1 text-xs font-mono">
-                      <span className="text-white/40">S: <FmtN val={obj.smeta} qisqa /></span>
-                      <span className="text-ok/70">F: <FmtN val={obj.fakt} qisqa /></span>
-                    </div>
+              {(data.objects || []).map((shartnoma, i) => (
+                <div key={i} className="mb-2">
+                  <div className="px-4 py-2 bg-white/[0.03] border border-white/5 rounded-t-xl">
+                    <h4 className="font-semibold text-white/70 text-sm tracking-wider uppercase">{shartnoma.nom}</h4>
                   </div>
-                  
-                  <div className="flex flex-col items-end justify-center gap-1">
-                    <span className={`text-sm font-bold ${obj.progress > 90 ? 'text-ok' : obj.progress > 50 ? 'text-warn' : 'text-danger'}`}>
-                      {formatPercent(obj.progress)}
-                    </span>
-                    <ChevronRight size={16} className="text-white/20 group-hover:text-white/60 transition-colors group-hover:translate-x-1" />
+                  <div className="flex flex-col gap-1 mt-1">
+                    {(shartnoma.subItems || []).map((obj, j) => {
+                      const isSub = obj.nom.startsWith('👷');
+                      return (
+                        <div 
+                          key={j} 
+                          onClick={() => !isSub && navigate('/boss/holat/' + encodeURIComponent(obj.nom))}
+                          className={`p-4 rounded-xl transition-all flex items-center justify-between group
+                            ${isSub ? 'bg-white/[0.02] cursor-default' : 'bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 cursor-pointer'}
+                          `}
+                        >
+                          <div className="flex-1 min-w-0 pr-4">
+                            <h4 className={`font-medium truncate transition-colors ${isSub ? 'text-white/50 text-sm' : 'text-white/90 group-hover:text-accent'}`}>
+                              {obj.nom}
+                            </h4>
+                            <div className="flex gap-4 mt-1 text-xs font-mono">
+                              <span className="text-white/40">S: <FmtN val={obj.smeta} qisqa /></span>
+                              <span className="text-ok/70">F: <FmtN val={obj.fakt} qisqa /></span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col items-end justify-center gap-1">
+                            <span className={`text-sm font-bold ${obj.progress > 90 ? 'text-ok' : obj.progress > 50 ? 'text-warn' : 'text-danger'}`}>
+                              {formatPercent(obj.progress)}
+                            </span>
+                            {!isSub && (
+                              <ChevronRight size={16} className="text-white/20 group-hover:text-white/60 transition-colors group-hover:translate-x-1" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

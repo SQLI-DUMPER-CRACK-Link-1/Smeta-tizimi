@@ -179,3 +179,24 @@ export type F2JobHolat = {
   hozir?: string;
   log?: string[];
 };
+
+/* ---------- Narxlar markazi (30_Panel.js → apiNarxlarOl) ---------- */
+export type NarxQator = {
+  nom: string;
+  birlik: string;
+  kat: string;              // ЧЕЛ | МАШ | МАТ | ОБ | КАБ | М/К
+  belgilangan: number | '';  // qo'lda belgilangan narx
+  max: number;               // smetadagi eng katta narx
+  smeta: Record<string, number>;   // obyekt → narx
+  sanaLar: Record<string, number>; // sana → narx
+  maxSana: number;
+  natija: number;            // yakuniy ishlatiladigan narx
+  manba: string;             // narx qayerdan olingan
+  xavf: boolean;             // narxlar orasida >5% farq
+};
+
+export type NarxlarJavob = {
+  rows: NarxQator[];
+  objects: string[];
+  sanalar: string[];
+};

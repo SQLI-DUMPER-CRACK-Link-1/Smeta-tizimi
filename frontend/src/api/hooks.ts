@@ -5,7 +5,7 @@ import { yangiUid } from '../_shared/idempotent';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
-  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat,
+  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob,
 } from './types';
 
 export function useObyektlar() {
@@ -342,5 +342,35 @@ export function useF2Fayllar(obyekt: string) {
       'apiF2FayllarOl', obyekt),
     enabled: !!obyekt,
     staleTime: 2 * 60 * 1000,
+  });
+}
+
+/* ============ NARXLAR MARKAZI ============ */
+
+export function useNarxlar(filter = 'ALL') {
+  return useQuery({
+    queryKey: ['narxlar', filter],
+    queryFn: () => gas<NarxlarJavob>('apiNarxlarOl', filter),
+    staleTime: 3 * 60 * 1000,
+  });
+}
+
+/** Qo'lda belgilangan narxni saqlash — u boshqa barcha manbalardan ustun */
+export function useNarxBelgilangan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ nom, birlik, belgilangan }: { nom: string; birlik: string; belgilangan: number | '' }) =>
+      gas<any>('apiNarxBelgilanganSaqla', nom, birlik, belgilangan),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['narxlar'] }),
+  });
+}
+
+/** Kategoriya o'zgartirish (ЧЕЛ/МАШ birlikdan avtomat — qolganlari qo'lda) */
+export function useNarxKat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ nom, birlik, yangiKat }: { nom: string; birlik: string; yangiKat: string }) =>
+      gas<any>('apiNarxKatSaqla', nom, birlik, yangiKat),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['narxlar'] }),
   });
 }
