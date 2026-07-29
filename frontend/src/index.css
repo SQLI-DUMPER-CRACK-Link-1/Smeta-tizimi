@@ -109,16 +109,19 @@ body {
   100% { background-position: 0 50%; }
 }
 
-/* Skroll — nozik, dark uchun (15 §12) */
-::-webkit-scrollbar { width: 10px; height: 10px; }
+/* Skroll — MacOS Apple style (yupqa, shaffof) */
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--surface-3);
-  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
   border: 2px solid transparent;
-  background-clip: content-box;
+  background-clip: padding-box;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--border-2); background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { 
+  background: rgba(255, 255, 255, 0.3); 
+  background-clip: padding-box; 
+}
 
 ::selection { background: rgba(79,123,255,.28); color: #fff; }
 

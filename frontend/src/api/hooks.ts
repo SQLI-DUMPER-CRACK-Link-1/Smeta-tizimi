@@ -24,6 +24,15 @@ export function useBossData() {
   });
 }
 
+export function useBossObyekt(obNom: string) {
+  return useQuery({
+    queryKey: ['bossObyekt', obNom],
+    queryFn: () => gas<{ rzList: any[], oylar: any[] }>('apiBossObyekt', obNom),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!obNom,
+  });
+}
+
 export function useHolat(obyekt: string, forceRefresh: boolean = false) {
   return useQuery({
     queryKey: ['holat', obyekt, forceRefresh],
