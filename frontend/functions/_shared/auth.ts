@@ -27,6 +27,7 @@ async function hmacHex(body: string, secret: string) {
 }
 
 export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Promise<string> {
+  if (!secret) secret = 'Boshlangich_Maxfiy_Kalit_123';
   const payload: Sess = {
     ...s,
     exp: Date.now() + 12 * 3600_000, // 12 soat
@@ -38,6 +39,7 @@ export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Prom
 }
 
 export async function tekshir(cookie: string | null, secret: string): Promise<Sess | null> {
+  if (!secret) secret = 'Boshlangich_Maxfiy_Kalit_123';
   const t = cookie?.match(/sess=([^;]+)/)?.[1];
   if (!t) return null;
   const parts = t.split('.');
