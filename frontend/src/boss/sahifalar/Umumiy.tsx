@@ -15,8 +15,17 @@ function AuroraBackground({ children }: { children: React.ReactNode }) {
          <Sahna3D />
       </div>
 
-      {/* Grid Overlay for texture */}
-      <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.02] pointer-events-none" />
+      {/* Animated Grid Overlay for texture */}
+      <div 
+        className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.03] pointer-events-none animate-[ping_10s_linear_infinite]" 
+        style={{ backgroundSize: '100px 100px', animation: 'gridMove 20s linear infinite' }}
+      />
+      <style>{`
+        @keyframes gridMove {
+          0% { background-position: 0 0; }
+          100% { background-position: 100px 100px; }
+        }
+      `}</style>
 
       {/* Blur overlays to make text readable */}
       <div className="absolute inset-0 z-0 bg-black/30 pointer-events-none" />
@@ -28,10 +37,50 @@ function AuroraBackground({ children }: { children: React.ReactNode }) {
   );
 }
 
+// --- UI SOUNDS (Web Audio API) ---
+const useUiSound = () => {
+  const playHover = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1000, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1500, ctx.currentTime + 0.03);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.02, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } catch(e) {}
+  };
+  const playClick = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } catch(e) {}
+  };
+  return { playHover, playClick };
+};
+
 function GlassCard({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
+  const { playHover, playClick } = useUiSound();
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -47,16 +96,28 @@ function GlassCard({ children, className = '', onClick }: { children: React.Reac
     setTilt({ x: tiltX, y: tiltY });
   };
 
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+    playHover();
+  };
+
   const handleMouseLeave = () => {
     setIsHovering(false);
     setTilt({ x: 0, y: 0 });
   };
 
+  const handleClick = () => {
+    if (onClick) {
+      playClick();
+      onClick();
+    }
+  };
+
   return (
     <div 
-      onClick={onClick}
+      onClick={handleClick}
       onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovering(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
         transform: isHovering ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)` : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
