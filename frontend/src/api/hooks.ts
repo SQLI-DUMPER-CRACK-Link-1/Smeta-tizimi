@@ -5,7 +5,7 @@ import { yangiUid } from '../_shared/idempotent';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
-  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator, F2UstunConfig, F2Varaq, BuxDashboard, Xarajat,
+  AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator, F2UstunConfig, F2Varaq,
 } from './types';
 
 export function useObyektlar() {
@@ -16,36 +16,25 @@ export function useObyektlar() {
   });
 }
 
+/**
+ * ⚠️ 2026-07-30 TUZATILDI: bu yerda avval `select` ichida Math.random()
+ * bilan SOXTA ERP raqamlari (ishchilar, texnikalar, zayavkalar, nuqsonlar)
+ * HAQIQIY moliyaviy dashboard ma'lumotiga ARALASHTIRILGAN edi. Bu ikki jihatdan
+ * xavfli edi:
+ *   1) Sonlar HAR YANGILANISHDA o'zgarardi — real ma'lumot o'zgarmasa ham,
+ *      rahbar "faol zayavkalar 7 dan 9 ga oshdi" deb o'ylashi mumkin edi;
+ *   2) Haqiqiy `apiBossData()` javobiga tegishli bo'lmagan soxta maydonlar
+ *      GAS'dan kelganidek ko'rinardi — bu tizimning "hech qachon soxta
+ *      ma'lumot ko'rsatilmasin" qoidasini buzadi.
+ * GAS'da bu ma'lumotlar uchun ZAXIRA (Kadrlar/Texnika/Taminot/Sifat) HALI
+ * YARATILMAGAN — shuning uchun `select` olib tashlandi, server javobi
+ * o'zgarishsiz qaytariladi. ERP sahifalari o'z holatini `useKadrlarData()`
+ * va sh.k. orqali ALOHIDA so'raydi (ular hozircha DEMO deb belgilangan).
+ */
 export function useBossData() {
   return useQuery({
     queryKey: ['bossData'],
     queryFn: () => gas<BossData>('apiBossData'),
-    select: (data) => {
-      if (!data || !data.jami) return data;
-      // Inject dummy ERP data
-      const jamiIshchilar = Math.max(12, Math.floor((data.jami.fakt || 0) / 10000000));
-      const jamiTexnikalar = Math.max(3, Math.floor(jamiIshchilar / 4));
-      const faolZayavkalar = Math.floor(Math.random() * 10) + 5;
-      const halQilinmaganNuqsonlar = Math.floor(Math.random() * 3) + 1;
-      
-      const objects = data.objects.map(obj => ({
-        ...obj,
-        ishchilarSoni: Math.max(2, Math.floor((obj.fakt || 0) / 10000000)),
-        texnikalarSoni: Math.max(1, Math.floor((obj.fakt || 0) / 40000000)),
-        zayavkalarKutilmoqda: Math.floor(Math.random() * 5),
-        nuqsonlar: Math.floor(Math.random() * 2),
-        kechikishKunlari: Math.floor(Math.random() * 10) - 2, // Manfiy bo'lsa demak ilgarilamoqda
-      }));
-
-      return {
-        ...data,
-        jami: {
-          ...data.jami,
-          jamiIshchilar, jamiTexnikalar, faolZayavkalar, halQilinmaganNuqsonlar
-        },
-        objects
-      };
-    },
     staleTime: 5 * 60 * 1000,
   });
 }

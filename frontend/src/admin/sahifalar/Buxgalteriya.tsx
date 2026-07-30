@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Wallet, TrendingUp, HandCoins, Building2, CreditCard, PieChart, Activity, Briefcase, FileSignature, Receipt, Truck, HardHat, ShoppingCart, Info, Search } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
