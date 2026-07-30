@@ -174,6 +174,19 @@ function PointerLight() {
 }
 
 export default function Sahna3D() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  if (isMobile) {
+    return null;
+  }
+
   return (
     <Canvas 
       camera={{ position: [0, 0, 30], fov: 45 }}

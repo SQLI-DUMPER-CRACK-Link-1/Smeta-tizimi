@@ -42,28 +42,30 @@ function AuroraBackground({ children }: { children: React.ReactNode }) {
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
         }
-        .glitch-hover:hover {
-          animation: cyberGlitch 0.25s infinite;
-          cursor: crosshair;
-        }
-        .laser-border::after {
-          content: "";
-          position: absolute;
-          inset: -1px;
-          border-radius: 16px;
-          padding: 1px;
-          background: linear-gradient(90deg, rgba(14,165,233,0), rgba(14,165,233,0.8), rgba(244,63,94,0.8), rgba(14,165,233,0));
-          background-size: 300% 100%;
-          animation: borderSweep 4s linear infinite;
-          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          -webkit-mask-composite: xor;
-          mask-composite: exclude;
-          opacity: 0;
-          transition: opacity 0.3s;
-          pointer-events: none;
-        }
-        .group\\/card:hover .laser-border::after {
-          opacity: 1;
+        @media (hover: hover) and (pointer: fine) {
+          .glitch-hover:hover {
+            animation: cyberGlitch 0.25s infinite;
+            cursor: crosshair;
+          }
+          .laser-border::after {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            border-radius: 16px;
+            padding: 1px;
+            background: linear-gradient(90deg, rgba(14,165,233,0), rgba(14,165,233,0.8), rgba(244,63,94,0.8), rgba(14,165,233,0));
+            background-size: 300% 100%;
+            animation: borderSweep 4s linear infinite;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+          }
+          .group\\/card:hover .laser-border::after {
+            opacity: 1;
+          }
         }
       `}</style>
 
@@ -123,6 +125,7 @@ function GlassCard({ children, className = '', onClick }: { children: React.Reac
   const { playHover, playClick } = useUiSound();
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.innerWidth < 768) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -137,18 +140,22 @@ function GlassCard({ children, className = '', onClick }: { children: React.Reac
   };
 
   const handleMouseEnter = () => {
-    setIsHovering(true);
-    playHover();
+    if (window.innerWidth >= 768) {
+      setIsHovering(true);
+      playHover();
+    }
   };
 
   const handleMouseLeave = () => {
-    setIsHovering(false);
-    setTilt({ x: 0, y: 0 });
+    if (window.innerWidth >= 768) {
+      setIsHovering(false);
+      setTilt({ x: 0, y: 0 });
+    }
   };
 
   const handleClick = () => {
     if (onClick) {
-      playClick();
+      if (window.innerWidth >= 768) playClick();
       onClick();
     }
   };
@@ -160,7 +167,7 @@ function GlassCard({ children, className = '', onClick }: { children: React.Reac
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
-        transform: isHovering ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)` : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+        transform: isHovering ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)` : 'none',
         transition: isHovering ? 'none' : 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
         transformStyle: 'preserve-3d'
       }}
@@ -175,7 +182,7 @@ function GlassCard({ children, className = '', onClick }: { children: React.Reac
       <div 
         className="relative z-10 w-full h-full transform-gpu"
         style={{
-          transform: isHovering ? 'translateZ(30px)' : 'translateZ(0)',
+          transform: isHovering ? 'translateZ(30px)' : 'none',
           transition: 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
           transformStyle: 'preserve-3d'
         }}
