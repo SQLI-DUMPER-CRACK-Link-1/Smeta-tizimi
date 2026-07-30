@@ -25,6 +25,22 @@ function AuroraBackground({ children }: { children: React.ReactNode }) {
           0% { background-position: 0 0; }
           100% { background-position: 100px 100px; }
         }
+        @keyframes cyberGlitch {
+          0% { transform: translate(0) }
+          20% { transform: translate(-2px, 2px); color: #0ea5e9; text-shadow: 2px 0 #f43f5e, -2px 0 #10b981; }
+          21% { transform: translate(0); color: inherit; text-shadow: none; }
+          40% { transform: translate(2px, -2px); color: #f43f5e; text-shadow: -2px 0 #0ea5e9, 2px 0 #10b981; }
+          41% { transform: translate(0); color: inherit; text-shadow: none; }
+          60% { transform: translate(-1px, -1px); color: #10b981; }
+          61% { transform: translate(0); color: inherit; }
+          80% { transform: translate(1px, 1px); }
+          81% { transform: translate(0); }
+          100% { transform: translate(0) }
+        }
+        .glitch-hover:hover {
+          animation: cyberGlitch 0.25s infinite;
+          cursor: crosshair;
+        }
       `}</style>
 
       {/* Blur overlays to make text readable */}
@@ -230,7 +246,7 @@ function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[
       <div className="flex-1 flex flex-col justify-center gap-5 z-10">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Kutilayotgan Sof Foyda</div>
-          <div className="text-3xl font-extrabold font-mono text-emerald-400 drop-shadow-md">
+          <div className="text-3xl font-extrabold font-mono text-emerald-400 drop-shadow-md glitch-hover">
             <FmtN val={sofFoyda} />
           </div>
         </div>
@@ -238,13 +254,13 @@ function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[
         <div className="flex gap-4">
           <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center">
             <div className="text-[10px] text-slate-400 uppercase mb-1">Rentabellik</div>
-            <div className="text-xl font-bold font-mono text-white flex items-center gap-1">
+            <div className="text-xl font-bold font-mono text-white flex items-center gap-1 glitch-hover">
               {rentabellik.toFixed(1)}% <Activity size={14} className="text-accent" />
             </div>
           </div>
           <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center" title="Tushgan puldan qilingan ish hajmi xarajati ayirmasi">
             <div className="text-[10px] text-slate-400 uppercase mb-1">Joriy Holat (Kesh)</div>
-            <div className={`text-lg font-bold font-mono ${realFoyda >= 0 ? 'text-ok' : 'text-danger'}`}>
+            <div className={`text-lg font-bold font-mono ${realFoyda >= 0 ? 'text-ok' : 'text-danger'} glitch-hover`}>
               <FmtN val={realFoyda} qisqa />
             </div>
           </div>
@@ -633,7 +649,7 @@ export default function Umumiy() {
                     <Info size={14} className="text-slate-600 group-hover:text-slate-400 transition-colors" />
                   </div>
                 </h3>
-                <div className={`text-3xl font-bold tracking-tight font-mono ${kpi.color}`}>
+                <div className={`text-3xl font-bold tracking-tight font-mono ${kpi.color} glitch-hover`}>
                   <FmtN val={kpi.qiymat} />
                 </div>
                 {kpi.pct !== null && (
