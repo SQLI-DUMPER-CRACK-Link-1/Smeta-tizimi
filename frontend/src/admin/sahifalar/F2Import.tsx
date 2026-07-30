@@ -188,29 +188,33 @@ export function F2Import() {
     setFaylNomi(nom);
     setVaraq('');
     setCfg(null);
+    setAktTree(null);
   }
 
-  /** Varaq tanlandi → ustunlarni tahlil qilamiz */
+  /** Varaq tanlandi → ustunlarni tahlil qilamiz.
+   * ⚠️ Bu yerda QADAM ALMASHTIRILMAYDI — o'qilgan daraxt faqat oldindan
+   * ko'rsatiladi, moslashtirishga o'tish FAQAT «Davom etish» tugmasi
+   * bosilganda (foydalanuvchi talabi: fayl tanlangach avval tasdiqlash kerak). */
   async function varaqTanla(v: string) {
     setVaraq(v);
     setCfg(null);
+    setAktTree(null);
     try {
       const r = await ustun.mutateAsync({ fileId: fid, varaq: v });
       if (!r.ok) { toast(r.xabar || "Varaq o'qilmadi"); return; }
-      if (r.tree) { setAktTree(r.tree); setQadam(1); return; }   // config kerak emas
+      if (r.tree) { setAktTree(r.tree); return; }   // config kerak emas — lekin qadam SHU YERDA o'zgarmaydi
       if (r.cols) setCfg(r.cols);
       else toast('Ustunlar aniqlanmadi');
     } catch (e: any) { toast(`Xato: ${e.message}`); }
   }
 
-  /** Ustunlar tasdiqlandi → daraxt quriladi */
+  /** Ustunlar tasdiqlandi → daraxt quriladi (hali oldindan ko'rish, qadam o'zgarmaydi) */
   async function daraxtQur() {
     if (!cfg) return;
     try {
       const r = await daraxt.mutateAsync({ fileId: fid, varaq, colConfig: cfg });
       if (!r.ok || !r.tree) { toast(r.xabar || "Daraxt qurilmadi"); return; }
       setAktTree(r.tree);
-      setQadam(1);
       toast(`${faylNomi}: ${barglar(r.tree).length} ta qator o'qildi`);
     } catch (e: any) { toast(`Xato: ${e.message}`); }
   }
@@ -436,8 +440,27 @@ export function F2Import() {
                 ))}
               </div>
               <Tugma tur="primary" onBos={daraxtQur} band={daraxt.isPending}>
-                {daraxt.isPending ? 'Daraxt qurilmoqda…' : 'Davom etish'}
+                {daraxt.isPending ? 'Daraxt qurilmoqda…' : 'Ustunlarni tasdiqlash'}
               </Tugma>
+            </section>
+          )}
+
+          {/* ---- Fayl o'qildi — aniq «Davom etish» tugmasi ----
+              ⚠️ Foydalanuvchi talabi: fayl/varaq tanlangach avtomatik
+              o'tmasin, alohida tasdiqlash bosqichi bo'lsin. */}
+          {aktTree && (
+            <section className="pt-2 border-t border-border">
+              <div className="rounded-[10px] border border-ok/25 bg-ok/[.08] p-4 flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-text font-medium">✅ Fayl o'qildi — «{faylNomi}»</p>
+                  <p className="text-sm text-text-dim tabular-nums">
+                    {barglar(aktTree).length} qator · <FmtN val={aktJami} /> so'm
+                  </p>
+                </div>
+                <Tugma tur="primary" onBos={() => setQadam(1)}>
+                  Davom etish →
+                </Tugma>
+              </div>
             </section>
           )}
         </div>
@@ -611,6 +634,8 @@ export function F2Import() {
               onBos={() => {
                 setYozishBoshlandi(false); setQadam(0);
                 setAktTree(null); setNatija(null);
+                setFid(''); setFaylNomi(''); setVaraq(''); setCfg(null);
+                setQolBekor(new Set()); setQolBog({});
               }}
             >
               Yangi Ф2 import
