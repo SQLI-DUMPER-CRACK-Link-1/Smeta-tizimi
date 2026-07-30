@@ -248,3 +248,34 @@ export type BuxDashboard = {
   jami: { dog: number; bajarilgan: number; tolangan: number; debitor: number; avans: number };
 };
 export type Xarajat = { row: number; sana: string; toifa: string; summa: number; izoh: string };
+
+/* ---------- Kadrlar va Tabel (ERP HR) ---------- */
+export type Ishchi = {
+  id: string;
+  ism: string;
+  kasb: string;
+  stavka: number;    // kunlik ish haqi stavkasi
+  brigada: string;
+  obyekt: string;
+  telefon?: string;
+  status?: 'faol' | 'bo\'shatilgan';
+};
+
+export type TabelKuni = 'keldi' | 'kelmadi' | 'kasal' | 'otgul' | null;
+
+export type TabelRecord = {
+  ishchiId: string;
+  sana: string;     // YYYY-MM-DD
+  holat: TabelKuni;
+  soat?: number;    // Necha soat ishlagani (agar soatbay bo'lsa)
+  izoh?: string;
+};
+
+export type KadrlarDashboard = {
+  ishchilar: Ishchi[];
+  tabellar: TabelRecord[];
+  jamiFaolIshchilar: number;
+  bugungiDavomat: number; // foizda (masalan, 95%)
+  oylikFond: number;      // joriy oyda kutilayotgan xarajat
+  berilganAvanslar: number;
+};
