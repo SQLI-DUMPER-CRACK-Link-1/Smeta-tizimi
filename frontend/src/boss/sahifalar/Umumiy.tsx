@@ -101,6 +101,7 @@ function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[
       color: "text-emerald-400",
       icon: PieChart,
       total: sofFoyda,
+      description: "Tasdiqlangan Umumiy Smeta qiymatidan (Qo'shilgan qiymatsiz/Nalogsiz) Kutilayotgan barcha Xarajatlarni (Material, Ish haqi, Subpodryad va h.k) ayirib tashlangandagi qolgan sof foyda summasi. Bu loyihani tugatgandagi biznesning kutilayotgan daromadi.",
       items: items
     });
   };
@@ -360,22 +361,36 @@ function ShartnomaRow({ shartnoma }: { shartnoma: any }) {
 // --- KPI MODAL (Tafsilotlar) ---
 function KpiModal({ kpi, onClose }: { kpi: any, onClose: () => void }) {
   if (!kpi) return null;
+  const KpiIcon = kpi.icon || PieChart;
+  
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
-      <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative bg-[#0F172A]/90 border border-white/20 shadow-2xl rounded-3xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden z-10 backdrop-blur-2xl">
-        
-        {/* Glow effect in modal */}
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-accent/20 rounded-full blur-[100px] pointer-events-none" />
-
-        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5 relative z-10">
-           <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-             <div className={`p-2 rounded-xl bg-white/5 ${kpi.color}`}>
-               <kpi.icon size={24} />
-             </div>
-             {kpi.nom} <span className="text-sm font-normal text-slate-400 ml-2">({kpi.items.length} ta shartnoma)</span>
-           </h3>
-           <button onClick={onClose} className="text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-red-500/80 hover:text-white rounded-xl p-2 shadow-sm"><X size={20} /></button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="relative w-full max-w-2xl bg-[#0B0E14]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+      >
+        <div className="p-6 border-b border-white/10 flex justify-between items-start bg-white/5 relative z-10">
+          <div>
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <KpiIcon size={28} className={kpi.color} />
+              {kpi.nom}
+            </h2>
+            {kpi.description && (
+              <div className="mt-3 text-sm text-slate-300 leading-relaxed max-w-xl bg-black/20 p-3 rounded-lg border border-white/5">
+                <span className="font-semibold text-white">Asos (Formula):</span> {kpi.description}
+              </div>
+            )}
+          </div>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-full p-2">
+            <X size={20} />
+          </button>
         </div>
         
         <div className="p-0 overflow-y-auto flex-1 scrollbar-thin relative z-10">
@@ -481,16 +496,16 @@ export default function Umumiy() {
         {/* Top KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {[
-            { id: "smeta", nom: "Smeta Jami", qiymat: data.jami.smeta, pct: null, color: "text-white", icon: Wallet, desc: "Barcha obyektlar yig'indisi" },
-            { id: "fakt", nom: "Bajarilgan (Fakt)", qiymat: data.jami.fakt, pct: data.jami.progress, color: "text-ok", bg: "bg-ok", icon: TrendingUp, desc: "Amalda qilingan ishlar" },
-            { id: "f2", nom: "Tasdiqlangan (F2)", qiymat: data.jami.f2, pct: data.jami.f2pct, color: "text-t-rs", bg: "bg-t-rs", icon: CheckCircle, desc: "Buyurtmachi tasdiqlagan" },
-            { id: "qoldiq", nom: "Qoldiq", qiymat: data.jami.qoldiq, pct: null, color: "text-slate-300", icon: Clock, desc: "Smetadan qolgan miqdor" },
+            { id: "smeta", nom: "Smeta Jami", qiymat: data.jami.smeta, pct: null, color: "text-white", icon: Wallet, desc: "Barcha obyektlarning tasdiqlangan lokal smetalari (LRV) yig'indisi. Kelajakdagi daromad bazasi." },
+            { id: "fakt", nom: "Bajarilgan (Fakt)", qiymat: data.jami.fakt, pct: data.jami.progress, color: "text-ok", bg: "bg-ok", icon: TrendingUp, desc: "Prorablar tomonidan kiritilib, PTB tomonidan tasdiqlangan amaldagi bajarilgan ishlar (F-2) hajmi." },
+            { id: "f2", nom: "Tasdiqlangan (F2)", qiymat: data.jami.f2, pct: data.jami.f2pct, color: "text-t-rs", bg: "bg-t-rs", icon: CheckCircle, desc: "Buyurtmachi (Texnadzor) tomonidan rasman tasdiqlangan hujjatli ish hajmi." },
+            { id: "qoldiq", nom: "Qoldiq", qiymat: data.jami.qoldiq, pct: null, color: "text-slate-300", icon: Clock, desc: "Smeta summasidan Bajarilgan (Fakt) summasi ayirmasi. Obyektni tugatish uchun qolgan ish hajmi." },
           ].map((kpi, idx) => (
             <motion.div key={`kpi1-${idx}`} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1, duration: 0.6, type: "spring" }}>
               <GlassCard 
                 className="p-6 relative group cursor-pointer hover:bg-white/10 transition-colors border-white/10 ring-0 hover:ring-2 hover:ring-accent/50 transform hover:-translate-y-1 active:translate-y-0 duration-200"
                 onClick={() => setActiveKpi({
-                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat,
+                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat, description: kpi.desc,
                   items: data.objects.filter(o => (o as any)[kpi.id] > 0).map(o => ({ nom: o.nom, val: (o as any)[kpi.id] }))
                 })}
               >
@@ -524,15 +539,15 @@ export default function Umumiy() {
         <h2 className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Moliyaviy Oqimlar</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {[
-            { id: "tolangan", nom: "Tushum (To'langan)", qiymat: data.jami.tolangan, color: "text-emerald-400", icon: ArrowDownToLine, border: "border-emerald-500/30", bg: "bg-emerald-500/5" },
-            { id: "debitor", nom: "Debitor (Qarz)", qiymat: data.jami.debitor, color: "text-red-400", icon: ArrowUpFromLine, border: "border-red-500/30", bg: "bg-red-500/5" },
-            { id: "avans", nom: "Avans", qiymat: data.jami.avans, color: "text-amber-400", icon: Layers, border: "border-amber-500/30", bg: "bg-amber-500/5" },
+            { id: "tolangan", nom: "Tushum (To'langan)", qiymat: data.jami.tolangan, color: "text-emerald-400", icon: ArrowDownToLine, border: "border-emerald-500/30", bg: "bg-emerald-500/5", desc: "Buxgalteriya bo'limi tomonidan kiritilgan (Bank va Kassa orqali) mijozlar tomonidan amalda to'langan mablag'lar." },
+            { id: "debitor", nom: "Debitor (Qarz)", qiymat: data.jami.debitor, color: "text-red-400", icon: ArrowUpFromLine, border: "border-red-500/30", bg: "bg-red-500/5", desc: "Tushum va Bajarilgan ish hajmi o'rtasidagi farq. Agar bajarilgan ish tushumdan ko'p bo'lsa, mijoz bizdan qarzdor (Debitor)." },
+            { id: "avans", nom: "Avans", qiymat: data.jami.avans, color: "text-amber-400", icon: Layers, border: "border-amber-500/30", bg: "bg-amber-500/5", desc: "Tushum va Bajarilgan ish hajmi o'rtasidagi farq. Agar mijoz ish hajmidan ortiq to'lagan bo'lsa, bizdagi oldindan to'lov qoldig'i (Avans)." },
           ].map((kpi, idx) => (
             <motion.div key={`kpi-mol-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 + idx * 0.05, duration: 0.4 }}>
               <div 
                 className={`p-4 rounded-xl border ${kpi.border} ${kpi.bg} backdrop-blur-md flex flex-col items-center text-center group cursor-pointer hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transform hover:-translate-y-1 active:translate-y-0 transition-all duration-200`}
                 onClick={() => setActiveKpi({
-                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat,
+                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat, description: kpi.desc,
                   items: data.objects.filter(o => (o as any)[kpi.id] > 0).map(o => ({ nom: o.nom, val: (o as any)[kpi.id] }))
                 })}
               >
@@ -548,19 +563,19 @@ export default function Umumiy() {
         <h2 className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Xarajatlar Tahlili</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
           {[
-            { id: "mat", nom: "Material", qiymat: data.jami.mat, color: "text-t-mat", icon: Wrench, border: "border-white/10", bg: "bg-white/5" },
-            { id: "chel", nom: "Ish Haqi", qiymat: data.jami.chel, color: "text-blue-400", icon: HardHat, border: "border-white/10", bg: "bg-white/5" },
-            { id: "mash", nom: "Mexanizm", qiymat: data.jami.mash, color: "text-purple-400", icon: Truck, border: "border-white/10", bg: "bg-white/5" },
-            { id: "ob", nom: "Uskuna", qiymat: data.jami.ob, color: "text-cyan-400", icon: Server, border: "border-white/10", bg: "bg-white/5" },
-            { id: "mk", nom: "Metal", qiymat: data.jami.mk, color: "text-slate-300", icon: Component, border: "border-white/10", bg: "bg-white/5" },
-            { id: "kab", nom: "Kabel", qiymat: data.jami.kab, color: "text-yellow-500", icon: Zap, border: "border-white/10", bg: "bg-white/5" },
-            { id: "sub", nom: "Subpodryad", qiymat: data.jami.sub, color: "text-orange-400", icon: Users, border: "border-white/10", bg: "bg-white/5" },
+            { id: "mat", nom: "Material", qiymat: data.jami.mat, color: "text-t-mat", icon: Wrench, border: "border-white/10", bg: "bg-white/5", desc: "Lokal Smetadagi barcha material resurslarning (armatura, beton va h.k) umumiy smeta narxi." },
+            { id: "chel", nom: "Ish Haqi", qiymat: data.jami.chel, color: "text-blue-400", icon: HardHat, border: "border-white/10", bg: "bg-white/5", desc: "Lokal Smetadagi ishchilar (T-1, T-2) oylik maoshlari yig'indisi." },
+            { id: "mash", nom: "Mexanizm", qiymat: data.jami.mash, color: "text-purple-400", icon: Truck, border: "border-white/10", bg: "bg-white/5", desc: "Lokal Smetadagi mashina va mexanizmlar xarajatlari yig'indisi." },
+            { id: "ob", nom: "Uskuna", qiymat: data.jami.ob, color: "text-cyan-400", icon: Server, border: "border-white/10", bg: "bg-white/5", desc: "Obyektga o'rnatiladigan uskunalar (oborudovaniye) xarajatlari." },
+            { id: "mk", nom: "Metal", qiymat: data.jami.mk, color: "text-slate-300", icon: Component, border: "border-white/10", bg: "bg-white/5", desc: "Metal konstruksiyalari bilan bog'liq maxsus xarajatlar." },
+            { id: "kab", nom: "Kabel", qiymat: data.jami.kab, color: "text-yellow-500", icon: Zap, border: "border-white/10", bg: "bg-white/5", desc: "Kabel va elektrotexnika bo'yicha kiritilgan smeta qiymati." },
+            { id: "sub", nom: "Subpodryad", qiymat: data.jami.sub, color: "text-orange-400", icon: Users, border: "border-white/10", bg: "bg-white/5", desc: "Qo'shimcha kelishuvlar yoki 3-tomonlarga (Subpodryadchilarga) beriladigan ishlar summasi." },
           ].map((kpi, idx) => (
             <motion.div key={`kpi-xar-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + idx * 0.05, duration: 0.4 }}>
               <div 
                 className={`p-4 rounded-xl border ${kpi.border} ${kpi.bg} backdrop-blur-md flex flex-col items-center text-center group cursor-pointer hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transform hover:-translate-y-1 active:translate-y-0 transition-all duration-200 h-full justify-center`}
                 onClick={() => setActiveKpi({
-                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat,
+                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat, description: kpi.desc,
                   items: data.objects.filter(o => (o as any)[kpi.id] > 0).map(o => ({ nom: o.nom, val: (o as any)[kpi.id] }))
                 })}
               >
