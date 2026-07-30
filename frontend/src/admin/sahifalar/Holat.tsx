@@ -7,10 +7,10 @@ import { Skeleton } from '../../umumiy/ui/Skeleton';
 import { SaveModal } from '../../umumiy/ui/SaveModal';
 import { ZamenaModal } from '../../umumiy/ui/ZamenaModal';
 import { toast } from '../../umumiy/ui/Toast';
-import { Edit3, Eye, ArrowLeft, CloudRain, HardHat, TrendingUp, TrendingDown, Gauge, Activity, Loader2 } from 'lucide-react';
+import { Edit3, Eye, ArrowLeft, CloudRain, HardHat, TrendingUp, TrendingDown, Gauge, Activity, Loader2, Building2 } from 'lucide-react';
 import { yangiUid } from '../../_shared/idempotent';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
-import { FmtN, formatPercent } from '../../lib/format';
+import { FmtN } from '../../lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export type EditState = {
@@ -42,7 +42,7 @@ export function Holat() {
     if (!selectedObyekt && obyektlar?.length) setSelectedObyekt(obyektlar[0].obyekt);
   }, [yoldagiObyekt, obyektlar, selectedObyekt]);
 
-  const { data: holatData, isLoading: isHolatLoading, error, dataUpdatedAt, isRefetching, refetch } = useHolat(selectedObyekt);
+  const { data: holatData, isLoading: isHolatLoading, error } = useHolat(selectedObyekt);
   const { data: lockStatus } = useLockStatus(selectedObyekt);
   const { mutateAsync: acquireLock } = useLockAcquire();
   const { mutateAsync: releaseLock } = useLockRelease();
@@ -100,10 +100,10 @@ export function Holat() {
 
     try {
       const r = await saqla.mutateAsync(editsToSave);
-      toast(`Muvaffaqiyatli saqlandi: ${r.qatorlar} qator`, 'success', async () => {
+      toast(`Muvaffaqiyatli saqlandi: ${r.qatorlar} qator`, 'ok', async () => {
          try {
            await saqla.mutateAsync(orqaga);
-           toast('O\'zgarishlar bekor qilindi', 'success');
+           toast('O\'zgarishlar bekor qilindi', 'ok');
          } catch(e: any) {
            toast('Bekor qilishda xatolik: ' + e.message, 'danger');
          }
@@ -182,7 +182,7 @@ export function Holat() {
         });
       }
 
-      toast("Qo'shish muvaffaqiyatli bajarildi!", 'success');
+      toast("Qo'shish muvaffaqiyatli bajarildi!", 'ok');
       setIsZamenaModalOpen(false);
       setDragSource(null);
       setDragTarget(null);

@@ -248,7 +248,7 @@ export type BuxDashboard = {
   jami: { dog: number; bajarilgan: number; tolangan: number; debitor: number; avans: number };
   kassaQoldiq: number;
   jamiXarajat: number;
-  jamiKreditor: number; // Bizning qarzimiz (Postavshik + Ishchi)
+  jamiKreditor?: number; // Bizning qarzimiz (Postavshik + Ishchi) — GAS'da hali manba yo'q, undefined bo'lishi mumkin
   jamiDebitor: number;  // Bizning haqimiz
 };
 export type Xarajat = { row: number; sana: string; toifa: string; summa: number; izoh: string; manba?: 'Kadrlar' | 'Taminot' | 'Texnika' | 'Boshqa' };

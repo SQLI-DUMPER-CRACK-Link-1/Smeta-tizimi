@@ -6,6 +6,7 @@ import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
   AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator, F2UstunConfig, F2Varaq,
+  BuxDashboard, Xarajat,
 } from './types';
 
 export function useObyektlar() {
@@ -478,19 +479,7 @@ export function useF2Daraxt() {
 export function useBuxDashboard() {
   return useQuery({
     queryKey: ['buxDash'],
-    queryFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      return {
-        qatorlar: [
-          { no: '1', nomi: 'Amfiteatr Obyekti', taraf: 'Buyurtmachi', dog_summa: 1200000000, bajarilgan: 850000000, tolangan: 500000000, debitor: 350000000, avans: 0, bajarilgan_pct: 70, tolangan_pct: 41, holat: 'Jarayonda' }
-        ],
-        jami: { dog: 1200000000, bajarilgan: 850000000, tolangan: 500000000, debitor: 350000000, avans: 0 },
-        kassaQoldiq: 450000000,
-        jamiXarajat: 285000000,
-        jamiKreditor: 12000000, // Postavshiklardan qarz va h.k.
-        jamiDebitor: 350000000, // Buyurtmachidan qarzdorlik
-      };
-    },
+    queryFn: () => gas<BuxDashboard>('apiBuxDashboard'),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -498,15 +487,7 @@ export function useBuxDashboard() {
 export function useXarajatlar() {
   return useQuery({
     queryKey: ['xarajatlar'],
-    queryFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return [
-        { row: 1, sana: '2026-07-28', toifa: 'Ёқилғи', summa: 2400000, izoh: 'Texnika bo\'limi (HOWO Samosval uchun zapravka)', manba: 'Texnika' },
-        { row: 2, sana: '2026-07-29', toifa: 'Материал', summa: 18500000, izoh: 'Ta\'minot: Armatura 12mm xarid (Amfiteatr uchun)', manba: 'Taminot' },
-        { row: 3, sana: '2026-07-30', toifa: 'Иш ҳақи (Аванс)', summa: 5500000, izoh: 'Kadrlar: Brigada-1 ga avans berildi', manba: 'Kadrlar' },
-        { row: 4, sana: '2026-07-30', toifa: 'Бошқа', summa: 1200000, izoh: 'Kantselyariya tovarlari', manba: 'Boshqa' },
-      ];
-    },
+    queryFn: () => gas<Xarajat[]>('apiXarajatOl'),
     staleTime: 5 * 60 * 1000,
   });
 }
