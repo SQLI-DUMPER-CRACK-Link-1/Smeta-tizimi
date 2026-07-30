@@ -760,30 +760,15 @@ export default function Umumiy() {
           ))}
         </div>
 
-        {/* Qurilish boshqaruvi (ERP Nazorat) */}
-        <h2 className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Operativ Nazorat (ERP)</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[
-            { id: "jamiIshchilar", nom: "Jami Ishchilar", qiymat: data.jami.jamiIshchilar, color: "text-blue-400", icon: HardHat, border: "border-blue-500/30", bg: "bg-blue-500/5", desc: "Tabel bo'yicha obyektlarda ishlayotgan barcha xodimlar soni." },
-            { id: "jamiTexnikalar", nom: "Texnikalar", qiymat: data.jami.jamiTexnikalar, color: "text-purple-400", icon: Truck, border: "border-purple-500/30", bg: "bg-purple-500/5", desc: "Obyektlarda ishlayotgan og'ir texnikalar soni." },
-            { id: "faolZayavkalar", nom: "Ochiq Zayavkalar", qiymat: data.jami.faolZayavkalar, color: "text-yellow-400", icon: ShoppingCart, border: "border-yellow-500/30", bg: "bg-yellow-500/5", desc: "Ta'minotga berilgan va hali yopilmagan qabul qilinishini kutyotgan moddiy so'rovlar." },
-            { id: "halQilinmaganNuqsonlar", nom: "Kritik Nuqsonlar", qiymat: data.jami.halQilinmaganNuqsonlar, color: "text-rose-400", icon: ShieldAlert, border: "border-rose-500/30", bg: "bg-rose-500/5", desc: "Texnadzor tomonidan qayd qilingan va hali bartaraf etilmagan nuqsonlar soni." },
-          ].map((kpi, idx) => (
-            <motion.div key={`kpi-erp-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 + idx * 0.05, duration: 0.4 }}>
-              <div 
-                className={`p-4 rounded-xl border ${kpi.border} ${kpi.bg} backdrop-blur-md flex flex-col items-center text-center group cursor-pointer hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transform hover:-translate-y-1 active:translate-y-0 transition-all duration-200`}
-                onClick={() => setActiveKpi({
-                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat, description: kpi.desc,
-                  items: data.objects.filter(o => (o as any)[kpi.id] > 0).map(o => ({ nom: o.nom, val: (o as any)[kpi.id] }))
-                })}
-              >
-                <kpi.icon size={24} className={`${kpi.color} mb-3 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`} />
-                <div className="text-[12px] font-bold text-slate-300 uppercase tracking-widest mb-1 group-hover:text-white transition-colors">{kpi.nom}</div>
-                <div className={`text-2xl font-mono font-bold ${kpi.color}`}>{kpi.qiymat} ta</div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        {/* ⚠️ 2026-07-30: "Operativ Nazorat (ERP)" bloki OLIB TASHLANDI —
+            u jami.jamiIshchilar/jamiTexnikalar/faolZayavkalar/halQilinmaganNuqsonlar
+            maydonlarini haqiqiy hisobot sifatida ko'rsatardi, lekin GAS'dagi
+            apiBossData() bu maydonlarni HECH QACHON qaytarmaydi (Kadrlar/Texnika/
+            Taminot/Sifat uchun real varaq yo'q). Qachonki GAS tomonida
+            apiKadrlarDashboard va sh.k. real funksiyalar yozilsa, shu joyga
+            HAQIQIY ma'lumot bilan qaytariladi. Qayta qo'shishdan oldin
+            frontend/src/api/hooks.ts dagi useBossData() haqiqatan GAS'dan
+            shu maydonlarni olib kelayotganini tekshiring. */}
 
         {/* Xarajatlar Tahlili (To'liq Backend Data) */}
         <h2 className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Xarajatlar Tahlili</h2>

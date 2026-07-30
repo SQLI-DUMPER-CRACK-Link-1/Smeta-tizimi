@@ -144,7 +144,31 @@ function apiBuxDashboard(){
     jami.dog+=dog; jami.bajarilgan+=baj; jami.tolangan+=tl;
     jami.debitor+=(debitor>0?debitor:0); jami.avans+=(debitor<0?-debitor:0);
   });
-  return {qatorlar:out, jami:jami};
+
+  // ⚡ 2026-07-30: Sayt tomonida "kassaQoldiq/jamiXarajat/jamiDebitor" nomlari
+  // bilan chaqirilyapti (Antigravity qurayotgan yangi Buxgalteriya UI). Bular
+  // OLDIN HAQIQIY QAYTARILMAGAN edi. FAQAT haqiqiy varaqlardan hisoblanadi:
+  //   jamiXarajat  — _XARAJAT varag'idagi barcha summalar (apiXarajatOl)
+  //   jamiDebitor  — jami.debitor bilan bir xil (mijozlar bizga qarzi)
+  //   kassaQoldiq  — to'langan (kirim) minus xarajat (chiqim) — haqiqiy pul qoldig'i
+  // ⚠️ "jamiKreditor" (yetkazib beruvchilarga qarzimiz) uchun tizimda HALI
+  // HECH QANDAY MANBA (varaq/hisob) YO'Q — shuning uchun SOXTA RAQAM
+  // QO'YILMAYDI. Frontend uni undefined holida qabul qilsin (FmtN "—" ko'rsatadi).
+  var jamiXarajat = 0;
+  try{
+    (apiXarajatOl()||[]).forEach(function(x){ jamiXarajat += (_toNum(x.summa)||0); });
+  }catch(e){}
+
+  jami.jamiXarajat = jamiXarajat;
+  jami.jamiDebitor = jami.debitor;
+  jami.kassaQoldiq = jami.tolangan - jamiXarajat;
+
+  // Ikkala shaklda ham qaytariladi: `jami.X` (asl UI) va yuqori darajada `X`
+  // (Antigravity'ning yangi Buxgalteriya UI'si shu ko'rinishda o'qiydi).
+  return {
+    qatorlar: out, jami: jami,
+    jamiXarajat: jamiXarajat, jamiDebitor: jami.debitor, kassaQoldiq: jami.kassaQoldiq
+  };
 }
 
 /* ⚡ 2026-07-13 YANGI: DEBИТОР AGING — Boss panel uchun "qanchadan beri to'lanmagan"
