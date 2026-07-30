@@ -29,9 +29,28 @@ function AuroraBackground({ children }: { children: React.ReactNode }) {
 }
 
 function GlassCard({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
   return (
-    <div onClick={onClick} className={`bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl overflow-hidden ${className}`}>
-      {children}
+    <div 
+      onClick={onClick}
+      onMouseMove={handleMouseMove}
+      className={`relative bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden group/card transition-all duration-300 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] hover:border-white/20 ${className}`}
+    >
+      <div 
+        className="pointer-events-none absolute -inset-px z-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover/card:opacity-100"
+        style={{
+          background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255,255,255,0.06), transparent 40%)`
+        }}
+      />
+      <div className="relative z-10 w-full h-full">
+        {children}
+      </div>
     </div>
   );
 }
@@ -163,7 +182,11 @@ function SmartXulosa({ jami }: { jami: any }) {
   return (
     <GlassCard className="p-6 relative overflow-hidden flex flex-col h-full border-l-4 border-l-accent bg-accent/5 hover:bg-accent/10 transition-colors duration-300">
        <div className="absolute -right-10 -top-10 opacity-10 pointer-events-none">
-         <Cpu size={120} />
+         <Cpu size={120} className="animate-[pulse_4s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
+       </div>
+       <div className="absolute top-6 right-6 flex items-center justify-center">
+         <div className="absolute w-4 h-4 bg-accent rounded-full animate-ping opacity-70" />
+         <div className="relative w-2 h-2 bg-accent rounded-full" />
        </div>
        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
          <Activity size={20} className="text-accent" /> AI Analitik Xulosa

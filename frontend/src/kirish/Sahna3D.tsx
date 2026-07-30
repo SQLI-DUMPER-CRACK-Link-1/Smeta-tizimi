@@ -1,8 +1,9 @@
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { EffectComposer, Bloom } from '@react-three/postprocessing';
-import { MeshTransmissionMaterial, Environment, Float, Sphere } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Noise, Vignette } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
+import { MeshTransmissionMaterial, Environment, Float, Sphere, CameraShake } from '@react-three/drei';
 
 function LuxCrystal() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -142,7 +143,7 @@ function ParallaxCamera() {
     camera.lookAt(0, 0, 0);
   });
 
-  return null;
+  return <CameraShake maxPitch={0.02} maxRoll={0.02} maxYaw={0.02} yawFrequency={0.2} pitchFrequency={0.2} rollFrequency={0.2} intensity={0.5} />;
 }
 
 export default function Sahna3D() {
@@ -173,6 +174,12 @@ export default function Sahna3D() {
           mipmapBlur 
           intensity={1.5} 
         />
+        <ChromaticAberration
+          blendFunction={BlendFunction.NORMAL}
+          offset={new THREE.Vector2(0.002, 0.002)}
+        />
+        <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.3} />
+        <Vignette eskil={false} offset={0.1} darkness={1.2} />
       </EffectComposer>
     </Canvas>
   );
