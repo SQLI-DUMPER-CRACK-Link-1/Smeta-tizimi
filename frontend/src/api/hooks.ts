@@ -525,6 +525,55 @@ export function useXarajatOchir() {
   });
 }
 
+export function useSkladOchir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (qatorNo: number) => gas<string>('apiSkladOchir', qatorNo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['skladQoldiq'] });
+    }
+  });
+}
+
+/* ============ ERP KADRLAR (MOCK DATA) ============ */
+export function useKadrlarData() {
+  return useQuery({
+    queryKey: ['kadrlar'],
+    queryFn: async () => {
+      // Hozircha Google Sheets'da API yo'q, shuning uchun sun'iy kutish va mock ma'lumot qaytaramiz
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const bugun = new Date().toISOString().split('T')[0];
+      
+      const mockIshchilar = [
+        { id: '1', ism: 'Azizov Bahrom', kasb: 'Prorab', stavka: 250000, brigada: 'Brigada-1', obyekt: 'Amfiteatr', status: 'faol' },
+        { id: '2', ism: 'Karimov Rustam', kasb: 'Usta', stavka: 180000, brigada: 'Brigada-1', obyekt: 'Amfiteatr', status: 'faol' },
+        { id: '3', ism: 'Nazarov Umid', kasb: 'Payvandchi', stavka: 200000, brigada: 'Brigada-2', obyekt: 'Suniy kol', status: 'faol' },
+        { id: '4', ism: 'Toshmatov Ali', kasb: 'Yordamchi', stavka: 120000, brigada: 'Brigada-1', obyekt: 'Amfiteatr', status: 'faol' },
+        { id: '5', ism: 'Eshmatov Vali', kasb: 'Santexnik', stavka: 170000, brigada: 'Brigada-3', obyekt: '10Kv liniya', status: 'faol' },
+      ] as any[];
+
+      const mockTabellar = [
+        { ishchiId: '1', sana: bugun, holat: 'keldi', izoh: '' },
+        { ishchiId: '2', sana: bugun, holat: 'keldi', izoh: '' },
+        { ishchiId: '3', sana: bugun, holat: 'kelmadi', izoh: 'Ruxsat soragan' },
+        { ishchiId: '4', sana: bugun, holat: 'keldi', izoh: '' },
+        { ishchiId: '5', sana: bugun, holat: 'kasal', izoh: '' },
+      ] as any[];
+
+      return {
+        ishchilar: mockIshchilar,
+        tabellar: mockTabellar,
+        jamiFaolIshchilar: 5,
+        bugungiDavomat: 60,
+        oylikFond: 23500000,
+        berilganAvanslar: 5500000,
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 /* ============ Ф2 ТАЙЁРЛАШ (smetadan yangi hujjat) ============ */
 
 export function useF2HujjatYarat() {
@@ -550,44 +599,3 @@ export function useSessiya() {
     retry: false,
   });
 }
-
- / *   = = = = = = = = = = = =   E R P   K A D R L A R   ( M O C K   D A T A )   = = = = = = = = = = = =   * / 
- e x p o r t   f u n c t i o n   u s e K a d r l a r D a t a ( )   { 
-     r e t u r n   u s e Q u e r y ( { 
-         q u e r y K e y :   [ ' k a d r l a r ' ] , 
-         q u e r y F n :   a s y n c   ( )   = >   { 
-             / /   H o z i r c h a   G o o g l e   S h e e t s ' d a   A P I   y o ' q ,   s h u n i n g   u c h u n   s u n ' i y   k u t i s h   v a   m o c k   m a ' l u m o t   q a y t a r a m i z 
-             a w a i t   n e w   P r o m i s e ( r e s o l v e   = >   s e t T i m e o u t ( r e s o l v e ,   8 0 0 ) ) ; 
-             
-             c o n s t   b u g u n   =   n e w   D a t e ( ) . t o I S O S t r i n g ( ) . s p l i t ( ' T ' ) [ 0 ] ; 
-             
-             c o n s t   m o c k I s h c h i l a r   =   [ 
-                 {   i d :   ' 1 ' ,   i s m :   ' A z i z o v   B a h r o m ' ,   k a s b :   ' P r o r a b ' ,   s t a v k a :   2 5 0 0 0 0 ,   b r i g a d a :   ' B r i g a d a - 1 ' ,   o b y e k t :   ' A m f i t e a t r ' ,   s t a t u s :   ' f a o l '   } , 
-                 {   i d :   ' 2 ' ,   i s m :   ' K a r i m o v   R u s t a m ' ,   k a s b :   ' U s t a ' ,   s t a v k a :   1 8 0 0 0 0 ,   b r i g a d a :   ' B r i g a d a - 1 ' ,   o b y e k t :   ' A m f i t e a t r ' ,   s t a t u s :   ' f a o l '   } , 
-                 {   i d :   ' 3 ' ,   i s m :   ' N a z a r o v   U m i d ' ,   k a s b :   ' P a y v a n d c h i ' ,   s t a v k a :   2 0 0 0 0 0 ,   b r i g a d a :   ' B r i g a d a - 2 ' ,   o b y e k t :   ' S u n i y   k o l ' ,   s t a t u s :   ' f a o l '   } , 
-                 {   i d :   ' 4 ' ,   i s m :   ' T o s h m a t o v   A l i ' ,   k a s b :   ' Y o r d a m c h i ' ,   s t a v k a :   1 2 0 0 0 0 ,   b r i g a d a :   ' B r i g a d a - 1 ' ,   o b y e k t :   ' A m f i t e a t r ' ,   s t a t u s :   ' f a o l '   } , 
-                 {   i d :   ' 5 ' ,   i s m :   ' E s h m a t o v   V a l i ' ,   k a s b :   ' S a n t e x n i k ' ,   s t a v k a :   1 7 0 0 0 0 ,   b r i g a d a :   ' B r i g a d a - 3 ' ,   o b y e k t :   ' 1 0 K v   l i n i y a ' ,   s t a t u s :   ' f a o l '   } , 
-             ]   a s   a n y [ ] ; 
- 
-             c o n s t   m o c k T a b e l l a r   =   [ 
-                 {   i s h c h i I d :   ' 1 ' ,   s a n a :   b u g u n ,   h o l a t :   ' k e l d i ' ,   i z o h :   ' '   } , 
-                 {   i s h c h i I d :   ' 2 ' ,   s a n a :   b u g u n ,   h o l a t :   ' k e l d i ' ,   i z o h :   ' '   } , 
-                 {   i s h c h i I d :   ' 3 ' ,   s a n a :   b u g u n ,   h o l a t :   ' k e l m a d i ' ,   i z o h :   ' R u x s a t   s o r a g a n '   } , 
-                 {   i s h c h i I d :   ' 4 ' ,   s a n a :   b u g u n ,   h o l a t :   ' k e l d i ' ,   i z o h :   ' '   } , 
-                 {   i s h c h i I d :   ' 5 ' ,   s a n a :   b u g u n ,   h o l a t :   ' k a s a l ' ,   i z o h :   ' '   } , 
-             ]   a s   a n y [ ] ; 
- 
-             r e t u r n   { 
-                 i s h c h i l a r :   m o c k I s h c h i l a r , 
-                 t a b e l l a r :   m o c k T a b e l l a r , 
-                 j a m i F a o l I s h c h i l a r :   5 , 
-                 b u g u n g i D a v o m a t :   6 0 , 
-                 o y l i k F o n d :   2 3 5 0 0 0 0 0 , 
-                 b e r i l g a n A v a n s l a r :   5 5 0 0 0 0 0 , 
-             } ; 
-         } , 
-         s t a l e T i m e :   5   *   6 0   *   1 0 0 0 , 
-     } ) ; 
- } 
-  
- 
