@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt,
+  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat,
 } from '../../api/hooks';
 import {
   Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
 } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
+import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
 import { toast } from '../../umumiy/ui/Toast';
 import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send } from 'lucide-react';
 import type { AktNode, F2Moslik, F2MoslashNatija } from '../../api/types';
@@ -43,6 +44,9 @@ export function F2Import() {
   const [faylNomi, setFaylNomi] = useState('');
   const [varaq, setVaraq] = useState('');
   const [cfg, setCfg] = useState<{kod:number;nom:number;bir:number;norma:number;obyom:number;narx:number;sum:number} | null>(null);
+  const [hover, setHover] = useState<string | null>(null);
+  const [filtr, setFiltr] = useState<'hammasi' | 'boglanmagan' | 'boglangan'>('hammasi');
+  const [qolBekor, setQolBekor] = useState<Set<string>>(new Set());
   const faylRef = useRef<HTMLInputElement>(null);
 
   const loklar = useF2Lokalkalar(obyekt);
@@ -54,6 +58,7 @@ export function F2Import() {
   const moslash = useF2AvtoMoslash();
   const yoz = useF2Yoz();
   const job = useF2JobHolat(yozishBoshlandi);
+  const lrv = useHolat(obyekt);
 
   const obNomlari = useMemo(
     () => Array.from(new Set((obyektlar.data ?? []).map((o) => o.obyekt.split(' - ')[0]))),
@@ -74,24 +79,55 @@ export function F2Import() {
    * (1.96 mlrd > 1.44 mlrd, farq −714 mln). aktJami barglardan olinadi, demak
    * bog'langan ham barglardan olinishi shart.
    */
+  /* Bog'lanishlar: uid -> {varaq,row} va teskarisi. Qo'lda bekor qilinganlar chiqariladi. */
+  const moslikMap = useMemo(() => {
+    const m = new Map<string, F2Moslik>();
+    (natija?.mosliklar ?? []).forEach((x) => { if (!qolBekor.has(x.uid)) m.set(x.uid, x); });
+    return m;
+  }, [natija, qolBekor]);
+  const joyMap = useMemo(() => {
+    const m = new Map<string, string>();
+    moslikMap.forEach((v, uid) => m.set(`${v.varaq}#${v.row}`, uid));
+    return m;
+  }, [moslikMap]);
+  const boglanganJoylar = useMemo(() => new Set(joyMap.keys()), [joyMap]);
   const boglanganJami = useMemo(
-    () => (natija?.mosliklar ?? [])
-      .filter((m) => bargUidlar.has(m.uid))
-      .reduce((a, m) => a + (m.summa || 0), 0),
-    [natija, bargUidlar],
+    () => [...moslikMap.values()].filter((m) => bargUidlar.has(m.uid)).reduce((a, m) => a + (m.summa || 0), 0),
+    [moslikMap, bargUidlar],
   );
 
   /** Ish (bl) darajasida bog'langanlar — alohida ko'rsatiladi, summaga QO'SHILMAYDI */
   const ishMosliklari = useMemo(
-    () => (natija?.mosliklar ?? []).filter((m) => !bargUidlar.has(m.uid)).length,
-    [natija, bargUidlar],
+    () => [...moslikMap.values()].filter((m) => !bargUidlar.has(m.uid)).length,
+    [moslikMap, bargUidlar],
   );
   /** Bog'lanmagan barglar — ular ➕ qo'shimcha bo'lib ketadi */
   const boglanmagan = useMemo(() => {
-    const mos = new Set((natija?.mosliklar ?? []).map((m) => m.uid));
-    return aktBarglar.filter((n) => !mos.has(n.uid));
-  }, [aktBarglar, natija]);
+    return aktBarglar.filter((n) => !moslikMap.has(n.uid));
+  }, [aktBarglar, moslikMap]);
   const dopJami = useMemo(() => boglanmagan.reduce((a, n) => a + (n.summa || 0), 0), [boglanmagan]);
+
+
+
+  /** LRV daraxti barglari — o'ng panel */
+  const lrvBarglar = useMemo(() => {
+    const out: any[] = [];
+    const yur = (ns: any[]) => (ns ?? []).forEach((n) => {
+      if (n.type && n.type !== 'rz' && (!n.children || !n.children.length)) out.push(n);
+      if (n.children?.length) yur(n.children);
+    });
+    yur(lrv.data?.tree ?? []);
+    return out;
+  }, [lrv.data]);
+
+  const aktKorinadigan = useMemo(() => aktBarglar.filter((n) => {
+    const bog = moslikMap.has(n.uid);
+    if (filtr === 'boglangan') return bog;
+    if (filtr === 'boglanmagan') return !bog;
+    return true;
+  }), [aktBarglar, moslikMap, filtr]);
+
+  function bogBekor(uid: string) { setQolBekor((p) => new Set(p).add(uid)); }
 
   const farq = aktJami - (boglanganJami + dopJami);
   const constOk = Math.abs(farq) < 1;
@@ -171,7 +207,7 @@ export function F2Import() {
     }));
     try {
       const r = await yoz.mutateAsync({
-        obyekt, oyNom, edits: natija.mosliklar as F2Moslik[], dopps, aktJami,
+        obyekt, oyNom, edits: [...moslikMap.values()] as F2Moslik[], dopps, aktJami,
       });
       if (!r.ok) { toast(r.xabar || 'Navbatga qo\'shilmadi'); return; }
       setYozishBoshlandi(true);
@@ -445,29 +481,96 @@ export function F2Import() {
             </div>
           )}
 
-          {/* Bog'lanmaganlar sababi bilan */}
-          {boglanmagan.length > 0 && (
-            <div className="karta overflow-hidden">
-              <div className="px-4 py-3 border-b border-border bg-[var(--surface-2)]/50">
-                <span className="text-[11px] uppercase tracking-[0.04em] text-text-dim">
-                  Bog'lanmagan — qo'shimcha bo'lib yoziladi ({boglanmagan.length})
-                </span>
-              </div>
-              <div className="max-h-72 overflow-y-auto divide-y divide-border">
-                {boglanmagan.slice(0, 100).map((n) => (
-                  <div key={n.uid} className="px-4 py-2.5 flex items-start justify-between gap-4 text-sm">
-                    <div className="min-w-0">
-                      <div className="text-text truncate" title={n.nom}>{n.nom}</div>
-                      <div className="text-[11px] text-text-mute">
-                        {natija.sabablar[n.uid] || 'smetada mos qator topilmadi'}
-                      </div>
-                    </div>
-                    <span className="tabular-nums text-text-dim flex-shrink-0"><FmtN val={n.summa} /></span>
-                  </div>
+          {/* ⭐ IKKI PANEL — panel'dagi kabi: chapda AKT, o'ngda SMETA */}
+          <IkkiPanel
+            chapSarlavha={`AKT (fayldan) — ${aktBarglar.length} qator`}
+            ongSarlavha={`SMETA (LRV) — ${boglanganJoylar.size} qator band`}
+            chapOng={
+              <div className="flex gap-1 flex-shrink-0">
+                {(['hammasi', 'boglanmagan', 'boglangan'] as const).map((f) => (
+                  <button key={f} onClick={() => setFiltr(f)}
+                    className={`h-6 px-2 rounded-md text-[11px] transition-colors cursor-pointer
+                      ${filtr === f ? 'bg-accent text-white' : 'text-text-mute hover:text-text'}`}>
+                    {f === 'hammasi' ? 'Hammasi' : f === 'boglangan' ? '● bog‘langan' : '○ bog‘lanmagan'}
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
+            }
+            chap={
+              <div className="divide-y divide-border">
+                {aktKorinadigan.map((n) => {
+                  const m = moslikMap.get(n.uid);
+                  const yoritilgan = hover === n.uid || (m && hover === `${m.varaq}#${m.row}`);
+                  return (
+                    <div
+                      key={n.uid}
+                      onMouseEnter={() => setHover(n.uid)}
+                      onMouseLeave={() => setHover(null)}
+                      className={`px-3 py-2 flex items-start gap-2 text-[13px] transition-colors duration-[120ms]
+                                  ${yoritilgan ? 'bg-[var(--accent)]/[.10]' : 'hover:bg-[var(--surface-2)]/40'}`}
+                    >
+                      <span className={`flex-shrink-0 mt-0.5 ${m ? 'text-ok' : 'text-text-mute'}`}
+                            title={m ? 'bog‘langan — bekor qilish uchun bosing' : 'bog‘lanmagan'}>
+                        {m ? (
+                          <button onClick={() => bogBekor(n.uid)} className="cursor-pointer">●</button>
+                        ) : '○'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-text truncate" title={n.nom}>{n.nom}</div>
+                        <div className="text-[11px] text-text-mute truncate">
+                          {n.kod && <span className="mr-2">{n.kod}</span>}
+                          {!m && (natija.sabablar[n.uid] || 'smetada mos qator topilmadi')}
+                        </div>
+                      </div>
+                      <span className="tabular-nums text-text-dim flex-shrink-0"><FmtN val={n.summa} /></span>
+                    </div>
+                  );
+                })}
+                {aktKorinadigan.length === 0 && (
+                  <p className="px-4 py-8 text-center text-sm text-text-mute">Filtrga mos qator yo‘q</p>
+                )}
+              </div>
+            }
+            ong={
+              <div className="divide-y divide-border">
+                {lrvBarglar.map((s) => {
+                  const kalit = `${s.varaq}#${s.row}`;
+                  const aktUid = joyMap.get(kalit);
+                  const yoritilgan = hover === kalit || (aktUid && hover === aktUid);
+                  return (
+                    <div
+                      key={kalit}
+                      onMouseEnter={() => setHover(kalit)}
+                      onMouseLeave={() => setHover(null)}
+                      className={`px-3 py-2 flex items-start gap-2 text-[13px] transition-colors duration-[120ms]
+                                  ${yoritilgan ? 'bg-[var(--accent)]/[.10]' : 'hover:bg-[var(--surface-2)]/40'}`}
+                    >
+                      <span className={`flex-shrink-0 mt-0.5 ${aktUid ? 'text-ok' : 'text-text-mute'}`}>
+                        {aktUid ? '●' : '○'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className={`truncate ${aktUid ? 'text-text' : 'text-text-dim'}`} title={s.nom}>{s.nom}</div>
+                        <div className="text-[11px] text-text-mute truncate">
+                          {s.kod && <span className="mr-2">{s.kod}</span>}{s.birlik}
+                        </div>
+                      </div>
+                      <span className="tabular-nums text-text-mute flex-shrink-0">{s.row}</span>
+                    </div>
+                  );
+                })}
+                {lrvBarglar.length === 0 && (
+                  <p className="px-4 py-8 text-center text-sm text-text-mute">
+                    {lrv.isLoading ? 'Smeta o‘qilmoqda…' : 'Smeta daraxti bo‘sh'}
+                  </p>
+                )}
+              </div>
+            }
+          />
+
+          <p className="text-[11px] text-text-mute">
+            ● bog'langan · ○ bog'lanmagan · bir tomonga kursor kelsa ikkinchisi ham yoritiladi ·
+            ● ni bosish bog'lanishni bekor qiladi
+          </p>
 
           <div className="flex gap-3">
             <Tugma onBos={() => setQadam(1)}>Orqaga</Tugma>
