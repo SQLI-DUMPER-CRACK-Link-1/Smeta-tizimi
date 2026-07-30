@@ -27,7 +27,7 @@ function barglar(nodes: AktNode[] = []): AktNode[] {
   return out;
 }
 
-const QADAMLAR = ['Fayl', 'Moslashtirish', 'Tekshirish', 'Yozish'];
+const QADAMLAR = ['Fayl', "Moslashtirish va bog'lash", 'Yozish'];
 
 export function F2Import() {
   const obyektlar = useObyektlar();
@@ -241,7 +241,6 @@ export function F2Import() {
     try {
       const r = await moslash.mutateAsync({ aktTree, obyekt, lokalka });
       setNatija(r);
-      setQadam(2);
     } catch (e: any) { toast(`Moslashtirishda xato: ${e.message}`); }
   }
 
@@ -259,7 +258,7 @@ export function F2Import() {
       });
       if (!r.ok) { toast(r.xabar || 'Navbatga qo\'shilmadi'); return; }
       setYozishBoshlandi(true);
-      setQadam(3);
+      setQadam(2);
     } catch (e: any) { toast(`Xato: ${e.message}`); }
   }
 
@@ -444,38 +443,40 @@ export function F2Import() {
         </div>
       )}
 
-      {/* ---------- QADAM 2 ---------- */}
+      {/* ---------- QADAM 2: moslashtirish va qo'lda bog'lash ---------- */}
       {qadam === 1 && aktTree && (
-        <div className="space-y-4 max-w-2xl">
-          <div className="grid grid-cols-3 gap-4">
-            <KpiKarta nom="Qatorlar" qiymat={aktBarglar.length} />
-            <KpiKarta nom="Akt jami" qiymat={<FmtN val={aktJami} qisqa />} ost="so'm" />
-            <KpiKarta nom="Razdellar" qiymat={aktTree.filter((n) => n.type === 'rz').length} />
+        <div className="space-y-4">
+          {/* Avto-moslashtirish — daraxtlar ustida */}
+          <div className="karta p-4 flex items-center justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <Tugma tur="primary" onBos={moslashtir} band={moslash.isPending} ikonka={<Wand2 size={16} />}>
+                {moslash.isPending ? 'Moslashtirilmoqda…' : natija ? 'Qayta moslashtirish' : 'Avto-moslashtirish'}
+              </Tugma>
+              <p className="text-[12px] text-text-dim mt-2">
+                {natija
+                  ? "Aniq mosliklar bog'landi. Qolganini quyida AKT'dan SMETA'ga sudrab bog'lang."
+                  : `Akt: ${aktBarglar.length} qator · ${aktTree.filter((n) => n.type === 'rz').length} razdel. Moslashtirish serverda bajariladi.`}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Tugma onBos={() => { setQadam(0); setNatija(null); }}>Orqaga</Tugma>
+              {natija && (
+                <Tugma tur="primary" onBos={yozish} band={yoz.isPending || !constOk} ikonka={<Send size={16} />}>
+                  Smetaga yozish
+                </Tugma>
+              )}
+            </div>
           </div>
-          <div className="karta p-5">
-            <p className="text-sm text-text-dim mb-4">
-              Moslashtirish <strong className="text-text">serverda</strong> bajariladi — panel bilan
-              bir xil dvigatel. Birlik qalqoni, marka farqi (ПК↔ПБ) va qat'iy unikallik qoidalari amal qiladi.
-            </p>
-            <Tugma tur="primary" onBos={moslashtir} band={moslash.isPending} ikonka={<Wand2 size={16} />}>
-              {moslash.isPending ? 'Moslashtirilmoqda…' : 'Avto-moslashtirish'}
-            </Tugma>
-          </div>
-        </div>
-      )}
 
-      {/* ---------- QADAM 3 ---------- */}
-      {qadam === 2 && natija && (
-        <div className="space-y-4 max-w-3xl">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {natija && <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiKarta nom="Bog'landi" qiymat={natija.stat.moslashti} ost={`${natija.stat.scopeHit} ta razdel ichida`} />
             <KpiKarta nom="Qo'shimcha bo'ladi" qiymat={boglanmagan.length} ost="smetada topilmadi" />
             <KpiKarta nom="Razdel mosligi" qiymat={`${natija.stat.rzMos}/${natija.stat.rzJami}`} />
             <KpiKarta nom="Vaqt" qiymat={`${(natija.stat.ms / 1000).toFixed(1)} s`} />
-          </div>
+          </div>}
 
           {/* CONSTANTA nazorati */}
-          <div className={`karta p-5 ${constOk ? '' : 'border-danger/40'}`}>
+          {natija && <div className={`karta p-5 ${constOk ? '' : 'border-danger/40'}`}>
             <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim mb-3">Solishtiruv</h4>
             <Juft nom="Akt jami" qiymat={<FmtN val={aktJami} />} />
             <Juft
@@ -505,10 +506,10 @@ export function F2Import() {
                 Farq nolga teng emas — yozish bloklandi. Akt fayli noto'g'ri o'qilgan bo'lishi mumkin.
               </p>
             )}
-          </div>
+          </div>}
 
           {/* Himoyalar */}
-          {(natija.stat.birlikBlok > 0 || natija.stat.zamenaShubha > 0) && (
+          {natija && (natija.stat.birlikBlok > 0 || natija.stat.zamenaShubha > 0) && (
             <div className="rounded-[10px] border border-warn/25 bg-warn/[.08] p-4 space-y-2">
               <div className="flex gap-2 items-center">
                 <AlertTriangle size={16} className="text-warn" />
@@ -573,17 +574,12 @@ export function F2Import() {
             ● ni bosish bog'lanishni bekor qiladi
           </p>
 
-          <div className="flex gap-3">
-            <Tugma onBos={() => setQadam(1)}>Orqaga</Tugma>
-            <Tugma tur="primary" onBos={yozish} band={yoz.isPending || !constOk} ikonka={<Send size={16} />}>
-              Smetaga yozish
-            </Tugma>
-          </div>
+          {/* Yozish tugmasi yuqorida — daraxtlar uzun bo'lgani uchun pastda ko'rinmaydi */}
         </div>
       )}
 
       {/* ---------- QADAM 4 ---------- */}
-      {qadam === 3 && (
+      {qadam === 2 && (
         <div className="karta p-6 max-w-2xl space-y-4">
           <div className="flex items-center gap-3">
             <FileSpreadsheet size={20} className="text-accent" />

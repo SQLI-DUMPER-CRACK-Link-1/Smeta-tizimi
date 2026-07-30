@@ -1,4 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useSessiya } from '../api/hooks';
+import { AlertTriangle } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3D';
 
@@ -16,6 +18,7 @@ const MENYU = [
 
 export default function AdminShell() {
   const navigate = useNavigate();
+  const sess = useSessiya();
 
   const handleLogout = () => {
     document.cookie = 'sess=; Max-Age=0; path=/';
@@ -39,7 +42,7 @@ export default function AdminShell() {
       <aside className="relative z-10 w-64 border-r border-white/10 bg-black/20 backdrop-blur-md flex flex-col shadow-2xl">
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold text-text">SMETA GAS</h1>
-          <p className="text-sm text-text-dim mt-1">👷 АДМИН</p>
+          <p className="text-sm text-text-dim mt-1">👷 {sess.data?.rol ? sess.data.rol.toUpperCase() : 'АДМИН'}</p>
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -74,6 +77,21 @@ export default function AdminShell() {
       </aside>
 
       {/* Main Content */}
+      {sess.data && !sess.data.yozaOladi && (
+        <div className="absolute top-0 left-64 right-0 z-30 bg-warn/15 border-b border-warn/30 px-4 py-2
+                        flex items-center gap-2 text-sm text-text backdrop-blur-sm">
+          <AlertTriangle size={16} className="text-warn flex-shrink-0" />
+          <span className="flex-1">
+            Siz <strong>{sess.data.rol}</strong> rolida kirgansiz — bu rolda <strong>yozish mumkin emas</strong>.
+            Admin bo'lib qayta kiring.
+          </span>
+          <button onClick={handleLogout}
+            className="h-7 px-3 rounded-lg bg-warn/20 hover:bg-warn/30 text-text text-xs font-medium cursor-pointer">
+            Chiqish
+          </button>
+        </div>
+      )}
+
       <main className="relative z-10 flex-1 overflow-hidden flex flex-col bg-transparent">
         <Outlet />
       </main>

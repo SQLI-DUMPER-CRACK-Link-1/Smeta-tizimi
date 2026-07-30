@@ -510,3 +510,17 @@ export function useF2HujjatYarat() {
       'apiF2TayyorHujjatYarat', obyekt, oyNom, items),
   });
 }
+
+/** Joriy sessiya — rol va yozish huquqi */
+export function useSessiya() {
+  return useQuery({
+    queryKey: ['sessiya'],
+    queryFn: async () => {
+      const r = await fetch('/api/sessiya');
+      if (!r.ok) throw new Error('Sessiya yo\'q');
+      return r.json() as Promise<{ ok: boolean; rol: string; email: string; yozaOladi: boolean; tugaydi: number }>;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
