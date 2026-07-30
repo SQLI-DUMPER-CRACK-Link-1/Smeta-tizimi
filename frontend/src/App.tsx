@@ -23,6 +23,12 @@ import { AiHelper } from './umumiy/ui/AiHelper';
 // Boss pages
 const Umumiy = lazy(() => import('./boss/sahifalar/Umumiy'));
 
+// ERP pages
+const ErpKadrlar = lazy(() => import('./erp/sahifalar/ErpKadrlar'));
+const ErpTexnika = lazy(() => import('./erp/sahifalar/ErpTexnika'));
+const ErpTaminot = lazy(() => import('./erp/sahifalar/ErpTaminot'));
+const ErpSifat = lazy(() => import('./erp/sahifalar/ErpSifat'));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -48,6 +54,11 @@ export default function App() {
           <Route path="ierarxiya" element={<Ierarxiya />} />
           <Route path="sklad" element={<Sklad />} />
           <Route path="monitoring" element={<Monitoring />} />
+          {/* ERP routes for Admin */}
+          <Route path="kadrlar" element={<ErpKadrlar />} />
+          <Route path="texnika" element={<ErpTexnika />} />
+          <Route path="taminot" element={<ErpTaminot />} />
+          <Route path="sifat" element={<ErpSifat />} />
         </Route>
 
         {/* Boss shell and routes */}
@@ -58,6 +69,11 @@ export default function App() {
         }>
           <Route index element={<Umumiy />} />
           <Route path="holat/:id" element={<Holat />} />
+          {/* ERP routes for Boss */}
+          <Route path="kadrlar" element={<ErpKadrlar />} />
+          <Route path="texnika" element={<ErpTexnika />} />
+          <Route path="taminot" element={<ErpTaminot />} />
+          <Route path="sifat" element={<ErpSifat />} />
         </Route>
 
         {/* Fallback */}

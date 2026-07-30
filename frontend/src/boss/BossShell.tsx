@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard } from 'lucide-react';
+import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert } from 'lucide-react';
 
 export default function BossShell() {
   const navigate = useNavigate();
@@ -27,6 +27,42 @@ export default function BossShell() {
           >
             <LayoutDashboard className="w-4 h-4" />
             Umumiy
+          </NavLink>
+          <NavLink
+            to="/boss/kadrlar"
+            className={({ isActive }) =>
+              `flex items-center gap-2 transition-colors ${isActive ? 'text-blue-400 font-medium' : 'text-white/50 hover:text-blue-400/80'}`
+            }
+          >
+            <HardHat className="w-4 h-4" />
+            Kadrlar
+          </NavLink>
+          <NavLink
+            to="/boss/texnika"
+            className={({ isActive }) =>
+              `flex items-center gap-2 transition-colors ${isActive ? 'text-purple-400 font-medium' : 'text-white/50 hover:text-purple-400/80'}`
+            }
+          >
+            <Truck className="w-4 h-4" />
+            Texnika
+          </NavLink>
+          <NavLink
+            to="/boss/taminot"
+            className={({ isActive }) =>
+              `flex items-center gap-2 transition-colors ${isActive ? 'text-yellow-400 font-medium' : 'text-white/50 hover:text-yellow-400/80'}`
+            }
+          >
+            <ShoppingCart className="w-4 h-4" />
+            Ta'minot
+          </NavLink>
+          <NavLink
+            to="/boss/sifat"
+            className={({ isActive }) =>
+              `flex items-center gap-2 transition-colors ${isActive ? 'text-red-400 font-medium' : 'text-white/50 hover:text-red-400/80'}`
+            }
+          >
+            <ShieldAlert className="w-4 h-4" />
+            Sifat (QA/QC)
           </NavLink>
         </nav>
 
