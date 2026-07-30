@@ -98,15 +98,34 @@ function FinancialChart({ objects }: { objects: any[] }) {
 }
 
 // --- PROFIT AND LOSS (Rentabellik Tahlili) ---
-function ProfitAndLoss({ jami }: { jami: any }) {
+function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[], onKpiClick: (kpi: any) => void }) {
   const umumiyXarajat = (jami.chel || 0) + (jami.mash || 0) + (jami.mat || 0) + (jami.ob || 0) + (jami.mk || 0) + (jami.kab || 0) + (jami.sub || 0);
   const sofFoyda = (jami.smeta || 0) - umumiyXarajat;
   const rentabellik = jami.smeta > 0 ? (sofFoyda / jami.smeta) * 100 : 0;
   
   const realFoyda = (jami.tolangan || 0) - (umumiyXarajat > 0 ? (umumiyXarajat * (jami.progress/100)) : 0); // Keltirilgan foyda
+
+  const handleClick = () => {
+    const items = objects.map(o => {
+      const oXarajat = (o.chel || 0) + (o.mash || 0) + (o.mat || 0) + (o.ob || 0) + (o.mk || 0) + (o.kab || 0) + (o.sub || 0);
+      const oFoyda = (o.smeta || 0) - oXarajat;
+      return { nom: o.nom, val: oFoyda };
+    }).filter(item => item.val !== 0);
+    
+    onKpiClick({
+      nom: "Sof Foyda (Prognoz)",
+      color: "text-emerald-400",
+      icon: PieChart,
+      total: sofFoyda,
+      items: items
+    });
+  };
   
   return (
-    <GlassCard className="p-6 h-[320px] flex flex-col relative overflow-hidden group">
+    <GlassCard 
+      onClick={handleClick}
+      className="p-6 h-[320px] flex flex-col relative overflow-hidden group cursor-pointer hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transform hover:-translate-y-1 active:translate-y-0 transition-all duration-200"
+    >
       <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-accent/10 rounded-full blur-3xl group-hover:bg-accent/20 transition-all duration-700 pointer-events-none" />
       <h3 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
         <PieChart size={20} className="text-emerald-400" />
@@ -496,7 +515,11 @@ export default function Umumiy() {
           </motion.div>
           
           <motion.div className="lg:col-span-1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
-            <ProfitAndLoss jami={data.jami} />
+            <ProfitAndLoss 
+              jami={data.jami} 
+              objects={data.objects || []} 
+              onKpiClick={(kpi) => setActiveKpi(kpi)} 
+            />
           </motion.div>
         </div>
 
