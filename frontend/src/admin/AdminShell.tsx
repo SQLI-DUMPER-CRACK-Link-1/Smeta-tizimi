@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput } from 'lucide-react';
+import Sahna3D from '../kirish/Sahna3D';
 
 const MENYU = [
   { yol: '/admin/obyektlar',  nom: 'Obyektlar',   Ikonka: Building2 },
@@ -22,9 +23,20 @@ export default function AdminShell() {
   };
 
   return (
-    <div className="flex h-screen bg-bg">
+    <div className="flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30 bg-[#020617]">
+      {/* 3D Interactive Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+         <Sahna3D />
+      </div>
+
+      {/* Grid Overlay for texture */}
+      <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.02] pointer-events-none" />
+
+      {/* Dark tint so content is readable */}
+      <div className="absolute inset-0 z-0 bg-black/40 pointer-events-none" />
+
       {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-surface flex flex-col">
+      <aside className="relative z-10 w-64 border-r border-white/10 bg-black/20 backdrop-blur-md flex flex-col shadow-2xl">
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold text-text">SMETA GAS</h1>
           <p className="text-sm text-text-dim mt-1">👷 АДМИН</p>
@@ -62,7 +74,7 @@ export default function AdminShell() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden flex flex-col">
+      <main className="relative z-10 flex-1 overflow-hidden flex flex-col bg-transparent">
         <Outlet />
       </main>
     </div>
