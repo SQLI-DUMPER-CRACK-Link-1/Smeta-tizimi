@@ -543,8 +543,6 @@ export function useKadrlarData() {
       // Hozircha Google Sheets'da API yo'q, shuning uchun sun'iy kutish va mock ma'lumot qaytaramiz
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      const bugun = new Date().toISOString().split('T')[0];
-      
       const mockIshchilar = [
         { id: '1', ism: 'Azizov Bahrom', kasb: 'Prorab', stavka: 250000, brigada: 'Brigada-1', obyekt: 'Amfiteatr', status: 'faol' },
         { id: '2', ism: 'Karimov Rustam', kasb: 'Usta', stavka: 180000, brigada: 'Brigada-1', obyekt: 'Amfiteatr', status: 'faol' },

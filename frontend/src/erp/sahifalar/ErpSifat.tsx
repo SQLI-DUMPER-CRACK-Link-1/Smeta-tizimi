@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, AlertTriangle, Search, Filter, ShieldAlert, CheckCircle, Clock } from 'lucide-react';
+import { ShieldCheck, Search, ShieldAlert, CheckCircle, Clock } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { useSifatData } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
