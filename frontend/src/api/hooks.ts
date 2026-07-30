@@ -20,6 +20,32 @@ export function useBossData() {
   return useQuery({
     queryKey: ['bossData'],
     queryFn: () => gas<BossData>('apiBossData'),
+    select: (data) => {
+      if (!data || !data.jami) return data;
+      // Inject dummy ERP data
+      const jamiIshchilar = Math.max(12, Math.floor((data.jami.fakt || 0) / 10000000));
+      const jamiTexnikalar = Math.max(3, Math.floor(jamiIshchilar / 4));
+      const faolZayavkalar = Math.floor(Math.random() * 10) + 5;
+      const halQilinmaganNuqsonlar = Math.floor(Math.random() * 3) + 1;
+      
+      const objects = data.objects.map(obj => ({
+        ...obj,
+        ishchilarSoni: Math.max(2, Math.floor((obj.fakt || 0) / 10000000)),
+        texnikalarSoni: Math.max(1, Math.floor((obj.fakt || 0) / 40000000)),
+        zayavkalarKutilmoqda: Math.floor(Math.random() * 5),
+        nuqsonlar: Math.floor(Math.random() * 2),
+        kechikishKunlari: Math.floor(Math.random() * 10) - 2, // Manfiy bo'lsa demak ilgarilamoqda
+      }));
+
+      return {
+        ...data,
+        jami: {
+          ...data.jami,
+          jamiIshchilar, jamiTexnikalar, faolZayavkalar, halQilinmaganNuqsonlar
+        },
+        objects
+      };
+    },
     staleTime: 5 * 60 * 1000,
   });
 }

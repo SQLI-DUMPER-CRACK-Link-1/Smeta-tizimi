@@ -39,6 +39,14 @@ export type BossObyekt = {
   subItems?: BossObyekt[];
   smeta: number; smetaToza: number; fakt: number; f2: number;
   qoldiq: number; progress: number; f2pct: number; leaf: number;
+  chel?: number; mash?: number; mat?: number; ob?: number;
+  mk?: number; kab?: number; sub?: number;
+  tolangan?: number; debitor?: number; avans?: number;
+  ishchilarSoni?: number;
+  texnikalarSoni?: number;
+  zayavkalarKutilmoqda?: number;
+  nuqsonlar?: number;
+  kechikishKunlari?: number;
 };
 
 export type BossJami = {
@@ -47,6 +55,10 @@ export type BossJami = {
   chel: number; mash: number; mat: number; ob: number;
   mk: number; kab: number; sub: number;
   tolangan: number; debitor: number; avans: number;
+  jamiIshchilar?: number;
+  jamiTexnikalar?: number;
+  faolZayavkalar?: number;
+  halQilinmaganNuqsonlar?: number;
 };
 
 export interface BossData {
