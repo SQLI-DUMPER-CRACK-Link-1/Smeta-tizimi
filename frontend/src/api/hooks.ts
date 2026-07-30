@@ -609,6 +609,55 @@ export function useTexnikaData() {
   });
 }
 
+/* ============ ERP TAMINOT VA SKLAD (MOCK DATA) ============ */
+export function useTaminotData() {
+  return useQuery({
+    queryKey: ['taminot'],
+    queryFn: async () => {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const bugun = new Date().toISOString().split('T')[0];
+      
+      const mockZayavkalar = [
+        { id: 'z1', sana: bugun, obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', material: 'Sement M400', birlik: 'tonna', miqdor: 15, status: 'Kutilmoqda', izoh: 'Shoshilinch' },
+        { id: 'z2', sana: bugun, obyekt: 'Suniy kol', prorab: 'Karimov Rustam', material: 'Armatura 12mm', birlik: 'tonna', miqdor: 5, status: 'Bozorda' },
+        { id: 'z3', sana: bugun, obyekt: '10Kv liniya', prorab: 'Eshmatov Vali', material: 'Kabel SIP-4', birlik: 'metr', miqdor: 500, status: 'Yuborildi' },
+        { id: 'z4', sana: bugun, obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', material: 'Qum', birlik: 'm3', miqdor: 30, status: 'Qabul qilindi' },
+      ] as any[];
+
+      const mockMateriallar = [
+        { id: 'm1', guruh: 'Asosiy', nom: 'Sement M400', birlik: 'tonna', obyekt: 'Markaziy Sklad', qoldiq: 4, minQoldiq: 10, smetaNarxi: 850000, faktNarxi: 870000 },
+        { id: 'm2', guruh: 'Asosiy', nom: 'Armatura 12mm', birlik: 'tonna', obyekt: 'Amfiteatr', qoldiq: 1.5, minQoldiq: 2, smetaNarxi: 9500000, faktNarxi: 9400000 },
+        { id: 'm3', guruh: 'Asosiy', nom: 'Beton M300', birlik: 'm3', obyekt: 'Suniy kol', qoldiq: 0, minQoldiq: 5, smetaNarxi: 550000, faktNarxi: 580000 },
+        { id: 'm4', guruh: 'Yordamchi', nom: 'Qadoq mix', birlik: 'kg', obyekt: 'Markaziy Sklad', qoldiq: 45, minQoldiq: 10, smetaNarxi: 12000, faktNarxi: 12000 },
+      ] as any[];
+
+      const mockPostavshiklar = [
+        { id: 'p1', nom: 'Bektemir Metall Invest', telefon: '+998901234567', yetkazilganSumma: 450000000, qarzimiz: 25000000 },
+        { id: 'p2', nom: 'Ohangaron Sement', telefon: '+998909876543', yetkazilganSumma: 120000000, qarzimiz: 0 },
+        { id: 'p3', nom: 'Stroy Mir (Bozor)', telefon: '+998991112233', yetkazilganSumma: 45000000, qarzimiz: 12000000 },
+      ] as any[];
+
+      // Mantiqiy hisob-kitoblar
+      const yangiZayavkalarSoni = mockZayavkalar.filter(z => z.status === 'Kutilmoqda').length;
+      const kritikMateriallarSoni = mockMateriallar.filter(m => m.qoldiq <= m.minQoldiq).length;
+      const jamiQarzimiz = mockPostavshiklar.reduce((acc, p) => acc + p.qarzimiz, 0);
+      const smetaNarxidanOshganlar = mockMateriallar.filter(m => m.faktNarxi > m.smetaNarxi).length;
+
+      return {
+        zayavkalar: mockZayavkalar,
+        materiallar: mockMateriallar,
+        postavshiklar: mockPostavshiklar,
+        yangiZayavkalarSoni,
+        kritikMateriallarSoni,
+        jamiQarzimiz,
+        smetaNarxidanOshganlar,
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 /* ============ Ф2 ТАЙЁРЛАШ (smetadan yangi hujjat) ============ */
 
 export function useF2HujjatYarat() {

@@ -314,3 +314,48 @@ export type TexnikaDashboard = {
   remontda: number;
   oylikYoqilgi: number; // Joriy oyda qancha litr sarflandi
 };
+
+/* ---------- Ta'minot, Ombor (Sklad) va Zayavkalar (ERP Supply) ---------- */
+export type ZayavkaStatus = 'Kutilmoqda' | 'Bozorda' | 'Yuborildi' | 'Qabul qilindi' | 'Rad etildi';
+
+export type Zayavka = {
+  id: string;
+  sana: string;
+  obyekt: string;
+  prorab: string;
+  material: string;
+  birlik: string;
+  miqdor: number;
+  status: ZayavkaStatus;
+  izoh?: string;
+};
+
+export type Material = {
+  id: string;
+  guruh: 'Asosiy' | 'Yordamchi' | 'Mexanizm' | 'Boshqa';
+  nom: string;
+  birlik: string;
+  obyekt: string; // Qaysi omborda (yoki Markaziy)
+  qoldiq: number;
+  minQoldiq: number; // Kritik chegara (shu miqdordan tushsa ogohlantirish beradi)
+  smetaNarxi: number;
+  faktNarxi: number;  // Haqiqiy olingan narxi
+};
+
+export type Postavshik = {
+  id: string;
+  nom: string;
+  telefon: string;
+  yetkazilganSumma: number;
+  qarzimiz: number; // Agar to'liq to'lanmagan bo'lsa
+};
+
+export type TaminotDashboard = {
+  zayavkalar: Zayavka[];
+  materiallar: Material[];
+  postavshiklar: Postavshik[];
+  yangiZayavkalarSoni: number;
+  kritikMateriallarSoni: number;
+  jamiQarzimiz: number;
+  smetaNarxidanOshganlar: number; // Smetadan qimmatga olingan materiallar soni
+};
