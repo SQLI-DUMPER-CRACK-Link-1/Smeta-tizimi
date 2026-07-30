@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
@@ -37,9 +37,33 @@ function AuroraBackground({ children }: { children: React.ReactNode }) {
           81% { transform: translate(0); }
           100% { transform: translate(0) }
         }
+        @keyframes borderSweep {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
         .glitch-hover:hover {
           animation: cyberGlitch 0.25s infinite;
           cursor: crosshair;
+        }
+        .laser-border::after {
+          content: "";
+          position: absolute;
+          inset: -1px;
+          border-radius: 16px;
+          padding: 1px;
+          background: linear-gradient(90deg, rgba(14,165,233,0), rgba(14,165,233,0.8), rgba(244,63,94,0.8), rgba(14,165,233,0));
+          background-size: 300% 100%;
+          animation: borderSweep 4s linear infinite;
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          opacity: 0;
+          transition: opacity 0.3s;
+          pointer-events: none;
+        }
+        .group\\/card:hover .laser-border::after {
+          opacity: 1;
         }
       `}</style>
 
@@ -140,7 +164,7 @@ function GlassCard({ children, className = '', onClick }: { children: React.Reac
         transition: isHovering ? 'none' : 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
         transformStyle: 'preserve-3d'
       }}
-      className={`relative bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden group/card hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20 ${className}`}
+      className={`relative bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden group/card hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20 ${className} laser-border`}
     >
       <div 
         className="pointer-events-none absolute -inset-px z-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover/card:opacity-100 mix-blend-overlay"
@@ -559,6 +583,44 @@ function KpiModal({ kpi, onClose }: { kpi: any, onClose: () => void }) {
   );
 }
 
+// --- KLIK QILGANDA RIPPLE EFFEKTI ---
+function ClickRipple() {
+  const [ripples, setRipples] = useState<{x: number, y: number, id: number}[]>([]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      const newRipple = { x: e.clientX, y: e.clientY, id: Date.now() };
+      setRipples(r => [...r, newRipple]);
+      setTimeout(() => {
+        setRipples(r => r.filter(rip => rip.id !== newRipple.id));
+      }, 1000);
+    };
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
+      {ripples.map(r => (
+        <div 
+          key={r.id} 
+          className="absolute rounded-full border-2 border-accent/60 opacity-80"
+          style={{ 
+            left: r.x, top: r.y, width: 40, height: 40, transform: 'translate(-50%, -50%)',
+            animation: 'ripple 0.8s cubic-bezier(0, 0, 0.2, 1) forwards'
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes ripple {
+          0% { transform: translate(-50%, -50%) scale(0); opacity: 1; border-width: 4px; }
+          100% { transform: translate(-50%, -50%) scale(4); opacity: 0; border-width: 0px; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export default function Umumiy() {
   const { data, isLoading, error, refetch, isFetching, dataUpdatedAt } = useBossData();
   const [activeKpi, setActiveKpi] = useState<any>(null);
@@ -566,6 +628,7 @@ export default function Umumiy() {
   if (isLoading) {
     return (
       <AuroraBackground>
+        <ClickRipple />
         <div className="h-screen flex items-center justify-center p-6">
           <div className="max-w-4xl w-full">
             <Skelet qatorlar={5} />
@@ -587,7 +650,8 @@ export default function Umumiy() {
 
   return (
     <AuroraBackground>
-      <div className="max-w-[1600px] w-full mx-auto p-6 md:p-8 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+      <ClickRipple />
+      <div className="max-w-[1600px] w-full mx-auto p-6 md:p-8 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative z-10">
         
         {/* Apple-style Header */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
