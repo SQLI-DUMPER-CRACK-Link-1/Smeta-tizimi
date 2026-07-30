@@ -246,8 +246,12 @@ export type BuxQator = {
 export type BuxDashboard = {
   qatorlar: BuxQator[];
   jami: { dog: number; bajarilgan: number; tolangan: number; debitor: number; avans: number };
+  kassaQoldiq: number;
+  jamiXarajat: number;
+  jamiKreditor: number; // Bizning qarzimiz (Postavshik + Ishchi)
+  jamiDebitor: number;  // Bizning haqimiz
 };
-export type Xarajat = { row: number; sana: string; toifa: string; summa: number; izoh: string };
+export type Xarajat = { row: number; sana: string; toifa: string; summa: number; izoh: string; manba?: 'Kadrlar' | 'Taminot' | 'Texnika' | 'Boshqa' };
 
 /* ---------- Kadrlar va Tabel (ERP HR) ---------- */
 export type Ishchi = {
