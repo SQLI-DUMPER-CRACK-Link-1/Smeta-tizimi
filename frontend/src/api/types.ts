@@ -359,3 +359,28 @@ export type TaminotDashboard = {
   jamiQarzimiz: number;
   smetaNarxidanOshganlar: number; // Smetadan qimmatga olingan materiallar soni
 };
+
+/* ---------- Sifat Nazorati (Texnadzor) ---------- */
+export type NuqsonStatus = 'Yangi' | 'Jarayonda' | 'Tuzatildi' | 'Muddati o\'tgan';
+export type MuhimlikDarajasi = 'Oddiy' | 'O\'rta' | 'Kritik';
+
+export type Nuqson = {
+  id: string;
+  obyekt: string;
+  prorab: string;
+  sana: string;
+  muddat: string;
+  tavsif: string;
+  daraja: MuhimlikDarajasi;
+  status: NuqsonStatus;
+  rasmUrl?: string;
+  izoh?: string;
+};
+
+export type SifatDashboard = {
+  nuqsonlar: Nuqson[];
+  jamiNuqsonlar: number;
+  tuzatilganlar: number;
+  muddatOtilgan: number;
+  kritik: number;
+};

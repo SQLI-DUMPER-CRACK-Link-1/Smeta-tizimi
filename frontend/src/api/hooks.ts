@@ -695,6 +695,43 @@ export function useTaminotData() {
   });
 }
 
+/* ============ ERP SIFAT NAZORATI (TEXNADZOR) (MOCK DATA) ============ */
+export function useSifatData() {
+  return useQuery({
+    queryKey: ['sifat'],
+    queryFn: async () => {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      const bugun = new Date();
+      const kecha = new Date(bugun); kecha.setDate(kecha.getDate() - 1);
+      const utganHafta = new Date(bugun); utganHafta.setDate(utganHafta.getDate() - 5);
+      
+      const f = (d: Date) => d.toISOString().split('T')[0];
+      
+      const mockNuqsonlar = [
+        { id: 'n1', obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', sana: f(utganHafta), muddat: f(kecha), tavsif: 'B1 ustunda beton markasi M200 dan past chiqdi (prochnost 15 MPa)', daraja: 'Kritik', status: 'Muddati o\'tgan', izoh: 'Buzib qayta quyish kerak' },
+        { id: 'n2', obyekt: 'Suniy kol', prorab: 'Karimov Rustam', sana: f(kecha), muddat: f(new Date(bugun.getTime() + 86400000*2)), tavsif: 'Gidroizolyatsiya qatlamida yoriqlar bor', daraja: 'O\'rta', status: 'Jarayonda' },
+        { id: 'n3', obyekt: '10Kv liniya', prorab: 'Eshmatov Vali', sana: f(bugun), muddat: f(new Date(bugun.getTime() + 86400000)), tavsif: 'Truba ulanish joyi yaxshi payvandlanmagan', daraja: 'Oddiy', status: 'Yangi' },
+        { id: 'n4', obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', sana: f(utganHafta), muddat: f(bugun), tavsif: 'Armatura karkasi chizmadan 5sm chetga chiqqan', daraja: 'O\'rta', status: 'Tuzatildi' },
+      ] as any[];
+
+      const jamiNuqsonlar = mockNuqsonlar.length;
+      const tuzatilganlar = mockNuqsonlar.filter(n => n.status === 'Tuzatildi').length;
+      const muddatOtilgan = mockNuqsonlar.filter(n => n.status === 'Muddati o\'tgan').length;
+      const kritik = mockNuqsonlar.filter(n => n.daraja === 'Kritik' && n.status !== 'Tuzatildi').length;
+
+      return {
+        nuqsonlar: mockNuqsonlar,
+        jamiNuqsonlar,
+        tuzatilganlar,
+        muddatOtilgan,
+        kritik
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 /* ============ Ф2 ТАЙЁРЛАШ (smetadan yangi hujjat) ============ */
 
 export function useF2HujjatYarat() {
