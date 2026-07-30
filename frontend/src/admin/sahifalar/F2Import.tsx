@@ -63,10 +63,28 @@ export function F2Import() {
   const aktBarglar = useMemo(() => barglar(aktTree ?? []), [aktTree]);
   const aktJami = useMemo(() => aktBarglar.reduce((a, n) => a + (n.summa || 0), 0), [aktBarglar]);
 
-  /** Bog'langan qatorlar summasi */
+  /** Barg uid'lari — solishtiruv FAQAT shular bo'yicha */
+  const bargUidlar = useMemo(() => new Set(aktBarglar.map((n) => n.uid)), [aktBarglar]);
+
+  /**
+   * Bog'langan summa — FAQAT BARG mosliklaridan.
+   * ⚠️ `mosliklar` ichida ish (bl) qatorlari HAM bor, va `bl.summa` o'z
+   * bolalarining yig'indisi. Hammasini qo'shsak bir pul IKKI MARTA sanaladi —
+   * shuning uchun «Bog'langan» akt jamisidan katta chiqib, farq manfiy bo'lardi
+   * (1.96 mlrd > 1.44 mlrd, farq −714 mln). aktJami barglardan olinadi, demak
+   * bog'langan ham barglardan olinishi shart.
+   */
   const boglanganJami = useMemo(
-    () => (natija?.mosliklar ?? []).reduce((a, m) => a + (m.summa || 0), 0),
-    [natija],
+    () => (natija?.mosliklar ?? [])
+      .filter((m) => bargUidlar.has(m.uid))
+      .reduce((a, m) => a + (m.summa || 0), 0),
+    [natija, bargUidlar],
+  );
+
+  /** Ish (bl) darajasida bog'langanlar — alohida ko'rsatiladi, summaga QO'SHILMAYDI */
+  const ishMosliklari = useMemo(
+    () => (natija?.mosliklar ?? []).filter((m) => !bargUidlar.has(m.uid)).length,
+    [natija, bargUidlar],
   );
   /** Bog'lanmagan barglar — ular ➕ qo'shimcha bo'lib ketadi */
   const boglanmagan = useMemo(() => {
@@ -376,7 +394,19 @@ export function F2Import() {
           <div className={`karta p-5 ${constOk ? '' : 'border-danger/40'}`}>
             <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim mb-3">Solishtiruv</h4>
             <Juft nom="Akt jami" qiymat={<FmtN val={aktJami} />} />
-            <Juft nom="Bog'langan" qiymat={<FmtN val={boglanganJami} />} />
+            <Juft
+              nom="Bog'langan"
+              qiymat={
+                <>
+                  <FmtN val={boglanganJami} />
+                  {ishMosliklari > 0 && (
+                    <span className="text-text-mute text-[11px] ml-2">
+                      (+{ishMosliklari} ta ish qatori — summasi bolalarida)
+                    </span>
+                  )}
+                </>
+              }
+            />
             <Juft nom="Qo'shimcha" qiymat={<FmtN val={dopJami} />} />
             <Juft
               nom="Farq"
