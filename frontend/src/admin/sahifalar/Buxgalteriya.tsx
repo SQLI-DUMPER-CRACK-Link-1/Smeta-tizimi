@@ -21,7 +21,7 @@ export function Buxgalteriya() {
   }
 
   const d = dash.data;
-  const xarajatRo'yxati = xarajatlar.data || [];
+  const xarajatRoyxati = xarajatlar.data || [];
 
   const xarajatManbaIkona = (manba: string | undefined) => {
     switch (manba) {
@@ -32,7 +32,7 @@ export function Buxgalteriya() {
     }
   };
 
-  const filtrlanganXarajatlar = xarajatRo'yxati.filter(x => 
+  const filtrlanganXarajatlar = xarajatRoyxati.filter(x => 
     x.izoh.toLowerCase().includes(qidiruv.toLowerCase()) || 
     x.toifa.toLowerCase().includes(qidiruv.toLowerCase())
   );
