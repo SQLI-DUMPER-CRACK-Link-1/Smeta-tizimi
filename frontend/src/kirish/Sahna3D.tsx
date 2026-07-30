@@ -2,64 +2,75 @@ import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { MeshTransmissionMaterial, Environment, Float, Sphere } from '@react-three/drei';
 
-function Karkas() {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const COUNT = 60;
-
-  // Generate random positions and scales for the beams
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  
-  useEffect(() => {
-    if (!meshRef.current) return;
-    
-    for (let i = 0; i < COUNT; i++) {
-      dummy.position.set(
-        (Math.random() - 0.5) * 50,
-        (Math.random() - 0.5) * 50,
-        (Math.random() - 0.5) * 50
-      );
-      
-      dummy.rotation.set(
-        Math.random() * Math.PI,
-        Math.random() * Math.PI,
-        0
-      );
-      
-      // Some are long and thin, some are thick
-      const isVertical = Math.random() > 0.5;
-      dummy.scale.set(
-        isVertical ? 0.3 : 10 + Math.random() * 25,
-        isVertical ? 10 + Math.random() * 25 : 0.3,
-        0.3
-      );
-      
-      dummy.updateMatrix();
-      meshRef.current.setMatrixAt(i, dummy.matrix);
-    }
-    meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [dummy]);
+function LuxCrystal() {
+  const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame((_state, delta) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += delta * 0.03;
-      meshRef.current.rotation.x += delta * 0.015;
+      meshRef.current.rotation.x += delta * 0.15;
+      meshRef.current.rotation.y += delta * 0.2;
     }
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, COUNT]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshPhysicalMaterial 
-        color="#0f172a" 
-        metalness={0.95} 
-        roughness={0.1}
-        clearcoat={1.0}
-        clearcoatRoughness={0.1}
-        emissive="#0ea5e9"
-        emissiveIntensity={1.5}
-      />
-    </instancedMesh>
+    <Float speed={1.5} rotationIntensity={0.5} floatIntensity={2}>
+      <mesh ref={meshRef} scale={10}>
+        <torusKnotGeometry args={[1, 0.4, 256, 64]} />
+        <MeshTransmissionMaterial 
+          backside
+          backsideThickness={5}
+          thickness={2}
+          chromaticAberration={0.4}
+          anisotropy={0.5}
+          distortion={0.5}
+          distortionScale={0.5}
+          temporalDistortion={0.1}
+          color="#0ea5e9"
+          resolution={1024}
+        />
+      </mesh>
+    </Float>
+  );
+}
+
+function GlowingOrbs() {
+  const orb1 = useRef<THREE.Mesh>(null);
+  const orb2 = useRef<THREE.Mesh>(null);
+  const orb3 = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    if (orb1.current) {
+      orb1.current.position.x = Math.sin(t * 0.5) * 15;
+      orb1.current.position.y = Math.cos(t * 0.5) * 15;
+      orb1.current.position.z = -10;
+    }
+    if (orb2.current) {
+      orb2.current.position.x = Math.cos(t * 0.4) * -20;
+      orb2.current.position.y = Math.sin(t * 0.4) * 15;
+      orb2.current.position.z = -15;
+    }
+    if (orb3.current) {
+      orb3.current.position.x = Math.sin(t * 0.3) * 20;
+      orb3.current.position.y = Math.cos(t * 0.3) * -15;
+      orb3.current.position.z = -20;
+    }
+  });
+
+  return (
+    <>
+      <Sphere ref={orb1} args={[4, 32, 32]}>
+        <meshBasicMaterial color="#0ea5e9" />
+      </Sphere>
+      <Sphere ref={orb2} args={[6, 32, 32]}>
+        <meshBasicMaterial color="#d4af37" />
+      </Sphere>
+      <Sphere ref={orb3} args={[5, 32, 32]}>
+        <meshBasicMaterial color="#8b5cf6" />
+      </Sphere>
+    </>
   );
 }
 
@@ -144,17 +155,16 @@ export default function Sahna3D() {
       <color attach="background" args={['#020617']} />
       <fogExp2 attach="fog" args={['#020617', 0.025]} />
       
-      <ambientLight intensity={0.4} />
-      {/* Luxurious cyan rim light */}
-      <directionalLight position={[15, 20, 5]} color="#0ea5e9" intensity={3} />
-      {/* Golden warm light from below */}
-      <directionalLight position={[-15, -20, -5]} color="#d4af37" intensity={2} />
-      {/* Soft fill light */}
-      <pointLight position={[0, 0, 10]} color="#ffffff" intensity={0.5} />
+      <ambientLight intensity={0.2} />
+      <directionalLight position={[10, 10, 10]} intensity={2} color="#ffffff" />
+      <directionalLight position={[-10, -10, -10]} intensity={1} color="#0ea5e9" />
       
-      <Karkas />
+      <LuxCrystal />
+      <GlowingOrbs />
       <Zarrachalar />
       <ParallaxCamera />
+      
+      <Environment preset="city" />
 
       {/* Cinematic Post Processing */}
       <EffectComposer>
