@@ -1,41 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users } from 'lucide-react';
+import Sahna3D from '../../kirish/Sahna3D';
 
-// --- AURORA BACKGROUND (Kuchaytirilgan, yorug'lashtirilgan) ---
+// --- 3D INTERACTIVE BACKGROUND ---
 function AuroraBackground({ children }: { children: React.ReactNode }) {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth) * 100,
-        y: (e.clientY / window.innerHeight) * 100,
-      });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
   return (
-    <div className="relative w-full h-full min-h-screen bg-[#020617] overflow-hidden text-white font-sans selection:bg-accent/30">
-      {/* 3D Background Image */}
-      <div className="absolute inset-0 z-0 bg-[url('/bg-3d.jpg')] bg-cover bg-center opacity-40 mix-blend-screen pointer-events-none" />
-
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{ x: `${mousePosition.x}%`, y: `${mousePosition.y}%` }}
-          transition={{ type: 'spring', damping: 80, stiffness: 40, mass: 1 }}
-          className="absolute -top-[75%] -left-[75%] w-[150vw] h-[150vw] rounded-full bg-accent/20 blur-[150px] mix-blend-screen opacity-50"
-        />
-        <div className="absolute top-[10%] right-[5%] w-[70vw] h-[70vw] rounded-full bg-indigo-500/20 blur-[180px] mix-blend-screen animate-pulse duration-[8000ms]" />
-        <div className="absolute -bottom-[20%] left-[10%] w-[80vw] h-[80vw] rounded-full bg-emerald-500/10 blur-[160px] mix-blend-screen" />
+    <div className="relative w-full h-full min-h-screen overflow-hidden text-white font-sans selection:bg-accent/30">
+      {/* 3D Interactive Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+         <Sahna3D />
       </div>
 
-      <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.05] pointer-events-none" />
+      {/* Grid Overlay for texture */}
+      <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.02] pointer-events-none" />
+
+      {/* Blur overlays to make text readable */}
+      <div className="absolute inset-0 z-0 bg-black/30 pointer-events-none" />
 
       <div className="relative z-10 w-full h-full flex flex-col">
         {children}
