@@ -1,6 +1,7 @@
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 
 function Karkas() {
   const meshRef = useRef<THREE.InstancedMesh>(null);
@@ -56,7 +57,7 @@ function Karkas() {
         clearcoat={1.0}
         clearcoatRoughness={0.1}
         emissive="#0ea5e9"
-        emissiveIntensity={0.15}
+        emissiveIntensity={1.5}
       />
     </instancedMesh>
   );
@@ -99,7 +100,7 @@ function Zarrachalar() {
         metalness={1} 
         roughness={0.2}
         emissive="#d4af37"
-        emissiveIntensity={0.5}
+        emissiveIntensity={3.0}
       />
     </instancedMesh>
   );
@@ -154,6 +155,15 @@ export default function Sahna3D() {
       <Karkas />
       <Zarrachalar />
       <ParallaxCamera />
+
+      {/* Cinematic Post Processing */}
+      <EffectComposer>
+        <Bloom 
+          luminanceThreshold={0.5} 
+          mipmapBlur 
+          intensity={1.5} 
+        />
+      </EffectComposer>
     </Canvas>
   );
 }
