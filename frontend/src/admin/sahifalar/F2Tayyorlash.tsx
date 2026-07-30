@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useObyektlar, useHolat, useF2HujjatYarat } from '../../api/hooks';
-import { Holatlar, Skelet } from '../../umumiy/ui/Sahifa';
+import { Skelet } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
 import { FileOutput, ExternalLink, ChevronDown, ChevronRight, Search, Building2, Calendar, FileText, CheckCircle, Database } from 'lucide-react';
@@ -110,7 +110,7 @@ export function F2Tayyorlash() {
       const r = await yarat.mutateAsync({ obyekt, oyNom, items });
       if (!r.ok) { toast('Hujjat yaratilmadi', 'danger'); return; }
       setNatija(r);
-      toast(`Ф2 tayyor: ${r.soni} qator`, 'success');
+      toast(`Ф2 tayyor: ${r.soni} qator`, 'ok');
     } catch (e: any) { toast(`Xato: ${e.message}`, 'danger'); }
   }
 

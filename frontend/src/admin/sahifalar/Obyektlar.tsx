@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useObyektlar, useBossData } from '../../api/hooks';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Folder, ChevronDown, FileSpreadsheet, Plus, TrendingUp, CheckCircle, Clock, Building2 } from 'lucide-react';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { Folder, ChevronDown, FileSpreadsheet, Plus, TrendingUp, Clock, Building2, Wallet } from 'lucide-react';
 import type { PapkaObyekt } from '../../api/types';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
@@ -45,7 +45,7 @@ export function Obyektlar() {
     }));
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -53,7 +53,7 @@ export function Obyektlar() {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 30, scale: 0.95 },
     show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
   };

@@ -3,7 +3,7 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ShoppingCart, ShieldAlert } from 'lucide-react';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users } from 'lucide-react';
 import Sahna3D from '../../kirish/Sahna3D';
 
 // --- 3D INTERACTIVE BACKGROUND ---
