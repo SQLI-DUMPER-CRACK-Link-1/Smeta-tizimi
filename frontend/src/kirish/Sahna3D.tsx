@@ -146,6 +146,33 @@ function ParallaxCamera() {
   return <CameraShake maxPitch={0.02} maxRoll={0.02} maxYaw={0.02} yawFrequency={0.2} pitchFrequency={0.2} rollFrequency={0.2} intensity={0.5} />;
 }
 
+// --- INTERAKTIV SICHQONCHA NURI (Pointer Orb) ---
+function PointerLight() {
+  const lightRef = useRef<THREE.PointLight>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+  const { viewport, mouse } = useThree();
+  
+  useFrame(() => {
+    if (lightRef.current && meshRef.current) {
+      const x = (mouse.x * viewport.width) / 2;
+      const y = (mouse.y * viewport.height) / 2;
+      // Silliq harakat (Lerp)
+      lightRef.current.position.lerp(new THREE.Vector3(x, y, 8), 0.1);
+      meshRef.current.position.lerp(new THREE.Vector3(x, y, 8), 0.1);
+    }
+  });
+
+  return (
+    <group>
+      <pointLight ref={lightRef} distance={20} intensity={5} color="#0ea5e9" />
+      <mesh ref={meshRef}>
+        <sphereGeometry args={[0.1, 16, 16]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+    </group>
+  );
+}
+
 export default function Sahna3D() {
   return (
     <Canvas 
@@ -164,6 +191,7 @@ export default function Sahna3D() {
       <GlowingOrbs />
       <Zarrachalar />
       <ParallaxCamera />
+      <PointerLight />
       
       <Environment preset="city" />
 
