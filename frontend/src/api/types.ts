@@ -279,3 +279,38 @@ export type KadrlarDashboard = {
   oylikFond: number;      // joriy oyda kutilayotgan xarajat
   berilganAvanslar: number;
 };
+
+/* ---------- Texnika va Yoqilg'i (ERP Machinery) ---------- */
+export type TexnikaType = 'Ekskavator' | 'Kran' | 'Samosval' | 'Buldozer' | 'Boshqa';
+export type TexnikaHolat = 'Ishlayapti' | 'Remontda' | 'Kutishda' | 'Ijara';
+
+export type Texnika = {
+  id: string;
+  nom: string;
+  davlatRaqami: string;
+  turi: TexnikaType;
+  holat: TexnikaHolat;
+  obyekt: string;
+  haydovchi: string; // F.I.O.
+  yoqilgiQoldiq: number; // Litrda
+  soatlikNorma?: number; // Motochasiga necha litr
+};
+
+export type YoqilgiRecord = {
+  id: string;
+  texnikaId: string;
+  sana: string;
+  kirimLitr?: number;
+  chiqimLitr?: number;
+  motochas: number;
+  izoh: string;
+};
+
+export type TexnikaDashboard = {
+  texnikalar: Texnika[];
+  tarix: YoqilgiRecord[];
+  jamiTexnika: number;
+  faolTexnika: number;
+  remontda: number;
+  oylikYoqilgi: number; // Joriy oyda qancha litr sarflandi
+};

@@ -574,6 +574,41 @@ export function useKadrlarData() {
   });
 }
 
+/* ============ ERP TEXNIKA VA GSM (MOCK DATA) ============ */
+export function useTexnikaData() {
+  return useQuery({
+    queryKey: ['texnika'],
+    queryFn: async () => {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const bugun = new Date().toISOString().split('T')[0];
+      
+      const mockTexnikalar = [
+        { id: 't1', nom: 'HOWO Samosval', davlatRaqami: '01 A 123 AA', turi: 'Samosval', holat: 'Ishlayapti', obyekt: 'Amfiteatr', haydovchi: 'Toshmatov Ali', yoqilgiQoldiq: 145, soatlikNorma: 0 },
+        { id: 't2', nom: 'Hyundai Ekskavator', davlatRaqami: '01 B 456 BB', turi: 'Ekskavator', holat: 'Ishlayapti', obyekt: 'Amfiteatr', haydovchi: 'Valiyev Olim', yoqilgiQoldiq: 80, soatlikNorma: 15 },
+        { id: 't3', nom: 'XCMG Avtokran 25t', davlatRaqami: '10 C 789 CC', turi: 'Kran', holat: 'Remontda', obyekt: 'Suniy kol', haydovchi: 'Karimov Rustam', yoqilgiQoldiq: 40, soatlikNorma: 12 },
+        { id: 't4', nom: 'Shacman Buldozer', davlatRaqami: '11 D 111 DD', turi: 'Buldozer', holat: 'Ishlayapti', obyekt: '10Kv liniya', haydovchi: 'Nazarov Umid', yoqilgiQoldiq: 210, soatlikNorma: 20 },
+        { id: 't5', nom: 'Isuzu Bortovoy', davlatRaqami: '01 E 222 EE', turi: 'Boshqa', holat: 'Kutishda', obyekt: 'Baza', haydovchi: 'Azizov Bobur', yoqilgiQoldiq: 35, soatlikNorma: 0 },
+      ] as any[];
+
+      const mockTarix = [
+        { id: 'tr1', texnikaId: 't1', sana: bugun, kirimLitr: 200, chiqimLitr: 55, motochas: 8, izoh: 'Zapravka qilingan' },
+        { id: 'tr2', texnikaId: 't2', sana: bugun, chiqimLitr: 45, motochas: 3, izoh: 'Kechki smena' },
+      ] as any[];
+
+      return {
+        texnikalar: mockTexnikalar,
+        tarix: mockTarix,
+        jamiTexnika: 5,
+        faolTexnika: 3,
+        remontda: 1,
+        oylikYoqilgi: 4850,
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 /* ============ Ф2 ТАЙЁРЛАШ (smetadan yangi hujjat) ============ */
 
 export function useF2HujjatYarat() {
