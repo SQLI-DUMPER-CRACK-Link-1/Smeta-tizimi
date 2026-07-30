@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, User } from 'lucide-react';
+import { Bot, X, Send, User, ChevronDown } from 'lucide-react';
 import { gas } from '../../api/client';
 import { useObyektlar } from '../../api/hooks';
 import ReactMarkdown from 'react-markdown';
@@ -28,6 +28,7 @@ export function AiHelper() {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedObyekt, setSelectedObyekt] = useState<string>('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { data: obyektlar } = useObyektlar();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -138,21 +139,46 @@ export function AiHelper() {
           </div>
 
           {/* Context Selector */}
-          <div className="px-4 py-2 border-b border-border bg-surface flex items-center gap-2">
+          <div className="px-4 py-2 border-b border-border bg-surface flex items-center gap-2 relative">
             <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/10 rounded-md border border-accent/20">
                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></div>
                <span className="text-[10px] uppercase font-bold text-accent tracking-wider">Mantiqiy Qidiruv:</span>
             </div>
-            <select 
-              value={selectedObyekt}
-              onChange={e => setSelectedObyekt(e.target.value)}
-              className="flex-1 bg-transparent border-none text-sm text-white focus:outline-none appearance-none cursor-pointer font-medium"
-            >
-              <option value="" className="bg-[#0B0E14] text-slate-300">Avto-aniqlash (Barcha obyektlar)</option>
-              {obyektlar?.map((o: any) => (
-                <option key={o.obyekt} value={o.obyekt} className="bg-[#0B0E14] text-white">Aniq: {o.obyekt}</option>
-              ))}
-            </select>
+            
+            <div className="flex-1 relative">
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full flex items-center justify-between bg-transparent border-none text-sm text-white focus:outline-none cursor-pointer font-medium hover:bg-white/5 px-2 py-1 rounded-md transition-colors text-left"
+              >
+                <span className="truncate pr-2">
+                  {selectedObyekt ? `Aniq: ${selectedObyekt}` : 'Avto-aniqlash (Barcha obyektlar)'}
+                </span>
+                <ChevronDown size={14} className={`text-text-dim transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+                  <div className="absolute top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-[#0B0E14] border border-border/50 rounded-xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 scrollbar-thin">
+                    <button
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${!selectedObyekt ? 'bg-accent text-white font-medium' : 'text-slate-300 hover:bg-white/10'}`}
+                      onClick={() => { setSelectedObyekt(''); setIsDropdownOpen(false); }}
+                    >
+                      Avto-aniqlash (Barcha obyektlar)
+                    </button>
+                    {obyektlar?.map((o: any) => (
+                      <button
+                        key={o.obyekt}
+                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${selectedObyekt === o.obyekt ? 'bg-accent text-white font-medium' : 'text-slate-300 hover:bg-white/10'}`}
+                        onClick={() => { setSelectedObyekt(o.obyekt); setIsDropdownOpen(false); }}
+                      >
+                        {o.obyekt}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Messages */}
