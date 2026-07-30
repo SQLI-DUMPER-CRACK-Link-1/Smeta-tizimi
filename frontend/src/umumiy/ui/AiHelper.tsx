@@ -38,11 +38,12 @@ export function AiHelper() {
   }, [messages, isOpen]);
 
   // Avtomatik obyekt tanlash
-  useEffect(() => {
-    if (!selectedObyekt && obyektlar?.length) {
-      setSelectedObyekt(obyektlar[0].obyekt);
-    }
-  }, [obyektlar, selectedObyekt]);
+  // Avtomatik obyekt tanlash o'chirildi - AI o'zi barcha obyektlardan qidiradi
+  // useEffect(() => {
+  //   if (!selectedObyekt && obyektlar?.length) {
+  //     setSelectedObyekt(obyektlar[0].obyekt);
+  //   }
+  // }, [obyektlar, selectedObyekt]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -138,15 +139,18 @@ export function AiHelper() {
 
           {/* Context Selector */}
           <div className="px-4 py-2 border-b border-border bg-surface flex items-center gap-2">
-            <span className="text-xs text-text-dim">Kontekst:</span>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/10 rounded-md border border-accent/20">
+               <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></div>
+               <span className="text-[10px] uppercase font-bold text-accent tracking-wider">Mantiqiy Qidiruv:</span>
+            </div>
             <select 
               value={selectedObyekt}
               onChange={e => setSelectedObyekt(e.target.value)}
-              className="flex-1 bg-transparent border-none text-sm text-white focus:outline-none appearance-none cursor-pointer"
+              className="flex-1 bg-transparent border-none text-sm text-white focus:outline-none appearance-none cursor-pointer font-medium"
             >
-              <option value="">Umumiy (obyektsiz)</option>
+              <option value="" className="bg-[#0B0E14] text-slate-300">Avto-aniqlash (Barcha obyektlar)</option>
               {obyektlar?.map((o: any) => (
-                <option key={o.obyekt} value={o.obyekt}>{o.obyekt}</option>
+                <option key={o.obyekt} value={o.obyekt} className="bg-[#0B0E14] text-white">Aniq: {o.obyekt}</option>
               ))}
             </select>
           </div>
