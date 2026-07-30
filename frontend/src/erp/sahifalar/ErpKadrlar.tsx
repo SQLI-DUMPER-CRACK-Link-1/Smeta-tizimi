@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, HardHat, CalendarCheck, HandCoins, Search, Filter, UserCheck, UserX, Clock, UserMinus } from 'lucide-react';
-import { AuroraBackground } from '../../umumiy/ui/aurora-background';
-import { GlassCard } from '../../umumiy/ui/ShishaKarta';
-import { FmtN } from '../../umumiy/Fmt';
+import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
+import { FmtN } from '../../lib/format';
 import { useKadrlarData } from '../../api/hooks';
-import { Skelet } from '../../umumiy/ui/Skelet';
+import { Skelet } from '../../umumiy/ui/Sahifa';
 
 export default function ErpKadrlar() {
   const { data, isLoading } = useKadrlarData();

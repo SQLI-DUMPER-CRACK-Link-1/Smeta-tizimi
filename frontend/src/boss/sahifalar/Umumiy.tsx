@@ -7,7 +7,7 @@ import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, Chevro
 import Sahna3D from '../../kirish/Sahna3D';
 
 // --- 3D INTERACTIVE BACKGROUND ---
-function AuroraBackground({ children }: { children: React.ReactNode }) {
+export function AuroraBackground({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full h-full min-h-screen overflow-hidden text-white font-sans selection:bg-accent/30">
       {/* 3D Interactive Background */}
@@ -118,7 +118,7 @@ const useUiSound = () => {
   return { playHover, playClick };
 };
 
-function GlassCard({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
+export function GlassCard({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
