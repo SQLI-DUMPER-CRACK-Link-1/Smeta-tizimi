@@ -3,7 +3,7 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X } from 'lucide-react';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu } from 'lucide-react';
 
 // --- AURORA BACKGROUND (Kuchaytirilgan, yorug'lashtirilgan) ---
 function AuroraBackground({ children }: { children: React.ReactNode }) {
@@ -154,6 +154,60 @@ function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[
             </div>
           </div>
         </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+// --- SMART AI XULOSA ---
+function SmartXulosa({ jami }: { jami: any }) {
+  const qarzlar = jami.debitor || 0;
+  const qoldiq = jami.qoldiq || 0;
+  const tushum = jami.tolangan || 0;
+  
+  let xavf = "Barqaror";
+  let xavfColor = "text-emerald-400";
+  if (qarzlar > tushum * 0.3) {
+    xavf = "Yuqori Xavf (Debitorlar ko'p)";
+    xavfColor = "text-danger";
+  } else if (qarzlar > tushum * 0.1) {
+    xavf = "O'rtacha (Qarzlarni undirish kerak)";
+    xavfColor = "text-warn";
+  }
+
+  return (
+    <GlassCard className="p-6 relative overflow-hidden flex flex-col h-full border-l-4 border-l-accent bg-accent/5 hover:bg-accent/10 transition-colors duration-300">
+       <div className="absolute -right-10 -top-10 opacity-10 pointer-events-none">
+         <Cpu size={120} />
+       </div>
+       <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+         <Activity size={20} className="text-accent" /> AI Analitik Xulosa
+       </h3>
+       <p className="text-slate-300 text-[15px] leading-relaxed relative z-10">
+         Sizda umumiy hisobda <span className="font-bold text-white border-b border-white/20 pb-0.5"><FmtN val={jami.smeta} qisqa /></span> lik shartnomaviy ishlar mavjud bo'lib, uning <span className="font-bold text-ok">{jami.progress}%</span> qismi amalda bajarilgan. 
+         Hozirgi vaqtda <span className="font-bold text-danger border-b border-danger/30 pb-0.5"><FmtN val={qarzlar} qisqa /></span> miqdorida debitor qarzdorlik shakllangan. 
+         Biznesning joriy moliyaviy barqarorligi: <span className={`font-bold ${xavfColor}`}>{xavf}</span>. 
+         Oldinda yana <span className="font-bold text-white"><FmtN val={qoldiq} qisqa /></span> lik bajarilishi kerak bo'lgan ish qoldig'i mavjud.
+       </p>
+    </GlassCard>
+  );
+}
+
+// --- TOP LIST ---
+function TopList({ title, icon: Icon, items, color, valKey }: { title: string, icon: any, items: any[], color: string, valKey: string }) {
+  return (
+    <GlassCard className="p-5 h-full">
+      <h3 className="text-[11px] font-bold text-slate-400 mb-4 flex items-center gap-2 uppercase tracking-widest">
+        <Icon size={14} className={color} /> {title}
+      </h3>
+      <div className="space-y-3">
+        {items.map((item, idx) => (
+          <div key={idx} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0 last:pb-0 group">
+             <div className="text-[13px] text-slate-300 font-medium truncate pr-3 group-hover:text-white transition-colors">{item.nom}</div>
+             <div className={`text-sm font-mono font-bold ${color}`}><FmtN val={item[valKey]} qisqa /></div>
+          </div>
+        ))}
+        {items.length === 0 && <div className="text-xs text-slate-500 italic">Ma'lumot topilmadi</div>}
       </div>
     </GlassCard>
   );
@@ -522,6 +576,33 @@ export default function Umumiy() {
             />
           </motion.div>
         </div>
+
+        {/* AI Summary and Top Problems */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+             <div className="lg:col-span-2">
+                <SmartXulosa jami={data.jami} />
+             </div>
+             <div className="lg:col-span-1">
+                <TopList 
+                  title="Top Debitorlar (Qarzlar)" 
+                  icon={AlertTriangle} 
+                  color="text-red-400" 
+                  valKey="debitor"
+                  items={[...(data.objects || [])].sort((a,b) => ((b as any).debitor||0) - ((a as any).debitor||0)).filter(o => (o as any).debitor > 0).slice(0, 4)} 
+                />
+             </div>
+             <div className="lg:col-span-1">
+                <TopList 
+                  title="Eng Ko'p Ish Qolgan" 
+                  icon={Clock} 
+                  color="text-amber-400" 
+                  valKey="qoldiq"
+                  items={[...(data.objects || [])].sort((a,b) => ((b as any).qoldiq||0) - ((a as any).qoldiq||0)).filter(o => (o as any).qoldiq > 0).slice(0, 4)} 
+                />
+             </div>
+          </div>
+        </motion.div>
 
         {/* IERARXIK JADVAL */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
