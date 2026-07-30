@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, HardHat, CalendarCheck, HandCoins, Search, Filter, UserCheck, UserX, Clock, UserMinus } from 'lucide-react';
+import { Users, HardHat, CalendarCheck, HandCoins, Search, Filter } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
 import { useKadrlarData } from '../../api/hooks';
@@ -19,40 +19,11 @@ export default function ErpKadrlar() {
     );
   }
 
-  const ishchilarTabellarBilan = data.ishchilar.map((ishchi: any) => {
-    const tabel = data.tabellar.find((t: any) => t.ishchiId === ishchi.id);
-    return { ...ishchi, davomat: tabel?.holat || null, izoh: tabel?.izoh || '' };
-  });
-
-  const filtrlanganIshchilar = ishchilarTabellarBilan.filter((ishchi: any) => {
+  const filtrlanganIshchilar = data.ishchilar.filter((ishchi: any) => {
     const mosKeladi = ishchi.ism.toLowerCase().includes(qidiruv.toLowerCase()) || 
                       ishchi.kasb.toLowerCase().includes(qidiruv.toLowerCase());
-    
-    if (filtir === 'keldi') return mosKeladi && ishchi.davomat === 'keldi';
-    if (filtir === 'kelmadi') return mosKeladi && (ishchi.davomat === 'kelmadi' || ishchi.davomat === 'otgul');
-    if (filtir === 'kasal') return mosKeladi && ishchi.davomat === 'kasal';
     return mosKeladi;
   });
-
-  const davomatRangi = (holat: string | null) => {
-    switch (holat) {
-      case 'keldi': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-      case 'kelmadi': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-      case 'kasal': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-      case 'otgul': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-      default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
-    }
-  };
-
-  const davomatIkona = (holat: string | null) => {
-    switch (holat) {
-      case 'keldi': return <UserCheck size={16} />;
-      case 'kelmadi': return <UserX size={16} />;
-      case 'kasal': return <UserMinus size={16} />;
-      case 'otgul': return <Clock size={16} />;
-      default: return <span className="text-xl leading-none">-</span>;
-    }
-  };
 
   return (
     <AuroraBackground>
@@ -139,58 +110,63 @@ export default function ErpKadrlar() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto scrollbar-thin">
-            <table className="w-full text-left border-collapse">
+          <div className="flex-1 overflow-auto scrollbar-thin pb-4">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead className="bg-black/60 sticky top-0 z-20 backdrop-blur-md">
                 <tr>
-                  <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider">F.I.O va Kasbi</th>
-                  <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider">Obyekt va Brigada</th>
-                  <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-right">Kunlik Stavka</th>
-                  <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-center">Bugungi Davomat</th>
-                  <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-center">Harakatlar</th>
+                  <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider sticky left-0 bg-[#121620] z-30 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">F.I.O va Kasbi</th>
+                  <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-center">Ishlagan</th>
+                  <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-right border-r border-white/10">Xisoblangan</th>
+                  {Array.from({length: 31}, (_, i) => (
+                    <th key={i} className="py-4 px-2 text-[10px] text-slate-500 font-bold uppercase text-center w-8 min-w-[32px]">{i+1}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filtrlanganIshchilar.map((ishchi: any, idx: number) => (
-                  <motion.tr 
-                    key={ishchi.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group"
-                  >
-                    <td className="py-4 px-6">
-                      <div className="font-semibold text-white/90 text-sm">{ishchi.ism}</div>
-                      <div className="text-xs text-blue-400 mt-1">{ishchi.kasb}</div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-sm text-slate-300">{ishchi.obyekt}</div>
-                      <div className="text-xs text-slate-500 mt-1">{ishchi.brigada}</div>
-                    </td>
-                    <td className="py-4 px-6 text-right font-mono font-medium text-emerald-400/90 text-sm">
-                      <FmtN val={ishchi.stavka} /> 
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      {ishchi.davomat ? (
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider ${davomatRangi(ishchi.davomat)}`}>
-                          {davomatIkona(ishchi.davomat)}
-                          {ishchi.davomat}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-500">Belgilanmagan</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      <button className="text-xs bg-white/5 hover:bg-white/10 text-slate-300 px-3 py-1.5 rounded border border-white/10 transition-colors">
-                        Tabelga yozish
-                      </button>
-                    </td>
-                  </motion.tr>
-                ))}
+                {filtrlanganIshchilar.map((ishchi: any, idx: number) => {
+                  const tabel = data.tabellar.find((t: any) => t.ishchiId === ishchi.id) || { kunlar: [], ishlaganKunlar: 0, xisoblanganOylik: 0 };
+                  
+                  return (
+                    <motion.tr 
+                      key={ishchi.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group"
+                    >
+                      <td className="py-3 px-6 sticky left-0 bg-[#121620] group-hover:bg-[#181d2a] z-10 shadow-[4px_0_12px_rgba(0,0,0,0.5)] transition-colors">
+                        <div className="font-semibold text-white/90 text-sm">{ishchi.ism}</div>
+                        <div className="text-xs text-blue-400 mt-0.5">{ishchi.kasb}</div>
+                      </td>
+                      <td className="py-3 px-6 text-center font-bold text-slate-300">
+                        {tabel.ishlaganKunlar} <span className="text-[10px] text-slate-500 font-normal">kun</span>
+                      </td>
+                      <td className="py-3 px-6 text-right font-mono font-bold text-emerald-400/90 text-sm border-r border-white/10">
+                        <FmtN val={tabel.xisoblanganOylik} />
+                      </td>
+                      {Array.from({length: 31}, (_, i) => {
+                         const kunHolati = tabel.kunlar.find((k: any) => k.sana === i + 1)?.holat;
+                         let bg = 'bg-white/5 border-white/10 text-slate-600';
+                         let txt = '-';
+                         if (kunHolati === 'keldi') { bg = 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 font-bold'; txt = '8'; } // 8 soat
+                         else if (kunHolati === 'kelmadi') { bg = 'bg-rose-500/20 border-rose-500/30 text-rose-400 font-bold'; txt = 'N'; }
+                         else if (kunHolati === 'kasal') { bg = 'bg-amber-500/20 border-amber-500/30 text-amber-400 font-bold'; txt = 'B'; }
+                         
+                         return (
+                           <td key={i} className="py-3 px-1 text-center">
+                             <div className={`w-7 h-7 mx-auto rounded border ${bg} flex items-center justify-center text-xs cursor-pointer hover:scale-110 transition-transform`}>
+                               {txt}
+                             </div>
+                           </td>
+                         )
+                      })}
+                    </motion.tr>
+                  )
+                })}
                 
                 {filtrlanganIshchilar.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-500">
+                    <td colSpan={34} className="py-12 text-center text-slate-500">
                       Hech qanday ma'lumot topilmadi...
                     </td>
                   </tr>

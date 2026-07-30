@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, AlertTriangle, Search, Filter, TrendingUp, HandCoins, Package, ClipboardList, MapPin } from 'lucide-react';
+import { ShoppingCart, AlertTriangle, Search, TrendingUp, HandCoins, Package, ClipboardList, MapPin } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
 import { useTaminotData } from '../../api/hooks';
@@ -30,7 +30,9 @@ export default function ErpTaminot() {
 
   const zayavkaRangi = (status: string) => {
     switch (status) {
-      case 'Kutilmoqda': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+      case 'Obyektdan so\'rov': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+      case 'Omborda tekshirilmoqda': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+      case 'Ombordan berildi': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'Bozorda': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
       case 'Yuborildi': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
       case 'Qabul qilindi': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
@@ -47,7 +49,7 @@ export default function ErpTaminot() {
             <ShoppingCart className="text-blue-400" size={32} />
             Ta'minot va Ombor (Sklad)
           </h1>
-          <p className="text-slate-400 mt-2 text-sm">Zayavkalar, materiallar qoldig'i va moliyaviy smeta nazorati</p>
+          <p className="text-slate-400 mt-2 text-sm">Zayavkalar ekotizimi, Perekidkalar va Material qoldiqlari nazorati</p>
         </header>
 
         {/* KPIs */}
@@ -107,13 +109,13 @@ export default function ErpTaminot() {
                 onClick={() => setTab('zayavkalar')}
                 className={`px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${tab === 'zayavkalar' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25' : 'bg-black/40 text-slate-400 hover:text-white border border-white/10'}`}
               >
-                <ClipboardList size={16} /> Zayavkalar (Talabnomalar)
+                <ClipboardList size={16} /> Zayavkalar Ekran (Snabsheniye)
               </button>
               <button 
                 onClick={() => setTab('sklad')}
                 className={`px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${tab === 'sklad' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'bg-black/40 text-slate-400 hover:text-white border border-white/10'}`}
               >
-                <Package size={16} /> Ombor Qoldiqlari (Sklad)
+                <Package size={16} /> Ombor va Qoldiqlar
               </button>
             </div>
 
@@ -138,8 +140,8 @@ export default function ErpTaminot() {
                     <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider">Material va Miqdor</th>
                     <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider">Prorab va Obyekt</th>
                     <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider">Sana / Izoh</th>
-                    <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-center">Status</th>
-                    <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-center">Harakatlar</th>
+                    <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-center">Joriy Status</th>
+                    <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-center">Omborchi / Ta'minotchi harakati</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -169,14 +171,24 @@ export default function ErpTaminot() {
                         </div>
                       </td>
                       <td className="py-4 px-6 text-center space-x-2">
-                        {z.status === 'Kutilmoqda' && (
-                          <button className="text-xs bg-blue-500/20 hover:bg-blue-500 hover:text-white text-blue-400 px-3 py-1.5 rounded border border-blue-500/30 transition-colors">
-                            Bozorga tushish
+                        {z.status === 'Obyektdan so\'rov' && (
+                          <button className="text-xs bg-orange-500/20 hover:bg-orange-500 hover:text-white text-orange-400 px-3 py-1.5 rounded border border-orange-500/30 transition-colors">
+                            Skladda tekshirish
                           </button>
                         )}
+                        {z.status === 'Omborda tekshirilmoqda' && (
+                          <div className="flex justify-center gap-2">
+                             <button className="text-xs bg-emerald-500/20 hover:bg-emerald-500 hover:text-white text-emerald-400 px-2 py-1.5 rounded border border-emerald-500/30 transition-colors" title="Skladda bor, Nakladnoy bilan berish">
+                               Skladdan berish
+                             </button>
+                             <button className="text-xs bg-blue-500/20 hover:bg-blue-500 hover:text-white text-blue-400 px-2 py-1.5 rounded border border-blue-500/30 transition-colors" title="Skladda yo'q, Snabshenes qidiradi">
+                               Bozorga jo'natish
+                             </button>
+                          </div>
+                        )}
                         {z.status === 'Bozorda' && (
-                          <button className="text-xs bg-emerald-500/20 hover:bg-emerald-500 hover:text-white text-emerald-400 px-3 py-1.5 rounded border border-emerald-500/30 transition-colors">
-                            Jo'natish (Rasmiylashtirish)
+                          <button className="text-xs bg-purple-500/20 hover:bg-purple-500 hover:text-white text-purple-400 px-3 py-1.5 rounded border border-purple-500/30 transition-colors">
+                            Xarid qilish va Obyektga yuborish
                           </button>
                         )}
                       </td>

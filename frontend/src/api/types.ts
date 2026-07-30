@@ -316,7 +316,7 @@ export type TexnikaDashboard = {
 };
 
 /* ---------- Ta'minot, Ombor (Sklad) va Zayavkalar (ERP Supply) ---------- */
-export type ZayavkaStatus = 'Kutilmoqda' | 'Bozorda' | 'Yuborildi' | 'Qabul qilindi' | 'Rad etildi';
+export type ZayavkaStatus = 'Obyektdan so\'rov' | 'Omborda tekshirilmoqda' | 'Ombordan berildi' | 'Bozorda' | 'Yuborildi' | 'Qabul qilindi' | 'Rad etildi';
 
 export type Zayavka = {
   id: string;

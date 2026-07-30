@@ -553,20 +553,37 @@ export function useKadrlarData() {
         { id: '5', ism: 'Eshmatov Vali', kasb: 'Santexnik', stavka: 170000, brigada: 'Brigada-3', obyekt: '10Kv liniya', status: 'faol' },
       ] as any[];
 
-      const mockTabellar = [
-        { ishchiId: '1', sana: bugun, holat: 'keldi', izoh: '' },
-        { ishchiId: '2', sana: bugun, holat: 'keldi', izoh: '' },
-        { ishchiId: '3', sana: bugun, holat: 'kelmadi', izoh: 'Ruxsat soragan' },
-        { ishchiId: '4', sana: bugun, holat: 'keldi', izoh: '' },
-        { ishchiId: '5', sana: bugun, holat: 'kasal', izoh: '' },
-      ] as any[];
+      // 1 dan 31 gacha kunlar uchun tabel matritsasi generatsiyasi
+      const oydagiKunlarSoni = 31;
+      const mockTabellar = mockIshchilar.map(ishchi => {
+         const kunlar: any[] = [];
+         let ishlaganKunlar = 0;
+         for (let i = 1; i <= oydagiKunlarSoni; i++) {
+            // Tasodifiy davomat: 80% kelgan, 10% kelmagan, 10% hali belgilanmagan
+            const rand = Math.random();
+            let holat = null;
+            if (i < 15) { // O'tgan kunlar
+               if (rand < 0.8) { holat = 'keldi'; ishlaganKunlar++; }
+               else if (rand < 0.9) holat = 'kelmadi';
+               else holat = 'kasal';
+            }
+            kunlar.push({ sana: i, holat });
+         }
+         return {
+            ishchiId: ishchi.id,
+            oy: '2026-07',
+            kunlar,
+            ishlaganKunlar,
+            xisoblanganOylik: ishlaganKunlar * ishchi.stavka
+         };
+      });
 
       return {
         ishchilar: mockIshchilar,
         tabellar: mockTabellar,
         jamiFaolIshchilar: 5,
-        bugungiDavomat: 60,
-        oylikFond: 23500000,
+        bugungiDavomat: 80,
+        oylikFond: mockTabellar.reduce((acc, t) => acc + t.xisoblanganOylik, 0),
         berilganAvanslar: 5500000,
       };
     },
@@ -584,20 +601,40 @@ export function useTexnikaData() {
       const bugun = new Date().toISOString().split('T')[0];
       
       const mockTexnikalar = [
-        { id: 't1', nom: 'HOWO Samosval', davlatRaqami: '01 A 123 AA', turi: 'Samosval', holat: 'Ishlayapti', obyekt: 'Amfiteatr', haydovchi: 'Toshmatov Ali', yoqilgiQoldiq: 145, soatlikNorma: 0 },
-        { id: 't2', nom: 'Hyundai Ekskavator', davlatRaqami: '01 B 456 BB', turi: 'Ekskavator', holat: 'Ishlayapti', obyekt: 'Amfiteatr', haydovchi: 'Valiyev Olim', yoqilgiQoldiq: 80, soatlikNorma: 15 },
-        { id: 't3', nom: 'XCMG Avtokran 25t', davlatRaqami: '10 C 789 CC', turi: 'Kran', holat: 'Remontda', obyekt: 'Suniy kol', haydovchi: 'Karimov Rustam', yoqilgiQoldiq: 40, soatlikNorma: 12 },
-        { id: 't4', nom: 'Shacman Buldozer', davlatRaqami: '11 D 111 DD', turi: 'Buldozer', holat: 'Ishlayapti', obyekt: '10Kv liniya', haydovchi: 'Nazarov Umid', yoqilgiQoldiq: 210, soatlikNorma: 20 },
-        { id: 't5', nom: 'Isuzu Bortovoy', davlatRaqami: '01 E 222 EE', turi: 'Boshqa', holat: 'Kutishda', obyekt: 'Baza', haydovchi: 'Azizov Bobur', yoqilgiQoldiq: 35, soatlikNorma: 0 },
+        { id: 't1', nom: 'HOWO Samosval', davlatRaqami: '01 A 123 AA', turi: 'Samosval', holat: 'Ishlayapti', obyekt: 'Amfiteatr', haydovchi: 'Toshmatov Ali', soatlikNorma: 0, 
+          oldingiQoldiq: 100 },
+        { id: 't2', nom: 'Hyundai Ekskavator', davlatRaqami: '01 B 456 BB', turi: 'Ekskavator', holat: 'Ishlayapti', obyekt: 'Amfiteatr', haydovchi: 'Valiyev Olim', soatlikNorma: 15,
+          oldingiQoldiq: 120 },
+        { id: 't3', nom: 'XCMG Avtokran 25t', davlatRaqami: '10 C 789 CC', turi: 'Kran', holat: 'Remontda', obyekt: 'Suniy kol', haydovchi: 'Karimov Rustam', soatlikNorma: 12,
+          oldingiQoldiq: 40 },
+        { id: 't4', nom: 'Shacman Buldozer', davlatRaqami: '11 D 111 DD', turi: 'Buldozer', holat: 'Ishlayapti', obyekt: '10Kv liniya', haydovchi: 'Nazarov Umid', soatlikNorma: 20,
+          oldingiQoldiq: 50 },
+        { id: 't5', nom: 'Isuzu Bortovoy', davlatRaqami: '01 E 222 EE', turi: 'Boshqa', holat: 'Kutishda', obyekt: 'Baza', haydovchi: 'Azizov Bobur', soatlikNorma: 0,
+          oldingiQoldiq: 35 },
       ] as any[];
 
       const mockTarix = [
-        { id: 'tr1', texnikaId: 't1', sana: bugun, kirimLitr: 200, chiqimLitr: 55, motochas: 8, izoh: 'Zapravka qilingan' },
-        { id: 'tr2', texnikaId: 't2', sana: bugun, chiqimLitr: 45, motochas: 3, izoh: 'Kechki smena' },
+        { id: 'tr1', texnikaId: 't1', sana: bugun, kirimLitr: 200, chiqimLitr: 0, motochas: 0, izoh: 'Zapravka qilingan' },
+        { id: 'tr2', texnikaId: 't2', sana: bugun, kirimLitr: 0, chiqimLitr: 0, motochas: 5, izoh: 'Kunduzgi smena' },
+        { id: 'tr3', texnikaId: 't4', sana: bugun, kirimLitr: 300, chiqimLitr: 0, motochas: 8, izoh: 'Zapravka va To\'liq smena' },
       ] as any[];
 
+      // Real hisob-kitob (O'g'rilik / Pere-rasxod nazorati uchun)
+      const hisoblanganTexnikalar = mockTexnikalar.map(t => {
+        let qoldiq = t.oldingiQoldiq;
+        const oydagiHarakat = mockTarix.filter(tr => tr.texnikaId === t.id);
+        
+        oydagiHarakat.forEach(h => {
+          if (h.kirimLitr) qoldiq += h.kirimLitr;
+          if (h.motochas && t.soatlikNorma) {
+             qoldiq -= (h.motochas * t.soatlikNorma);
+          }
+        });
+        return { ...t, yoqilgiQoldiq: qoldiq };
+      });
+
       return {
-        texnikalar: mockTexnikalar,
+        texnikalar: hisoblanganTexnikalar,
         tarix: mockTarix,
         jamiTexnika: 5,
         faolTexnika: 3,
@@ -619,15 +656,15 @@ export function useTaminotData() {
       const bugun = new Date().toISOString().split('T')[0];
       
       const mockZayavkalar = [
-        { id: 'z1', sana: bugun, obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', material: 'Sement M400', birlik: 'tonna', miqdor: 15, status: 'Kutilmoqda', izoh: 'Shoshilinch' },
-        { id: 'z2', sana: bugun, obyekt: 'Suniy kol', prorab: 'Karimov Rustam', material: 'Armatura 12mm', birlik: 'tonna', miqdor: 5, status: 'Bozorda' },
-        { id: 'z3', sana: bugun, obyekt: '10Kv liniya', prorab: 'Eshmatov Vali', material: 'Kabel SIP-4', birlik: 'metr', miqdor: 500, status: 'Yuborildi' },
-        { id: 'z4', sana: bugun, obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', material: 'Qum', birlik: 'm3', miqdor: 30, status: 'Qabul qilindi' },
+        { id: 'z1', sana: bugun, obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', material: 'Sement M400', birlik: 'tonna', miqdor: 15, status: 'Obyektdan so\'rov', izoh: 'Shoshilinch' },
+        { id: 'z2', sana: bugun, obyekt: 'Suniy kol', prorab: 'Karimov Rustam', material: 'Armatura 12mm', birlik: 'tonna', miqdor: 5, status: 'Omborda tekshirilmoqda' },
+        { id: 'z3', sana: bugun, obyekt: '10Kv liniya', prorab: 'Eshmatov Vali', material: 'Kabel SIP-4', birlik: 'metr', miqdor: 50, status: 'Ombordan berildi' },
+        { id: 'z4', sana: bugun, obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', material: 'Qum', birlik: 'm3', miqdor: 30, status: 'Bozorda' },
       ] as any[];
 
       const mockMateriallar = [
         { id: 'm1', guruh: 'Asosiy', nom: 'Sement M400', birlik: 'tonna', obyekt: 'Markaziy Sklad', qoldiq: 4, minQoldiq: 10, smetaNarxi: 850000, faktNarxi: 870000 },
-        { id: 'm2', guruh: 'Asosiy', nom: 'Armatura 12mm', birlik: 'tonna', obyekt: 'Amfiteatr', qoldiq: 1.5, minQoldiq: 2, smetaNarxi: 9500000, faktNarxi: 9400000 },
+        { id: 'm2', guruh: 'Asosiy', nom: 'Armatura 12mm', birlik: 'tonna', obyekt: 'Markaziy Sklad', qoldiq: 1.5, minQoldiq: 2, smetaNarxi: 9500000, faktNarxi: 9400000 },
         { id: 'm3', guruh: 'Asosiy', nom: 'Beton M300', birlik: 'm3', obyekt: 'Suniy kol', qoldiq: 0, minQoldiq: 5, smetaNarxi: 550000, faktNarxi: 580000 },
         { id: 'm4', guruh: 'Yordamchi', nom: 'Qadoq mix', birlik: 'kg', obyekt: 'Markaziy Sklad', qoldiq: 45, minQoldiq: 10, smetaNarxi: 12000, faktNarxi: 12000 },
       ] as any[];
@@ -639,7 +676,7 @@ export function useTaminotData() {
       ] as any[];
 
       // Mantiqiy hisob-kitoblar
-      const yangiZayavkalarSoni = mockZayavkalar.filter(z => z.status === 'Kutilmoqda').length;
+      const yangiZayavkalarSoni = mockZayavkalar.filter(z => z.status === 'Obyektdan so\'rov' || z.status === 'Omborda tekshirilmoqda').length;
       const kritikMateriallarSoni = mockMateriallar.filter(m => m.qoldiq <= m.minQoldiq).length;
       const jamiQarzimiz = mockPostavshiklar.reduce((acc, p) => acc + p.qarzimiz, 0);
       const smetaNarxidanOshganlar = mockMateriallar.filter(m => m.faktNarxi > m.smetaNarxi).length;
