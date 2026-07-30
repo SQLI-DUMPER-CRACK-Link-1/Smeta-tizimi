@@ -3,7 +3,7 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu } from 'lucide-react';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users } from 'lucide-react';
 
 // --- AURORA BACKGROUND (Kuchaytirilgan, yorug'lashtirilgan) ---
 function AuroraBackground({ children }: { children: React.ReactNode }) {
@@ -536,17 +536,15 @@ export default function Umumiy() {
           ))}
         </div>
 
-        {/* Second Row KPIs: Moliya va Xarajatlar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {/* Moliya Oqimlari */}
+        <h2 className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Moliyaviy Oqimlar</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {[
             { id: "tolangan", nom: "Tushum (To'langan)", qiymat: data.jami.tolangan, color: "text-emerald-400", icon: ArrowDownToLine, border: "border-emerald-500/30", bg: "bg-emerald-500/5" },
             { id: "debitor", nom: "Debitor (Qarz)", qiymat: data.jami.debitor, color: "text-red-400", icon: ArrowUpFromLine, border: "border-red-500/30", bg: "bg-red-500/5" },
             { id: "avans", nom: "Avans", qiymat: data.jami.avans, color: "text-amber-400", icon: Layers, border: "border-amber-500/30", bg: "bg-amber-500/5" },
-            { id: "mat", nom: "Material", qiymat: data.jami.mat, color: "text-t-mat", icon: Wrench, border: "border-white/10", bg: "bg-white/5" },
-            { id: "chel", nom: "Ish Haqi (Oylik)", qiymat: data.jami.chel, color: "text-blue-400", icon: HardHat, border: "border-white/10", bg: "bg-white/5" },
-            { id: "mash", nom: "Texnika (Mashina)", qiymat: data.jami.mash, color: "text-purple-400", icon: Truck, border: "border-white/10", bg: "bg-white/5" },
           ].map((kpi, idx) => (
-            <motion.div key={`kpi2-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + idx * 0.05, duration: 0.4 }}>
+            <motion.div key={`kpi-mol-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 + idx * 0.05, duration: 0.4 }}>
               <div 
                 className={`p-4 rounded-xl border ${kpi.border} ${kpi.bg} backdrop-blur-md flex flex-col items-center text-center group cursor-pointer hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transform hover:-translate-y-1 active:translate-y-0 transition-all duration-200`}
                 onClick={() => setActiveKpi({
@@ -554,8 +552,36 @@ export default function Umumiy() {
                   items: data.objects.filter(o => (o as any)[kpi.id] > 0).map(o => ({ nom: o.nom, val: (o as any)[kpi.id] }))
                 })}
               >
+                <kpi.icon size={24} className={`${kpi.color} mb-3 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`} />
+                <div className="text-[12px] font-bold text-slate-300 uppercase tracking-widest mb-1 group-hover:text-white transition-colors">{kpi.nom}</div>
+                <div className={`text-2xl font-mono font-bold ${kpi.color}`}><FmtN val={kpi.qiymat} qisqa /></div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Xarajatlar Tahlili (To'liq Backend Data) */}
+        <h2 className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Xarajatlar Tahlili</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+          {[
+            { id: "mat", nom: "Material", qiymat: data.jami.mat, color: "text-t-mat", icon: Wrench, border: "border-white/10", bg: "bg-white/5" },
+            { id: "chel", nom: "Ish Haqi", qiymat: data.jami.chel, color: "text-blue-400", icon: HardHat, border: "border-white/10", bg: "bg-white/5" },
+            { id: "mash", nom: "Mexanizm", qiymat: data.jami.mash, color: "text-purple-400", icon: Truck, border: "border-white/10", bg: "bg-white/5" },
+            { id: "ob", nom: "Uskuna", qiymat: data.jami.ob, color: "text-cyan-400", icon: Server, border: "border-white/10", bg: "bg-white/5" },
+            { id: "mk", nom: "Metal", qiymat: data.jami.mk, color: "text-slate-300", icon: Component, border: "border-white/10", bg: "bg-white/5" },
+            { id: "kab", nom: "Kabel", qiymat: data.jami.kab, color: "text-yellow-500", icon: Zap, border: "border-white/10", bg: "bg-white/5" },
+            { id: "sub", nom: "Subpodryad", qiymat: data.jami.sub, color: "text-orange-400", icon: Users, border: "border-white/10", bg: "bg-white/5" },
+          ].map((kpi, idx) => (
+            <motion.div key={`kpi-xar-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + idx * 0.05, duration: 0.4 }}>
+              <div 
+                className={`p-4 rounded-xl border ${kpi.border} ${kpi.bg} backdrop-blur-md flex flex-col items-center text-center group cursor-pointer hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transform hover:-translate-y-1 active:translate-y-0 transition-all duration-200 h-full justify-center`}
+                onClick={() => setActiveKpi({
+                  nom: kpi.nom, color: kpi.color, icon: kpi.icon, total: kpi.qiymat,
+                  items: data.objects.filter(o => (o as any)[kpi.id] > 0).map(o => ({ nom: o.nom, val: (o as any)[kpi.id] }))
+                })}
+              >
                 <kpi.icon size={20} className={`${kpi.color} mb-2 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`} />
-                <div className="text-[11px] font-bold text-slate-300 uppercase tracking-widest mb-1 group-hover:text-white transition-colors">{kpi.nom}</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 group-hover:text-white transition-colors">{kpi.nom}</div>
                 <div className={`text-lg font-mono font-bold ${kpi.color}`}><FmtN val={kpi.qiymat} qisqa /></div>
               </div>
             </motion.div>
