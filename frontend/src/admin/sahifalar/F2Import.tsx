@@ -8,6 +8,7 @@ import {
 } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
+import { F2Daraxt, type DaraxtTugun } from '../../umumiy/ui/F2Daraxt';
 import { toast } from '../../umumiy/ui/Toast';
 import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send } from 'lucide-react';
 import type { AktNode, F2Moslik, F2MoslashNatija } from '../../api/types';
@@ -47,6 +48,7 @@ export function F2Import() {
   const [hover, setHover] = useState<string | null>(null);
   const [filtr, setFiltr] = useState<'hammasi' | 'boglanmagan' | 'boglangan'>('hammasi');
   const [qolBekor, setQolBekor] = useState<Set<string>>(new Set());
+  const [qolBog, setQolBog] = useState<Record<string, F2Moslik>>({});
   const faylRef = useRef<HTMLInputElement>(null);
 
   const loklar = useF2Lokalkalar(obyekt);
@@ -67,6 +69,13 @@ export function F2Import() {
 
   const aktBarglar = useMemo(() => barglar(aktTree ?? []), [aktTree]);
   const aktJami = useMemo(() => aktBarglar.reduce((a, n) => a + (n.summa || 0), 0), [aktBarglar]);
+  /** Akt daraxtidagi BARCHA tugun (bl ham) — qo'lda bog'lashda izlash uchun */
+  const aktBarchaTugun = useMemo(() => {
+    const out: AktNode[] = [];
+    const yur = (ns: AktNode[]) => (ns ?? []).forEach((n) => { if (n.type !== 'rz') out.push(n); if (n.children?.length) yur(n.children); });
+    yur(aktTree ?? []);
+    return out;
+  }, [aktTree]);
 
   /** Barg uid'lari — solishtiruv FAQAT shular bo'yicha */
   const bargUidlar = useMemo(() => new Set(aktBarglar.map((n) => n.uid)), [aktBarglar]);
@@ -83,8 +92,9 @@ export function F2Import() {
   const moslikMap = useMemo(() => {
     const m = new Map<string, F2Moslik>();
     (natija?.mosliklar ?? []).forEach((x) => { if (!qolBekor.has(x.uid)) m.set(x.uid, x); });
+    Object.values(qolBog).forEach((x) => m.set(x.uid, x));   // qo'lda bog'langanlar ustuvor
     return m;
-  }, [natija, qolBekor]);
+  }, [natija, qolBekor, qolBog]);
   const joyMap = useMemo(() => {
     const m = new Map<string, string>();
     moslikMap.forEach((v, uid) => m.set(`${v.varaq}#${v.row}`, uid));
@@ -109,25 +119,63 @@ export function F2Import() {
 
 
 
-  /** LRV daraxti barglari — o'ng panel */
-  const lrvBarglar = useMemo(() => {
-    const out: any[] = [];
-    const yur = (ns: any[]) => (ns ?? []).forEach((n) => {
-      if (n.type && n.type !== 'rz' && (!n.children || !n.children.length)) out.push(n);
-      if (n.children?.length) yur(n.children);
-    });
-    yur(lrv.data?.tree ?? []);
-    return out;
+  function bogBekor(uid: string) {
+    setQolBekor((p) => new Set(p).add(uid));
+    setQolBog((p) => { const n = { ...p }; delete n[uid]; return n; });
+  }
+
+  /** Sudrab tashlash: akt qatori → smeta qatori. «varaq#row» dan ajratamiz. */
+  function qolBogla(aktKalit: string, smetaKalit: string) {
+    const i = smetaKalit.lastIndexOf('#');
+    if (i < 0) return;
+    const varaqNom = smetaKalit.slice(0, i);
+    const row = Number(smetaKalit.slice(i + 1));
+    if (!row) return;
+    if (joyMap.has(smetaKalit)) { toast('Bu smeta qatori allaqachon band'); return; }
+    const n = aktBarglar.find((x) => x.uid === aktKalit)
+      ?? aktBarchaTugun.find((x) => x.uid === aktKalit);
+    if (!n) { toast('Akt qatori topilmadi'); return; }
+    setQolBekor((p) => { const s = new Set(p); s.delete(aktKalit); return s; });
+    setQolBog((p) => ({
+      ...p,
+      [aktKalit]: {
+        uid: aktKalit, varaq: varaqNom, row,
+        kod: n.kod ?? '', hajm: n.hajm ?? 0, narx: n.narx ?? 0, summa: n.summa ?? 0,
+      },
+    }));
+    toast(`Bog'landi: ${String(n.nom).slice(0, 34)} → ${row}-qator`);
+  }
+
+  /* ---------- Daraxtlar (ikki panel uchun) ---------- */
+
+  /** AKT daraxti — razdel → ish → resurs, bog'lanish belgilari bilan */
+  const aktDaraxt = useMemo((): DaraxtTugun[] => {
+    const map = (ns: AktNode[]): DaraxtTugun[] => (ns ?? []).map((n) => ({
+      kalit: n.uid,
+      type: n.type,
+      nom: n.nom,
+      kod: n.kod,
+      bir: n.bir,
+      summa: n.summa,
+      belgi: n.type === 'rz' ? undefined : <FmtN val={n.summa} />,
+      children: n.children?.length ? map(n.children) : undefined,
+    }));
+    return map(aktTree ?? []);
+  }, [aktTree]);
+
+  /** SMETA daraxti — LRV_PLUS ierarxiyasi */
+  const smetaDaraxt = useMemo((): DaraxtTugun[] => {
+    const map = (ns: any[]): DaraxtTugun[] => (ns ?? []).map((n) => ({
+      kalit: n.type === 'rz' ? `rz:${n.nom}:${n.row ?? ''}` : `${n.varaq}#${n.row}`,
+      type: n.type,
+      nom: n.nom,
+      kod: n.kod,
+      bir: n.birlik,
+      belgi: n.type === 'rz' ? undefined : <span className="text-text-mute">{n.row}</span>,
+      children: n.children?.length ? map(n.children) : undefined,
+    }));
+    return map(lrv.data?.tree ?? []);
   }, [lrv.data]);
-
-  const aktKorinadigan = useMemo(() => aktBarglar.filter((n) => {
-    const bog = moslikMap.has(n.uid);
-    if (filtr === 'boglangan') return bog;
-    if (filtr === 'boglanmagan') return !bog;
-    return true;
-  }), [aktBarglar, moslikMap, filtr]);
-
-  function bogBekor(uid: string) { setQolBekor((p) => new Set(p).add(uid)); }
 
   const farq = aktJami - (boglanganJami + dopJami);
   const constOk = Math.abs(farq) < 1;
@@ -497,73 +545,26 @@ export function F2Import() {
               </div>
             }
             chap={
-              <div className="divide-y divide-border">
-                {aktKorinadigan.map((n) => {
-                  const m = moslikMap.get(n.uid);
-                  const yoritilgan = hover === n.uid || (m && hover === `${m.varaq}#${m.row}`);
-                  return (
-                    <div
-                      key={n.uid}
-                      onMouseEnter={() => setHover(n.uid)}
-                      onMouseLeave={() => setHover(null)}
-                      className={`px-3 py-2 flex items-start gap-2 text-[13px] transition-colors duration-[120ms]
-                                  ${yoritilgan ? 'bg-[var(--accent)]/[.10]' : 'hover:bg-[var(--surface-2)]/40'}`}
-                    >
-                      <span className={`flex-shrink-0 mt-0.5 ${m ? 'text-ok' : 'text-text-mute'}`}
-                            title={m ? 'bog‘langan — bekor qilish uchun bosing' : 'bog‘lanmagan'}>
-                        {m ? (
-                          <button onClick={() => bogBekor(n.uid)} className="cursor-pointer">●</button>
-                        ) : '○'}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-text truncate" title={n.nom}>{n.nom}</div>
-                        <div className="text-[11px] text-text-mute truncate">
-                          {n.kod && <span className="mr-2">{n.kod}</span>}
-                          {!m && (natija.sabablar[n.uid] || 'smetada mos qator topilmadi')}
-                        </div>
-                      </div>
-                      <span className="tabular-nums text-text-dim flex-shrink-0"><FmtN val={n.summa} /></span>
-                    </div>
-                  );
-                })}
-                {aktKorinadigan.length === 0 && (
-                  <p className="px-4 py-8 text-center text-sm text-text-mute">Filtrga mos qator yo‘q</p>
-                )}
-              </div>
+              <F2Daraxt
+                tugunlar={aktDaraxt}
+                bogMi={(k) => moslikMap.has(k)}
+                hover={hover}
+                setHover={setHover}
+                onBogBekor={bogBekor}
+                sudraladi
+                bosh="Akt daraxti bo‘sh"
+              />
             }
             ong={
-              <div className="divide-y divide-border">
-                {lrvBarglar.map((s) => {
-                  const kalit = `${s.varaq}#${s.row}`;
-                  const aktUid = joyMap.get(kalit);
-                  const yoritilgan = hover === kalit || (aktUid && hover === aktUid);
-                  return (
-                    <div
-                      key={kalit}
-                      onMouseEnter={() => setHover(kalit)}
-                      onMouseLeave={() => setHover(null)}
-                      className={`px-3 py-2 flex items-start gap-2 text-[13px] transition-colors duration-[120ms]
-                                  ${yoritilgan ? 'bg-[var(--accent)]/[.10]' : 'hover:bg-[var(--surface-2)]/40'}`}
-                    >
-                      <span className={`flex-shrink-0 mt-0.5 ${aktUid ? 'text-ok' : 'text-text-mute'}`}>
-                        {aktUid ? '●' : '○'}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className={`truncate ${aktUid ? 'text-text' : 'text-text-dim'}`} title={s.nom}>{s.nom}</div>
-                        <div className="text-[11px] text-text-mute truncate">
-                          {s.kod && <span className="mr-2">{s.kod}</span>}{s.birlik}
-                        </div>
-                      </div>
-                      <span className="tabular-nums text-text-mute flex-shrink-0">{s.row}</span>
-                    </div>
-                  );
-                })}
-                {lrvBarglar.length === 0 && (
-                  <p className="px-4 py-8 text-center text-sm text-text-mute">
-                    {lrv.isLoading ? 'Smeta o‘qilmoqda…' : 'Smeta daraxti bo‘sh'}
-                  </p>
-                )}
-              </div>
+              <F2Daraxt
+                tugunlar={smetaDaraxt}
+                bogMi={(k) => boglanganJoylar.has(k)}
+                hover={hover}
+                setHover={setHover}
+                tashlanadi
+                onTashla={qolBogla}
+                bosh={lrv.isLoading ? "Smeta o‘qilmoqda…" : "Smeta daraxti bo‘sh"}
+              />
             }
           />
 
