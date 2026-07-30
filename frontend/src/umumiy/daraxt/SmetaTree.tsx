@@ -150,9 +150,9 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                   </div>
                 </div>
                 
-                {/* Data Columns */}
+                {/* Data Columns with Gantt/Progress Visual */}
                 <div className="flex items-center h-full pr-4 flex-shrink-0 font-medium tabular-nums text-xs">
-                  <div className="w-24 text-right text-text-dim"><FmtN val={node.smetaHajm} /></div>
+                  <div className="w-24 text-right text-slate-400"><FmtN val={node.smetaHajm} /></div>
                   <div className="w-24 text-right">
                     {isEditMode ? (
                       <input
@@ -178,16 +178,27 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                             }));
                           }
                         }}
-                        className={`w-full text-right bg-surface-2 border rounded px-2 py-1 text-sm focus:outline-none focus:border-accent ${isOverLimit ? 'border-danger text-danger' : 'border-border text-white'}`}
+                        className={`w-full text-right bg-black/50 border rounded px-2 py-1 text-sm outline-none transition-colors ${isOverLimit ? 'border-red-500/50 text-red-400 focus:border-red-400' : 'border-white/10 text-white focus:border-yellow-500/50'}`}
                         title={isOverLimit ? `Smetadan oshiq: ${currentFakt} > ${node.smetaHajm}` : ''}
                       />
                     ) : (
-                      <FmtN val={node.fakt} cl={isOverLimit ? 'text-danger' : 'text-ok'} />
+                      <FmtN val={node.fakt} cl={isOverLimit ? 'text-red-400' : 'text-emerald-400'} />
                     )}
                   </div>
-                  <div className="w-24 text-right text-text-dim"><FmtN val={node.narx} /></div>
-                  <div className="w-32 text-right text-white"><FmtN val={node.smeta} /></div>
-                  <div className="w-24 text-right text-t-rs"><FmtN val={node.f2ol} /></div>
+                  
+                  {/* Gantt / Progress Bar Mini-visual */}
+                  <div className="w-32 px-3 flex items-center">
+                    <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden border border-white/5 shadow-inner" title={`Bajarilish: ${Math.round((node.fakt / (node.smetaHajm || 1)) * 100)}%`}>
+                       <div 
+                         className={`h-full rounded-full transition-all duration-500 ${isOverLimit ? 'bg-red-500' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}`} 
+                         style={{ width: `${Math.min((node.fakt / (node.smetaHajm || 1)) * 100, 100)}%` }}
+                       />
+                    </div>
+                  </div>
+
+                  <div className="w-24 text-right text-slate-400"><FmtN val={node.narx} /></div>
+                  <div className="w-28 text-right text-white font-bold"><FmtN val={node.smeta} /></div>
+                  <div className="w-24 text-right text-blue-400"><FmtN val={node.f2ol} /></div>
                 </div>
               </div>
             );
