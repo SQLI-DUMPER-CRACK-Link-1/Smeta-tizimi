@@ -12,7 +12,7 @@ export const onRequestPost: PagesFunction<{
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });
     }
 
-    const YOZUVCHI = /^api(HolatSaqla|BlQosh|RsQosh|OyQosh|F2Qolla|F2QollaNavbatga|ShartnomaSaqla|ShartnomaOchir|Lock)/;
+    const YOZUVCHI = /^api(HolatSaqla|BlQosh|RsQosh|OyQosh|F2Qolla|F2QollaNavbatga|ShartnomaSaqla|ShartnomaOchir|Lock|XarajatYoz|XarajatOchir|Ishchi|Tabel|Texnika|Zayavka|Postavshik|Nuqson)/;
     if ((sess.rol === 'boss' || sess.rol === 'rahbar') && YOZUVCHI.test(fn)) {
       return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' }, { status: 403 });
     }

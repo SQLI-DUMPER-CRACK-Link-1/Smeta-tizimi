@@ -241,8 +241,9 @@ function FinancialChart({ objects }: { objects: any[] }) {
 // --- PROFIT AND LOSS (Rentabellik Tahlili) ---
 function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[], onKpiClick: (kpi: any) => void }) {
   const umumiyXarajat = (jami.chel || 0) + (jami.mash || 0) + (jami.mat || 0) + (jami.ob || 0) + (jami.mk || 0) + (jami.kab || 0) + (jami.sub || 0);
-  const sofFoyda = (jami.smeta || 0) - umumiyXarajat;
-  const rentabellik = jami.smeta > 0 ? (sofFoyda / jami.smeta) * 100 : 0;
+  const sofFoyda = (jami.smetaToza || jami.smeta || 0) - umumiyXarajat;
+  const asoSmeta = jami.smetaToza || jami.smeta || 0;
+  const rentabellik = asoSmeta > 0 ? (sofFoyda / asoSmeta) * 100 : 0;
   
   const realFoyda = (jami.tolangan || 0) - (umumiyXarajat > 0 ? (umumiyXarajat * (jami.progress/100)) : 0); // Keltirilgan foyda
 
@@ -390,8 +391,9 @@ function RazdelRow({ nom }: { nom: string }) {
         const bgCol = rz.progress >= 70 ? 'bg-ok' : rz.progress >= 30 ? 'bg-warn' : 'bg-danger';
         return (
           <tr key={`rz-${idx}`} className="bg-black/20 border-b border-white/5 hover:bg-black/30 transition-colors">
-            <td className="py-3 pl-[80px] pr-4 text-white/70 text-sm flex items-center gap-2">
-              <span className="text-white/20 font-mono">└</span>
+            <td className="py-3 pl-[80px] pr-4 text-slate-300 font-medium text-sm flex items-center gap-3">
+              <span className="text-white/20 font-mono text-lg">└</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50"></div>
               {rz.nom}
             </td>
             <td className="py-3 px-4 text-right font-mono text-white/40"><FmtN val={rz.res} /></td>
@@ -444,14 +446,16 @@ function ObyektRow({ obj }: { obj: any }) {
   
   return (
     <>
-      <tr onClick={() => setOpen(!open)} className="cursor-pointer bg-transparent hover:bg-white/[0.03] transition-colors border-b border-white/5">
+      <tr onClick={() => setOpen(!open)} className="cursor-pointer bg-white/[0.01] hover:bg-blue-500/[0.05] transition-all border-b border-white/5">
         <td className="py-4 pl-[48px] pr-4 flex items-center gap-3">
-          <div className="w-4 flex justify-center text-accent/50">{!isSub && (open ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}</div>
-          <span className={`text-sm ${isSub ? 'text-white/50' : 'text-white/80 font-medium'}`}>
-            {!isSub && <FileText size={14} className="inline mr-2 text-white/30" />}
+          <div className={`w-5 h-5 flex items-center justify-center rounded-md transition-colors ${open ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/40 group-hover:bg-blue-500/10'}`}>
+            {!isSub && (open ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
+          </div>
+          <span className={`text-[15px] ${isSub ? 'text-white/50' : 'text-blue-100 font-semibold'}`}>
+            {!isSub && <FileText size={14} className="inline mr-2 text-blue-400/50" />}
             {obj.nom} 
-            {obj.leaf ? <span className="text-[11px] text-white/30 ml-2">({obj.leaf} qator)</span> : ''}
-            {(obj.fakt - obj.f2) > 0 && <span className="text-[10px] ml-3 text-warn/70 bg-warn/10 px-2 py-0.5 rounded-full">❄️ Muzlagan: <FmtN val={obj.fakt - obj.f2} /></span>}
+            {obj.leaf ? <span className="text-[11px] text-white/30 ml-2 font-mono bg-white/5 px-2 py-0.5 rounded-md">[{obj.leaf}]</span> : ''}
+            {(obj.fakt - obj.f2) > 0 && <span className="text-[10px] ml-3 text-warn/90 bg-warn/10 px-2 py-0.5 rounded-full border border-warn/20 shadow-[0_0_10px_rgba(251,191,36,0.1)]">❄️ Muzlagan: <FmtN val={obj.fakt - obj.f2} qisqa /></span>}
           </span>
         </td>
         <td className="py-4 px-4 text-right font-mono text-white/70"><FmtN val={obj.smeta} /></td>
@@ -482,18 +486,18 @@ function ShartnomaRow({ shartnoma }: { shartnoma: any }) {
 
   return (
     <>
-      <tr onClick={() => setOpen(!open)} className="cursor-pointer bg-white/[0.02] hover:bg-white/[0.05] transition-colors border-b border-white/10">
+      <tr onClick={() => setOpen(!open)} className="cursor-pointer bg-blue-500/[0.02] hover:bg-blue-500/[0.08] transition-all border-b border-blue-500/10 shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
         <td className="py-5 px-4 flex items-center gap-3">
-          <div className="w-5 h-5 flex items-center justify-center bg-white/10 rounded-md text-accent">
-            {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          <div className={`w-6 h-6 flex items-center justify-center rounded-lg shadow-inner transition-transform duration-300 ${open ? 'bg-blue-500/20 text-blue-400 rotate-90' : 'bg-white/10 text-white/70'}`}>
+            <ChevronRight size={16} />
           </div>
-          <span className="font-bold text-white tracking-wide text-base">
+          <span className="font-extrabold text-white tracking-wide text-[16px] drop-shadow-sm">
             {shartnoma.nom}
-            <span className="font-normal text-xs text-white/40 ml-3">({shartnoma.subItems?.length || 0} obyekt)</span>
+            <span className="font-medium text-[11px] text-blue-300/60 ml-3 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">{shartnoma.subItems?.length || 0} ta OBYEKT</span>
           </span>
           <div className="flex gap-2 ml-4">
-             {shartnoma.tolangan > 0 && <span className="text-[10px] text-ok bg-ok/10 px-2 py-0.5 rounded border border-ok/20">💵 To'langan: <FmtN val={shartnoma.tolangan} qisqa /></span>}
-             {shartnoma.debitor > 0 && <span className="text-[10px] text-danger bg-danger/10 px-2 py-0.5 rounded border border-danger/20">⚠ Debitor: <FmtN val={shartnoma.debitor} qisqa /></span>}
+             {shartnoma.tolangan > 0 && <span className="text-[10px] text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20 font-mono shadow-[0_0_10px_rgba(52,211,153,0.1)]">💵 Kesh: <FmtN val={shartnoma.tolangan} qisqa /></span>}
+             {shartnoma.debitor > 0 && <span className="text-[10px] text-red-400 bg-red-400/10 px-2 py-1 rounded-md border border-red-400/20 font-mono shadow-[0_0_10px_rgba(248,113,113,0.1)]">⚠ Debitor: <FmtN val={shartnoma.debitor} qisqa /></span>}
           </div>
         </td>
         <td className="py-5 px-4 text-right font-mono font-bold text-accent"><FmtN val={shartnoma.smeta} /></td>
