@@ -3,21 +3,9 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ExternalLink, MapPin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ExternalLink } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Sahna3D from '../../kirish/Sahna3D';
-
-// Fix leaflet default icon issue in React
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 
 // --- 3D INTERACTIVE BACKGROUND ---
 export function AuroraBackground({ children }: { children: React.ReactNode }) {
@@ -366,57 +354,6 @@ function NewsTicker({ objects, jami }: { objects: any[], jami: any }) {
         </motion.div>
       </div>
     </div>
-  );
-}
-
-// --- GEO MAP ---
-function GeoMap({ objects }: { objects: any[] }) {
-  // O'zbekiston markazi
-  const center: [number, number] = [41.311081, 69.240562]; // Tashkent
-  
-  // Obyektlar uchun random koordinatalar simulyatsiyasi (Toshkent atrofida)
-  const mapData = objects.slice(0, 15).map((obj, i) => {
-    const isDanger = (obj.debitor || 0) > 0 || (obj.qoldiq || 0) > (obj.smeta || 1) * 0.5;
-    return {
-      ...obj,
-      lat: 41.311081 + (Math.random() - 0.5) * 0.2,
-      lng: 69.240562 + (Math.random() - 0.5) * 0.2,
-      isDanger
-    };
-  });
-
-  return (
-    <GlassCard className="p-0 h-[400px] overflow-hidden relative">
-      <div className="absolute top-4 left-4 z-[400] bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 pointer-events-none">
-        <h3 className="text-white font-bold flex items-center gap-2 text-sm"><MapPin size={16} className="text-accent" /> Obyektlar Geo-Lokatsiyasi</h3>
-      </div>
-      <MapContainer center={center} zoom={11} className="w-full h-full bg-slate-900" zoomControl={false}>
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-        />
-        {mapData.map((obj, idx) => {
-          const iconHtml = `<div style="background-color: ${obj.isDanger ? '#ef4444' : '#10b981'}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px ${obj.isDanger ? '#ef4444' : '#10b981'}; animation: pulse 2s infinite;"></div>`;
-          const customIcon = L.divIcon({ html: iconHtml, className: 'custom-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
-          
-          return (
-            <Marker key={idx} position={[obj.lat, obj.lng]} icon={customIcon}>
-              <Popup className="custom-popup">
-                <div className="bg-slate-900 text-white p-2 rounded-lg">
-                  <div className="font-bold border-b border-white/20 pb-1 mb-2 text-sm">{obj.nom}</div>
-                  <div className="text-xs text-slate-300">Debitor: <span className="text-red-400 font-mono"><FmtN val={obj.debitor} qisqa /></span></div>
-                  <div className="text-xs text-slate-300 mt-1">Fakt: <span className="text-ok font-mono"><FmtN val={obj.fakt} qisqa /></span></div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
-      <style>{`
-        .leaflet-popup-content-wrapper { background: transparent; padding: 0; box-shadow: none; }
-        .leaflet-popup-tip { display: none; }
-      `}</style>
-    </GlassCard>
   );
 }
 
@@ -999,12 +936,16 @@ export default function Umumiy() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* ⚠️ 2026-07-31: "Obyektlar Geo-Lokatsiyasi" xaritasi OLIB TASHLANDI —
+            u haqiqiy obyekt nomlari va haqiqiy moliyaviy raqamlarni
+            Math.random() bilan yasalgan SOXTA koordinatalarga qo'yib,
+            Toshkent atrofida ko'rsatardi (park esa Navoiyda). Rahbar buni
+            haqiqiy joylashuv deb qabul qilishi mumkin edi. GAS'da obyekt
+            koordinatalari uchun HECH QANDAY manba yo'q. Haqiqiy koordinata
+            maydoni qo'shilgandan keyingina xarita qaytariladi. */}
+        <div className="mb-8">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4, duration: 0.6 }}>
             <FinancialChart objects={data.objects || []} />
-          </motion.div>
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45, duration: 0.6 }}>
-            <GeoMap objects={data.objects || []} />
           </motion.div>
         </div>
         

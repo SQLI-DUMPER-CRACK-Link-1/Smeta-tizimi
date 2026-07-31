@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
-import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert } from 'lucide-react';
+import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3D';
 
 const MENYU = [
@@ -18,6 +18,7 @@ const MENYU = [
   { yol: '/admin/texnika',    nom: 'Texnika',      Ikonka: Truck },
   { yol: '/admin/taminot',    nom: "Ta'minot",     Ikonka: ShoppingCart },
   { yol: '/admin/sifat',      nom: 'Sifat (QA)',   Ikonka: ShieldAlert },
+  { yol: '/admin/sozlamalar', nom: 'Sozlamalar',   Ikonka: Settings },
 ];
 
 export default function AdminShell() {

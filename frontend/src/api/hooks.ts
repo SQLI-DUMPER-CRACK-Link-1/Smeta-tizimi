@@ -12,6 +12,7 @@ import type {
   TaminotDashboard, ZayavkaStatus, Postavshik,
   SifatDashboard, MuhimlikDarajasi, NuqsonStatus,
   NavbatHolat, NavbatBoshlash,
+  TizimSozlama, NakrutkaKoef, Stavka,
 } from './types';
 
 /* ============ DVIGATEL: OBYEKTNI ISHLASH (НАВБАТ) ============
@@ -739,5 +740,69 @@ export function useSessiya() {
     },
     staleTime: 5 * 60 * 1000,
     retry: false,
+  });
+}
+
+/* ============ SOZLAMALAR (30_Panel.js + 80_Shartnoma.js) ============ */
+
+export function useTizimSozlama() {
+  return useQuery({
+    queryKey: ['tizimSozlama'],
+    queryFn: () => gas<TizimSozlama>('apiSozlamaOl'),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useTizimSozlamaSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: TizimSozlama) => gas<string>('apiSozlamaSaqla', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tizimSozlama'] }),
+  });
+}
+
+/** shNo bo'sh bo'lsa — umumiy (default) koeffitsientlar */
+export function useNakrutka(shNo?: string) {
+  return useQuery({
+    queryKey: ['nakrutka', shNo || 'umumiy'],
+    queryFn: () => gas<NakrutkaKoef[]>('apiNakrutkaOl', shNo || ''),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useNakrutkaSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ items, shNo }: { items: NakrutkaKoef[]; shNo?: string }) =>
+      gas<unknown>('apiNakrutkaSaqla', items, shNo || ''),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['nakrutka'] }),
+  });
+}
+
+export function useStavka(obyekt: string) {
+  return useQuery({
+    queryKey: ['stavka', obyekt],
+    queryFn: () => gas<Stavka>('apiStavkaOl', obyekt),
+    enabled: !!obyekt,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useStavkaSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt, chel }: { obyekt: string; chel: number }) =>
+      gas<{ ok: boolean; chel: number; xabar: string }>('apiStavkaSaqla', obyekt, chel),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['stavka'] }),
+  });
+}
+
+/** Tizim tashxisi — nima ishlamayotganini ko'rsatadi */
+export function useTashxis(enabled: boolean) {
+  return useQuery({
+    queryKey: ['tashxis'],
+    queryFn: () => gas<unknown>('apiTashxis'),
+    enabled,
+    staleTime: 60 * 1000,
   });
 }
