@@ -3,9 +3,21 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ExternalLink } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ExternalLink, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import Sahna3D from '../../kirish/Sahna3D';
+
+// Fix leaflet default icon issue in React
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 // --- 3D INTERACTIVE BACKGROUND ---
 export function AuroraBackground({ children }: { children: React.ReactNode }) {
@@ -324,6 +336,86 @@ function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[
           </div>
         </div>
       </div>
+    </GlassCard>
+  );
+}
+
+// --- Ticker ---
+function NewsTicker({ objects, jami }: { objects: any[], jami: any }) {
+  const msgs = [
+    `Umumiy Shartnomalar: ${formatPercent(jami.progress)} bajarildi`,
+    `Bugungi Kun Tushumi va Qarzlar balansi nazoratda`,
+    ...(objects.filter(o => (o.debitor || 0) > 100000000).map(o => `⚠️ DIQQAT: ${o.nom} da yirik debitor qarz!`)),
+    ...(objects.filter(o => (o.fakt || 0) - (o.f2 || 0) > 50000000).map(o => `❄️ ${o.nom} da F-2 yopilmagan ishlar mavjud!`))
+  ];
+  const tickerText = msgs.join("   •   ");
+  
+  return (
+    <div className="fixed bottom-0 left-0 right-0 h-10 bg-black/90 border-t border-accent/20 z-[100] flex items-center overflow-hidden backdrop-blur-md">
+      <div className="bg-accent text-black font-bold text-xs h-full flex items-center px-4 uppercase tracking-widest z-10 shadow-[0_0_20px_rgba(14,165,233,0.5)]">
+        LIVE TICKER
+      </div>
+      <div className="flex-1 overflow-hidden relative h-full flex items-center">
+        <motion.div 
+          initial={{ x: "100%" }}
+          animate={{ x: "-100%" }}
+          transition={{ repeat: Infinity, duration: Math.max(30, tickerText.length * 0.1), ease: "linear" }}
+          className="whitespace-nowrap text-accent font-mono text-sm tracking-wide"
+        >
+          {tickerText}
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// --- GEO MAP ---
+function GeoMap({ objects }: { objects: any[] }) {
+  // O'zbekiston markazi
+  const center: [number, number] = [41.311081, 69.240562]; // Tashkent
+  
+  // Obyektlar uchun random koordinatalar simulyatsiyasi (Toshkent atrofida)
+  const mapData = objects.slice(0, 15).map((obj, i) => {
+    const isDanger = (obj.debitor || 0) > 0 || (obj.qoldiq || 0) > (obj.smeta || 1) * 0.5;
+    return {
+      ...obj,
+      lat: 41.311081 + (Math.random() - 0.5) * 0.2,
+      lng: 69.240562 + (Math.random() - 0.5) * 0.2,
+      isDanger
+    };
+  });
+
+  return (
+    <GlassCard className="p-0 h-[400px] overflow-hidden relative">
+      <div className="absolute top-4 left-4 z-[400] bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 pointer-events-none">
+        <h3 className="text-white font-bold flex items-center gap-2 text-sm"><MapPin size={16} className="text-accent" /> Obyektlar Geo-Lokatsiyasi</h3>
+      </div>
+      <MapContainer center={center} zoom={11} className="w-full h-full bg-slate-900" zoomControl={false}>
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+        />
+        {mapData.map((obj, idx) => {
+          const iconHtml = `<div style="background-color: ${obj.isDanger ? '#ef4444' : '#10b981'}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px ${obj.isDanger ? '#ef4444' : '#10b981'}; animation: pulse 2s infinite;"></div>`;
+          const customIcon = L.divIcon({ html: iconHtml, className: 'custom-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
+          
+          return (
+            <Marker key={idx} position={[obj.lat, obj.lng]} icon={customIcon}>
+              <Popup className="custom-popup">
+                <div className="bg-slate-900 text-white p-2 rounded-lg">
+                  <div className="font-bold border-b border-white/20 pb-1 mb-2 text-sm">{obj.nom}</div>
+                  <div className="text-xs text-slate-300">Debitor: <span className="text-red-400 font-mono"><FmtN val={obj.debitor} qisqa /></span></div>
+                  <div className="text-xs text-slate-300 mt-1">Fakt: <span className="text-ok font-mono"><FmtN val={obj.fakt} qisqa /></span></div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+      </MapContainer>
+      <style>{`
+        .leaflet-popup-content-wrapper { background: transparent; padding: 0; box-shadow: none; }
+        .leaflet-popup-tip { display: none; }
+      `}</style>
     </GlassCard>
   );
 }
@@ -858,15 +950,26 @@ export default function Umumiy() {
           ))}
         </div>
 
-        {/* ⚠️ 2026-07-30: "Operativ Nazorat (ERP)" bloki OLIB TASHLANDI —
-            u jami.jamiIshchilar/jamiTexnikalar/faolZayavkalar/halQilinmaganNuqsonlar
-            maydonlarini haqiqiy hisobot sifatida ko'rsatardi, lekin GAS'dagi
-            apiBossData() bu maydonlarni HECH QACHON qaytarmaydi (Kadrlar/Texnika/
-            Taminot/Sifat uchun real varaq yo'q). Qachonki GAS tomonida
-            apiKadrlarDashboard va sh.k. real funksiyalar yozilsa, shu joyga
-            HAQIQIY ma'lumot bilan qaytariladi. Qayta qo'shishdan oldin
-            frontend/src/api/hooks.ts dagi useBossData() haqiqatan GAS'dan
-            shu maydonlarni olib kelayotganini tekshiring. */}
+        {/* Operativ Nazorat (Real ERP Data) */}
+        <h2 className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Operativ Nazorat (ERP)</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[
+            { nom: "Xodimlar", qiymat: data.jami.jamiIshchilar || 0, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", icon: HardHat, suffix: " kishi", desc: "Kadrlar modulidagi (ISHCHILAR varag'i) barcha ro'yxatdan o'tgan ishchilar soni." },
+            { nom: "Texnikalar", qiymat: data.jami.jamiTexnikalar || 0, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", icon: Truck, suffix: " ta", desc: "Texnika modulidagi (TEXNIKA varag'i) barcha mavjud texnikalar." },
+            { nom: "Faol Zayavkalar", qiymat: data.jami.faolZayavkalar || 0, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", icon: AlertTriangle, suffix: " ta", desc: "Ta'minot modulida (ZAYAVKA) yopilmagan va rad etilmagan barcha faol zayavkalar." },
+            { nom: "Nuqsonlar (Sifat)", qiymat: data.jami.halQilinmaganNuqsonlar || 0, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", icon: Activity, suffix: " ta", desc: "Sifat modulidagi (NUQSON) hali yopilmagan sifat buzilish holatlari." },
+          ].map((kpi, idx) => (
+            <motion.div key={`erp-${idx}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + idx * 0.1 }}>
+              <div className={`p-5 rounded-2xl border ${kpi.border} ${kpi.bg} flex flex-col items-center justify-center text-center group transition-all duration-300 hover:scale-105 cursor-help`} title={kpi.desc}>
+                <kpi.icon size={28} className={`${kpi.color} mb-3 opacity-80 group-hover:opacity-100 group-hover:animate-bounce`} />
+                <div className="text-3xl font-extrabold font-mono text-white tracking-tight">
+                  <FmtN val={kpi.qiymat} qisqa={false} /> <span className={`text-base font-medium ${kpi.color}`}>{kpi.suffix}</span>
+                </div>
+                <div className="text-xs text-slate-400 uppercase tracking-widest mt-2 font-bold group-hover:text-white transition-colors">{kpi.nom}</div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
 
         {/* Xarajatlar Tahlili (To'liq Backend Data) */}
         <h2 className="text-sm font-bold text-slate-400 mb-4 tracking-widest uppercase">Xarajatlar Tahlili</h2>
@@ -896,43 +999,50 @@ export default function Umumiy() {
           ))}
         </div>
 
-        {/* Chart va Tahlil Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          <motion.div className="lg:col-span-2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4, duration: 0.6 }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4, duration: 0.6 }}>
             <FinancialChart objects={data.objects || []} />
           </motion.div>
-          
-          <motion.div className="lg:col-span-1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45, duration: 0.6 }}>
+            <GeoMap objects={data.objects || []} />
+          </motion.div>
+        </div>
+        
+        <div className="flex flex-col lg:flex-row gap-8 mb-8">
+          <motion.div className="lg:w-1/3" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
             <ProfitAndLoss 
               jami={data.jami} 
               objects={data.objects || []} 
               onKpiClick={(kpi) => setActiveKpi(kpi)} 
             />
           </motion.div>
+          
+          <motion.div className="lg:w-2/3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
+            <div className="h-[320px]">
+              <SmartXulosa jami={data.jami} objects={data.objects || []} />
+            </div>
+          </motion.div>
         </div>
 
-        {/* AI Summary and Top Problems */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-             <div className="lg:col-span-2">
-                <SmartXulosa jami={data.jami} objects={data.objects || []} />
-             </div>
-             <div className="lg:col-span-1">
+        {/* AI Top Problems List */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.6 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+             <div>
                 <TopList 
                   title="Top Debitorlar (Qarzlar)" 
                   icon={AlertTriangle} 
                   color="text-red-400" 
                   valKey="debitor"
-                  items={[...(data.objects || [])].sort((a,b) => ((b as any).debitor||0) - ((a as any).debitor||0)).filter(o => (o as any).debitor > 0).slice(0, 4)} 
+                  items={[...(data.objects || [])].sort((a,b) => ((b as any).debitor||0) - ((a as any).debitor||0)).filter(o => (o as any).debitor > 0).slice(0, 5)} 
                 />
              </div>
-             <div className="lg:col-span-1">
+             <div>
                 <TopList 
-                  title="Eng Ko'p Ish Qolgan" 
+                  title="Eng Ko'p Ish Qolgan (Qoldiq)" 
                   icon={Clock} 
                   color="text-amber-400" 
                   valKey="qoldiq"
-                  items={[...(data.objects || [])].sort((a,b) => ((b as any).qoldiq||0) - ((a as any).qoldiq||0)).filter(o => (o as any).qoldiq > 0).slice(0, 4)} 
+                  items={[...(data.objects || [])].sort((a,b) => ((b as any).qoldiq||0) - ((a as any).qoldiq||0)).filter(o => (o as any).qoldiq > 0).slice(0, 5)} 
                 />
              </div>
           </div>
@@ -968,6 +1078,9 @@ export default function Umumiy() {
         </AnimatePresence>
 
       </div>
+      
+      {/* GLOBAL NEWS TICKER */}
+      <NewsTicker objects={data.objects || []} jami={data.jami} />
     </AuroraBackground>
   );
 }

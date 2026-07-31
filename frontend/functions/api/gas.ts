@@ -12,7 +12,34 @@ export const onRequestPost: PagesFunction<{
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });
     }
 
-    const YOZUVCHI = /^api(HolatSaqla|BlQosh|RsQosh|OyQosh|F2Qolla|F2QollaNavbatga|ShartnomaSaqla|ShartnomaOchir|Lock|XarajatYoz|XarajatOchir|Ishchi|Tabel|Texnika|Zayavka|Postavshik|Nuqson)/;
+    // ⚠️ DIQQAT: bu ro'yxat FAQAT yozuvchi funksiyalarni bloklashi kerak.
+    // Prefiks bilan yozganda ("Texnika") o'qish funksiyasi (apiTexnikaDashboard)
+    // ham tasodifan bloklanib qoladi — shuning uchun har biri to'liq yoziladi.
+    const YOZUVCHI = new RegExp('^api(' + [
+      // Smeta / F2
+      'HolatSaqla', 'BlQosh', 'RsQosh', 'RzQosh', 'OyQosh',
+      'F2Qolla', 'F2QollaNavbatga', 'F2BoglanishBekorQil', 'F2OyOchirish',
+      'Lock[A-Za-z]*',
+      // Shartnoma / Buxgalteriya
+      'ShartnomaSaqla', 'ShartnomaOchir', 'ShartnomaBogSaqla',
+      'QoshIshSaqla', 'QoshIshOchir', 'TolovSaqla', 'TolovOchir', 'TolovTahrir',
+      'XarajatYoz', 'XarajatOchir',
+      // Narx / ierarxiya / sozlama
+      'NarxlarSaqla', 'NarxBelgilanganSaqla', 'NarxKatSaqla', 'NarxSanaQosh',
+      'DarajalarSaqla', 'ReestrSaqla', 'SozlamaSaqla', 'StavkaSaqla',
+      'OraliqlarSaqla', 'SvodUstunSaqla', 'KategoriyaSaqla', 'NakrutkaSaqla',
+      // Sklad
+      'SkladYoz', 'SkladOchir', 'PrixodYoz', 'RashodYoz', 'RashodYozMass',
+      // Dvigatelni ishga tushirish (og'ir yozuv operatsiyasi)
+      'ObyektIshla', 'ObyektFonIshla', 'ObyektTezkorIshla', 'ObyektTezkorFonIshla',
+      'BarchaIshla', 'BarchaFonIshla', 'BarchaTezkorIshla', 'NavbatToxtat',
+      // ERP
+      'IshchiQosh', 'IshchiTahrir', 'IshchiOchir', 'TabelBelgila',
+      'TexnikaQosh', 'TexnikaTahrir', 'TexnikaTarixQosh',
+      'ZayavkaQosh', 'ZayavkaHolatYangila',
+      'PostavshikQosh', 'PostavshikTahrir',
+      'NuqsonQosh', 'NuqsonHolatYangila',
+    ].join('|') + ')$');
     if ((sess.rol === 'boss' || sess.rol === 'rahbar') && YOZUVCHI.test(fn)) {
       return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' }, { status: 403 });
     }

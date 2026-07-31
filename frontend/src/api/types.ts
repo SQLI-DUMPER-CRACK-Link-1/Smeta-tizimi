@@ -397,3 +397,44 @@ export type SifatDashboard = {
   muddatOtilgan: number;
   kritik: number;
 };
+
+/* ---------- Navbat / Dvigatel ishga tushirish (50_Navbat.js) ---------- */
+export type NavbatLogYozuv = {
+  ob: string;
+  ok: boolean;
+  qisman?: boolean;
+  xabar?: string;
+  vaqt?: string;
+};
+
+export type NavbatHolat = {
+  running: boolean;
+  qolgan: number;
+  bajarilgan: number;
+  jami: number;
+  foiz: number;
+  hozir: string;
+  log: NavbatLogYozuv[];
+  navbat: string[];
+};
+
+export type NavbatBoshlash = { ok: boolean; xabar?: string };
+
+/* ---------- Sozlamalar (30_Panel.js) ---------- */
+export type TizimSozlama = {
+  rootId: string;
+  serverId: string;
+  dataQator: number | string;
+  narxMantiq: string;
+};
+
+/** Накрутка koeffitsienti (80_Shartnoma.js → apiNakrutkaOl) */
+export type NakrutkaKoef = {
+  koef: string;
+  qiymat: number;
+  def: number;
+  override: boolean;
+  izoh: string;
+};
+
+export type Stavka = { chel: number };

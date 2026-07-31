@@ -203,7 +203,33 @@ function apiBossData(){
 
   var objects = [];
   var j = {smeta:0,smetaToza:0,chel:0,mash:0,mat:0,ob:0,mk:0,kab:0,sub:0,fakt:0,f2:0,qoldiq:0,
-           tolangan:0,debitor:0,avans:0,leaf:0};
+           tolangan:0,debitor:0,avans:0,leaf:0,
+           jamiIshchilar:0, jamiTexnikalar:0, faolZayavkalar:0, halQilinmaganNuqsonlar:0};
+
+  // ERP (Kadr/Texnika) modullaridan haqiqiy statistika (faqat faol narsalar)
+  try {
+    if(typeof _ishchilarSheet === 'function') {
+      var ishSh = _ishchilarSheet();
+      j.jamiIshchilar = Math.max(0, ishSh.getLastRow() - 1);
+    }
+    if(typeof _texnikaSheet === 'function') {
+      var texSh = _texnikaSheet();
+      j.jamiTexnikalar = Math.max(0, texSh.getLastRow() - 1);
+    }
+    if(typeof _zayavkaSheet === 'function') {
+      var zaySh = _zayavkaSheet();
+      // Faol zayavkalar (YANGI yoki TASDIQLANGAN)
+      var zRows = zaySh.getLastRow() > 1 ? zaySh.getRange(2, 8, zaySh.getLastRow()-1, 1).getValues() : [];
+      j.faolZayavkalar = zRows.filter(function(r) { return r[0] !== 'YOPILGAN' && r[0] !== 'OTKAZ'; }).length;
+    }
+    if(typeof _nuqsonSheet === 'function') {
+      var nuqSh = _nuqsonSheet();
+      var nRows = nuqSh.getLastRow() > 1 ? nuqSh.getRange(2, 8, nuqSh.getLastRow()-1, 1).getValues() : [];
+      j.halQilinmaganNuqsonlar = nRows.filter(function(r) { return r[0] !== 'YOPILGAN' && r[0] !== 'BEKOR'; }).length;
+    }
+  } catch(e) {
+    console.error("ERP stats error in BossData:", e);
+  }
 
   (d.shartnomalar || []).forEach(function(sh) {
     if(sh.no === '—' && (!sh.obyektlar || !sh.obyektlar.length) && (!sh.qoshlar || !sh.qoshlar.length)) return;

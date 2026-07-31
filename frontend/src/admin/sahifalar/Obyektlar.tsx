@@ -1,20 +1,55 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useObyektlar, useBossData } from '../../api/hooks';
+import { useObyektlar, useBossData, useNavbatHolat, useObyektIshla, useBarchaIshla, useNavbatToxtat } from '../../api/hooks';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { Folder, ChevronDown, FileSpreadsheet, Plus, TrendingUp, Clock, Building2, Wallet } from 'lucide-react';
+import { Folder, ChevronDown, FileSpreadsheet, TrendingUp, Clock, Building2, Wallet, PlayCircle, Zap, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import type { PapkaObyekt } from '../../api/types';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { FmtN, formatPercent } from '../../lib/format';
+import { toast } from '../../umumiy/ui/Toast';
 
 export function Obyektlar() {
   const soragan = useObyektlar();
   const { data: bossData } = useBossData();
   const { data, refetch, isFetching, error } = soragan;
-  
+
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
+
+  // ⚡ Dvigatel (НАВБАТ) — fon rejimida ishlaydi, UI faqat holatni kuzatadi
+  const [kuzat, setKuzat] = useState(true);
+  const { data: navbat } = useNavbatHolat(kuzat);
+  const navbatFaol = !!navbat?.running;
+  const obyektIshla = useObyektIshla();
+  const barchaIshla = useBarchaIshla();
+  const navbatToxtat = useNavbatToxtat();
+
+  // Navbat tugaganda ma'lumotni bir marta yangilaymiz
+  const [oldingiFaol, setOldingiFaol] = useState(false);
+  if (navbatFaol !== oldingiFaol) {
+    setOldingiFaol(navbatFaol);
+    if (!navbatFaol && oldingiFaol) { refetch(); toast('Dvigatel ishini tugatdi', 'ok'); }
+    if (navbatFaol) setKuzat(true);
+  }
+
+  const hammasiniIshla = async (tezkor: boolean) => {
+    try {
+      const r = await barchaIshla.mutateAsync({ tezkor });
+      if (r.ok === false) { toast(r.xabar || 'Boshlanmadi', 'danger'); return; }
+      setKuzat(true);
+      toast(tezkor ? 'Tezkor hisoblash navbatga qo\'yildi' : 'To\'liq hisoblash navbatga qo\'yildi', 'ok');
+    } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+  };
+
+  const bittasiniIshla = async (obyekt: string, tezkor: boolean) => {
+    try {
+      const r = await obyektIshla.mutateAsync({ obyekt, tezkor });
+      if (r.ok === false) { toast(r.xabar || 'Boshlanmadi', 'danger'); return; }
+      setKuzat(true);
+      toast(`«${obyekt}» navbatga qo'yildi`, 'ok');
+    } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+  };
 
   const groupedData = useMemo(() => {
     if (!data) return [];
@@ -100,17 +135,86 @@ export function Obyektlar() {
             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
             className="flex items-center gap-4"
           >
-            <button 
+            <button
               onClick={() => refetch()} disabled={isFetching}
               className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-colors"
             >
               Yangilash
             </button>
-            <button className="flex items-center gap-2 bg-gradient-to-r from-accent to-blue-500 hover:from-accent/90 hover:to-blue-500/90 text-white px-6 py-2.5 rounded-xl shadow-lg shadow-accent/20 transition-all active:scale-95 font-semibold">
-              <Plus size={18} /> Yangi obyekt
+            <button
+              onClick={() => hammasiniIshla(true)}
+              disabled={navbatFaol || barchaIshla.isPending}
+              title="Barcha obyektlarni tezkor rejimda qayta hisoblaydi (fon navbatida)"
+              className="flex items-center gap-2 bg-white/5 border border-white/10 text-white px-5 py-2.5 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-40 font-medium"
+            >
+              <Zap size={18} /> Tezkor
+            </button>
+            <button
+              onClick={() => hammasiniIshla(false)}
+              disabled={navbatFaol || barchaIshla.isPending}
+              title="Barcha obyektlarni to'liq qayta hisoblaydi (fon navbatida)"
+              className="flex items-center gap-2 bg-gradient-to-r from-accent to-blue-500 hover:from-accent/90 hover:to-blue-500/90 text-white px-6 py-2.5 rounded-xl shadow-lg shadow-accent/20 transition-all active:scale-95 font-semibold disabled:opacity-40"
+            >
+              <PlayCircle size={18} /> Hammasini ishla
             </button>
           </motion.div>
         </header>
+
+        {/* ⚡ НАВБАТ — dvigatel fon rejimida ishlayotganda jonli progress */}
+        <AnimatePresence>
+          {navbatFaol && navbat && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              className="mb-6 overflow-hidden"
+            >
+              <GlassCard className="p-5 border-accent/30">
+                <div className="flex items-center justify-between gap-4 flex-wrap mb-3">
+                  <div className="flex items-center gap-3">
+                    <Loader2 size={20} className="text-accent animate-spin" />
+                    <div>
+                      <div className="text-white font-semibold">
+                        Dvigatel ishlamoqda — {navbat.bajarilgan}/{navbat.jami} obyekt
+                      </div>
+                      {navbat.hozir && (
+                        <div className="text-xs text-slate-400 mt-0.5">Hozir: {navbat.hozir.split('@@')[0]}</div>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try { await navbatToxtat.mutateAsync(); toast('Navbat to\'xtatildi', 'ok'); }
+                      catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+                    }}
+                    disabled={navbatToxtat.isPending}
+                    className="text-xs bg-rose-500/20 hover:bg-rose-500 hover:text-white text-rose-400 px-3 py-1.5 rounded border border-rose-500/30 transition-colors disabled:opacity-50"
+                  >
+                    To'xtatish
+                  </button>
+                </div>
+                <div className="h-2 bg-black/50 rounded-full overflow-hidden shadow-inner">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-accent to-blue-400 rounded-full"
+                    animate={{ width: `${navbat.foiz}%` }}
+                    transition={{ duration: 0.4 }}
+                  />
+                </div>
+                {navbat.log && navbat.log.length > 0 && (
+                  <div className="mt-3 max-h-24 overflow-y-auto scrollbar-thin text-xs space-y-1">
+                    {navbat.log.slice(-6).reverse().map((l, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        {l.ok
+                          ? <CheckCircle size={12} className="text-ok shrink-0" />
+                          : <AlertTriangle size={12} className="text-danger shrink-0" />}
+                        <span className="text-slate-300">{l.ob}</span>
+                        {l.xabar && <span className="text-slate-500 truncate">— {l.xabar}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </GlassCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {groupedData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[50vh] opacity-60">
@@ -185,11 +289,31 @@ export function Obyektlar() {
                         </div>
                       ) : (
                         <div className="mt-auto pt-4 border-t border-white/10 text-xs text-slate-500 italic flex items-center gap-2">
-                          <Clock size={14} /> Moliya ma'lumotlari yuklanmadi
+                          <Clock size={14} /> Moliya ma'lumotlari yuklanmadi — obyektni «Ishla» tugmasi bilan hisoblang
                         </div>
                       )}
+
+                      {/* ⚡ Shu obyektni qayta hisoblash (dvigatel, fon navbatida) */}
+                      <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); group.items.forEach(it => bittasiniIshla(it.obyekt, true)); }}
+                          disabled={navbatFaol || obyektIshla.isPending}
+                          title="Tezkor qayta hisoblash (narx o'zgarmagan bo'lsa)"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-3 py-2 rounded-lg border border-white/10 transition-colors disabled:opacity-40"
+                        >
+                          <Zap size={13} /> Tezkor
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); group.items.forEach(it => bittasiniIshla(it.obyekt, false)); }}
+                          disabled={navbatFaol || obyektIshla.isPending}
+                          title="To'liq qayta hisoblash"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-accent/15 hover:bg-accent hover:text-white text-accent px-3 py-2 rounded-lg border border-accent/30 transition-colors disabled:opacity-40"
+                        >
+                          <PlayCircle size={13} /> Ishla
+                        </button>
+                      </div>
                     </div>
-                    
+
                     <AnimatePresence>
                       {isExpanded && hasMultiple && (
                         <motion.div 

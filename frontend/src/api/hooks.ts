@@ -11,7 +11,48 @@ import type {
   TexnikaDashboard, Texnika, TexnikaType, TexnikaHolat,
   TaminotDashboard, ZayavkaStatus, Postavshik,
   SifatDashboard, MuhimlikDarajasi, NuqsonStatus,
+  NavbatHolat, NavbatBoshlash,
 } from './types';
+
+/* ============ DVIGATEL: OBYEKTNI ISHLASH (НАВБАТ) ============
+ * ⚠️ Barcha obyektni skan qiluvchi ish SINXRON emas — GAS 6 daqiqa limitiga
+ * urilmasligi uchun navbat (trigger) orqali fonda bajariladi. UI faqat
+ * navbat holatini so'rab turadi. (50_Navbat.js)                            */
+
+export function useNavbatHolat(faol: boolean) {
+  return useQuery({
+    queryKey: ['navbatHolat'],
+    queryFn: () => gas<NavbatHolat>('apiNavbatHolat'),
+    refetchInterval: faol ? 4000 : false,
+    staleTime: 0,
+  });
+}
+
+export function useObyektIshla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt, tezkor }: { obyekt: string; tezkor?: boolean }) =>
+      gas<NavbatBoshlash>(tezkor ? 'apiObyektTezkorFonIshla' : 'apiObyektFonIshla', obyekt),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['navbatHolat'] }),
+  });
+}
+
+export function useBarchaIshla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tezkor }: { tezkor?: boolean } = {}) =>
+      gas<NavbatBoshlash>(tezkor ? 'apiBarchaTezkorIshla' : 'apiBarchaFonIshla'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['navbatHolat'] }),
+  });
+}
+
+export function useNavbatToxtat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => gas<{ ok: boolean; xabar: string }>('apiNavbatToxtat'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['navbatHolat'] }),
+  });
+}
 
 export function useObyektlar() {
   return useQuery({
