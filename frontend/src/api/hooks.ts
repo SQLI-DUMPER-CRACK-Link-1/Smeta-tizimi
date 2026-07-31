@@ -7,6 +7,10 @@ import type {
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
   AktNode, F2Moslik, F2MoslashNatija, F2JobHolat, NarxlarJavob, DarajaQator, F2UstunConfig, F2Varaq,
   BuxDashboard, Xarajat,
+  KadrlarDashboard, Ishchi, TabelKuni,
+  TexnikaDashboard, Texnika, TexnikaType, TexnikaHolat,
+  TaminotDashboard, ZayavkaStatus, Postavshik,
+  SifatDashboard, MuhimlikDarajasi, NuqsonStatus,
 } from './types';
 
 export function useObyektlar() {
@@ -525,198 +529,149 @@ export function useSkladOchir() {
   });
 }
 
-/* ============ ERP KADRLAR (MOCK DATA) ============ */
-export function useKadrlarData() {
+/* ============ ERP KADRLAR VA TABEL (87_ErpModullar.js) ============ */
+export function useKadrlarData(oy?: string) {
   return useQuery({
-    queryKey: ['kadrlar'],
-    queryFn: async () => {
-      // Hozircha Google Sheets'da API yo'q, shuning uchun sun'iy kutish va mock ma'lumot qaytaramiz
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const mockIshchilar = [
-        { id: '1', ism: 'Azizov Bahrom', kasb: 'Prorab', stavka: 250000, brigada: 'Brigada-1', obyekt: 'Amfiteatr', status: 'faol' },
-        { id: '2', ism: 'Karimov Rustam', kasb: 'Usta', stavka: 180000, brigada: 'Brigada-1', obyekt: 'Amfiteatr', status: 'faol' },
-        { id: '3', ism: 'Nazarov Umid', kasb: 'Payvandchi', stavka: 200000, brigada: 'Brigada-2', obyekt: 'Suniy kol', status: 'faol' },
-        { id: '4', ism: 'Toshmatov Ali', kasb: 'Yordamchi', stavka: 120000, brigada: 'Brigada-1', obyekt: 'Amfiteatr', status: 'faol' },
-        { id: '5', ism: 'Eshmatov Vali', kasb: 'Santexnik', stavka: 170000, brigada: 'Brigada-3', obyekt: '10Kv liniya', status: 'faol' },
-      ] as any[];
-
-      // 1 dan 31 gacha kunlar uchun tabel matritsasi generatsiyasi
-      const oydagiKunlarSoni = 31;
-      const mockTabellar = mockIshchilar.map(ishchi => {
-         const kunlar: any[] = [];
-         let ishlaganKunlar = 0;
-         for (let i = 1; i <= oydagiKunlarSoni; i++) {
-            // Tasodifiy davomat: 80% kelgan, 10% kelmagan, 10% hali belgilanmagan
-            const rand = Math.random();
-            let holat = null;
-            if (i < 15) { // O'tgan kunlar
-               if (rand < 0.8) { holat = 'keldi'; ishlaganKunlar++; }
-               else if (rand < 0.9) holat = 'kelmadi';
-               else holat = 'kasal';
-            }
-            kunlar.push({ sana: i, holat });
-         }
-         return {
-            ishchiId: ishchi.id,
-            oy: '2026-07',
-            kunlar,
-            ishlaganKunlar,
-            xisoblanganOylik: ishlaganKunlar * ishchi.stavka
-         };
-      });
-
-      return {
-        ishchilar: mockIshchilar,
-        tabellar: mockTabellar,
-        jamiFaolIshchilar: 5,
-        bugungiDavomat: 80,
-        oylikFond: mockTabellar.reduce((acc, t) => acc + t.xisoblanganOylik, 0),
-        berilganAvanslar: 5500000,
-      };
-    },
+    queryKey: ['kadrlar', oy || 'joriy'],
+    queryFn: () => gas<KadrlarDashboard>('apiKadrlarDashboard', oy),
     staleTime: 5 * 60 * 1000,
   });
 }
 
-/* ============ ERP TEXNIKA VA GSM (MOCK DATA) ============ */
+export function useIshchiQosh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { ism: string; kasb?: string; stavka?: number; brigada?: string; obyekt?: string; telefon?: string }) =>
+      gas<{ ok: boolean; id: string }>('apiIshchiQosh', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kadrlar'] }),
+  });
+}
+
+export function useIshchiTahrir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: Partial<Ishchi> & { id: string }) => gas<{ ok: boolean }>('apiIshchiTahrir', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kadrlar'] }),
+  });
+}
+
+export function useIshchiOchir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => gas<{ ok: boolean }>('apiIshchiOchir', id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kadrlar'] }),
+  });
+}
+
+export function useTabelBelgila() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { ishchiId: string; sana: string; holat: TabelKuni }) => gas<{ ok: boolean }>('apiTabelBelgila', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kadrlar'] }),
+  });
+}
+
+/* ============ ERP TEXNIKA VA GSM (87_ErpModullar.js) ============ */
 export function useTexnikaData() {
   return useQuery({
     queryKey: ['texnika'],
-    queryFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const bugun = new Date().toISOString().split('T')[0];
-      
-      const mockTexnikalar = [
-        { id: 't1', nom: 'HOWO Samosval', davlatRaqami: '01 A 123 AA', turi: 'Samosval', holat: 'Ishlayapti', obyekt: 'Amfiteatr', haydovchi: 'Toshmatov Ali', soatlikNorma: 0, 
-          oldingiQoldiq: 100 },
-        { id: 't2', nom: 'Hyundai Ekskavator', davlatRaqami: '01 B 456 BB', turi: 'Ekskavator', holat: 'Ishlayapti', obyekt: 'Amfiteatr', haydovchi: 'Valiyev Olim', soatlikNorma: 15,
-          oldingiQoldiq: 120 },
-        { id: 't3', nom: 'XCMG Avtokran 25t', davlatRaqami: '10 C 789 CC', turi: 'Kran', holat: 'Remontda', obyekt: 'Suniy kol', haydovchi: 'Karimov Rustam', soatlikNorma: 12,
-          oldingiQoldiq: 40 },
-        { id: 't4', nom: 'Shacman Buldozer', davlatRaqami: '11 D 111 DD', turi: 'Buldozer', holat: 'Ishlayapti', obyekt: '10Kv liniya', haydovchi: 'Nazarov Umid', soatlikNorma: 20,
-          oldingiQoldiq: 50 },
-        { id: 't5', nom: 'Isuzu Bortovoy', davlatRaqami: '01 E 222 EE', turi: 'Boshqa', holat: 'Kutishda', obyekt: 'Baza', haydovchi: 'Azizov Bobur', soatlikNorma: 0,
-          oldingiQoldiq: 35 },
-      ] as any[];
-
-      const mockTarix = [
-        { id: 'tr1', texnikaId: 't1', sana: bugun, kirimLitr: 200, chiqimLitr: 0, motochas: 0, izoh: 'Zapravka qilingan' },
-        { id: 'tr2', texnikaId: 't2', sana: bugun, kirimLitr: 0, chiqimLitr: 0, motochas: 5, izoh: 'Kunduzgi smena' },
-        { id: 'tr3', texnikaId: 't4', sana: bugun, kirimLitr: 300, chiqimLitr: 0, motochas: 8, izoh: 'Zapravka va To\'liq smena' },
-      ] as any[];
-
-      // Real hisob-kitob (O'g'rilik / Pere-rasxod nazorati uchun)
-      const hisoblanganTexnikalar = mockTexnikalar.map(t => {
-        let qoldiq = t.oldingiQoldiq;
-        const oydagiHarakat = mockTarix.filter(tr => tr.texnikaId === t.id);
-        
-        oydagiHarakat.forEach(h => {
-          if (h.kirimLitr) qoldiq += h.kirimLitr;
-          if (h.motochas && t.soatlikNorma) {
-             qoldiq -= (h.motochas * t.soatlikNorma);
-          }
-        });
-        return { ...t, yoqilgiQoldiq: qoldiq };
-      });
-
-      return {
-        texnikalar: hisoblanganTexnikalar,
-        tarix: mockTarix,
-        jamiTexnika: 5,
-        faolTexnika: 3,
-        remontda: 1,
-        oylikYoqilgi: 4850,
-      };
-    },
+    queryFn: () => gas<TexnikaDashboard>('apiTexnikaDashboard'),
     staleTime: 5 * 60 * 1000,
   });
 }
 
-/* ============ ERP TAMINOT VA SKLAD (MOCK DATA) ============ */
+export function useTexnikaQosh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { nom: string; davlatRaqami?: string; turi?: TexnikaType; holat?: TexnikaHolat; obyekt?: string; haydovchi?: string; soatlikNorma?: number; oldingiQoldiq?: number }) =>
+      gas<{ ok: boolean; id: string }>('apiTexnikaQosh', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['texnika'] }),
+  });
+}
+
+export function useTexnikaTahrir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: Partial<Texnika> & { id: string }) => gas<{ ok: boolean }>('apiTexnikaTahrir', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['texnika'] }),
+  });
+}
+
+export function useTexnikaTarixQosh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { texnikaId: string; sana?: string; kirimLitr?: number; chiqimLitr?: number; motochas?: number; izoh?: string }) =>
+      gas<{ ok: boolean; id: string }>('apiTexnikaTarixQosh', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['texnika'] }),
+  });
+}
+
+/* ============ ERP TA'MINOT VA OMBOR (87_ErpModullar.js + real Sklad) ============ */
 export function useTaminotData() {
   return useQuery({
     queryKey: ['taminot'],
-    queryFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const bugun = new Date().toISOString().split('T')[0];
-      
-      const mockZayavkalar = [
-        { id: 'z1', sana: bugun, obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', material: 'Sement M400', birlik: 'tonna', miqdor: 15, status: 'Obyektdan so\'rov', izoh: 'Shoshilinch' },
-        { id: 'z2', sana: bugun, obyekt: 'Suniy kol', prorab: 'Karimov Rustam', material: 'Armatura 12mm', birlik: 'tonna', miqdor: 5, status: 'Omborda tekshirilmoqda' },
-        { id: 'z3', sana: bugun, obyekt: '10Kv liniya', prorab: 'Eshmatov Vali', material: 'Kabel SIP-4', birlik: 'metr', miqdor: 50, status: 'Ombordan berildi' },
-        { id: 'z4', sana: bugun, obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', material: 'Qum', birlik: 'm3', miqdor: 30, status: 'Bozorda' },
-      ] as any[];
-
-      const mockMateriallar = [
-        { id: 'm1', guruh: 'Asosiy', nom: 'Sement M400', birlik: 'tonna', obyekt: 'Markaziy Sklad', qoldiq: 4, minQoldiq: 10, smetaNarxi: 850000, faktNarxi: 870000 },
-        { id: 'm2', guruh: 'Asosiy', nom: 'Armatura 12mm', birlik: 'tonna', obyekt: 'Markaziy Sklad', qoldiq: 1.5, minQoldiq: 2, smetaNarxi: 9500000, faktNarxi: 9400000 },
-        { id: 'm3', guruh: 'Asosiy', nom: 'Beton M300', birlik: 'm3', obyekt: 'Suniy kol', qoldiq: 0, minQoldiq: 5, smetaNarxi: 550000, faktNarxi: 580000 },
-        { id: 'm4', guruh: 'Yordamchi', nom: 'Qadoq mix', birlik: 'kg', obyekt: 'Markaziy Sklad', qoldiq: 45, minQoldiq: 10, smetaNarxi: 12000, faktNarxi: 12000 },
-      ] as any[];
-
-      const mockPostavshiklar = [
-        { id: 'p1', nom: 'Bektemir Metall Invest', telefon: '+998901234567', yetkazilganSumma: 450000000, qarzimiz: 25000000 },
-        { id: 'p2', nom: 'Ohangaron Sement', telefon: '+998909876543', yetkazilganSumma: 120000000, qarzimiz: 0 },
-        { id: 'p3', nom: 'Stroy Mir (Bozor)', telefon: '+998991112233', yetkazilganSumma: 45000000, qarzimiz: 12000000 },
-      ] as any[];
-
-      // Mantiqiy hisob-kitoblar
-      const yangiZayavkalarSoni = mockZayavkalar.filter(z => z.status === 'Obyektdan so\'rov' || z.status === 'Omborda tekshirilmoqda').length;
-      const kritikMateriallarSoni = mockMateriallar.filter(m => m.qoldiq <= m.minQoldiq).length;
-      const jamiQarzimiz = mockPostavshiklar.reduce((acc, p) => acc + p.qarzimiz, 0);
-      const smetaNarxidanOshganlar = mockMateriallar.filter(m => m.faktNarxi > m.smetaNarxi).length;
-
-      return {
-        zayavkalar: mockZayavkalar,
-        materiallar: mockMateriallar,
-        postavshiklar: mockPostavshiklar,
-        yangiZayavkalarSoni,
-        kritikMateriallarSoni,
-        jamiQarzimiz,
-        smetaNarxidanOshganlar,
-      };
-    },
+    queryFn: () => gas<TaminotDashboard>('apiTaminotDashboard'),
     staleTime: 5 * 60 * 1000,
   });
 }
 
-/* ============ ERP SIFAT NAZORATI (TEXNADZOR) (MOCK DATA) ============ */
+export function useZayavkaQosh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { sana?: string; obyekt?: string; prorab?: string; material: string; birlik?: string; miqdor?: number; status?: ZayavkaStatus; izoh?: string }) =>
+      gas<{ ok: boolean; id: string }>('apiZayavkaQosh', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['taminot'] }),
+  });
+}
+
+export function useZayavkaHolatYangila() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: ZayavkaStatus }) => gas<{ ok: boolean }>('apiZayavkaHolatYangila', id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['taminot'] }),
+  });
+}
+
+export function usePostavshikQosh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { nom: string; telefon?: string; yetkazilganSumma?: number; qarzimiz?: number }) =>
+      gas<{ ok: boolean; id: string }>('apiPostavshikQosh', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['taminot'] }),
+  });
+}
+
+export function usePostavshikTahrir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: Partial<Postavshik> & { id: string }) => gas<{ ok: boolean }>('apiPostavshikTahrir', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['taminot'] }),
+  });
+}
+
+/* ============ ERP SIFAT NAZORATI / TEXNADZOR (87_ErpModullar.js) ============ */
 export function useSifatData() {
   return useQuery({
     queryKey: ['sifat'],
-    queryFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      const bugun = new Date();
-      const kecha = new Date(bugun); kecha.setDate(kecha.getDate() - 1);
-      const utganHafta = new Date(bugun); utganHafta.setDate(utganHafta.getDate() - 5);
-      
-      const f = (d: Date) => d.toISOString().split('T')[0];
-      
-      const mockNuqsonlar = [
-        { id: 'n1', obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', sana: f(utganHafta), muddat: f(kecha), tavsif: 'B1 ustunda beton markasi M200 dan past chiqdi (prochnost 15 MPa)', daraja: 'Kritik', status: 'Muddati o\'tgan', izoh: 'Buzib qayta quyish kerak' },
-        { id: 'n2', obyekt: 'Suniy kol', prorab: 'Karimov Rustam', sana: f(kecha), muddat: f(new Date(bugun.getTime() + 86400000*2)), tavsif: 'Gidroizolyatsiya qatlamida yoriqlar bor', daraja: 'O\'rta', status: 'Jarayonda' },
-        { id: 'n3', obyekt: '10Kv liniya', prorab: 'Eshmatov Vali', sana: f(bugun), muddat: f(new Date(bugun.getTime() + 86400000)), tavsif: 'Truba ulanish joyi yaxshi payvandlanmagan', daraja: 'Oddiy', status: 'Yangi' },
-        { id: 'n4', obyekt: 'Amfiteatr', prorab: 'Azizov Bahrom', sana: f(utganHafta), muddat: f(bugun), tavsif: 'Armatura karkasi chizmadan 5sm chetga chiqqan', daraja: 'O\'rta', status: 'Tuzatildi' },
-      ] as any[];
-
-      const jamiNuqsonlar = mockNuqsonlar.length;
-      const tuzatilganlar = mockNuqsonlar.filter(n => n.status === 'Tuzatildi').length;
-      const muddatOtilgan = mockNuqsonlar.filter(n => n.status === 'Muddati o\'tgan').length;
-      const kritik = mockNuqsonlar.filter(n => n.daraja === 'Kritik' && n.status !== 'Tuzatildi').length;
-
-      return {
-        nuqsonlar: mockNuqsonlar,
-        jamiNuqsonlar,
-        tuzatilganlar,
-        muddatOtilgan,
-        kritik
-      };
-    },
+    queryFn: () => gas<SifatDashboard>('apiSifatDashboard'),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useNuqsonQosh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { obyekt?: string; prorab?: string; sana?: string; muddat?: string; tavsif: string; daraja?: MuhimlikDarajasi; status?: NuqsonStatus; izoh?: string }) =>
+      gas<{ ok: boolean; id: string }>('apiNuqsonQosh', d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sifat'] }),
+  });
+}
+
+export function useNuqsonHolatYangila() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: NuqsonStatus }) => gas<{ ok: boolean }>('apiNuqsonHolatYangila', id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sifat'] }),
   });
 }
 

@@ -3,7 +3,9 @@ import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users } from 'lucide-react';
+import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import Sahna3D from '../../kirish/Sahna3D';
 
 // --- 3D INTERACTIVE BACKGROUND ---
@@ -193,46 +195,71 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
   );
 }
 
-// --- CHART ---
+// --- CHART (Recharts) ---
 function FinancialChart({ objects }: { objects: any[] }) {
   const allSubItems = objects.flatMap(sh => sh.subItems || []).filter(o => !o.nom.startsWith('👷'));
   
   if (!allSubItems || allSubItems.length === 0) return null;
-  const maxSmeta = Math.max(...allSubItems.map(o => o.smeta || 0));
+  
+  const chartData = allSubItems.sort((a, b) => b.smeta - a.smeta).slice(0, 15).map(o => ({
+    name: o.nom.length > 20 ? o.nom.substring(0, 20) + '...' : o.nom,
+    Smeta: o.smeta,
+    Fakt: o.fakt,
+    F2: o.f2
+  }));
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-4 rounded-xl shadow-2xl">
+          <p className="text-white font-bold mb-3 border-b border-white/10 pb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-3 text-sm mb-1">
+               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+               <span className="text-slate-300 w-16">{entry.name}:</span>
+               <span className="text-white font-mono font-bold"><FmtN val={entry.value} /> so'm</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <GlassCard className="p-6 h-[320px] flex flex-col">
-      <h3 className="text-lg font-semibold text-white/90 mb-6 flex items-center gap-2">
+    <GlassCard className="p-6 h-[400px] flex flex-col">
+      <h3 className="text-lg font-semibold text-white/90 mb-4 flex items-center gap-2">
         <TrendingUp size={20} className="text-accent" />
-        Moliyaviy Oqim (Top Obyektlar)
+        Top 15 Obyektlar Moliyaviy Oqimi
       </h3>
       
-      <div className="flex-1 flex items-end gap-3 w-full overflow-x-auto pb-4 scrollbar-thin">
-        {allSubItems.sort((a, b) => b.smeta - a.smeta).slice(0, 20).map((obj, idx) => {
-          const hSmeta = Math.max(5, ((obj.smeta || 0) / maxSmeta) * 100);
-          const hFakt = Math.max(0, ((obj.fakt || 0) / maxSmeta) * 100);
-          const hF2 = Math.max(0, ((obj.f2 || 0) / maxSmeta) * 100);
-          
-          return (
-            <div key={idx} className="flex flex-col items-center gap-2 group flex-1 min-w-[50px] relative">
-              <div className="w-full h-[180px] relative flex justify-center items-end bg-white/5 rounded-t-xl overflow-hidden shadow-inner">
-                <motion.div initial={{ height: 0 }} animate={{ height: `${hSmeta}%` }} transition={{ duration: 1, delay: idx * 0.02 }} className="absolute bottom-0 w-full bg-white/10" />
-                <motion.div initial={{ height: 0 }} animate={{ height: `${hFakt}%` }} transition={{ duration: 1, delay: 0.2 + idx * 0.02 }} className="absolute bottom-0 w-full bg-ok/50" />
-                <motion.div initial={{ height: 0 }} animate={{ height: `${hF2}%` }} transition={{ duration: 1, delay: 0.4 + idx * 0.02 }} className="absolute bottom-0 w-full bg-t-rs/70" />
-              </div>
-              <span className="text-[10px] text-white/50 truncate w-full text-center group-hover:text-white transition-colors" title={obj.nom}>
-                {obj.nom.substring(0, 10)}...
-              </span>
-              
-              <div className="absolute -top-24 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/90 backdrop-blur-xl px-4 py-3 rounded-xl text-xs whitespace-nowrap z-20 pointer-events-none border border-white/20 shadow-2xl">
-                <div className="font-bold text-white mb-2 max-w-[250px] truncate border-b border-white/10 pb-1">{obj.nom}</div>
-                <div className="text-white/70 flex justify-between gap-4"><span>Smeta:</span> <span className="font-mono text-white"><FmtN val={obj.smeta} /></span></div>
-                <div className="text-white/70 flex justify-between gap-4"><span>Fakt:</span> <span className="font-mono text-ok"><FmtN val={obj.fakt} /></span></div>
-                <div className="text-white/70 flex justify-between gap-4"><span>F2:</span> <span className="font-mono text-t-rs"><FmtN val={obj.f2} /></span></div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex-1 w-full h-full min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 10, left: 20, bottom: 60 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <XAxis 
+              dataKey="name" 
+              stroke="rgba(255,255,255,0.3)" 
+              tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+              angle={-45}
+              textAnchor="end"
+              height={60}
+            />
+            <YAxis 
+              stroke="rgba(255,255,255,0.3)"
+              tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+              tickFormatter={(value) => `${(value / 1000000).toFixed(0)} mln`}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
+            <Bar dataKey="Smeta" fill="rgba(255,255,255,0.2)" radius={[4, 4, 0, 0]} barSize={15} />
+            <Bar dataKey="Fakt" fill="#34d399" radius={[4, 4, 0, 0]} barSize={15} />
+            <Bar dataKey="F2" fill="#38bdf8" radius={[4, 4, 0, 0]} barSize={15} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </GlassCard>
   );
@@ -303,10 +330,16 @@ function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[
 }
 
 // --- SMART AI XULOSA ---
-function SmartXulosa({ jami }: { jami: any }) {
+function SmartXulosa({ jami, objects }: { jami: any, objects: any[] }) {
   const qarzlar = jami.debitor || 0;
   const qoldiq = jami.qoldiq || 0;
   const tushum = jami.tolangan || 0;
+  
+  // Obyektlar bo'yicha tahlil (eng yomon ko'rsatkichlar)
+  const topDebitor = objects.length > 0 ? objects.reduce((prev, curr) => (prev.debitor || 0) > (curr.debitor || 0) ? prev : curr) : null;
+  const topQoldiq = objects.length > 0 ? objects.reduce((prev, curr) => (prev.qoldiq || 0) > (curr.qoldiq || 0) ? prev : curr) : null;
+  const muzlaganList = objects.filter(o => (o.fakt || 0) - (o.f2 || 0) > 0);
+  const totalMuzlagan = muzlaganList.reduce((sum, o) => sum + ((o.fakt || 0) - (o.f2 || 0)), 0);
   
   let xavf = "Barqaror";
   let xavfColor = "text-emerald-400";
@@ -330,12 +363,39 @@ function SmartXulosa({ jami }: { jami: any }) {
        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
          <Activity size={20} className="text-accent" /> AI Analitik Xulosa
        </h3>
-       <p className="text-slate-300 text-[15px] leading-relaxed relative z-10">
-         Sizda umumiy hisobda <span className="font-bold text-white border-b border-white/20 pb-0.5"><FmtN val={jami.smeta} qisqa /></span> lik shartnomaviy ishlar mavjud bo'lib, uning <span className="font-bold text-ok">{jami.progress}%</span> qismi amalda bajarilgan. 
-         Hozirgi vaqtda <span className="font-bold text-danger border-b border-danger/30 pb-0.5"><FmtN val={qarzlar} qisqa /></span> miqdorida debitor qarzdorlik shakllangan. 
-         Biznesning joriy moliyaviy barqarorligi: <span className={`font-bold ${xavfColor}`}>{xavf}</span>. 
-         Oldinda yana <span className="font-bold text-white"><FmtN val={qoldiq} qisqa /></span> lik bajarilishi kerak bo'lgan ish qoldig'i mavjud.
-       </p>
+       <div className="text-slate-300 text-[14px] leading-relaxed relative z-10 space-y-3">
+         <p>
+           Sizda umumiy hisobda <span className="font-bold text-white"><FmtN val={jami.smeta} qisqa /></span> lik shartnomaviy ishlar bo'lib, bajarilishi <span className="font-bold text-ok">{jami.progress}%</span>.
+           Biznesning joriy barqarorligi: <span className={`font-bold ${xavfColor}`}>{xavf}</span>.
+         </p>
+         
+         <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-2">
+           {topDebitor && topDebitor.debitor > 0 && (
+             <div className="flex items-start gap-2">
+               <AlertTriangle size={14} className="text-red-400 mt-1 flex-shrink-0" />
+               <span>
+                 Eng katta debitor qarzdorlik <span className="text-white font-semibold">"{topDebitor.nom}"</span> obyektiga to'g'ri kelmoqda (<span className="text-red-400 font-mono font-bold"><FmtN val={topDebitor.debitor} qisqa /></span>).
+               </span>
+             </div>
+           )}
+           {totalMuzlagan > 0 && (
+             <div className="flex items-start gap-2">
+               <Info size={14} className="text-amber-400 mt-1 flex-shrink-0" />
+               <span>
+                 Tizimda F-2 bilan yopilmagan (tasdiqlanmagan) jami <span className="text-amber-400 font-mono font-bold"><FmtN val={totalMuzlagan} qisqa /></span> lik muzlagan mablag' mavjud!
+               </span>
+             </div>
+           )}
+           {topQoldiq && topQoldiq.qoldiq > 0 && (
+             <div className="flex items-start gap-2">
+               <Clock size={14} className="text-blue-400 mt-1 flex-shrink-0" />
+               <span>
+                 <span className="text-white font-semibold">"{topQoldiq.nom}"</span> obyektida eng katta ish hajmi qoldig'i mavjud (<span className="text-blue-400 font-mono font-bold"><FmtN val={topQoldiq.qoldiq} qisqa /></span>).
+               </span>
+             </div>
+           )}
+         </div>
+       </div>
     </GlassCard>
   );
 }
@@ -407,7 +467,18 @@ function RazdelRow({ nom }: { nom: string }) {
               </div>
             </td>
             <td className="py-3 px-4 text-right font-mono text-warn/80"><FmtN val={rz.f2} /></td>
-            <td className="py-3 px-4 text-right font-mono text-danger/80"><FmtN val={rz.ost} /></td>
+            <td className="py-3 px-4 text-right">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(`/boss/holat/${encodeURIComponent(nom)}`, '_blank');
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-semibold border border-blue-500/20 transition-all hover:scale-105 active:scale-95"
+                title="Batafsil ma'lumot (Drill-Down)"
+              >
+                <ExternalLink size={12} /> Batafsil
+              </button>
+            </td>
           </tr>
         );
       })}
@@ -469,7 +540,18 @@ function ObyektRow({ obj }: { obj: any }) {
           </div>
         </td>
         <td className="py-4 px-4 text-right font-mono text-warn"><FmtN val={obj.f2} /></td>
-        <td className="py-4 px-4 text-right font-mono text-danger/80"><FmtN val={obj.qoldiq} /></td>
+        <td className="py-4 px-4 text-right">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(`/boss/holat/${encodeURIComponent(obj.nom)}`, '_blank');
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-bold border border-indigo-500/20 transition-all hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(99,102,241,0.1)]"
+            title="Ushbu obyektning eng kichik detaligacha kirish"
+          >
+            <ExternalLink size={14} /> Ichiga kirish
+          </button>
+        </td>
       </tr>
       
       {open && !isSub && (
@@ -570,7 +652,21 @@ function KpiModal({ kpi, onClose }: { kpi: any, onClose: () => void }) {
             <tbody>
               {kpi.items.sort((a:any, b:any) => b.val - a.val).map((item:any, idx:number) => (
                 <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.04] transition-colors">
-                  <td className="py-4 px-6 font-medium text-white/80">{item.nom}</td>
+                  <td className="py-4 px-6 font-medium text-white/80">
+                    <div className="flex items-center gap-3">
+                      {item.nom}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/boss/holat/${encodeURIComponent(item.nom)}`, '_blank');
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-1 bg-white/10 hover:bg-white/20 rounded-md text-xs text-white/70"
+                        title="Ichiga kirish"
+                      >
+                        <ExternalLink size={12} /> Batafsil
+                      </button>
+                    </div>
+                  </td>
                   <td className={`py-4 px-6 text-right font-mono font-bold ${kpi.color}`}><FmtN val={item.val} /></td>
                   <td className="py-4 px-6 text-right">
                      <div className="flex items-center gap-2 justify-end">
@@ -821,7 +917,7 @@ export default function Umumiy() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
              <div className="lg:col-span-2">
-                <SmartXulosa jami={data.jami} />
+                <SmartXulosa jami={data.jami} objects={data.objects || []} />
              </div>
              <div className="lg:col-span-1">
                 <TopList 

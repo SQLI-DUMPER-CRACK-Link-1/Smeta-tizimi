@@ -1,15 +1,33 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, HardHat, CalendarCheck, HandCoins, Search, Filter } from 'lucide-react';
+import { Users, HardHat, CalendarCheck, HandCoins, Search, Filter, Plus } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
-import { useKadrlarData } from '../../api/hooks';
+import { useKadrlarData, useIshchiQosh, useTabelBelgila } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
+import { ErpQoshModal } from '../ErpQoshModal';
+import { toast } from '../../umumiy/ui/Toast';
+import type { TabelKuni } from '../../api/types';
+
+const TABEL_AYLANISH: TabelKuni[] = [null, 'keldi', 'kelmadi', 'kasal'];
 
 export default function ErpKadrlar() {
   const { data, isLoading } = useKadrlarData();
   const [qidiruv, setQidiruv] = useState('');
   const [filtir, setFiltir] = useState('barchasi');
+  const [qoshOchiq, setQoshOchiq] = useState(false);
+  const ishchiQosh = useIshchiQosh();
+  const tabelBelgila = useTabelBelgila();
+
+  const bugun = new Date().toISOString().split('T')[0];
+  const kunBos = (ishchiId: string, kun: number) => {
+    const oy = bugun.slice(0, 7);
+    const sana = `${oy}-${String(kun).padStart(2, '0')}`;
+    const tabel = data?.tabellar.find((t: any) => t.ishchiId === ishchiId);
+    const joriy = tabel?.kunlar.find((k: any) => k.sana === kun)?.holat ?? null;
+    const keyingi = TABEL_AYLANISH[(TABEL_AYLANISH.indexOf(joriy) + 1) % TABEL_AYLANISH.length];
+    tabelBelgila.mutate({ ishchiId, sana, holat: keyingi });
+  };
 
   if (isLoading || !data) {
     return (
@@ -28,12 +46,20 @@ export default function ErpKadrlar() {
   return (
     <AuroraBackground>
       <div className="max-w-[1600px] mx-auto p-6 flex flex-col h-full overflow-hidden relative z-10">
-        <header className="mb-6">
-          <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 tracking-tight flex items-center gap-3">
-            <Users className="text-blue-400" size={32} />
-            Kadrlar va Davomat (HR)
-          </h1>
-          <p className="text-slate-400 mt-2 text-sm">Obyektlardagi ishchilar, davomat va maoshlar monitoringi</p>
+        <header className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 tracking-tight flex items-center gap-3">
+              <Users className="text-blue-400" size={32} />
+              Kadrlar va Davomat (HR)
+            </h1>
+            <p className="text-slate-400 mt-2 text-sm">Obyektlardagi ishchilar, davomat va maoshlar monitoringi</p>
+          </div>
+          <button
+            onClick={() => setQoshOchiq(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors shadow-lg"
+          >
+            <Plus size={18} /> Ishchi qo'shish
+          </button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -154,7 +180,11 @@ export default function ErpKadrlar() {
                          
                          return (
                            <td key={i} className="py-3 px-1 text-center">
-                             <div className={`w-7 h-7 mx-auto rounded border ${bg} flex items-center justify-center text-xs cursor-pointer hover:scale-110 transition-transform`}>
+                             <div
+                               onClick={() => kunBos(ishchi.id, i + 1)}
+                               title="Bosib davomatni belgilang (bo'sh → keldi → kelmadi → kasal)"
+                               className={`w-7 h-7 mx-auto rounded border ${bg} flex items-center justify-center text-xs cursor-pointer hover:scale-110 transition-transform`}
+                             >
                                {txt}
                              </div>
                            </td>

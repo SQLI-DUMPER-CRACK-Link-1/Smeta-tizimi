@@ -275,9 +275,18 @@ export type TabelRecord = {
   izoh?: string;
 };
 
+// Bir ishchi uchun oylik tabel matritsasi (apiKadrlarDashboard qaytaradigan haqiqiy shakl)
+export type TabelOylik = {
+  ishchiId: string;
+  oy: string; // YYYY-MM
+  kunlar: { sana: number; holat: TabelKuni }[];
+  ishlaganKunlar: number;
+  xisoblanganOylik: number;
+};
+
 export type KadrlarDashboard = {
   ishchilar: Ishchi[];
-  tabellar: TabelRecord[];
+  tabellar: TabelOylik[];
   jamiFaolIshchilar: number;
   bugungiDavomat: number; // foizda (masalan, 95%)
   oylikFond: number;      // joriy oyda kutilayotgan xarajat
