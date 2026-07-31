@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 
+export type ErpOption = string | { value: string; label: string };
+
 export type ErpField = {
   key: string;
   label: string;
   type: 'text' | 'number' | 'select' | 'textarea' | 'date';
-  options?: string[];
+  options?: ErpOption[];
   required?: boolean;
   placeholder?: string;
 };
@@ -17,10 +19,16 @@ interface ErpQoshModalProps {
   onClose: () => void;
   onSubmit: (values: Record<string, any>) => void | Promise<void>;
   isSaving?: boolean;
+  /** Modal ochilganda oldindan to'ldiriladigan qiymatlar (masalan tanlangan texnika) */
+  initial?: Record<string, any>;
 }
 
-export function ErpQoshModal({ isOpen, title, fields, onClose, onSubmit, isSaving }: ErpQoshModalProps) {
-  const [qiymatlar, setQiymatlar] = useState<Record<string, any>>({});
+export function ErpQoshModal({ isOpen, title, fields, onClose, onSubmit, isSaving, initial }: ErpQoshModalProps) {
+  const [qiymatlar, setQiymatlar] = useState<Record<string, any>>(initial || {});
+  // Modal har ochilganda initial qiymatlarni qayta o'rnatamiz (eski kiritilgan qiymat qolib ketmasin)
+  const [ochiqEdi, setOchiqEdi] = useState(false);
+  if (isOpen && !ochiqEdi) { setOchiqEdi(true); setQiymatlar(initial || {}); }
+  if (!isOpen && ochiqEdi) setOchiqEdi(false);
 
   if (!isOpen) return null;
 
@@ -31,7 +39,7 @@ export function ErpQoshModal({ isOpen, title, fields, onClose, onSubmit, isSavin
       if (f.required && !qiymatlar[f.key]) return;
     }
     await onSubmit(qiymatlar);
-    setQiymatlar({});
+    setQiymatlar(initial || {});
   };
 
   return (
@@ -57,7 +65,11 @@ export function ErpQoshModal({ isOpen, title, fields, onClose, onSubmit, isSavin
                   onChange={e => set(f.key, e.target.value)}
                 >
                   <option value="">— tanlang —</option>
-                  {(f.options || []).map(o => <option key={o} value={o}>{o}</option>)}
+                  {(f.options || []).map(o => {
+                    const val = typeof o === 'string' ? o : o.value;
+                    const lab = typeof o === 'string' ? o : o.label;
+                    return <option key={val} value={val}>{lab}</option>;
+                  })}
                 </select>
               ) : f.type === 'textarea' ? (
                 <textarea

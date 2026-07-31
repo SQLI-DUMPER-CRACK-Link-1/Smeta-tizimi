@@ -4,8 +4,7 @@ import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ExternalLink } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Sahna3D from '../../kirish/Sahna3D';
 
 // --- 3D INTERACTIVE BACKGROUND ---
@@ -332,7 +331,6 @@ function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[
 // --- SMART AI XULOSA ---
 function SmartXulosa({ jami, objects }: { jami: any, objects: any[] }) {
   const qarzlar = jami.debitor || 0;
-  const qoldiq = jami.qoldiq || 0;
   const tushum = jami.tolangan || 0;
   
   // Obyektlar bo'yicha tahlil (eng yomon ko'rsatkichlar)

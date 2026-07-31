@@ -1,15 +1,22 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Truck, Search, Filter, Wrench, Fuel, MapPin, CheckCircle, Clock } from 'lucide-react';
+import { Truck, Search, Filter, Wrench, Fuel, MapPin, CheckCircle, Clock, Plus } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
-import { useTexnikaData } from '../../api/hooks';
+import { useTexnikaData, useTexnikaQosh, useTexnikaTarixQosh } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
+import { ErpQoshModal } from '../ErpQoshModal';
+import { toast } from '../../umumiy/ui/Toast';
 
 export default function ErpTexnika() {
   const { data, isLoading } = useTexnikaData();
   const [qidiruv, setQidiruv] = useState('');
   const [filtir, setFiltir] = useState('barchasi');
+  const [qoshOchiq, setQoshOchiq] = useState(false);
+  const [tarixOchiq, setTarixOchiq] = useState(false);
+  const [tanlanganTexnika, setTanlanganTexnika] = useState('');
+  const texnikaQosh = useTexnikaQosh();
+  const tarixQosh = useTexnikaTarixQosh();
 
   if (isLoading || !data) {
     return (
@@ -51,12 +58,28 @@ export default function ErpTexnika() {
     <AuroraBackground>
       <div className="max-w-[1600px] mx-auto p-6 flex flex-col h-full overflow-hidden relative z-10">
         
-        <header className="mb-6">
-          <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300 tracking-tight flex items-center gap-3">
-            <Truck className="text-purple-400" size={32} />
-            Texnika va Yoqilg'i (GSM)
-          </h1>
-          <p className="text-slate-400 mt-2 text-sm">Maxsus texnikalar, ularning holati, yoqilg'i sarfi va motochaslari</p>
+        <header className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300 tracking-tight flex items-center gap-3">
+              <Truck className="text-purple-400" size={32} />
+              Texnika va Yoqilg'i (GSM)
+            </h1>
+            <p className="text-slate-400 mt-2 text-sm">Maxsus texnikalar, ularning holati, yoqilg'i sarfi va motochaslari</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setTarixOchiq(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white font-medium hover:bg-white/15 transition-colors"
+            >
+              <Fuel size={18} /> Zapravka / Smena
+            </button>
+            <button
+              onClick={() => setQoshOchiq(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors shadow-lg"
+            >
+              <Plus size={18} /> Texnika qo'shish
+            </button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -188,10 +211,16 @@ export default function ErpTexnika() {
                       </div>
                     </td>
                     <td className="py-4 px-6 text-center space-x-2">
-                      <button className="text-xs bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-slate-300 px-3 py-1.5 rounded border border-white/10 transition-colors">
+                      <button
+                        onClick={() => { setTanlanganTexnika(t.id); setTarixOchiq(true); }}
+                        className="text-xs bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-slate-300 px-3 py-1.5 rounded border border-white/10 transition-colors"
+                      >
                         Zapravka
                       </button>
-                      <button className="text-xs bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 text-slate-300 px-3 py-1.5 rounded border border-white/10 transition-colors">
+                      <button
+                        onClick={() => { setTanlanganTexnika(t.id); setTarixOchiq(true); }}
+                        className="text-xs bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 text-slate-300 px-3 py-1.5 rounded border border-white/10 transition-colors"
+                      >
                         Motochas
                       </button>
                     </td>
@@ -201,7 +230,9 @@ export default function ErpTexnika() {
                 {filtrlanganTexnikalar.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-500">
-                      Hech qanday texnika topilmadi...
+                      {data.texnikalar.length === 0
+                        ? "Hali birorta texnika kiritilmagan — «Texnika qo'shish» tugmasini bosing."
+                        : 'Qidiruvga mos texnika topilmadi.'}
                     </td>
                   </tr>
                 )}
@@ -211,6 +242,54 @@ export default function ErpTexnika() {
 
         </div>
       </div>
+
+      <ErpQoshModal
+        isOpen={qoshOchiq}
+        title="Yangi texnika qo'shish"
+        isSaving={texnikaQosh.isPending}
+        onClose={() => setQoshOchiq(false)}
+        fields={[
+          { key: 'nom', label: 'Nomi', type: 'text', required: true, placeholder: 'Hyundai Ekskavator' },
+          { key: 'davlatRaqami', label: 'Davlat raqami', type: 'text', placeholder: '01 A 123 AA' },
+          { key: 'turi', label: 'Turi', type: 'select', options: ['Ekskavator', 'Kran', 'Samosval', 'Buldozer', 'Boshqa'] },
+          { key: 'holat', label: 'Holati', type: 'select', options: ['Ishlayapti', 'Remontda', 'Kutishda', 'Ijara'] },
+          { key: 'obyekt', label: 'Obyekt', type: 'text' },
+          { key: 'haydovchi', label: 'Haydovchi', type: 'text' },
+          { key: 'soatlikNorma', label: 'Motochasiga yoqilg\'i normasi (litr)', type: 'number', placeholder: '15' },
+          { key: 'oldingiQoldiq', label: 'Boshlang\'ich yoqilg\'i qoldig\'i (litr)', type: 'number', placeholder: '0' },
+        ]}
+        onSubmit={async (v) => {
+          try {
+            await texnikaQosh.mutateAsync(v as any);
+            toast('Texnika qo\'shildi', 'ok');
+            setQoshOchiq(false);
+          } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+        }}
+      />
+
+      <ErpQoshModal
+        isOpen={tarixOchiq}
+        title="Zapravka / Smena yozuvi"
+        isSaving={tarixQosh.isPending}
+        initial={{ texnikaId: tanlanganTexnika, sana: new Date().toISOString().split('T')[0] }}
+        onClose={() => { setTarixOchiq(false); setTanlanganTexnika(''); }}
+        fields={[
+          { key: 'texnikaId', label: 'Texnika', type: 'select', required: true, options: data.texnikalar.map((t: any) => ({ value: t.id, label: `${t.nom}${t.davlatRaqami ? ' · ' + t.davlatRaqami : ''}` })) },
+          { key: 'sana', label: 'Sana', type: 'date', required: true },
+          { key: 'kirimLitr', label: 'Quyilgan yoqilg\'i (litr)', type: 'number', placeholder: '0' },
+          { key: 'chiqimLitr', label: 'Qo\'lda chiqim (litr)', type: 'number', placeholder: '0' },
+          { key: 'motochas', label: 'Motochas (soat)', type: 'number', placeholder: '0' },
+          { key: 'izoh', label: 'Izoh', type: 'textarea' },
+        ]}
+        onSubmit={async (v) => {
+          try {
+            await tarixQosh.mutateAsync(v as any);
+            toast('Yozuv qo\'shildi', 'ok');
+            setTarixOchiq(false);
+            setTanlanganTexnika('');
+          } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+        }}
+      />
     </AuroraBackground>
   );
 }

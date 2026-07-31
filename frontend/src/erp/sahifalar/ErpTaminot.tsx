@@ -1,15 +1,26 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, AlertTriangle, Search, TrendingUp, HandCoins, Package, ClipboardList, MapPin } from 'lucide-react';
+import { ShoppingCart, AlertTriangle, Search, TrendingUp, HandCoins, Package, ClipboardList, MapPin, Plus } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
-import { useTaminotData } from '../../api/hooks';
+import { useTaminotData, useZayavkaQosh, useZayavkaHolatYangila } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
+import { ErpQoshModal } from '../ErpQoshModal';
+import { toast } from '../../umumiy/ui/Toast';
+import type { ZayavkaStatus } from '../../api/types';
+
+const ZAYAVKA_HOLATLARI: ZayavkaStatus[] = [
+  'Obyektdan so\'rov', 'Omborda tekshirilmoqda', 'Ombordan berildi',
+  'Bozorda', 'Yuborildi', 'Qabul qilindi', 'Rad etildi',
+];
 
 export default function ErpTaminot() {
   const { data, isLoading } = useTaminotData();
   const [qidiruv, setQidiruv] = useState('');
   const [tab, setTab] = useState<'zayavkalar' | 'sklad'>('zayavkalar');
+  const [qoshOchiq, setQoshOchiq] = useState(false);
+  const zayavkaQosh = useZayavkaQosh();
+  const holatYangila = useZayavkaHolatYangila();
 
   if (isLoading || !data) {
     return (
@@ -28,6 +39,13 @@ export default function ErpTaminot() {
     m.nom.toLowerCase().includes(qidiruv.toLowerCase())
   );
 
+  const holatOzgartir = async (id: string, status: ZayavkaStatus) => {
+    try {
+      await holatYangila.mutateAsync({ id, status });
+      toast(`Holat o'zgartirildi: ${status}`, 'ok');
+    } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+  };
+
   const zayavkaRangi = (status: string) => {
     switch (status) {
       case 'Obyektdan so\'rov': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
@@ -44,12 +62,20 @@ export default function ErpTaminot() {
     <AuroraBackground>
       <div className="max-w-[1600px] mx-auto p-6 flex flex-col h-full overflow-hidden relative z-10">
         
-        <header className="mb-6">
-          <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-300 tracking-tight flex items-center gap-3">
-            <ShoppingCart className="text-blue-400" size={32} />
-            Ta'minot va Ombor (Sklad)
-          </h1>
-          <p className="text-slate-400 mt-2 text-sm">Zayavkalar ekotizimi, Perekidkalar va Material qoldiqlari nazorati</p>
+        <header className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-300 tracking-tight flex items-center gap-3">
+              <ShoppingCart className="text-blue-400" size={32} />
+              Ta'minot va Ombor (Sklad)
+            </h1>
+            <p className="text-slate-400 mt-2 text-sm">Zayavkalar ekotizimi, Perekidkalar va Material qoldiqlari nazorati</p>
+          </div>
+          <button
+            onClick={() => setQoshOchiq(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors shadow-lg"
+          >
+            <Plus size={18} /> Zayavka berish
+          </button>
         </header>
 
         {/* KPIs */}
@@ -172,23 +198,46 @@ export default function ErpTaminot() {
                       </td>
                       <td className="py-4 px-6 text-center space-x-2">
                         {z.status === 'Obyektdan so\'rov' && (
-                          <button className="text-xs bg-orange-500/20 hover:bg-orange-500 hover:text-white text-orange-400 px-3 py-1.5 rounded border border-orange-500/30 transition-colors">
+                          <button
+                            onClick={() => holatOzgartir(z.id, 'Omborda tekshirilmoqda')}
+                            disabled={holatYangila.isPending}
+                            className="text-xs bg-orange-500/20 hover:bg-orange-500 hover:text-white text-orange-400 px-3 py-1.5 rounded border border-orange-500/30 transition-colors disabled:opacity-50"
+                          >
                             Skladda tekshirish
                           </button>
                         )}
                         {z.status === 'Omborda tekshirilmoqda' && (
                           <div className="flex justify-center gap-2">
-                             <button className="text-xs bg-emerald-500/20 hover:bg-emerald-500 hover:text-white text-emerald-400 px-2 py-1.5 rounded border border-emerald-500/30 transition-colors" title="Skladda bor, Nakladnoy bilan berish">
+                             <button
+                               onClick={() => holatOzgartir(z.id, 'Ombordan berildi')}
+                               disabled={holatYangila.isPending}
+                               className="text-xs bg-emerald-500/20 hover:bg-emerald-500 hover:text-white text-emerald-400 px-2 py-1.5 rounded border border-emerald-500/30 transition-colors disabled:opacity-50" title="Skladda bor, Nakladnoy bilan berish">
                                Skladdan berish
                              </button>
-                             <button className="text-xs bg-blue-500/20 hover:bg-blue-500 hover:text-white text-blue-400 px-2 py-1.5 rounded border border-blue-500/30 transition-colors" title="Skladda yo'q, Snabshenes qidiradi">
+                             <button
+                               onClick={() => holatOzgartir(z.id, 'Bozorda')}
+                               disabled={holatYangila.isPending}
+                               className="text-xs bg-blue-500/20 hover:bg-blue-500 hover:text-white text-blue-400 px-2 py-1.5 rounded border border-blue-500/30 transition-colors disabled:opacity-50" title="Skladda yo'q, Snabshenes qidiradi">
                                Bozorga jo'natish
                              </button>
                           </div>
                         )}
                         {z.status === 'Bozorda' && (
-                          <button className="text-xs bg-purple-500/20 hover:bg-purple-500 hover:text-white text-purple-400 px-3 py-1.5 rounded border border-purple-500/30 transition-colors">
+                          <button
+                            onClick={() => holatOzgartir(z.id, 'Yuborildi')}
+                            disabled={holatYangila.isPending}
+                            className="text-xs bg-purple-500/20 hover:bg-purple-500 hover:text-white text-purple-400 px-3 py-1.5 rounded border border-purple-500/30 transition-colors disabled:opacity-50"
+                          >
                             Xarid qilish va Obyektga yuborish
+                          </button>
+                        )}
+                        {z.status === 'Yuborildi' && (
+                          <button
+                            onClick={() => holatOzgartir(z.id, 'Qabul qilindi')}
+                            disabled={holatYangila.isPending}
+                            className="text-xs bg-emerald-500/20 hover:bg-emerald-500 hover:text-white text-emerald-400 px-3 py-1.5 rounded border border-emerald-500/30 transition-colors disabled:opacity-50"
+                          >
+                            Obyekt qabul qildi
                           </button>
                         )}
                       </td>
@@ -264,6 +313,31 @@ export default function ErpTaminot() {
           </div>
         </div>
       </div>
+
+      <ErpQoshModal
+        isOpen={qoshOchiq}
+        title="Yangi zayavka (material so'rovi)"
+        isSaving={zayavkaQosh.isPending}
+        initial={{ sana: new Date().toISOString().split('T')[0], status: 'Obyektdan so\'rov' }}
+        onClose={() => setQoshOchiq(false)}
+        fields={[
+          { key: 'material', label: 'Material nomi', type: 'text', required: true, placeholder: 'Sement M400' },
+          { key: 'miqdor', label: 'Miqdori', type: 'number', required: true, placeholder: '15' },
+          { key: 'birlik', label: 'O\'lchov birligi', type: 'text', placeholder: 'tonna' },
+          { key: 'obyekt', label: 'Obyekt', type: 'text' },
+          { key: 'prorab', label: 'So\'ragan prorab', type: 'text' },
+          { key: 'sana', label: 'Sana', type: 'date' },
+          { key: 'status', label: 'Boshlang\'ich holat', type: 'select', options: ZAYAVKA_HOLATLARI },
+          { key: 'izoh', label: 'Izoh', type: 'textarea', placeholder: 'Shoshilinch...' },
+        ]}
+        onSubmit={async (v) => {
+          try {
+            await zayavkaQosh.mutateAsync(v as any);
+            toast('Zayavka qo\'shildi', 'ok');
+            setQoshOchiq(false);
+          } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+        }}
+      />
     </AuroraBackground>
   );
 }

@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, Search, ShieldAlert, CheckCircle, Clock } from 'lucide-react';
+import { ShieldCheck, Search, ShieldAlert, CheckCircle, Clock, Plus } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
-import { useSifatData } from '../../api/hooks';
+import { useSifatData, useNuqsonQosh, useNuqsonHolatYangila } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
+import { ErpQoshModal } from '../ErpQoshModal';
+import { toast } from '../../umumiy/ui/Toast';
 
 export default function ErpSifat() {
   const { data, isLoading } = useSifatData();
   const [qidiruv, setQidiruv] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('Barchasi');
+  const [qoshOchiq, setQoshOchiq] = useState(false);
+  const nuqsonQosh = useNuqsonQosh();
+  const holatYangila = useNuqsonHolatYangila();
 
   if (isLoading || !data) {
     return (
@@ -26,6 +31,13 @@ export default function ErpSifat() {
     }
     return mosKeladi;
   });
+
+  const holatOzgartir = async (id: string, status: 'Jarayonda' | 'Tuzatildi') => {
+    try {
+      await holatYangila.mutateAsync({ id, status });
+      toast(`Holat o'zgartirildi: ${status}`, 'ok');
+    } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+  };
 
   const darajaRangi = (daraja: string) => {
     switch (daraja) {
@@ -50,12 +62,20 @@ export default function ErpSifat() {
     <AuroraBackground>
       <div className="max-w-[1600px] mx-auto p-6 flex flex-col h-full overflow-hidden relative z-10">
         
-        <header className="mb-6">
-          <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 tracking-tight flex items-center gap-3">
-            <ShieldCheck className="text-blue-400" size={32} />
-            Sifat Nazorati (Texnadzor)
-          </h1>
-          <p className="text-slate-400 mt-2 text-sm">Obyektlardagi nuqsonlar (defektlar) va ularni tuzatish jarayoni</p>
+        <header className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 tracking-tight flex items-center gap-3">
+              <ShieldCheck className="text-blue-400" size={32} />
+              Sifat Nazorati (Texnadzor)
+            </h1>
+            <p className="text-slate-400 mt-2 text-sm">Obyektlardagi nuqsonlar (defektlar) va ularni tuzatish jarayoni</p>
+          </div>
+          <button
+            onClick={() => setQoshOchiq(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors shadow-lg"
+          >
+            <Plus size={18} /> Nuqson qayd etish
+          </button>
         </header>
 
         {/* KPIs */}
@@ -170,13 +190,25 @@ export default function ErpSifat() {
                     </td>
                     <td className="py-4 px-6 text-center space-x-2">
                       {n.status !== 'Tuzatildi' && (
-                        <button className="text-xs bg-emerald-500/20 hover:bg-emerald-500 hover:text-white text-emerald-400 px-3 py-1.5 rounded border border-emerald-500/30 transition-colors">
-                          Tuzatildi deb belgilash
-                        </button>
+                        <>
+                          {n.status === 'Yangi' && (
+                            <button
+                              onClick={() => holatOzgartir(n.id, 'Jarayonda')}
+                              disabled={holatYangila.isPending}
+                              className="text-xs bg-amber-500/20 hover:bg-amber-500 hover:text-white text-amber-400 px-3 py-1.5 rounded border border-amber-500/30 transition-colors disabled:opacity-50"
+                            >
+                              Ishga olindi
+                            </button>
+                          )}
+                          <button
+                            onClick={() => holatOzgartir(n.id, 'Tuzatildi')}
+                            disabled={holatYangila.isPending}
+                            className="text-xs bg-emerald-500/20 hover:bg-emerald-500 hover:text-white text-emerald-400 px-3 py-1.5 rounded border border-emerald-500/30 transition-colors disabled:opacity-50"
+                          >
+                            Tuzatildi deb belgilash
+                          </button>
+                        </>
                       )}
-                      <button className="text-xs bg-white/5 hover:bg-white/10 text-slate-300 px-3 py-1.5 rounded border border-white/10 transition-colors">
-                        Batafsil
-                      </button>
                     </td>
                   </motion.tr>
                 ))}
@@ -184,7 +216,9 @@ export default function ErpSifat() {
                 {filtrlanganNuqsonlar.length === 0 && (
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-slate-500">
-                      Hech qanday nuqson topilmadi
+                      {data.nuqsonlar.length === 0
+                        ? "Hali birorta nuqson qayd etilmagan — «Nuqson qayd etish» tugmasini bosing."
+                        : 'Filtrga mos nuqson topilmadi.'}
                     </td>
                   </tr>
                 )}
@@ -193,6 +227,30 @@ export default function ErpSifat() {
           </div>
         </div>
       </div>
+
+      <ErpQoshModal
+        isOpen={qoshOchiq}
+        title="Yangi nuqson qayd etish"
+        isSaving={nuqsonQosh.isPending}
+        initial={{ sana: new Date().toISOString().split('T')[0], daraja: 'Oddiy', status: 'Yangi' }}
+        onClose={() => setQoshOchiq(false)}
+        fields={[
+          { key: 'tavsif', label: 'Nuqson tavsifi', type: 'textarea', required: true, placeholder: 'B1 ustunda beton markasi past chiqdi...' },
+          { key: 'obyekt', label: 'Obyekt', type: 'text' },
+          { key: 'prorab', label: 'Mas\'ul prorab', type: 'text' },
+          { key: 'daraja', label: 'Muhimlik darajasi', type: 'select', options: ['Oddiy', 'O\'rta', 'Kritik'] },
+          { key: 'sana', label: 'Qayd etilgan sana', type: 'date' },
+          { key: 'muddat', label: 'Tuzatish muddati', type: 'date' },
+          { key: 'izoh', label: 'Izoh', type: 'textarea' },
+        ]}
+        onSubmit={async (v) => {
+          try {
+            await nuqsonQosh.mutateAsync(v as any);
+            toast('Nuqson qayd etildi', 'ok');
+            setQoshOchiq(false);
+          } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+        }}
+      />
     </AuroraBackground>
   );
 }

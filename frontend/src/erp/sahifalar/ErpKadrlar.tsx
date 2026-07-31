@@ -197,7 +197,9 @@ export default function ErpKadrlar() {
                 {filtrlanganIshchilar.length === 0 && (
                   <tr>
                     <td colSpan={34} className="py-12 text-center text-slate-500">
-                      Hech qanday ma'lumot topilmadi...
+                      {data.ishchilar.length === 0
+                        ? "Hali birorta ishchi kiritilmagan — «Ishchi qo'shish» tugmasini bosing."
+                        : 'Qidiruvga mos ishchi topilmadi.'}
                     </td>
                   </tr>
                 )}
@@ -207,6 +209,30 @@ export default function ErpKadrlar() {
 
         </div>
       </div>
+
+      <ErpQoshModal
+        isOpen={qoshOchiq}
+        title="Yangi ishchi qo'shish"
+        isSaving={ishchiQosh.isPending}
+        onClose={() => setQoshOchiq(false)}
+        fields={[
+          { key: 'ism', label: 'F.I.O', type: 'text', required: true, placeholder: 'Azizov Bahrom' },
+          { key: 'kasb', label: 'Kasbi', type: 'text', placeholder: 'Prorab' },
+          { key: 'stavka', label: 'Kunlik stavka (so\'m)', type: 'number', placeholder: '250000' },
+          { key: 'brigada', label: 'Brigada', type: 'text', placeholder: 'Brigada-1' },
+          { key: 'obyekt', label: 'Obyekt', type: 'text' },
+          { key: 'telefon', label: 'Telefon', type: 'text', placeholder: '+998 90 123 45 67' },
+        ]}
+        onSubmit={async (v) => {
+          try {
+            await ishchiQosh.mutateAsync(v as any);
+            toast('Ishchi qo\'shildi', 'ok');
+            setQoshOchiq(false);
+          } catch (e: any) {
+            toast('Xato: ' + e.message, 'danger');
+          }
+        }}
+      />
     </AuroraBackground>
   );
 }
