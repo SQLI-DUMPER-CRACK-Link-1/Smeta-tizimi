@@ -214,7 +214,7 @@ export function F2Import() {
       });
       return k;
     };
-    const kids = (tur === 'bl') ? getKids(d) : [];
+    const kids = (tur === 'bl') ? getKids(d).filter(k => !moslikMap.has(k.uid) && !qolDop[k.uid]) : [];
 
     setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
     setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
@@ -320,7 +320,7 @@ export function F2Import() {
       });
       return k;
     };
-    const kids = (tur === 'bl') ? getKids(d) : [];
+    const kids = (tur === 'bl') ? getKids(d).filter(k => !moslikMap.has(k.uid) && !qolDop[k.uid]) : [];
 
     setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
     setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
@@ -371,7 +371,7 @@ export function F2Import() {
       });
       return k;
     };
-    const kids = (tur === 'bl') ? getKids(d) : [];
+    const kids = (tur === 'bl') ? getKids(d).filter(k => !moslikMap.has(k.uid) && !qolDop[k.uid]) : [];
 
     setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
     setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
