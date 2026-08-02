@@ -498,7 +498,7 @@ function RazdelRow({ nom }: { nom: string }) {
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(`/boss/holat/${encodeURIComponent(nom)}`, '_blank');
+                  window.open(`/boss/holat/${encodeURIComponent(nom.split(' - ')[1] || nom)}`, '_blank');
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-semibold border border-blue-500/20 transition-all hover:scale-105 active:scale-95"
                 title="Batafsil ma'lumot (Drill-Down)"
@@ -571,7 +571,7 @@ function ObyektRow({ obj }: { obj: any }) {
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              window.open(`/boss/holat/${encodeURIComponent(obj.nom)}`, '_blank');
+              window.open(`/boss/holat/${encodeURIComponent(obj.obyekt || obj.nom)}`, '_blank');
             }}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-bold border border-indigo-500/20 transition-all hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(99,102,241,0.1)]"
             title="Ushbu obyektning eng kichik detaligacha kirish"
@@ -685,7 +685,7 @@ function KpiModal({ kpi, onClose }: { kpi: any, onClose: () => void }) {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(`/boss/holat/${encodeURIComponent(item.nom)}`, '_blank');
+                          window.open(`/boss/holat/${encodeURIComponent(item.obyekt || item.nom)}`, '_blank');
                         }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-1 bg-white/10 hover:bg-white/20 rounded-md text-xs text-white/70"
                         title="Ichiga kirish"
