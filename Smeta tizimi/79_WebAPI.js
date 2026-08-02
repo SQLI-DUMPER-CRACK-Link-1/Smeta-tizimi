@@ -57,7 +57,7 @@ function _wapiRuxsatmi(fn){
   if(fn.indexOf('api') !== 0) return false;          // faqat api*
   if(WAPI_QORA_ROYXAT[fn]) return false;             // qora ro'yxat
   if(!/^[A-Za-z0-9_]+$/.test(fn)) return false;      // toza nom
-  return typeof globalThis[fn] === 'function';
+  return typeof this[fn] === 'function' || typeof globalThis[fn] === 'function';
 }
 
 /* ============ 3. ASOSIY MARSHRUTIZATOR ============ */

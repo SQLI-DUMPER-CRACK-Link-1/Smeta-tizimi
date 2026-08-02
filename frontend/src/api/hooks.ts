@@ -377,8 +377,8 @@ export function useF2FaylOqi() {
 /** ⭐ Avto-moslashtirish — dvigatel GAS'da (35_F2Moslash.js), saytda TAKRORLANMAYDI */
 export function useF2AvtoMoslash() {
   return useMutation({
-    mutationFn: ({ aktTree, obyekt, lokalka }: { aktTree: AktNode[]; obyekt: string; lokalka?: string }) =>
-      gas<F2MoslashNatija>('apiF2AvtoMoslash', aktTree, obyekt, { lokalka: lokalka || '' }),
+    mutationFn: ({ aktTree, obyekt, lokalka, qatiy }: { aktTree: AktNode[]; obyekt: string; lokalka?: string; qatiy?: boolean }) =>
+      gas<F2MoslashNatija>('apiF2AvtoMoslash', aktTree, obyekt, { lokalka: lokalka || '', qatiy }),
   });
 }
 

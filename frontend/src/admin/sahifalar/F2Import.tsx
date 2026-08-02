@@ -27,6 +27,11 @@ function barglar(nodes: AktNode[] = []): AktNode[] {
   return out;
 }
 
+function formatVol(val: any) {
+  if (typeof val !== 'number') return val;
+  return Number(val.toFixed(4));
+}
+
 const QADAMLAR = ['Fayl', "Moslashtirish va bog'lash", 'Yozish'];
 
 export function F2Import() {
@@ -50,6 +55,12 @@ export function F2Import() {
   const [ochiqSignal, setOchiqSignal] = useState(0);
   const [qolBekor, setQolBekor] = useState<Set<string>>(new Set());
   const [qolBog, setQolBog] = useState<Record<string, F2Moslik>>({});
+  const [qolDop, setQolDop] = useState<Record<string, any>>({});
+  const [dopModalUid, setDopModalUid] = useState<string | null>(null);
+  
+  // Drag and Drop (Zamena/Dop) oraliq holati
+  const [dropState, setDropState] = useState<{aktKalit: string, smetaKalit: string, smetaRow: number, varaqNom: string} | null>(null);
+
   const faylRef = useRef<HTMLInputElement>(null);
 
   const loklar = useF2Lokalkalar(obyekt);
@@ -112,13 +123,21 @@ export function F2Import() {
     () => [...moslikMap.values()].filter((m) => !bargUidlar.has(m.uid)).length,
     [moslikMap, bargUidlar],
   );
-  /** Bog'lanmagan barglar — ular ➕ qo'shimcha bo'lib ketadi */
+  /** Bog'lanmagan barglar — ular endi avtomatik qoshilmaydi, faqat Dop modal orqali qoshiladi */
+  const doppedUids = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(qolDop).forEach(d => {
+      s.add(d.uid);
+      if (d.childUids) d.childUids.forEach((c: string) => s.add(c));
+    });
+    return s;
+  }, [qolDop]);
+
   const boglanmagan = useMemo(() => {
-    return aktBarglar.filter((n) => !moslikMap.has(n.uid));
-  }, [aktBarglar, moslikMap]);
-  const dopJami = useMemo(() => boglanmagan.reduce((a, n) => a + (n.summa || 0), 0), [boglanmagan]);
-
-
+    return aktBarglar.filter((n) => !moslikMap.has(n.uid) && !doppedUids.has(n.uid));
+  }, [aktBarglar, moslikMap, doppedUids]);
+  
+  const dopJami = useMemo(() => Object.values(qolDop).reduce((a, n) => a + (n.summa || 0), 0), [qolDop]);
 
   function bogBekor(uid: string) {
     setQolBekor((p) => new Set(p).add(uid));
@@ -136,15 +155,179 @@ export function F2Import() {
     const n = aktBarglar.find((x) => x.uid === aktKalit)
       ?? aktBarchaTugun.find((x) => x.uid === aktKalit);
     if (!n) { toast('Akt qatori topilmadi'); return; }
+    
+    // Zudlik bilan Zamena qilib yubormaymiz, modal ochamiz!
+    setDropState({ aktKalit, smetaKalit, smetaRow: row, varaqNom });
+  }
+
+  function tasdiqlaDropZamena() {
+    if (!dropState) return;
+    const { aktKalit, smetaRow, varaqNom } = dropState;
+    const n = aktBarchaTugun.find((x) => x.uid === aktKalit);
+    if (!n) return;
+    
     setQolBekor((p) => { const s = new Set(p); s.delete(aktKalit); return s; });
-    setQolBog((p) => ({
+    setQolDop((p) => { const nd = { ...p }; delete nd[aktKalit]; return nd; });
+
+    const newBog = { [aktKalit]: {
+      uid: aktKalit, varaq: varaqNom, row: smetaRow,
+      kod: n.kod ?? '', hajm: n.hajm ?? 0, narx: n.narx ?? 0, summa: n.summa ?? 0,
+    } };
+
+    // Agar BL bo'lsa va ichida rs lari bo'lsa, va ular bog'lanmagan bo'lsa, ularni ham Dop qilib qo'shamiz!
+    // (Foydalanuvchi "bl ni tortib tashlasam ichidagi rs larni ham kiritishi kerak" degandi).
+    if (n.type === 'bl') {
+       let targetSmetaNode: any = null;
+       const findSmetaNode = (nodes: any[]) => {
+         for (const sn of nodes) {
+            if (sn.row === smetaRow && sn.varaq === varaqNom) { targetSmetaNode = sn; return; }
+            if (sn.children) findSmetaNode(sn.children);
+            if (targetSmetaNode) return;
+         }
+       };
+       findSmetaNode(lrv.data?.tree || []);
+
+       const smetaBolalar = targetSmetaNode?.children || [];
+       const bandBolalar = new Set<string>(); // qaysi smeta row band bo'ldi
+       const cleanStr = (s?: string) => (s || '').replace(/\s+/g, '').toUpperCase();
+
+       const getKids = (node: AktNode): any[] => {
+         let k: any[] = [];
+         (node.children || []).forEach(c => {
+            k.push({uid: c.uid, type: c.type, kod: c.kod, nom: c.nom, bir: c.bir, hajm: c.hajm, narx: c.narx, summa: c.summa});
+            if (c.children) k = k.concat(getKids(c));
+         });
+         return k;
+       };
+       
+       const kids = getKids(n).filter(k => !moslikMap.has(k.uid) && !qolDop[k.uid]);
+       
+       kids.forEach(k => {
+          let mapped = false;
+          // Smeta bolalari ichidan mosini qidiramiz (kod, yoki nom+birlik bo'yicha)
+          for (const sb of smetaBolalar) {
+             if (bandBolalar.has(sb.varaq + '#' + sb.row) || joyMap.has(sb.varaq + '#' + sb.row)) continue;
+             if ((k.kod && sb.kod && cleanStr(k.kod) === cleanStr(sb.kod)) || 
+                 (cleanStr(k.nom) === cleanStr(sb.nom) && cleanStr(k.bir) === cleanStr(sb.birlik))) {
+                
+                // Topildi! Zamena qilamiz
+                newBog[k.uid] = {
+                   uid: k.uid, varaq: sb.varaq, row: sb.row,
+                   kod: k.kod ?? '', hajm: k.hajm ?? 0, narx: k.narx ?? 0, summa: k.summa ?? 0,
+                };
+                bandBolalar.add(sb.varaq + '#' + sb.row);
+                setQolBekor((p) => { const s = new Set(p); s.delete(k.uid); return s; });
+                mapped = true;
+                break;
+             }
+          }
+
+          if (!mapped) {
+             // Topilmadi, shuning uchun Dop qilamiz
+             setQolDop(p => ({
+               ...p,
+               [k.uid]: {
+                 uid: k.uid, varaq: varaqNom, action: 'add_bl', tur: k.type === 'ob' ? 'ob' : 'mat', targetRow: smetaRow,
+                 kod: k.kod, nom: k.nom, bir: k.bir, hajm: k.hajm, narx: k.narx || 0,
+                 summa: k.summa || 0, children: [], childUids: []
+               }
+             }));
+          }
+       });
+    }
+
+    setQolBog((p) => ({ ...p, ...newBog }));
+    toast(`Bog'landi (Zamena): ${String(n.nom).slice(0, 34)}`);
+    setDropState(null);
+  }
+
+  function tasdiqlaDropDop() {
+    if (!dropState) return;
+    const { aktKalit, smetaRow, varaqNom } = dropState;
+    const d = aktBarchaTugun.find((x) => x.uid === aktKalit);
+    if (!d) return;
+
+    const tur = (d.type === 'ob') ? 'ob' : ((d.type === 'mat' || d.type === 'rs') ? 'mat' : 'bl');
+    const getKids = (node: AktNode): any[] => {
+      let k: any[] = [];
+      (node.children || []).forEach(c => {
+         k.push({uid: c.uid, type: c.type, kod: c.kod, nom: c.nom, bir: c.bir, hajm: c.hajm, narx: c.narx, summa: c.summa});
+         if (c.children) k = k.concat(getKids(c));
+      });
+      return k;
+    };
+    const kids = (tur === 'bl') ? getKids(d) : [];
+
+    setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
+    setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
+
+    setQolDop((p) => ({
       ...p,
-      [aktKalit]: {
-        uid: aktKalit, varaq: varaqNom, row,
-        kod: n.kod ?? '', hajm: n.hajm ?? 0, narx: n.narx ?? 0, summa: n.summa ?? 0,
-      },
+      [d.uid]: {
+        uid: d.uid, varaq: varaqNom, action: 'add_bl', tur, targetRow: smetaRow,
+        kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, narx: d.narx || 0,
+        summa: d.summa || 0, children: kids, childUids: kids.map(c => c.uid)
+      }
     }));
-    toast(`Bog'landi: ${String(n.nom).slice(0, 34)} → ${row}-qator`);
+    toast(`Qo'shimcha ish qilib qo'shildi!`);
+    setDropState(null);
+  }
+
+  function handleDopClick(uid: string) {
+    setDopModalUid(uid);
+  }
+
+  const smetaRazdellar = useMemo(() => {
+    const out: {nom: string, varaq: string, lastRow: number, row: number}[] = [];
+    (lrv.data?.tree || []).forEach((n: any) => {
+      if (n.type === 'rz') {
+        let lastRow = n.row || 0;
+        (n.children || []).forEach((c: any) => {
+          if (c.row > lastRow) lastRow = c.row;
+          (c.children || []).forEach((r2: any) => { if (r2.row > lastRow) lastRow = r2.row; });
+        });
+        out.push({ nom: n.nom || '(nom yo\'q)', varaq: n.varaq || '', lastRow, row: n.row || 0 });
+      }
+    });
+    return out;
+  }, [lrv.data]);
+
+  function tasdiqlaDop(rz: typeof smetaRazdellar[0]) {
+    if (!dopModalUid) return;
+    const d = aktBarchaTugun.find((x) => x.uid === dopModalUid);
+    if (!d) return;
+    const tur = (d.type === 'ob') ? 'ob' : ((d.type === 'mat' || d.type === 'rs') ? 'mat' : 'bl');
+    
+    // Agar BL bo'lsa, uning bolalarini ham yig'ib olish
+    const getKids = (node: AktNode): any[] => {
+      let k: any[] = [];
+      (node.children || []).forEach(c => {
+         k.push({uid: c.uid, type: c.type, kod: c.kod, nom: c.nom, bir: c.bir, hajm: c.hajm, narx: c.narx, summa: c.summa});
+         if (c.children) k = k.concat(getKids(c));
+      });
+      return k;
+    };
+    const kids = (tur === 'bl') ? getKids(d) : [];
+
+    setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
+    setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
+
+    setQolDop((p) => ({
+      ...p,
+      [d.uid]: {
+        uid: d.uid, varaq: rz.varaq, action: 'add_bl', tur, targetRow: rz.lastRow,
+        kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, narx: d.narx || 0,
+        summa: d.summa || 0, children: kids, childUids: kids.map(c => c.uid)
+      }
+    }));
+    setDopModalUid(null);
+    toast(`${rz.nom} ga Qo'shimcha ish bo'lib qo'shildi`, 'ok');
+  }
+
+  function handleBekorSmetaTaraf(aktUid: string) {
+    setQolBekor((p) => { const s = new Set(p); s.add(aktUid); return s; });
+    setQolBog((p) => { const nb = { ...p }; delete nb[aktUid]; return nb; });
+    setQolDop((p) => { const nd = { ...p }; delete nd[aktUid]; return nd; });
   }
 
   /* ---------- Daraxtlar (ikki panel uchun) ---------- */
@@ -160,7 +343,7 @@ export function F2Import() {
       summa: n.summa,
       belgi: n.type === 'rz' ? undefined : (
         <div className="flex gap-3 items-center text-[12px] whitespace-nowrap">
-          {n.hajm ? <span>Hajm: <span className="font-medium text-emerald-400">{n.hajm}</span></span> : null}
+          {n.hajm ? <span>Hajm: <span className="font-medium text-emerald-400">{formatVol(n.hajm)}</span></span> : null}
           <span>Summa: <FmtN val={n.summa} /></span>
         </div>
       ),
@@ -181,10 +364,53 @@ export function F2Import() {
            const farq = (n.qoldiq ?? 0) - (aktQator.hajm ?? 0);
            boglanganAktText = (
              <div className="mt-1 p-1 px-2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex justify-between items-center text-[11px] min-w-[200px]">
-                <span>+ {aktQator.hajm} (F2: {aktQator.kod || 'kodsiz'}) - <FmtN val={aktQator.summa}/></span>
-                {Math.abs(farq) > 0.001 && <span className={farq < 0 ? 'text-red-400 ml-2 font-bold' : 'text-orange-300 ml-2'}>Farq: {farq > 0 ? `+${farq.toFixed(3)}` : farq.toFixed(3)}</span>}
+                <div className="flex items-center gap-2">
+                   <span>+ {formatVol(aktQator.hajm)} (F2: {aktQator.kod || 'kodsiz'}) - <FmtN val={aktQator.summa}/></span>
+                   {Math.abs(farq) > 0.001 && <span className={farq < 0 ? 'text-red-400 ml-2 font-bold' : 'text-orange-300 ml-2'}>Farq: {farq > 0 ? `+${formatVol(farq)}` : formatVol(farq)}</span>}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); handleBekorSmetaTaraf(boglanganAktUid); }} className="ml-4 hover:text-red-400 font-bold px-2 rounded bg-black/20 hover:bg-black/40 transition-colors text-slate-300" title="Bekor qilish">
+                   ✕
+                </button>
              </div>
            );
+        }
+      }
+
+      let mappedChildren = n.children?.length ? map(n.children) : undefined;
+
+      if (n.type === 'rz') {
+        let lastRow = n.row || 0;
+        (n.children || []).forEach((c: any) => {
+          if (c.row > lastRow) lastRow = c.row;
+          (c.children || []).forEach((r2: any) => { if (r2.row > lastRow) lastRow = r2.row; });
+        });
+        
+        const doppsForThisRz = Object.values(qolDop).filter(d => d.varaq === n.varaq && d.targetRow === lastRow);
+        if (doppsForThisRz.length > 0) {
+          if (!mappedChildren) mappedChildren = [];
+          doppsForThisRz.forEach(d => {
+             mappedChildren!.push({
+                kalit: `dop_${d.uid}`,
+                type: d.tur === 'ob' ? 'ob' : (d.tur === 'mat' ? 'mat' : 'bl'),
+                nom: `${d.nom}`,
+                kod: d.kod,
+                bir: d.bir,
+                belgi: (
+                  <div className="flex flex-col items-end">
+                     <div className="mt-1 p-1 px-2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 flex justify-between items-center text-[11px] min-w-[200px]">
+                        <span>Qo'shimcha ish hajmi: {formatVol(d.hajm)}</span>
+                        <div className="flex items-center gap-4">
+                           <span className="font-bold"><FmtN val={d.summa}/></span>
+                           <button onClick={(e) => { e.stopPropagation(); handleBekorSmetaTaraf(d.uid); }} className="hover:text-red-400 font-bold px-2 rounded bg-black/20 hover:bg-black/40 transition-colors text-slate-300" title="Bekor qilish">
+                              ✕
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+                ),
+                children: undefined
+             });
+          });
         }
       }
 
@@ -197,18 +423,18 @@ export function F2Import() {
         belgi: n.type === 'rz' ? undefined : (
           <div className="flex flex-col items-end">
             <div className="flex gap-2 items-center text-[11px] opacity-80 whitespace-nowrap">
-              {n.smetaHajm != null && <span>Smeta: <span className="font-medium text-white">{n.smetaHajm}</span></span>}
-              {n.qoldiq != null && <span>| Qoldiq: <span className="text-orange-400">{n.qoldiq}</span></span>}
-              {n.fakt > 0 && <span>| O'tgan F2: <span className="text-blue-400">{n.fakt}</span></span>}
+              {n.smetaHajm != null && <span>Smeta: <span className="font-medium text-white">{formatVol(n.smetaHajm)}</span></span>}
+              {n.qoldiq != null && <span>| Qoldiq: <span className="text-orange-400">{formatVol(n.qoldiq)}</span></span>}
+              {n.fakt > 0 && <span>| O'tgan F2: <span className="text-blue-400">{formatVol(n.fakt)}</span></span>}
             </div>
             {boglanganAktText}
           </div>
         ),
-        children: n.children?.length ? map(n.children) : undefined,
+        children: mappedChildren,
       };
     });
     return map(lrv.data?.tree ?? []);
-  }, [lrv.data, joyMap, aktBarchaTugun]);
+  }, [lrv.data, joyMap, aktBarchaTugun, qolDop]);
 
   const farq = aktJami - (boglanganJami + dopJami);
   const constOk = Math.abs(farq) < 1;
@@ -276,7 +502,7 @@ export function F2Import() {
   async function moslashtir() {
     if (!aktTree) return;
     try {
-      const r = await moslash.mutateAsync({ aktTree, obyekt, lokalka });
+      const r = await moslash.mutateAsync({ aktTree, obyekt, lokalka, qatiy: true });
       setNatija(r);
     } catch (e: any) { toast(`Moslashtirishda xato: ${e.message}`); }
   }
@@ -284,11 +510,8 @@ export function F2Import() {
   /* ---------- 4. Yozish ---------- */
   async function yozish() {
     if (!natija) return;
-    const dopps = boglanmagan.map((n) => ({
-      uid: n.uid, nom: n.nom, kod: n.kod || '', bir: n.bir || '',
-      hajm: n.hajm || 0, narx: n.narx || 0, summa: n.summa || 0,
-      type: n.type, tur: n.type === 'bl' ? 'bl' : n.type, kat: '', action: 'dop',
-    }));
+    // Dopps endi boglanmagan ro'yxatidan EMAS, faqat qo'lda tasdiqlangan qolDop dan keladi!
+    const dopps = Object.values(qolDop);
     try {
       const r = await yoz.mutateAsync({
         obyekt, oyNom, edits: [...moslikMap.values()] as F2Moslik[], dopps, aktJami,
@@ -322,6 +545,60 @@ export function F2Import() {
           </div>
         ))}
       </div>
+
+      {dopModalUid && (
+        <div className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setDopModalUid(null); }}>
+          <div className="bg-[#18181b] border border-border/40 rounded-xl p-5 max-w-lg w-full max-h-[80vh] flex flex-col shadow-2xl">
+            <div className="flex justify-between items-center mb-3 border-b border-border/20 pb-3">
+              <h3 className="font-bold text-lg text-emerald-400">Qaysi razdelga qo'shamiz?</h3>
+              <button onClick={() => setDopModalUid(null)} className="text-text-mute hover:text-white transition-colors">
+                ✕
+              </button>
+            </div>
+            <div className="text-[12px] text-text-mute mb-4">
+               F2 aktidagi o'qilmagan ishni Smeta qoldig'iga (Qo'shimcha ish sifatida) qo'shish uchun Smeta razdelini tanlang.
+               Bu jarayon ostidagi barcha material/mexanizmlarni ham avtomatik o'ziga ergashtiradi.
+            </div>
+            <div className="overflow-auto flex-1 pr-2 custom-scrollbar flex flex-col gap-1">
+              {smetaRazdellar.length === 0 ? (
+                 <div className="text-center p-4 text-orange-400">Smetada razdellar topilmadi</div>
+              ) : smetaRazdellar.map((rz, i) => (
+                <div 
+                  key={i} 
+                  onClick={() => tasdiqlaDop(rz)}
+                  className="px-3 py-3 border-b border-border/20 cursor-pointer text-[13px] font-semibold hover:bg-emerald-500/10 transition-colors text-white"
+                >
+                  <span className="text-emerald-500 mr-2">➜</span>
+                  {rz.nom} <span className="text-text-mute text-[10px] ml-1 font-normal">({rz.varaq})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dropState && (
+        <div className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setDropState(null); }}>
+          <div className="bg-[#18181b] border border-border/40 rounded-xl p-6 max-w-md w-full shadow-2xl transform scale-100 transition-all">
+            <h3 className="font-bold text-lg text-white mb-2 text-center">Tashlangan qator bilan nima qilamiz?</h3>
+            <p className="text-text-mute text-[13px] text-center mb-6">
+              Siz akt qatorini smeta qatori ustiga tashladingiz. Bu amaliyot zamenami yoki tagidan yangi qator qilib qo'shishmi?
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={tasdiqlaDropZamena} className="flex flex-col items-center justify-center p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors text-emerald-400">
+                <span className="text-2xl mb-2">🔄</span>
+                <span className="font-bold">Zamena</span>
+                <span className="text-[10px] opacity-70 mt-1 text-center">Smetadagi qator o'rniga bog'lanadi</span>
+              </button>
+              <button onClick={tasdiqlaDropDop} className="flex flex-col items-center justify-center p-4 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-colors text-blue-400">
+                <span className="text-2xl mb-2">➕</span>
+                <span className="font-bold">Qo'shimcha ish</span>
+                <span className="text-[10px] opacity-70 mt-1 text-center">Shu qatordan keyin yangi qator ochiladi</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------- QADAM 1 ---------- */}
       {qadam === 0 && (
@@ -619,6 +896,7 @@ export function F2Import() {
                 setHover={setHover}
                 onBogBekor={bogBekor}
                 sudraladi
+                onDopClick={handleDopClick}
                 bosh="Akt daraxti bo‘sh"
                 filtr={filtr}
                 ochiqYopiqSignal={ochiqSignal}

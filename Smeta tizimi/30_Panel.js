@@ -250,6 +250,7 @@ function apiBossData(){
 
     var shNode = {
       nom: gName,
+      obyekt: sh.obyekt,
       isGroup: true,
       subItems: [],
       smeta: shSmeta,

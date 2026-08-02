@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, type ReactNode, memo } from 'react';
+import { useMemo, useState, useEffect, useRef, type ReactNode, memo } from 'react';
 import { ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 export type DaraxtTugun = {
@@ -20,13 +20,15 @@ const TUR_NOM: Record<string, string> = { bl: 'ИШ', rs: 'РЕС', mat: 'МАТ
 
 const DaraxtQator = memo(function DaraxtQator({
   t, daraja, bolalari, bog, yoritilgan, drop, yopiqHas,
-  sudraladi, tashlanadi, onTashla, setHover, setUstida, toggle, onBogBekor
+  sudraladi, tashlanadi, onTashla, setHover, setUstida, toggle, onBogBekor,
+  onDopClick
 }: {
   t: DaraxtTugun; daraja: number; bolalari: boolean; bog: boolean; yoritilgan: boolean; drop: boolean; yopiqHas: boolean;
   sudraladi?: boolean; tashlanadi?: boolean;
   onTashla?: (aktKalit: string, smetaKalit: string) => void;
   setHover: (k: string | null) => void; setUstida: (k: string | null) => void;
   toggle: (k: string) => void; onBogBekor?: (kalit: string) => void;
+  onDopClick?: (kalit: string) => void;
 }) {
   return (
     <div
@@ -77,18 +79,24 @@ const DaraxtQator = memo(function DaraxtQator({
            ) : (
              <span className="w-6 h-6 flex items-center justify-center text-text-mute opacity-30">—</span>
            )}
-           <span className="text-[11px] font-bold tracking-wider opacity-80" style={{ color: TUR_RANG[t.type] || '#ccc' }} title={TUR_NOM[t.type]}>
-              {TUR_NOM[t.type]}
-           </span>
+           {(!bog && sudraladi && t.type !== 'rz' && onDopClick) ? (
+             <button onClick={(e) => { e.stopPropagation(); onDopClick(t.kalit); }} className="w-6 h-6 ml-[-4px] flex items-center justify-center rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:scale-110 transition-all cursor-pointer" title="Smetaga qo'shimcha ish qilib qo'shish (Dop)">
+               <span className="text-[14px] font-bold leading-none">+</span>
+             </button>
+           ) : (
+             <span className="text-[11px] font-bold tracking-wider opacity-80" style={{ color: TUR_RANG[t.type] || '#ccc' }} title={TUR_NOM[t.type]}>
+                {TUR_NOM[t.type]}
+             </span>
+           )}
         </div>
       )}
 
       <div className={`min-w-0 flex-1 py-1.5 ${bog ? 'opacity-100' : 'opacity-80'}`}>
-        <div className={`truncate ${t.type === 'rz' ? 'text-white font-bold tracking-wide' : bog ? 'text-emerald-50 font-medium' : 'text-slate-200'}`} title={t.nom}>
+        <div className={`whitespace-normal leading-tight break-words ${t.type === 'rz' ? 'text-white font-bold tracking-wide' : bog ? 'text-emerald-50 font-medium' : 'text-slate-200'}`} title={t.nom}>
           {t.nom}
         </div>
         {(t.kod || t.bir) && (
-          <div className={`text-[11px] truncate mt-0.5 ${bog ? 'text-emerald-400/60' : 'text-slate-400'}`}>
+          <div className={`text-[11px] mt-0.5 whitespace-normal ${bog ? 'text-emerald-400/60' : 'text-slate-400'}`}>
             {t.kod && <span className="mr-2 font-mono bg-black/20 px-1.5 py-0.5 rounded">{t.kod}</span>}
             <span className="italic">{t.bir}</span>
           </div>
@@ -105,6 +113,7 @@ export function F2Daraxt({
   sudraladi, tashlanadi, onTashla, bosh,
   filtr = 'hammasi',
   ochiqYopiqSignal = 0,
+  onDopClick,
 }: {
   tugunlar: DaraxtTugun[];
   /** shu tugun bog'langanmi (kalit bo'yicha) */
@@ -118,15 +127,20 @@ export function F2Daraxt({
   bosh?: string;
   filtr?: 'hammasi' | 'boglanmagan' | 'boglangan';
   ochiqYopiqSignal?: number;
+  onDopClick?: (kalit: string) => void;
 }) {
   const [yopiq, setYopiq] = useState<Set<string>>(new Set());
   const [ustida, setUstida] = useState<string | null>(null);
+  const lastSignal = useRef(ochiqYopiqSignal);
 
   // ochiqYopiqSignal o'zgarganda barchasini ochish yoki yopish
   useEffect(() => {
-    if (ochiqYopiqSignal > 0) {
+    if (ochiqYopiqSignal === lastSignal.current) return;
+    lastSignal.current = ochiqYopiqSignal;
+    
+    if (ochiqYopiqSignal && ochiqYopiqSignal > 0) {
       setYopiq(new Set()); // Barchasini ochish
-    } else if (ochiqYopiqSignal < 0) {
+    } else if (ochiqYopiqSignal && ochiqYopiqSignal < 0) {
       // Barchasini yopish (faqat razdellarni)
       const rzs = new Set<string>();
       const yur = (ns: DaraxtTugun[]) => ns.forEach(n => {
@@ -212,6 +226,7 @@ export function F2Daraxt({
           setUstida={setUstida}
           toggle={toggle}
           onBogBekor={onBogBekor}
+          onDopClick={onDopClick}
         />
       ))}
     </div>
