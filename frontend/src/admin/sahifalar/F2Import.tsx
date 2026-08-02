@@ -10,7 +10,7 @@ import { FmtN } from '../../lib/format';
 import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
 import { F2Daraxt, type DaraxtTugun } from '../../umumiy/ui/F2Daraxt';
 import { toast } from '../../umumiy/ui/Toast';
-import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send } from 'lucide-react';
+import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send, FolderOpen, FolderClosed } from 'lucide-react';
 import type { AktNode, F2Moslik, F2MoslashNatija } from '../../api/types';
 
 /* Akt daraxtidagi BARCHA barg (leaf) tugunlar — jami summa faqat shulardan.
@@ -47,6 +47,7 @@ export function F2Import() {
   const [cfg, setCfg] = useState<{kod:number;nom:number;bir:number;norma:number;obyom:number;narx:number;sum:number} | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const [filtr, setFiltr] = useState<'hammasi' | 'boglanmagan' | 'boglangan'>('hammasi');
+  const [ochiqSignal, setOchiqSignal] = useState(0);
   const [qolBekor, setQolBekor] = useState<Set<string>>(new Set());
   const [qolBog, setQolBog] = useState<Record<string, F2Moslik>>({});
   const faylRef = useRef<HTMLInputElement>(null);
@@ -558,16 +559,26 @@ export function F2Import() {
             chapSarlavha={`AKT (fayldan) — ${aktBarglar.length} qator`}
             ongSarlavha={`SMETA (LRV) — ${boglanganJoylar.size} qator band`}
             chapOng={
-              <div className="flex gap-1 flex-shrink-0">
-                {(['hammasi', 'boglanmagan', 'boglangan'] as const).map((f) => (
-                  <button key={f} onClick={() => setFiltr(f)}
-                    className={`h-6 px-2 rounded-md text-[11px] transition-colors cursor-pointer
-                      ${filtr === f ? 'bg-accent text-white' : 'text-text-mute hover:text-text'}`}>
-                    {f === 'hammasi' ? 'Hammasi' : f === 'boglangan' ? '● bog‘langan' : '○ bog‘lanmagan'}
-                  </button>
-                ))}
-              </div>
-            }
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex gap-1 flex-shrink-0 bg-black/20 p-1 rounded-lg">
+                    {(['hammasi', 'boglanmagan', 'boglangan'] as const).map((f) => (
+                      <button key={f} onClick={() => setFiltr(f)}
+                        className={`flex-1 h-7 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer shadow-sm
+                          ${filtr === f ? 'bg-accent text-white scale-100' : 'text-slate-400 hover:text-white hover:bg-white/10 scale-95'}`}>
+                        {f === 'hammasi' ? 'Barchasi' : f === 'boglangan' ? '✓ Bog‘langan' : '○ Bog‘lanmagan'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setOchiqSignal(s => s > 0 ? s + 1 : 1)} className="flex-1 flex items-center justify-center gap-1.5 h-6 bg-white/5 hover:bg-white/10 text-slate-300 rounded text-[11px] transition-colors">
+                      <FolderOpen size={13} /> Barchasini ochish
+                    </button>
+                    <button onClick={() => setOchiqSignal(s => s < 0 ? s - 1 : -1)} className="flex-1 flex items-center justify-center gap-1.5 h-6 bg-white/5 hover:bg-white/10 text-slate-300 rounded text-[11px] transition-colors">
+                      <FolderClosed size={13} /> Barchasini yig'ish
+                    </button>
+                  </div>
+                </div>
+              }
             chap={
               <F2Daraxt
                 tugunlar={aktDaraxt}
@@ -577,6 +588,8 @@ export function F2Import() {
                 onBogBekor={bogBekor}
                 sudraladi
                 bosh="Akt daraxti bo‘sh"
+                filtr={filtr}
+                ochiqYopiqSignal={ochiqSignal}
               />
             }
             ong={
@@ -588,6 +601,8 @@ export function F2Import() {
                 tashlanadi
                 onTashla={qolBogla}
                 bosh={lrv.isLoading ? "Smeta o‘qilmoqda…" : "Smeta daraxti bo‘sh"}
+                filtr={filtr}
+                ochiqYopiqSignal={ochiqSignal}
               />
             }
           />
