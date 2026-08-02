@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Bot, X, Send, User, ChevronDown } from 'lucide-react';
 import { gas } from '../../api/client';
 import { useObyektlar } from '../../api/hooks';
@@ -12,6 +13,7 @@ type Message = {
 };
 
 export function AiHelper() {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
@@ -95,6 +97,8 @@ export function AiHelper() {
       setIsLoading(false);
     }
   };
+
+  if (location.pathname.startsWith('/boss')) return null;
 
   return (
     <>

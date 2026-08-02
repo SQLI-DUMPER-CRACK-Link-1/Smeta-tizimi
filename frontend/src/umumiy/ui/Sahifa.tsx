@@ -361,7 +361,7 @@ export function Tanlov({ qiymat, ozgardi, variantlar }: {
       onChange={(e) => ozgardi(e.target.value)}
       className="input h-9 px-3 text-sm w-full cursor-pointer"
     >
-      {variantlar.map((v) => <option key={v} value={v}>{v}</option>)}
+      {variantlar.map((v) => <option key={v} value={v} className="bg-slate-800 text-white">{v}</option>)}
     </select>
   );
 }

@@ -259,7 +259,7 @@ export function Holat() {
                 className="h-10 px-4 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-medium outline-none focus:border-yellow-500/50 appearance-none min-w-[200px] cursor-pointer"
               >
                 {obyektlar?.map(obj => (
-                  <option key={obj.obyekt} value={obj.obyekt}>{obj.obyekt}</option>
+                  <option key={obj.obyekt} value={obj.obyekt} className="bg-slate-800 text-white">{obj.obyekt}</option>
                 ))}
               </select>
             )}

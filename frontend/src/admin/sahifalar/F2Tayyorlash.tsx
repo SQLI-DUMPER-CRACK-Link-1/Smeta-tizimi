@@ -172,8 +172,8 @@ export function F2Tayyorlash() {
                 value={obyekt} onChange={(e) => setObyekt(e.target.value)}
                 className="pl-9 pr-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent/50 appearance-none min-w-[200px]"
               >
-                <option value="">Obyektni tanlang...</option>
-                {obNomlari.map(o => <option key={o} value={o}>{o}</option>)}
+                <option value="" className="bg-slate-800 text-white">Obyektni tanlang...</option>
+                {obNomlari.map(o => <option key={o} value={o} className="bg-slate-800 text-white">{o}</option>)}
               </select>
             </div>
             <div className="relative">

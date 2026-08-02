@@ -64,11 +64,11 @@ export function ErpQoshModal({ isOpen, title, fields, onClose, onSubmit, isSavin
                   value={qiymatlar[f.key] ?? ''}
                   onChange={e => set(f.key, e.target.value)}
                 >
-                  <option value="">— tanlang —</option>
+                  <option value="" className="bg-slate-800 text-white">— tanlang —</option>
                   {(f.options || []).map(o => {
                     const val = typeof o === 'string' ? o : o.value;
                     const lab = typeof o === 'string' ? o : o.label;
-                    return <option key={val} value={val}>{lab}</option>;
+                    return <option key={val} value={val} className="bg-slate-800 text-white">{lab}</option>;
                   })}
                 </select>
               ) : f.type === 'textarea' ? (

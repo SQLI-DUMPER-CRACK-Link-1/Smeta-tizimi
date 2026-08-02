@@ -226,9 +226,9 @@ function StavkaBolimi() {
               onChange={e => setTanlangan(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-accent/50"
             >
-              <option value="">— obyektni tanlang —</option>
+              <option value="" className="bg-slate-800 text-white">— obyektni tanlang —</option>
               {(obyektlar || []).map(o => (
-                <option key={o.obyekt} value={o.obyekt}>{o.obyekt}</option>
+                <option key={o.obyekt} value={o.obyekt} className="bg-slate-800 text-white">{o.obyekt}</option>
               ))}
             </select>
           </div>
