@@ -134,6 +134,10 @@ export function F2Daraxt({
             } : undefined}
             onMouseEnter={() => setHover(t.kalit)}
             onMouseLeave={() => setHover(null)}
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest('button')) return;
+              if (bolalari) toggle(t.kalit);
+            }}
             className={`flex items-center gap-2 border-b border-border/60 text-[13px]
                         transition-colors duration-[120ms] min-h-[32px] group
                         ${drop ? 'bg-emerald-500/20 ring-1 ring-emerald-500'
@@ -141,7 +145,7 @@ export function F2Daraxt({
                           : bog ? 'bg-emerald-500/10 border-l-[3px] border-l-emerald-500' 
                           : t.type === 'rz' ? 'bg-[var(--surface-2)]/40 border-l-[3px] border-l-transparent'
                           : 'hover:bg-[var(--surface-2)]/40 border-l-[3px] border-l-transparent'}
-                        ${sudraladi && t.type !== 'rz' ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                        ${sudraladi && t.type !== 'rz' ? 'cursor-grab active:cursor-grabbing' : bolalari ? 'cursor-pointer' : ''}`}
             style={{ paddingLeft: 8 + daraja * 18, paddingRight: 10 }}
           >
             {/* Ochish/yig'ish */}

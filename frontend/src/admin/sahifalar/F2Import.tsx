@@ -158,7 +158,12 @@ export function F2Import() {
       kod: n.kod,
       bir: n.bir,
       summa: n.summa,
-      belgi: n.type === 'rz' ? undefined : <FmtN val={n.summa} />,
+      belgi: n.type === 'rz' ? undefined : (
+        <div className="flex gap-3 items-center text-[12px] whitespace-nowrap">
+          {n.hajm ? <span>Hajm: <span className="font-medium text-emerald-400">{n.hajm}</span></span> : null}
+          <span>Summa: <FmtN val={n.summa} /></span>
+        </div>
+      ),
       children: n.children?.length ? map(n.children) : undefined,
     }));
     return map(aktTree ?? []);
@@ -166,17 +171,44 @@ export function F2Import() {
 
   /** SMETA daraxti — LRV_PLUS ierarxiyasi */
   const smetaDaraxt = useMemo((): DaraxtTugun[] => {
-    const map = (ns: any[]): DaraxtTugun[] => (ns ?? []).map((n) => ({
-      kalit: n.type === 'rz' ? `rz:${n.nom}:${n.row ?? ''}` : `${n.varaq}#${n.row}`,
-      type: n.type,
-      nom: n.nom,
-      kod: n.kod,
-      bir: n.birlik,
-      belgi: n.type === 'rz' ? undefined : <span className="text-text-mute">{n.row}</span>,
-      children: n.children?.length ? map(n.children) : undefined,
-    }));
+    const map = (ns: any[]): DaraxtTugun[] => (ns ?? []).map((n) => {
+      const kalit = n.type === 'rz' ? `rz:${n.nom}:${n.row ?? ''}` : `${n.varaq}#${n.row}`;
+      const boglanganAktUid = joyMap.get(kalit);
+      let boglanganAktText = null;
+      if (boglanganAktUid) {
+        const aktQator = aktBarchaTugun.find(a => a.uid === boglanganAktUid);
+        if (aktQator) {
+           const farq = (n.qoldiq ?? 0) - (aktQator.hajm ?? 0);
+           boglanganAktText = (
+             <div className="mt-1 p-1 px-2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex justify-between items-center text-[11px] min-w-[200px]">
+                <span>+ {aktQator.hajm} (F2: {aktQator.kod || 'kodsiz'}) - <FmtN val={aktQator.summa}/></span>
+                {Math.abs(farq) > 0.001 && <span className={farq < 0 ? 'text-red-400 ml-2 font-bold' : 'text-orange-300 ml-2'}>Farq: {farq > 0 ? `+${farq.toFixed(3)}` : farq.toFixed(3)}</span>}
+             </div>
+           );
+        }
+      }
+
+      return {
+        kalit,
+        type: n.type,
+        nom: n.nom,
+        kod: n.kod,
+        bir: n.birlik,
+        belgi: n.type === 'rz' ? undefined : (
+          <div className="flex flex-col items-end">
+            <div className="flex gap-2 items-center text-[11px] opacity-80 whitespace-nowrap">
+              {n.smetaHajm != null && <span>Smeta: <span className="font-medium text-white">{n.smetaHajm}</span></span>}
+              {n.qoldiq != null && <span>| Qoldiq: <span className="text-orange-400">{n.qoldiq}</span></span>}
+              {n.fakt > 0 && <span>| O'tgan F2: <span className="text-blue-400">{n.fakt}</span></span>}
+            </div>
+            {boglanganAktText}
+          </div>
+        ),
+        children: n.children?.length ? map(n.children) : undefined,
+      };
+    });
     return map(lrv.data?.tree ?? []);
-  }, [lrv.data]);
+  }, [lrv.data, joyMap, aktBarchaTugun]);
 
   const farq = aktJami - (boglanganJami + dopJami);
   const constOk = Math.abs(farq) < 1;
@@ -494,7 +526,7 @@ export function F2Import() {
 
           {natija && <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiKarta nom="Bog'landi" qiymat={natija.stat.moslashti} ost={`${natija.stat.scopeHit} ta razdel ichida`} />
-            <KpiKarta nom="Qo'shimcha bo'ladi" qiymat={boglanmagan.length} ost="smetada topilmadi" />
+            <KpiKarta nom="Qoldiq (Bog'lanmagan)" qiymat={boglanmagan.length} ost="smetada topilmadi" />
             <KpiKarta nom="Razdel mosligi" qiymat={`${natija.stat.rzMos}/${natija.stat.rzJami}`} />
             <KpiKarta nom="Vaqt" qiymat={`${(natija.stat.ms / 1000).toFixed(1)} s`} />
           </div>}
@@ -516,7 +548,7 @@ export function F2Import() {
                 </>
               }
             />
-            <Juft nom="Qo'shimcha" qiymat={<FmtN val={dopJami} />} />
+            <Juft nom="Qoldiq (Bog'lanmagan)" qiymat={<FmtN val={dopJami} />} />
             <Juft
               nom="Farq"
               qiymat={
