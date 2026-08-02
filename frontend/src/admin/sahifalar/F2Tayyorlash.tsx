@@ -120,7 +120,7 @@ export function F2Tayyorlash() {
 
   async function handleAiSmartF2() {
     if (!obyekt) { toast('Obyektni tanlang!', 'danger'); return; }
-    if (!aiText.trim()) { toast('Summani kiriting (masalan: 500 mln so\\'m)', 'warn'); return; }
+    if (!aiText.trim()) { toast("Summani kiriting (masalan: 500 mln so'm)", 'warn'); return; }
     
     try {
       const res = await smartF2.mutateAsync({ obyekt, text: aiText });

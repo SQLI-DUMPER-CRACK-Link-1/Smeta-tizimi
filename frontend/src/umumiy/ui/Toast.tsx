@@ -1,21 +1,36 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, AlertTriangle, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export type ToastType = 'ok' | 'danger';
+/** Dizayn tokenlariga mos: ok=--ok, warn=--warn, danger=--danger.
+ *  ⚠️ 'success' YO'Q — 'ok' ishlating (build yiqiladi). */
+export type ToastType = 'ok' | 'warn' | 'danger';
 
 interface ToastEvent {
   message: string;
   type: ToastType;
   onUndo?: () => void;
+  /** Ko'rinib turish vaqti (ms). Berilmasa: undo bilan 10s, aks holda 3s. */
+  davomiylik?: number;
 }
 
 let toastListener: ((toast: ToastEvent) => void) | null = null;
 
-export const toast = (message: string, type: ToastType = 'ok', onUndo?: () => void) => {
+export const toast = (
+  message: string,
+  type: ToastType = 'ok',
+  onUndo?: () => void,
+  davomiylik?: number,
+) => {
   if (toastListener) {
-    toastListener({ message, type, onUndo });
+    toastListener({ message, type, onUndo, davomiylik });
   }
+};
+
+const USLUB: Record<ToastType, string> = {
+  ok: 'border-ok text-ok',
+  warn: 'border-warn text-warn',
+  danger: 'border-danger text-danger',
 };
 
 export function ToastContainer() {
@@ -27,7 +42,7 @@ export function ToastContainer() {
       setToasts((prev) => [...prev, { ...t, id }]);
       setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
-      }, t.onUndo ? 10000 : 3000);
+      }, t.davomiylik ?? (t.onUndo ? 10000 : 3000));
     };
     return () => {
       toastListener = null;
@@ -43,11 +58,11 @@ export function ToastContainer() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border bg-surface-2 ${
-              t.type === 'ok' ? 'border-ok text-ok' : 'border-danger text-danger'
-            }`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border bg-surface-2 ${USLUB[t.type]}`}
           >
-            {t.type === 'ok' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+            {t.type === 'ok' ? <CheckCircle2 size={20} />
+              : t.type === 'warn' ? <AlertTriangle size={20} />
+              : <AlertCircle size={20} />}
             <span className="text-white font-medium text-sm">{t.message}</span>
             {t.onUndo && (
               <button
