@@ -156,20 +156,51 @@ export function F2Import() {
       ?? aktBarchaTugun.find((x) => x.uid === aktKalit);
     if (!n) { toast('Akt qatori topilmadi'); return; }
     
+    // Exact match tekshiruvi (Aynan bir xil kod, nom, birlik bo'lsa - avtomatik ulanadi)
+    let targetSmetaNode: any = null;
+    const findSmetaNode = (nodes: any[]) => {
+       for (const sn of nodes) {
+          if (sn.row === row && sn.varaq === varaqNom) { targetSmetaNode = sn; return; }
+          if (sn.children) findSmetaNode(sn.children);
+          if (targetSmetaNode) return;
+       }
+    };
+    findSmetaNode(lrv.data?.tree || []);
+
+    if (targetSmetaNode) {
+       const cleanStr = (s?: string) => (s || '').replace(/\s+/g, '').toUpperCase();
+       const aKod = cleanStr(n.kod); const sKod = cleanStr(targetSmetaNode.kod);
+       const aNom = cleanStr(n.nom); const sNom = cleanStr(targetSmetaNode.nom);
+       const aBir = cleanStr(n.bir); const sBir = cleanStr(targetSmetaNode.birlik);
+       
+       let isExactMatch = false;
+       if (aKod && sKod && aKod === sKod) isExactMatch = true;
+       else if (aNom && sNom && aNom === sNom && aBir === sBir) isExactMatch = true;
+
+       if (isExactMatch) {
+          bajarDropZamena(aktKalit, row, varaqNom);
+          return;
+       }
+    }
+
     // Zudlik bilan Zamena qilib yubormaymiz, modal ochamiz!
     setDropState({ aktKalit, smetaKalit, smetaRow: row, varaqNom });
   }
 
   function tasdiqlaDropZamena() {
     if (!dropState) return;
-    const { aktKalit, smetaRow, varaqNom } = dropState;
+    bajarDropZamena(dropState.aktKalit, dropState.smetaRow, dropState.varaqNom);
+    setDropState(null);
+  }
+
+  function bajarDropZamena(aktKalit: string, smetaRow: number, varaqNom: string) {
     const n = aktBarchaTugun.find((x) => x.uid === aktKalit);
     if (!n) return;
     
     setQolBekor((p) => { const s = new Set(p); s.delete(aktKalit); return s; });
     setQolDop((p) => { const nd = { ...p }; delete nd[aktKalit]; return nd; });
 
-    const newBog = { [aktKalit]: {
+    const newBog: Record<string, any> = { [aktKalit]: {
       uid: aktKalit, varaq: varaqNom, row: smetaRow,
       kod: n.kod ?? '', hajm: n.hajm ?? 0, narx: n.narx ?? 0, summa: n.summa ?? 0,
     } };
@@ -238,7 +269,6 @@ export function F2Import() {
 
     setQolBog((p) => ({ ...p, ...newBog }));
     toast(`Bog'landi (Zamena): ${String(n.nom).slice(0, 34)}`);
-    setDropState(null);
   }
 
   function tasdiqlaDropDop() {

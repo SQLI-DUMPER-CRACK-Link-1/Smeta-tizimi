@@ -265,6 +265,7 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
     var ok = cands.filter(function(c){ return c.type !== 'rz'; });
     if (!ok.length) return null;
     if (ok.length === 1) return smetaTaken(ok[0].varaq, ok[0].row) ? null : ok[0];
+    return _ekvivmi(ok) ? _birinchiBosh(ok, fHajm) : null;
   }
   /* QAT'IY: faqat AYNAN bitta nomzod. Ekvivalent-qisqartma ham, fuzzy ham yo'q.
    * Generic resurs (000001 = ЗАТРАТЫ ТРУДА) 153 joyda bir xil — aralashmasin. */
