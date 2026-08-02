@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect, useRef, type ReactNode, memo } from 'react';
-import { ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { useMemo, useState, useEffect, useRef, useCallback, type ReactNode, memo } from 'react';
+import { ChevronDown, ChevronRight, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export type DaraxtTugun = {
   kalit: string;              // uid (akt) yoki "varaq#row" (smeta)
@@ -18,10 +18,49 @@ const TUR_RANG: Record<string, string> = {
 };
 const TUR_NOM: Record<string, string> = { bl: 'ИШ', rs: 'РЕС', mat: 'МАТ', ob: 'ОБ' };
 
+// Gap drop zone — smeta qatorlari orasiga tashlash uchun
+const GapZone = memo(function GapZone({
+  smetaKalit, daraja, onGapDrop,
+}: {
+  smetaKalit: string; daraja: number; onGapDrop: (aktKalit: string, smetaKalit: string) => void;
+}) {
+  const [aktiv, setAktiv] = useState(false);
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setAktiv(true); }}
+      onDragLeave={() => setAktiv(false)}
+      onDrop={(e) => {
+        e.preventDefault(); e.stopPropagation(); setAktiv(false);
+        const aktKalit = e.dataTransfer.getData('text/plain');
+        if (aktKalit) onGapDrop(aktKalit, smetaKalit);
+      }}
+      style={{
+        height: aktiv ? 22 : 5,
+        background: aktiv ? 'rgba(16,185,129,0.25)' : 'transparent',
+        borderRadius: 3,
+        boxShadow: aktiv ? '0 0 0 1px rgba(16,185,129,0.6)' : 'none',
+        paddingLeft: 8 + daraja * 18,
+        paddingRight: 10,
+        margin: aktiv ? '1px 0' : '0',
+        transition: 'all 100ms',
+        display: 'flex',
+        alignItems: 'center',
+        cursor: 'copy',
+      }}
+    >
+      {aktiv && (
+        <span style={{ color: '#34d399', fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', userSelect: 'none' }}>
+          ↓ Shu yerga qo'shimcha qilib qo'shish
+        </span>
+      )}
+    </div>
+  );
+});
+
 const DaraxtQator = memo(function DaraxtQator({
   t, daraja, bolalari, bog, yoritilgan, drop, yopiqHas,
   sudraladi, tashlanadi, onTashla, setHover, setUstida, toggle, onBogBekor,
-  onDopClick
+  onDopClick, onOtishClick, scrollRef,
 }: {
   t: DaraxtTugun; daraja: number; bolalari: boolean; bog: boolean; yoritilgan: boolean; drop: boolean; yopiqHas: boolean;
   sudraladi?: boolean; tashlanadi?: boolean;
@@ -29,14 +68,17 @@ const DaraxtQator = memo(function DaraxtQator({
   setHover: (k: string | null) => void; setUstida: (k: string | null) => void;
   toggle: (k: string) => void; onBogBekor?: (kalit: string) => void;
   onDopClick?: (kalit: string) => void;
+  onOtishClick?: (kalit: string) => void;
+  scrollRef?: (el: HTMLDivElement | null) => void;
 }) {
   return (
     <div
+      ref={scrollRef}
       draggable={sudraladi && t.type !== 'rz'}
       onDragStart={(e) => { e.dataTransfer.setData('text/plain', t.kalit); e.dataTransfer.effectAllowed = 'link'; }}
-      onDragOver={tashlanadi && t.type !== 'rz' ? (e) => { e.preventDefault(); setUstida(t.kalit); } : undefined}
+      onDragOver={tashlanadi ? (e) => { e.preventDefault(); setUstida(t.kalit); } : undefined}
       onDragLeave={tashlanadi ? () => setUstida(null) : undefined}
-      onDrop={tashlanadi && t.type !== 'rz' ? (e) => {
+      onDrop={tashlanadi ? (e) => {
         e.preventDefault();
         setUstida(null);
         const aktKalit = e.dataTransfer.getData('text/plain');
@@ -51,7 +93,7 @@ const DaraxtQator = memo(function DaraxtQator({
       className={`flex items-center gap-2 border-b border-border/60 text-[13px]
                   transition-colors duration-[120ms] min-h-[32px] group
                   ${drop ? 'bg-emerald-500/20 ring-1 ring-emerald-500'
-                    : yoritilgan ? 'bg-[var(--accent)]/[.10]'
+                    : yoritilgan ? 'bg-[var(--accent)]/[.15] ring-1 ring-[var(--accent)]/30'
                     : bog ? 'bg-emerald-500/10 border-l-[3px] border-l-emerald-500' 
                     : t.type === 'rz' ? 'bg-[var(--surface-2)]/40 border-l-[3px] border-l-transparent'
                     : 'hover:bg-[var(--surface-2)]/40 border-l-[3px] border-l-transparent'}
@@ -67,11 +109,11 @@ const DaraxtQator = memo(function DaraxtQator({
       </span>
 
       {t.type !== 'rz' && (
-        <div className="flex-shrink-0 flex items-center gap-2 w-[72px]">
+        <div className="flex-shrink-0 flex items-center gap-1" style={{ width: 88 }}>
            {bog ? (
-             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 group-hover:scale-110 transition-transform" title="Bog'langan">
+             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 group-hover:scale-110 transition-transform" title="Bog'langan — bosib bekor qilish">
                {onBogBekor ? (
-                 <button onClick={(e) => { e.stopPropagation(); onBogBekor(t.kalit); }} className="cursor-pointer hover:text-red-400">
+                 <button onClick={(e) => { e.stopPropagation(); onBogBekor(t.kalit); }} className="cursor-pointer hover:text-red-400 transition-colors" title="Bekor qilish">
                    <CheckCircle2 size={16} />
                  </button>
                ) : <CheckCircle2 size={16} />}
@@ -79,15 +121,29 @@ const DaraxtQator = memo(function DaraxtQator({
            ) : (
              <span className="w-6 h-6 flex items-center justify-center text-text-mute opacity-30">—</span>
            )}
-           {(!bog && sudraladi && t.type !== 'rz' && onDopClick) ? (
-             <button onClick={(e) => { e.stopPropagation(); onDopClick(t.kalit); }} className="w-6 h-6 ml-[-4px] flex items-center justify-center rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:scale-110 transition-all cursor-pointer" title="Smetaga qo'shimcha ish qilib qo'shish (Dop)">
+           
+           {/* → tugmasi: akt tarafida bog'langan bo'lsa smeta tarafiga o'tish */}
+           {bog && onOtishClick && (
+             <button
+               onClick={(e) => { e.stopPropagation(); onOtishClick(t.kalit); }}
+               className="w-6 h-6 flex items-center justify-center rounded bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/25 hover:scale-110 transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+               title="Bog'langan smeta qatorini ko'rsatish →"
+             >
+               <ArrowRight size={13} />
+             </button>
+           )}
+
+           {/* + tugmasi: bog'lanmagan bo'lsa dop qilish */}
+           {!bog && sudraladi && t.type !== 'rz' && onDopClick && (
+             <button onClick={(e) => { e.stopPropagation(); onDopClick(t.kalit); }} className="w-6 h-6 ml-0.5 flex items-center justify-center rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:scale-110 transition-all cursor-pointer" title="Smetaga qo'shimcha ish qilib qo'shish (Dop)">
                <span className="text-[14px] font-bold leading-none">+</span>
              </button>
-           ) : (
-             <span className="text-[11px] font-bold tracking-wider opacity-80" style={{ color: TUR_RANG[t.type] || '#ccc' }} title={TUR_NOM[t.type]}>
-                {TUR_NOM[t.type]}
-             </span>
            )}
+
+           {/* Tur belgisi */}
+           <span className="text-[10px] font-bold tracking-wider opacity-70 ml-0.5" style={{ color: TUR_RANG[t.type] || '#ccc' }} title={TUR_NOM[t.type]}>
+              {TUR_NOM[t.type]}
+           </span>
         </div>
       )}
 
@@ -103,45 +159,50 @@ const DaraxtQator = memo(function DaraxtQator({
         )}
       </div>
 
-      <span className={`flex-shrink-0 tabular-nums text-[13px] ${bog ? 'text-emerald-400 font-bold' : 'text-slate-400 font-medium'}`}>{t.belgi}</span>
+      <span className={`flex-shrink-0 tabular-nums text-[13px] max-w-[240px] ${bog ? 'text-emerald-400 font-bold' : 'text-slate-400 font-medium'}`}>{t.belgi}</span>
     </div>
   );
 });
 
 export function F2Daraxt({
-  tugunlar, bogMi, hover, setHover, onBogBekor,
-  sudraladi, tashlanadi, onTashla, bosh,
+  tugunlar, bogMi, dopMi, hover, setHover, onBogBekor,
+  sudraladi, tashlanadi, onTashla, onGapDrop, bosh,
   filtr = 'hammasi',
   ochiqYopiqSignal = 0,
   onDopClick,
+  onOtishClick,
+  scrollToKey,
 }: {
   tugunlar: DaraxtTugun[];
-  /** shu tugun bog'langanmi (kalit bo'yicha) */
   bogMi: (kalit: string) => boolean;
+  dopMi?: (kalit: string) => boolean;
   hover: string | null;
   setHover: (k: string | null) => void;
   onBogBekor?: (kalit: string) => void;
   sudraladi?: boolean;
   tashlanadi?: boolean;
   onTashla?: (aktKalit: string, smetaKalit: string) => void;
+  onGapDrop?: (aktKalit: string, smetaKalit: string) => void;
   bosh?: string;
-  filtr?: 'hammasi' | 'boglanmagan' | 'boglangan';
+  filtr?: 'hammasi' | 'boglanmagan' | 'boglangan' | 'qolDop';
   ochiqYopiqSignal?: number;
   onDopClick?: (kalit: string) => void;
+  onOtishClick?: (kalit: string) => void;
+  scrollToKey?: string | null;
 }) {
   const [yopiq, setYopiq] = useState<Set<string>>(new Set());
   const [ustida, setUstida] = useState<string | null>(null);
+  const [yoritilganKey, setYoritilganKey] = useState<string | null>(null);
   const lastSignal = useRef(ochiqYopiqSignal);
+  const scrollRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // ochiqYopiqSignal o'zgarganda barchasini ochish yoki yopish
   useEffect(() => {
     if (ochiqYopiqSignal === lastSignal.current) return;
     lastSignal.current = ochiqYopiqSignal;
     
     if (ochiqYopiqSignal && ochiqYopiqSignal > 0) {
-      setYopiq(new Set()); // Barchasini ochish
+      setYopiq(new Set());
     } else if (ochiqYopiqSignal && ochiqYopiqSignal < 0) {
-      // Barchasini yopish (faqat razdellarni)
       const rzs = new Set<string>();
       const yur = (ns: DaraxtTugun[]) => ns.forEach(n => {
         if (n.type === 'rz' || n.children?.length) {
@@ -154,45 +215,81 @@ export function F2Daraxt({
     }
   }, [ochiqYopiqSignal, tugunlar]);
 
+  // scrollToKey o'zgarganda — shu qatorni ochib scroll qilamiz
+  useEffect(() => {
+    if (!scrollToKey) return;
+    
+    // Shu kalitning ota-bobolari bo'lgan yopiq daraxtni ochamiz
+    const ochishKerak = new Set<string>();
+    const topOta = (ns: DaraxtTugun[], targetKey: string, path: string[]): boolean => {
+      for (const n of ns) {
+        if (n.kalit === targetKey) {
+          path.forEach(k => ochishKerak.add(k));
+          return true;
+        }
+        if (n.children && topOta(n.children, targetKey, [...path, n.kalit])) return true;
+      }
+      return false;
+    };
+    topOta(tugunlar, scrollToKey, []);
+    
+    if (ochishKerak.size > 0) {
+      setYopiq(p => {
+        const yangi = new Set(p);
+        ochishKerak.forEach(k => yangi.delete(k));
+        return yangi;
+      });
+    }
+    
+    const timer = setTimeout(() => {
+      const el = scrollRefs.current.get(scrollToKey);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setYoritilganKey(scrollToKey);
+        setTimeout(() => setYoritilganKey(null), 2500);
+      }
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [scrollToKey, tugunlar]);
+
   const toggle = (k: string) =>
     setYopiq((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
-  /** Ko'rinadigan qatorlarni filtrlash va tartiblash */
+  const setScrollRef = useCallback((kalit: string) => (el: HTMLDivElement | null) => {
+    if (el) scrollRefs.current.set(kalit, el);
+    else scrollRefs.current.delete(kalit);
+  }, []);
+
   const qatorlar = useMemo(() => {
     const out: { t: DaraxtTugun; daraja: number }[] = [];
     
-    // 1-qadam: Daraxtni filtr bo'yicha chuqur tozalash (deep clone & filter)
     const filtrla = (ns: DaraxtTugun[]): DaraxtTugun[] => {
       const res: DaraxtTugun[] = [];
       for (const n of ns) {
         if (n.type === 'rz') {
-          // Razdel faqat bolalari bor bo'lsa (yoki filter 'hammasi' bo'lsa) ko'rsatiladi
           const fBolalar = filtrla(n.children ?? []);
           if (fBolalar.length > 0 || filtr === 'hammasi') {
             res.push({ ...n, children: fBolalar });
           }
         } else {
-          // Ish, Resurs, Material, Obyem (hammasi o'zi bog'lanishi mumkin)
           const bog = bogMi(n.kalit);
-          const matches = filtr === 'hammasi' || (filtr === 'boglangan' && bog) || (filtr === 'boglanmagan' && !bog);
+          const dop = dopMi ? dopMi(n.kalit) : n.kalit.startsWith('dop_');
           
+          let matches = false;
+          if (filtr === 'hammasi') matches = true;
+          else if (filtr === 'boglangan') matches = bog && !dop;
+          else if (filtr === 'boglanmagan') matches = !bog && !dop;
+          else if (filtr === 'qolDop') matches = dop;
+
           let fBolalar: DaraxtTugun[] = [];
-          if (n.children?.length) {
-            fBolalar = filtrla(n.children);
-          }
-          
-          // Agar o'zi mos kelsa YOKI bolalaridan biri mos kelsa, ro'yxatga qo'shamiz
-          if (matches || fBolalar.length > 0) {
-            res.push({ ...n, children: fBolalar });
-          }
+          if (n.children?.length) fBolalar = filtrla(n.children);
+          if (matches || fBolalar.length > 0) res.push({ ...n, children: fBolalar });
         }
       }
       return res;
     };
 
     const filtrlanganTugunlar = filtrla(tugunlar);
-
-    // 2-qadam: Filtrlangan daraxtni yassilash (ko'rinish uchun)
     const yur = (ns: DaraxtTugun[], d: number) => {
       ns.forEach((t) => {
         out.push({ t, daraja: d });
@@ -201,34 +298,55 @@ export function F2Daraxt({
     };
     yur(filtrlanganTugunlar, 0);
     return out;
-  }, [tugunlar, yopiq, filtr, bogMi]);
+  }, [tugunlar, yopiq, bogMi, filtr]);
 
-  if (!qatorlar.length) {
-    return <p className="px-4 py-8 text-center text-sm text-text-mute">{bosh ?? 'Bo‘sh'}</p>;
+  if (!tugunlar.length) {
+    return <div className="p-6 text-center text-text-mute text-sm">{bosh ?? 'Bo\'sh'}</div>;
   }
 
   return (
-    <div className="pb-10">
-      {qatorlar.map(({ t, daraja }) => (
-        <DaraxtQator
-          key={t.kalit}
-          t={t}
-          daraja={daraja}
-          bolalari={!!t.children?.length}
-          bog={t.type !== 'rz' && bogMi(t.kalit)}
-          yoritilgan={hover === t.kalit}
-          drop={ustida === t.kalit}
-          yopiqHas={yopiq.has(t.kalit)}
-          sudraladi={sudraladi}
-          tashlanadi={tashlanadi}
-          onTashla={onTashla}
-          setHover={setHover}
-          setUstida={setUstida}
-          toggle={toggle}
-          onBogBekor={onBogBekor}
-          onDopClick={onDopClick}
-        />
-      ))}
+    <div className="text-[13px]">
+      {qatorlar.map(({ t, daraja }, idx) => {
+        const bog = bogMi(t.kalit);
+        const drop = ustida === t.kalit;
+        const yoritilgan = yoritilganKey === t.kalit || (hover !== null && hover === t.kalit);
+        const bolalari = !!(t.children?.length);
+        const yopiqHas = yopiq.has(t.kalit);
+        const prevType = idx > 0 ? qatorlar[idx - 1].t.type : null;
+        
+        return (
+          <div key={t.kalit}>
+            {/* Gap drop zone — faqat smeta tarafida, qatorlar orasida */}
+            {tashlanadi && onGapDrop && t.type !== 'rz' && prevType && prevType !== 'rz' && (
+              <GapZone
+                smetaKalit={t.kalit}
+                daraja={daraja}
+                onGapDrop={onGapDrop}
+              />
+            )}
+            
+            <DaraxtQator
+              t={t}
+              daraja={daraja}
+              bolalari={bolalari}
+              bog={bog}
+              yoritilgan={yoritilgan}
+              drop={drop}
+              yopiqHas={yopiqHas}
+              sudraladi={sudraladi}
+              tashlanadi={tashlanadi}
+              onTashla={onTashla}
+              setHover={setHover}
+              setUstida={setUstida}
+              toggle={toggle}
+              onBogBekor={onBogBekor}
+              onDopClick={onDopClick}
+              onOtishClick={bog ? onOtishClick : undefined}
+              scrollRef={setScrollRef(t.kalit)}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
