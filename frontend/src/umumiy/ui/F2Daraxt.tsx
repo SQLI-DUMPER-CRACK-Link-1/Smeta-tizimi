@@ -16,7 +16,6 @@ export type DaraxtTugun = {
 const TUR_RANG: Record<string, string> = {
   bl: 'var(--t-bl, #c084fc)', rs: 'var(--t-rs, #60a5fa)', mat: 'var(--t-mat, #facc15)', ob: 'var(--t-ob, #2dd4bf)',
 };
-const TUR_BELGI: Record<string, string> = { bl: '🔧', rs: '🔹', mat: '🧱', ob: '⚙️' };
 const TUR_NOM: Record<string, string> = { bl: 'ИШ', rs: 'РЕС', mat: 'МАТ', ob: 'ОБ' };
 
 export function F2Daraxt({
