@@ -113,6 +113,18 @@ export function F2Import() {
     return m;
   }, [moslikMap]);
   const boglanganJoylar = useMemo(() => new Set(joyMap.keys()), [joyMap]);
+
+  const aktBogMi = (k: string) => {
+    if (moslikMap.has(k)) return true;
+    if (qolDop[k]) return true;
+    for (const dop of Object.values(qolDop)) {
+      if (dop.childUids?.includes(k)) return true;
+    }
+    // Agar server qaytargan stat ichida qolibDopps bo'lsa (kelajakda):
+    if ((natija?.stat as any)?.qolibDopps?.some((d: any) => d.uid === k || d.childUids?.includes(k))) return true;
+    return false;
+  };
+
   const boglanganJami = useMemo(
     () => [...moslikMap.values()].filter((m) => bargUidlar.has(m.uid)).reduce((a, m) => a + (m.summa || 0), 0),
     [moslikMap, bargUidlar],
@@ -189,7 +201,33 @@ export function F2Import() {
 
   function tasdiqlaDropZamena() {
     if (!dropState) return;
-    bajarDropZamena(dropState.aktKalit, dropState.smetaRow, dropState.varaqNom);
+    const { aktKalit, smetaRow, varaqNom } = dropState;
+    const d = aktBarchaTugun.find((x) => x.uid === aktKalit);
+    if (!d) return;
+
+    const tur = (d.type === 'ob') ? 'ob' : ((d.type === 'mat' || d.type === 'rs') ? 'mat' : 'bl');
+    const getKids = (node: AktNode): any[] => {
+      let k: any[] = [];
+      (node.children || []).forEach(c => {
+         k.push({uid: c.uid, type: c.type, kod: c.kod, nom: c.nom, bir: c.bir, hajm: c.hajm, narx: c.narx, summa: c.summa});
+         if (c.children) k = k.concat(getKids(c));
+      });
+      return k;
+    };
+    const kids = (tur === 'bl') ? getKids(d) : [];
+
+    setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
+    setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
+
+    setQolDop((p) => ({
+      ...p,
+      [d.uid]: {
+        uid: d.uid, varaq: varaqNom, action: 'zamena_add', tur, targetRow: smetaRow,
+        kod: d.kod, nom: d.nom, bir: d.bir, hajm: d.hajm, narx: d.narx || 0,
+        summa: d.summa || 0, children: kids, childUids: kids.map(c => c.uid), zamena: true, droppedOnRow: smetaRow
+      }
+    }));
+    toast(`Zamena qator qo'shildi: ${String(d.nom).slice(0, 34)}`);
     setDropState(null);
   }
 
@@ -206,7 +244,6 @@ export function F2Import() {
     } };
 
     // Agar BL bo'lsa va ichida rs lari bo'lsa, va ular bog'lanmagan bo'lsa, ularni ham Dop qilib qo'shamiz!
-    // (Foydalanuvchi "bl ni tortib tashlasam ichidagi rs larni ham kiritishi kerak" degandi).
     if (n.type === 'bl') {
        let targetSmetaNode: any = null;
        const findSmetaNode = (nodes: any[]) => {
@@ -235,13 +272,11 @@ export function F2Import() {
        
        kids.forEach(k => {
           let mapped = false;
-          // Smeta bolalari ichidan mosini qidiramiz (kod, yoki nom+birlik bo'yicha)
           for (const sb of smetaBolalar) {
              if (bandBolalar.has(sb.varaq + '#' + sb.row) || joyMap.has(sb.varaq + '#' + sb.row)) continue;
              if ((k.kod && sb.kod && cleanStr(k.kod) === cleanStr(sb.kod)) || 
                  (cleanStr(k.nom) === cleanStr(sb.nom) && cleanStr(k.bir) === cleanStr(sb.birlik))) {
                 
-                // Topildi! Zamena qilamiz
                 newBog[k.uid] = {
                    uid: k.uid, varaq: sb.varaq, row: sb.row,
                    kod: k.kod ?? '', hajm: k.hajm ?? 0, narx: k.narx ?? 0, summa: k.summa ?? 0,
@@ -254,11 +289,10 @@ export function F2Import() {
           }
 
           if (!mapped) {
-             // Topilmadi, shuning uchun Dop qilamiz
              setQolDop(p => ({
                ...p,
                [k.uid]: {
-                 uid: k.uid, varaq: varaqNom, action: 'add_bl', tur: k.type === 'ob' ? 'ob' : 'mat', targetRow: smetaRow,
+                 uid: k.uid, varaq: varaqNom, action: 'add_rs', tur: k.type === 'ob' ? 'ob' : 'mat', targetRow: smetaRow,
                  kod: k.kod, nom: k.nom, bir: k.bir, hajm: k.hajm, narx: k.narx || 0,
                  summa: k.summa || 0, children: [], childUids: []
                }
@@ -268,7 +302,7 @@ export function F2Import() {
     }
 
     setQolBog((p) => ({ ...p, ...newBog }));
-    toast(`Bog'landi (Zamena): ${String(n.nom).slice(0, 34)}`);
+    toast(`Bog'landi: ${String(n.nom).slice(0, 34)}`);
   }
 
   function tasdiqlaDropDop() {
@@ -921,7 +955,7 @@ export function F2Import() {
             chap={
               <F2Daraxt
                 tugunlar={aktDaraxt}
-                bogMi={(k) => moslikMap.has(k)}
+                bogMi={aktBogMi}
                 hover={hover}
                 setHover={setHover}
                 onBogBekor={bogBekor}
