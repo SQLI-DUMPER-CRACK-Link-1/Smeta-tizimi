@@ -1,11 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useSessiya } from '../api/hooks';
 import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert, Bot, X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function BossShell() {
   const navigate = useNavigate();
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const sess = useSessiya();
+
+  useEffect(() => {
+    if (sess.isError) {
+      document.cookie = 'sess=; Max-Age=0; path=/';
+      navigate('/');
+    }
+  }, [sess.isError, navigate]);
 
   const handleLogout = () => {
     document.cookie = 'sess=; Max-Age=0; path=/';
