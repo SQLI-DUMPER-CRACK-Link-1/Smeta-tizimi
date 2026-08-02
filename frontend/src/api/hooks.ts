@@ -729,6 +729,15 @@ export function useF2HujjatYarat() {
   });
 }
 
+export function useAiSmartF2() {
+  return useMutation({
+    mutationFn: ({ obyekt, text }: { obyekt: string; text: string }) => 
+      gas<{ ok?: boolean; text?: string; sum?: number; qoldiqSum?: number; edits?: any[] }>(
+        'apiAiSmartF2', obyekt, text
+      ),
+  });
+}
+
 /** Joriy sessiya — rol va yozish huquqi */
 export function useSessiya() {
   return useQuery({

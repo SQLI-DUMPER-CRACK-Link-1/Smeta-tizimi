@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useObyektlar, useHolat, useF2HujjatYarat } from '../../api/hooks';
+import { useObyektlar, useHolat, useF2HujjatYarat, useAiSmartF2 } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
-import { FileOutput, ExternalLink, ChevronDown, ChevronRight, Search, Building2, Calendar, FileText, CheckCircle, Database } from 'lucide-react';
+import { FileOutput, ExternalLink, ChevronDown, ChevronRight, Search, Building2, Calendar, FileText, CheckCircle, Database, Wand2, Loader2, Sparkles } from 'lucide-react';
 import type { TreeNode } from '../../api/types';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,6 +52,10 @@ export function F2Tayyorlash() {
   const [tanlov, setTanlov] = useState<Record<string, number>>({});
   const [ochiq, setOchiq] = useState<Record<string, boolean>>({});
   const [natija, setNatija] = useState<{ url?: string; name?: string; jami?: number; soni?: number } | null>(null);
+  
+  // AI Smart F2
+  const [aiText, setAiText] = useState('');
+  const smartF2 = useAiSmartF2();
 
   useEffect(() => { setTanlov({}); setNatija(null); }, [obyekt]);
 
@@ -114,6 +118,31 @@ export function F2Tayyorlash() {
     } catch (e: any) { toast(`Xato: ${e.message}`, 'danger'); }
   }
 
+  async function handleAiSmartF2() {
+    if (!obyekt) { toast('Obyektni tanlang!', 'danger'); return; }
+    if (!aiText.trim()) { toast('Summani kiriting (masalan: 500 mln so\\'m)', 'warn'); return; }
+    
+    try {
+      const res = await smartF2.mutateAsync({ obyekt, text: aiText });
+      if (res.text) {
+         toast(res.text, 'warn', undefined, 5000);
+      }
+      if (res.ok && res.edits) {
+        // Tanlovni tozalab, faqat AI berganlarini kiritamiz
+        const newTanlov: Record<string, number> = {};
+        res.edits.forEach(e => {
+           // kalit = varaq#row
+           const kalit = `${e.varaq}#${e.row}`;
+           newTanlov[kalit] = e.hajmToTake;
+        });
+        setTanlov(newTanlov);
+        toast(`✨ AI Smetani qidirdi: ${res.edits.length} ta pozitsiyadan ${FmtN({val: res.sum, qisqa: true}).props.children} lik ish yig'ildi.`, 'ok', undefined, 4000);
+      }
+    } catch (e: any) {
+      toast(`AI Xato: ${e.message}`, 'danger');
+    }
+  }
+
   return (
     <AuroraBackground>
       <div className="max-w-[1600px] w-full mx-auto p-6 md:p-8 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative z-10">
@@ -163,6 +192,37 @@ export function F2Tayyorlash() {
             </div>
           </motion.div>
         </header>
+
+        {/* AI Smart F2 Banner */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-6">
+          <GlassCard className="p-4 border-accent/30 bg-accent/5 flex flex-col md:flex-row items-center gap-4 group">
+            <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center text-accent flex-shrink-0 group-hover:scale-110 transition-transform">
+              <Sparkles size={24} />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-white font-bold text-lg mb-1">AI bilan Avto-F2 yasash</h3>
+              <p className="text-slate-400 text-sm">Obyekt va oyni tanlab, kerakli summani sotavering. AI minglab smeta qatorlarini o'qib, o'zi optimal F-2 yig'ib beradi.</p>
+            </div>
+            <div className="flex w-full md:w-auto items-center gap-2">
+               <input 
+                 type="text" 
+                 value={aiText} 
+                 onChange={(e) => setAiText(e.target.value)} 
+                 placeholder="Masalan: 500 mln so'mga yasa" 
+                 className="px-4 py-3 bg-black/50 border border-accent/30 rounded-xl text-white outline-none focus:border-accent w-full md:w-64 font-medium"
+                 onKeyDown={(e) => e.key === 'Enter' && handleAiSmartF2()}
+                 disabled={smartF2.isPending || !obyekt}
+               />
+               <button 
+                 onClick={handleAiSmartF2}
+                 disabled={smartF2.isPending || !obyekt}
+                 className="bg-accent hover:bg-sky-400 text-black p-3 rounded-xl shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all disabled:opacity-50 flex items-center justify-center"
+               >
+                 {smartF2.isPending ? <Loader2 size={24} className="animate-spin" /> : <Wand2 size={24} />}
+               </button>
+            </div>
+          </GlassCard>
+        </motion.div>
 
         {!obyekt ? (
           <div className="flex flex-col items-center justify-center h-[50vh] opacity-60">
