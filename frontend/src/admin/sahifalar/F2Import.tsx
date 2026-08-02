@@ -241,11 +241,42 @@ export function F2Import() {
 
   const dopJami = useMemo(() => Object.values(qolDop).reduce((a, n) => a + (n.summa || 0), 0), [qolDop]);
 
-  /** Hamma bog'lanishlarni bekor qilish: moslikMap ham, qolDop ham */
+  /** Hamma bog'lanishlarni bekor qilish: moslikMap ham, qolDop ham. Farzandlarini ham qo'shib bekor qiladi */
   function bogBekor(uid: string) {
-    setQolBekor((p) => new Set(p).add(uid));
-    setQolBog((p) => { const n = { ...p }; delete n[uid]; return n; });
-    setQolDop((p) => { const n = { ...p }; delete n[uid]; return n; });
+    const toRemove = new Set<string>([uid]);
+    const n = aktBarchaTugun.find((x) => x.uid === uid);
+    if (n && n.children) {
+      const getKids = (node: AktNode) => {
+        if (node.children) {
+          node.children.forEach(c => {
+            toRemove.add(c.uid);
+            getKids(c);
+          });
+        }
+      };
+      getKids(n);
+    }
+
+    setQolBekor((p) => {
+      const s = new Set(p);
+      toRemove.forEach(u => s.add(u));
+      return s;
+    });
+    setQolBog((p) => {
+      const np = { ...p };
+      toRemove.forEach(u => delete np[u]);
+      return np;
+    });
+    setQolDop((p) => {
+      const np = { ...p };
+      toRemove.forEach(u => delete np[u]);
+      return np;
+    });
+  }
+
+  function smetaBogBekor(smetaKalit: string) {
+    const aktUid = joyMap.get(smetaKalit);
+    if (aktUid) bogBekor(aktUid);
   }
 
   /** Sudrab tashlash: akt qatori → smeta qatori. «varaq#row» yoki rz:nom:row dan ajratamiz. */
@@ -1201,6 +1232,7 @@ export function F2Import() {
                 tashlanadi
                 onTashla={qolBogla}
                 onGapDrop={qolGapDop}
+                onBogBekor={smetaBogBekor}
                 scrollToKey={smetaScrollTo}
                 bosh={lrv.isLoading ? "Smeta o‘qilmoqda…" : "Smeta daraxti bo‘sh"}
                 filtr={filtr}
