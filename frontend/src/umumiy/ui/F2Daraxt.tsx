@@ -69,22 +69,25 @@ export function F2Daraxt({
     const filtrla = (ns: DaraxtTugun[]): DaraxtTugun[] => {
       const res: DaraxtTugun[] = [];
       for (const n of ns) {
-        if (n.type === 'rz' || (n.type === 'bl' && n.children?.length)) {
-          // Razdel yoki bolalari bor ish
+        if (n.type === 'rz') {
+          // Razdel faqat bolalari bor bo'lsa (yoki filter 'hammasi' bo'lsa) ko'rsatiladi
           const fBolalar = filtrla(n.children ?? []);
-          if (fBolalar.length > 0) {
+          if (fBolalar.length > 0 || filtr === 'hammasi') {
             res.push({ ...n, children: fBolalar });
-          } else if (filtr === 'hammasi') {
-            // Hammasi bo'lsa bo'sh razdelni ham ko'rsatamiz
-            res.push({ ...n, children: [] });
           }
         } else {
-          // Barg (leaf)
+          // Ish, Resurs, Material, Obyem (hammasi o'zi bog'lanishi mumkin)
           const bog = bogMi(n.kalit);
-          if (filtr === 'hammasi' || 
-             (filtr === 'boglangan' && bog) || 
-             (filtr === 'boglanmagan' && !bog)) {
-            res.push(n);
+          const matches = filtr === 'hammasi' || (filtr === 'boglangan' && bog) || (filtr === 'boglanmagan' && !bog);
+          
+          let fBolalar: DaraxtTugun[] = [];
+          if (n.children?.length) {
+            fBolalar = filtrla(n.children);
+          }
+          
+          // Agar o'zi mos kelsa YOKI bolalaridan biri mos kelsa, ro'yxatga qo'shamiz
+          if (matches || fBolalar.length > 0) {
+            res.push({ ...n, children: fBolalar });
           }
         }
       }
