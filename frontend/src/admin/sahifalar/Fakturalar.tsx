@@ -306,7 +306,7 @@ export function Fakturalar() {
             setQolganFayllar(res.qolganFayllar);
           }
           if (res.qolganFayllar === 0 || (res.ishlanganFayllar === 0 && res.qolganFayllar === 0)) {
-            toast('Sinxronizatsiya to\\'liq yakunlandi!', 'ok');
+            toast("Sinxronizatsiya to'liq yakunlandi!", 'ok');
             break;
           }
         } else {

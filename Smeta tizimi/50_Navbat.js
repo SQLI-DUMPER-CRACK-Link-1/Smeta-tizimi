@@ -378,6 +378,16 @@ function avtoYangilash(){
   // ⚡ 2026-07-10: Грaфик работ — oxirgi saqlangan sozlamalar bo'yicha fon jarayonini
   //   boshlaydi (toza FAKT bilan), shunda foydalanuvchi kirganda TAYYOR turadi.
   if(typeof _grafikAvtoYangilash==='function'){ try{ _grafikAvtoYangilash(); }catch(e){ Logger.log('grafik avto: '+e); } }
+  
+  var trs=ScriptApp.getProjectTriggers();
+  var borFS=false;
+  for(var i=0;i<trs.length;i++) if(trs[i].getHandlerFunction()==='fakturaSinx'){ borFS=true; break; }
+  if(!borFS){
+    if(typeof fakturaSinxTriggerOrnat === 'function') {
+      fakturaSinxTriggerOrnat();
+    }
+  }
+
   if(typeof supabaseDashboardPush==='function'){ try{ supabaseDashboardPush(); }catch(e){ Logger.log('SB dash: '+e); } }
   if(typeof supabaseNarxlarPush==='function'){ try{ supabaseNarxlarPush(); }catch(e){} }
 }
