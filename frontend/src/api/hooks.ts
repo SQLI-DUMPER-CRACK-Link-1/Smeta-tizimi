@@ -346,7 +346,7 @@ export function useSkladYoz() {
 }
 
 /* ============ FAKTURALAR (Fakturalar.js) ============ */
-export interface FakturaItem {
+export type FakturaItem = {
   id?: string;
   fakturaRaqami: string;
   postavshik: string;
@@ -360,8 +360,9 @@ export interface FakturaItem {
   jamiNdsSiz: number;
   ndsSummasi: number;
   jamiNdsBilan: number;
+  kategoriya?: string;
   isDuplicate?: boolean;
-}
+};
 
 export function useFakturalarOl() {
   return useQuery({

@@ -33,6 +33,30 @@ export function Fakturalar() {
     });
   }, [hammasi, q]);
 
+  // Analitika hisoblash
+  const analitika = useMemo(() => {
+    let jami = 0;
+    let jamiNds = 0;
+    const kat: Record<string, number> = {};
+    const post: Record<string, number> = {};
+
+    satrlar.forEach(m => {
+      jami += m.jamiNdsBilan || 0;
+      jamiNds += m.ndsSummasi || 0;
+      
+      const k = m.kategoriya || 'Boshqa';
+      kat[k] = (kat[k] || 0) + (m.jamiNdsBilan || 0);
+
+      const p = m.postavshik || 'Noma\'lum';
+      post[p] = (post[p] || 0) + (m.jamiNdsBilan || 0);
+    });
+
+    const katArr = Object.entries(kat).sort((a,b)=>b[1]-a[1]);
+    const postArr = Object.entries(post).sort((a,b)=>b[1]-a[1]).slice(0, 5); // Top 5
+
+    return { jami, jamiNds, soni: satrlar.length, katArr, postArr };
+  }, [satrlar]);
+
   const loadPdfJs = async () => {
     if ((window as any).pdfjsLib) return (window as any).pdfjsLib;
     return new Promise((resolve, reject) => {
@@ -273,9 +297,10 @@ export function Fakturalar() {
     { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '120px', chiz: (m: any) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
     { kalit: 'postavshik', nom: 'Postavshik', chiz: (m: any) => <span className="text-text truncate text-[13px]">{m.postavshik}</span> },
     { kalit: 'nomi', nom: 'Maxsulot nomi', chiz: (m: any) => <span className="text-text font-medium text-[13px]">{m.nomi}</span> },
+    { kalit: 'kategoriya', nom: 'Kategoriya', en: '130px', chiz: (m: any) => <span className="inline-block px-2 py-1 bg-white/5 border border-border text-text-dim rounded-md text-[11px]">{m.kategoriya || 'Boshqa'}</span> },
     { kalit: 'birligi', nom: 'Birlik', en: '70px', chiz: (m: any) => <span className="text-text-dim text-[13px]">{m.birligi}</span> },
-    { kalit: 'miqdori', nom: 'Miqdor', raqam: true, en: '100px', chiz: (m: any) => <FmtN val={m.miqdori} /> },
-    { kalit: 'narxi', nom: 'Narx (NDS siz)', raqam: true, en: '120px', chiz: (m: any) => <FmtN val={m.narxi} /> },
+    { kalit: 'miqdori', nom: 'Miqdor', raqam: true, en: '90px', chiz: (m: any) => <FmtN val={m.miqdori} /> },
+    { kalit: 'narxi', nom: 'Narx (NDS siz)', raqam: true, en: '110px', chiz: (m: any) => <FmtN val={m.narxi} /> },
     { kalit: 'jamiNdsBilan', nom: 'Jami (NDS bilan)', raqam: true, en: '130px', chiz: (m: any) => <span className="text-ok font-medium"><FmtN val={m.jamiNdsBilan} /></span> },
   ];
 
@@ -298,6 +323,48 @@ export function Fakturalar() {
       <Holatlar soragan={soragan} bosh={{ matn: 'Fakturalar jurnali bo\'sh', izoh: 'Hali hech qanday faktura kiritilmagan.' }}>
         {() => (
           <div className="flex flex-col gap-6">
+
+            {/* Analitika Kengash */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="karta p-5 shadow-lg border border-border bg-gradient-to-br from-black/40 to-black/10">
+                <h3 className="text-sm font-medium text-text-dim mb-1">Jami Qabul Qilingan Summa</h3>
+                <div className="text-3xl font-bold text-white mb-2"><FmtN val={analitika.jami} /> <span className="text-sm font-normal text-text-dim">so'm</span></div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-text-dim">Hujjatlar soni:</span>
+                  <span className="text-accent font-medium">{analitika.soni} ta</span>
+                </div>
+                <div className="flex justify-between text-[13px] mt-1">
+                  <span className="text-text-dim">Jami NDS:</span>
+                  <span className="text-warning font-medium"><FmtN val={analitika.jamiNds} /></span>
+                </div>
+              </div>
+
+              <div className="karta p-4 shadow-lg border border-border overflow-hidden flex flex-col">
+                <h3 className="text-[13px] font-medium text-text-dim mb-3 uppercase tracking-wider">Kategoriyalar bo'yicha</h3>
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                  {analitika.katArr.length === 0 ? <span className="text-text-dim text-sm">Ma'lumot yo'q</span> : 
+                   analitika.katArr.map(([k, s]) => (
+                    <div key={k} className="flex justify-between items-center text-sm">
+                      <span className="text-text truncate pr-2 flex-1" title={k}>{k}</span>
+                      <span className="font-semibold text-ok shrink-0"><FmtN val={s} /></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="karta p-4 shadow-lg border border-border overflow-hidden flex flex-col">
+                <h3 className="text-[13px] font-medium text-text-dim mb-3 uppercase tracking-wider">Top-5 Yetkazib Beruvchilar</h3>
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                  {analitika.postArr.length === 0 ? <span className="text-text-dim text-sm">Ma'lumot yo'q</span> : 
+                   analitika.postArr.map(([p, s]) => (
+                    <div key={p} className="flex justify-between items-center text-sm">
+                      <span className="text-text truncate pr-2 flex-1" title={p}>{p}</span>
+                      <span className="font-semibold text-white shrink-0"><FmtN val={s} /></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
             
             {/* Drive Sync Boshqaruvi */}
             <div className="karta p-4 border border-border shadow-lg">
