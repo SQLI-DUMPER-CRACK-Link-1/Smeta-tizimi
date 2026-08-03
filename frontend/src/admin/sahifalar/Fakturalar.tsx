@@ -21,6 +21,9 @@ export function Fakturalar() {
   const [parsingStatus, setParsingStatus] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [isSyncingLoop, setIsSyncingLoop] = useState(false);
+  const [qolganFayllar, setQolganFayllar] = useState<number | null>(null);
+
   const hammasi = soragan.data?.fakturalar ?? [];
 
   const satrlar = useMemo(() => {
@@ -292,6 +295,35 @@ export function Fakturalar() {
     }
   };
 
+  const startSyncLoop = async () => {
+    setIsSyncingLoop(true);
+    let xatoCount = 0;
+    try {
+      while (true) {
+        const res = await drvSinx.mutateAsync();
+        if (res?.ok) {
+          if (res.qolganFayllar !== undefined) {
+            setQolganFayllar(res.qolganFayllar);
+          }
+          if (res.qolganFayllar === 0 || (res.ishlanganFayllar === 0 && res.qolganFayllar === 0)) {
+            toast('Sinxronizatsiya to\\'liq yakunlandi!', 'ok');
+            break;
+          }
+        } else {
+          toast("Xatolik: " + res?.xabar, 'danger');
+          xatoCount++;
+          if (xatoCount > 3) break;
+        }
+      }
+    } catch(e) {
+      toast("Sinxronizatsiya to'xtab qoldi: " + String(e), 'danger');
+    } finally {
+      setIsSyncingLoop(false);
+      setQolganFayllar(null);
+      drvHolat.refetch();
+    }
+  };
+
   const ustunlar = [
     { kalit: 'kelganSana', nom: 'Sana', en: '100px', chiz: (m: any) => <span className="text-text-dim text-[13px]">{m.kelganSana}</span> },
     { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '120px', chiz: (m: any) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
@@ -371,32 +403,39 @@ export function Fakturalar() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-medium text-white flex items-center gap-2">
-                    <RefreshCw size={18} className="text-accent" /> Avto-Sinxronizatsiya (Google Drive)
+                    <RefreshCw size={18} className={`text-accent ${isSyncingLoop ? 'animate-spin' : ''}`} /> Avto-Sinxronizatsiya (Google Drive)
                   </h3>
-                  <p className="text-sm text-text-dim">Kechasi soat 02:00 da o'zi ishlaydi, yoki hoziroq qo'lda ishga tushiring.</p>
+                  <p className="text-sm text-text-dim">Papka ichidagi hamma hujjatlar yig'iladi va AI tahlilidan o'tkaziladi.</p>
                 </div>
                 <div className="flex gap-2 items-center">
                   <Tugma 
-                    ikonka={<RefreshCw size={14} className={drvSinx.isPending || drvHolat.isFetching ? 'animate-spin' : ''} />} 
+                    ikonka={<RefreshCw size={14} className={drvHolat.isFetching ? 'animate-spin' : ''} />} 
                     onBos={() => drvHolat.refetch()}
-                    band={drvHolat.isFetching}
+                    band={drvHolat.isFetching || isSyncingLoop}
                   >
                     Yangilash
                   </Tugma>
                   <Tugma 
                     tur="primary" 
                     ikonka={<FileUp size={16} />} 
-                    band={drvSinx.isPending || drvHolat.isFetching} 
-                    onBos={async () => {
-                      const res = await drvSinx.mutateAsync();
-                      if (res?.ok) toast(`Muvaffaqiyatli! ${res.ishlanganFayllar} ta fayl o'qildi, ${res.yozilganQatorlar} ta qator yozildi.`, 'ok');
-                      else toast('Xato: ' + res?.xabar, 'danger');
-                    }}
+                    band={isSyncingLoop || drvHolat.isFetching} 
+                    onBos={startSyncLoop}
                   >
-                    {drvSinx.isPending ? 'Sinxronizatsiya qilinmoqda...' : 'Hozir Sinxronizatsiya Qilish'}
+                    {isSyncingLoop ? 'Sinxronizatsiya jarayonda...' : 'Hozir Sinxronizatsiya Qilish'}
                   </Tugma>
                 </div>
               </div>
+
+              {isSyncingLoop && (
+                <div className="bg-black/30 border border-border p-3 rounded-md mb-4 flex items-center justify-between">
+                  <span className="text-warning text-sm font-medium animate-pulse">
+                    Jarayon ketmoqda, iltimos sahifani yopmang...
+                  </span>
+                  <span className="text-white text-sm">
+                    Qolgan hujjatlar: <b className="text-accent">{qolganFayllar ?? 'hisoblanmoqda...'}</b> ta
+                  </span>
+                </div>
+              )}
 
               <div className="grid grid-cols-4 gap-4">
                 <a href={drvHolat.data?.yangi?.url || '#'} target="_blank" rel="noreferrer" className="bg-black/20 p-4 rounded-xl border border-border hover:border-accent/50 transition-colors group cursor-pointer block relative">

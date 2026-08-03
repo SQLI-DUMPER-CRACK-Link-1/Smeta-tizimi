@@ -414,7 +414,7 @@ export function useFakturaDriveHolat() {
 export function useFakturaAvtoSinx() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => gas<{ ok: boolean; ishlanganFayllar?: number; yozilganQatorlar?: number; xabar?: string }>('apiFakturaAvtoSinx'),
+    mutationFn: () => gas<{ ok: boolean; ishlanganFayllar?: number; yozilganQatorlar?: number; qolganFayllar?: number; xabar?: string }>('apiFakturaAvtoSinx'),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fakturalar'] });
       qc.invalidateQueries({ queryKey: ['fakturaDriveHolat'] });
