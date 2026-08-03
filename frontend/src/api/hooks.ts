@@ -370,6 +370,12 @@ export function useFakturalarOl() {
   });
 }
 
+export function useFakturaFaylYoz() {
+  return useMutation({
+    mutationFn: (payload: { base64: string; nomi: string; postavshik: string }) => gas<{ ok: boolean; url?: string; xabar?: string }>('apiFakturaFaylYoz', payload),
+  });
+}
+
 export function useFakturaYoz() {
   const qc = useQueryClient();
   return useMutation({

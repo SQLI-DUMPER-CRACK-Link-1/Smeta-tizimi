@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { useFakturalarOl, useFakturaYoz, type FakturaItem } from '../../api/hooks';
+import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, type FakturaItem } from '../../api/hooks';
 import { Sahifa, Holatlar, Jadval, Qidiruv, Tugma } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
 import { FileUp, Save, X } from 'lucide-react';
@@ -8,18 +8,14 @@ import { FmtN } from '../../lib/format';
 export function Fakturalar() {
   const soragan = useFakturalarOl();
   const yoz = useFakturaYoz();
+  const faylYoz = useFakturaFaylYoz();
   
   const [q, setQ] = useState('');
   const [modalOchiq, setModalOchiq] = useState(false);
   
-  const [fakturaRaqami, setFakturaRaqami] = useState('');
-  const [kelganSana, setKelganSana] = useState('');
-  const [shartnomaRaqami, setShartnomaRaqami] = useState('');
-  const [shartnomaSanasi, setShartnomaSanasi] = useState('');
-  const [postavshik, setPostavshik] = useState('');
-  
   const [yangiKiritmalar, setYangiKiritmalar] = useState<FakturaItem[]>([]);
   const [isParsing, setIsParsing] = useState(false);
+  const [parsingStatus, setParsingStatus] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hammasi = soragan.data?.fakturalar ?? [];
@@ -50,44 +46,69 @@ export function Fakturalar() {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     
     setIsParsing(true);
     setYangiKiritmalar([]);
+    let barchaTovarlar: FakturaItem[] = [];
     
     try {
       const pdfjsLib: any = await loadPdfJs();
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setParsingStatus(`O'qilmoqda: ${i + 1} / ${files.length} (${file.name})`);
         
-        // Barcha matnni bitta ketma-ketlikda yig'amiz
-        const items = textContent.items;
-        items.forEach((item: any) => {
-          fullText += item.str + ' ';
+        // 1. PDF matnini o'qish
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let j = 1; j <= pdf.numPages; j++) {
+          const page = await pdf.getPage(j);
+          const textContent = await page.getTextContent();
+          textContent.items.forEach((item: any) => { fullText += item.str + ' '; });
+        }
+        fullText = fullText.replace(/\s+/g, ' ');
+        
+        // 2. Matndan tovarlarni ajratish
+        const { items, supplier } = parseFakturaText(fullText);
+        barchaTovarlar = [...barchaTovarlar, ...items];
+        
+        // 3. PDF faylni Base64 formatga o'tkazish
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
         });
+        
+        // 4. Orqa fonga PDF ni saqlash uchun yuborish
+        try {
+            await faylYoz.mutateAsync({ base64, nomi: file.name, postavshik: supplier });
+        } catch(err) {
+            console.error("Faylni saqlashda xato:", err);
+            toast(`${file.name} ni Drive ga saqlab bo'lmadi`);
+        }
       }
       
-      // Matndagi ortiqcha bo'shliqlarni bittaga qisqartiramiz
-      fullText = fullText.replace(/\s+/g, ' ');
-      
-      parseFakturaText(fullText);
+      if (barchaTovarlar.length > 0) {
+        setYangiKiritmalar(barchaTovarlar);
+        toast(`Jami ${barchaTovarlar.length} ta tovar topildi`);
+      } else {
+        toast("Fakturalar ichidan tovarlarni ajratib bo'lmadi.");
+      }
       
     } catch (err: any) {
       console.error(err);
       toast("Fakturani o'qishda xato: " + err.message);
     } finally {
       setIsParsing(false);
+      setParsingStatus('');
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const parseFakturaText = (text: string) => {
+  const parseFakturaText = (text: string): { items: FakturaItem[], supplier: string } => {
     let docNo = '';
     let docDate = '';
     let contractNo = '';
@@ -108,17 +129,11 @@ export function Fakturalar() {
       docNo = fakMatch[2];
     }
     
-    // Postavshik (Yetkazib берувчи: yoki Воситачи: dan to Манзил: gacha bo'lgan joyda)
-    const supplierMatch = text.match(/(?:Етказиб\s*берувчи|Воситачи):(.*?)(?:Манзил:|Етказиб\s*берувчининг|Воситачининг)/i);
+    const supplierMatch = text.match(/(?:Етказиб\s*берувчи|Воситачи|Ижрочи|Буюртмачи):(.*?)(?:Манзил:|Етказиб\s*берувчининг|Воситачининг|Ижрочининг|Буюртмачининг)/i);
     if (supplierMatch) {
       supplier = supplierMatch[1].trim();
     }
     
-    setFakturaRaqami(docNo);
-    setKelganSana(docDate);
-    setShartnomaRaqami(contractNo);
-    setShartnomaSanasi(contractDate);
-    setPostavshik(supplier);
 
     const tovarlar: FakturaItem[] = [];
     
@@ -195,23 +210,13 @@ export function Fakturalar() {
         });
     }
     
-    if (tovarlar.length > 0) {
-      setYangiKiritmalar(tovarlar);
-      toast(`${tovarlar.length} ta tovar topildi`);
-    } else {
-      toast("Jadval ichidan tovarlarni ajratib bo'lmadi. O'qilgan matn formati mos kelmadi.");
-    }
+    return { items: tovarlar, supplier: supplier || "Noma'lum" };
   };
 
   const handleSave = async () => {
     if (yangiKiritmalar.length === 0) return;
     
-    const finalItems = yangiKiritmalar.map(item => ({
-      ...item,
-      fakturaRaqami, postavshik, kelganSana, shartnomaRaqami, shartnomaSanasi
-    }));
-    
-    const res = await yoz.mutateAsync(finalItems);
+    const res = await yoz.mutateAsync(yangiKiritmalar);
     if (res?.ok) {
       toast(`${res.soni} ta qator muvaffaqiyatli saqlandi!`);
       setModalOchiq(false);
@@ -274,7 +279,8 @@ export function Fakturalar() {
                 <div className="border-2 border-dashed border-border rounded-xl p-12 flex flex-col items-center justify-center text-center gap-4 bg-black/10 hover:bg-black/20 transition-colors">
                   <input 
                     type="file" 
-                    accept=".pdf" 
+                    accept=".pdf"
+                    multiple
                     className="hidden" 
                     ref={fileInputRef} 
                     onChange={handleFileUpload} 
@@ -283,55 +289,41 @@ export function Fakturalar() {
                     <FileUp size={32} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-white mb-1">Didox Fakturasini tanlang</h3>
-                    <p className="text-sm text-text-dim">PDF formatidagi faylni yuklang, tizim avtomatik o'qiydi</p>
+                    <h3 className="text-lg font-medium text-white mb-1">Didox Fakturalarini tanlang</h3>
+                    <p className="text-sm text-text-dim">Bir nechta PDF fayllarni birdaniga tanlashingiz mumkin</p>
                   </div>
                   <Tugma tur="primary" band={isParsing} onBos={() => fileInputRef.current?.click()}>
-                    {isParsing ? 'O\'qilmoqda...' : 'Fayl tanlash'}
+                    {isParsing ? 'O\'qilmoqda...' : 'Fayllarni tanlash'}
                   </Tugma>
+                  {parsingStatus && <div className="text-accent text-sm mt-2">{parsingStatus}</div>}
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-black/20 p-4 rounded-xl border border-border">
-                    <div>
-                      <span className="text-xs text-text-dim uppercase tracking-wider block mb-1">Faktura №</span>
-                      <input className="w-full bg-[var(--surface-2)] border border-border rounded p-2 text-white text-sm" value={fakturaRaqami} onChange={e => setFakturaRaqami(e.target.value)} />
-                    </div>
-                    <div>
-                      <span className="text-xs text-text-dim uppercase tracking-wider block mb-1">Sana</span>
-                      <input className="w-full bg-[var(--surface-2)] border border-border rounded p-2 text-white text-sm" value={kelganSana} onChange={e => setKelganSana(e.target.value)} />
-                    </div>
-                    <div>
-                      <span className="text-xs text-text-dim uppercase tracking-wider block mb-1">Shartnoma №</span>
-                      <input className="w-full bg-[var(--surface-2)] border border-border rounded p-2 text-white text-sm" value={shartnomaRaqami} onChange={e => setShartnomaRaqami(e.target.value)} />
-                    </div>
-                    <div>
-                      <span className="text-xs text-text-dim uppercase tracking-wider block mb-1">Shartnoma sanasi</span>
-                      <input className="w-full bg-[var(--surface-2)] border border-border rounded p-2 text-white text-sm" value={shartnomaSanasi} onChange={e => setShartnomaSanasi(e.target.value)} />
-                    </div>
-                    <div className="col-span-2 md:col-span-4 mt-2">
-                      <span className="text-xs text-text-dim uppercase tracking-wider block mb-1">Yetkazib beruvchi</span>
-                      <input className="w-full bg-[var(--surface-2)] border border-border rounded p-2 text-white text-sm font-medium text-accent" value={postavshik} onChange={e => setPostavshik(e.target.value)} />
-                    </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <h3 className="font-bold text-white">O'qilgan tovarlar ro'yxati:</h3>
+                    <span className="text-sm text-text-dim px-3 py-1 bg-[var(--surface-2)] rounded-full">
+                      Jami {yangiKiritmalar.length} ta tovar
+                    </span>
                   </div>
-
-                  <h3 className="font-bold text-white mt-2">O'qilgan tovarlar ro'yxati:</h3>
                   
-                  <div className="border border-border rounded-xl overflow-hidden bg-black/20">
+                  <div className="border border-border rounded-xl overflow-hidden bg-black/20 overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                       <thead className="bg-[var(--surface-2)] border-b border-border text-text-dim">
                         <tr>
+                          <th className="px-3 py-2 font-medium">Postavshik</th>
+                          <th className="px-3 py-2 font-medium">Faktura "-</th>
                           <th className="px-3 py-2 font-medium">Nomi</th>
                           <th className="px-3 py-2 font-medium">Birlik</th>
                           <th className="px-3 py-2 font-medium text-right">Miqdor</th>
                           <th className="px-3 py-2 font-medium text-right">Narxi (so'm)</th>
-                          <th className="px-3 py-2 font-medium text-right">NDS Summasi</th>
                           <th className="px-3 py-2 font-medium text-right">Jami Summa</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {yangiKiritmalar.map((t, i) => (
                           <tr key={i} className="hover:bg-white/5">
+                            <td className="px-3 py-2 text-white max-w-[150px] truncate" title={t.postavshik}>{t.postavshik}</td>
+                            <td className="px-3 py-2 text-text-dim w-24">{t.fakturaRaqami}</td>
                             <td className="px-3 py-2 max-w-[250px] truncate text-white" title={t.nomi}>
                               <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none" value={t.nomi} onChange={(e) => {
                                 const nw = [...yangiKiritmalar]; nw[i].nomi = e.target.value; setYangiKiritmalar(nw);
@@ -348,7 +340,6 @@ export function Fakturalar() {
                               }}/>
                             </td>
                             <td className="px-3 py-2 text-right w-32"><FmtN val={t.narxi} /></td>
-                            <td className="px-3 py-2 text-right w-32"><FmtN val={t.ndsSummasi} /></td>
                             <td className="px-3 py-2 text-right font-bold text-ok w-32"><FmtN val={t.jamiNdsBilan} /></td>
                           </tr>
                         ))}

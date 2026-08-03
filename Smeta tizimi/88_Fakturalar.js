@@ -86,3 +86,42 @@ function apiFakturaYoz(fakturalarArray) {
     return { ok: false, xabar: String(e) };
   }
 }
+
+function apiFakturaFaylYoz(payload) {
+  try {
+    var b64 = payload.base64;
+    if (!b64) return { ok: false, xabar: 'Base64 data kiritilmadi' };
+    
+    if (b64.indexOf('base64,') !== -1) {
+      b64 = b64.split('base64,')[1];
+    }
+
+    var fileName = payload.nomi || 'Faktura.pdf';
+    var postavshik = payload.postavshik || 'Boshqalar';
+    postavshik = postavshik.replace(/[<>:"\/\\|?*]/g, '_'); // Papka nomi uchun taqiqlangan belgilarni tozalash
+    
+    var rootFolders = DriveApp.getRootFolder().getFoldersByName('Fakturalar');
+    var fakturaFolder;
+    if (rootFolders.hasNext()) {
+      fakturaFolder = rootFolders.next();
+    } else {
+      fakturaFolder = DriveApp.getRootFolder().createFolder('Fakturalar');
+    }
+    
+    var postFolders = fakturaFolder.getFoldersByName(postavshik);
+    var postFolder;
+    if (postFolders.hasNext()) {
+      postFolder = postFolders.next();
+    } else {
+      postFolder = fakturaFolder.createFolder(postavshik);
+    }
+    
+    var blob = Utilities.newBlob(Utilities.base64Decode(b64), 'application/pdf', fileName);
+    var file = postFolder.createFile(blob);
+    
+    return { ok: true, url: file.getUrl(), fileName: fileName };
+  } catch(e) {
+    return { ok: false, xabar: String(e) };
+  }
+}
+
