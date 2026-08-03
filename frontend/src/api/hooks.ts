@@ -360,6 +360,7 @@ export interface FakturaItem {
   jamiNdsSiz: number;
   ndsSummasi: number;
   jamiNdsBilan: number;
+  isDuplicate?: boolean;
 }
 
 export function useFakturalarOl() {
@@ -381,6 +382,13 @@ export function useFakturaYoz() {
   return useMutation({
     mutationFn: (fakturalar: FakturaItem[]) => gas<{ ok: boolean; soni?: number; xabar?: string }>('apiFakturaYoz', fakturalar),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['fakturalar'] }),
+  });
+}
+
+export function useFakturaOCR() {
+  return useMutation({
+    mutationFn: (payload: { base64: string; mimeType: string; nomi: string }) => 
+      gas<{ ok: boolean; text?: string; xabar?: string }>('apiFakturaOCR', payload)
   });
 }
 

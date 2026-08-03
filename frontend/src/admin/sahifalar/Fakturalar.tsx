@@ -9,6 +9,7 @@ export function Fakturalar() {
   const soragan = useFakturalarOl();
   const yoz = useFakturaYoz();
   const faylYoz = useFakturaFaylYoz();
+  const ocr = useFakturaOCR();
   
   const [q, setQ] = useState('');
   const [modalOchiq, setModalOchiq] = useState(false);
@@ -60,27 +61,47 @@ export function Fakturalar() {
         const file = files[i];
         setParsingStatus(`O'qilmoqda: ${i + 1} / ${files.length} (${file.name})`);
         
-        // 1. PDF matnini o'qish
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
-        for (let j = 1; j <= pdf.numPages; j++) {
-          const page = await pdf.getPage(j);
-          const textContent = await page.getTextContent();
-          textContent.items.forEach((item: any) => { fullText += item.str + ' '; });
-        }
-        fullText = fullText.replace(/\s+/g, ' ');
-        
-        // 2. Matndan tovarlarni ajratish
-        const { items, supplier } = parseFakturaText(fullText);
-        barchaTovarlar = [...barchaTovarlar, ...items];
-        
-        // 3. PDF faylni Base64 formatga o'tkazish
+        // 3. Faylni Base64 formatga o'tkazish
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
           reader.readAsDataURL(file);
         });
+
+        // 1. PDF yoki rasm matnini o'qish
+        let fullText = '';
+        if (file.type.startsWith('image/')) {
+          setParsingStatus(`Rasm o'qilmoqda (Google OCR): ${i + 1} / ${files.length} (${file.name})`);
+          const ocrRes = await ocr.mutateAsync({ base64, mimeType: file.type, nomi: file.name });
+          if (ocrRes?.ok && ocrRes.text) {
+            fullText = ocrRes.text.replace(/\s+/g, ' ');
+          } else {
+            toast(`OCR xatosi (${file.name}): ${ocrRes?.xabar}`, 'danger');
+          }
+        } else {
+          setParsingStatus(`PDF o'qilmoqda: ${i + 1} / ${files.length} (${file.name})`);
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          for (let j = 1; j <= pdf.numPages; j++) {
+            const page = await pdf.getPage(j);
+            const textContent = await page.getTextContent();
+            textContent.items.forEach((item: any) => { fullText += item.str + ' '; });
+          }
+          fullText = fullText.replace(/\s+/g, ' ');
+
+          // Agar PDF bo'lsa lekin ichida matn yo'q bo'lsa (skaner PDF), OCR qilamiz
+          if (fullText.trim().length < 50) {
+            setParsingStatus(`Skaner PDF aniqlandi, OCR qilinmoqda: ${i + 1} / ${files.length}`);
+            const ocrRes = await ocr.mutateAsync({ base64, mimeType: 'application/pdf', nomi: file.name });
+            if (ocrRes?.ok && ocrRes.text) {
+              fullText = ocrRes.text.replace(/\s+/g, ' ');
+            }
+          }
+        }
+        
+        // 2. Matndan tovarlarni ajratish
+        const { items, supplier } = parseFakturaText(fullText);
+        barchaTovarlar = [...barchaTovarlar, ...items];
         
         // 4. Orqa fonga PDF ni saqlash uchun yuborish
         try {
@@ -223,9 +244,18 @@ export function Fakturalar() {
   };
 
   const handleSave = async () => {
-    if (yangiKiritmalar.length === 0) return;
+    // FAQAT dublikat bo'lmaganlarini saqlash
+    const yaroqli = yangiKiritmalar.filter(item => {
+      const isDup = item.fakturaRaqami && item.postavshik && hammasi.some(x => x.fakturaRaqami === item.fakturaRaqami && x.postavshik === item.postavshik);
+      return !isDup;
+    });
+
+    if (yaroqli.length === 0) {
+      toast("Saqlash uchun yangi tovar yo'q (hammasi dublikat)", "warn");
+      return;
+    }
     
-    const res = await yoz.mutateAsync(yangiKiritmalar);
+    const res = await yoz.mutateAsync(yaroqli);
     if (res?.ok) {
       toast(`${res.soni} ta qator muvaffaqiyatli saqlandi!`, 'ok');
       setModalOchiq(false);
@@ -289,7 +319,7 @@ export function Fakturalar() {
                 <div className="border-2 border-dashed border-border rounded-xl p-12 flex flex-col items-center justify-center text-center gap-4 bg-black/10 hover:bg-black/20 transition-colors">
                   <input 
                     type="file" 
-                    accept=".pdf"
+                    accept=".pdf, image/png, image/jpeg, image/jpg"
                     multiple
                     className="hidden" 
                     ref={fileInputRef} 
@@ -299,8 +329,8 @@ export function Fakturalar() {
                     <FileUp size={32} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-white mb-1">Didox Fakturalarini tanlang</h3>
-                    <p className="text-sm text-text-dim">Bir nechta PDF fayllarni birdaniga tanlashingiz mumkin</p>
+                    <h3 className="text-lg font-medium text-white mb-1">Faktura (PDF yoki Rasm) tanlang</h3>
+                    <p className="text-sm text-text-dim">Bir nechta PDF, JPG, PNG fayllarni birdaniga tanlashingiz mumkin</p>
                   </div>
                   <Tugma tur="primary" band={isParsing} onBos={() => fileInputRef.current?.click()}>
                     {isParsing ? 'O\'qilmoqda...' : 'Fayllarni tanlash'}
@@ -330,10 +360,20 @@ export function Fakturalar() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {yangiKiritmalar.map((t, i) => (
-                          <tr key={i} className="hover:bg-white/5">
-                            <td className="px-3 py-2 text-white max-w-[150px] truncate" title={t.postavshik}>{t.postavshik}</td>
-                            <td className="px-3 py-2 text-text-dim w-24">{t.fakturaRaqami}</td>
+                        {yangiKiritmalar.map((t, i) => {
+                          const isDup = t.fakturaRaqami && t.postavshik && hammasi.some(x => x.fakturaRaqami === t.fakturaRaqami && x.postavshik === t.postavshik);
+                          return (
+                          <tr key={i} className={`hover:bg-white/5 ${isDup ? 'opacity-50 bg-danger/10' : ''}`} title={isDup ? "Bu faktura oldin kiritilgan (Dublikat)" : ""}>
+                            <td className="px-3 py-2 max-w-[150px]">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-white text-sm" placeholder="Postavshik" value={t.postavshik} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].postavshik = e.target.value; setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
+                            <td className="px-3 py-2 w-32">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-text-dim text-sm" placeholder="Faktura №" value={t.fakturaRaqami} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].fakturaRaqami = e.target.value; setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
                             <td className="px-3 py-2 max-w-[250px] truncate text-white" title={t.nomi}>
                               <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none" value={t.nomi} onChange={(e) => {
                                 const nw = [...yangiKiritmalar]; nw[i].nomi = e.target.value; setYangiKiritmalar(nw);
@@ -352,7 +392,8 @@ export function Fakturalar() {
                             <td className="px-3 py-2 text-right w-32"><FmtN val={t.narxi} /></td>
                             <td className="px-3 py-2 text-right font-bold text-ok w-32"><FmtN val={t.jamiNdsBilan} /></td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -360,7 +401,10 @@ export function Fakturalar() {
               )}
             </div>
             
-            <div className="border-t border-border bg-black/20 p-4 flex justify-end gap-3">
+            <div className="border-t border-border bg-black/20 p-4 flex justify-end gap-3 items-center">
+              {yangiKiritmalar.some(t => t.fakturaRaqami && t.postavshik && hammasi.some(x => x.fakturaRaqami === t.fakturaRaqami && x.postavshik === t.postavshik)) && (
+                <span className="text-danger text-sm mr-auto font-medium">* Dublikat qatorlar saqlanmaydi!</span>
+              )}
               <Tugma onBos={() => setModalOchiq(false)}>Bekor qilish</Tugma>
               {yangiKiritmalar.length > 0 && (
                 <Tugma tur="primary" onBos={handleSave} band={yoz.isPending} ikonka={<Save size={16} />}>
