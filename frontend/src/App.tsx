@@ -17,6 +17,7 @@ import { Sozlamalar } from './admin/sahifalar/Sozlamalar';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
 import { Narxlar } from './admin/sahifalar/Narxlar';
 import { Ierarxiya } from './admin/sahifalar/Ierarxiya';
+import { Fakturalar } from './admin/sahifalar/Fakturalar';
 import { Buxgalteriya } from './admin/sahifalar/Buxgalteriya';
 import { CommandPalette } from './umumiy/ui/CommandPalette';
 import { AiHelper } from './umumiy/ui/AiHelper';
@@ -50,10 +51,11 @@ export default function App() {
           <Route path="f2" element={<F2Import />} />
           <Route path="f2-tayyorlash" element={<F2Tayyorlash />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
-          <Route path="shartnoma" element={<Shartnoma />} />
+          <Route path="shartnomalar" element={<Shartnoma />} />
+          <Route path="fakturalar" element={<Fakturalar />} />
+          <Route path="sklad" element={<Sklad />} />
           <Route path="narxlar" element={<Narxlar />} />
           <Route path="ierarxiya" element={<Ierarxiya />} />
-          <Route path="sklad" element={<Sklad />} />
           <Route path="monitoring" element={<Monitoring />} />
           <Route path="sozlamalar" element={<Sozlamalar />} />
           {/* ERP routes for Admin */}

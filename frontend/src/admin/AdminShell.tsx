@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
-import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings } from 'lucide-react';
+import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3D';
 
 const MENYU = [
@@ -10,6 +10,7 @@ const MENYU = [
   { yol: '/admin/f2',         nom: 'Ф2 импорт',    Ikonka: FileInput },
   { yol: '/admin/buxgalteriya', nom: 'Buxgalteriya', Ikonka: Calculator },
   { yol: '/admin/shartnoma',  nom: 'Shartnomalar', Ikonka: FileSignature },
+  { yol: '/admin/fakturalar', nom: 'Fakturalar (PDF)', Ikonka: FileText },
   { yol: '/admin/f2-tayyorlash', nom: 'Ф2 тайёрлаш', Ikonka: FileOutput },
   { yol: '/admin/narxlar',    nom: 'Narxlar',      Ikonka: Tags },
   { yol: '/admin/ierarxiya',  nom: 'Ierarxiya',    Ikonka: Network },

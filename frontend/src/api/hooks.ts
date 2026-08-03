@@ -345,6 +345,39 @@ export function useSkladYoz() {
   });
 }
 
+/* ============ FAKTURALAR (Fakturalar.js) ============ */
+export interface FakturaItem {
+  id?: string;
+  fakturaRaqami: string;
+  postavshik: string;
+  kelganSana: string;
+  shartnomaRaqami: string;
+  shartnomaSanasi: string;
+  nomi: string;
+  birligi: string;
+  miqdori: number;
+  narxi: number;
+  jamiNdsSiz: number;
+  ndsSummasi: number;
+  jamiNdsBilan: number;
+}
+
+export function useFakturalarOl() {
+  return useQuery({
+    queryKey: ['fakturalar'],
+    queryFn: () => gas<{ ok: boolean; fakturalar?: FakturaItem[]; xabar?: string }>('apiFakturalarOl'),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useFakturaYoz() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (fakturalar: FakturaItem[]) => gas<{ ok: boolean; soni?: number; xabar?: string }>('apiFakturaYoz', fakturalar),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fakturalar'] }),
+  });
+}
+
 /* ============ Ф2 ИМПОРТ ============ */
 
 export function useF2Lokalkalar(obyekt: string) {
