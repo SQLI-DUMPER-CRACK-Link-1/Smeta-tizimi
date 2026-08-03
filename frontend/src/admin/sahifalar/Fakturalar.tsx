@@ -87,6 +87,8 @@ export function Fakturalar() {
           const fRes = await faylYoz.mutateAsync({ base64, nomi: file.name, postavshik: supplier });
           if (fRes && fRes.ok === false) {
              toast(`${file.name} xato: ${fRes.xabar}`, 'danger');
+          } else if (fRes?.ok) {
+             toast(`${file.name} Drive ga yuklandi`, 'ok');
           }
         } catch(err: any) {
             console.error("Faylni saqlashda xato:", err);
@@ -221,7 +223,7 @@ export function Fakturalar() {
     
     const res = await yoz.mutateAsync(yangiKiritmalar);
     if (res?.ok) {
-      toast(`${res.soni} ta qator muvaffaqiyatli saqlandi!`, 'success');
+      toast(`${res.soni} ta qator muvaffaqiyatli saqlandi!`, 'ok');
       setModalOchiq(false);
       setYangiKiritmalar([]);
       soragan.refetch();
