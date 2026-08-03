@@ -84,10 +84,13 @@ export function Fakturalar() {
         
         // 4. Orqa fonga PDF ni saqlash uchun yuborish
         try {
-            await faylYoz.mutateAsync({ base64, nomi: file.name, postavshik: supplier });
-        } catch(err) {
+          const fRes = await faylYoz.mutateAsync({ base64, nomi: file.name, postavshik: supplier });
+          if (fRes && fRes.ok === false) {
+             toast(`${file.name} xato: ${fRes.xabar}`, 'danger');
+          }
+        } catch(err: any) {
             console.error("Faylni saqlashda xato:", err);
-            toast(`${file.name} ni Drive ga saqlab bo'lmadi`);
+            toast(`${file.name} ni Drive ga saqlab bo'lmadi: ${err.message}`, 'danger');
         }
       }
       
