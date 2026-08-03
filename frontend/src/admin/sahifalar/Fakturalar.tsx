@@ -142,23 +142,24 @@ export function Fakturalar() {
 
     const tovarlar: FakturaItem[] = [];
     
-    // Raqamlar orasidagi bo'shliqlarni yo'qotamiz (masalan "1 200.00" -> "1200.00")
-    let cleanText = text;
-    while (true) {
-        const next = cleanText.replace(/(\d)\s+(\d)/g, '$1$2');
-        if (next === cleanText) break;
-        cleanText = next;
-    }
-    
-    // [Miqdor] [Narx] [JamiNDSsiz] [AksizStavka] [AksizSumma] [NDS Stavka] [NDS Summa] [Jami] [Kelib chiqishi]
-    // AksizStavka va AksizSumma ba'zan bo'lmasligi mumkin yoki "Без акциза 0" shaklida bo'lishi mumkin.
-    const amtRegex = /(-?[\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)\s+(?:(?:Без\s*акциз(?:а|сиз)|Акцизсиз|\d+\s*%)\s+(-?[\d.,]+)\s+)?(\d+\s*%|Без\s*НДС|ҚҚСсиз|Без\s*НДС\s*\(0\)|ҚҚСсиз\s*\(0\))\s+(-?[\d.,]+)\s+(-?[\d.,]+)(?:\s+(?:Олди-сотди|Ўз\.иш\.чиқ\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?/gi;
+    const n = '(-?\\d+(?:\\s\\d{3})*(?:\\.\\d+)?)';
+    const amtRegex = new RegExp(
+        n + '\\s+' + // Miqdor
+        n + '\\s+' + // Narx
+        n + '\\s+' + // Jami NDS siz
+        '(?:(?:Без\\s*акциз(?:а|сиз)|Акцизсиз|\\d+\\s*%)\\s+' + n + '\\s+)?' + // Optional Aksiz
+        '(\\d+\\s*%|Без\\s*НДС|ҚҚСсиз|Без\\s*НДС\\s*\\(0\\)|ҚҚСсиз\\s*\\(0\\))\\s+' + // NDS stavka
+        n + '\\s+' + // NDS Summa
+        n + // Jami
+        '(?:\\s+(?:Олди-сотди|Ўз\\.иш\\.чиқ\\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?',
+        'gi'
+    );
     
     let match;
     let lastEnd = 0;
     
-    while ((match = amtRegex.exec(cleanText)) !== null) {
-        let precedingText = cleanText.substring(lastEnd, match.index).trim();
+    while ((match = amtRegex.exec(text)) !== null) {
+        let precedingText = text.substring(lastEnd, match.index).trim();
         lastEnd = amtRegex.lastIndex;
         
         let tokens = precedingText.split(/\s+/);
@@ -197,7 +198,10 @@ export function Fakturalar() {
             if (nameStr.startsWith('-')) nameStr = nameStr.substring(1).trim();
         }
         
-        const parseNum = (s: string) => parseFloat(s.replace(/,/g, '.'));
+        const parseNum = (s: string) => {
+            if (!s) return 0;
+            return parseFloat(s.replace(/\s+/g, '').replace(/,/g, '.'));
+        };
         
         tovarlar.push({
             fakturaRaqami: docNo, 
