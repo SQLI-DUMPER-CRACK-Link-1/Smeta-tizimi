@@ -150,9 +150,9 @@ export function Fakturalar() {
         cleanText = next;
     }
     
-    // Tovar qatorini aniqlash uchun mukammal regex. Har bir qator oxirida 6 ta qiymat va stavka bo'ladi.
-    // [Miqdor] [Narx] [JamiNDSsiz] [NDS Stavka] [NDS Summa] [Jami] [Kelib chiqishi]
-    const amtRegex = /(-?[\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)\s+(\d+\s*%|Без\s*НДС|ҚҚСсиз)\s+(-?[\d.,]+)\s+(-?[\d.,]+)(?:\s+(?:Олди-сотди|Ўз\.иш\.чиқ\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?/gi;
+    // [Miqdor] [Narx] [JamiNDSsiz] [AksizStavka] [AksizSumma] [NDS Stavka] [NDS Summa] [Jami] [Kelib chiqishi]
+    // AksizStavka va AksizSumma ba'zan bo'lmasligi mumkin yoki "Без акциза 0" shaklida bo'lishi mumkin.
+    const amtRegex = /(-?[\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)\s+(?:(?:Без\s*акциз(?:а|сиз)|Акцизсиз|\d+\s*%)\s+(-?[\d.,]+)\s+)?(\d+\s*%|Без\s*НДС|ҚҚСсиз|Без\s*НДС\s*\(0\)|ҚҚСсиз\s*\(0\))\s+(-?[\d.,]+)\s+(-?[\d.,]+)(?:\s+(?:Олди-сотди|Ўз\.иш\.чиқ\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?/gi;
     
     let match;
     let lastEnd = 0;
@@ -210,8 +210,8 @@ export function Fakturalar() {
             miqdori: parseNum(match[1]),
             narxi: parseNum(match[2]),
             jamiNdsSiz: parseNum(match[3]),
-            ndsSummasi: parseNum(match[5]),
-            jamiNdsBilan: parseNum(match[6])
+            ndsSummasi: parseNum(match[6]),
+            jamiNdsBilan: parseNum(match[7])
         });
     }
     
