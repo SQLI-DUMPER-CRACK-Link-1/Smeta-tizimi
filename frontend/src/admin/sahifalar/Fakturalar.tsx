@@ -122,35 +122,77 @@ export function Fakturalar() {
 
     const tovarlar: FakturaItem[] = [];
     
-    // Jadval qatorlarini Oлди-сотди yoki shunga o'xshash so'zlar bilan bo'lamiz
-    const chunks = text.split(/(?:Олди-сотди|Ўз\.иш\.чиқ\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган)/i);
+    // Raqamlar orasidagi bo'shliqlarni yo'qotamiz (masalan "1 200.00" -> "1200.00")
+    let cleanText = text;
+    while (true) {
+        const next = cleanText.replace(/(\d)\s+(\d)/g, '$1$2');
+        if (next === cleanText) break;
+        cleanText = next;
+    }
     
-    // Eng oxirgi chunk da qatorlar yo'q (u footer)
-    chunks.pop();
-
-    for (let i = 0; i < chunks.length; i++) {
-      let chunk = chunks[i];
-      if (i === 0) {
-        // Birinchi qator uchun: header (column numbers 9 10 11 12 13 14 kabi) ni izlaymiz va uni qirqib tashlaymiz
-        // " 12 13 1 " kabi sequence qatorning boshi
-        const startMatch = chunk.match(/(?:\s9|\s10|\s11|\s12|\s13|\s14)\s+(1\s+[^\d].*)$/);
-        if (startMatch) {
-           chunk = startMatch[1];
-        } else {
-           // Agar topilmasa, "чиқиши" degan so'zdan keyingi qismini olishga harakat qilamiz
-           const chiIdx = chunk.toLowerCase().lastIndexOf('чиқиши');
-           if (chiIdx !== -1) {
-              chunk = chunk.substring(chiIdx + 6).trim();
-              const colMatch = chunk.match(/\d+(?:\s+\d+)*\s+(1\s+[^\d].*)$/);
-              if (colMatch) chunk = colMatch[1];
-           }
+    // Tovar qatorini aniqlash uchun mukammal regex. Har bir qator oxirida 6 ta qiymat va stavka bo'ladi.
+    // [Miqdor] [Narx] [JamiNDSsiz] [NDS Stavka] [NDS Summa] [Jami] [Kelib chiqishi]
+    const amtRegex = /(-?[\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)\s+(\d+\s*%|Без\s*НДС|ҚҚСсиз)\s+(-?[\d.,]+)\s+(-?[\d.,]+)(?:\s+(?:Олди-сотди|Ўз\.иш\.чиқ\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?/gi;
+    
+    let match;
+    let lastEnd = 0;
+    
+    while ((match = amtRegex.exec(cleanText)) !== null) {
+        let precedingText = cleanText.substring(lastEnd, match.index).trim();
+        lastEnd = amtRegex.lastIndex;
+        
+        let tokens = precedingText.split(/\s+/);
+        let birligi = tokens.pop() || ''; // Odatda eng oxirgisi o'lchov birligi (dona, tonna)
+        let nameStr = tokens.join(' ');
+        
+        if (tovarlar.length === 0) {
+            // Birinchi qator uchun header'ni (ustun raqamlarini) qirqib tashlash kerak
+            const headerMatch = nameStr.match(/(?:\s9|\s10|\s11|\s12|\s13|\s14)\s+(1\s+.*)$/);
+            if (headerMatch) {
+                nameStr = headerMatch[1];
+            } else {
+                const chiIdx = nameStr.toLowerCase().lastIndexOf('чиқиши');
+                if (chiIdx !== -1) {
+                    let afterChi = nameStr.substring(chiIdx + 6).trim();
+                    const colMatch = afterChi.match(/\d+(?:\s+\d+)*\s+(1\s+.*)$/);
+                    if (colMatch) nameStr = colMatch[1];
+                    else nameStr = afterChi;
+                }
+            }
         }
-      }
-      
-      if (chunk.trim()) {
-        const item = parseRow(chunk);
-        if (item) tovarlar.push(item);
-      }
+        
+        // Boshidagi qator raqamini olib tashlash (1, 2, 3...)
+        nameStr = nameStr.replace(/^\d+\s+/, '').trim();
+        
+        // Komitent (vositachi) nomini qirqib tashlash
+        const guvoxMatch = nameStr.match(/\(гуво[хҳ]нома[^)]+\)\s*/i);
+        if (guvoxMatch) {
+            nameStr = nameStr.substring(guvoxMatch.index! + guvoxMatch[0].length).trim();
+        }
+        
+        // 15+ xonali MXIK kodini olib tashlash
+        const kodMatch = nameStr.match(/\d{15,}/);
+        if (kodMatch) {
+            nameStr = nameStr.replace(kodMatch[0], '').replace(/-\s*-/g, '-').trim();
+            if (nameStr.startsWith('-')) nameStr = nameStr.substring(1).trim();
+        }
+        
+        const parseNum = (s: string) => parseFloat(s.replace(/,/g, '.'));
+        
+        tovarlar.push({
+            fakturaRaqami: docNo, 
+            postavshik: supplier, 
+            kelganSana: docDate, 
+            shartnomaRaqami: contractNo, 
+            shartnomaSanasi: contractDate,
+            nomi: nameStr,
+            birligi: birligi,
+            miqdori: parseNum(match[1]),
+            narxi: parseNum(match[2]),
+            jamiNdsSiz: parseNum(match[3]),
+            ndsSummasi: parseNum(match[5]),
+            jamiNdsBilan: parseNum(match[6])
+        });
     }
     
     if (tovarlar.length > 0) {
@@ -158,74 +200,6 @@ export function Fakturalar() {
       toast(`${tovarlar.length} ta tovar topildi`);
     } else {
       toast("Jadval ichidan tovarlarni ajratib bo'lmadi. O'qilgan matn formati mos kelmadi.");
-    }
-  };
-
-  const parseRow = (line: string): FakturaItem | null => {
-    try {
-      let normalized = line.trim();
-      
-      // Bo'shliq bilan yozilgan sonlarni birlashtirish (masalan "1 200 000" -> "1200000")
-      while (true) {
-        const next = normalized.replace(/(\d)\s+(\d)/g, '$1$2');
-        if (next === normalized) break;
-        normalized = next;
-      }
-
-      // "Без НДС" yoki "ҚҚСсиз" larni "0%" ga almashtirish
-      normalized = normalized.replace(/Без\s*НДС/ig, '0%').replace(/ҚҚСсиз/ig, '0%');
-      
-      const tokens = normalized.split(/\s+/);
-      
-      // Oxiridagi raqam bo'lmagan so'zlarni (masalan "Олди-сотди") olib tashlash
-      while (tokens.length > 0) {
-        const last = tokens[tokens.length - 1];
-        if (/^[\d.,]+%?$/.test(last)) {
-          break; // Haqiqiy son yoki stavka topildi
-        } else {
-          tokens.pop();
-        }
-      }
-      
-      if (tokens.length < 7) return null;
-      
-      const len = tokens.length;
-      const stavkaToken = tokens[len - 3];
-      if (!stavkaToken || !stavkaToken.includes('%')) {
-         return null; // Tovar qatoriga o'xshamadi
-      }
-      
-      const parseNum = (s: string) => parseFloat(s.replace(/,/g, '.'));
-      
-      const jamiNdsBilan = parseNum(tokens[len - 1]);
-      const ndsSummasi = parseNum(tokens[len - 2]);
-      const jamiNdsSiz = parseNum(tokens[len - 4]);
-      const narxi = parseNum(tokens[len - 5]);
-      const miqdori = parseNum(tokens[len - 6]);
-      const birligi = tokens[len - 7];
-      
-      let nomi = tokens.slice(1, len - 7).join(' '); // 0-chi index bu qator raqami (No)
-      
-      // Komitent fakturalarida mahsulot nomidan oldin Komitent nomi va STIR/QQS raqamlari keladi
-      // Ular har doim "(гувохнома фаол)" kabi matn bilan tugaydi
-      const guvoxMatch = nomi.match(/\(гуво[хҳ]нома[^)]+\)\s*/i);
-      if (guvoxMatch) {
-         nomi = nomi.substring(guvoxMatch.index! + guvoxMatch[0].length).trim();
-      }
-      
-      // Ba'zan nomida "-" va kodlar qolib ketadi
-      const kodMatch = nomi.match(/\d{15,}/);
-      if (kodMatch) {
-         nomi = nomi.replace(kodMatch[0], '').replace(/-\s*-/g, '-').trim();
-         if (nomi.startsWith('-')) nomi = nomi.substring(1).trim();
-      }
-
-      return {
-        fakturaRaqami: '', postavshik: '', kelganSana: '', shartnomaRaqami: '', shartnomaSanasi: '',
-        nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan
-      };
-    } catch(e) {
-      return null;
     }
   };
 
