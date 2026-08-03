@@ -108,8 +108,8 @@ export function Fakturalar() {
       docNo = fakMatch[2];
     }
     
-    // Postavshik (Yetkazib берувчи: dan to Манзил: gacha bo'lgan joyda)
-    const supplierMatch = text.match(/Етказиб\s*берувчи:(.*?)(?:Манзил:|Етказиб\s*берувчининг)/i);
+    // Postavshik (Yetkazib берувчи: yoki Воситачи: dan to Манзил: gacha bo'lgan joyda)
+    const supplierMatch = text.match(/(?:Етказиб\s*берувчи|Воситачи):(.*?)(?:Манзил:|Етказиб\s*берувчининг|Воситачининг)/i);
     if (supplierMatch) {
       supplier = supplierMatch[1].trim();
     }
@@ -131,9 +131,9 @@ export function Fakturalar() {
     for (let i = 0; i < chunks.length; i++) {
       let chunk = chunks[i];
       if (i === 0) {
-        // Birinchi qator uchun: header (column numbers 9 10 kabi) ni izlaymiz va uni qirqib tashlaymiz
-        // " 9 10 1 " kabi sequence qatorning boshi
-        const startMatch = chunk.match(/(?:\s9|\s10|\s11|\s12)\s+(1\s+[^\d].*)$/);
+        // Birinchi qator uchun: header (column numbers 9 10 11 12 13 14 kabi) ni izlaymiz va uni qirqib tashlaymiz
+        // " 12 13 1 " kabi sequence qatorning boshi
+        const startMatch = chunk.match(/(?:\s9|\s10|\s11|\s12|\s13|\s14)\s+(1\s+[^\d].*)$/);
         if (startMatch) {
            chunk = startMatch[1];
         } else {
@@ -205,6 +205,13 @@ export function Fakturalar() {
       const birligi = tokens[len - 7];
       
       let nomi = tokens.slice(1, len - 7).join(' '); // 0-chi index bu qator raqami (No)
+      
+      // Komitent fakturalarida mahsulot nomidan oldin Komitent nomi va STIR/QQS raqamlari keladi
+      // Ular har doim "(гувохнома фаол)" kabi matn bilan tugaydi
+      const guvoxMatch = nomi.match(/\(гуво[хҳ]нома[^)]+\)\s*/i);
+      if (guvoxMatch) {
+         nomi = nomi.substring(guvoxMatch.index! + guvoxMatch[0].length).trim();
+      }
       
       // Ba'zan nomida "-" va kodlar qolib ketadi
       const kodMatch = nomi.match(/\d{15,}/);
