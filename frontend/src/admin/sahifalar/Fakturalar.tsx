@@ -221,11 +221,12 @@ export function Fakturalar() {
     
     const res = await yoz.mutateAsync(yangiKiritmalar);
     if (res?.ok) {
-      toast(`${res.soni} ta qator muvaffaqiyatli saqlandi!`);
+      toast(`${res.soni} ta qator muvaffaqiyatli saqlandi!`, 'success');
       setModalOchiq(false);
       setYangiKiritmalar([]);
+      soragan.refetch();
     } else {
-      toast("Xatolik: " + res?.xabar);
+      toast("Xatolik: " + res?.xabar, 'danger');
     }
   };
 
