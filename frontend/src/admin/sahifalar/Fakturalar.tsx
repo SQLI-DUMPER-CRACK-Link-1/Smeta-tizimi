@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef } from 'react';
 import { useFakturalarOl, useFakturaYoz, type FakturaItem } from '../../api/hooks';
 import { Sahifa, Holatlar, Jadval, Qidiruv, Tugma } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
-import { FileUp, Save, X, Plus } from 'lucide-react';
+import { FileUp, Save, X } from 'lucide-react';
 import { FmtN } from '../../lib/format';
 
 export function Fakturalar() {
@@ -208,7 +208,6 @@ export function Fakturalar() {
       const jamiNdsSiz = parseFloat(numbers[numbers.length - 1].replace(/\s/g, ''));
       
       // Qolgan matn - Maxsulot nomi va Birligi
-      const matchLength = numbers[numbers.length - 3].length + numbers[numbers.length - 2].length + numbers[numbers.length - 1].length + 2; // probellar
       const nameAndUnitRaw = beforeStavka.substring(0, beforeStavka.lastIndexOf(numbers[numbers.length - 3])).trim();
       
       // Birlik odatda oxirgi so'z bo'ladi (метр, шт, кг)
