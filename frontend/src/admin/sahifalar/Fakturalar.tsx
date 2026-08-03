@@ -66,21 +66,15 @@ export function Fakturalar() {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         
-        // Y koordinatasi bo'yicha qatorlarga ajratish uchun
+        // Barcha matnni bitta ketma-ketlikda yig'amiz
         const items = textContent.items;
-        let lastY = -1;
-        let line = '';
-        
         items.forEach((item: any) => {
-          if (lastY !== item.transform[5] && lastY !== -1) {
-            fullText += line + '\n';
-            line = '';
-          }
-          line += item.str + ' ';
-          lastY = item.transform[5];
+          fullText += item.str + ' ';
         });
-        fullText += line + '\n';
       }
+      
+      // Matndagi ortiqcha bo'shliqlarni bittaga qisqartiramiz
+      fullText = fullText.replace(/\s+/g, ' ');
       
       parseFakturaText(fullText);
       
@@ -94,40 +88,30 @@ export function Fakturalar() {
   };
 
   const parseFakturaText = (text: string) => {
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    
     let docNo = '';
     let docDate = '';
     let contractNo = '';
     let contractDate = '';
     let supplier = '';
     
-    // Asosiy ma'lumotlarni izlash
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      
-      // Shartnoma sanasi va raqami
-      // Masalan: "13.05.2026 даги 1038-26-сонли шартномага"
-      const shartMatch = line.match(/(\d{2}\.\d{2}\.\d{4})\s*даги\s*([^\s]+)-сонли\s*шартномага/i);
-      if (shartMatch) {
-        contractDate = shartMatch[1];
-        contractNo = shartMatch[2];
-      }
-      
-      // Faktura sanasi va raqami
-      // Masalan: "14.05.2026 даги 1280-сонли" keyingi qator "Ҳисобварақ-фактура"
-      const fakMatch = line.match(/(\d{2}\.\d{2}\.\d{4})\s*даги\s*([^\s]+)-сонли/i);
-      if (fakMatch && lines[i+1] && lines[i+1].toLowerCase().includes("фактура")) {
-        docDate = fakMatch[1];
-        docNo = fakMatch[2];
-      }
-      
-      // Postavshik
-      if (line.toLowerCase().includes("етказиб берувчи:")) {
-        const val = line.replace(/етказиб берувчи:/i, '').trim();
-        if (val) supplier = val;
-        else supplier = lines[i+1];
-      }
+    // Shartnoma sanasi va raqami
+    const shartMatch = text.match(/(\d{2}\.\d{2}\.\d{4})\s*даги\s*([^\s]+)-сонли\s*шартномага/i);
+    if (shartMatch) {
+      contractDate = shartMatch[1];
+      contractNo = shartMatch[2];
+    }
+    
+    // Faktura sanasi va raqami
+    const fakMatch = text.match(/(\d{2}\.\d{2}\.\d{4})\s*даги\s*([^\s]+)-сонли(?:\s*Ҳисобварақ-фактура)?/i);
+    if (fakMatch) {
+      docDate = fakMatch[1];
+      docNo = fakMatch[2];
+    }
+    
+    // Postavshik (Yetkazib берувчи: dan to Манзил: gacha bo'lgan joyda)
+    const supplierMatch = text.match(/Етказиб\s*берувчи:(.*?)(?:Манзил:|Етказиб\s*берувчининг)/i);
+    if (supplierMatch) {
+      supplier = supplierMatch[1].trim();
     }
     
     setFakturaRaqami(docNo);
@@ -136,28 +120,36 @@ export function Fakturalar() {
     setShartnomaSanasi(contractDate);
     setPostavshik(supplier);
 
-    // Qatorlarni ajratib olish (tovarlar)
     const tovarlar: FakturaItem[] = [];
     
-    // "№" yoki "Махсулот номи" dan keyin qatorlar boshlanadi
-    let tableStart = false;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes("Товарни келиб") || line.includes("Товар (хизмат) лар")) {
-        tableStart = true;
-        continue;
-      }
-      if (line.toLowerCase().includes("жами тўлов учун") || line.toLowerCase().startsWith("жами")) {
-        tableStart = false;
+    // Jadval qatorlarini Oлди-сотди yoki shunga o'xshash so'zlar bilan bo'lamiz
+    const chunks = text.split(/(?:Олди-сотди|Ўз\.иш\.чиқ\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган)/i);
+    
+    // Eng oxirgi chunk da qatorlar yo'q (u footer)
+    chunks.pop();
+
+    for (let i = 0; i < chunks.length; i++) {
+      let chunk = chunks[i];
+      if (i === 0) {
+        // Birinchi qator uchun: header (column numbers 9 10 kabi) ni izlaymiz va uni qirqib tashlaymiz
+        // " 9 10 1 " kabi sequence qatorning boshi
+        const startMatch = chunk.match(/(?:\s9|\s10|\s11|\s12)\s+(1\s+[^\d].*)$/);
+        if (startMatch) {
+           chunk = startMatch[1];
+        } else {
+           // Agar topilmasa, "чиқиши" degan so'zdan keyingi qismini olishga harakat qilamiz
+           const chiIdx = chunk.toLowerCase().lastIndexOf('чиқиши');
+           if (chiIdx !== -1) {
+              chunk = chunk.substring(chiIdx + 6).trim();
+              const colMatch = chunk.match(/\d+(?:\s+\d+)*\s+(1\s+[^\d].*)$/);
+              if (colMatch) chunk = colMatch[1];
+           }
+        }
       }
       
-      if (tableStart) {
-        // Qator raqam bilan boshlanishi ehtimoli katta (1, 2, 3...)
-        const startMatch = line.match(/^(\d+)\s+(.+)/);
-        if (startMatch) {
-           const item = parseRow(line);
-           if (item) tovarlar.push(item);
-        }
+      if (chunk.trim()) {
+        const item = parseRow(chunk);
+        if (item) tovarlar.push(item);
       }
     }
     
