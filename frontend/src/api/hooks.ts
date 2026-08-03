@@ -392,6 +392,35 @@ export function useFakturaOCR() {
   });
 }
 
+export type FakturaFolderStatus = { count: number; url: string };
+export type FakturaDriveHolatRes = {
+  ok: boolean;
+  yangi?: FakturaFolderStatus;
+  arxiv?: FakturaFolderStatus;
+  dublikat?: FakturaFolderStatus;
+  xato?: FakturaFolderStatus;
+  xabar?: string;
+};
+
+export function useFakturaDriveHolat() {
+  return useQuery({
+    queryKey: ['fakturaDriveHolat'],
+    queryFn: () => gas<FakturaDriveHolatRes>('apiFakturaDriveHolat'),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useFakturaAvtoSinx() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => gas<{ ok: boolean; ishlanganFayllar?: number; yozilganQatorlar?: number; xabar?: string }>('apiFakturaAvtoSinx'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fakturalar'] });
+      qc.invalidateQueries({ queryKey: ['fakturaDriveHolat'] });
+    }
+  });
+}
+
 /* ============ Ф2 ИМПОРТ ============ */
 
 export function useF2Lokalkalar(obyekt: string) {

@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaOCR, type FakturaItem } from '../../api/hooks';
+import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaOCR, useFakturaDriveHolat, useFakturaAvtoSinx, type FakturaItem } from '../../api/hooks';
 import { Sahifa, Holatlar, Jadval, Qidiruv, Tugma } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
-import { FileUp, Save, X } from 'lucide-react';
+import { FileUp, Save, X, RefreshCw, FolderOpen, FolderArchive, FolderX, ExternalLink } from 'lucide-react';
 import { FmtN } from '../../lib/format';
 
 export function Fakturalar() {
@@ -10,6 +10,8 @@ export function Fakturalar() {
   const yoz = useFakturaYoz();
   const faylYoz = useFakturaFaylYoz();
   const ocr = useFakturaOCR();
+  const drvHolat = useFakturaDriveHolat();
+  const drvSinx = useFakturaAvtoSinx();
   
   const [q, setQ] = useState('');
   const [modalOchiq, setModalOchiq] = useState(false);
@@ -295,8 +297,83 @@ export function Fakturalar() {
     >
       <Holatlar soragan={soragan} bosh={{ matn: 'Fakturalar jurnali bo\'sh', izoh: 'Hali hech qanday faktura kiritilmagan.' }}>
         {() => (
-          <div className="karta overflow-hidden shadow-lg border border-border">
-            <Jadval ustunlar={ustunlar} satrlar={satrlar} kalit={(m, i) => m.id || i.toString()} />
+          <div className="flex flex-col gap-6">
+            
+            {/* Drive Sync Boshqaruvi */}
+            <div className="karta p-4 border border-border shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                    <RefreshCw size={18} className="text-accent" /> Avto-Sinxronizatsiya (Google Drive)
+                  </h3>
+                  <p className="text-sm text-text-dim">Kechasi soat 02:00 da o'zi ishlaydi, yoki hoziroq qo'lda ishga tushiring.</p>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <Tugma 
+                    ikonka={<RefreshCw size={14} className={drvSinx.isPending || drvHolat.isFetching ? 'animate-spin' : ''} />} 
+                    onBos={() => drvHolat.refetch()}
+                    band={drvHolat.isFetching}
+                  >
+                    Yangilash
+                  </Tugma>
+                  <Tugma 
+                    tur="primary" 
+                    ikonka={<FileUp size={16} />} 
+                    band={drvSinx.isPending || drvHolat.isFetching} 
+                    onBos={async () => {
+                      const res = await drvSinx.mutateAsync();
+                      if (res?.ok) toast(`Muvaffaqiyatli! ${res.ishlanganFayllar} ta fayl o'qildi, ${res.yozilganQatorlar} ta qator yozildi.`, 'ok');
+                      else toast('Xato: ' + res?.xabar, 'danger');
+                    }}
+                  >
+                    {drvSinx.isPending ? 'Sinxronizatsiya qilinmoqda...' : 'Hozir Sinxronizatsiya Qilish'}
+                  </Tugma>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-4">
+                <a href={drvHolat.data?.yangi?.url || '#'} target="_blank" rel="noreferrer" className="bg-black/20 p-4 rounded-xl border border-border hover:border-accent/50 transition-colors group cursor-pointer block relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent"><FolderOpen size={20} /></div>
+                    <ExternalLink size={14} className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <h4 className="text-text-dim text-sm font-medium">Kutayotganlar (Yangi)</h4>
+                  <p className="text-2xl font-bold text-white mt-1">{drvHolat.data?.yangi?.count || 0} <span className="text-sm font-normal text-text-dim">ta fayl</span></p>
+                </a>
+                
+                <a href={drvHolat.data?.arxiv?.url || '#'} target="_blank" rel="noreferrer" className="bg-black/20 p-4 rounded-xl border border-border hover:border-ok/50 transition-colors group cursor-pointer block relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-10 h-10 rounded-full bg-ok/20 flex items-center justify-center text-ok"><FolderArchive size={20} /></div>
+                    <ExternalLink size={14} className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <h4 className="text-text-dim text-sm font-medium">Tugallanganlar (Arxiv)</h4>
+                  <p className="text-2xl font-bold text-white mt-1">{drvHolat.data?.arxiv?.count || 0} <span className="text-sm font-normal text-text-dim">ta fayl</span></p>
+                </a>
+
+                <a href={drvHolat.data?.dublikat?.url || '#'} target="_blank" rel="noreferrer" className="bg-black/20 p-4 rounded-xl border border-border hover:border-warning/50 transition-colors group cursor-pointer block relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center text-warning"><FileUp size={20} /></div>
+                    <ExternalLink size={14} className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <h4 className="text-text-dim text-sm font-medium">Qaytarilgan (Dublikatlar)</h4>
+                  <p className="text-2xl font-bold text-white mt-1">{drvHolat.data?.dublikat?.count || 0} <span className="text-sm font-normal text-text-dim">ta fayl</span></p>
+                </a>
+
+                <a href={drvHolat.data?.xato?.url || '#'} target="_blank" rel="noreferrer" className="bg-black/20 p-4 rounded-xl border border-border hover:border-danger/50 transition-colors group cursor-pointer block relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-10 h-10 rounded-full bg-danger/20 flex items-center justify-center text-danger"><FolderX size={20} /></div>
+                    <ExternalLink size={14} className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <h4 className="text-text-dim text-sm font-medium">Xato / O'qilmaganlar</h4>
+                  <p className="text-2xl font-bold text-white mt-1">{drvHolat.data?.xato?.count || 0} <span className="text-sm font-normal text-text-dim">ta fayl</span></p>
+                </a>
+              </div>
+            </div>
+
+            {/* Asosiy Jadval */}
+            <div className="karta overflow-hidden shadow-lg border border-border">
+              <Jadval ustunlar={ustunlar} satrlar={satrlar} kalit={(m, i) => m.id || i.toString()} />
+            </div>
           </div>
         )}
       </Holatlar>
