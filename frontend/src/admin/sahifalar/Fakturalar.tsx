@@ -155,11 +155,8 @@ export function Fakturalar() {
         // Qator raqam bilan boshlanishi ehtimoli katta (1, 2, 3...)
         const startMatch = line.match(/^(\d+)\s+(.+)/);
         if (startMatch) {
-           // Agar qatorda kamida foiz belgisi % bo'lsa (nds stavkasi) u tovar qatori degan umidda
-           if (line.includes("%")) {
-              const item = parseRow(line);
-              if (item) tovarlar.push(item);
-           }
+           const item = parseRow(line);
+           if (item) tovarlar.push(item);
         }
       }
     }
@@ -174,54 +171,52 @@ export function Fakturalar() {
 
   const parseRow = (line: string): FakturaItem | null => {
     try {
-      // Eng oxiridan raqamlarni ajratib olish (teskari tartibda)
-      // Line oxirida "Олди-сотди" kabi so'z bo'lishi mumkin
-      const cleanLine = line.replace(/Олди-сотди/i, '').replace(/Ўз\.иш\.чиқ/i, '').trim();
+      let normalized = line.trim();
       
-      // Raqamlarni topish: oxiridan boshlab 5 ta son bloki (NDS bilan jami, NDS summa, NDS stavka(%), Jami NDS siz, Narxi, Miqdori)
-      // O'rtadagi probellarni olib tashlaymiz raqamlar uchun: "1 127 172.00" -> "1127172.00"
-      // Ammo bu biroz qiyin. Boshqacha usul: % belgisini topamiz.
-      const percentIdx = cleanLine.lastIndexOf('%');
-      if (percentIdx === -1) return null;
+      // Bo'shliq bilan yozilgan sonlarni birlashtirish (masalan "1 200 000" -> "1200000")
+      while (true) {
+        const next = normalized.replace(/(\d)\s+(\d)/g, '$1$2');
+        if (next === normalized) break;
+        normalized = next;
+      }
+
+      // "Без НДС" yoki "ҚҚСсиз" larni "0%" ga almashtirish
+      normalized = normalized.replace(/Без\s*НДС/ig, '0%').replace(/ҚҚСсиз/ig, '0%');
       
-      const beforePercent = cleanLine.substring(0, percentIdx).trim();
-      const afterPercent = cleanLine.substring(percentIdx + 1).trim();
+      const tokens = normalized.split(/\s+/);
       
-      // Foizdan keyin 2 ta raqam bor: NDS Summasi, Jami NDS Bilan
-      const afterParts = afterPercent.replace(/\s+/g, '').match(/[\d.]+/g);
-      const ndsSummasi = parseFloat(afterParts?.[0] || '0');
-      const jamiNdsBilan = parseFloat(afterParts?.[1] || '0');
+      // Oxiridagi raqam bo'lmagan so'zlarni (masalan "Олди-сотди") olib tashlash
+      while (tokens.length > 0) {
+        const last = tokens[tokens.length - 1];
+        if (/^[\d.,]+%?$/.test(last)) {
+          break; // Haqiqiy son yoki stavka topildi
+        } else {
+          tokens.pop();
+        }
+      }
       
-      // Foizdan oldin raqamlar ketma ketligi bor. Foiz stavkasini o'zini qirqamiz (masalan "12")
-      const stavkaMatch = beforePercent.match(/(\d+)\s*$/);
-      const beforeStavka = beforePercent.substring(0, beforePercent.length - (stavkaMatch?.[0].length || 0)).trim();
+      if (tokens.length < 7) return null;
       
-      // Endi beforeStavka oxiridan 3 ta raqam bloki: Miqdor, Narx, JamiNdsSiz
-      // Format: 9 149.000000 110 001.56 1 006 404 295.54
-      // Buning uchun probel bilan ajratilgan, lekin ichida nuqtasi bor bloklarni qidiramiz.
-      // Yaxshisi, hamma raqamlarni space+nuqta bo'yicha emas, balki oxiridan 3 ta ".xx" formatli sonlarni olamiz
-      const numbers = beforeStavka.match(/[\d\s]+\.\d+/g);
-      if (!numbers || numbers.length < 3) return null;
+      const len = tokens.length;
+      const stavkaToken = tokens[len - 3];
+      if (!stavkaToken || !stavkaToken.includes('%')) {
+         return null; // Tovar qatoriga o'xshamadi
+      }
       
-      const miqdori = parseFloat(numbers[numbers.length - 3].replace(/\s/g, ''));
-      const narxi = parseFloat(numbers[numbers.length - 2].replace(/\s/g, ''));
-      const jamiNdsSiz = parseFloat(numbers[numbers.length - 1].replace(/\s/g, ''));
+      const parseNum = (s: string) => parseFloat(s.replace(/,/g, '.'));
       
-      // Qolgan matn - Maxsulot nomi va Birligi
-      const nameAndUnitRaw = beforeStavka.substring(0, beforeStavka.lastIndexOf(numbers[numbers.length - 3])).trim();
+      const jamiNdsBilan = parseNum(tokens[len - 1]);
+      const ndsSummasi = parseNum(tokens[len - 2]);
+      const jamiNdsSiz = parseNum(tokens[len - 4]);
+      const narxi = parseNum(tokens[len - 5]);
+      const miqdori = parseNum(tokens[len - 6]);
+      const birligi = tokens[len - 7];
       
-      // Birlik odatda oxirgi so'z bo'ladi (метр, шт, кг)
-      const nameParts = nameAndUnitRaw.split(' ');
-      const birligi = nameParts.pop() || '';
-      
-      // Boshidagi raqamni (No) olib tashlash
-      let nomi = nameParts.join(' ');
-      nomi = nomi.replace(/^\d+\s+/, '').trim();
+      let nomi = tokens.slice(1, len - 7).join(' '); // 0-chi index bu qator raqami (No)
       
       // Ba'zan nomida "-" va kodlar qolib ketadi
       const kodMatch = nomi.match(/\d{15,}/);
       if (kodMatch) {
-         // kodni olib tashlash
          nomi = nomi.replace(kodMatch[0], '').replace(/-\s*-/g, '-').trim();
          if (nomi.startsWith('-')) nomi = nomi.substring(1).trim();
       }
