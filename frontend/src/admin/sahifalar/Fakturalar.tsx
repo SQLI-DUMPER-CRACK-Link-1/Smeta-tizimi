@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, type FakturaItem } from '../../api/hooks';
+import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaOCR, type FakturaItem } from '../../api/hooks';
 import { Sahifa, Holatlar, Jadval, Qidiruv, Tugma } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
 import { FileUp, Save, X } from 'lucide-react';
