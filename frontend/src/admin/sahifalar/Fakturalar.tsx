@@ -170,6 +170,11 @@ export function Fakturalar() {
     let contractDate = '';
     let supplier = '';
     
+    let supplierInn = '';
+    let supplierManzil = '';
+    let buyerInn = '';
+    let buyerManzil = '';
+    
     // Shartnoma sanasi va raqami
     const shartMatch = text.match(/(\d{2}\.\d{2}\.\d{4})\s*даги\s*([^\s]+)-сонли\s*шартномага/i);
     if (shartMatch) {
@@ -184,11 +189,35 @@ export function Fakturalar() {
       docNo = fakMatch[2];
     }
     
-    const supplierMatch = text.match(/(?:Етказиб\s*берувчи|Воситачи|Ижрочи|Буюртмачи):(.*?)(?:Манзил:|Етказиб\s*берувчининг|Воситачининг|Ижрочининг|Буюртмачининг)/i);
+    const supplierMatch = text.match(/(?:Етказиб\s*берувчи|Воситачи|Ижрочи|Буюртмачи|Sotuvchi):(.*?)(?:Манзил:|Етказиб\s*берувчининг|Воситачининг|Ижрочининг|Буюртмачининг|СТИР)/i);
     if (supplierMatch) {
       supplier = supplierMatch[1].trim();
     }
     
+    const manzilSupMatch = text.match(/(?:Етказиб\s*берувчи|Воситачи|Ижрочи|Буюртмачи|Sotuvchi)[\s\S]*?Манзил:\s*(.*?)(?:Сотиб\s*олувчи|Етказиб\s*берувчининг|СТИР|МХИК)/i);
+    if (manzilSupMatch) {
+        supplierManzil = manzilSupMatch[1].trim();
+    }
+
+    const buyerManzilMatch = text.match(/(?:Сотиб\s*олувчи|Харидор)[\s\S]*?Манзил:\s*(.*?)(?:Етказиб\s*берувчининг|Сотиб\s*олувчининг|СТИР|МХИК)/i);
+    if (buyerManzilMatch) {
+        buyerManzil = buyerManzilMatch[1].trim();
+    }
+
+    const stirSupMatch = text.match(/(?:Етказиб\s*берувчининг\s*СТИР\s*рақами|СТИР).*?(\d{9})/i);
+    if (stirSupMatch) {
+        supplierInn = stirSupMatch[1];
+    }
+    const stirBuyMatch = text.match(/(?:Сотиб\s*олувчининг\s*СТИР\s*рақами).*?(\d{9})/i);
+    if (stirBuyMatch) {
+        buyerInn = stirBuyMatch[1];
+    } else {
+        const allStirs = text.match(/\b\d{9}\b/g);
+        if (allStirs && allStirs.length >= 2) {
+            supplierInn = supplierInn || allStirs[0];
+            buyerInn = allStirs[1];
+        }
+    }
 
     const tovarlar: FakturaItem[] = [];
     
@@ -199,8 +228,8 @@ export function Fakturalar() {
         n + '\\s+' + // Jami NDS siz
         '(?:(?:Без\\s*акциз(?:а|сиз)|Акцизсиз|\\d+\\s*%)\\s+' + n + '\\s+)?' + // Optional Aksiz
         '(\\d+\\s*%|Без\\s*НДС|ҚҚСсиз|Без\\s*НДС\\s*\\(0\\)|ҚҚСсиз\\s*\\(0\\))\\s+' + // NDS stavka
-        n + '\\s+' + // NDS Summa
-        n + // Jami
+        n + '\\s+' + // NDS summa
+        n + // Jami summa
         '(?:\\s+(?:Олди-сотди|Ўз\\.иш\\.чиқ\\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?',
         'gi'
     );
@@ -212,25 +241,39 @@ export function Fakturalar() {
         let precedingText = text.substring(lastEnd, match.index).trim();
         lastEnd = amtRegex.lastIndex;
         
-        let tokens = precedingText.split(/\s+/);
-        let birligi = tokens.pop() || ''; // Odatda eng oxirgisi o'lchov birligi (dona, tonna)
-        let nameStr = tokens.join(' ');
-        
-        if (tovarlar.length === 0) {
-            // Birinchi qator uchun header'ni (ustun raqamlarini) qirqib tashlash kerak
-            const headerMatch = nameStr.match(/(?:\s9|\s10|\s11|\s12|\s13|\s14)\s+(1\s+.*)$/);
-            if (headerMatch) {
-                nameStr = headerMatch[1];
-            } else {
-                const chiIdx = nameStr.toLowerCase().lastIndexOf('чиқиши');
-                if (chiIdx !== -1) {
-                    let afterChi = nameStr.substring(chiIdx + 6).trim();
-                    const colMatch = afterChi.match(/\d+(?:\s+\d+)*\s+(1\s+.*)$/);
-                    if (colMatch) nameStr = colMatch[1];
-                    else nameStr = afterChi;
-                }
+        const colNumbersMatch = precedingText.match(/1\s+2\s+3\s+4\s+5\s+6\s+7\s+8\s+9\s+10\s+(.*)/);
+        if (colNumbersMatch) {
+            precedingText = colNumbersMatch[1];
+        } else {
+            const headerKeywords = /(?:қиймати|Summa|Сумма|Нархи|Narxi|Миқдор|Miqdor|номи|nomi|Tovar)\s+(.*)/is;
+            const hkMatch = precedingText.match(headerKeywords);
+            if (hkMatch && hkMatch[1] && hkMatch[1].length < 200) {
+                const segments = precedingText.split(/(?:қиймати|Summa|Сумма|Нархи|Narxi|Миқдор|Miqdor|номи|nomi|Tovar)\s+/i);
+                precedingText = segments[segments.length - 1];
             }
         }
+        
+        precedingText = precedingText.replace(/\b\d{17}\b/g, '').trim();
+
+        const tokens = precedingText.split(/\s+/);
+        let nomi = '';
+        let birligi = '';
+        if (tokens.length >= 2) {
+            birligi = tokens.pop() || '';
+            const qoldi = tokens.join(' ');
+            const nmMatch = qoldi.match(/\d+[\s.]*(.*)/);
+            if (nmMatch && nmMatch[1]) {
+                nomi = nmMatch[1].trim();
+            } else {
+                nomi = qoldi;
+            }
+        } else {
+            nomi = precedingText;
+            birligi = 'dona';
+        }
+        
+        let nameStr = nomi.replace(/^[\d\s.]+/, '').trim();
+        if (nameStr.startsWith('-')) nameStr = nameStr.substring(1).trim();
         
         // Boshidagi qator raqamini olib tashlash (1, 2, 3...)
         nameStr = nameStr.replace(/^\d+\s+/, '').trim();
@@ -325,15 +368,18 @@ export function Fakturalar() {
   };
 
   const ustunlar = [
-    { kalit: 'kelganSana', nom: 'Sana', en: '100px', chiz: (m: any) => <span className="text-text-dim text-[13px]">{m.kelganSana}</span> },
-    { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '120px', chiz: (m: any) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
+    { kalit: 'kelganSana', nom: 'Sana', en: '80px', chiz: (m: any) => <span className="text-text-dim text-[13px]">{m.kelganSana}</span> },
+    { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '100px', chiz: (m: any) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
     { kalit: 'postavshik', nom: 'Postavshik', chiz: (m: any) => <span className="text-text truncate text-[13px]">{m.postavshik}</span> },
+    { kalit: 'postavshikInn', nom: 'Y. STIR', en: '100px', chiz: (m: any) => <span className="text-text-dim text-[12px]">{m.postavshikInn}</span> },
+    { kalit: 'postavshikManzil', nom: 'Y. Manzil', en: '150px', chiz: (m: any) => <span className="text-text-dim text-[12px] truncate max-w-[150px]" title={m.postavshikManzil}>{m.postavshikManzil}</span> },
+    { kalit: 'sotibOluvchiInn', nom: 'S. STIR', en: '100px', chiz: (m: any) => <span className="text-text-dim text-[12px]">{m.sotibOluvchiInn}</span> },
     { kalit: 'nomi', nom: 'Maxsulot nomi', chiz: (m: any) => <span className="text-text font-medium text-[13px]">{m.nomi}</span> },
-    { kalit: 'kategoriya', nom: 'Kategoriya', en: '130px', chiz: (m: any) => <span className="inline-block px-2 py-1 bg-white/5 border border-border text-text-dim rounded-md text-[11px]">{m.kategoriya || 'Boshqa'}</span> },
+    { kalit: 'kategoriya', nom: 'Kategoriya', en: '110px', chiz: (m: any) => <span className="inline-block px-2 py-1 bg-white/5 border border-border text-text-dim rounded-md text-[11px]">{m.kategoriya || 'Boshqa'}</span> },
     { kalit: 'birligi', nom: 'Birlik', en: '70px', chiz: (m: any) => <span className="text-text-dim text-[13px]">{m.birligi}</span> },
-    { kalit: 'miqdori', nom: 'Miqdor', raqam: true, en: '90px', chiz: (m: any) => <FmtN val={m.miqdori} /> },
-    { kalit: 'narxi', nom: 'Narx (NDS siz)', raqam: true, en: '110px', chiz: (m: any) => <FmtN val={m.narxi} /> },
-    { kalit: 'jamiNdsBilan', nom: 'Jami (NDS bilan)', raqam: true, en: '130px', chiz: (m: any) => <span className="text-ok font-medium"><FmtN val={m.jamiNdsBilan} /></span> },
+    { kalit: 'miqdori', nom: 'Miqdor', raqam: true, en: '80px', chiz: (m: any) => <FmtN val={m.miqdori} /> },
+    { kalit: 'narxi', nom: 'Narx', raqam: true, en: '90px', chiz: (m: any) => <FmtN val={m.narxi} /> },
+    { kalit: 'jamiNdsBilan', nom: 'Jami Summa', raqam: true, en: '110px', chiz: (m: any) => <span className="text-ok font-medium"><FmtN val={m.jamiNdsBilan} /></span> },
   ];
 
   return (
@@ -534,6 +580,8 @@ export function Fakturalar() {
                       <thead className="bg-[var(--surface-2)] border-b border-border text-text-dim">
                         <tr>
                           <th className="px-3 py-2 font-medium">Postavshik</th>
+                          <th className="px-3 py-2 font-medium">Y. STIR</th>
+                          <th className="px-3 py-2 font-medium">S. STIR</th>
                           <th className="px-3 py-2 font-medium">Faktura "-</th>
                           <th className="px-3 py-2 font-medium">Nomi</th>
                           <th className="px-3 py-2 font-medium">Birlik</th>
@@ -550,6 +598,16 @@ export function Fakturalar() {
                             <td className="px-3 py-2 max-w-[150px]">
                               <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-white text-sm" placeholder="Postavshik" value={t.postavshik} onChange={(e) => {
                                 const nw = [...yangiKiritmalar]; nw[i].postavshik = e.target.value; setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
+                            <td className="px-3 py-2 w-24">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-text-dim text-sm" placeholder="Y. STIR" value={t.postavshikInn || ''} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].postavshikInn = e.target.value; setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
+                            <td className="px-3 py-2 w-24">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-text-dim text-sm" placeholder="S. STIR" value={t.sotibOluvchiInn || ''} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].sotibOluvchiInn = e.target.value; setYangiKiritmalar(nw);
                               }}/>
                             </td>
                             <td className="px-3 py-2 w-32">

@@ -352,7 +352,11 @@ export type FakturaItem = {
   postavshik: string;
   kelganSana: string;
   shartnomaRaqami: string;
-  shartnomaSanasi: string;
+  shartnomaSanasi?: string;
+  postavshikInn?: string;
+  postavshikManzil?: string;
+  sotibOluvchiInn?: string;
+  sotibOluvchiManzil?: string;
   nomi: string;
   birligi: string;
   miqdori: number;
