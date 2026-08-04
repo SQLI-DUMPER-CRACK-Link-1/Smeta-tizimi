@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
   useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat,
@@ -11,7 +11,8 @@ import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
 import { F2Daraxt, type DaraxtTugun } from '../../umumiy/ui/F2Daraxt';
 import { toast } from '../../umumiy/ui/Toast';
 import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send, FolderOpen, FolderClosed, ShieldAlert } from 'lucide-react';
-import type { AktNode, F2Moslik, F2MoslashNatija } from '../../api/types';
+import type { AktNode, F2Moslik } from '../../api/types';
+import { useF2Store } from '../store/useF2Store';
 
 /* Akt daraxtidagi BARCHA barg (leaf) tugunlar — jami summa faqat shulardan.
  * ⚠️ bl summasi bolalarining yig'indisi bo'lgani uchun uni QO'SHSAK ikki marta
@@ -99,31 +100,35 @@ const QADAMLAR = ['Fayl', "Moslashtirish va bog'lash", 'Yozish'];
 
 export function F2Import() {
   const obyektlar = useObyektlar();
-  const [obyekt, setObyekt] = useState('');
-  const [oyNom, setOyNom] = useState(() => {
-    const d = new Date();
-    return `${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
-  });
-  const [lokalka, setLokalka] = useState('');
-  const [qadam, setQadam] = useState(0);
-  const [aktTree, setAktTree] = useState<AktNode[] | null>(null);
-  const [natija, setNatija] = useState<F2MoslashNatija | null>(null);
-  const [yozishBoshlandi, setYozishBoshlandi] = useState(false);
-  const [fid, setFid] = useState('');
-  const [faylNomi, setFaylNomi] = useState('');
-  const [varaq, setVaraq] = useState('');
-  const [cfg, setCfg] = useState<{kod:number;nom:number;bir:number;norma:number;obyom:number;narx:number;sum:number} | null>(null);
-  const [hover, setHover] = useState<string | null>(null);
-  const [filtr, setFiltr] = useState<'hammasi' | 'boglanmagan' | 'boglangan'>('hammasi');
-  const [ochiqSignal, setOchiqSignal] = useState(0);
-  const [qolBekor, setQolBekor] = useState<Set<string>>(new Set());
-  const [qolBog, setQolBog] = useState<Record<string, F2Moslik>>({});
-  const [qolDop, setQolDop] = useState<Record<string, any>>({});
-  const [dopModalUid, setDopModalUid] = useState<string | null>(null);
-  
-  const [dropState, setDropState] = useState<{aktKalit: string, smetaKalit: string, smetaRow: number, varaqNom: string} | null>(null);
-  // Scroll-to navigation: akt tarafdan → bosilganda smeta tarafda ochib ko'rsatish
-  const [smetaScrollTo, setSmetaScrollTo] = useState<string | null>(null);
+  const [state, setState] = useF2Store();
+  const { obyekt, oyNom, lokalka, qadam, aktTree, natija, yozishBoshlandi, fid, faylNomi, varaq, cfg, hover, filtr, ochiqSignal, qolBekor, qolBog, qolDop, dopModalUid, dropState, smetaScrollTo } = state;
+
+  const createSetter = <K extends keyof typeof state>(key: K) => {
+    return (val: (typeof state)[K] | ((prev: (typeof state)[K]) => (typeof state)[K])) => {
+      setState((s: any) => ({ [key]: typeof val === 'function' ? (val as any)(s[key]) : val }));
+    };
+  };
+
+  const setObyekt = createSetter('obyekt');
+  const setOyNom = createSetter('oyNom');
+  const setLokalka = createSetter('lokalka');
+  const setQadam = createSetter('qadam');
+  const setAktTree = createSetter('aktTree');
+  const setNatija = createSetter('natija');
+  const setYozishBoshlandi = createSetter('yozishBoshlandi');
+  const setFid = createSetter('fid');
+  const setFaylNomi = createSetter('faylNomi');
+  const setVaraq = createSetter('varaq');
+  const setCfg = createSetter('cfg');
+  const setHover = createSetter('hover');
+  const setFiltr = createSetter('filtr');
+  const setOchiqSignal = createSetter('ochiqSignal');
+  const setQolBekor = createSetter('qolBekor');
+  const setQolBog = createSetter('qolBog');
+  const setQolDop = createSetter('qolDop');
+  const setDopModalUid = createSetter('dopModalUid');
+  const setDropState = createSetter('dropState');
+  const setSmetaScrollTo = createSetter('smetaScrollTo');
 
   const faylRef = useRef<HTMLInputElement>(null);
 

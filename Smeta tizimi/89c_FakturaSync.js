@@ -9,13 +9,36 @@ function fakturaSinxTriggerOrnat() {
   // Eski triggerlarni o'chirish
   var trs = ScriptApp.getProjectTriggers();
   for (var i = 0; i < trs.length; i++) {
-    if (trs[i].getHandlerFunction() === 'apiFakturaAvtoSinx') {
+    var handler = trs[i].getHandlerFunction();
+    if (handler === 'apiFakturaAvtoSinx' || handler === 'apiFakturaSinxAsosiy' || handler === 'apiFakturaSinxDavom') {
       ScriptApp.deleteTrigger(trs[i]);
     }
   }
   // Har kuni kechasi soat 02:00 da ishlaydigan yangi trigger
-  ScriptApp.newTrigger('apiFakturaAvtoSinx').timeBased().everyDays(1).atHour(2).create();
+  ScriptApp.newTrigger('apiFakturaSinxAsosiy').timeBased().everyDays(1).atHour(2).create();
   return {ok: true, xabar: "Sinxronizatsiya har kuni soat 02:00 ga sozlandi."};
+}
+
+function apiFakturaSinxAsosiy() {
+  var res = apiFakturaAvtoSinx();
+  if (res && res.ok && res.qolganFayllar > 0) {
+    ScriptApp.newTrigger('apiFakturaSinxDavom').timeBased().after(1 * 60 * 1000).create();
+  }
+}
+
+function apiFakturaSinxDavom() {
+  // Eski bir martalik triggerlarni tozalash
+  var trs = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < trs.length; i++) {
+    if (trs[i].getHandlerFunction() === 'apiFakturaSinxDavom') {
+      ScriptApp.deleteTrigger(trs[i]);
+    }
+  }
+
+  var res = apiFakturaAvtoSinx();
+  if (res && res.ok && res.qolganFayllar > 0) {
+    ScriptApp.newTrigger('apiFakturaSinxDavom').timeBased().after(1 * 60 * 1000).create();
+  }
 }
 
 function apiFakturaAvtoSinx() {
