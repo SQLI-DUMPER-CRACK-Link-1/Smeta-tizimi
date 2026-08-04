@@ -300,20 +300,33 @@ function _parseFakturaText(text) {
         });
     }
     
+    var isGarbage = false;
+    for (var i = 0; i < items.length; i++) {
+        var n = items[i].nomi || '';
+        if (n === 'шт.' || n.length > 250 || n === 'Иштирок этмайман' || n === 'Без НДС') {
+            isGarbage = true;
+            break;
+        }
+    }
+    
     // AI Fallback
-    if (items.length === 0 && typeof llmCall === 'function') {
+    if ((items.length === 0 || isGarbage) && typeof aiCall === 'function') {
         try {
             var sys = "Sen faktura/akt/kvitansiya o'qiydigan AIsan. Bu hujjat ko'p varaqli (multi-page) yoki juda uzun bo'lishi mumkin. Hamma varaqlardagi barcha tovar va xizmatlarni bitta ham qoldirmay top!\n" + 
                       "Faqat JSON formatda Array qaytar, hech qanday markdown(```json) yozma!\n" + 
                       "Har bir obyektda: fakturaRaqami, kelganSana, postavshik, shartnomaRaqami, shartnomaSanasi, nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
                       "Kategoriyalar: Armatura, Beton, Sement, G'isht/Blok, Inert (Qum, Sheben), Kabel/Elektrika, Santexnika, Mixanizm, Asbob/Uskuna, Xizmat, Boshqa.\n" +
                       "Raqamlar yozuvsiz toza son bo'lsin.";
-            var res = llmCall({
+            var res = aiCall({
                 system: sys,
-                contents: [{role: 'user', parts: [{text: text}]}]
+                user: "Matndan barcha tovar va materiallarni top:\n\n" + text,
+                json: true
             });
             if (res) {
-                var jsonStr = res.replace(/```json/gi, '').replace(/```/g, '').trim();
+                var jsonStr = res;
+                if(jsonStr.indexOf('```') !== -1) {
+                    jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+                }
                 var arr = JSON.parse(jsonStr);
                 if (Array.isArray(arr) && arr.length > 0) {
                     items = arr.map(function(m){
@@ -323,6 +336,10 @@ function _parseFakturaText(text) {
                             postavshik: String(m.postavshik||supplier),
                             shartnomaRaqami: String(m.shartnomaRaqami||contractNo),
                             shartnomaSanasi: String(m.shartnomaSanasi||contractDate),
+                            postavshikInn: supplierInn,
+                            postavshikManzil: supplierManzil,
+                            sotibOluvchiInn: buyerInn,
+                            sotibOluvchiManzil: buyerManzil,
                             nomi: String(m.nomi||''),
                             birligi: String(m.birligi||'dona'),
                             miqdori: Number(m.miqdori)||0,
@@ -338,7 +355,7 @@ function _parseFakturaText(text) {
         } catch(e) {
             Logger.log('AI Parse Xato: ' + e);
         }
-    } else {
+    } else if (items.length > 0 && !isGarbage) {
         // Regex ishlagan bo'lsa, tezkor o'zimiz kategoriya beramiz
         for (var i = 0; i < items.length; i++) {
            var nm = items[i].nomi.toLowerCase();

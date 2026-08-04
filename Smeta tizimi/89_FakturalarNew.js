@@ -30,7 +30,11 @@ function apiFakturalarOl() {
         jamiNdsSiz: Number(row[9]) || 0,
         ndsSummasi: Number(row[10]) || 0,
         jamiNdsBilan: Number(row[11]) || 0,
-        kategoriya: String(row[12] || 'Boshqa')
+        kategoriya: String(row[12] || 'Boshqa'),
+        postavshikInn: String(row[13] || ''),
+        postavshikManzil: String(row[14] || ''),
+        sotibOluvchiInn: String(row[15] || ''),
+        sotibOluvchiManzil: String(row[16] || '')
       });
     }
     return { ok: true, fakturalar: out };
@@ -49,7 +53,7 @@ function apiFakturaYoz(fakturalarArray) {
       var sarlavhalar = [
         "Faktura raqami", "Postavshik", "Kelgan sana", "Shartnoma raqami", "Shartnoma sanasi",
         "Maxsulot nomi", "O'lchov birligi", "Miqdori", "Narxi (NDS siz)", 
-        "Yetkazib berish qiymati", "NDS summasi", "NDS bilan umumiy summa", "Kategoriya",
+        "Jami NDS siz", "NDS summasi", "NDS bilan umumiy summa", "Kategoriya",
         "Postavshik INN", "Postavshik Manzil", "Sotib oluvchi INN", "Sotib oluvchi Manzil"
       ];
       sh.appendRow(sarlavhalar);
@@ -74,7 +78,6 @@ function apiFakturaYoz(fakturalarArray) {
         item.miqdori || 0,
         item.narxi || 0,
         item.jamiNdsSiz || 0,
-        item.yetkazishQiymati || 0,
         item.ndsSummasi || 0,
         item.jamiNdsBilan || 0,
         item.kategoriya || "Boshqa",
