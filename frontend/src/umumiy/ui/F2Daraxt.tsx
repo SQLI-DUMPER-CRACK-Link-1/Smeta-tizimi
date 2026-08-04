@@ -215,9 +215,15 @@ export function F2Daraxt({
     }
   }, [ochiqYopiqSignal, tugunlar]);
 
+  const lastScrolled = useRef<string | null>(null);
+
   // scrollToKey o'zgarganda — shu qatorni ochib scroll qilamiz
   useEffect(() => {
-    if (!scrollToKey) return;
+    if (!scrollToKey) {
+      lastScrolled.current = null;
+      return;
+    }
+    if (scrollToKey === lastScrolled.current) return;
     
     // Shu kalitning ota-bobolari bo'lgan yopiq daraxtni ochamiz
     const ochishKerak = new Set<string>();
@@ -246,6 +252,7 @@ export function F2Daraxt({
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         setYoritilganKey(scrollToKey);
+        lastScrolled.current = scrollToKey;
         setTimeout(() => setYoritilganKey(null), 2500);
       }
     }, 180);
