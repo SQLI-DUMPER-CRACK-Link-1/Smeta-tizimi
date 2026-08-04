@@ -365,7 +365,7 @@ export function F2Import() {
     };
     const kids = (tur === 'bl') ? getKids(d).filter(k => !moslikMap.has(k.uid) && !qolDop[k.uid]) : [];
 
-    setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
+    setQolBekor((p) => { const s = new Set(p); s.add(d.uid); return s; });
     setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
 
     setQolDop((p) => ({
@@ -438,6 +438,7 @@ export function F2Import() {
           }
 
           if (!mapped) {
+             setQolBekor((p) => { const s = new Set(p); s.add(k.uid); return s; });
              setQolDop(p => ({
                ...p,
                [k.uid]: {
@@ -471,7 +472,7 @@ export function F2Import() {
     };
     const kids = (tur === 'bl') ? getKids(d).filter(k => !moslikMap.has(k.uid) && !qolDop[k.uid]) : [];
 
-    setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
+    setQolBekor((p) => { const s = new Set(p); s.add(d.uid); return s; });
     setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
 
     setQolDop((p) => ({
@@ -522,7 +523,7 @@ export function F2Import() {
     };
     const kids = (tur === 'bl') ? getKids(d).filter(k => !moslikMap.has(k.uid) && !qolDop[k.uid]) : [];
 
-    setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
+    setQolBekor((p) => { const s = new Set(p); s.add(d.uid); return s; });
     setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
 
     setQolDop((p) => ({
@@ -552,7 +553,7 @@ export function F2Import() {
     };
     const kids = (tur === 'bl') ? getKids(d).filter(k => !moslikMap.has(k.uid) && !qolDop[k.uid]) : [];
 
-    setQolBekor((p) => { const s = new Set(p); s.delete(d.uid); return s; });
+    setQolBekor((p) => { const s = new Set(p); s.add(d.uid); return s; });
     setQolBog((p) => { const nb = { ...p }; delete nb[d.uid]; return nb; });
 
     setQolDop((p) => ({
@@ -595,7 +596,7 @@ export function F2Import() {
     };
     const kids = (tur === 'bl') ? getKids(n) : [];
 
-    setQolBekor((p) => { const s = new Set(p); s.delete(aktKalit); return s; });
+    setQolBekor((p) => { const s = new Set(p); s.add(aktKalit); return s; });
     setQolBog((p) => { const nb = { ...p }; delete nb[aktKalit]; return nb; });
     setQolDop(p => ({
       ...p,
