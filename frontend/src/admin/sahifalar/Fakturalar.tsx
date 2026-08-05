@@ -14,7 +14,10 @@ export function Fakturalar() {
   const drvSinx = useFakturaAvtoSinx();
   
   const [q, setQ] = useState('');
+  const [katFiltr, setKatFiltr] = useState('');
+  const [postFiltr, setPostFiltr] = useState('');
   const [modalOchiq, setModalOchiq] = useState(false);
+  const [sverkaOchiq, setSverkaOchiq] = useState(false);
   
   const [yangiKiritmalar, setYangiKiritmalar] = useState<FakturaItem[]>([]);
   const [isParsing, setIsParsing] = useState(false);
@@ -22,6 +25,7 @@ export function Fakturalar() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSyncingLoop, setIsSyncingLoop] = useState(false);
+  const syncToxtatRef = useRef(false);
   const [qolganFayllar, setQolganFayllar] = useState<number | null>(null);
 
   const hammasi = soragan.data?.fakturalar ?? [];
@@ -29,12 +33,15 @@ export function Fakturalar() {
   const satrlar = useMemo(() => {
     const s = q.trim().toUpperCase();
     return hammasi.filter((m) => {
-      if (!s) return true;
-      return m.nomi.toUpperCase().includes(s) || 
-             m.fakturaRaqami.toUpperCase().includes(s) ||
-             m.postavshik.toUpperCase().includes(s);
+      if (s && !(m.nomi.toUpperCase().includes(s) || m.fakturaRaqami.toUpperCase().includes(s) || m.postavshik.toUpperCase().includes(s))) return false;
+      if (katFiltr && m.kategoriya !== katFiltr) return false;
+      if (postFiltr && m.postavshik !== postFiltr) return false;
+      return true;
     });
-  }, [hammasi, q]);
+  }, [hammasi, q, katFiltr, postFiltr]);
+
+  const kategoriyalar = useMemo(() => Array.from(new Set(hammasi.map(x => x.kategoriya || 'Boshqa'))).sort(), [hammasi]);
+  const postavshiklar = useMemo(() => Array.from(new Set(hammasi.map(x => x.postavshik || "Noma'lum"))).sort(), [hammasi]);
 
   // Analitika hisoblash
   const analitika = useMemo(() => {
@@ -344,9 +351,10 @@ export function Fakturalar() {
 
   const startSyncLoop = async () => {
     setIsSyncingLoop(true);
+    syncToxtatRef.current = false;
     let xatoCount = 0;
     try {
-      while (true) {
+      while (!syncToxtatRef.current) {
         const res = await drvSinx.mutateAsync();
         if (res?.ok) {
           if (res.qolganFayllar !== undefined) {
@@ -362,6 +370,7 @@ export function Fakturalar() {
           if (xatoCount > 3) break;
         }
       }
+      if (syncToxtatRef.current) toast("Sinxronizatsiya to'xtatildi (Pause)", "warn");
     } catch(e) {
       toast("Sinxronizatsiya to'xtab qoldi: " + String(e), 'danger');
     } finally {
@@ -395,9 +404,20 @@ export function Fakturalar() {
       yangilanmoqda={soragan.isFetching}
       amallar={
         <div className="flex gap-3">
+          <select value={katFiltr} onChange={(e) => setKatFiltr(e.target.value)} className="input h-9 px-3 text-sm w-40 max-w-full bg-[var(--surface-2)]">
+            <option value="">Barcha Kategoriyalar</option>
+            {kategoriyalar.map(k => <option key={k} value={k}>{k}</option>)}
+          </select>
+          <select value={postFiltr} onChange={(e) => setPostFiltr(e.target.value)} className="input h-9 px-3 text-sm w-48 max-w-full bg-[var(--surface-2)]">
+            <option value="">Barcha Yetkazib beruvchilar</option>
+            {postavshiklar.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
           <Qidiruv qiymat={q} ozgardi={setQ} placeholder="Faktura, nomi..." />
+          <Tugma tur="secondary" ikonka={<FolderArchive size={16} />} onBos={() => setSverkaOchiq(true)}>
+            Sverka
+          </Tugma>
           <Tugma tur="primary" ikonka={<FileUp size={16} />} onBos={() => setModalOchiq(true)}>
-            Faktura yuklash (PDF)
+            Faktura yuklash
           </Tugma>
         </div>
       }
@@ -465,14 +485,24 @@ export function Fakturalar() {
                   >
                     Yangilash
                   </Tugma>
-                  <Tugma 
-                    tur="primary" 
-                    ikonka={<FileUp size={16} />} 
-                    band={isSyncingLoop || drvHolat.isFetching} 
-                    onBos={startSyncLoop}
-                  >
-                    {isSyncingLoop ? 'Sinxronizatsiya jarayonda...' : 'Hozir Sinxronizatsiya Qilish'}
-                  </Tugma>
+                  {isSyncingLoop ? (
+                    <Tugma 
+                      tur="danger" 
+                      ikonka={<X size={16} />} 
+                      onBos={() => { syncToxtatRef.current = true; }}
+                    >
+                      To'xtatish (Pause)
+                    </Tugma>
+                  ) : (
+                    <Tugma 
+                      tur="primary" 
+                      ikonka={<FileUp size={16} />} 
+                      band={drvHolat.isFetching} 
+                      onBos={startSyncLoop}
+                    >
+                      Hozir Sinxronizatsiya Qilish
+                    </Tugma>
+                  )}
                 </div>
               </div>
 
@@ -656,6 +686,62 @@ export function Fakturalar() {
                   {yoz.isPending ? "Saqlanmoqda..." : "Tasdiqlash va Saqlash"}
                 </Tugma>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sverkaOchiq && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="karta flex max-h-full w-full max-w-4xl flex-col shadow-2xl border border-white/10 relative overflow-hidden bg-[var(--surface-1)]">
+            <div className="flex items-center justify-between border-b border-border bg-black/20 p-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <FolderArchive className="text-ok" size={20} />
+                Sverka (Reconciliation)
+              </h2>
+              <button onClick={() => setSverkaOchiq(false)} className="text-text-dim hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              <p className="text-text-dim text-sm mb-4">Ushbu ro'yxatda joriy filtrlangan fakturalar bo'yicha Yetkazib beruvchilar kesimida umumlashtirilgan hisobot ko'rsatiladi.</p>
+              <div className="border border-border rounded-xl overflow-hidden bg-black/20 overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-[var(--surface-2)] border-b border-border text-text-dim">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Yetkazib Beruvchi (Postavshik)</th>
+                      <th className="px-4 py-3 font-medium text-right">Fakturalar Soni</th>
+                      <th className="px-4 py-3 font-medium text-right">Qatorlar Soni</th>
+                      <th className="px-4 py-3 font-medium text-right">Jami NDS siz</th>
+                      <th className="px-4 py-3 font-medium text-right">Jami NDS</th>
+                      <th className="px-4 py-3 font-medium text-right">Jami Summa (QQS bilan)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {Object.entries(
+                      satrlar.reduce((acc, curr) => {
+                        const p = curr.postavshik || "Noma'lum";
+                        if (!acc[p]) acc[p] = { faks: new Set(), qator: 0, ndssiz: 0, nds: 0, jami: 0 };
+                        acc[p].faks.add(curr.fakturaRaqami);
+                        acc[p].qator++;
+                        acc[p].ndssiz += curr.jamiNdsSiz || 0;
+                        acc[p].nds += curr.ndsSummasi || 0;
+                        acc[p].jami += curr.jamiNdsBilan || 0;
+                        return acc;
+                      }, {} as Record<string, any>)
+                    ).sort((a,b) => b[1].jami - a[1].jami).map(([p, data]) => (
+                      <tr key={p} className="hover:bg-white/5">
+                        <td className="px-4 py-3 font-medium text-white">{p}</td>
+                        <td className="px-4 py-3 text-right text-accent">{data.faks.size} ta</td>
+                        <td className="px-4 py-3 text-right text-text-dim">{data.qator} ta</td>
+                        <td className="px-4 py-3 text-right text-text-dim"><FmtN val={data.ndssiz} /></td>
+                        <td className="px-4 py-3 text-right text-warning"><FmtN val={data.nds} /></td>
+                        <td className="px-4 py-3 text-right font-bold text-ok"><FmtN val={data.jami} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

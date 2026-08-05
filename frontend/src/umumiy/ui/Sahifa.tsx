@@ -179,7 +179,7 @@ export function Jadval<T,>({
               {ustunlar.map((u) => (
                 <th
                   key={u.kalit}
-                  style={{ width: u.en }}
+                  style={{ width: u.en, minWidth: u.en }}
                   className={`sticky top-0 z-[1] bg-[var(--surface-2)] px-4 py-3 font-medium
                               text-[11px] uppercase tracking-[0.04em] text-text-dim
                               border-b border-border ${u.raqam ? 'text-right' : 'text-left'}`}

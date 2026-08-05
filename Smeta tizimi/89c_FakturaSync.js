@@ -250,7 +250,9 @@ function _parseFakturaText(text) {
             var res = aiCall({
                 system: sys,
                 user: "Matndan barcha tovar va materiallarni top:\n\n" + text,
-                json: true
+                json: true,
+                maxTok: 8192,
+                temp: 0.1
             });
             if (res) {
                 var jsonStr = res;
@@ -288,95 +290,10 @@ function _parseFakturaText(text) {
         }
     }
 
-    // AI ishlamasa yoki bo'sh qaytarsa, eskirgan Regex orqali o'qiymiz (Fallback)
     if (!aiSuccess) {
-        var n = '(-?\\d+(?:\\s\\d{3})*(?:\\.\\d+)?)';
-        var amtRegex = new RegExp(
-            n + '\\s+' + 
-            n + '\\s+' + 
-            n + '\\s+' + 
-            '(?:(?:Без\\s*акциз(?:а|сиз)|Акцизсиз|\\d+\\s*%)\\s+' + n + '\\s+)?' + 
-            '(\\d+\\s*%|Без\\s*НДС|ҚҚСсиз|Без\\s*НДС\\s*\\(0\\)|ҚҚСсиз\\s*\\(0\\))\\s+' + 
-            n + '\\s+' + 
-            n + 
-            '(?:\\s+(?:Олди-сотди|Ўз\\.иш\\.чиқ\\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?',
-            'gi'
-        );
-        
-        var match;
-        var lastEnd = 0;
-        
-        while ((match = amtRegex.exec(text)) !== null) {
-            var precedingText = text.substring(lastEnd, match.index).trim();
-            lastEnd = amtRegex.lastIndex;
-            
-            var colNumbersMatch = precedingText.match(/1\s+2\s+3\s+4\s+5\s+6\s+7\s+8\s+9\s+10\s+(.*)/);
-            if (colNumbersMatch) {
-                precedingText = colNumbersMatch[1];
-            } else {
-                var headerKeywords = /(?:қиймати|Summa|Сумма|Нархи|Narxi|Миқдор|Miqdor|номи|nomi|Tovar)\s+(.*)/is;
-                var hkMatch = precedingText.match(headerKeywords);
-                if (hkMatch && hkMatch[1] && hkMatch[1].length < 200) {
-                    var segments = precedingText.split(/(?:қиймати|Summa|Сумма|Нархи|Narxi|Миқдор|Miqdor|номи|nomi|Tovar)\s+/i);
-                    precedingText = segments[segments.length - 1];
-                }
-            }
-            
-            precedingText = precedingText.replace(/\b\d{17}\b/g, '').trim();
-            var tokens = precedingText.split(/\s+/);
-            var nomi = '';
-            var birligi = '';
-            if (tokens.length >= 2) {
-                birligi = tokens.pop();
-                var qoldi = tokens.join(' ');
-                var nmMatch = qoldi.match(/\d+[\s.]*(.*)/);
-                if (nmMatch && nmMatch[1]) {
-                    nomi = nmMatch[1].trim();
-                } else {
-                    nomi = qoldi;
-                }
-            } else {
-                nomi = precedingText;
-                birligi = 'dona';
-            }
-            
-            var parseNum = function(s) {
-                if (!s) return 0;
-                return parseFloat(s.replace(/\s+/g, '').replace(/,/g, '.'));
-            };
-            
-            items.push({
-                fakturaRaqami: docNo, 
-                kelganSana: docDate,
-                postavshik: supplier,
-                shartnomaRaqami: contractNo,
-                shartnomaSanasi: contractDate,
-                postavshikInn: supplierInn,
-                postavshikManzil: supplierManzil,
-                sotibOluvchiInn: buyerInn,
-                sotibOluvchiManzil: buyerManzil,
-                nomi: nomi,
-                birligi: birligi,
-                miqdori: parseNum(match[1]),
-                narxi: parseNum(match[2]),
-                jamiNdsSiz: parseNum(match[3]),
-                ndsSummasi: parseNum(match[6]),
-                jamiNdsBilan: parseNum(match[7]),
-                kategoriya: 'Boshqa'
-            });
-        }
-
-        // Regex orqali kategoriya berish
-        if (items.length > 0) {
-            for (var i = 0; i < items.length; i++) {
-               var nm = items[i].nomi.toLowerCase();
-               if(nm.indexOf('арматура')>-1) items[i].kategoriya='Armatura';
-               else if(nm.indexOf('бетон')>-1) items[i].kategoriya='Beton';
-               else if(nm.indexOf('цемент')>-1 || nm.indexOf('sement')>-1) items[i].kategoriya='Sement';
-               else if(nm.indexOf('щебень')>-1 || nm.indexOf('песок')>-1 || nm.indexOf('qum')>-1) items[i].kategoriya='Inert (Qum, Sheben)';
-               else items[i].kategoriya='Boshqa';
-            }
-        }
+        Logger.log('AI orqali o\'qish muvaffaqiyatsiz bo\'ldi. (Ehtimol matn juda uzun yoki AI xatosi)');
+        // Regex eskirgan va xato ishlaganligi sababli olib tashlandi.
+        // Hujjatni qo'lda tekshirish uchun bo'sh array qaytaramiz.
     }
     
     return { items: items, supplier: supplier };
