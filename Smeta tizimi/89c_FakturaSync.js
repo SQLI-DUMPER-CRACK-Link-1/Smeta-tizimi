@@ -229,7 +229,6 @@ function _parseFakturaText(text) {
     if (stirBuyMatch) {
         buyerInn = stirBuyMatch[1];
     } else {
-        // Fallback for buyer INN if exact match fails
         var allStirs = text.match(/\b\d{9}\b/g);
         if (allStirs && allStirs.length >= 2) {
             supplierInn = supplierInn || allStirs[0];
@@ -238,102 +237,10 @@ function _parseFakturaText(text) {
     }
     
     var items = [];
-    var n = '(-?\\d+(?:\\s\\d{3})*(?:\\.\\d+)?)';
-    var amtRegex = new RegExp(
-        n + '\\s+' + 
-        n + '\\s+' + 
-        n + '\\s+' + 
-        '(?:(?:Без\\s*акциз(?:а|сиз)|Акцизсиз|\\d+\\s*%)\\s+' + n + '\\s+)?' + 
-        '(\\d+\\s*%|Без\\s*НДС|ҚҚСсиз|Без\\s*НДС\\s*\\(0\\)|ҚҚСсиз\\s*\\(0\\))\\s+' + 
-        n + '\\s+' + 
-        n + 
-        '(?:\\s+(?:Олди-сотди|Ўз\\.иш\\.чиқ\\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?',
-        'gi'
-    );
-    
-    var match;
-    var lastEnd = 0;
-    
-    while ((match = amtRegex.exec(text)) !== null) {
-        var precedingText = text.substring(lastEnd, match.index).trim();
-        lastEnd = amtRegex.lastIndex;
-        
-        // Agar bu birinchi item bo'lsa, precedingText ichida butun header bo'ladi.
-        // Header odatda "1 2 3 4 5 6 7 8 9 10" kabi raqamlar qatoridan keyin tugaydi.
-        var colNumbersMatch = precedingText.match(/1\s+2\s+3\s+4\s+5\s+6\s+7\s+8\s+9\s+10\s+(.*)/);
-        if (colNumbersMatch) {
-            precedingText = colNumbersMatch[1];
-        } else {
-            // Yoki "Maxsulot nomi" yoki shunga o'xshash so'zdan keyingi qismini olamiz
-            var headerKeywords = /(?:қиймати|Summa|Сумма|Нархи|Narxi|Миқдор|Miqdor|номи|nomi|Tovar)\s+(.*)/is;
-            var hkMatch = precedingText.match(headerKeywords);
-            if (hkMatch && hkMatch[1] && hkMatch[1].length < 200) {
-                // Fagatgina ohirgi qismini olamiz (agar u juda uzun bo'lmasa)
-                var segments = precedingText.split(/(?:қиймати|Summa|Сумма|Нархи|Narxi|Миқдор|Miqdor|номи|nomi|Tovar)\s+/i);
-                precedingText = segments[segments.length - 1];
-            }
-        }
-        
-        // MXIK kodi (17 ta raqam) ni o'chirib tashlaymiz
-        precedingText = precedingText.replace(/\b\d{17}\b/g, '').trim();
+    var aiSuccess = false;
 
-        var tokens = precedingText.split(/\s+/);
-        var nomi = '';
-        var birligi = '';
-        if (tokens.length >= 2) {
-            birligi = tokens.pop();
-            var qoldi = tokens.join(' ');
-            var nmMatch = qoldi.match(/\d+[\s.]*(.*)/);
-            if (nmMatch && nmMatch[1]) {
-                nomi = nmMatch[1].trim();
-            } else {
-                nomi = qoldi;
-            }
-        } else {
-            nomi = precedingText;
-            birligi = 'dona';
-        }
-        
-        var nameStr = nomi.replace(/^[\d\s.]+/, '').trim();
-        if (nameStr.indexOf('-') === 0) nameStr = nameStr.substring(1).trim();
-        
-        var parseNum = function(s) {
-            if (!s) return 0;
-            return parseFloat(s.replace(/\s+/g, '').replace(/,/g, '.'));
-        };
-        
-        items.push({
-            fakturaRaqami: docNo, 
-            kelganSana: docDate,
-            postavshik: supplier,
-            shartnomaRaqami: contractNo,
-            shartnomaSanasi: contractDate,
-            postavshikInn: supplierInn,
-            postavshikManzil: supplierManzil,
-            sotibOluvchiInn: buyerInn,
-            sotibOluvchiManzil: buyerManzil,
-            nomi: nameStr,
-            birligi: birligi,
-            miqdori: parseNum(match[1]),
-            narxi: parseNum(match[2]),
-            jamiNdsSiz: parseNum(match[3]),
-            ndsSummasi: parseNum(match[6]),
-            jamiNdsBilan: parseNum(match[7]),
-            kategoriya: 'Boshqa'
-        });
-    }
-    
-    var isGarbage = false;
-    for (var i = 0; i < items.length; i++) {
-        var n = items[i].nomi || '';
-        if (n === 'шт.' || n.length > 250 || n === 'Иштирок этмайман' || n === 'Без НДС') {
-            isGarbage = true;
-            break;
-        }
-    }
-    
-    // AI Fallback
-    if ((items.length === 0 || isGarbage) && typeof aiCall === 'function') {
+    // AI orqali 100% aniq o'qishga harakat qilamiz (Primary)
+    if (typeof aiCall === 'function') {
         try {
             var sys = "Sen faktura/akt/kvitansiya o'qiydigan AIsan. Bu hujjat ko'p varaqli (multi-page) yoki juda uzun bo'lishi mumkin. Hamma varaqlardagi barcha tovar va xizmatlarni bitta ham qoldirmay top!\n" + 
                       "Faqat JSON formatda Array qaytar, hech qanday markdown(```json) yozma!\n" + 
@@ -373,20 +280,102 @@ function _parseFakturaText(text) {
                             kategoriya: String(m.kategoriya||'Boshqa')
                         };
                     });
+                    aiSuccess = true;
                 }
             }
         } catch(e) {
             Logger.log('AI Parse Xato: ' + e);
         }
-    } else if (items.length > 0 && !isGarbage) {
-        // Regex ishlagan bo'lsa, tezkor o'zimiz kategoriya beramiz
-        for (var i = 0; i < items.length; i++) {
-           var nm = items[i].nomi.toLowerCase();
-           if(nm.indexOf('арматура')>-1) items[i].kategoriya='Armatura';
-           else if(nm.indexOf('бетон')>-1) items[i].kategoriya='Beton';
-           else if(nm.indexOf('цемент')>-1 || nm.indexOf('sement')>-1) items[i].kategoriya='Sement';
-           else if(nm.indexOf('щебень')>-1 || nm.indexOf('песок')>-1 || nm.indexOf('qum')>-1) items[i].kategoriya='Inert (Qum, Sheben)';
-           else items[i].kategoriya='Boshqa';
+    }
+
+    // AI ishlamasa yoki bo'sh qaytarsa, eskirgan Regex orqali o'qiymiz (Fallback)
+    if (!aiSuccess) {
+        var n = '(-?\\d+(?:\\s\\d{3})*(?:\\.\\d+)?)';
+        var amtRegex = new RegExp(
+            n + '\\s+' + 
+            n + '\\s+' + 
+            n + '\\s+' + 
+            '(?:(?:Без\\s*акциз(?:а|сиз)|Акцизсиз|\\d+\\s*%)\\s+' + n + '\\s+)?' + 
+            '(\\d+\\s*%|Без\\s*НДС|ҚҚСсиз|Без\\s*НДС\\s*\\(0\\)|ҚҚСсиз\\s*\\(0\\))\\s+' + 
+            n + '\\s+' + 
+            n + 
+            '(?:\\s+(?:Олди-сотди|Ўз\\.иш\\.чиқ\\.|Импорт|Четдан келтирилган|Ўз эҳтиёжлари учун ишлаб чиқарилган))?',
+            'gi'
+        );
+        
+        var match;
+        var lastEnd = 0;
+        
+        while ((match = amtRegex.exec(text)) !== null) {
+            var precedingText = text.substring(lastEnd, match.index).trim();
+            lastEnd = amtRegex.lastIndex;
+            
+            var colNumbersMatch = precedingText.match(/1\s+2\s+3\s+4\s+5\s+6\s+7\s+8\s+9\s+10\s+(.*)/);
+            if (colNumbersMatch) {
+                precedingText = colNumbersMatch[1];
+            } else {
+                var headerKeywords = /(?:қиймати|Summa|Сумма|Нархи|Narxi|Миқдор|Miqdor|номи|nomi|Tovar)\s+(.*)/is;
+                var hkMatch = precedingText.match(headerKeywords);
+                if (hkMatch && hkMatch[1] && hkMatch[1].length < 200) {
+                    var segments = precedingText.split(/(?:қиймати|Summa|Сумма|Нархи|Narxi|Миқдор|Miqdor|номи|nomi|Tovar)\s+/i);
+                    precedingText = segments[segments.length - 1];
+                }
+            }
+            
+            precedingText = precedingText.replace(/\b\d{17}\b/g, '').trim();
+            var tokens = precedingText.split(/\s+/);
+            var nomi = '';
+            var birligi = '';
+            if (tokens.length >= 2) {
+                birligi = tokens.pop();
+                var qoldi = tokens.join(' ');
+                var nmMatch = qoldi.match(/\d+[\s.]*(.*)/);
+                if (nmMatch && nmMatch[1]) {
+                    nomi = nmMatch[1].trim();
+                } else {
+                    nomi = qoldi;
+                }
+            } else {
+                nomi = precedingText;
+                birligi = 'dona';
+            }
+            
+            var parseNum = function(s) {
+                if (!s) return 0;
+                return parseFloat(s.replace(/\s+/g, '').replace(/,/g, '.'));
+            };
+            
+            items.push({
+                fakturaRaqami: docNo, 
+                kelganSana: docDate,
+                postavshik: supplier,
+                shartnomaRaqami: contractNo,
+                shartnomaSanasi: contractDate,
+                postavshikInn: supplierInn,
+                postavshikManzil: supplierManzil,
+                sotibOluvchiInn: buyerInn,
+                sotibOluvchiManzil: buyerManzil,
+                nomi: nomi,
+                birligi: birligi,
+                miqdori: parseNum(match[1]),
+                narxi: parseNum(match[2]),
+                jamiNdsSiz: parseNum(match[3]),
+                ndsSummasi: parseNum(match[6]),
+                jamiNdsBilan: parseNum(match[7]),
+                kategoriya: 'Boshqa'
+            });
+        }
+
+        // Regex orqali kategoriya berish
+        if (items.length > 0) {
+            for (var i = 0; i < items.length; i++) {
+               var nm = items[i].nomi.toLowerCase();
+               if(nm.indexOf('арматура')>-1) items[i].kategoriya='Armatura';
+               else if(nm.indexOf('бетон')>-1) items[i].kategoriya='Beton';
+               else if(nm.indexOf('цемент')>-1 || nm.indexOf('sement')>-1) items[i].kategoriya='Sement';
+               else if(nm.indexOf('щебень')>-1 || nm.indexOf('песок')>-1 || nm.indexOf('qum')>-1) items[i].kategoriya='Inert (Qum, Sheben)';
+               else items[i].kategoriya='Boshqa';
+            }
         }
     }
     

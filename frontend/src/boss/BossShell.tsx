@@ -18,7 +18,7 @@ export default function BossShell() {
 
   const handleLogout = () => {
     document.cookie = 'sess=; Max-Age=0; path=/';
-    navigate('/');
+    window.location.href = '/';
   };
 
   return (

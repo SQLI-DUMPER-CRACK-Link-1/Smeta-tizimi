@@ -36,7 +36,7 @@ export default function AdminShell() {
 
   const handleLogout = () => {
     document.cookie = 'sess=; Max-Age=0; path=/';
-    navigate('/');
+    window.location.href = '/';
   };
 
   return (
