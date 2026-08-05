@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaOCR, useFakturaDriveHolat, useFakturaAvtoSinx, type FakturaItem } from '../../api/hooks';
-import { Sahifa, Holatlar, Jadval, Qidiruv, Tugma } from '../../umumiy/ui/Sahifa';
+import { Sahifa, Holatlar, Qidiruv, Tugma } from '../../umumiy/ui/Sahifa';
+import { IlgorJadval, type IlgorUstun } from '../../umumiy/ui/IlgorJadval';
 import { toast } from '../../umumiy/ui/Toast';
-import { FileUp, Save, X, RefreshCw, FolderOpen, FolderArchive, FolderX, ExternalLink } from 'lucide-react';
+import { FileUp, Save, X, RefreshCw, FolderOpen, FolderArchive, FolderX, ExternalLink, FileText } from 'lucide-react';
 import { FmtN } from '../../lib/format';
 
 export function Fakturalar() {
@@ -13,9 +14,6 @@ export function Fakturalar() {
   const drvHolat = useFakturaDriveHolat();
   const drvSinx = useFakturaAvtoSinx();
   
-  const [q, setQ] = useState('');
-  const [katFiltr, setKatFiltr] = useState('');
-  const [postFiltr, setPostFiltr] = useState('');
   const [modalOchiq, setModalOchiq] = useState(false);
   const [sverkaOchiq, setSverkaOchiq] = useState(false);
   
@@ -30,18 +28,8 @@ export function Fakturalar() {
 
   const hammasi = soragan.data?.fakturalar ?? [];
 
-  const satrlar = useMemo(() => {
-    const s = q.trim().toUpperCase();
-    return hammasi.filter((m) => {
-      if (s && !(m.nomi.toUpperCase().includes(s) || m.fakturaRaqami.toUpperCase().includes(s) || m.postavshik.toUpperCase().includes(s))) return false;
-      if (katFiltr && m.kategoriya !== katFiltr) return false;
-      if (postFiltr && m.postavshik !== postFiltr) return false;
-      return true;
-    });
-  }, [hammasi, q, katFiltr, postFiltr]);
-
-  const kategoriyalar = useMemo(() => Array.from(new Set(hammasi.map(x => x.kategoriya || 'Boshqa'))).sort(), [hammasi]);
-  const postavshiklar = useMemo(() => Array.from(new Set(hammasi.map(x => x.postavshik || "Noma'lum"))).sort(), [hammasi]);
+  // Analitika hisoblash (endi filtrlanmagan hamma ma'lumotdan yoki shunchaki hammasidan)
+  const satrlar = hammasi;
 
   // Analitika hisoblash
   const analitika = useMemo(() => {
@@ -137,7 +125,6 @@ export function Fakturalar() {
         
         // 2. Matndan tovarlarni ajratish
         const { items, supplier } = parseFakturaText(fullText);
-        barchaTovarlar = [...barchaTovarlar, ...items];
         
         // 4. Orqa fonga PDF ni saqlash uchun yuborish
         try {
@@ -146,11 +133,17 @@ export function Fakturalar() {
              toast(`${file.name} xato: ${fRes.xabar}`, 'danger');
           } else if (fRes?.ok) {
              toast(`${file.name} Drive ga yuklandi`, 'ok');
+             // Update items with the returned file URL
+             if (fRes.url) {
+                items.forEach(it => it.faylUrl = fRes.url);
+             }
           }
         } catch(err: any) {
             console.error("Faylni saqlashda xato:", err);
             toast(`${file.name} ni Drive ga saqlab bo'lmadi: ${err.message}`, 'danger');
         }
+        
+        barchaTovarlar = [...barchaTovarlar, ...items];
       }
       
       if (barchaTovarlar.length > 0) {
@@ -380,19 +373,22 @@ export function Fakturalar() {
     }
   };
 
-  const ustunlar = [
-    { kalit: 'kelganSana', nom: 'Sana', en: '80px', chiz: (m: any) => <span className="text-text-dim text-[13px]">{m.kelganSana}</span> },
-    { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '100px', chiz: (m: any) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
-    { kalit: 'postavshik', nom: 'Postavshik', chiz: (m: any) => <span className="text-text truncate text-[13px]">{m.postavshik}</span> },
-    { kalit: 'postavshikInn', nom: 'Y. STIR', en: '100px', chiz: (m: any) => <span className="text-text-dim text-[12px]">{m.postavshikInn}</span> },
-    { kalit: 'postavshikManzil', nom: 'Y. Manzil', en: '150px', chiz: (m: any) => <span className="text-text-dim text-[12px] truncate max-w-[150px]" title={m.postavshikManzil}>{m.postavshikManzil}</span> },
-    { kalit: 'sotibOluvchiInn', nom: 'S. STIR', en: '100px', chiz: (m: any) => <span className="text-text-dim text-[12px]">{m.sotibOluvchiInn}</span> },
-    { kalit: 'nomi', nom: 'Maxsulot nomi', chiz: (m: any) => <span className="text-text font-medium text-[13px]">{m.nomi}</span> },
-    { kalit: 'kategoriya', nom: 'Kategoriya', en: '110px', chiz: (m: any) => <span className="inline-block px-2 py-1 bg-white/5 border border-border text-text-dim rounded-md text-[11px]">{m.kategoriya || 'Boshqa'}</span> },
-    { kalit: 'birligi', nom: 'Birlik', en: '70px', chiz: (m: any) => <span className="text-text-dim text-[13px]">{m.birligi}</span> },
-    { kalit: 'miqdori', nom: 'Miqdor', raqam: true, en: '80px', chiz: (m: any) => <FmtN val={m.miqdori} /> },
-    { kalit: 'narxi', nom: 'Narx', raqam: true, en: '90px', chiz: (m: any) => <FmtN val={m.narxi} /> },
-    { kalit: 'jamiNdsBilan', nom: 'Jami Summa', raqam: true, en: '110px', chiz: (m: any) => <span className="text-ok font-medium"><FmtN val={m.jamiNdsBilan} /></span> },
+  const ustunlar: IlgorUstun<FakturaItem>[] = [
+    { kalit: 'kelganSana', nom: 'Sana', en: '100px', chiz: (m) => <span className="text-text-dim text-[13px]">{m.kelganSana}</span> },
+    { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '110px', chiz: (m) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
+    { kalit: 'postavshik', nom: 'Postavshik', en: '200px', chiz: (m) => <span className="text-text truncate text-[13px] max-w-[200px] block" title={m.postavshik}>{m.postavshik}</span> },
+    { kalit: 'postavshikInn', nom: 'Y. STIR', en: '100px', chiz: (m) => <span className="text-text-dim text-[12px]">{m.postavshikInn}</span> },
+    { kalit: 'nomi', nom: 'Maxsulot nomi', en: '250px', chiz: (m) => (
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-text font-medium text-[13px] truncate max-w-[200px] block" title={m.nomi}>{m.nomi}</span>
+        {m.faylUrl && <FileText size={14} className="text-accent shrink-0 opacity-50 hover:opacity-100" title="Asl hujjatni ko'rish" />}
+      </div>
+    ) },
+    { kalit: 'kategoriya', nom: 'Kategoriya', en: '120px', chiz: (m) => <span className="inline-block px-2 py-1 bg-white/5 border border-border text-text-dim rounded-md text-[11px]">{m.kategoriya || 'Boshqa'}</span> },
+    { kalit: 'birligi', nom: 'Birlik', en: '80px', chiz: (m) => <span className="text-text-dim text-[13px]">{m.birligi}</span> },
+    { kalit: 'miqdori', nom: 'Miqdor', raqam: true, en: '100px', chiz: (m) => <FmtN val={m.miqdori} /> },
+    { kalit: 'narxi', nom: 'Narx', raqam: true, en: '110px', chiz: (m) => <FmtN val={m.narxi} /> },
+    { kalit: 'jamiNdsBilan', nom: 'Jami Summa', raqam: true, en: '130px', chiz: (m) => <span className="text-ok font-medium"><FmtN val={m.jamiNdsBilan} /></span> },
   ];
 
   return (
@@ -403,16 +399,8 @@ export function Fakturalar() {
       onYangila={() => soragan.refetch()}
       yangilanmoqda={soragan.isFetching}
       amallar={
-        <div className="flex gap-3">
-          <select value={katFiltr} onChange={(e) => setKatFiltr(e.target.value)} className="input h-9 px-3 text-sm w-40 max-w-full bg-[var(--surface-2)]">
-            <option value="">Barcha Kategoriyalar</option>
-            {kategoriyalar.map(k => <option key={k} value={k}>{k}</option>)}
-          </select>
-          <select value={postFiltr} onChange={(e) => setPostFiltr(e.target.value)} className="input h-9 px-3 text-sm w-48 max-w-full bg-[var(--surface-2)]">
-            <option value="">Barcha Yetkazib beruvchilar</option>
-            {postavshiklar.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <Qidiruv qiymat={q} ozgardi={setQ} placeholder="Faktura, nomi..." />
+        <div className="flex gap-3 items-center">
+          <span className="text-text-dim text-sm mr-2 hidden sm:inline-block">Qo'shimcha harakatlar:</span>
           <Tugma tur="secondary" ikonka={<FolderArchive size={16} />} onBos={() => setSverkaOchiq(true)}>
             Sverka
           </Tugma>
@@ -556,10 +544,20 @@ export function Fakturalar() {
               </div>
             </div>
 
-            {/* Asosiy Jadval */}
-            <div className="karta overflow-hidden shadow-lg border border-border">
-              <Jadval ustunlar={ustunlar} satrlar={satrlar} kalit={(m, i) => m.id || i.toString()} />
-            </div>
+            {/* Asosiy Ilg'or Jadval */}
+            <IlgorJadval 
+              ustunlar={ustunlar} 
+              satrlar={satrlar} 
+              kalit={(m, i) => m.id || i.toString()} 
+              eksportNom="Fakturalar_Buxgalteriya"
+              onSatrBos={(m) => {
+                 if(m.faylUrl) {
+                    window.open(m.faylUrl, '_blank');
+                 } else {
+                    toast("Bu tovarning asl hujjat havolasi (PDF) bazada mavjud emas.", "warn");
+                 }
+              }}
+            />
           </div>
         )}
       </Holatlar>

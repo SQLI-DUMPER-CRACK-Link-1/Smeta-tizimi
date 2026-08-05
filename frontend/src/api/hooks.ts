@@ -366,6 +366,7 @@ export type FakturaItem = {
   jamiNdsBilan: number;
   kategoriya?: string;
   isDuplicate?: boolean;
+  faylUrl?: string;
 };
 
 export function useFakturalarOl() {
