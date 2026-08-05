@@ -91,7 +91,7 @@ function apiFakturaAvtoSinx() {
       var blob = file.getBlob();
       var parsed = _parseFakturaVision(blob, file);
       
-      if(parsed.items.length === 0 || !parsed.items[0].fakturaRaqami || !parsed.items[0].postavshik){
+      if(parsed.items.length === 0 || !parsed.items[0].nomi){
           // Agar jadval topilmasa
           file.moveTo(xatoPap);
           continue;
@@ -113,12 +113,20 @@ function apiFakturaAvtoSinx() {
          file.moveTo(dubPap);
       } else {
          // Yaroqli tovarlarni qo'shish
+         var fpos = "Noma_lum";
+         if(parsed.items.length > 0) fpos = String(parsed.items[0].postavshik || "Noma'lum").replace(/[<>:"\/\\|?*]/g, '_').trim();
+         if(!fpos) fpos = "Noma_lum";
+         
+         var posPap = getOrCreateFolder(arxivPap, fpos);
+         
          for(var j=0; j<parsed.items.length; j++){
-             yangiKiritmalar.push(parsed.items[j]);
+             var itm = parsed.items[j];
+             itm.faylUrl = file.getUrl();
+             yangiKiritmalar.push(itm);
              // cache for next files in the same batch
-             existingMap[parsed.items[j].fakturaRaqami + '@@' + parsed.items[j].postavshik] = true; 
+             existingMap[itm.fakturaRaqami + '@@' + itm.postavshik] = true; 
          }
-         file.moveTo(arxivPap);
+         file.moveTo(posPap);
       }
     } catch(err) {
       Logger.log("Xato: " + err.toString());
@@ -185,12 +193,13 @@ function _parseFakturaVision(blob, fileObj) {
             var sys = "Sen qat'iy va bexato ishlaydigan Buxgalteriya AIsan. Berilgan hujjat PDF yoki Rasm ko'rinishidagi hisob-faktura / akt. Hujjat ko'p varaqli bo'lishi ham mumkin. Hamma varaqlardagi barcha ma'lumotlarni o'qi!\n\n" + 
                       "QAT'IY QOIDALAR:\n" +
                       "1. Hujjatdagi BARCHA tovar va xizmatlarni top. Bittasini ham o'tkazib yuborma!\n" +
-                      "2. NOMI: Kirill va lotin harflarini xuddi hujjatdagidek yoz. Mahsulot nomi uzilgan bo'lsa mantiqan yig'ib bitta qator qil.\n" +
+                      "2. NOMI: Kirill va lotin harflarini xuddi hujjatdagidek yoz. DIQQAT JIDDIY QOIDA 1: Ba'zan PDF o'qiyotganda bir nechta mahsulot nomlari ketma-ket bitta blok/matn qilib yig'ilib qoladi (masalan: '17 Truba... 18 Tройник... 19...'), lekin ularning miqdori va narxi pastdagi qatorlarda alohida-alohida keladi. Bunday holatda O'SHA YIG'ILIB QOLGAN NOMLARNI bittalab ajratib, pastdagi raqamli qatorlarga (miqdor/narx) ketma-ket to'g'ri moslab ber! Hech qachon bir nechta tovar nomini bitta qatorga tiqib yuborma! DIQQAT JIDDIY QOIDA 2: 'Oldi sotdi', 'O'z.ish.chiq.', 'Import', 'Chetdan keltirilgan' kabi so'zlar MAHSULOT NOMI EMAS! Ular shunchaki kelib chiqish turi. Ularni aslo mahsulot nomi sifatida yozma! Jadvaldan tovarning haqiqiy nomini (masalan, 'Сетка дорожная', 'Профнастил', 'Kabel') izlab top va shuni yoz!\n" +
                       "3. BIRLIGI: 'metr', 'dona', 'kg', 'tonna', 'sht', 'komplekt', 'litr', 'm3', 'kub. m.' kabi so'zlar FAQAT Birlik! Ularni 'nomi' sifatida yozma!\n" +
                       "4. RAQAMLAR: Narx, miqdor va summalarni probelsiz, faqat toza son ko'rinishida yoz (masalan: 1250000.50).\n" +
                       "5. Barcha tovarlar bitta umumlashgan obyektga joylanishi shart. Har bir element quyidagi maydonlarga ega bo'lsin:\n" +
                       "   fakturaRaqami, kelganSana (dd.mm.yyyy formatida), postavshik (Sotuvchi nomi), postavshikInn (Sotuvchi STIR), postavshikManzil, sotibOluvchiInn (Xaridor STIR), sotibOluvchiManzil, shartnomaRaqami, shartnomaSanasi (dd.mm.yyyy), nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
-                      "6. KATEGORIYA: Armatura, Beton, Sement, G'isht/Blok, Inert (Qum, Sheben), Kabel/Elektrika, Santexnika, Mixanizm, Asbob/Uskuna, Xizmat, Boshqa.\n\n" +
+                      "6. MUHIM QO'SHIMCHA: Agar foydalanuvchi hujjatni to'liq emas, faqat jadval qismini rasmga olgan bo'lsa (ya'ni Faktura raqami va Postavshik aniq ko'rinmasa), ularni bo'sh qoldirmasdan 'Noma\\'lum' deb yozib qo'y. Shunda tizim jadvalni xatosiz qabul qiladi.\n" +
+                      "7. KATEGORIYA: Armatura, Beton, Sement, G'isht/Blok, Inert (Qum, Sheben), Kabel/Elektrika, Santexnika, Mixanizm, Asbob/Uskuna, Xizmat, Boshqa.\n\n" +
                       "QAYTARISH FORMATI: Sening javobing qat'iy ravishda quyidagi JSON sxemasida bo'lishi shart:\n" +
                       "{\n" +
                       "  \"items\": [\n" +
@@ -241,9 +250,9 @@ function _parseFakturaVision(blob, fileObj) {
                     items = arr.map(function(m){
                         supplier = supplier || String(m.postavshik||'');
                         return {
-                            fakturaRaqami: String(m.fakturaRaqami||''),
-                            kelganSana: String(m.kelganSana||''),
-                            postavshik: String(m.postavshik||''),
+                            fakturaRaqami: String(m.fakturaRaqami || "Noma'lum"),
+                            kelganSana: String(m.kelganSana || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd.MM.yyyy")),
+                            postavshik: String(m.postavshik || "Noma'lum"),
                             shartnomaRaqami: String(m.shartnomaRaqami||''),
                             shartnomaSanasi: String(m.shartnomaSanasi||''),
                             postavshikInn: String(m.postavshikInn||''),
@@ -280,4 +289,8 @@ if (typeof globalThis !== 'undefined') {
   globalThis.apiFakturaAvtoSinx = apiFakturaAvtoSinx;
   globalThis.apiFakturaDriveHolat = apiFakturaDriveHolat;
   globalThis.fakturaSinxTriggerOrnat = fakturaSinxTriggerOrnat;
+  globalThis.apiStartBackgroundSync = function() {
+    apiFakturaSinxDavom();
+    return {ok: true, xabar: "Orqa fonda sinxronizatsiya ishga tushdi. U barcha fayllar tugaguncha avtomatik ishlaydi."};
+  };
 }
