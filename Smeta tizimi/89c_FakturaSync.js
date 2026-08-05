@@ -86,22 +86,13 @@ function apiFakturaAvtoSinx() {
     var file = hammaFayllar[count];
     count++;
     
-    // Matnni OCR orqali o'qish (Drive API v3)
-    var resource = { name: file.getName(), mimeType: MimeType.GOOGLE_DOCS };
+    // 1. To'g'ridan-to'g'ri PDF faylni (blob) Gemini Vision ga beramiz. Matnga o'girmaymiz.
     try {
-      var converted = Drive.Files.create(resource, file.getBlob());
+      var blob = file.getBlob();
+      var parsed = _parseFakturaVision(blob, file);
       
-      var url = "https://docs.google.com/document/export?format=txt&id=" + converted.id;
-      var options = { headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() }, muteHttpExceptions: true };
-      var text = UrlFetchApp.fetch(url, options).getContentText();
-      
-      DriveApp.getFileById(converted.id).setTrashed(true); // vaqtinchalik faylni o'chirish
-      text = text.replace(/\s+/g, ' ');
-
-      // Matnni parchalash (Frontend dagi logic)
-      var parsed = _parseFakturaText(text);
       if(parsed.items.length === 0 || !parsed.items[0].fakturaRaqami || !parsed.items[0].postavshik){
-          // Agar jadval topilmasa Yoki header (Raqam/Postavshik) yo'q bo'lsa
+          // Agar jadval topilmasa
           file.moveTo(xatoPap);
           continue;
       }
@@ -132,7 +123,7 @@ function apiFakturaAvtoSinx() {
     } catch(err) {
       Logger.log("Xato: " + err.toString());
       try {
-         xatoPap.createFile(file.getName() + "_CRASH.txt", "=== XATO ===\n" + err.toString() + "\n\n=== MATN ===\n" + (typeof text !== 'undefined' ? text : ''));
+         xatoPap.createFile(file.getName() + "_CRASH.txt", "=== XATO ===\n" + err.toString());
       } catch(e){}
       file.moveTo(xatoPap);
     }
@@ -185,100 +176,54 @@ function apiFakturaDriveHolat() {
   }
 }
 
-function _parseFakturaText(text) {
-    var docNo = '';
-    var docDate = '';
-    var contractNo = '';
-    var contractDate = '';
+function _parseFakturaVision(blob, fileObj) {
+    var items = [];
     var supplier = '';
     
-    var supplierInn = '';
-    var supplierManzil = '';
-    var buyerInn = '';
-    var buyerManzil = '';
-    
-    var shartMatch = text.match(/(\d{2}\.\d{2}\.\d{4})\s*даги\s*([^\s]+)-сонли\s*шартномага/i);
-    if (shartMatch) {
-      contractDate = shartMatch[1];
-      contractNo = shartMatch[2];
-    }
-    
-    var fakMatch = text.match(/(\d{2}\.\d{2}\.\d{4})\s*даги\s*([^\s]+)-сонли(?:\s*Ҳисобварақ-фактура)?/i);
-    if (fakMatch) {
-      docDate = fakMatch[1];
-      docNo = fakMatch[2];
-    }
-    
-    var supplierMatch = text.match(/(?:Етказиб\s*берувчи|Воситачи|Ижрочи|Буюртмачи|Sotuvchi):(.*?)(?:Манзил:|Етказиб\s*берувчининг|Воситачининг|Ижрочининг|Буюртмачининг|СТИР)/i);
-    if (supplierMatch) {
-      supplier = supplierMatch[1].trim();
-    }
-    
-    var manzilSupMatch = text.match(/(?:Етказиб\s*берувчи|Воситачи|Ижрочи|Буюртмачи|Sotuvchi)[\s\S]*?Манзил:\s*(.*?)(?:Сотиб\s*олувчи|Етказиб\s*берувчининг|СТИР|МХИК)/i);
-    if (manzilSupMatch) {
-        supplierManzil = manzilSupMatch[1].trim();
-    }
-
-    var buyerManzilMatch = text.match(/(?:Сотиб\s*олувчи|Харидор)[\s\S]*?Манзил:\s*(.*?)(?:Етказиб\s*берувчининг|Сотиб\s*олувчининг|СТИР|МХИК)/i);
-    if (buyerManzilMatch) {
-        buyerManzil = buyerManzilMatch[1].trim();
-    }
-
-    var stirSupMatch = text.match(/(?:Етказиб\s*берувчининг\s*СТИР\s*рақами|СТИР).*?(\d{9})/i);
-    if (stirSupMatch) {
-        supplierInn = stirSupMatch[1];
-    }
-    var stirBuyMatch = text.match(/(?:Сотиб\s*олувчининг\s*СТИР\s*рақами).*?(\d{9})/i);
-    if (stirBuyMatch) {
-        buyerInn = stirBuyMatch[1];
-    } else {
-        var allStirs = text.match(/\b\d{9}\b/g);
-        if (allStirs && allStirs.length >= 2) {
-            supplierInn = supplierInn || allStirs[0];
-            buyerInn = allStirs[1];
-        }
-    }
-    
-    var items = [];
-    var aiSuccess = false;
-
-    // AI orqali 100% aniq o'qishga harakat qilamiz (Primary)
-    if (typeof aiCall === 'function') {
+    if (typeof aiFetchRaw === 'function') {
         try {
-            var sys = "Sen faktura va aktlarni o'qiydigan mutlaqo bexato va professional AIsan. Matn OCR dan o'tgani sababli, ustunlar joylashuvi buzilgan, raqamlar boshqa qatorga tushib qolgan bo'lishi mumkin.\n\n" + 
+            var sys = "Sen qat'iy va bexato ishlaydigan Buxgalteriya AIsan. Berilgan hujjat PDF yoki Rasm ko'rinishidagi hisob-faktura / akt. Hujjat ko'p varaqli bo'lishi ham mumkin. Hamma varaqlardagi barcha ma'lumotlarni o'qi!\n\n" + 
                       "QAT'IY QOIDALAR:\n" +
                       "1. Hujjatdagi BARCHA tovar va xizmatlarni top. Bittasini ham o'tkazib yuborma!\n" +
-                      "2. NOMI: Mahsulot nomi ba'zan 2-3 qatorga uzilib ketadi, ularni mantiqan yig'ib bitta ism qil.\n" +
-                      "3. BIRLIGI: 'metr', 'dona', 'kg', 'tonna', 'sht', 'komplekt', 'litr', 'm3', 'kub. m.' kabi so'zlar FAQAT Birlik! Hech qachon ularni 'Nomi' sifatida yozma!\n" +
-                      "4. RAQAMLAR: Narx, miqdor va summalarni (jamiNdsSiz, ndsSummasi, jamiNdsBilan) topishda mantiqan qara. Odatda ular ketma-ket keladi (Miqdor, Narx, NDSsiz summa, NDS summa, Jami summa). Probelsiz toza son ko'rinishida yoz (masalan: 1250000).\n" +
-                      "5. Har bir obyekt ushbu maydonlarga ega bo'lishi shart:\n" +
-                      "   fakturaRaqami, kelganSana, postavshik, shartnomaRaqami, shartnomaSanasi, nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
+                      "2. NOMI: Kirill va lotin harflarini xuddi hujjatdagidek yoz. Mahsulot nomi uzilgan bo'lsa mantiqan yig'ib bitta qator qil.\n" +
+                      "3. BIRLIGI: 'metr', 'dona', 'kg', 'tonna', 'sht', 'komplekt', 'litr', 'm3', 'kub. m.' kabi so'zlar FAQAT Birlik! Ularni 'nomi' sifatida yozma!\n" +
+                      "4. RAQAMLAR: Narx, miqdor va summalarni probelsiz, faqat toza son ko'rinishida yoz (masalan: 1250000.50).\n" +
+                      "5. Barcha tovarlar bitta umumlashgan obyektga joylanishi shart. Har bir element quyidagi maydonlarga ega bo'lsin:\n" +
+                      "   fakturaRaqami, kelganSana (dd.mm.yyyy formatida), postavshik (Sotuvchi nomi), postavshikInn (Sotuvchi STIR), postavshikManzil, sotibOluvchiInn (Xaridor STIR), sotibOluvchiManzil, shartnomaRaqami, shartnomaSanasi (dd.mm.yyyy), nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
                       "6. KATEGORIYA: Armatura, Beton, Sement, G'isht/Blok, Inert (Qum, Sheben), Kabel/Elektrika, Santexnika, Mixanizm, Asbob/Uskuna, Xizmat, Boshqa.\n\n" +
-                      "MISOL (OCR matn buzilgan holatda):\n" +
-                      "1 Бетон М-200 kub. m. \n 117.7 \n 402051.22 47321428.59 5678571.43 53000000\n\n" +
-                      "KUTILGAN NATIJA:\n" +
-                      "{\"items\": [{\"nomi\": \"Бетон М-200\", \"birligi\": \"kub. m.\", \"miqdori\": 117.7, \"narxi\": 402051.22, \"jamiNdsSiz\": 47321428.59, \"ndsSummasi\": 5678571.43, \"jamiNdsBilan\": 53000000, \"kategoriya\": \"Beton\"}]}\n\n" +
-                      "QAYTARISH FORMATI: Sening javobing qat'iy ravishda `{\"items\": [...]}` ko'rinishidagi bitta JSON obyekti bo'lishi shart. Boshqa hech qanday izoh yozma!";
-            var res = aiCall({
-                system: sys,
-                user: "Matnni diqqat bilan tahlil qil. Ustunlar siljigan bo'lishi mumkin, birlik va narxlarni to'g'ri nomlarga bog'la:\n\n" + text,
-                json: true,
-                maxTok: 8192,
-                temp: 0.1
-            });
-            
-            // Yordamchi log - xatoni topish uchun
-            var debugText = "=== OCR MATN ===\n" + text + "\n\n=== AI JAVOBI ===\n" + (res || "AI JAVOB BERMADI");
-            
-            if (res) {
-                var jsonStr = res;
+                      "QAYTARISH FORMATI: Sening javobing qat'iy ravishda quyidagi JSON sxemasida bo'lishi shart:\n" +
+                      "{\n" +
+                      "  \"items\": [\n" +
+                      "    { \"nomi\": \"...\", \"birligi\": \"...\", \"miqdori\": 1.0, \"narxi\": 1000 ... }\n" +
+                      "  ]\n" +
+                      "}\n" +
+                      "Boshqa hech qanday izoh yozma!";
+
+            var base64 = Utilities.base64Encode(blob.getBytes());
+            var mime = blob.getContentType() || 'application/pdf';
+            var payload = {
+                contents: [{
+                    parts: [
+                        { text: sys + "\n\nUshbu hujjatni tahlil qilib, tovarlarni JSON formatida qaytar." },
+                        { inlineData: { mimeType: mime, data: base64 } }
+                    ]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.1
+                }
+            };
+
+            var res = aiFetchRaw('gemini-2.5-flash', payload);
+            if (res && res.text) {
+                var jsonStr = res.text.trim();
                 if(jsonStr.indexOf('```') !== -1) {
                     jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
                 }
                 var rawObj = JSON.parse(jsonStr);
                 var arr = Array.isArray(rawObj) ? rawObj : (rawObj.items || rawObj.tovarlar || []);
+                
                 if (Array.isArray(arr) && arr.length > 0) {
-                    // Agar AI umuman noto'g'ri topgan bo'lsa (masalan nomi 'metr') - buni xatoga chiqarish kerak
                     var xatoBormi = false;
                     for(var k=0; k<arr.length; k++){
                         var nomiTest = String(arr[k].nomi||'').toLowerCase().trim();
@@ -286,21 +231,25 @@ function _parseFakturaText(text) {
                             xatoBormi = true; break;
                         }
                     }
-                    if(xatoBormi) {
-                        xatoPap.createFile(file.getName() + "_AI_XatoLog.txt", debugText);
+                    if(xatoBormi && fileObj) {
+                        try {
+                           var xp = DriveApp.getRootFolder().getFoldersByName('Fakturalar').next().getFoldersByName('Xato_Oqilganlar').next();
+                           xp.createFile(fileObj.getName() + "_AI_XatoLog.txt", "=== AI VISION JAVOBI ===\n" + jsonStr);
+                        } catch(e){}
                     }
                     
                     items = arr.map(function(m){
+                        supplier = supplier || String(m.postavshik||'');
                         return {
-                            fakturaRaqami: String(m.fakturaRaqami||docNo),
-                            kelganSana: String(m.kelganSana||docDate),
-                            postavshik: String(m.postavshik||supplier),
-                            shartnomaRaqami: String(m.shartnomaRaqami||contractNo),
-                            shartnomaSanasi: String(m.shartnomaSanasi||contractDate),
-                            postavshikInn: supplierInn,
-                            postavshikManzil: supplierManzil,
-                            sotibOluvchiInn: buyerInn,
-                            sotibOluvchiManzil: buyerManzil,
+                            fakturaRaqami: String(m.fakturaRaqami||''),
+                            kelganSana: String(m.kelganSana||''),
+                            postavshik: String(m.postavshik||''),
+                            shartnomaRaqami: String(m.shartnomaRaqami||''),
+                            shartnomaSanasi: String(m.shartnomaSanasi||''),
+                            postavshikInn: String(m.postavshikInn||''),
+                            postavshikManzil: String(m.postavshikManzil||''),
+                            sotibOluvchiInn: String(m.sotibOluvchiInn||''),
+                            sotibOluvchiManzil: String(m.sotibOluvchiManzil||''),
                             nomi: String(m.nomi||''),
                             birligi: String(m.birligi||'dona'),
                             miqdori: Number(m.miqdori)||0,
@@ -311,18 +260,17 @@ function _parseFakturaText(text) {
                             kategoriya: String(m.kategoriya||'Boshqa')
                         };
                     });
-                    aiSuccess = true;
                 }
             }
-        } catch(e) {
-            Logger.log('AI Parse Xato: ' + e);
+        } catch(err) {
+            Logger.log("AI Vision Xato: " + err.toString());
+            if(fileObj) {
+               try {
+                   var xp = DriveApp.getRootFolder().getFoldersByName('Fakturalar').next().getFoldersByName('Xato_Oqilganlar').next();
+                   xp.createFile(fileObj.getName() + "_VISION_CRASH.txt", "=== XATO ===\n" + err.toString());
+               } catch(e){}
+            }
         }
-    }
-
-    if (!aiSuccess) {
-        Logger.log('AI orqali o\'qish muvaffaqiyatsiz bo\'ldi. (Ehtimol matn juda uzun yoki AI xatosi)');
-        // Regex eskirgan va xato ishlaganligi sababli olib tashlandi.
-        // Hujjatni qo'lda tekshirish uchun bo'sh array qaytaramiz.
     }
     
     return { items: items, supplier: supplier };
