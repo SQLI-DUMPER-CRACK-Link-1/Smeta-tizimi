@@ -80,37 +80,11 @@ const useUiSound = () => {
 };
 
 export function GlassCard({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
   const { playHover, playClick } = useUiSound();
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (window.innerWidth < 768) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setMousePosition({ x, y });
-
-    // 3D Tilt hisoblash
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const tiltX = ((y - centerY) / centerY) * -10; // Max 10 deg
-    const tiltY = ((x - centerX) / centerX) * 10;
-    setTilt({ x: tiltX, y: tiltY });
-  };
 
   const handleMouseEnter = () => {
     if (window.innerWidth >= 768) {
-      setIsHovering(true);
       playHover();
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (window.innerWidth >= 768) {
-      setIsHovering(false);
-      setTilt({ x: 0, y: 0 });
     }
   };
 
@@ -124,30 +98,10 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
   return (
     <div 
       onClick={handleClick}
-      onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        transform: isHovering ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)` : 'none',
-        transition: isHovering ? 'none' : 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
-        transformStyle: 'preserve-3d'
-      }}
-      className={`relative bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden group/card hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20 ${className} laser-border`}
+      className={`relative bg-surface-2 border border-border shadow-lg rounded-2xl overflow-hidden hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:border-accent/40 transition-all duration-300 ${className}`}
     >
-      <div 
-        className="pointer-events-none absolute -inset-px z-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover/card:opacity-100 mix-blend-overlay"
-        style={{
-          background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255,255,255,0.15), transparent 40%)`
-        }}
-      />
-      <div 
-        className="relative z-10 w-full h-full transform-gpu"
-        style={{
-          transform: isHovering ? 'translateZ(30px)' : 'none',
-          transition: 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
-          transformStyle: 'preserve-3d'
-        }}
-      >
+      <div className="relative z-10 w-full h-full">
         {children}
       </div>
     </div>
