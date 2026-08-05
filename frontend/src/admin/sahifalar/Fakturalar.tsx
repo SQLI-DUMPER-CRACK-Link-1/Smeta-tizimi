@@ -346,8 +346,9 @@ export function Fakturalar() {
     setIsSyncingLoop(true);
     syncToxtatRef.current = false;
     let xatoCount = 0;
-    try {
-      while (!syncToxtatRef.current) {
+    
+    while (!syncToxtatRef.current) {
+      try {
         const res = await drvSinx.mutateAsync();
         if (res?.ok) {
           if (res.qolganFayllar !== undefined) {
@@ -357,20 +358,33 @@ export function Fakturalar() {
             toast("Sinxronizatsiya to'liq yakunlandi!", 'ok');
             break;
           }
+          xatoCount = 0; // reset error count on success
         } else {
-          toast("Xatolik: " + res?.xabar, 'danger');
+          toast("Sinx xatosi: " + res?.xabar, 'danger');
           xatoCount++;
-          if (xatoCount > 3) break;
+          if (xatoCount > 3) {
+            toast("Xatolar ko'payib ketdi, sinxronizatsiya to'xtatildi.", 'danger');
+            break;
+          }
+          // Kichik tanaffus
+          await new Promise(r => setTimeout(r, 2000));
         }
+      } catch (e: any) {
+        toast("Tarmoq xatosi: " + String(e.message || e), 'danger');
+        xatoCount++;
+        if (xatoCount > 3) {
+            toast("Tarmoq xatosi sababli to'xtatildi.", 'danger');
+            break;
+        }
+        await new Promise(r => setTimeout(r, 3000)); // kuting
       }
-      if (syncToxtatRef.current) toast("Sinxronizatsiya to'xtatildi (Pause)", "warn");
-    } catch(e) {
-      toast("Sinxronizatsiya to'xtab qoldi: " + String(e), 'danger');
-    } finally {
-      setIsSyncingLoop(false);
-      setQolganFayllar(null);
-      drvHolat.refetch();
     }
+    
+    if (syncToxtatRef.current) toast("Sinxronizatsiya to'xtatildi (Pause)", "warn");
+    
+    setIsSyncingLoop(false);
+    setQolganFayllar(null);
+    drvHolat.refetch();
   };
 
   const ustunlar: IlgorUstun<FakturaItem>[] = [
