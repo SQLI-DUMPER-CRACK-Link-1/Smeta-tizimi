@@ -244,7 +244,11 @@ export function F2Import() {
     return v;
   }, [lrv.data, joyMap, aktBarchaTugun]);
 
-  const dopJami = useMemo(() => Object.values(qolDop).reduce((a, n) => a + (n.summa || 0), 0), [qolDop]);
+  const dopJami = useMemo(() => {
+    return aktBarglar
+      .filter(n => doppedUids.has(n.uid) && !moslikMap.has(n.uid))
+      .reduce((a, n) => a + (n.summa || 0), 0);
+  }, [aktBarglar, doppedUids, moslikMap]);
 
   /** Hamma bog'lanishlarni bekor qilish: moslikMap ham, qolDop ham. Farzandlarini ham qo'shib bekor qiladi */
   function bogBekor(uid: string) {
@@ -1150,9 +1154,9 @@ export function F2Import() {
                 </>
               }
             />
-            <Juft nom="Qoldiq (Bog'lanmagan)" qiymat={<FmtN val={dopJami} />} />
+            <Juft nom="Qo'shimcha ish (Dop)" qiymat={<FmtN val={dopJami} />} />
             <Juft
-              nom="Farq"
+              nom="Farq (Qoldiq)"
               qiymat={
                 <span className={constOk ? 'text-ok' : 'text-danger'}>
                   <FmtN val={farq} /> {constOk ? '✅' : '⛔'}
