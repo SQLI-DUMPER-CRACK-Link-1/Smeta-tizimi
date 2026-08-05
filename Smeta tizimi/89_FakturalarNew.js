@@ -34,7 +34,8 @@ function apiFakturalarOl() {
         postavshikInn: String(row[13] || ''),
         postavshikManzil: String(row[14] || ''),
         sotibOluvchiInn: String(row[15] || ''),
-        sotibOluvchiManzil: String(row[16] || '')
+        sotibOluvchiManzil: String(row[16] || ''),
+        faylUrl: String(row[17] || '')
       });
     }
     return { ok: true, fakturalar: out };
@@ -54,7 +55,8 @@ function apiFakturaYoz(fakturalarArray) {
         "Faktura raqami", "Postavshik", "Kelgan sana", "Shartnoma raqami", "Shartnoma sanasi",
         "Maxsulot nomi", "O'lchov birligi", "Miqdori", "Narxi (NDS siz)", 
         "Jami NDS siz", "NDS summasi", "NDS bilan umumiy summa", "Kategoriya",
-        "Postavshik INN", "Postavshik Manzil", "Sotib oluvchi INN", "Sotib oluvchi Manzil"
+        "Postavshik INN", "Postavshik Manzil", "Sotib oluvchi INN", "Sotib oluvchi Manzil",
+        "Fayl URL"
       ];
       sh.appendRow(sarlavhalar);
       sh.getRange(1, 1, 1, sarlavhalar.length).setFontWeight("bold").setBackground("#e0e0e0");
@@ -84,7 +86,8 @@ function apiFakturaYoz(fakturalarArray) {
         item.postavshikInn || "",
         item.postavshikManzil || "",
         item.sotibOluvchiInn || "",
-        item.sotibOluvchiManzil || ""
+        item.sotibOluvchiManzil || "",
+        item.faylUrl || ""
       ]);
     }
 

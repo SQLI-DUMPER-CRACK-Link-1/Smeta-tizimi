@@ -5,16 +5,12 @@ import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ExternalLink } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import Sahna3D from '../../kirish/Sahna3D';
-
 // --- 3D INTERACTIVE BACKGROUND ---
 export function AuroraBackground({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full h-full min-h-screen overflow-hidden text-white font-sans selection:bg-accent/30">
-      {/* 3D Interactive Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-         <Sahna3D />
-      </div>
+      {/* Background Gradient */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-accent/10 via-[#020617] to-[#020617] pointer-events-none" />
 
       {/* Animated Grid Overlay for texture */}
       <div 

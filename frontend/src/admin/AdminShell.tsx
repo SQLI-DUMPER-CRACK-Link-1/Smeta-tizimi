@@ -3,7 +3,6 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText } from 'lucide-react';
-import Sahna3D from '../kirish/Sahna3D';
 
 const MENYU = [
   { yol: '/admin/obyektlar',  nom: 'Obyektlar',   Ikonka: Building2 },
@@ -41,16 +40,14 @@ export default function AdminShell() {
 
   return (
     <div className="flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30 bg-[#020617]">
-      {/* 3D Interactive Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-         <Sahna3D />
-      </div>
+      {/* Background Gradient */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-accent/10 via-[#020617] to-[#020617] pointer-events-none" />
 
       {/* Grid Overlay for texture */}
-      <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.02] pointer-events-none" />
+      <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.03] pointer-events-none" />
 
       {/* Dark tint so content is readable */}
-      <div className="absolute inset-0 z-0 bg-black/40 pointer-events-none" />
+      <div className="absolute inset-0 z-0 bg-black/20 pointer-events-none" />
 
       {/* Sidebar */}
       <aside className="relative z-10 w-64 border-r border-white/10 bg-black/20 backdrop-blur-md flex flex-col shadow-2xl">
