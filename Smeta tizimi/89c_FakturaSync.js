@@ -131,6 +131,9 @@ function apiFakturaAvtoSinx() {
       }
     } catch(err) {
       Logger.log("Xato: " + err.toString());
+      try {
+         xatoPap.createFile(file.getName() + "_CRASH.txt", "=== XATO ===\n" + err.toString() + "\n\n=== MATN ===\n" + (typeof text !== 'undefined' ? text : ''));
+      } catch(e){}
       file.moveTo(xatoPap);
     }
   }
@@ -263,6 +266,10 @@ function _parseFakturaText(text) {
                 maxTok: 8192,
                 temp: 0.1
             });
+            
+            // Yordamchi log - xatoni topish uchun
+            var debugText = "=== OCR MATN ===\n" + text + "\n\n=== AI JAVOBI ===\n" + (res || "AI JAVOB BERMADI");
+            
             if (res) {
                 var jsonStr = res;
                 if(jsonStr.indexOf('```') !== -1) {
@@ -271,6 +278,18 @@ function _parseFakturaText(text) {
                 var rawObj = JSON.parse(jsonStr);
                 var arr = Array.isArray(rawObj) ? rawObj : (rawObj.items || rawObj.tovarlar || []);
                 if (Array.isArray(arr) && arr.length > 0) {
+                    // Agar AI umuman noto'g'ri topgan bo'lsa (masalan nomi 'metr') - buni xatoga chiqarish kerak
+                    var xatoBormi = false;
+                    for(var k=0; k<arr.length; k++){
+                        var nomiTest = String(arr[k].nomi||'').toLowerCase().trim();
+                        if(nomiTest === 'metr' || nomiTest === 'dona' || nomiTest === 'sht' || nomiTest === 'kg') {
+                            xatoBormi = true; break;
+                        }
+                    }
+                    if(xatoBormi) {
+                        xatoPap.createFile(file.getName() + "_AI_XatoLog.txt", debugText);
+                    }
+                    
                     items = arr.map(function(m){
                         return {
                             fakturaRaqami: String(m.fakturaRaqami||docNo),
