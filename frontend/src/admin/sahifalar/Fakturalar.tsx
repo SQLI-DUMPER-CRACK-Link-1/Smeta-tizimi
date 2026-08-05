@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaOCR, useFakturaDriveHolat, useFakturaAvtoSinx, type FakturaItem } from '../../api/hooks';
+import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaOCR, useFakturaDriveHolat, useFakturaAvtoSinx, useFakturaSinxFonda, type FakturaItem } from '../../api/hooks';
 import { Sahifa, Holatlar, Tugma } from '../../umumiy/ui/Sahifa';
 import { IlgorJadval, type IlgorUstun } from '../../umumiy/ui/IlgorJadval';
 import { toast } from '../../umumiy/ui/Toast';
@@ -13,6 +13,7 @@ export function Fakturalar() {
   const ocr = useFakturaOCR();
   const drvHolat = useFakturaDriveHolat();
   const drvSinx = useFakturaAvtoSinx();
+  const drvSinxFonda = useFakturaSinxFonda();
   
   const [modalOchiq, setModalOchiq] = useState(false);
   const [sverkaOchiq, setSverkaOchiq] = useState(false);
@@ -387,6 +388,21 @@ export function Fakturalar() {
     drvHolat.refetch();
   };
 
+  const startBackgroundSync = async () => {
+    if (confirm("Jarayon serverda (orqa fonda) ishga tushadi. Sahifani yopsangiz ham ishlayveradi. Ishga tushirilsinmi?")) {
+      try {
+        const res = await drvSinxFonda.mutateAsync();
+        if (res?.ok) {
+          toast(res.xabar || "Orqa fonda sinxronizatsiya ishga tushdi!", 'ok');
+        } else {
+          toast("Xatolik: " + res?.xabar, 'danger');
+        }
+      } catch (e: any) {
+        toast("Tarmoq xatosi: " + String(e.message || e), 'danger');
+      }
+    }
+  };
+
   const ustunlar: IlgorUstun<FakturaItem>[] = [
     { kalit: 'kelganSana', nom: 'Sana', en: '100px', chiz: (m) => <span className="text-text-dim text-[13px]">{m.kelganSana}</span> },
     { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '110px', chiz: (m) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
@@ -491,6 +507,15 @@ export function Fakturalar() {
                   >
                     Yangilash
                   </Tugma>
+
+                  <Tugma 
+                    ikonka={<RefreshCw size={14} className={drvSinxFonda.isPending ? 'animate-spin' : ''} />} 
+                    onBos={startBackgroundSync}
+                    band={drvSinxFonda.isPending || isSyncingLoop}
+                  >
+                    Fonda to'liq sinx qilish
+                  </Tugma>
+
                   {isSyncingLoop ? (
                     <Tugma 
                       tur="danger" 
@@ -511,6 +536,7 @@ export function Fakturalar() {
                   )}
                 </div>
               </div>
+            </div>
 
               {isSyncingLoop && (
                 <div className="bg-black/30 border border-border p-3 rounded-md mb-4 flex items-center justify-between">

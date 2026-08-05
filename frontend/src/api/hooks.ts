@@ -233,6 +233,18 @@ export function useShartnomaSaqla() {
   });
 }
 
+export function useFakturaAvtoSinx() {
+  return useMutation({
+    mutationFn: () => gas<any>('apiFakturaAvtoSinx')
+  });
+}
+
+export function useFakturaSinxFonda() {
+  return useMutation({
+    mutationFn: () => gas<any>('apiStartBackgroundSync')
+  });
+}
+
 export function useShartnomaOchir() {
   return useMutation({
     mutationFn: (no: string) => gas<any>('apiShartnomaOchir', no)
