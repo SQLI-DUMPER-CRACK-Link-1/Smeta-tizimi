@@ -536,7 +536,6 @@ export function Fakturalar() {
                   )}
                 </div>
               </div>
-            </div>
 
               {isSyncingLoop && (
                 <div className="bg-black/30 border border-border p-3 rounded-md mb-4 flex items-center justify-between">
