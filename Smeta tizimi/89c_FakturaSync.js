@@ -242,15 +242,19 @@ function _parseFakturaText(text) {
     // AI orqali 100% aniq o'qishga harakat qilamiz (Primary)
     if (typeof aiCall === 'function') {
         try {
-            var sys = "Sen faktura va aktlarni o'qiydigan mukammal AIsan. Matn skanerdan (OCR) o'tgan, shuning uchun ustunlar va qatorlar chalkashgan yoki siljigan bo'lishi mumkin.\n\n" + 
+            var sys = "Sen faktura va aktlarni o'qiydigan mutlaqo bexato va professional AIsan. Matn OCR dan o'tgani sababli, ustunlar joylashuvi buzilgan, raqamlar boshqa qatorga tushib qolgan bo'lishi mumkin.\n\n" + 
                       "QAT'IY QOIDALAR:\n" +
-                      "1. Hujjatdagi barcha tovar va xizmatlarni bitta ham qoldirmay top!\n" +
+                      "1. Hujjatdagi BARCHA tovar va xizmatlarni top. Bittasini ham o'tkazib yuborma!\n" +
                       "2. NOMI: Mahsulot nomi ba'zan 2-3 qatorga uzilib ketadi, ularni mantiqan yig'ib bitta ism qil.\n" +
-                      "3. BIRLIGI: 'metr', 'dona', 'kg', 'tonna', 'sht', 'komplekt', 'litr', 'm3' - bular faqat Birlik! Hech qachon ularni mahsulot Nomi sifatida yozma!\n" +
-                      "4. RAQAMLAR: Narx, miqdor va summalarni probelsiz, faqat toza son ko'rinishida yoz (masalan: 1250000).\n" +
+                      "3. BIRLIGI: 'metr', 'dona', 'kg', 'tonna', 'sht', 'komplekt', 'litr', 'm3', 'kub. m.' kabi so'zlar FAQAT Birlik! Hech qachon ularni 'Nomi' sifatida yozma!\n" +
+                      "4. RAQAMLAR: Narx, miqdor va summalarni (jamiNdsSiz, ndsSummasi, jamiNdsBilan) topishda mantiqan qara. Odatda ular ketma-ket keladi (Miqdor, Narx, NDSsiz summa, NDS summa, Jami summa). Probelsiz toza son ko'rinishida yoz (masalan: 1250000).\n" +
                       "5. Har bir obyekt ushbu maydonlarga ega bo'lishi shart:\n" +
                       "   fakturaRaqami, kelganSana, postavshik, shartnomaRaqami, shartnomaSanasi, nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
                       "6. KATEGORIYA: Armatura, Beton, Sement, G'isht/Blok, Inert (Qum, Sheben), Kabel/Elektrika, Santexnika, Mixanizm, Asbob/Uskuna, Xizmat, Boshqa.\n\n" +
+                      "MISOL (OCR matn buzilgan holatda):\n" +
+                      "1 Бетон М-200 kub. m. \n 117.7 \n 402051.22 47321428.59 5678571.43 53000000\n\n" +
+                      "KUTILGAN NATIJA:\n" +
+                      "{\"items\": [{\"nomi\": \"Бетон М-200\", \"birligi\": \"kub. m.\", \"miqdori\": 117.7, \"narxi\": 402051.22, \"jamiNdsSiz\": 47321428.59, \"ndsSummasi\": 5678571.43, \"jamiNdsBilan\": 53000000, \"kategoriya\": \"Beton\"}]}\n\n" +
                       "QAYTARISH FORMATI: Sening javobing qat'iy ravishda `{\"items\": [...]}` ko'rinishidagi bitta JSON obyekti bo'lishi shart. Boshqa hech qanday izoh yozma!";
             var res = aiCall({
                 system: sys,
