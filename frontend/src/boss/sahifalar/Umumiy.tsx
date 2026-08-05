@@ -9,19 +9,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 export function AuroraBackground({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full h-full min-h-screen overflow-hidden text-white font-sans selection:bg-accent/30">
-      {/* Background Gradient */}
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-accent/10 via-[#020617] to-[#020617] pointer-events-none" />
+      {/* Super lightweight solid background for performance */}
+      <div className="absolute inset-0 z-0 bg-[#020617] pointer-events-none" />
 
-      {/* Animated Grid Overlay for texture */}
+      {/* Static Grid Overlay for texture */}
       <div 
-        className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.03] pointer-events-none animate-[ping_10s_linear_infinite]" 
-        style={{ backgroundSize: '100px 100px', animation: 'gridMove 20s linear infinite' }}
+        className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.03] pointer-events-none" 
+        style={{ backgroundSize: '100px 100px' }}
       />
       <style>{`
-        @keyframes gridMove {
-          0% { background-position: 0 0; }
-          100% { background-position: 100px 100px; }
-        }
         @keyframes cyberGlitch {
           0% { transform: translate(0) }
           20% { transform: translate(-2px, 2px); color: #0ea5e9; text-shadow: 2px 0 #f43f5e, -2px 0 #10b981; }

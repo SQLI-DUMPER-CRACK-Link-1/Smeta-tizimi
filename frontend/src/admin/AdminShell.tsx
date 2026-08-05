@@ -40,8 +40,8 @@ export default function AdminShell() {
 
   return (
     <div className="flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30 bg-[#020617]">
-      {/* Background Gradient */}
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-accent/10 via-[#020617] to-[#020617] pointer-events-none" />
+      {/* Super lightweight solid background for performance */}
+      <div className="absolute inset-0 z-0 bg-[#020617] pointer-events-none" />
 
       {/* Grid Overlay for texture */}
       <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.03] pointer-events-none" />
