@@ -242,14 +242,19 @@ function _parseFakturaText(text) {
     // AI orqali 100% aniq o'qishga harakat qilamiz (Primary)
     if (typeof aiCall === 'function') {
         try {
-            var sys = "Sen faktura/akt/kvitansiya o'qiydigan AIsan. Bu hujjat ko'p varaqli (multi-page) yoki juda uzun bo'lishi mumkin. Hamma varaqlardagi barcha tovar va xizmatlarni bitta ham qoldirmay top!\n" + 
-                      "Faqat JSON formatda Array qaytar, hech qanday markdown(```json) yozma!\n" + 
-                      "Har bir obyektda: fakturaRaqami, kelganSana, postavshik, shartnomaRaqami, shartnomaSanasi, nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
-                      "Kategoriyalar: Armatura, Beton, Sement, G'isht/Blok, Inert (Qum, Sheben), Kabel/Elektrika, Santexnika, Mixanizm, Asbob/Uskuna, Xizmat, Boshqa.\n" +
-                      "Raqamlar yozuvsiz toza son bo'lsin.";
+            var sys = "Sen faktura va aktlarni o'qiydigan mukammal AIsan. Matn skanerdan (OCR) o'tgan, shuning uchun ustunlar va qatorlar chalkashgan yoki siljigan bo'lishi mumkin.\n\n" + 
+                      "QAT'IY QOIDALAR:\n" +
+                      "1. Hujjatdagi barcha tovar va xizmatlarni bitta ham qoldirmay top!\n" +
+                      "2. NOMI: Mahsulot nomi ba'zan 2-3 qatorga uzilib ketadi, ularni mantiqan yig'ib bitta ism qil.\n" +
+                      "3. BIRLIGI: 'metr', 'dona', 'kg', 'tonna', 'sht', 'komplekt', 'litr', 'm3' - bular faqat Birlik! Hech qachon ularni mahsulot Nomi sifatida yozma!\n" +
+                      "4. RAQAMLAR: Narx, miqdor va summalarni probelsiz, faqat toza son ko'rinishida yoz (masalan: 1250000).\n" +
+                      "5. Har bir obyekt ushbu maydonlarga ega bo'lishi shart:\n" +
+                      "   fakturaRaqami, kelganSana, postavshik, shartnomaRaqami, shartnomaSanasi, nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
+                      "6. KATEGORIYA: Armatura, Beton, Sement, G'isht/Blok, Inert (Qum, Sheben), Kabel/Elektrika, Santexnika, Mixanizm, Asbob/Uskuna, Xizmat, Boshqa.\n\n" +
+                      "QAYTARISH FORMATI: Sening javobing qat'iy ravishda `{\"items\": [...]}` ko'rinishidagi bitta JSON obyekti bo'lishi shart. Boshqa hech qanday izoh yozma!";
             var res = aiCall({
                 system: sys,
-                user: "Matndan barcha tovar va materiallarni top:\n\n" + text,
+                user: "Matnni diqqat bilan tahlil qil. Ustunlar siljigan bo'lishi mumkin, birlik va narxlarni to'g'ri nomlarga bog'la:\n\n" + text,
                 json: true,
                 maxTok: 8192,
                 temp: 0.1
@@ -259,7 +264,8 @@ function _parseFakturaText(text) {
                 if(jsonStr.indexOf('```') !== -1) {
                     jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
                 }
-                var arr = JSON.parse(jsonStr);
+                var rawObj = JSON.parse(jsonStr);
+                var arr = Array.isArray(rawObj) ? rawObj : (rawObj.items || rawObj.tovarlar || []);
                 if (Array.isArray(arr) && arr.length > 0) {
                     items = arr.map(function(m){
                         return {
