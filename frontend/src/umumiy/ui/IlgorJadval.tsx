@@ -1,4 +1,4 @@
-import React, { useState, useMemo, ReactNode } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Filter, Search, Download, X } from 'lucide-react';
 
@@ -78,7 +78,7 @@ export function IlgorJadval<T extends Record<string, any>>({
 
     for (const s of yakuniySatrlar) {
       const row = ustunlar.map(u => {
-        let val = s[u.kalit];
+        let val: any = s[u.kalit];
         if (val === null || val === undefined) val = '';
         return `"${String(val).replace(/"/g, '""')}"`;
       });

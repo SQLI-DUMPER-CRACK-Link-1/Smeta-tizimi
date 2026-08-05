@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaOCR, useFakturaDriveHolat, useFakturaAvtoSinx, type FakturaItem } from '../../api/hooks';
-import { Sahifa, Holatlar, Qidiruv, Tugma } from '../../umumiy/ui/Sahifa';
+import { Sahifa, Holatlar, Tugma } from '../../umumiy/ui/Sahifa';
 import { IlgorJadval, type IlgorUstun } from '../../umumiy/ui/IlgorJadval';
 import { toast } from '../../umumiy/ui/Toast';
 import { FileUp, Save, X, RefreshCw, FolderOpen, FolderArchive, FolderX, ExternalLink, FileText } from 'lucide-react';
@@ -381,7 +381,11 @@ export function Fakturalar() {
     { kalit: 'nomi', nom: 'Maxsulot nomi', en: '250px', chiz: (m) => (
       <div className="flex items-center justify-between gap-2">
         <span className="text-text font-medium text-[13px] truncate max-w-[200px] block" title={m.nomi}>{m.nomi}</span>
-        {m.faylUrl && <FileText size={14} className="text-accent shrink-0 opacity-50 hover:opacity-100" title="Asl hujjatni ko'rish" />}
+        {m.faylUrl && (
+           <div title="Asl hujjatni ko'rish" className="cursor-pointer">
+              <FileText size={14} className="text-accent shrink-0 opacity-50 hover:opacity-100" />
+           </div>
+        )}
       </div>
     ) },
     { kalit: 'kategoriya', nom: 'Kategoriya', en: '120px', chiz: (m) => <span className="inline-block px-2 py-1 bg-white/5 border border-border text-text-dim rounded-md text-[11px]">{m.kategoriya || 'Boshqa'}</span> },
