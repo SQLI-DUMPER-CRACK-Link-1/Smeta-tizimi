@@ -30,7 +30,17 @@ export function Fakturalar() {
   const hammasi = soragan.data?.fakturalar ?? [];
 
   // Analitika hisoblash (endi filtrlanmagan hamma ma'lumotdan yoki shunchaki hammasidan)
-  const satrlar = hammasi;
+  const satrlar = useMemo(() => {
+    return [...hammasi].sort((a, b) => {
+      const p = (d: string) => {
+        if (!d) return 0;
+        const pts = d.split('.');
+        if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
+        return 0;
+      };
+      return p(b.kelganSana) - p(a.kelganSana);
+    });
+  }, [hammasi]);
 
   // Analitika hisoblash
   const analitika = useMemo(() => {
@@ -408,11 +418,11 @@ export function Fakturalar() {
     { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '110px', chiz: (m) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
     { kalit: 'postavshik', nom: 'Postavshik', en: '200px', chiz: (m) => <span className="text-text truncate text-[13px] max-w-[200px] block" title={m.postavshik}>{m.postavshik}</span> },
     { kalit: 'postavshikInn', nom: 'Y. STIR', en: '100px', chiz: (m) => <span className="text-text-dim text-[12px]">{m.postavshikInn}</span> },
-    { kalit: 'nomi', nom: 'Maxsulot nomi', en: '250px', chiz: (m) => (
+    { kalit: 'nomi', nom: 'Maxsulot nomi', en: '380px', chiz: (m) => (
       <div className="flex items-center justify-between gap-2">
-        <span className="text-text font-medium text-[13px] truncate max-w-[200px] block" title={m.nomi}>{m.nomi}</span>
+        <span className="text-text font-medium text-[13px] truncate max-w-[340px] block" title={m.nomi}>{m.nomi}</span>
         {m.faylUrl && (
-           <div title="Asl hujjatni ko'rish" className="cursor-pointer">
+           <div title="Asl hujjatni ko'rish" className="cursor-pointer" onClick={(e) => { e.stopPropagation(); window.open(m.faylUrl, '_blank'); }}>
               <FileText size={14} className="text-accent shrink-0 opacity-50 hover:opacity-100" />
            </div>
         )}
