@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useObyektlar, useBossData, useNavbatHolat, useObyektIshla, useBarchaIshla, useNavbatToxtat } from '../../api/hooks';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -27,11 +27,20 @@ export function Obyektlar() {
 
   // Navbat tugaganda ma'lumotni bir marta yangilaymiz
   const [oldingiFaol, setOldingiFaol] = useState(false);
-  if (navbatFaol !== oldingiFaol) {
-    setOldingiFaol(navbatFaol);
-    if (!navbatFaol && oldingiFaol) { refetch(); toast('Dvigatel ishini tugatdi', 'ok'); }
-    if (navbatFaol) setKuzat(true);
-  }
+  
+  useEffect(() => {
+    if (navbatFaol !== oldingiFaol) {
+      setOldingiFaol(navbatFaol);
+      if (!navbatFaol && oldingiFaol) { 
+        refetch(); 
+        toast('Dvigatel ishini tugatdi', 'ok'); 
+      }
+    }
+    // Agar javob kelgan bo'lsa va ishlamayotgan bo'lsa kuzatishni to'xtatamiz
+    if (navbat && !navbatFaol && kuzat) {
+      setKuzat(false);
+    }
+  }, [navbat, navbatFaol, oldingiFaol, kuzat, refetch]);
 
   const hammasiniIshla = async (tezkor: boolean) => {
     try {
