@@ -59,8 +59,20 @@ export function Obyektlar() {
       const baseName = obj.obyekt.split(' - ')[0];
       if (!groups.has(baseName)) {
         // BossData dan moliyaviy ma'lumotlarni qidiramiz
-        const stats = bossData?.objects?.find(o => o.nom.toLowerCase() === baseName.toLowerCase());
-        groups.set(baseName, { items: [], stats: stats || null });
+        let stats = null;
+        if (bossData?.objects) {
+           for (const sh of bossData.objects) {
+              if (sh.nom.toLowerCase() === baseName.toLowerCase()) {
+                 stats = sh;
+                 break;
+              }
+              if (sh.subItems) {
+                 const found = sh.subItems.find(s => s.nom.toLowerCase() === baseName.toLowerCase());
+                 if (found) { stats = found; break; }
+              }
+           }
+        }
+        groups.set(baseName, { items: [], stats: stats });
       }
       groups.get(baseName)!.items.push(obj);
     });
