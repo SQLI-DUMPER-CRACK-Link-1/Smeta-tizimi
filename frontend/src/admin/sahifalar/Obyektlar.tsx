@@ -258,7 +258,7 @@ export function Obyektlar() {
                 <motion.div variants={itemVariants} key={i} className={isExpanded && hasMultiple ? 'row-span-2' : ''}>
                   <GlassCard 
                     className={`h-full flex flex-col group/card cursor-pointer transition-all duration-300 ${isExpanded ? 'border-accent/50 shadow-[0_0_30px_rgba(14,165,233,0.15)]' : 'border-white/10 hover:border-white/30 hover:shadow-xl'}`}
-                    onClick={() => hasMultiple ? toggleGroup(group.baseName, { stopPropagation: () => {} } as any) : navigate(`/admin/holat/${encodeURIComponent(group.items[0].obyekt)}`)}
+                    onClick={() => navigate(`/admin/holat/${encodeURIComponent(group.baseName)}`)}
                   >
                     <div className="p-6 flex-1 flex flex-col relative z-10">
                       
@@ -267,7 +267,10 @@ export function Obyektlar() {
                           {hasMultiple ? <Folder size={28} /> : <FileSpreadsheet size={28} />}
                         </div>
                         {hasMultiple && (
-                          <div className={`w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 transition-all duration-300 ${isExpanded ? 'rotate-180 bg-accent/20 text-accent' : 'group-hover/card:bg-white/10'}`}>
+                          <div 
+                            onClick={(e) => { e.stopPropagation(); toggleGroup(group.baseName, e as any); }}
+                            className={`w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 cursor-pointer hover:bg-white/20 transition-all duration-300 ${isExpanded ? 'rotate-180 bg-accent/20 text-accent' : 'group-hover/card:bg-white/10'}`}
+                          >
                             <ChevronDown size={18} />
                           </div>
                         )}
