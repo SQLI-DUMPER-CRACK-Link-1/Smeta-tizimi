@@ -30,7 +30,7 @@ export function pulQisqa(n?: number | null): string {
 // React komponent formatida (Nafosat qatlami uchun)
 export function FmtN({ val, cl = '', qisqa = false }: { val?: number | null, cl?: string, qisqa?: boolean }) {
   if (qisqa) return <span className={`tabular-nums ${cl}`}>{pulQisqa(val)}</span>;
-  if (val == null) return <span className={cl}>0</span>;
+  if (val == null) return <span className={cl}>0.00</span>;
 
   const isNegative = val < 0;
   const absVal = Math.abs(val);
@@ -38,7 +38,7 @@ export function FmtN({ val, cl = '', qisqa = false }: { val?: number | null, cl?
   // Butun va kasr qismga ajratish
   const parts = absVal.toFixed(2).split('.');
   const whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  const fraction = parts[1] === '00' ? '' : `.${parts[1]}`;
+  const fraction = `.${parts[1]}`;
 
   return (
     <span className={`inline-flex items-baseline ${isNegative ? 'text-danger' : cl}`}>

@@ -7,7 +7,7 @@ import { Skeleton } from '../../umumiy/ui/Skeleton';
 import { SaveModal } from '../../umumiy/ui/SaveModal';
 import { ZamenaModal } from '../../umumiy/ui/ZamenaModal';
 import { toast } from '../../umumiy/ui/Toast';
-import { Edit3, ArrowLeft, TrendingUp, TrendingDown, Gauge, Activity, Loader2, Building2, Save } from 'lucide-react';
+import { Edit3, ArrowLeft, Gauge, Activity, Loader2, Building2, Save } from 'lucide-react';
 import { yangiUid } from '../../_shared/idempotent';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
@@ -23,8 +23,6 @@ export function Holat() {
   const { data: obyektlar, isLoading: isObyektlarLoading } = useObyektlar();
   const { data: bossData } = useBossData();
   const [selectedObyekt, setSelectedObyekt] = useState<string>('');
-  const [selectedOy, setSelectedOy] = useState<string>('');
-  
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const hasEdits = Object.keys(edits).length > 0;
@@ -35,21 +33,11 @@ export function Holat() {
 
   const { id: yoldagiObyekt } = useParams<{ id: string }>();
   useEffect(() => {
-    if (yoldagiObyekt) {
-      const nom = decodeURIComponent(yoldagiObyekt);
-      if (nom !== selectedObyekt) setSelectedObyekt(nom);
-      return;
+    if (yoldagiObyekt && obyektlar?.some(o => o.obyekt === yoldagiObyekt)) {
+      setSelectedObyekt(yoldagiObyekt);
     }
     if (!selectedObyekt && obyektlar?.length) setSelectedObyekt(obyektlar[0].obyekt);
   }, [yoldagiObyekt, obyektlar, selectedObyekt]);
-
-  useEffect(() => {
-    if (!bossData?.oylar || bossData.oylar.length === 0) return;
-    const oyList = bossData.oylar as string[];
-    if (!selectedOy && oyList.length > 0) {
-      setSelectedOy(oyList[oyList.length - 1]);
-    }
-  }, [bossData?.oylar, selectedOy]);
 
   const { data: holatData, isLoading: isHolatLoading, error } = useHolat(selectedObyekt);
   const saqla = useHolatSaqla(selectedObyekt);
@@ -65,7 +53,6 @@ export function Holat() {
 
   const handleSave = async () => {
     const editsToSave = Object.values(edits).map(e => {
-      // Backend apiHolatSaqla expects "oylar" for F2 data instead of "f2"
       const payload: any = { ...e.edit };
       if (payload.f2) {
         payload.oylar = payload.f2;
@@ -198,15 +185,29 @@ export function Holat() {
       let currentParentList = rootNodes;
       let currentPath = '';
 
-      const addLevel = (levelVal: string | undefined) => {
-        if (!levelVal) return;
+      const addLevel = (levelVal?: string) => {
+        if (!levelVal || levelVal === '-') return;
         const p = currentPath ? `${currentPath}||${levelVal}` : levelVal;
         currentPath = p;
         if (!pathMap[p]) {
-          const newNode = { type: 'rz', nom: levelVal, children: [] } as unknown as TreeNode;
+          const newNode = { 
+            type: 'rz', nom: levelVal, children: [],
+            smetaHajm: 0, fakt: 0, f2ol: 0, qoldiq: 0, 
+            smeta: 0, stFakt: 0, stF2: 0, stOst: 0 
+          } as unknown as TreeNode;
           pathMap[p] = newNode;
           currentParentList.push(newNode);
         }
+        
+        pathMap[p].smetaHajm! += (rz.smetaHajm || 0);
+        pathMap[p].fakt! += (rz.fakt || 0);
+        pathMap[p].f2ol! += (rz.f2ol || 0);
+        pathMap[p].qoldiq! += (rz.qoldiq || 0);
+        pathMap[p].smeta! += (rz.smeta || 0);
+        pathMap[p].stFakt! += (rz.stFakt || (rz.fakt || 0) * (rz.narx || 0));
+        pathMap[p].stF2! += (rz.stF2 || 0);
+        pathMap[p].stOst! += (rz.stOst || (rz.qoldiq || 0) * (rz.narx || 0));
+
         currentParentList = pathMap[p].children!;
       };
 
@@ -266,19 +267,6 @@ export function Holat() {
                     <option key={o.obyekt} value={o.obyekt}>{o.obyekt}</option>
                   ))}
                 </select>
-                
-                {(holatData as any)?.oylar && (holatData as any).oylar.length > 0 && (
-                  <select
-                    value={selectedOy}
-                    onChange={e => setSelectedOy(e.target.value)}
-                    className="bg-black/50 border border-white/10 text-white rounded-xl px-4 h-10 outline-none focus:border-yellow-500/50 appearance-none font-medium shadow-inner"
-                  >
-                    <option value="">-- Oyni tanlang (F2) --</option>
-                    {(holatData as any).oylar.map((oy: any) => (
-                      <option key={oy} value={oy}>{oy}</option>
-                    ))}
-                  </select>
-                )}
               </div>
             )}
           </div>
@@ -286,43 +274,33 @@ export function Holat() {
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 flex-shrink-0">
           <GlassCard className="p-4 border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent">
-             <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Planned Value (PV)</div>
-             <div className="text-xl font-mono font-bold text-white"><FmtN val={evm.pv} qisqa /></div>
-             <div className="text-xs text-slate-500 mt-1">Smeta (Reja) Qiymati</div>
+             <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Smeta Jami</div>
+             <div className="text-xl font-mono font-bold text-white"><FmtN val={evm.pv} /></div>
+             <div className="text-slate-500 text-[10px] mt-2">Smeta (Reja) Qiymati</div>
           </GlassCard>
-          
-          <GlassCard className="p-4 border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent">
-             <div className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest mb-1">Earned Value (EV)</div>
-             <div className="text-xl font-mono font-bold text-emerald-400"><FmtN val={evm.ev} qisqa /></div>
-             <div className="text-xs text-emerald-500/60 mt-1">Bajarilgan F-2</div>
+          <GlassCard className="p-4 border-white/10 bg-gradient-to-br from-emerald-500/[0.05] to-transparent">
+             <div className="text-emerald-500/70 text-[10px] font-bold uppercase tracking-widest mb-1">F2 Jami</div>
+             <div className="text-xl font-mono font-bold text-emerald-400"><FmtN val={evm.ev} /></div>
+             <div className="text-emerald-500/40 text-[10px] mt-2">Bajarilgan F-2 Summasi</div>
           </GlassCard>
-          
-          <GlassCard className="p-4 border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent">
-             <div className="text-orange-400 text-[10px] font-bold uppercase tracking-widest mb-1">Actual Cost (AC)</div>
-             <div className="text-xl font-mono font-bold text-orange-400"><FmtN val={evm.ac} qisqa /></div>
-             <div className="text-xs text-orange-500/60 mt-1">Haqiqiy Xarajat</div>
+          <GlassCard className="p-4 border-white/10 bg-gradient-to-br from-amber-500/[0.05] to-transparent">
+             <div className="text-amber-500/70 text-[10px] font-bold uppercase tracking-widest mb-1">Fakt Jami</div>
+             <div className="text-xl font-mono font-bold text-amber-500"><FmtN val={evm.ac} /></div>
+             <div className="text-amber-500/40 text-[10px] mt-2">Haqiqiy Xarajat</div>
           </GlassCard>
-
-          <GlassCard className="p-4 flex flex-col justify-between border-white/10 relative overflow-hidden">
-             <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Schedule Perf. (SPI)</div>
-             <div className="flex items-end justify-between z-10">
-               <div className={`text-2xl font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
-                 {evm.spi.toFixed(2)}
-               </div>
-               {evm.spi >= 1 ? <TrendingUp size={24} className="text-emerald-500/50 mb-1" /> : <TrendingDown size={24} className="text-red-500/50 mb-1" />}
+          <GlassCard className="p-4 border-white/10 flex items-center justify-between relative overflow-hidden">
+             <div className="relative z-10">
+                <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Muddat Ko'rsat.</div>
+                <div className={`text-xl font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>{evm.spi.toFixed(2)}</div>
              </div>
-             <div className="absolute right-0 bottom-0 opacity-10 translate-x-4 translate-y-4"><Gauge size={80} /></div>
+             <Gauge size={48} className={`absolute right-2 -bottom-2 opacity-10 ${evm.spi >= 1 ? 'text-emerald-500' : 'text-red-500'}`} />
           </GlassCard>
-
-          <GlassCard className="p-4 flex flex-col justify-between border-white/10 relative overflow-hidden">
-             <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Cost Perf. (CPI)</div>
-             <div className="flex items-end justify-between z-10">
-               <div className={`text-2xl font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
-                 {evm.cpi.toFixed(2)}
-               </div>
-               {evm.cpi >= 1 ? <Activity size={24} className="text-emerald-500/50 mb-1" /> : <TrendingDown size={24} className="text-red-500/50 mb-1" />}
+          <GlassCard className="p-4 border-white/10 flex items-center justify-between relative overflow-hidden">
+             <div className="relative z-10">
+                <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Byudjet Ko'rsat.</div>
+                <div className={`text-xl font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>{evm.cpi.toFixed(2)}</div>
              </div>
-             <div className="absolute right-0 bottom-0 opacity-10 translate-x-4 translate-y-4"><Gauge size={80} /></div>
+             <Activity size={48} className={`absolute right-2 -bottom-2 opacity-10 ${evm.cpi >= 1 ? 'text-emerald-500' : 'text-red-500'}`} />
           </GlassCard>
         </div>
 
@@ -379,7 +357,6 @@ export function Holat() {
               <SmetaTree 
                 data={groupedTree} 
                 isEditMode={true}
-                selectedOy={selectedOy}
                 edits={edits}
                 setEdits={setEdits}
                 onNodeDrop={handleNodeDrop}

@@ -10,13 +10,12 @@ import { ChevronRight, ChevronDown, RefreshCcw, Plus } from 'lucide-react';
 interface SmetaTreeProps {
   data: TreeNode[];
   isEditMode?: boolean;
-  selectedOy?: string;
   edits?: Record<string, EditState>;
   setEdits?: React.Dispatch<React.SetStateAction<Record<string, EditState>>>;
   onNodeDrop?: (source: TreeNode, target?: TreeNode) => void;
 }
 
-export function SmetaTree({ data, isEditMode = false, selectedOy = '', edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
+export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
@@ -64,7 +63,7 @@ export function SmetaTree({ data, isEditMode = false, selectedOy = '', edits = {
         <div className="flex items-center h-full pr-4 flex-shrink-0 gap-4">
           <div className="w-20 text-right text-blue-400/70" title="Smeta Hajm">Sm. Vol</div>
           <div className="w-24 text-right text-emerald-400/70" title="Fakt Hajm">Fakt Vol</div>
-          <div className="w-24 text-right text-purple-400/70" title={`F2 Hajm (${selectedOy || 'Jami'})`}>F2 Vol</div>
+          <div className="w-24 text-right text-purple-400/70" title="Jami F2 Hajm">F2 Vol</div>
           <div className="w-20 text-right text-amber-400/70" title="Qoldiq Hajm">Qoldiq</div>
           
           <div className="w-4 border-r border-white/10 h-full mx-2"></div>
@@ -104,7 +103,6 @@ export function SmetaTree({ data, isEditMode = false, selectedOy = '', edits = {
             const key = `${node.varaq}#${node.row}`;
             const isEdited = !!edits[key];
             const currentFakt = edits[key]?.edit.fakt ?? node.fakt ?? 0;
-            const currentF2 = edits[key]?.edit.f2?.[selectedOy]?.obyom ?? (selectedOy && (node.oylar?.[selectedOy] as any)?.obyom) ?? 0;
             const isOverLimit = currentFakt > (node.smetaHajm || 0);
             
             return (
@@ -204,39 +202,7 @@ export function SmetaTree({ data, isEditMode = false, selectedOy = '', edits = {
                   </div>
                   
                   <div className="w-24 text-right">
-                    {isEditMode && selectedOy && node.type !== 'rz' ? (
-                      <input
-                        type="text"
-                        value={currentF2}
-                        placeholder="F2"
-                        onChange={(e) => {
-                          const val = Number(e.target.value.replace(/,/g, '.'));
-                          if (isNaN(val)) return;
-                          if (setEdits && node.varaq && node.row) {
-                            setEdits(prev => {
-                              const existingEdit = prev[key]?.edit || {};
-                              const existingF2 = existingEdit.f2 || {};
-                              return {
-                                ...prev,
-                                [key]: {
-                                  node,
-                                  edit: {
-                                    ...existingEdit,
-                                    varaq: node.varaq!,
-                                    row: node.row!,
-                                    f2: { ...existingF2, [selectedOy]: { ...(existingF2[selectedOy] || {}), obyom: val } }
-                                  }
-                                }
-                              };
-                            });
-                          }
-                        }}
-                        className="w-full text-right bg-black/60 border border-purple-500/30 rounded px-1.5 py-0.5 text-purple-300 outline-none focus:border-purple-400"
-                        title={`${selectedOy} uchun F2 hajm kiriting. Mumkin: ${node.f2mum || 0}`}
-                      />
-                    ) : (
-                      <FmtN val={selectedOy ? ((node.oylar?.[selectedOy] as any)?.obyom || 0) : (node.smetaHajm - (node.f2ol || 0))} cl="text-purple-400" />
-                    )}
+                      <FmtN val={node.f2ol || 0} cl="text-purple-400" />
                   </div>
                   
                   <div className="w-20 text-right text-amber-300/80"><FmtN val={node.qoldiq} /></div>
@@ -250,9 +216,9 @@ export function SmetaTree({ data, isEditMode = false, selectedOy = '', edits = {
 
                   {/* SUMMAS (Nakrutka) */}
                   <div className="w-24 text-right text-blue-200"><FmtN val={node.smeta} /></div>
-                  <div className="w-24 text-right text-emerald-300 font-bold"><FmtN val={node.stFakt || (node.fakt * node.narx)} /></div>
+                  <div className="w-24 text-right text-emerald-300 font-bold"><FmtN val={node.stFakt ?? (node.fakt * (node.narx || 0))} /></div>
                   <div className="w-24 text-right text-purple-300 font-bold"><FmtN val={node.stF2 || 0} /></div>
-                  <div className="w-24 text-right text-amber-300"><FmtN val={node.stOst || (node.qoldiq * node.narx)} /></div>
+                  <div className="w-24 text-right text-amber-300"><FmtN val={node.stOst ?? (node.qoldiq * (node.narx || 0))} /></div>
                 </div>
               </div>
             );
