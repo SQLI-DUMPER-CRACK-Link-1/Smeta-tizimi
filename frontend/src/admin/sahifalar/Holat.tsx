@@ -7,7 +7,7 @@ import { Skeleton } from '../../umumiy/ui/Skeleton';
 import { SaveModal } from '../../umumiy/ui/SaveModal';
 import { ZamenaModal } from '../../umumiy/ui/ZamenaModal';
 import { toast } from '../../umumiy/ui/Toast';
-import { Edit3, ArrowLeft, Gauge, Activity, Loader2, Building2, Save } from 'lucide-react';
+import { Edit3, ArrowLeft, Loader2, Building2, Save } from 'lucide-react';
 import { yangiUid } from '../../_shared/idempotent';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
@@ -190,8 +190,11 @@ export function Holat() {
         const p = currentPath ? `${currentPath}||${levelVal}` : levelVal;
         currentPath = p;
         if (!pathMap[p]) {
+          const synthVaraq = `synth_${p}`;
+          const synthRow = Object.keys(pathMap).length + 1;
           const newNode = { 
             type: 'rz', nom: levelVal, children: [],
+            varaq: synthVaraq, row: synthRow,
             smetaHajm: 0, fakt: 0, f2ol: 0, qoldiq: 0, 
             smeta: 0, stFakt: 0, stF2: 0, stOst: 0 
           } as unknown as TreeNode;
@@ -272,7 +275,7 @@ export function Holat() {
           </div>
         </header>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 flex-shrink-0">
+        <div className="grid grid-cols-3 gap-4 mb-6 flex-shrink-0">
           <GlassCard className="p-4 border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent">
              <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Smeta Jami</div>
              <div className="text-xl font-mono font-bold text-white"><FmtN val={evm.pv} /></div>
@@ -287,20 +290,6 @@ export function Holat() {
              <div className="text-amber-500/70 text-[10px] font-bold uppercase tracking-widest mb-1">Fakt Jami</div>
              <div className="text-xl font-mono font-bold text-amber-500"><FmtN val={evm.ac} /></div>
              <div className="text-amber-500/40 text-[10px] mt-2">Haqiqiy Xarajat</div>
-          </GlassCard>
-          <GlassCard className="p-4 border-white/10 flex items-center justify-between relative overflow-hidden">
-             <div className="relative z-10">
-                <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Muddat Ko'rsat.</div>
-                <div className={`text-xl font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>{evm.spi.toFixed(2)}</div>
-             </div>
-             <Gauge size={48} className={`absolute right-2 -bottom-2 opacity-10 ${evm.spi >= 1 ? 'text-emerald-500' : 'text-red-500'}`} />
-          </GlassCard>
-          <GlassCard className="p-4 border-white/10 flex items-center justify-between relative overflow-hidden">
-             <div className="relative z-10">
-                <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Byudjet Ko'rsat.</div>
-                <div className={`text-xl font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>{evm.cpi.toFixed(2)}</div>
-             </div>
-             <Activity size={48} className={`absolute right-2 -bottom-2 opacity-10 ${evm.cpi >= 1 ? 'text-emerald-500' : 'text-red-500'}`} />
           </GlassCard>
         </div>
 

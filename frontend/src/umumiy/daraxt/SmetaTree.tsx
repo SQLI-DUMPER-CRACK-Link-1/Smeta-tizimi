@@ -163,7 +163,9 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                     {node.kod && <span className="text-text-dim font-mono text-xs flex-shrink-0 w-24 truncate">{node.kod}</span>}
                     
                     {/* Nom */}
-                    <span className="text-white truncate flex-1" title={node.nom}>{node.nom}</span>
+                    <span className="text-white truncate flex-1" title={node.nom || 'Nomsiz'}>
+                      {node.nom || <span className="text-white/30 italic">Nomsiz</span>}
+                    </span>
                     
                     {/* Birlik */}
                     <span className="text-text-dim w-12 text-center flex-shrink-0">{node.birlik}</span>
