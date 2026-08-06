@@ -192,12 +192,60 @@ export function Holat() {
     }
   };
 
-  // 🏗️ EVM (Earned Value Management) Calculations
   const stats = useMemo(() => {
     if (!bossData || !selectedObyekt) return null;
-    const baseName = selectedObyekt.split(' - ')[0];
-    return bossData.objects?.find(o => o.nom.toLowerCase() === baseName.toLowerCase());
+    const baseName = selectedObyekt.split(' - ')[0].toLowerCase();
+    for (const sh of bossData.objects || []) {
+      if (sh.nom.toLowerCase() === baseName) return sh;
+      if (sh.subItems) {
+         const found = sh.subItems.find((s: any) => s.nom.toLowerCase() === baseName);
+         if (found) return found;
+      }
+    }
+    return null;
   }, [bossData, selectedObyekt]);
+
+  // 🏗️ Daraxtni D1, D2, D3 bo'yicha guruhlash
+  const groupedTree = useMemo(() => {
+    if (!holatData?.tree) return [];
+    
+    const rootNodes: TreeNode[] = [];
+    const pathMap: Record<string, TreeNode> = {};
+
+    holatData.tree.forEach((rz) => {
+      if (rz.type !== 'rz') {
+        rootNodes.push(rz);
+        return;
+      }
+      
+      let currentParentList = rootNodes;
+      let currentPath = '';
+
+      const addLevel = (levelVal: string | undefined) => {
+        if (!levelVal) return;
+        const p = currentPath ? `${currentPath}||${levelVal}` : levelVal;
+        currentPath = p;
+        if (!pathMap[p]) {
+          const newNode: TreeNode = {
+            type: 'rz',
+            nom: levelVal,
+            children: [],
+          };
+          pathMap[p] = newNode;
+          currentParentList.push(newNode);
+        }
+        currentParentList = pathMap[p].children!;
+      };
+
+      addLevel(rz.d1);
+      addLevel(rz.d2);
+      addLevel(rz.d3);
+      
+      currentParentList.push(rz);
+    });
+
+    return rootNodes;
+  }, [holatData?.tree]);
 
   const evm = useMemo(() => {
     if (!stats) return { pv: 0, ev: 0, ac: 0, spi: 0, cpi: 0 };
@@ -386,9 +434,9 @@ export function Holat() {
             </div>
           ) : holatData?.tree ? (
             <div className="flex-1 min-h-0 relative z-10">
-              {/* SmetaTree componentini o'zgartirmasdan ishlatamiz, lekin tashqarisi qorong'u rejimga moslashadi (CSS orqali global o'zgaradi yoki tree dark mode qo'llab-quvvatlaydi deb faraz qilamiz) */}
+              {/* SmetaTree componentini o'zgartirmasdan ishlatamiz, lekin tashqarisi qorong'u rejimga moslashadi */}
               <SmetaTree 
-                data={holatData.tree} 
+                data={groupedTree} 
                 isEditMode={isEditMode}
                 edits={edits}
                 setEdits={setEdits}

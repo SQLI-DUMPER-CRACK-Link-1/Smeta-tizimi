@@ -96,11 +96,11 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
     const y = e.clientY - rect.top;
     setMousePosition({ x, y });
 
-    // 3D Tilt hisoblash
+    // 3D Tilt hisoblash (intensivligi pasaytirildi)
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const tiltX = ((y - centerY) / centerY) * -10; // Max 10 deg
-    const tiltY = ((x - centerX) / centerX) * 10;
+    const tiltX = ((y - centerY) / centerY) * -3; // Max 3 deg (10 dan tushirildi)
+    const tiltY = ((x - centerX) / centerX) * 3;
     setTilt({ x: tiltX, y: tiltY });
   };
 
@@ -132,7 +132,7 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
-        transform: isHovering ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)` : 'none',
+        transform: isHovering ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.005, 1.005, 1.005)` : 'none',
         transition: isHovering ? 'none' : 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
         transformStyle: 'preserve-3d'
       }}

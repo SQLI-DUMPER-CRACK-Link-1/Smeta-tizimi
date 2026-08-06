@@ -118,7 +118,10 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                 {/* Fixed Indent Guide lines would go here based on row.depth */}
                 <div 
                   className="flex items-center h-full px-4 flex-1 min-w-0"
-                  style={{ paddingLeft: `${row.depth * 24 + 16}px` }}
+                  style={{ paddingLeft: `${row.depth * 24 + 16}px`, cursor: row.hasChildren ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (row.hasChildren && !isEditMode) toggleExpand(`${node.varaq}#${node.row}`);
+                  }}
                 >
                   <div className="flex items-center gap-2 w-full">
                     {/* Expand/Collapse Chevron */}
