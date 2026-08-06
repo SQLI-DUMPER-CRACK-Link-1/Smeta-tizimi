@@ -95,10 +95,12 @@ export function useBossObyekt(obNom: string) {
   });
 }
 
+import type { HolatJami } from './types';
+
 export function useHolat(obyekt: string, forceRefresh: boolean = false) {
   return useQuery({
     queryKey: ['holat', obyekt, forceRefresh],
-    queryFn: () => gas<{ tree: TreeNode[], lokalkalar: string[] }>('apiHolatOl', obyekt, forceRefresh),
+    queryFn: () => gas<{ tree: TreeNode[], lokalkalar: string[], jami?: HolatJami, oylar?: string[] }>('apiHolatOl', obyekt, forceRefresh),
     staleTime: Infinity, // Extremely heavy, don't refetch unless forced
     enabled: !!obyekt,
   });

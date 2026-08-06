@@ -439,3 +439,8 @@ export type NakrutkaKoef = {
 };
 
 export type Stavka = { chel: number };
+export type HolatJami = {
+  stSm?: number; stFk?: number; stF2?: number;
+  chel?: number; mash?: number; mat?: number; ob?: number;
+  mk?: number; kab?: number; bez?: number;
+};

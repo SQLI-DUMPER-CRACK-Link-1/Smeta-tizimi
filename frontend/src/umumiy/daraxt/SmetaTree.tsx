@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { TreeNode } from '../../api/types';
-import type { EditState } from '../../admin/sahifalar/Holat';
 import { flattenTree, getAllKeys } from './utils';
 import { FmtN } from '../../lib/format';
 import { Badge } from '../ui/Badge';
@@ -9,14 +8,16 @@ import { ChevronRight, ChevronDown, RefreshCcw, Plus } from 'lucide-react';
 
 interface SmetaTreeProps {
   data: TreeNode[];
+  oylar?: string[];
   isEditMode?: boolean;
-  edits?: Record<string, EditState>;
-  setEdits?: React.Dispatch<React.SetStateAction<Record<string, EditState>>>;
+  edits?: Record<string, any>;
+  setEdits?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   onNodeDrop?: (source: TreeNode, target?: TreeNode) => void;
 }
 
-export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
+export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
+  const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +26,12 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
   const rowVirtualizer = useVirtualizer({
     count: flatNodes.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 40,
+    estimateSize: (idx) => {
+      const row = flatNodes[idx];
+      const key = `${row.node.varaq}#${row.node.row}`;
+      if (expandedDetailId === key) return 250;
+      return 36;
+    },
     overscan: 20,
   });
 
@@ -136,10 +142,13 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
               >
                 {/* Fixed Indent Guide lines would go here based on row.depth */}
                 <div 
-                  className="flex items-center h-full px-4 flex-1 min-w-0"
+                  className="flex items-center h-9 px-4 flex-1 min-w-0"
                   style={{ paddingLeft: `${row.depth * 24 + 16}px`, cursor: row.hasChildren ? 'pointer' : 'default' }}
                   onClick={() => {
-                    if (row.hasChildren && !isEditMode) toggleExpand(`${node.varaq}#${node.row}`);
+                    if (row.hasChildren && !isEditMode) toggleExpand(key);
+                    if ((node.type === 'bl' || node.type === 'rs') && isEditMode) {
+                      setExpandedDetailId(prev => prev === key ? null : key);
+                    }
                   }}
                 >
                   <div className="flex items-center gap-2 w-full">
@@ -222,8 +231,75 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                   <div className="w-24 text-right text-blue-200"><FmtN val={node.smeta} /></div>
                   <div className="w-24 text-right text-emerald-300 font-bold"><FmtN val={node.stFakt ?? (node.fakt * (node.narx || 0))} /></div>
                   <div className="w-24 text-right text-purple-300 font-bold"><FmtN val={node.stF2 || 0} /></div>
-                  <div className="w-24 text-right text-amber-300"><FmtN val={node.stOst ?? (node.qoldiq * (node.narx || 0))} /></div>
+                  <div className="w-24 text-right text-cyan-300"><FmtN val={node.stOst ?? (node.f2mum * (node.narx || 0))} /></div>
+                  <div className="w-24 text-right text-amber-300"><FmtN val={(node.smeta || 0) - (node.stFakt ?? (node.fakt * (node.narx || 0)))} /></div>
                 </div>
+
+                {/* Expanded RowDetailPanel for F2 Monthly Editing */}
+                {expandedDetailId === key && (
+                  <div className="absolute top-9 left-0 w-full h-[214px] bg-black/60 border-t border-white/5 shadow-inner backdrop-blur-md p-4 flex gap-6 z-10 overflow-hidden cursor-default" onClick={(e) => e.stopPropagation()}>
+                    {/* Left: Quick Stats */}
+                    <div className="w-64 flex-shrink-0 grid grid-cols-2 gap-3">
+                      <div className="bg-white/5 border border-white/5 rounded-lg p-3">
+                        <div className="text-[10px] text-slate-500 font-bold">Hajm Smeta</div>
+                        <div className="text-sm text-blue-400 font-mono"><FmtN val={node.smetaHajm} /></div>
+                      </div>
+                      <div className="bg-white/5 border border-white/5 rounded-lg p-3">
+                        <div className="text-[10px] text-slate-500 font-bold">Hajm Fakt</div>
+                        <div className="text-sm text-emerald-400 font-mono"><FmtN val={currentFakt} /></div>
+                      </div>
+                      <div className="bg-white/5 border border-white/5 rounded-lg p-3">
+                        <div className="text-[10px] text-slate-500 font-bold">Hajm F2</div>
+                        <div className="text-sm text-purple-400 font-mono"><FmtN val={node.f2ol} /></div>
+                      </div>
+                      <div className="bg-white/5 border border-white/5 rounded-lg p-3">
+                        <div className="text-[10px] text-slate-500 font-bold">Hajm Mumkin</div>
+                        <div className="text-sm text-cyan-400 font-mono"><FmtN val={node.f2mum} /></div>
+                      </div>
+                    </div>
+                    
+                    {/* Right: Monthly F2 Inputs */}
+                    <div className="flex-1 overflow-x-auto">
+                      <h4 className="text-xs font-bold text-slate-400 mb-3 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-purple-500"></span>Oylik F2 Hajmlarni Kiritish</h4>
+                      <div className="flex gap-4">
+                        {oylar.map((oy: string) => {
+                          const oylarState = edits[key]?.edit?.oylar || node.oylar || {};
+                          const currentOyVal = oylarState[oy] ?? 0;
+                          return (
+                            <div key={oy} className="bg-white/5 border border-white/10 rounded-xl p-3 w-44 flex-shrink-0">
+                              <div className="text-xs font-bold text-slate-300 mb-2">{oy}</div>
+                              <input
+                                type="text"
+                                value={currentOyVal}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value.replace(/,/g, '.'));
+                                  if (isNaN(val)) return;
+                                  if (setEdits) {
+                                    setEdits(prev => {
+                                      const existingOylar = prev[key]?.edit?.oylar || node.oylar || {};
+                                      return {
+                                        ...prev,
+                                        [key]: {
+                                          node,
+                                          edit: { 
+                                            ...(prev[key]?.edit || {}), 
+                                            varaq: node.varaq!, row: node.row!,
+                                            oylar: { ...existingOylar, [oy]: val }
+                                          }
+                                        }
+                                      };
+                                    });
+                                  }
+                                }}
+                                className="w-full bg-black/50 border border-white/10 text-purple-300 font-mono text-sm rounded px-2 py-1 outline-none focus:border-purple-500/50"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

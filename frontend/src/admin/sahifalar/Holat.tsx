@@ -7,7 +7,7 @@ import { Skeleton } from '../../umumiy/ui/Skeleton';
 import { SaveModal } from '../../umumiy/ui/SaveModal';
 import { ZamenaModal } from '../../umumiy/ui/ZamenaModal';
 import { toast } from '../../umumiy/ui/Toast';
-import { Edit3, ArrowLeft, Loader2, Building2, Save } from 'lucide-react';
+import { Edit3, ArrowLeft, Loader2, Building2, Save, TrendingUp, ChevronDown } from 'lucide-react';
 import { yangiUid } from '../../_shared/idempotent';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
@@ -222,6 +222,7 @@ export function Holat() {
     });
     return rootNodes;
   }, [holatData?.tree]);
+  const { jami, oylar } = holatData || {};
 
   const evm = useMemo(() => {
     if (!stats) return { pv: 0, ev: 0, ac: 0, spi: 0, cpi: 0 };
@@ -232,6 +233,8 @@ export function Holat() {
     const cpi = ac > 0 ? (ev / ac) : 1;
     return { pv, ev, ac, spi, cpi };
   }, [stats]);
+
+  const [showNakrutka, setShowNakrutka] = useState(false);
 
   return (
     <AuroraBackground>
@@ -294,6 +297,63 @@ export function Holat() {
           </GlassCard>
         </div>
 
+        {/* Nakrutka Jami jadvali */}
+        {jami && (
+          <div className="mb-6 flex-shrink-0">
+            <button 
+              onClick={() => setShowNakrutka(!showNakrutka)}
+              className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors backdrop-blur-md text-sm font-bold text-slate-300"
+            >
+              <div className="flex items-center gap-2 text-cyan-400">
+                <TrendingUp size={18} />
+                Nakrutka - barcha xarajatlar jami
+              </div>
+              <ChevronDown size={18} className={`transition-transform duration-300 ${showNakrutka ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+              {showNakrutka && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }} 
+                  animate={{ height: 'auto', opacity: 1 }} 
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-2 bg-black/40 border border-white/10 rounded-xl p-4 backdrop-blur-md">
+                    <table className="w-full text-left text-sm text-slate-300">
+                      <thead>
+                        <tr className="border-b border-white/10 text-slate-500 uppercase tracking-wider text-[10px]">
+                          <th className="pb-2">Pozitsiya</th>
+                          <th className="pb-2 text-right">Smeta (Asl)</th>
+                          <th className="pb-2 text-right">Fakt</th>
+                          <th className="pb-2 text-right">F2 olingan</th>
+                          <th className="pb-2 text-right">Qoldiq</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 font-mono text-[13px]">
+                        {[
+                          { lbl: 'ZATRATY TRUDA (chel)', v: 'chel' },
+                          { lbl: 'ZATRATY MASHIN (mash)', v: 'mash' },
+                          { lbl: 'MATERIALY (mat)', v: 'mat' },
+                          { lbl: 'OBORUDOVANIE (ob)', v: 'ob' },
+                          { lbl: 'ITOGO PRYAMYE ZATRATY (Jami)', v: 'stSm' }
+                        ].map((row, i) => (
+                          <tr key={i} className={i === 4 ? 'font-bold text-white' : ''}>
+                            <td className="py-2">{row.lbl}</td>
+                            <td className="py-2 text-right text-blue-400"><FmtN val={(jami as any)[row.v]} /></td>
+                            <td className="py-2 text-right text-emerald-400"><FmtN val={i === 4 ? jami.stFk : 0} /></td>
+                            <td className="py-2 text-right text-purple-400"><FmtN val={i === 4 ? jami.stF2 : 0} /></td>
+                            <td className="py-2 text-right text-amber-400"><FmtN val={i === 4 ? ((jami.stSm || 0) - (jami.stFk || 0)) : 0} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         <AnimatePresence>
           {hasEdits && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mb-4 flex-shrink-0">
@@ -343,13 +403,13 @@ export function Holat() {
             </div>
           ) : holatData?.tree ? (
             <div className="flex-1 min-h-0 relative z-10">
-              {/* SmetaTree componentini o'zgartirmasdan ishlatamiz, lekin tashqarisi qorong'u rejimga moslashadi */}
               <SmetaTree 
                 data={groupedTree} 
-                isEditMode={true}
-                edits={edits}
-                setEdits={setEdits}
-                onNodeDrop={handleNodeDrop}
+                oylar={oylar}
+                isEditMode={true} 
+                edits={edits} 
+                setEdits={setEdits} 
+                onNodeDrop={handleNodeDrop} 
               />
             </div>
           ) : (
