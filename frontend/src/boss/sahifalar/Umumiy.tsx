@@ -85,9 +85,7 @@ const useUiSound = () => {
 
 export function GlassCard({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
-  const { playHover, playClick } = useUiSound();
+  const { playClick } = useUiSound();
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (window.innerWidth < 768) return;
@@ -95,27 +93,6 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     setMousePosition({ x, y });
-
-    // 3D Tilt hisoblash (intensivligi pasaytirildi)
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const tiltX = ((y - centerY) / centerY) * -3; // Max 3 deg (10 dan tushirildi)
-    const tiltY = ((x - centerX) / centerX) * 3;
-    setTilt({ x: tiltX, y: tiltY });
-  };
-
-  const handleMouseEnter = () => {
-    if (window.innerWidth >= 768) {
-      setIsHovering(true);
-      playHover();
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (window.innerWidth >= 768) {
-      setIsHovering(false);
-      setTilt({ x: 0, y: 0 });
-    }
   };
 
   const handleClick = () => {
@@ -129,13 +106,6 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
     <div 
       onClick={handleClick}
       onMouseMove={handleMouseMove}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        transform: isHovering ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.005, 1.005, 1.005)` : 'none',
-        transition: isHovering ? 'none' : 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
-        transformStyle: 'preserve-3d'
-      }}
       className={`relative bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden group/card hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20 ${className} laser-border`}
     >
       <div 
@@ -144,14 +114,7 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
           background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255,255,255,0.15), transparent 40%)`
         }}
       />
-      <div 
-        className="relative z-10 w-full h-full transform-gpu"
-        style={{
-          transform: isHovering ? 'translateZ(30px)' : 'none',
-          transition: 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
-          transformStyle: 'preserve-3d'
-        }}
-      >
+      <div className="relative z-10 w-full h-full">
         {children}
       </div>
     </div>

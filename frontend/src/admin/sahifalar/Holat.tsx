@@ -195,7 +195,7 @@ export function Holat() {
           const newNode = { 
             type: 'rz', nom: levelVal, children: [],
             varaq: synthVaraq, row: synthRow,
-            smetaHajm: 0, fakt: 0, f2ol: 0, qoldiq: 0, 
+            smetaHajm: 0, fakt: 0, f2ol: 0, qoldiq: 0, f2mum: 0,
             smeta: 0, stFakt: 0, stF2: 0, stOst: 0 
           } as unknown as TreeNode;
           pathMap[p] = newNode;
@@ -206,6 +206,7 @@ export function Holat() {
         pathMap[p].fakt! += (rz.fakt || 0);
         pathMap[p].f2ol! += (rz.f2ol || 0);
         pathMap[p].qoldiq! += (rz.qoldiq || 0);
+        pathMap[p].f2mum! += (rz.f2mum || 0);
         pathMap[p].smeta! += (rz.smeta || 0);
         pathMap[p].stFakt! += (rz.stFakt || (rz.fakt || 0) * (rz.narx || 0));
         pathMap[p].stF2! += (rz.stF2 || 0);

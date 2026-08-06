@@ -64,6 +64,7 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
           <div className="w-20 text-right text-blue-400/70" title="Smeta Hajm">Sm. Vol</div>
           <div className="w-24 text-right text-emerald-400/70" title="Fakt Hajm">Fakt Vol</div>
           <div className="w-24 text-right text-purple-400/70" title="Jami F2 Hajm">F2 Vol</div>
+          <div className="w-24 text-right text-cyan-400/70" title="F2 Olish Mumkin (Fakt - F2)">F2 Mum.</div>
           <div className="w-20 text-right text-amber-400/70" title="Qoldiq Hajm">Qoldiq</div>
           
           <div className="w-4 border-r border-white/10 h-full mx-2"></div>
@@ -71,6 +72,7 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
           <div className="w-24 text-right text-blue-400" title="Smeta Summa">Sm. Sum</div>
           <div className="w-24 text-right text-emerald-400" title="Fakt Summa (Nakrutka)">Fk. Sum</div>
           <div className="w-24 text-right text-purple-400" title="F2 Summa (Nakrutka)">F2 Sum</div>
+          <div className="w-24 text-right text-cyan-400" title="F2 Olish Mumkin Summa (Nakrutka)">F2 M. Sum</div>
           <div className="w-24 text-right text-amber-400" title="Qoldiq Summa (Nakrutka)">Ost. Sum</div>
         </div>
       </div>
