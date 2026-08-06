@@ -104,7 +104,7 @@ export function SmetaTree({ data, isEditMode = false, selectedOy = '', edits = {
             const key = `${node.varaq}#${node.row}`;
             const isEdited = !!edits[key];
             const currentFakt = edits[key]?.edit.fakt ?? node.fakt ?? 0;
-            const currentF2 = edits[key]?.edit.f2?.[selectedOy]?.obyom ?? (selectedOy && node.oylar?.[selectedOy]?.obyom) ?? 0;
+            const currentF2 = edits[key]?.edit.f2?.[selectedOy]?.obyom ?? (selectedOy && (node.oylar?.[selectedOy] as any)?.obyom) ?? 0;
             const isOverLimit = currentFakt > (node.smetaHajm || 0);
             
             return (
@@ -235,7 +235,7 @@ export function SmetaTree({ data, isEditMode = false, selectedOy = '', edits = {
                         title={`${selectedOy} uchun F2 hajm kiriting. Mumkin: ${node.f2mum || 0}`}
                       />
                     ) : (
-                      <FmtN val={selectedOy ? (node.oylar?.[selectedOy]?.obyom || 0) : (node.smetaHajm - (node.f2ol || 0))} cl="text-purple-400" />
+                      <FmtN val={selectedOy ? ((node.oylar?.[selectedOy] as any)?.obyom || 0) : (node.smetaHajm - (node.f2ol || 0))} cl="text-purple-400" />
                     )}
                   </div>
                   

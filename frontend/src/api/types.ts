@@ -72,6 +72,7 @@ export type Edit = {
   varaq: string;
   row: number;
   fakt?: number;
+  f2?: Record<string, { obyom?: number; narx?: number }>;
   oylar?: Record<string, number>;
 };
 

@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useHolat, useObyektlar, useLockAcquire, useLockRelease, useLockStatus, useHolatSaqla, useBlQosh, useRsQosh, useBossData } from '../../api/hooks';
+import { useHolat, useObyektlar, useHolatSaqla, useBossData, useBlQosh, useRsQosh } from '../../api/hooks';
 import type { Edit, TreeNode } from '../../api/types';
 import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
 import { Skeleton } from '../../umumiy/ui/Skeleton';
 import { SaveModal } from '../../umumiy/ui/SaveModal';
 import { ZamenaModal } from '../../umumiy/ui/ZamenaModal';
 import { toast } from '../../umumiy/ui/Toast';
-import { Edit3, Eye, ArrowLeft, CloudRain, HardHat, TrendingUp, TrendingDown, Gauge, Activity, Loader2, Building2 } from 'lucide-react';
+import { Edit3, ArrowLeft, TrendingUp, TrendingDown, Gauge, Activity, Loader2, Building2, Save } from 'lucide-react';
 import { yangiUid } from '../../_shared/idempotent';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
@@ -27,6 +27,7 @@ export function Holat() {
   
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const hasEdits = Object.keys(edits).length > 0;
   
   const [isZamenaModalOpen, setIsZamenaModalOpen] = useState(false);
   const [dragSource, setDragSource] = useState<TreeNode | null>(null);
@@ -63,7 +64,15 @@ export function Holat() {
   }, [saqla.isPending]);
 
   const handleSave = async () => {
-    const editsToSave = Object.values(edits).map(e => e.edit);
+    const editsToSave = Object.values(edits).map(e => {
+      // Backend apiHolatSaqla expects "oylar" for F2 data instead of "f2"
+      const payload: any = { ...e.edit };
+      if (payload.f2) {
+        payload.oylar = payload.f2;
+        delete payload.f2;
+      }
+      return payload;
+    });
     if (editsToSave.length === 0) return;
     
     const orqaga = editsToSave.map(e => {
@@ -194,7 +203,7 @@ export function Holat() {
         const p = currentPath ? `${currentPath}||${levelVal}` : levelVal;
         currentPath = p;
         if (!pathMap[p]) {
-          const newNode: TreeNode = { type: 'rz', nom: levelVal, children: [] };
+          const newNode = { type: 'rz', nom: levelVal, children: [] } as unknown as TreeNode;
           pathMap[p] = newNode;
           currentParentList.push(newNode);
         }
@@ -258,14 +267,14 @@ export function Holat() {
                   ))}
                 </select>
                 
-                {holatData?.oylar && holatData.oylar.length > 0 && (
+                {(holatData as any)?.oylar && (holatData as any).oylar.length > 0 && (
                   <select
                     value={selectedOy}
                     onChange={e => setSelectedOy(e.target.value)}
                     className="bg-black/50 border border-white/10 text-white rounded-xl px-4 h-10 outline-none focus:border-yellow-500/50 appearance-none font-medium shadow-inner"
                   >
                     <option value="">-- Oyni tanlang (F2) --</option>
-                    {holatData.oylar.map((oy: any) => (
+                    {(holatData as any).oylar.map((oy: any) => (
                       <option key={oy} value={oy}>{oy}</option>
                     ))}
                   </select>
@@ -317,9 +326,8 @@ export function Holat() {
           </GlassCard>
         </div>
 
-        {/* Edit State Banner */}
         <AnimatePresence>
-          {isEditMode && Object.keys(edits).length > 0 && (
+          {hasEdits && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mb-4 flex-shrink-0">
               <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-xl flex items-center justify-between backdrop-blur-md">
                 <div className="flex items-center gap-3">
@@ -333,28 +341,15 @@ export function Holat() {
                 </div>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setEdits({})} className="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white bg-white/5 border border-white/10 rounded-lg transition-colors">Bekor qilish</button>
-                  <button onClick={() => setIsSaveModalOpen(true)} className="px-6 py-2 text-sm font-bold text-black bg-yellow-500 hover:bg-yellow-400 rounded-lg shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all active:scale-95">
-                    Saqlash va Yopish
+                  <button onClick={() => setIsSaveModalOpen(true)} className="px-6 py-2 text-sm font-bold text-black bg-yellow-500 hover:bg-yellow-400 rounded-lg shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all active:scale-95 flex items-center gap-2">
+                    <Save size={16} /> Saqlash va Yopish
                   </button>
                 </div>
               </div>
             </motion.div>
           )}
-          
-          {lockStatus?.status === 'locked' && !isEditMode && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mb-4 flex-shrink-0">
-               <div className="bg-red-500/10 border border-red-500/20 px-5 py-3 rounded-xl flex items-center gap-3 backdrop-blur-md">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></div>
-                  <span className="text-sm text-red-200">
-                    <strong className="text-white mr-1">{lockStatus.user || 'Boshqa muhandis'}</strong> 
-                    hozirda ushbu smetani tahrirlamoqda. Obyekt band.
-                  </span>
-               </div>
-            </motion.div>
-          )}
         </AnimatePresence>
         
-        {/* Smeta Tree Area */}
         <GlassCard className="flex-1 min-h-0 flex flex-col border-white/10 bg-black/40 overflow-hidden relative rounded-2xl">
           {/* Subtle blueprint grid overlay */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
