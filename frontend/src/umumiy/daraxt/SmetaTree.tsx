@@ -10,12 +10,13 @@ import { ChevronRight, ChevronDown, RefreshCcw, Plus } from 'lucide-react';
 interface SmetaTreeProps {
   data: TreeNode[];
   isEditMode?: boolean;
+  selectedOy?: string;
   edits?: Record<string, EditState>;
   setEdits?: React.Dispatch<React.SetStateAction<Record<string, EditState>>>;
   onNodeDrop?: (source: TreeNode, target?: TreeNode) => void;
 }
 
-export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
+export function SmetaTree({ data, isEditMode = false, selectedOy = '', edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
@@ -58,6 +59,23 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
         </div>
       </div>
 
+      <div className="h-8 border-b border-white/5 bg-black/40 flex items-center px-4 sticky top-14 z-10 flex-shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider backdrop-blur-md">
+        <div className="flex-1">Nom / Birlik</div>
+        <div className="flex items-center h-full pr-4 flex-shrink-0 gap-4">
+          <div className="w-20 text-right text-blue-400/70" title="Smeta Hajm">Sm. Vol</div>
+          <div className="w-24 text-right text-emerald-400/70" title="Fakt Hajm">Fakt Vol</div>
+          <div className="w-24 text-right text-purple-400/70" title={`F2 Hajm (${selectedOy || 'Jami'})`}>F2 Vol</div>
+          <div className="w-20 text-right text-amber-400/70" title="Qoldiq Hajm">Qoldiq</div>
+          
+          <div className="w-4 border-r border-white/10 h-full mx-2"></div>
+          
+          <div className="w-24 text-right text-blue-400" title="Smeta Summa">Sm. Sum</div>
+          <div className="w-24 text-right text-emerald-400" title="Fakt Summa (Nakrutka)">Fk. Sum</div>
+          <div className="w-24 text-right text-purple-400" title="F2 Summa (Nakrutka)">F2 Sum</div>
+          <div className="w-24 text-right text-amber-400" title="Qoldiq Summa (Nakrutka)">Ost. Sum</div>
+        </div>
+      </div>
+
       <div 
         className="flex-1 overflow-auto" 
         ref={parentRef}
@@ -85,8 +103,9 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
             const node = row.node;
             const key = `${node.varaq}#${node.row}`;
             const isEdited = !!edits[key];
-            const currentFakt = edits[key]?.edit.fakt ?? node.fakt;
-            const isOverLimit = currentFakt > node.smetaHajm;
+            const currentFakt = edits[key]?.edit.fakt ?? node.fakt ?? 0;
+            const currentF2 = edits[key]?.edit.f2?.[selectedOy]?.obyom ?? (selectedOy && node.oylar?.[selectedOy]?.obyom) ?? 0;
+            const isOverLimit = currentFakt > (node.smetaHajm || 0);
             
             return (
               <div
@@ -154,54 +173,86 @@ export function SmetaTree({ data, isEditMode = false, edits = {}, setEdits, onNo
                 </div>
                 
                 {/* Data Columns with Gantt/Progress Visual */}
-                <div className="flex items-center h-full pr-4 flex-shrink-0 font-medium tabular-nums text-xs">
-                  <div className="w-24 text-right text-slate-400"><FmtN val={node.smetaHajm} /></div>
+                <div className="flex items-center h-full pr-4 flex-shrink-0 font-medium tabular-nums text-[11px] gap-4">
+                  {/* VOLUMES */}
+                  <div className="w-20 text-right text-blue-300/80"><FmtN val={node.smetaHajm} /></div>
                   <div className="w-24 text-right">
-                    {isEditMode ? (
+                    {isEditMode && node.type !== 'rz' ? (
                       <input
                         type="text"
                         value={currentFakt}
+                        placeholder="Fakt"
                         onChange={(e) => {
-                          const valStr = e.target.value.replace(/,/g, '.');
-                          const val = Number(valStr);
+                          const val = Number(e.target.value.replace(/,/g, '.'));
                           if (isNaN(val)) return;
-                          
                           if (setEdits && node.varaq && node.row) {
                             setEdits(prev => ({
                               ...prev,
                               [key]: {
                                 node,
-                                edit: {
-                                  ...(prev[key]?.edit || {}),
-                                  varaq: node.varaq!,
-                                  row: node.row!,
-                                  fakt: val
-                                }
+                                edit: { ...(prev[key]?.edit || {}), varaq: node.varaq!, row: node.row!, fakt: val }
                               }
                             }));
                           }
                         }}
-                        className={`w-full text-right bg-black/50 border rounded px-2 py-1 text-sm outline-none transition-colors ${isOverLimit ? 'border-red-500/50 text-red-400 focus:border-red-400' : 'border-white/10 text-white focus:border-yellow-500/50'}`}
-                        title={isOverLimit ? `Smetadan oshiq: ${currentFakt} > ${node.smetaHajm}` : ''}
+                        className={`w-full text-right bg-black/60 border rounded px-1.5 py-0.5 outline-none transition-colors ${isOverLimit ? 'border-red-500/50 text-red-400' : 'border-emerald-500/30 text-emerald-300 focus:border-emerald-400'}`}
+                        title="Fakt hajm kiriting"
                       />
                     ) : (
                       <FmtN val={node.fakt} cl={isOverLimit ? 'text-red-400' : 'text-emerald-400'} />
                     )}
                   </div>
                   
-                  {/* Gantt / Progress Bar Mini-visual */}
-                  <div className="w-32 px-3 flex items-center">
-                    <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden border border-white/5 shadow-inner" title={`Bajarilish: ${Math.round((node.fakt / (node.smetaHajm || 1)) * 100)}%`}>
-                       <div 
-                         className={`h-full rounded-full transition-all duration-500 ${isOverLimit ? 'bg-red-500' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}`} 
-                         style={{ width: `${Math.min((node.fakt / (node.smetaHajm || 1)) * 100, 100)}%` }}
-                       />
+                  <div className="w-24 text-right">
+                    {isEditMode && selectedOy && node.type !== 'rz' ? (
+                      <input
+                        type="text"
+                        value={currentF2}
+                        placeholder="F2"
+                        onChange={(e) => {
+                          const val = Number(e.target.value.replace(/,/g, '.'));
+                          if (isNaN(val)) return;
+                          if (setEdits && node.varaq && node.row) {
+                            setEdits(prev => {
+                              const existingEdit = prev[key]?.edit || {};
+                              const existingF2 = existingEdit.f2 || {};
+                              return {
+                                ...prev,
+                                [key]: {
+                                  node,
+                                  edit: {
+                                    ...existingEdit,
+                                    varaq: node.varaq!,
+                                    row: node.row!,
+                                    f2: { ...existingF2, [selectedOy]: { ...(existingF2[selectedOy] || {}), obyom: val } }
+                                  }
+                                }
+                              };
+                            });
+                          }
+                        }}
+                        className="w-full text-right bg-black/60 border border-purple-500/30 rounded px-1.5 py-0.5 text-purple-300 outline-none focus:border-purple-400"
+                        title={`${selectedOy} uchun F2 hajm kiriting. Mumkin: ${node.f2mum || 0}`}
+                      />
+                    ) : (
+                      <FmtN val={selectedOy ? (node.oylar?.[selectedOy]?.obyom || 0) : (node.smetaHajm - (node.f2ol || 0))} cl="text-purple-400" />
+                    )}
+                  </div>
+                  
+                  <div className="w-20 text-right text-amber-300/80"><FmtN val={node.qoldiq} /></div>
+
+                  <div className="w-4 border-r border-white/10 h-full mx-2 flex items-center justify-center">
+                    {/* Tiny visual progress bar for Fakt */}
+                    <div className="w-full h-8 flex flex-col justify-end bg-black/30 rounded-sm overflow-hidden" title={`Fakt: ${Math.round((node.fakt / (node.smetaHajm || 1)) * 100)}%`}>
+                      <div className="w-full bg-emerald-500/50" style={{ height: `${Math.min((node.fakt / (node.smetaHajm || 1)) * 100, 100)}%` }} />
                     </div>
                   </div>
 
-                  <div className="w-24 text-right text-slate-400"><FmtN val={node.narx} /></div>
-                  <div className="w-28 text-right text-white font-bold"><FmtN val={node.smeta} /></div>
-                  <div className="w-24 text-right text-blue-400"><FmtN val={node.f2ol} /></div>
+                  {/* SUMMAS (Nakrutka) */}
+                  <div className="w-24 text-right text-blue-200"><FmtN val={node.smeta} /></div>
+                  <div className="w-24 text-right text-emerald-300 font-bold"><FmtN val={node.stFakt || (node.fakt * node.narx)} /></div>
+                  <div className="w-24 text-right text-purple-300 font-bold"><FmtN val={node.stF2 || 0} /></div>
+                  <div className="w-24 text-right text-amber-300"><FmtN val={node.stOst || (node.qoldiq * node.narx)} /></div>
                 </div>
               </div>
             );

@@ -23,8 +23,8 @@ export function Holat() {
   const { data: obyektlar, isLoading: isObyektlarLoading } = useObyektlar();
   const { data: bossData } = useBossData();
   const [selectedObyekt, setSelectedObyekt] = useState<string>('');
+  const [selectedOy, setSelectedOy] = useState<string>('');
   
-  const [isEditMode, setIsEditMode] = useState(false);
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   
@@ -42,10 +42,15 @@ export function Holat() {
     if (!selectedObyekt && obyektlar?.length) setSelectedObyekt(obyektlar[0].obyekt);
   }, [yoldagiObyekt, obyektlar, selectedObyekt]);
 
+  useEffect(() => {
+    if (!bossData?.oylar || bossData.oylar.length === 0) return;
+    const oyList = bossData.oylar as string[];
+    if (!selectedOy && oyList.length > 0) {
+      setSelectedOy(oyList[oyList.length - 1]);
+    }
+  }, [bossData?.oylar, selectedOy]);
+
   const { data: holatData, isLoading: isHolatLoading, error } = useHolat(selectedObyekt);
-  const { data: lockStatus } = useLockStatus(selectedObyekt);
-  const { mutateAsync: acquireLock } = useLockAcquire();
-  const { mutateAsync: releaseLock } = useLockRelease();
   const saqla = useHolatSaqla(selectedObyekt);
   const blQosh = useBlQosh();
   const rsQosh = useRsQosh();
@@ -56,38 +61,6 @@ export function Holat() {
     window.addEventListener('beforeunload', h);
     return () => window.removeEventListener('beforeunload', h);
   }, [saqla.isPending]);
-
-  useEffect(() => {
-    setIsEditMode(false);
-    setEdits({});
-  }, [selectedObyekt]);
-
-  useEffect(() => {
-    return () => {
-      if (isEditMode && selectedObyekt) {
-        releaseLock({ obyekt: selectedObyekt, reason: 'Sahifa yopildi' }).catch(console.error);
-      }
-    };
-  }, [isEditMode, selectedObyekt, releaseLock]);
-
-  const toggleEditMode = async () => {
-    if (isEditMode) {
-      setIsEditMode(false);
-      setEdits({});
-      await releaseLock({ obyekt: selectedObyekt, reason: 'Tahrirlash yakunlandi' });
-    } else {
-      if (lockStatus?.status === 'locked') {
-        toast(`Obyekt band: ${lockStatus.user}`, 'danger');
-        return;
-      }
-      try {
-        await acquireLock({ obyekt: selectedObyekt, reason: 'Smeta tahrirlash' });
-        setIsEditMode(true);
-      } catch (err: any) {
-        toast('Band qilishda xatolik: ' + err.message, 'danger');
-      }
-    }
-  };
 
   const handleSave = async () => {
     const editsToSave = Object.values(edits).map(e => e.edit);
@@ -110,8 +83,6 @@ export function Holat() {
       });
       setIsSaveModalOpen(false);
       setEdits({});
-      setIsEditMode(false);
-      await releaseLock({ obyekt: selectedObyekt, reason: 'Saqlash yakunlandi' });
     } catch (err: any) {
       toast(`Saqlashda xatolik: ${err.message}`, 'danger');
     }
@@ -205,10 +176,8 @@ export function Holat() {
     return null;
   }, [bossData, selectedObyekt]);
 
-  // 🏗️ Daraxtni D1, D2, D3 bo'yicha guruhlash
   const groupedTree = useMemo(() => {
     if (!holatData?.tree) return [];
-    
     const rootNodes: TreeNode[] = [];
     const pathMap: Record<string, TreeNode> = {};
 
@@ -217,7 +186,6 @@ export function Holat() {
         rootNodes.push(rz);
         return;
       }
-      
       let currentParentList = rootNodes;
       let currentPath = '';
 
@@ -226,11 +194,7 @@ export function Holat() {
         const p = currentPath ? `${currentPath}||${levelVal}` : levelVal;
         currentPath = p;
         if (!pathMap[p]) {
-          const newNode: TreeNode = {
-            type: 'rz',
-            nom: levelVal,
-            children: [],
-          };
+          const newNode: TreeNode = { type: 'rz', nom: levelVal, children: [] };
           pathMap[p] = newNode;
           currentParentList.push(newNode);
         }
@@ -240,20 +204,18 @@ export function Holat() {
       addLevel(rz.d1);
       addLevel(rz.d2);
       addLevel(rz.d3);
-      
       currentParentList.push(rz);
     });
-
     return rootNodes;
   }, [holatData?.tree]);
 
   const evm = useMemo(() => {
     if (!stats) return { pv: 0, ev: 0, ac: 0, spi: 0, cpi: 0 };
-    const pv = stats.smeta || 1; // Planned Value
-    const ev = stats.f2 || 0;    // Earned Value
-    const ac = stats.fakt || 0;  // Actual Cost
-    const spi = pv > 0 ? (ev / pv) : 0; // Schedule Performance Index
-    const cpi = ac > 0 ? (ev / ac) : 1; // Cost Performance Index
+    const pv = stats.smeta || 1;
+    const ev = stats.f2 || 0;
+    const ac = stats.fakt || 0;
+    const spi = pv > 0 ? (ev / pv) : 0;
+    const cpi = ac > 0 ? (ev / ac) : 1;
     return { pv, ev, ac, spi, cpi };
   }, [stats]);
 
@@ -261,7 +223,6 @@ export function Holat() {
     <AuroraBackground>
       <div className="max-w-[1800px] w-full mx-auto p-4 md:p-6 flex-1 flex flex-col min-h-0 overflow-hidden relative z-10">
         
-        {/* Header & Controls */}
         <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate('/admin/obyektlar')} className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 transition-colors backdrop-blur-md">
@@ -282,53 +243,38 @@ export function Holat() {
           </div>
           
           <div className="flex flex-wrap items-center gap-4 bg-black/40 p-3 rounded-2xl border border-white/10 shadow-lg backdrop-blur-md">
-            <div className="flex items-center gap-3 pr-4 border-r border-white/10">
-              <CloudRain size={20} className="text-blue-400" />
-              <div>
-                <div className="text-white font-bold text-sm">Yomg'irli, 12°C</div>
-                <div className="text-slate-400 text-[10px] uppercase">Obyekt iqlimi</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 pr-4 border-r border-white/10">
-              <HardHat size={20} className="text-yellow-400" />
-              <div>
-                <div className="text-white font-bold text-sm">45 Ishchi · 8 Texnika</div>
-                <div className="text-slate-400 text-[10px] uppercase">Resurs holati</div>
-              </div>
-            </div>
-            
             {isObyektlarLoading ? (
                <Skeleton className="h-10 w-48 rounded-xl bg-white/5" />
             ) : (
-              <select 
-                value={selectedObyekt} 
-                onChange={e => setSelectedObyekt(e.target.value)}
-                disabled={isEditMode}
-                className="h-10 px-4 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-medium outline-none focus:border-yellow-500/50 appearance-none min-w-[200px] cursor-pointer"
-              >
-                {obyektlar?.map(obj => (
-                  <option key={obj.obyekt} value={obj.obyekt} className="bg-slate-800 text-white">{obj.obyekt}</option>
-                ))}
-              </select>
-            )}
-
-            {selectedObyekt && (
-              <button
-                onClick={toggleEditMode}
-                disabled={isHolatLoading}
-                className={`h-10 px-5 inline-flex items-center gap-2 rounded-xl text-sm font-bold transition-all shadow-lg ${
-                  isEditMode 
-                    ? 'bg-yellow-500 text-black hover:bg-yellow-400 hover:shadow-yellow-500/25' 
-                    : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
-                }`}
-              >
-                {isEditMode ? <><Eye size={18} /> Rejim: Ko'rish</> : <><Edit3 size={18} /> Rejim: Tahrirlash</>}
-              </button>
+              <div className="flex gap-2">
+                <select 
+                  value={selectedObyekt} 
+                  onChange={e => setSelectedObyekt(e.target.value)}
+                  className="bg-black/50 border border-white/10 text-white rounded-xl px-4 h-10 outline-none focus:border-yellow-500/50 appearance-none font-medium shadow-inner min-w-[250px]"
+                >
+                  <option value="">-- Obyektni tanlang --</option>
+                  {obyektlar?.map(o => (
+                    <option key={o.obyekt} value={o.obyekt}>{o.obyekt}</option>
+                  ))}
+                </select>
+                
+                {holatData?.oylar && holatData.oylar.length > 0 && (
+                  <select
+                    value={selectedOy}
+                    onChange={e => setSelectedOy(e.target.value)}
+                    className="bg-black/50 border border-white/10 text-white rounded-xl px-4 h-10 outline-none focus:border-yellow-500/50 appearance-none font-medium shadow-inner"
+                  >
+                    <option value="">-- Oyni tanlang (F2) --</option>
+                    {holatData.oylar.map((oy: any) => (
+                      <option key={oy} value={oy}>{oy}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             )}
           </div>
         </header>
 
-        {/* 🏗️ EVM Dashboards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 flex-shrink-0">
           <GlassCard className="p-4 border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent">
              <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Planned Value (PV)</div>
@@ -437,7 +383,8 @@ export function Holat() {
               {/* SmetaTree componentini o'zgartirmasdan ishlatamiz, lekin tashqarisi qorong'u rejimga moslashadi */}
               <SmetaTree 
                 data={groupedTree} 
-                isEditMode={isEditMode}
+                isEditMode={true}
+                selectedOy={selectedOy}
                 edits={edits}
                 setEdits={setEdits}
                 onNodeDrop={handleNodeDrop}
