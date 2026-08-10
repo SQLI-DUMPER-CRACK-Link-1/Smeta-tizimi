@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat,
+  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish,
 } from '../../api/hooks';
 import {
   Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
@@ -142,6 +142,7 @@ export function F2Import() {
   const yoz = useF2Yoz();
   const job = useF2JobHolat(yozishBoshlandi);
   const lrv = useHolat(obyekt);
+  const useF2OyOchirishHook = useF2OyOchirish();
 
   const obNomlari = useMemo(
     () => Array.from(new Set((obyektlar.data ?? []).map((o) => o.obyekt.split(' - ')[0]))),
@@ -903,7 +904,8 @@ export function F2Import() {
 
       {/* ---------- QADAM 1 ---------- */}
       {qadam === 0 && (
-        <div className="karta p-5 space-y-4 max-w-2xl">
+        <div className="flex flex-col xl:flex-row gap-5 items-start">
+          <div className="karta p-5 space-y-4 w-full max-w-2xl flex-shrink-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Maydon nom="Obyekt">
               <Tanlov
@@ -1073,6 +1075,70 @@ export function F2Import() {
                 </Tugma>
               </div>
             </section>
+          )}
+        </div>
+
+          {/* Tarix va Boshqaruv (O'ng tomon) */}
+          {obyekt && (
+            <div className="karta p-4 w-full xl:w-[320px] flex-shrink-0">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldAlert size={16} className="text-text-dim" />
+                <h3 className="font-medium text-sm">F2 Tarixi va Nazorat</h3>
+              </div>
+              
+              {lrv.isLoading ? (
+                <div className="space-y-2">
+                  <div className="skel h-8 rounded" />
+                  <div className="skel h-8 rounded" />
+                </div>
+              ) : !lrv.data?.oylar?.length ? (
+                <p className="text-sm text-text-mute text-center py-4">Bu obyekt uchun F2 kiritilmagan</p>
+              ) : (
+                <div className="space-y-2">
+                  {lrv.data.oylar.map((oy) => {
+                    let oySum = 0;
+                    const barglarTugun = barglar(lrv.data?.tree as unknown as AktNode[] || []);
+                    barglarTugun.forEach(n => {
+                      const val = (n as any).oylar?.[oy] || (n as any).stF2?.[oy] || 0;
+                      if (val && n.narx) oySum += val * n.narx;
+                    });
+                    
+                    return (
+                      <div key={oy} className="flex flex-col gap-1.5 p-2 rounded border border-border bg-[var(--surface-2)]">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm text-accent">{oy}</span>
+                          <button 
+                            onClick={() => {
+                              if(window.confirm(`⚠️ "${oy}" oyi uchun yozilgan BARCHA qiymatlar (hajm/narx/summa) ushbu obyektdan BUTUNLAY o'chiriladi.\n\nDavom etamizmi?`)) {
+                                useF2OyOchirishHook.mutate({ obyekt, oyNom: oy }, {
+                                  onSuccess: (r) => {
+                                    if(r.ok) {
+                                      toast(r.xabar || "Oy tozalandi", "ok");
+                                      lrv.refetch();
+                                    } else {
+                                      toast("Xato: " + r.xabar, "danger");
+                                    }
+                                  },
+                                  onError: (e: any) => toast(e.message, "danger")
+                                });
+                              }
+                            }}
+                            disabled={useF2OyOchirishHook.isPending && useF2OyOchirishHook.variables?.oyNom === oy}
+                            className="text-[11px] px-2 py-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded transition-colors"
+                          >
+                            {useF2OyOchirishHook.isPending && useF2OyOchirishHook.variables?.oyNom === oy ? 'Tozalanmoqda...' : 'Tozalash'}
+                          </button>
+                        </div>
+                        <div className="text-[12px] text-text-mute flex justify-between">
+                          <span>Jami summa:</span>
+                          <span className="font-medium text-text"><FmtN val={oySum} /> so'm</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

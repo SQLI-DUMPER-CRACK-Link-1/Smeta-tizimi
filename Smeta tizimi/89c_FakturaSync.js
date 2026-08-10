@@ -68,7 +68,7 @@ function apiFakturaAvtoSinx() {
   }
   _deepScan(yangiPap);
 
-  var limit = 8; // Har safar max 8 ta faylni ishlaymiz, timeout bo'lmasligi uchun
+  var limit = 20; // Har safar max 20 ta faylni ishlaymiz (Google 6 minutlik limitiga sig'ish uchun)
   var count = 0;
   
   var existingData = apiFakturalarOl().fakturalar || [];
@@ -129,6 +129,12 @@ function apiFakturaAvtoSinx() {
          file.moveTo(posPap);
       }
     } catch(err) {
+      var msg = err.toString().toLowerCase();
+      if(msg.indexOf('429') > -1 || msg.indexOf('quota') > -1 || msg.indexOf('too many requests') > -1 || msg.indexOf('limit') > -1) {
+          Logger.log("API limit tushdi, to'xtatamiz.");
+          // Faylni xatoga o'tkazmaymiz, joyida qoladi, keyingi tsiklda yana urinib ko'riladi.
+          break;
+      }
       Logger.log("Xato: " + err.toString());
       try {
          xatoPap.createFile(file.getName() + "_CRASH.txt", "=== XATO ===\n" + err.toString());
@@ -193,17 +199,17 @@ function _parseFakturaVision(blob, fileObj) {
             var sys = "Sen qat'iy va bexato ishlaydigan Buxgalteriya AIsan. Berilgan hujjat PDF yoki Rasm ko'rinishidagi hisob-faktura / akt. Hujjat ko'p varaqli bo'lishi ham mumkin. Hamma varaqlardagi barcha ma'lumotlarni o'qi!\n\n" + 
                       "QAT'IY QOIDALAR:\n" +
                       "1. Hujjatdagi BARCHA tovar va xizmatlarni top. Bittasini ham o'tkazib yuborma!\n" +
-                      "2. NOMI: Kirill va lotin harflarini xuddi hujjatdagidek yoz. DIQQAT JIDDIY QOIDA 1: Ba'zan PDF o'qiyotganda bir nechta mahsulot nomlari ketma-ket bitta blok/matn qilib yig'ilib qoladi (masalan: '17 Truba... 18 Tройник... 19...'), lekin ularning miqdori va narxi pastdagi qatorlarda alohida-alohida keladi. Bunday holatda O'SHA YIG'ILIB QOLGAN NOMLARNI bittalab ajratib, pastdagi raqamli qatorlarga (miqdor/narx) ketma-ket to'g'ri moslab ber! Hech qachon bir nechta tovar nomini bitta qatorga tiqib yuborma! DIQQAT JIDDIY QOIDA 2: 'Oldi sotdi', 'O'z.ish.chiq.', 'Import', 'Chetdan keltirilgan' kabi so'zlar MAHSULOT NOMI EMAS! Ular shunchaki kelib chiqish turi. Ularni aslo mahsulot nomi sifatida yozma! Jadvaldan tovarning haqiqiy nomini (masalan, 'Сетка дорожная', 'Профнастил', 'Kabel') izlab top va shuni yoz!\n" +
+                      "2. NOMI: Kirill va lotin harflarini xuddi hujjatdagidek yoz. DIQQAT JIDDIY QOIDA 1: Ba'zan PDF o'qiyotganda bir nechta mahsulot nomlari ketma-ket bitta blok/matn qilib yig'ilib qoladi (masalan: '17 Truba... 18 Tройник... 19...'), lekin ularning miqdori va narxi pastdagi qatorlarda alohida-alohida keladi. Bunday holatda O'SHA YIG'ILIB QOLGAN NOMLARNI bittalab ajratib, pastdagi raqamli qatorlarga (miqdor/narx) ketma-ket to'g'ri moslab ber! DIQQAT JIDDIY QOIDA 2: 'Oldi sotdi', 'O'z.ish.chiq.', 'Import', 'Chetdan keltirilgan' kabi so'zlar MAHSULOT NOMI EMAS! Ularni aslo nomi sifatida yozma! DIQQAT JIDDIY QOIDA 3: Hisob-fakturada ko'pincha 2 xil nom ustuni bo'ladi: 1) 'Махсулот номи (хизматлар)' va 2) '... миллий каталоги буйича...'. Sen 'nomi' maydoniga ALBATTA 1-ustundagi 'Махсулот номи' ni yozishing SHART, u eng asosiysi! 'katalogNomi' maydoniga esa 2-ustundagi katalog kodini yoki nomini yoz! Hech qachon ikkalasini bitta maydonga aralashtirma!\n" +
                       "3. BIRLIGI: 'metr', 'dona', 'kg', 'tonna', 'sht', 'komplekt', 'litr', 'm3', 'kub. m.' kabi so'zlar FAQAT Birlik! Ularni 'nomi' sifatida yozma!\n" +
                       "4. RAQAMLAR: Narx, miqdor va summalarni probelsiz, faqat toza son ko'rinishida yoz (masalan: 1250000.50).\n" +
                       "5. Barcha tovarlar bitta umumlashgan obyektga joylanishi shart. Har bir element quyidagi maydonlarga ega bo'lsin:\n" +
-                      "   fakturaRaqami, kelganSana (dd.mm.yyyy formatida), postavshik (Sotuvchi nomi), postavshikInn (Sotuvchi STIR), postavshikManzil, sotibOluvchiInn (Xaridor STIR), sotibOluvchiManzil, shartnomaRaqami, shartnomaSanasi (dd.mm.yyyy), nomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
+                      "   fakturaRaqami, kelganSana (dd.mm.yyyy formatida), postavshik (Sotuvchi nomi), postavshikInn (Sotuvchi STIR), postavshikManzil, sotibOluvchiInn (Xaridor STIR), sotibOluvchiManzil, shartnomaRaqami, shartnomaSanasi (dd.mm.yyyy), nomi, katalogNomi, birligi, miqdori, narxi, jamiNdsSiz, ndsSummasi, jamiNdsBilan, kategoriya.\n" +
                       "6. MUHIM QO'SHIMCHA: Agar foydalanuvchi hujjatni to'liq emas, faqat jadval qismini rasmga olgan bo'lsa (ya'ni Faktura raqami va Postavshik aniq ko'rinmasa), ularni bo'sh qoldirmasdan 'Noma\\'lum' deb yozib qo'y. Shunda tizim jadvalni xatosiz qabul qiladi.\n" +
                       "7. KATEGORIYA: Armatura, Beton, Sement, G'isht/Blok, Inert (Qum, Sheben), Kabel/Elektrika, Santexnika, Mixanizm, Asbob/Uskuna, Xizmat, Boshqa.\n\n" +
                       "QAYTARISH FORMATI: Sening javobing qat'iy ravishda quyidagi JSON sxemasida bo'lishi shart:\n" +
                       "{\n" +
                       "  \"items\": [\n" +
-                      "    { \"nomi\": \"...\", \"birligi\": \"...\", \"miqdori\": 1.0, \"narxi\": 1000 ... }\n" +
+                      "    { \"nomi\": \"...\", \"katalogNomi\": \"...\", \"birligi\": \"...\", \"miqdori\": 1.0, \"narxi\": 1000 ... }\n" +
                       "  ]\n" +
                       "}\n" +
                       "Boshqa hech qanday izoh yozma!";
@@ -260,6 +266,7 @@ function _parseFakturaVision(blob, fileObj) {
                             sotibOluvchiInn: String(m.sotibOluvchiInn||''),
                             sotibOluvchiManzil: String(m.sotibOluvchiManzil||''),
                             nomi: String(m.nomi||''),
+                            katalogNomi: String(m.katalogNomi||''),
                             birligi: String(m.birligi||'dona'),
                             miqdori: Number(m.miqdori)||0,
                             narxi: Number(m.narxi)||0,

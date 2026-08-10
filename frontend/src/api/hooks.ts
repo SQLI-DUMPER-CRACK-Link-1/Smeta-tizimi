@@ -167,8 +167,13 @@ export function useHolatSaqla(obyekt: string) {
           for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
             const edit = edits.find(e => e.varaq === node.varaq && e.row === node.row);
-            if (edit && edit.fakt !== undefined) {
-              node.fakt = edit.fakt;
+            if (edit) {
+              if (edit.fakt !== undefined) {
+                node.fakt = edit.fakt;
+              }
+              if (edit.oylar) {
+                node.oylar = { ...(node.oylar || {}), ...edit.oylar };
+              }
             }
             if (node.children) {
               updateTree(node.children);
@@ -184,11 +189,7 @@ export function useHolatSaqla(obyekt: string) {
     },
     onError: (_xato, _v, ctx) => {
       qc.setQueryData(['holat', obyekt, false], ctx?.oldingi);
-    },
-    onSettled: () => {
-      // Invalidate but don't block the UI, it will happen in background
-      qc.invalidateQueries({ queryKey: ['holat', obyekt] });
-    },
+    }
   });
 }
 
@@ -367,6 +368,7 @@ export type FakturaItem = {
   sotibOluvchiInn?: string;
   sotibOluvchiManzil?: string;
   nomi: string;
+  katalogNomi?: string;
   birligi: string;
   miqdori: number;
   narxi: number;
@@ -480,6 +482,14 @@ export function useF2Yoz() {
       obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
     }) => gas<{ ok: boolean; fon?: boolean; xabar?: string }>(
       'apiF2QollaNavbatga', obyekt, oyNom, edits, dopps, aktJami),
+  });
+}
+
+/** F2 oyni tozalash (o'chirish) */
+export function useF2OyOchirish() {
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom }: { obyekt: string; oyNom: string }) =>
+      gas<{ ok: boolean; tozalandi?: boolean; xabar?: string }>('apiF2OyOchirish', obyekt, oyNom),
   });
 }
 

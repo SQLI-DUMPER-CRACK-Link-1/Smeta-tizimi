@@ -252,6 +252,40 @@ function aiFetchRaw(model, payload, opts){
     }
     if(vaqtTugadimi()) break;
   }
+  
+  // ⚡ Universal Fallback: Agar Gemini xato bersa va Groq ulangan bo'lsa (Faktura/Vision uchun ham)
+  var groqKey = _groqGwKey();
+  if (opts.fallback !== false && groqKey && !vaqtTugadimi()) {
+    try {
+      var messages = [];
+      if (payload.system_instruction && payload.system_instruction.parts) {
+        messages.push({ role: 'system', content: payload.system_instruction.parts.map(function(p){return p.text}).join('\n') });
+      }
+      if (payload.contents) {
+        payload.contents.forEach(function(c) {
+          var role = (c.role === 'model') ? 'assistant' : 'user';
+          var partsArr = [];
+          var hasImg = false;
+          (c.parts||[]).forEach(function(p) {
+            if (p.text) partsArr.push({ type: 'text', text: p.text });
+            var d = p.inlineData || p.inline_data;
+            if (d) {
+               hasImg = true;
+               partsArr.push({ type: 'image_url', image_url: { url: 'data:' + d.mimeType + ';base64,' + d.data } });
+            }
+          });
+          if (hasImg) messages.push({ role: role, content: partsArr });
+          else messages.push({ role: role, content: partsArr.map(function(x){return x.text}).join('\n') });
+        });
+      }
+      
+      var r = groqFetchRaw('llama-3.2-90b-vision-preview', messages, opts);
+      if (r && r.text) return { code: 200, text: r.text, json: r.json };
+    } catch (gErr) {
+      lastErr += ' | Groq fallback: ' + (gErr.message || gErr);
+    }
+  }
+
   throw new Error('Gemini band/limitda — qayta urinishlar tugadi. Keyinroq urining yoki intervalni oshiring (aiGwSozla). Oxirgi: '+lastErr);
 }
 
@@ -262,6 +296,7 @@ function aiFetchRaw(model, payload, opts){
  * ============================================================== */
 var GROQ_TEXT_MODEL = 'llama-3.3-70b-versatile'; // sifat — tahlil/chat/akt
 var GROQ_FAST_MODEL  = 'llama-3.1-8b-instant';    // tez/ko'p so'rovli (kunlik vazifa va h.k.)
+var GROQ_VISION_MODEL = 'llama-3.2-90b-vision-preview'; // rasm o'qish (Faktura, smeta PDF)
 var GROQ_WHISPER_MODEL = 'whisper-large-v3-turbo';
 
 function groqFetchRaw(model, messages, opts){
@@ -425,11 +460,23 @@ function uniCallText(o, url, key, defaultModel, isAnthropic) {
   if (o.contents && o.contents.length) {
     o.contents.forEach(function(c) {
       var role = (c.role === 'model') ? 'assistant' : 'user';
-      var txt = '';
+      var partsArr = [];
+      var hasImg = false;
       if (c.parts && c.parts.length) {
-        txt = c.parts.filter(function(p){return p && p.text!=null;}).map(function(p){return p.text;}).join('\n');
+        c.parts.forEach(function(p) {
+          if (p.text != null) partsArr.push({ type: 'text', text: String(p.text) });
+          var d = p.inlineData || p.inline_data;
+          if (d && !isAnthropic) {
+            hasImg = true;
+            partsArr.push({ type: 'image_url', image_url: { url: 'data:' + d.mimeType + ';base64,' + d.data } });
+          }
+        });
       }
-      if(txt) messages.push({ role: role, content: txt });
+      if (hasImg) {
+        messages.push({ role: role, content: partsArr });
+      } else if (partsArr.length) {
+        messages.push({ role: role, content: partsArr.map(function(x){return x.text}).join('\n') });
+      }
     });
   } else {
     var userText;
@@ -486,7 +533,8 @@ function aiCall(o){
   }
 
   if(hasInline || o.forceGemini) {
-     order = ['GEMINI']; // inline vision/audio strictly goes to Gemini for now
+     order = ['GEMINI'];
+     if (_uniKey('GROQ')) order.push('GROQ'); // Fallback to Groq Vision
   }
 
   for(var i=0; i<order.length; i++){
@@ -495,7 +543,10 @@ function aiCall(o){
      if(!key) continue;
 
      try {
-       if(prov === 'GROQ') text = uniCallText(o, 'https://api.groq.com/openai/v1/chat/completions', key, GROQ_TEXT_MODEL, false);
+       if(prov === 'GROQ') {
+         var gModel = hasInline ? GROQ_VISION_MODEL : GROQ_TEXT_MODEL;
+         text = uniCallText(o, 'https://api.groq.com/openai/v1/chat/completions', key, gModel, false);
+       }
        else if(prov === 'DEEPSEEK') text = uniCallText(o, 'https://api.deepseek.com/chat/completions', key, 'deepseek-chat', false);
        else if(prov === 'OPENAI') text = uniCallText(o, 'https://api.openai.com/v1/chat/completions', key, 'gpt-4o', false);
        else if(prov === 'ANTHROPIC') text = uniCallText(o, null, key, 'claude-3-5-sonnet-20241022', true);
