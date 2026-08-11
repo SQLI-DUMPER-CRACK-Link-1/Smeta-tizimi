@@ -845,7 +845,8 @@ export function useSessiya() {
     queryKey: ['sessiya'],
     queryFn: async () => {
       const r = await fetch('/api/sessiya');
-      if (!r.ok) throw new Error('Sessiya yo\'q');
+      if (r.status === 401 || r.status === 403) throw new Error("Sessiya yo'q");
+      if (!r.ok) throw new Error('Server xatosi: ' + r.status);
       return r.json() as Promise<{ ok: boolean; rol: string; email: string; yozaOladi: boolean; tugaydi: number }>;
     },
     staleTime: 5 * 60 * 1000,

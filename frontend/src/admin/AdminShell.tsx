@@ -28,11 +28,11 @@ export default function AdminShell() {
   const sess = useSessiya();
 
   useEffect(() => {
-    if (sess.isError) {
+    if (sess.isError && sess.error?.message === "Sessiya yo'q") {
       document.cookie = 'sess=; Max-Age=0; path=/';
       navigate('/');
     }
-  }, [sess.isError, navigate]);
+  }, [sess.isError, sess.error, navigate]);
 
   const handleLogout = () => {
     document.cookie = 'sess=; Max-Age=0; path=/';

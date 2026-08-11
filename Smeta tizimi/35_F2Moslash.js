@@ -134,6 +134,7 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
   var mosliklar = [];
   var sabablar  = {};
   var rzDiag    = [];
+  var takliflar = {};
 
   /* Tezlik: klientda `.some()` bilan O(n) qidirilardi. 10 000 LRV qatori ×
    * 2 000 akt tuguni = 20 mln solishtiruv → GAS'da daqiqalar. Set bilan O(1).
@@ -155,10 +156,7 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
   /* --- 2.1 Lokalka aniqlash (ko'p smetali obyekt) --- */
   var lok = (opts.lokalka && opts.lokalka !== 'AVTO') ? opts.lokalka : '';
   var lokAuto = false;
-  if (!lok){
-    var det = _f2mLokalkaAniqla(aktTree, lrvTree);
-    if (det.best && det.ball >= 5){ lok = det.best; lokAuto = true; }
-  }
+  // REMOVED: Tizim avtomatik lokalka tanlamaydi, global qidiruv uchun barchasi ochiq qoladi.
 
   /* --- 2.2 Global indekslar (lokalka cheklovi bilan) --- */
   var byKod = {}, byNomBir = {}, byKanon = {};
@@ -257,7 +255,7 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
     var ok = cands.filter(function(c){ return c.type !== 'rz'; });
     if (!ok.length) return null;
     if (ok.length === 1) return smetaTaken(ok[0].varaq, ok[0].row) ? null : ok[0];
-    return _ekvivmi(ok) ? _birinchiBosh(ok) : null;
+    return _birinchiBosh(ok); // Yanada kuchaytirildi: bir xil qatorlar orasidan birinchisini olish
   }
   /* QAT'IY: faqat AYNAN bitta nomzod. Ekvivalent-qisqartma ham, fuzzy ham yo'q.
    * Generic resurs (000001 = ЗАТРАТЫ ТРУДА) 153 joyda bir xil — aralashmasin. */
@@ -372,9 +370,9 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
       }
       if (sMatch) viaScope = true;
     }
-    if (!qatiy && !sMatch && fk)   sMatch = findUnique((byKod[fk] || []).filter(leafFilter));
-    if (!qatiy && !sMatch && fkan) sMatch = findUnique((byKanon[fkan] || []).filter(leafFilter));
-    if (!qatiy && !sMatch)         sMatch = findUnique((byNomBir[nb] || []).filter(leafFilter));
+    if (!qatiy && !sMatch && fk)   sMatch = pickUnique((byKod[fk] || []).filter(leafFilter));
+    if (!qatiy && !sMatch && fkan) sMatch = pickUnique((byKanon[fkan] || []).filter(leafFilter));
+    if (!qatiy && !sMatch)         sMatch = pickUnique((byNomBir[nb] || []).filter(leafFilter));
 
     if (sMatch && !_birMos(fNode.bir, sMatch.birlik)){
       st.otkazib++; st.birlikBlok++;
@@ -389,7 +387,24 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
       return;
     }
     if (sMatch){ qoshMoslik(fNode, sMatch); st.moslashti++; if (viaScope) st.scopeHit++; }
-    else { st.otkazib++; sababYoz(fNode.uid, fk, nb); }
+    else { st.otkazib++; sababYoz(fNode.uid, fk, nb);
+      var ts = [];
+      if (scope && fk) ts.push.apply(ts, (scope.byKod[fk] || []).filter(leafFilter));
+      if (scope && fkan) ts.push.apply(ts, ((scope.byKanon || {})[fkan] || []).filter(leafFilter));
+      if (scope) ts.push.apply(ts, (scope.byNomBir[nb] || []).filter(leafFilter));
+      if (!qatiy && fk) ts.push.apply(ts, (byKod[fk] || []).filter(leafFilter));
+      if (!qatiy && fkan) ts.push.apply(ts, (byKanon[fkan] || []).filter(leafFilter));
+      if (!qatiy) ts.push.apply(ts, (byNomBir[nb] || []).filter(leafFilter));
+      var uniq = [], map = {};
+      for(var i=0; i<ts.length; i++) {
+        var c = ts[i];
+        if(!smetaTaken(c.varaq, c.row)) {
+          var k = c.varaq+'#'+c.row;
+          if(!map[k]) { map[k]=1; uniq.push(c); }
+        }
+      }
+      if(uniq.length>0) takliflar[fNode.uid] = uniq;
+}
   }
 
   /* --- 2.7 ISH (bl) + bolalari --- */
@@ -407,8 +422,8 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
       if (sMatch) viaScope = true;
       if (!qatiy && !sMatch && scope.all){ sMatch = pickFuzzy(scope.all, fBl); if (sMatch){ viaScope = true; viaFuzzy = true; } }
     }
-    if (!qatiy && !sMatch) sMatch = findUnique(byKod[kK]);
-    if (!qatiy && !sMatch && kanBl){ sMatch = findUnique(byKanon[kanBl]); if (sMatch) viaKanon = true; }
+    if (!qatiy && !sMatch) sMatch = pickUnique(byKod[kK]);
+    if (!qatiy && !sMatch && kanBl){ sMatch = pickUnique(byKanon[kanBl]); if (sMatch) viaKanon = true; }
 
     if (sMatch && !_birMos(fBl.bir, sMatch.birlik)){
       st.otkazib++; st.birlikBlok++;
@@ -417,7 +432,7 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
       return;
     }
     if (!sMatch){
-      sMatch = findUnique((byNomBir[nbBl] || []).filter(function(c){
+      sMatch = pickUnique((byNomBir[nbBl] || []).filter(function(c){
         // LRVda ish noto'g'ri 'mat' bo'lib saqlangan bo'lishi mumkin — rz dan boshqasi o'tadi
         return !!(c && _f2mAynanMi(fBl.kod, fBl.nom, fBl.bir, c.kod, c.nom, c.birlik)) && c.type !== 'rz';
       }));
@@ -427,6 +442,24 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
      * ostidagi 824 resurs = 2.57 MLRD moslashtirishga umuman kirmagan edi.) */
     if (!sMatch || sMatch.type === 'rz'){
       st.otkazib++; sababYoz(fBl.uid, kK, nbBl);
+
+      var ts = [];
+      if (scope && kK) ts.push.apply(ts, (scope.byKod[kK] || []).filter(leafFilter));
+      if (scope && kKan) ts.push.apply(ts, ((scope.byKanon || {})[kKan] || []).filter(leafFilter));
+      if (scope) ts.push.apply(ts, (scope.byNomBir[nbBl] || []).filter(leafFilter));
+      if (!qatiy && kK) ts.push.apply(ts, (byKod[kK] || []).filter(leafFilter));
+      if (!qatiy && kKan) ts.push.apply(ts, (byKanon[kKan] || []).filter(leafFilter));
+      if (!qatiy) ts.push.apply(ts, (byNomBir[nbBl] || []).filter(leafFilter));
+      var uniq = [], map = {};
+      for(var i=0; i<ts.length; i++) {
+        var c = ts[i];
+        if(!smetaTaken(c.varaq, c.row)) {
+          var k = c.varaq+'#'+c.row;
+          if(!map[k]) { map[k]=1; uniq.push(c); }
+        }
+      }
+      if(uniq.length>0) takliflar[fBl.uid] = uniq;
+
       (fBl.children || []).forEach(function(fRs){
         if (fRs.type !== 'rs' && fRs.type !== 'mat' && fRs.type !== 'ob') return;
         if (alreadyMapped(fRs.uid)) return;
@@ -506,7 +539,7 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
   st.rzMos   = rzDiag.filter(function(d){ return d.ok; }).length;
   st.rzJami  = rzDiag.length;
 
-  return {mosliklar: mosliklar, sabablar: sabablar, rzDiag: rzDiag, stat: st};
+  return {mosliklar: mosliklar, sabablar: sabablar, rzDiag: rzDiag, stat: st, takliflar: takliflar};
 }
 
 /* Akt qaysi lokalkaga tegishli: razdel nomi +5 ball, ish kodi +1 ball. */

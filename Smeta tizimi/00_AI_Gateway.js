@@ -245,10 +245,12 @@ function aiFetchRaw(model, payload, opts){
       var qaytarsa = (code===429 || code===500 || code===503 ||
                      /overload|unavailable|exhaust|rate limit|quota|try again|resource has been/i.test(em));
       if(qaytarsa){
+        var isQuota = code===429 || /quota|exhaust|resource has been/i.test(em);
+        if (isQuota && _groqGwKey() && opts.fallback !== false) break; // Uzoq kutmasdan Groq ga o'tish
         if(i<maxRetry-1 && !vaqtTugadimi()){ Utilities.sleep(_aiBackoff(json,i)); continue; }
         break;
       }
-      throw new Error('Gemini ('+code+'): '+em);
+      break; // Throw qilib to'xtatmaymiz, fallback ishlashi uchun break
     }
     if(vaqtTugadimi()) break;
   }

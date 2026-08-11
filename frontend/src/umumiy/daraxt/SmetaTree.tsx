@@ -138,18 +138,19 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                 style={{
                   height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start}px)`,
+                  cursor: (row.hasChildren || (isEditMode && (node.type === 'bl' || node.type === 'rs'))) ? 'pointer' : 'default'
+                }}
+                onClick={() => {
+                  if (row.hasChildren) toggleExpand(key);
+                  if ((node.type === 'bl' || node.type === 'rs') && isEditMode) {
+                    setExpandedDetailId(prev => prev === key ? null : key);
+                  }
                 }}
               >
                 {/* Fixed Indent Guide lines would go here based on row.depth */}
                 <div 
                   className="flex items-center h-9 px-4 flex-1 min-w-0"
-                  style={{ paddingLeft: `${row.depth * 24 + 16}px`, cursor: row.hasChildren ? 'pointer' : 'default' }}
-                  onClick={() => {
-                    if (row.hasChildren && !isEditMode) toggleExpand(key);
-                    if ((node.type === 'bl' || node.type === 'rs') && isEditMode) {
-                      setExpandedDetailId(prev => prev === key ? null : key);
-                    }
-                  }}
+                  style={{ paddingLeft: `${row.depth * 24 + 16}px` }}
                 >
                   <div className="flex items-center gap-2 w-full">
                     {/* Expand/Collapse Chevron */}
@@ -193,6 +194,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                         type="text"
                         value={currentFakt}
                         placeholder="Fakt"
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
                           const val = Number(e.target.value.replace(/,/g, '.'));
                           if (isNaN(val)) return;

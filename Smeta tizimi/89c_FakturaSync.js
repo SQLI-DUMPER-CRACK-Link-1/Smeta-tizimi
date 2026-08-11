@@ -68,7 +68,7 @@ function apiFakturaAvtoSinx() {
   }
   _deepScan(yangiPap);
 
-  var limit = 20; // Har safar max 20 ta faylni ishlaymiz (Google 6 minutlik limitiga sig'ish uchun)
+  var limit = 20; // Har safar max 20 ta faylni ishlaymiz
   var count = 0;
   
   var existingData = apiFakturalarOl().fakturalar || [];
@@ -81,65 +81,76 @@ function apiFakturaAvtoSinx() {
   }
 
   var yangiKiritmalar = [];
+  var batchSize = 5; // Fayllarni 5 tadan jamlab yuboramiz (API limitni tejash uchun)
 
   while (count < hammaFayllar.length && count < limit) {
-    var file = hammaFayllar[count];
-    count++;
-    
-    // 1. To'g'ridan-to'g'ri PDF faylni (blob) Gemini Vision ga beramiz. Matnga o'girmaymiz.
+    var batch = [];
+    while (batch.length < batchSize && count < hammaFayllar.length && count < limit) {
+      batch.push({
+         id: "F" + count,
+         file: hammaFayllar[count],
+         blob: hammaFammaFayllar_getBlobSafe(hammaFayllar[count])
+      });
+      count++;
+    }
+    if (batch.length === 0) break;
+
     try {
-      var blob = file.getBlob();
-      var parsed = _parseFakturaVision(blob, file);
+      var parsedBatch = _parseFakturaVisionBatch(batch);
       
-      if(parsed.items.length === 0 || !parsed.items[0].nomi){
-          // Agar jadval topilmasa
-          file.moveTo(xatoPap);
-          continue;
-      }
+      // Endi har bir faylni o'ziga tegishli papkaga jildiramiz
+      for (var b = 0; b < batch.length; b++) {
+         var fb = batch[b];
+         var fileItems = parsedBatch.filter(function(x) { return x.docId === fb.id; });
+         
+         if (fileItems.length === 0 || !fileItems[0].nomi) {
+             fb.file.moveTo(xatoPap);
+             continue;
+         }
 
-      // Dublikat tekshirish
-      var isDup = false;
-      for(var i=0; i<parsed.items.length; i++){
-         var it = parsed.items[i];
-         if(it.fakturaRaqami && it.postavshik){
-             if(existingMap[it.fakturaRaqami + '@@' + it.postavshik]){
-                 isDup = true;
-                 break;
+         var isDup = false;
+         for(var i=0; i<fileItems.length; i++){
+            var it = fileItems[i];
+            if(it.fakturaRaqami && it.postavshik){
+                if(existingMap[it.fakturaRaqami + '@@' + it.postavshik]){
+                    isDup = true;
+                    break;
+                }
+            }
+         }
+
+         if (isDup) {
+             fb.file.moveTo(dubPap);
+         } else {
+             var fpos = "Noma_lum";
+             if(fileItems.length > 0) fpos = String(fileItems[0].postavshik || "Noma'lum").replace(/[<>:"\/\\|?*]/g, '_').trim();
+             if(!fpos) fpos = "Noma_lum";
+             
+             var posPap = getOrCreateFolder(arxivPap, fpos);
+             
+             for(var j=0; j<fileItems.length; j++){
+                 var itm = fileItems[j];
+                 itm.faylUrl = fb.file.getUrl();
+                 delete itm.docId; // o'chiramiz
+                 yangiKiritmalar.push(itm);
+                 existingMap[itm.fakturaRaqami + '@@' + itm.postavshik] = true; 
              }
+             fb.file.moveTo(posPap);
          }
-      }
-
-      if(isDup){
-         file.moveTo(dubPap);
-      } else {
-         // Yaroqli tovarlarni qo'shish
-         var fpos = "Noma_lum";
-         if(parsed.items.length > 0) fpos = String(parsed.items[0].postavshik || "Noma'lum").replace(/[<>:"\/\\|?*]/g, '_').trim();
-         if(!fpos) fpos = "Noma_lum";
-         
-         var posPap = getOrCreateFolder(arxivPap, fpos);
-         
-         for(var j=0; j<parsed.items.length; j++){
-             var itm = parsed.items[j];
-             itm.faylUrl = file.getUrl();
-             yangiKiritmalar.push(itm);
-             // cache for next files in the same batch
-             existingMap[itm.fakturaRaqami + '@@' + itm.postavshik] = true; 
-         }
-         file.moveTo(posPap);
       }
     } catch(err) {
       var msg = err.toString().toLowerCase();
       if(msg.indexOf('429') > -1 || msg.indexOf('quota') > -1 || msg.indexOf('too many requests') > -1 || msg.indexOf('limit') > -1) {
           Logger.log("API limit tushdi, to'xtatamiz.");
-          // Faylni xatoga o'tkazmaymiz, joyida qoladi, keyingi tsiklda yana urinib ko'riladi.
-          break;
+          break; // Keyingi triggerda davom etadi
       }
       Logger.log("Xato: " + err.toString());
-      try {
-         xatoPap.createFile(file.getName() + "_CRASH.txt", "=== XATO ===\n" + err.toString());
-      } catch(e){}
-      file.moveTo(xatoPap);
+      for (var k = 0; k < batch.length; k++) {
+         try {
+           xatoPap.createFile(batch[k].file.getName() + "_CRASH.txt", "=== XATO ===\n" + err.toString());
+         } catch(e){}
+         batch[k].file.moveTo(xatoPap);
+      }
     }
   }
 

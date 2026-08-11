@@ -224,6 +224,37 @@ export function Holat() {
   }, [holatData?.tree]);
   const { jami, oylar } = holatData || {};
 
+  const catStats = useMemo(() => {
+    const s = {
+      chel: { stFakt: 0, stF2: 0 },
+      mash: { stFakt: 0, stF2: 0 },
+      mat: { stFakt: 0, stF2: 0 },
+      ob: { stFakt: 0, stF2: 0 },
+    };
+    if (!holatData?.tree) return s;
+    const traverse = (nodes: any[]) => {
+      nodes.forEach(n => {
+        if (n.children && n.children.length > 0) {
+          traverse(n.children);
+        } else {
+          if (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') {
+            let cat = 'chel';
+            const rkat = (n.kat || '').toUpperCase();
+            if (n.type === 'ob' || rkat.includes('ОБ') || rkat.includes('OB')) cat = 'ob';
+            else if (n.type === 'mat' || rkat.includes('МАТ') || rkat.includes('MAT')) cat = 'mat';
+            else if (rkat.includes('МАШ') || rkat.includes('MASH')) cat = 'mash';
+            else if (rkat.includes('ЧЕЛ') || rkat.includes('CHEL')) cat = 'chel';
+            
+            s[cat as keyof typeof s].stFakt += (n.stFakt || ((n.fakt || 0) * (n.narx || 0)));
+            s[cat as keyof typeof s].stF2 += (n.stF2 || 0);
+          }
+        }
+      });
+    };
+    traverse(holatData.tree);
+    return s;
+  }, [holatData?.tree]);
+
   const evm = useMemo(() => {
     if (!stats) return { pv: 0, ev: 0, ac: 0, spi: 0, cpi: 0 };
     const pv = stats.smeta || 1;
@@ -336,15 +367,21 @@ export function Holat() {
                           { lbl: 'MATERIALY (mat)', v: 'mat' },
                           { lbl: 'OBORUDOVANIE (ob)', v: 'ob' },
                           { lbl: 'ITOGO PRYAMYE ZATRATY (Jami)', v: 'stSm' }
-                        ].map((row, i) => (
-                          <tr key={i} className={i === 4 ? 'font-bold text-white' : ''}>
-                            <td className="py-2">{row.lbl}</td>
-                            <td className="py-2 text-right text-blue-400"><FmtN val={(jami as any)[row.v]} /></td>
-                            <td className="py-2 text-right text-emerald-400"><FmtN val={i === 4 ? jami.stFk : 0} /></td>
-                            <td className="py-2 text-right text-purple-400"><FmtN val={i === 4 ? jami.stF2 : 0} /></td>
-                            <td className="py-2 text-right text-amber-400"><FmtN val={i === 4 ? ((jami.stSm || 0) - (jami.stFk || 0)) : 0} /></td>
-                          </tr>
-                        ))}
+                        ].map((row, i) => {
+                          const sm = i === 4 ? (jami.stSm || 0) : (jami as any)[row.v] || 0;
+                          const fk = i === 4 ? (jami.stFk || 0) : catStats[row.v as keyof typeof catStats]?.stFakt || 0;
+                          const f2 = i === 4 ? (jami.stF2 || 0) : catStats[row.v as keyof typeof catStats]?.stF2 || 0;
+                          const qol = Math.max(0, sm - fk);
+                          return (
+                            <tr key={i} className={i === 4 ? 'font-bold text-white' : ''}>
+                              <td className="py-2">{row.lbl}</td>
+                              <td className="py-2 text-right text-blue-400"><FmtN val={sm} /></td>
+                              <td className="py-2 text-right text-emerald-400"><FmtN val={fk} /></td>
+                              <td className="py-2 text-right text-purple-400"><FmtN val={f2} /></td>
+                              <td className="py-2 text-right text-amber-400"><FmtN val={qol} /></td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

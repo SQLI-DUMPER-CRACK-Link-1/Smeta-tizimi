@@ -814,9 +814,9 @@ export function F2Import() {
   /* ---------- 2. Moslashtirish ---------- */
   async function moslashtir() {
     if (!aktTree) return;
-    try {
-      const r = await moslash.mutateAsync({ aktTree, obyekt, lokalka, qatiy: true });
-      setNatija(r);
+      try {
+        const r = await moslash.mutateAsync({ aktTree, obyekt, lokalka, qatiy: false });
+        setNatija(r);
     } catch (e: any) { toast(`Moslashtirishda xato: ${e.message}`); }
   }
 

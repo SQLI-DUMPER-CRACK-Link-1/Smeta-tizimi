@@ -418,9 +418,9 @@ export function Fakturalar() {
     { kalit: 'fakturaRaqami', nom: 'Faktura №', en: '110px', chiz: (m) => <span className="text-accent text-[13px] font-medium">{m.fakturaRaqami}</span> },
     { kalit: 'postavshik', nom: 'Postavshik', en: '200px', chiz: (m) => <span className="text-text truncate text-[13px] max-w-[200px] block" title={m.postavshik}>{m.postavshik}</span> },
     { kalit: 'postavshikInn', nom: 'Y. STIR', en: '100px', chiz: (m) => <span className="text-text-dim text-[12px]">{m.postavshikInn}</span> },
-    { kalit: 'nomi', nom: 'Maxsulot nomi', en: '380px', chiz: (m) => (
+    { kalit: 'nomi', nom: 'Maxsulot nomi', en: '250px', chiz: (m) => (
       <div className="flex items-center justify-between gap-2">
-        <span className="text-text font-medium text-[13px] truncate max-w-[340px] block" title={m.nomi}>{m.nomi}</span>
+        <span className="text-text font-medium text-[13px] truncate max-w-[210px] block" title={m.nomi}>{m.nomi}</span>
         {m.faylUrl && (
            <div title="Asl hujjatni ko'rish" className="cursor-pointer" onClick={(e) => { e.stopPropagation(); window.open(m.faylUrl, '_blank'); }}>
               <FileText size={14} className="text-accent shrink-0 opacity-50 hover:opacity-100" />
@@ -428,6 +428,7 @@ export function Fakturalar() {
         )}
       </div>
     ) },
+    { kalit: 'katalogNomi', nom: 'Katalog nomi', en: '200px', chiz: (m) => <span className="text-text-dim text-[11px] truncate max-w-[190px] block" title={m.katalogNomi}>{m.katalogNomi}</span> },
     { kalit: 'kategoriya', nom: 'Kategoriya', en: '120px', chiz: (m) => <span className="inline-block px-2 py-1 bg-white/5 border border-border text-text-dim rounded-md text-[11px]">{m.kategoriya || 'Boshqa'}</span> },
     { kalit: 'birligi', nom: 'Birlik', en: '80px', chiz: (m) => <span className="text-text-dim text-[13px]">{m.birligi}</span> },
     { kalit: 'miqdori', nom: 'Miqdor', raqam: true, en: '100px', chiz: (m) => <FmtN val={m.miqdori} /> },

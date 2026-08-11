@@ -175,6 +175,7 @@ export type F2Moslik = {
 export type F2MoslashNatija = {
   mosliklar: F2Moslik[];
   sabablar: Record<string, string>;
+  takliflar?: Record<string, any[]>;
   rzDiag: { nom: string; ok: boolean }[];
   stat: {
     moslashti: number; otkazib: number; scopeHit: number; fuzzyHit: number;
