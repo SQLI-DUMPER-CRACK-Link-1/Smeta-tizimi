@@ -235,37 +235,29 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
 
   function _ekvivmi(cands){
     if (cands.length < 2) return true;
-    function key(c){
-      return _f2mNormKod(c.kod) + '||' + _f2mNormNom(c.nom) + '||' +
-             _f2mNormBir(c.birlik) + '||' + (Number(c.narx) || 0);
-    }
+    function key(c){ return _f2mNormKod(c.kod) + '||' + _f2mNormNom(c.nom) + '||' + _f2mNormBir(c.birlik) + '||' + (Number(c.narx)||0); }
     var k0 = key(cands[0]);
     for (var i = 1; i < cands.length; i++) if (key(cands[i]) !== k0) return false;
     return true;
   }
-  function _birinchiBosh(cands, fHajm){
-    if (fHajm !== undefined) {
-       for (var i = 0; i < cands.length; i++) {
-         if (!smetaTaken(cands[i].varaq, cands[i].row) && Math.abs((cands[i].hajm||0) - fHajm) < 0.0001) return cands[i];
-       }
-    }
+  function _birinchiBosh(cands){
     for (var i = 0; i < cands.length; i++) if (!smetaTaken(cands[i].varaq, cands[i].row)) return cands[i];
     return null;
   }
 
-  /* Global unikallik. ⚠️ «band bo'lmaganlar orasida bitta qolsa» QOIDASI
-   * XATO edi — bandlik TARTIBIGA bog'liq tasodif. Faqat boshidanoq bitta. */
-  function findUnique(cands, fHajm){
+  /* Global unikallik. ?? <band bo'lmaganlar orasida bitta qolsa> QOIDASI XATO EDI.
+   * Endi: faqat aniq BITTA nomzod (yoki barcha nomzodlar ekvivalent). */
+  function findUnique(cands){
     if (!cands || !cands.length) return null;
     if (cands.length === 1) return !smetaTaken(cands[0].varaq, cands[0].row) ? cands[0] : null;
-    return _ekvivmi(cands) ? _birinchiBosh(cands, fHajm) : null;
+    return _ekvivmi(cands) ? _birinchiBosh(cands) : null;
   }
-  function pickUnique(cands, fHajm){
+  function pickUnique(cands){
     if (!cands || !cands.length) return null;
     var ok = cands.filter(function(c){ return c.type !== 'rz'; });
     if (!ok.length) return null;
     if (ok.length === 1) return smetaTaken(ok[0].varaq, ok[0].row) ? null : ok[0];
-    return _ekvivmi(ok) ? _birinchiBosh(ok, fHajm) : null;
+    return _ekvivmi(ok) ? _birinchiBosh(ok) : null;
   }
   /* QAT'IY: faqat AYNAN bitta nomzod. Ekvivalent-qisqartma ham, fuzzy ham yo'q.
    * Generic resurs (000001 = ЗАТРАТЫ ТРУДА) 153 joyda bir xil — aralashmasin. */
@@ -370,9 +362,9 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
     var sMatch = null, viaScope = false;
 
     if (scope){
-      sMatch = fk ? pickUnique((scope.byKod[fk] || []).filter(leafFilter), fNode.hajm) : null;
-      if (!sMatch && fkan) sMatch = pickUnique(((scope.byKanon || {})[fkan] || []).filter(leafFilter), fNode.hajm);
-      if (!sMatch) sMatch = pickUnique((scope.byNomBir[nb] || []).filter(leafFilter), fNode.hajm);
+      sMatch = fk ? pickUnique((scope.byKod[fk] || []).filter(leafFilter)) : null;
+      if (!sMatch && fkan) sMatch = pickUnique(((scope.byKanon || {})[fkan] || []).filter(leafFilter));
+      if (!sMatch) sMatch = pickUnique((scope.byNomBir[nb] || []).filter(leafFilter));
       // QAT'IY rejimda fuzzy ISHLAMAYDI (aralashtirish xavfi)
       if (!qatiy && !sMatch && scope.all){
         sMatch = pickFuzzy(scope.all.filter(leafFilter), fNode);
@@ -380,9 +372,9 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
       }
       if (sMatch) viaScope = true;
     }
-    if (!qatiy && !sMatch && fk)   sMatch = findUnique((byKod[fk] || []).filter(leafFilter), fNode.hajm);
-    if (!qatiy && !sMatch && fkan) sMatch = findUnique((byKanon[fkan] || []).filter(leafFilter), fNode.hajm);
-    if (!qatiy && !sMatch)         sMatch = findUnique((byNomBir[nb] || []).filter(leafFilter), fNode.hajm);
+    if (!qatiy && !sMatch && fk)   sMatch = findUnique((byKod[fk] || []).filter(leafFilter));
+    if (!qatiy && !sMatch && fkan) sMatch = findUnique((byKanon[fkan] || []).filter(leafFilter));
+    if (!qatiy && !sMatch)         sMatch = findUnique((byNomBir[nb] || []).filter(leafFilter));
 
     if (sMatch && !_birMos(fNode.bir, sMatch.birlik)){
       st.otkazib++; st.birlikBlok++;
@@ -409,14 +401,14 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
     var sMatch = null, viaScope = false, viaFuzzy = false, viaKanon = false;
 
     if (scope){
-      sMatch = kK ? pickUnique(scope.byKod[kK], fBl.hajm) : null;
-      if (!sMatch && kanBl){ sMatch = pickUnique((scope.byKanon || {})[kanBl], fBl.hajm); if (sMatch) viaKanon = true; }
-      if (!sMatch) sMatch = pickUnique(scope.byNomBir[nbBl], fBl.hajm);
+      sMatch = kK ? pickUnique(scope.byKod[kK]) : null;
+      if (!sMatch && kanBl){ sMatch = pickUnique((scope.byKanon || {})[kanBl]); if (sMatch) viaKanon = true; }
+      if (!sMatch) sMatch = pickUnique(scope.byNomBir[nbBl]);
       if (sMatch) viaScope = true;
       if (!qatiy && !sMatch && scope.all){ sMatch = pickFuzzy(scope.all, fBl); if (sMatch){ viaScope = true; viaFuzzy = true; } }
     }
-    if (!qatiy && !sMatch) sMatch = findUnique(byKod[kK], fBl.hajm);
-    if (!qatiy && !sMatch && kanBl){ sMatch = findUnique(byKanon[kanBl], fBl.hajm); if (sMatch) viaKanon = true; }
+    if (!qatiy && !sMatch) sMatch = findUnique(byKod[kK]);
+    if (!qatiy && !sMatch && kanBl){ sMatch = findUnique(byKanon[kanBl]); if (sMatch) viaKanon = true; }
 
     if (sMatch && !_birMos(fBl.bir, sMatch.birlik)){
       st.otkazib++; st.birlikBlok++;
