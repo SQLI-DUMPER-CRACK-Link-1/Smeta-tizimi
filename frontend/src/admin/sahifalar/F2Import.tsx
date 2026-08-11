@@ -144,6 +144,20 @@ export function F2Import() {
   const lrv = useHolat(obyekt);
   const useF2OyOchirishHook = useF2OyOchirish();
 
+  // Umumiy obyektdagi Smeta va Oldingi F2 ni hisoblash
+  const { umumiySmeta, umumiyOldingiF2 } = useMemo(() => {
+    let smeta = 0;
+    let oldingiF2 = 0;
+    if (lrv.data?.tree) {
+      const b = barglar(lrv.data.tree as unknown as any[]);
+      b.forEach(n => {
+        smeta += Number((n as any).smeta || 0);
+        oldingiF2 += Number((n as any).stF2 || 0);
+      });
+    }
+    return { umumiySmeta: smeta, umumiyOldingiF2: oldingiF2 };
+  }, [lrv.data?.tree]);
+
   const obNomlari = useMemo(
     () => Array.from(new Set((obyektlar.data ?? []).map((o) => o.obyekt.split(' - ')[0]))),
     [obyektlar.data],
@@ -1085,6 +1099,23 @@ export function F2Import() {
                 <ShieldAlert size={16} className="text-text-dim" />
                 <h3 className="font-medium text-sm">F2 Tarixi va Nazorat</h3>
               </div>
+
+              {!lrv.isLoading && (
+                <div className="mb-4 space-y-1 p-2 rounded bg-white/5 text-[12px] border border-white/10">
+                  <div className="flex justify-between">
+                    <span className="text-text-mute">Smeta jami:</span>
+                    <span className="font-medium text-white"><FmtN val={umumiySmeta} /> so'm</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-mute">O'tgan F2 lar (Jami):</span>
+                    <span className="font-medium text-blue-300"><FmtN val={umumiyOldingiF2} /> so'm</span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/10 pt-1 mt-1">
+                    <span className="text-text-mute">Smeta qoldiq:</span>
+                    <span className="font-medium text-amber-300"><FmtN val={umumiySmeta - umumiyOldingiF2} /> so'm</span>
+                  </div>
+                </div>
+              )}
               
               {lrv.isLoading ? (
                 <div className="space-y-2">
@@ -1097,10 +1128,11 @@ export function F2Import() {
                 <div className="space-y-2">
                   {lrv.data.oylar.map((oy) => {
                     let oySum = 0;
-                    const barglarTugun = barglar(lrv.data?.tree as unknown as AktNode[] || []);
+                    const barglarTugun = barglar(lrv.data?.tree as unknown as any[] || []);
                     barglarTugun.forEach(n => {
-                      const val = (n as any).oylar?.[oy] || (n as any).stF2?.[oy] || 0;
-                      if (val && n.narx) oySum += val * n.narx;
+                      const v = Number((n as any).oylar?.[oy] || (n as any).stF2?.[oy] || 0);
+                      const p = Number(n.narx || 0);
+                      oySum += v * p;
                     });
                     
                     return (
@@ -1206,7 +1238,10 @@ export function F2Import() {
           {/* CONSTANTA nazorati */}
           {natija && <div className={`karta p-5 ${constOk ? '' : 'border-danger/40'}`}>
             <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim mb-3">Solishtiruv</h4>
-            <Juft nom="Akt jami" qiymat={<FmtN val={aktJami} />} />
+            <Juft nom="Smeta jami (Barcha)" qiymat={<FmtN val={umumiySmeta} />} />
+              <Juft nom="O'tgan F2 jami (Barcha)" qiymat={<span className="text-blue-300"><FmtN val={umumiyOldingiF2} /></span>} />
+              <div className="w-full h-[1px] bg-border my-1" />
+              <Juft nom="Hozirgi import (Yangi F2)" qiymat={<span className="text-emerald-400 font-bold"><FmtN val={aktJami} /></span>} />
             <Juft
               nom="Bog'langan"
               qiymat={
