@@ -444,12 +444,13 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
       st.otkazib++; sababYoz(fBl.uid, kK, nbBl);
 
       var ts = [];
-      if (scope && kK) ts.push.apply(ts, (scope.byKod[kK] || []).filter(leafFilter));
-      if (scope && kKan) ts.push.apply(ts, ((scope.byKanon || {})[kKan] || []).filter(leafFilter));
-      if (scope) ts.push.apply(ts, (scope.byNomBir[nbBl] || []).filter(leafFilter));
-      if (!qatiy && kK) ts.push.apply(ts, (byKod[kK] || []).filter(leafFilter));
-      if (!qatiy && kKan) ts.push.apply(ts, (byKanon[kKan] || []).filter(leafFilter));
-      if (!qatiy) ts.push.apply(ts, (byNomBir[nbBl] || []).filter(leafFilter));
+      function blFilter(c){ return c.type !== 'rz'; }
+      if (scope && kK) ts.push.apply(ts, (scope.byKod[kK] || []).filter(blFilter));
+      if (scope && kanBl) ts.push.apply(ts, ((scope.byKanon || {})[kanBl] || []).filter(blFilter));
+      if (scope) ts.push.apply(ts, (scope.byNomBir[nbBl] || []).filter(blFilter));
+      if (!qatiy && kK) ts.push.apply(ts, (byKod[kK] || []).filter(blFilter));
+      if (!qatiy && kanBl) ts.push.apply(ts, (byKanon[kanBl] || []).filter(blFilter));
+      if (!qatiy) ts.push.apply(ts, (byNomBir[nbBl] || []).filter(blFilter));
       var uniq = [], map = {};
       for(var i=0; i<ts.length; i++) {
         var c = ts[i];
@@ -810,3 +811,4 @@ function apiF2NolDiagnostika(obyekt){
     return out;
   }
 }
+// trigger sync

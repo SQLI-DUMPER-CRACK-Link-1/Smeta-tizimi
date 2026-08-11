@@ -11,12 +11,39 @@ export async function gas<T>(fn: string, ...args: unknown[]): Promise<T> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fn, args }),
     });
-    
-    if (!r.ok && r.status >= 500) {
-      throw new Error(`Server xatosi: ${r.status}`);
+
+    let j: any = null;
+    let raw = '';
+
+    if (typeof (r as any).text === 'function') {
+      raw = await r.text();
+      if (raw) {
+        try {
+          j = JSON.parse(raw);
+        } catch {
+          j = null;
+        }
+      }
+    } else if (typeof (r as any).json === 'function') {
+      try {
+        j = await r.json();
+      } catch {
+        j = null;
+      }
     }
 
-    const j = await r.json();
+    if (!r.ok) {
+      const msg =
+        j?.error ||
+        j?.message ||
+        (typeof raw === 'string' && raw.trim() ? raw.trim().slice(0, 300) : '') ||
+        `Server xatosi: ${r.status}`;
+      throw new Error(msg);
+    }
+
+    if (!j) {
+      throw new Error('GAS javobi JSON emas');
+    }
     if (!j.ok) throw new Error(j.error || 'GAS xato');
     
     if (degradatsiyaDarajasi > 0) {

@@ -231,8 +231,15 @@ export function useShartnomaDashboard() {
 }
 
 export function useShartnomaSaqla() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => gas<any>('apiShartnomaSaqla', data)
+    mutationFn: (data: any) => gas<any>('apiShartnomaSaqla', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shartnomalar'] });
+      qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
+      qc.invalidateQueries({ queryKey: ['buxDash'] });
+      qc.invalidateQueries({ queryKey: ['bossData'] });
+    },
   });
 }
 
@@ -244,27 +251,51 @@ export function useFakturaSinxFonda() {
 }
 
 export function useShartnomaOchir() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (no: string) => gas<any>('apiShartnomaOchir', no)
+    mutationFn: (no: string) => gas<any>('apiShartnomaOchir', no),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shartnomalar'] });
+      qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
+      qc.invalidateQueries({ queryKey: ['buxDash'] });
+      qc.invalidateQueries({ queryKey: ['bossData'] });
+    },
   });
 }
 
 export function useShartnomaBogSaqla() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ obyekt, tanlov, soni }: { obyekt: string, tanlov: string, soni: number }) => 
-      gas<any>('apiShartnomaBogSaqla', obyekt, tanlov, soni)
+      gas<any>('apiShartnomaBogSaqla', obyekt, tanlov, soni),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
+      qc.invalidateQueries({ queryKey: ['bossData'] });
+    },
   });
 }
 
 export function useQoshIshSaqla() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => gas<any>('apiQoshIshSaqla', data)
+    mutationFn: (data: any) => gas<any>('apiQoshIshSaqla', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
+      qc.invalidateQueries({ queryKey: ['buxDash'] });
+      qc.invalidateQueries({ queryKey: ['bossData'] });
+    },
   });
 }
 
 export function useQoshIshOchir() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (row: number) => gas<any>('apiQoshIshOchir', row)
+    mutationFn: (row: number) => gas<any>('apiQoshIshOchir', row),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
+      qc.invalidateQueries({ queryKey: ['buxDash'] });
+      qc.invalidateQueries({ queryKey: ['bossData'] });
+    },
   });
 }
 
@@ -284,13 +315,23 @@ export function useTolovSaqla() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tolovlar'] });
       qc.invalidateQueries({ queryKey: ['shartnomalar'] });
+      qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
+      qc.invalidateQueries({ queryKey: ['buxDash'] });
+      qc.invalidateQueries({ queryKey: ['bossData'] });
     },
   });
 }
 
 export function useTolovOchir() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (row: number) => gas<any>('apiTolovOchir', row)
+    mutationFn: (row: number) => gas<any>('apiTolovOchir', row),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tolovlar'] });
+      qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
+      qc.invalidateQueries({ queryKey: ['buxDash'] });
+      qc.invalidateQueries({ queryKey: ['bossData'] });
+    },
   });
 }
 
@@ -477,11 +518,15 @@ export function useF2AvtoMoslash() {
 
 /** Fon rejimida yozish — kompyuter o'chsa ham davom etadi */
 export function useF2Yoz() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
       obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
     }) => gas<{ ok: boolean; fon?: boolean; xabar?: string }>(
       'apiF2QollaNavbatga', obyekt, oyNom, edits, dopps, aktJami),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['f2job'] });
+    },
   });
 }
 

@@ -417,13 +417,14 @@ function apiPapkaSkan(){
  * apiBoglashOl + apiKeshHolat + _webAppUrl) chaqirilardi — har biri ~0.5-2 sek RPC.
  * apiPanelInit ularni BITTA chaqiruvga jamlaydi → yuklash sezilarli tezlashadi. */
 function apiPanelInit(){
-  var skan=[];   try{ skan=apiPapkaSkan(); }catch(e){}
-  var fmtMap={}; try{ fmtMap=apiBoglashOl(); }catch(e){}
-  var kesh={};   try{ kesh=apiKeshHolat(); }catch(e){}
-  var url='';    try{ url=_webAppUrl(); }catch(e){}
-  var paused=false; try{ paused=tizimMuzlatilganMi(); }catch(e){}
-  var aiKalit={bor:false}; try{ if(typeof apiAiKalitHolat==='function') aiKalit=apiAiKalitHolat(); }catch(e){}
-  return {skan:skan, fmtMap:fmtMap, kesh:kesh, webAppUrl:url, systemPaused:paused, aiKalit:aiKalit};
+  var errs = [];
+  var skan=[];   try{ skan=apiPapkaSkan(); }catch(e){ errs.push('apiPapkaSkan: '+(e.message||e)); Logger.log('apiPanelInit/apiPapkaSkan: '+e); }
+  var fmtMap={}; try{ fmtMap=apiBoglashOl(); }catch(e){ errs.push('apiBoglashOl: '+(e.message||e)); Logger.log('apiPanelInit/apiBoglashOl: '+e); }
+  var kesh={};   try{ kesh=apiKeshHolat(); }catch(e){ errs.push('apiKeshHolat: '+(e.message||e)); Logger.log('apiPanelInit/apiKeshHolat: '+e); }
+  var url='';    try{ url=_webAppUrl(); }catch(e){ errs.push('_webAppUrl: '+(e.message||e)); Logger.log('apiPanelInit/_webAppUrl: '+e); }
+  var paused=false; try{ paused=tizimMuzlatilganMi(); }catch(e){ errs.push('tizimMuzlatilganMi: '+(e.message||e)); Logger.log('apiPanelInit/tizimMuzlatilganMi: '+e); }
+  var aiKalit={bor:false}; try{ if(typeof apiAiKalitHolat==='function') aiKalit=apiAiKalitHolat(); }catch(e){ errs.push('apiAiKalitHolat: '+(e.message||e)); Logger.log('apiPanelInit/apiAiKalitHolat: '+e); }
+  return {skan:skan, fmtMap:fmtMap, kesh:kesh, webAppUrl:url, systemPaused:paused, aiKalit:aiKalit, xatolar:errs};
 }
 
 /* API: Tizim holatini olish (paused yoki running) */
@@ -2255,10 +2256,10 @@ function apiOyQosh(obyekt, oyNom){
     var last=sh.getLastRow(), start=a.dataQator>0?a.dataQator:_autoData(sh), n=last-start+1;
     if(bor) {
       bordi++;
-      // ⚡ 2026-07-05: oy allaqachon bor bo'lsa ham formulalar TA'MIRLANADI —
-      // eski oylarda bl qatorlarga НАРХ/СУММА yozilmagan bo'lishi mumkin (F2=0 sababi)
-      if(n>=1){ try { _oyFormulaToldur(sh, start, last); } catch(ex){} }
-      try { _oyYigindiFormulalarYangila(sh); } catch(ex){}
+      // ⚡ 2026-08-11: F2 jarayoni qotib qolmasligi uchun (15+ faylda formula yangilash 6 daqiqadan
+      // oshib ketardi), agar ustun allaqachon mavjud bo'lsa ortiqcha "repair" qilinmaydi.
+      // if(n>=1){ try { _oyFormulaToldur(sh, start, last); } catch(ex){} }
+      // try { _oyYigindiFormulalarYangila(sh); } catch(ex){}
       continue;
     }
     var hr=_hdrRow(sh);
@@ -3847,7 +3848,21 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
   if(!_oyTayyor){
     _setF2Prog('1/4: Ой устуни текширилмоқда/яратилмоқда — '+oyNom);
     try {
-       apiOyQosh(obyekt, oyNom);
+       // ⚡ Faqat F2 da qatnashgan varaqlar (sub-obyektlar) uchungina oy ustuni yaratamiz
+       var targetSubObs = {};
+       (edits||[]).concat(dopps||[]).forEach(function(e){
+         if(e.varaq){
+            var sub = obyekt;
+            if(e.varaq.indexOf('||') >= 0) sub = e.varaq.split('||')[0];
+            targetSubObs[sub] = true;
+         }
+       });
+       var targets = Object.keys(targetSubObs);
+       if(targets.length > 0){
+         targets.forEach(function(sub){ apiOyQosh(sub, oyNom); });
+       } else {
+         apiOyQosh(obyekt, oyNom);
+       }
     } catch(e) {
        _setF2Prog('❌ Ой устуни яратилмади: '+(e.message||e));
        return {ok:false, xabar:'❌ Ой устуни яратилмади: '+(e.message||e)+'. LRV_PLUS борлигини ва [Ишла] қилинганини текширинг.'};
@@ -4539,7 +4554,7 @@ function apiF2JobHolat(){
 function apiF2QollaNavbatga(obyekt, oyNom, edits, dopps, aktJami) {
   edits=edits||[]; dopps=dopps||[];
   cachePut('f2fon_payload', {obyekt:obyekt, oyNom:oyNom, edits:edits, dopps:dopps, aktJami:Number(aktJami)||0}, 21600);
-  _f2JobSet({status:'navbat', obyekt:obyekt, oyNom:oyNom, done:0, total:dopps.length,
+  _f2JobSet({status:'navbat', obyekt:obyekt, oyNom:oyNom, done:0, total:(edits.length + dopps.length),
              boshlandi:Date.now(), xabar:'Навбатга қўшилди', resume:{dopStart:0,mappedYoz:0,dopsYoz:0}});
   _f2LogTozala();
   _setF2Prog('⏳ Навбатда: '+obyekt+' / '+oyNom+' ('+edits.length+' мослаштирилган, '+dopps.length+' қўшимча)');
@@ -4579,7 +4594,7 @@ function _f2FonQadam() {
                     mappedYoz:r.mappedYoz||0, dopsYoz:r.dopsYoz||0};
         // Progress: mos qatorlar + qo'shimchalar birgalikda
         var _jami=(p.edits||[]).length+(p.dopps||[]).length;
-        job.done=(r.mappedYoz||0)+(r.dopStart||0); job.total=_jami||job.total;
+        job.done=(r.mappedYoz||0)+(r.dopsYoz||0); job.total=_jami||job.total;
         job.status='ishlayapti';
         job.xabar='Давом этмоқда: '+job.done+'/'+job.total;
         _f2JobSet(job);

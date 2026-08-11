@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
   useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish,
@@ -12,7 +12,7 @@ import { F2Daraxt, type DaraxtTugun } from '../../umumiy/ui/F2Daraxt';
 import { toast } from '../../umumiy/ui/Toast';
 import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send, FolderOpen, FolderClosed, ShieldAlert } from 'lucide-react';
 import type { AktNode, F2Moslik } from '../../api/types';
-import { useF2Store } from '../store/useF2Store';
+import { resetF2Store, useF2Store } from '../store/useF2Store';
 
 /* Akt daraxtidagi BARCHA barg (leaf) tugunlar — jami summa faqat shulardan.
  * ⚠️ bl summasi bolalarining yig'indisi bo'lgani uchun uni QO'SHSAK ikki marta
@@ -140,7 +140,7 @@ export function F2Import() {
   const daraxt = useF2Daraxt();
   const moslash = useF2AvtoMoslash();
   const yoz = useF2Yoz();
-  const job = useF2JobHolat(yozishBoshlandi);
+  const job = useF2JobHolat(true);
   const lrv = useHolat(obyekt);
   const useF2OyOchirishHook = useF2OyOchirish();
 
@@ -264,6 +264,14 @@ export function F2Import() {
       .filter(n => doppedUids.has(n.uid) && !moslikMap.has(n.uid))
       .reduce((a, n) => a + (n.summa || 0), 0);
   }, [aktBarglar, doppedUids, moslikMap]);
+
+  useEffect(() => {
+    const holat = job.data?.job?.status;
+    if (!holat) return;
+    if (holat !== 'navbat' && holat !== 'ishlayapti') return;
+    if (!yozishBoshlandi) setYozishBoshlandi(true);
+    if (qadam !== 2) setQadam(2);
+  }, [job.data?.job?.status, qadam, yozishBoshlandi]);
 
   /** Hamma bog'lanishlarni bekor qilish: moslikMap ham, qolDop ham. Farzandlarini ham qo'shib bekor qiladi */
   function bogBekor(uid: string) {
@@ -837,6 +845,7 @@ export function F2Import() {
       if (!r.ok) { toast(r.xabar || 'Navbatga qo\'shilmadi'); return; }
       setYozishBoshlandi(true);
       setQadam(2);
+      await job.refetch();
     } catch (e: any) { toast(`Xato: ${e.message}`); }
   }
 
@@ -1403,10 +1412,7 @@ export function F2Import() {
             <Tugma
               tur="primary"
               onBos={() => {
-                setYozishBoshlandi(false); setQadam(0);
-                setAktTree(null); setNatija(null);
-                setFid(''); setFaylNomi(''); setVaraq(''); setCfg(null);
-                setQolBekor(new Set()); setQolBog({});
+                resetF2Store();
               }}
             >
               Yangi Ф2 import

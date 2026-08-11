@@ -148,10 +148,25 @@ function _navbatQadam(){
       try {
         var f2File = DriveApp.getFileById(f2Fid);
         var f2Data = JSON.parse(f2File.getBlob().getDataAsString());
-        natija = apiF2Qolla(f2Ob, f2Oy, f2Data.edits, f2Data.dopps);
+        // ⚡ 2026-08-11: F2 jarayoni qismlarga bo'linganda qolgan joyidan davom ettirish (resume) xotirasi
+        var jobKey = 'F2_JOB_' + f2Fid;
+        var _job = null;
+        try { _job = JSON.parse(sp.getProperty(jobKey)); } catch(e){}
+        
+        // _job ni apiF2Qolla'ga jo'natamiz
+        natija = apiF2Qolla(f2Ob, f2Oy, f2Data.edits, f2Data.dopps, f2Data.aktJami, _job);
         natija.ob = f2Ob + ' (F2 '+f2Oy+')';
         natija.sek = Math.round((Date.now()-t0)/1000);
-        f2File.setTrashed(true);
+        
+        if (natija && natija.resume) {
+           qoldir = true; // navbatdan tushmaydi, keyingi qadam shu fayldan davom etadi
+           sp.setProperty(jobKey, JSON.stringify(natija.resume));
+           natija.qisman = true;
+           natija.xabar = 'Давом этади...';
+        } else {
+           f2File.setTrashed(true);
+           sp.deleteProperty(jobKey);
+        }
       } catch(ex) {
         natija = {ob: f2Ob + ' (F2)', ok:false, sek: Math.round((Date.now()-t0)/1000), xato: ex.message||ex};
       }
