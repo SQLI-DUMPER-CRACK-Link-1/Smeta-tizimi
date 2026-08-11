@@ -38,8 +38,14 @@ export function ToastContainer() {
 
   useEffect(() => {
     toastListener = (t) => {
-      const id = Date.now();
-      setToasts((prev) => [...prev, { ...t, id }]);
+      // Millisecond collision prevent
+      const id = Date.now() + Math.random();
+      setToasts((prev) => {
+        const next = [...prev, { ...t, id }];
+        // Maksimal 5 ta toast qolishi kerak (eskilari o'chiriladi)
+        if (next.length > 5) return next.slice(next.length - 5);
+        return next;
+      });
       setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
       }, t.davomiylik ?? (t.onUndo ? 10000 : 3000));
