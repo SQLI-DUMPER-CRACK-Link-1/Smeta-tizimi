@@ -690,24 +690,35 @@ export function F2Import() {
       const rowDopps = Object.values(qolDop).filter(d => d.varaq === n.varaq && (d.droppedOnRow === n.row || d.targetRow === n.row));
       
       const doppsContent = rowDopps.length > 0 ? (
-        <div className="flex flex-col gap-1 mt-1 w-full max-w-[400px]">
+        <div className="flex flex-col gap-1 mt-1 w-full max-w-[600px]">
           {rowDopps.map(d => {
             const isZamena = d.action === 'zamena_add';
             const bgClass = isZamena ? 'bg-orange-500/10 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/30';
             const textClass = isZamena ? 'text-orange-400' : 'text-yellow-400';
-            const amalName = isZamena ? '🔄 ZAMENA' : d.tur === 'bl' ? '➕ ISH QO‘SHISH' : d.tur === 'rz' ? '📂 RAZDEL QO‘SHISH' : '➕ RS QO‘SHISH';
+            const amalName = isZamena ? '🔄 ZAMENA' : d.tur === 'bl' ? '➕ ISH' : d.tur === 'rz' ? '📂 RAZDEL' : '➕ DOP';
             
             return (
-              <div key={d.uid} className={`p-1 px-2 rounded border border-dashed flex justify-between items-center text-[11px] ${bgClass}`}>
-                <div className="flex items-center gap-2">
-                   <span className={`font-bold ${textClass}`}>{amalName}</span>
-                   <span className="text-slate-300 ml-1">+ {formatVol(d.hajm)} (F2: {d.kod || 'kodsiz'})</span>
-                </div>
-                <div className="flex items-center gap-3">
-                   <span className="font-bold text-slate-200"><FmtN val={d.summa}/> sum</span>
-                   <button onClick={(e) => { e.stopPropagation(); handleBekorSmetaTaraf(d.uid); }} className="hover:text-red-400 font-bold px-1.5 rounded bg-black/20 hover:bg-black/40 transition-colors text-slate-400" title="Bekor qilish">
-                      ✕
-                   </button>
+              <div key={d.uid} className={`p-1.5 px-2 rounded border border-dashed flex flex-col gap-1 text-[11px] ${bgClass}`}>
+                <div className="flex justify-between items-start">
+                   <div className="flex flex-col gap-0.5 max-w-[85%]">
+                     <div className="flex items-center gap-2">
+                       <span className={`font-bold px-1 rounded bg-black/20 ${textClass}`}>{amalName}</span>
+                       <span className="text-slate-300 font-medium">F2: {d.kod || 'kodsiz'}</span>
+                     </div>
+                     <div className="text-slate-100 font-medium leading-tight mt-0.5 truncate" title={d.nom}>
+                       {d.nom}
+                     </div>
+                     <div className="flex items-center gap-3 text-slate-400 mt-0.5">
+                       <span>Hajm: <span className="text-emerald-300 font-bold">{formatVol(d.hajm)} {d.bir}</span></span>
+                       {d.narx > 0 && <span>Narxi: <span className="text-emerald-300"><FmtN val={d.narx}/></span></span>}
+                     </div>
+                   </div>
+                   <div className="flex flex-col items-end gap-1">
+                     <span className="font-bold text-yellow-300"><FmtN val={d.summa}/> so'm</span>
+                     <button onClick={(e) => { e.stopPropagation(); handleBekorSmetaTaraf(d.uid); }} className="hover:text-red-400 font-bold px-2 py-0.5 rounded bg-black/20 hover:bg-black/40 transition-colors text-slate-400" title="Bekor qilish">
+                        ✕
+                     </button>
+                   </div>
                 </div>
               </div>
             );
