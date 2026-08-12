@@ -1031,11 +1031,6 @@ const onAvtoMoslash = () => {
     // Normalizatsiya (strict match)
     const nNom = (s:string) => String(s||'').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
     const nKod = (s:string) => String(s||'').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '').replace(/^0+/, '');
-    const nBir = (s:string) => {
-      let b = String(s||'').toUpperCase().replace(/\s+/g,'').replace(/[^А-ЯЁA-Z]/g,'');
-      const m:any = {'ШТ':'ШТ','ДАНА':'ШТ','ШТУК':'ШТ','М3':'М3','КУБ':'М3','М2':'М2','КВ':'М2','Т':'Т','ТОННА':'Т','КГ':'КГ','М':'М','ПОГ':'М','КОМПЛ':'КОМПЛ','КМП':'КОМПЛ'};
-      return m[b] || b;
-    };
     
     // Smeta qatorlarini yig'ib chiqamiz
     const smetaQatorlar: any[] = [];
@@ -1598,8 +1593,8 @@ const onAvtoMoslash = () => {
 
           {/* ⭐ IKKI PANEL — panel'dagi kabi: chapda AKT, o'ngda SMETA */}
           <IkkiPanel
-            chapSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>AKT LOKALKASI (Ф2) - {oyNom}</span> <button onClick={onAvtoMoslash} className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-2 py-1 rounded text-[11px] transition-colors font-bold whitespace-nowrap"><Wand2 size={13}/> + Barchasini Avto-Moslash</button></div><Kiritma qiymat={f2Qidiruv} ozgardi={setF2Qidiruv} placeholder="F2 ichidan izlash (nomi yoki kodi)" w="full" /></div>}
-            ongSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>SMETA (LRV) — {boglanganJoylar.size} qator band</span><button onClick={() => setQatorQoshModal(true)} className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-[11px] transition-colors whitespace-nowrap"><FolderOpen size={13}/> + Qator Qo'shish</button></div><Kiritma qiymat={smetaQidiruv} ozgardi={setSmetaQidiruv} placeholder="Smeta ichidan izlash (nomi yoki kodi)" w="full" /></div>}
+            chapSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>AKT LOKALKASI (Ф2) - {oyNom}</span> <button onClick={onAvtoMoslash} className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-2 py-1 rounded text-[11px] transition-colors font-bold whitespace-nowrap"><Wand2 size={13}/> + Barchasini Avto-Moslash</button></div><Kiritma qiymat={f2Qidiruv} ozgardi={setF2Qidiruv} placeholder="F2 ichidan izlash (nomi yoki kodi)" /></div>}
+            ongSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>SMETA (LRV) — {boglanganJoylar.size} qator band</span><button onClick={() => setQatorQoshModal(true)} className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-[11px] transition-colors whitespace-nowrap"><FolderOpen size={13}/> + Qator Qo'shish</button></div><Kiritma qiymat={smetaQidiruv} ozgardi={setSmetaQidiruv} placeholder="Smeta ichidan izlash (nomi yoki kodi)" /></div>}
             chapOng={
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex gap-1 flex-shrink-0 bg-black/20 p-1 rounded-lg flex-wrap">
@@ -1625,6 +1620,8 @@ const onAvtoMoslash = () => {
               <F2Daraxt
                 tugunlar={filterDaraxt(aktDaraxt, f2Qidiruv)}
                 bogMi={aktBogMi}
+                takliflar={takliflar}
+                onTaklifTanlandi={(_uid, cand) => { setSmetaScrollTo(cand); toast('Topildi!', 'ok'); }}
                 dopMi={(k) => !!qolDop[k]}
                 hover={hover}
                 setHover={setHover}
