@@ -1242,7 +1242,7 @@ export function F2Import() {
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <Tugma onBos={() => { setQadam(0); setNatija(null); }}>Orqaga</Tugma>
-              {natija && (
+              {(natija || Object.keys(qolBog).length > 0 || Object.keys(qolDop).length > 0) && (
                 <Tugma tur="primary" onBos={yozish} band={yoz.isPending} ikonka={<Send size={16} />}>
                   Smetaga yozish {constOk ? '' : '(Farq mavjud!)'}
                 </Tugma>

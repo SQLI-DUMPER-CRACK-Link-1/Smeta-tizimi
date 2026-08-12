@@ -57,7 +57,7 @@ function apiFakturaYoz(fakturalarArray) {
         "Maxsulot nomi", "O'lchov birligi", "Miqdori", "Narxi (NDS siz)", 
         "Jami NDS siz", "NDS summasi", "NDS bilan umumiy summa", "Kategoriya",
         "Postavshik INN", "Postavshik Manzil", "Sotib oluvchi INN", "Sotib oluvchi Manzil",
-        "Fayl URL", "Katalog nomi"
+        "Fayl URL", "Katalog nomi", "Aksiz summasi", "NDS stavkasi", "Bank hisob raqami", "Yetkazib berish kompaniyasi"
       ];
       sh.appendRow(sarlavhalar);
       sh.getRange(1, 1, 1, sarlavhalar.length).setFontWeight("bold").setBackground("#e0e0e0");
@@ -89,7 +89,11 @@ function apiFakturaYoz(fakturalarArray) {
         item.sotibOluvchiInn || "",
         item.sotibOluvchiManzil || "",
         item.faylUrl || "",
-        item.katalogNomi || ""
+        item.katalogNomi || "",
+        item.aksizSummasi || 0,
+        item.ndsStavkasi || 0,
+        item.yetkazibBeruvchiHisobRaqam || "",
+        item.yetkazibBerishKompaniyasi || ""
       ]);
     }
 

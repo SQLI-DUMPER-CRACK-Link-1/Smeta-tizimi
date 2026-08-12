@@ -417,6 +417,10 @@ export type FakturaItem = {
   ndsSummasi: number;
   jamiNdsBilan: number;
   kategoriya?: string;
+  aksizSummasi?: number;
+  ndsStavkasi?: number;
+  yetkazibBeruvchiHisobRaqam?: string;
+  yetkazibBerishKompaniyasi?: string;
   isDuplicate?: boolean;
   faylUrl?: string;
 };
