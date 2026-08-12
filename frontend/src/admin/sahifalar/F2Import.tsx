@@ -10,6 +10,7 @@ import { FmtN } from '../../lib/format';
 import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
 import { F2Daraxt, type DaraxtTugun } from '../../umumiy/ui/F2Daraxt';
 import { toast } from '../../umumiy/ui/Toast';
+import { gas } from '../../api/gas';
 import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send, FolderOpen, FolderClosed, ShieldAlert } from 'lucide-react';
 import type { AktNode, F2Moslik } from '../../api/types';
 import { resetF2Store, useF2Store } from '../store/useF2Store';
@@ -131,6 +132,36 @@ export function F2Import() {
   const setSmetaScrollTo = createSetter('smetaScrollTo');
 
   const [tahrirModalOy, setTahrirModalOy] = useState<string | null>(null);
+
+  const [razdelModalOchiq, setRazdelModalOchiq] = useState(false);
+  const [yangiRazdelSmeta, setYangiRazdelSmeta] = useState('');
+  const [yangiRazdelQator, setYangiRazdelQator] = useState('');
+  const [yangiRazdelNom, setYangiRazdelNom] = useState('');
+  const [razdelLoading, setRazdelLoading] = useState(false);
+
+  const onRazdelSaqlash = async () => {
+    if (!yangiRazdelSmeta || !yangiRazdelNom) {
+      toast("Varaq (smeta) va razdel nomini kiriting!", "danger");
+      return;
+    }
+    setRazdelLoading(true);
+    try {
+      const res = await gas('apiRazdelQosh', obyektOlim, yangiRazdelSmeta, yangiRazdelQator, yangiRazdelNom);
+      if (res && res.ok) {
+        toast("Yangi razdel qo'shildi!", "ok");
+        setRazdelModalOchiq(false);
+        setYangiRazdelNom('');
+        setYangiRazdelQator('');
+        lrv.refetch(); // Daraxtni yangilaymiz
+      } else {
+        toast(res?.error || res?.xabar || "Xatolik", "danger");
+      }
+    } catch(e) {
+      toast(e.message || String(e), "danger");
+    }
+    setRazdelLoading(false);
+  };
+
   const [tanlanganFaylNomi, setTanlanganFaylNomi] = useState<string>('');
 
   const restoredF2Ref = useRef(false);
@@ -1390,7 +1421,12 @@ export function F2Import() {
           {/* ⭐ IKKI PANEL — panel'dagi kabi: chapda AKT, o'ngda SMETA */}
           <IkkiPanel
             chapSarlavha={`AKT (fayldan) — ${aktBarglar.length} qator`}
-            ongSarlavha={`SMETA (LRV) — ${boglanganJoylar.size} qator band`}
+            ongSarlavha={
+              <div className="flex items-center justify-between w-full">
+                <span>SMETA (LRV) — {boglanganJoylar.size} qator band</span>
+                <button onClick={() => setRazdelModalOchiq(true)} className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-[11px] transition-colors"><FolderOpen size={13}/> + Yangi Razdel</button>
+              </div>
+            }
             chapOng={
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex gap-1 flex-shrink-0 bg-black/20 p-1 rounded-lg flex-wrap">
@@ -1556,6 +1592,63 @@ export function F2Import() {
           </div>
         </div>
       )}
+    
+      {/* YANGI RAZDEL QO'SHISH MODAL */}
+      {razdelModalOchiq && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-[var(--surface-1)] border border-border w-full max-w-md rounded-lg shadow-2xl p-5 flex flex-col gap-4">
+            <h3 className="text-lg font-bold text-accent border-b border-border pb-2">
+              Smetaga Yangi Razdel Qo'shish
+            </h3>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-[13px] font-medium text-text-main">Qaysi smetaga (varaqqa):</label>
+              <Tanlov
+                qiymat={yangiRazdelSmeta}
+                ozgardi={setYangiRazdelSmeta}
+                variantlar={['', ...(lrv.data?.subs || [])]}
+              />
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-[13px] font-medium text-text-main">Razdel nomi:</label>
+              <Kiritma
+                qiymat={yangiRazdelNom}
+                ozgardi={setYangiRazdelNom}
+                placeholder="Masalan: Qoshimcha ishlar 1"
+              />
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-[13px] font-medium text-text-main">Qaysi qatordan keyin (ixtiyoriy):</label>
+              <Kiritma
+                qiymat={yangiRazdelQator}
+                ozgardi={setYangiRazdelQator}
+                placeholder="Bo'sh qoldirilsa eng oxiriga tushadi"
+                tur="number"
+              />
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
+              <Tugma 
+                tur="secondary" 
+                onBos={() => setRazdelModalOchiq(false)} 
+                disabled={razdelLoading}
+              >
+                Bekor qilish
+              </Tugma>
+              <Tugma 
+                tur="primary" 
+                onBos={onRazdelSaqlash} 
+                kutyapti={razdelLoading}
+              >
+                Saqlash
+              </Tugma>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Sahifa>
   );
 }
