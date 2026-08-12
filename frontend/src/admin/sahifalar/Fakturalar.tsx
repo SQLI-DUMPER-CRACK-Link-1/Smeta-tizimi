@@ -290,6 +290,8 @@ export function Fakturalar() {
     
     return { items: tovarlar, supplier: supplier || "Noma'lum" };
   };
+  
+  void parseFakturaText;
 
   const handleSave = async () => {
     // FAQAT dublikat bo'lmaganlarini saqlash
