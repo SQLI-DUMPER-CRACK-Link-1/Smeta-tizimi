@@ -197,7 +197,7 @@ export function F2Daraxt({
   ochiqYopiqSignal = 0,
   onDopClick,
   onOtishClick,
-  scrollToKey,
+  scrollToKey, takliflar, onTaklifTanlandi,
 }: {
   tugunlar: DaraxtTugun[];
   bogMi: (kalit: string) => boolean;
@@ -214,7 +214,7 @@ export function F2Daraxt({
   ochiqYopiqSignal?: number;
   onDopClick?: (kalit: string) => void;
   onOtishClick?: (kalit: string) => void;
-  scrollToKey?: string | null;
+  scrollToKey?: string | null; takliflar?: Record<string, any[]>; onTaklifTanlandi?: (uid: string, cand: any) => void;
 }) {
   const [yopiq, setYopiq] = useState<Set<string>>(new Set());
   const [ustida, setUstida] = useState<string | null>(null);
@@ -375,7 +375,7 @@ export function F2Daraxt({
               onBogBekor={onBogBekor}
               onDopClick={onDopClick}
               onOtishClick={bog ? onOtishClick : undefined}
-              scrollRef={setScrollRef(t.kalit)}
+              scrollRef={setScrollRef(t.kalit)} takliflar={takliflar} onTaklifTanlandi={onTaklifTanlandi}
             />
           </div>
         );
