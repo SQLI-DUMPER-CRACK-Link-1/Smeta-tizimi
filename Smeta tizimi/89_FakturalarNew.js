@@ -173,9 +173,34 @@ function apiFakturaOCR(payload) {
   }
 }
 
+function apiFakturaAiParse(payload) {
+  try {
+    var b64 = payload.base64;
+    var mimeType = payload.mimeType || 'application/pdf';
+    var fileName = payload.nomi || 'Faktura.pdf';
+
+    if (b64.indexOf('base64,') !== -1) {
+      b64 = b64.split('base64,')[1];
+    }
+
+    var blob = Utilities.newBlob(Utilities.base64Decode(b64), mimeType, fileName);
+    
+    // We assume _parseFakturaVision is available in the global scope (defined in 89c_FakturaSync.js)
+    if (typeof _parseFakturaVision === 'function') {
+       var result = _parseFakturaVision(blob, null);
+       return { ok: true, items: result.items, supplier: result.supplier };
+    } else {
+       return { ok: false, xabar: "_parseFakturaVision funksiyasi topilmadi." };
+    }
+  } catch(e) {
+    return { ok: false, xabar: String(e) };
+  }
+}
+
 if (typeof globalThis !== 'undefined') {
   globalThis.apiFakturalarOl = apiFakturalarOl;
   globalThis.apiFakturaYoz = apiFakturaYoz;
   globalThis.apiFakturaFaylYoz = apiFakturaFaylYoz;
   globalThis.apiFakturaOCR = apiFakturaOCR;
+  globalThis.apiFakturaAiParse = apiFakturaAiParse;
 }

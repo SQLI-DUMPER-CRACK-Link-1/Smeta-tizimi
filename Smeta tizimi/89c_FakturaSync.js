@@ -89,7 +89,7 @@ function apiFakturaAvtoSinx() {
       batch.push({
          id: "F" + count,
          file: hammaFayllar[count],
-         blob: hammaFammaFayllar_getBlobSafe(hammaFayllar[count])
+         blob: hammaFayllar[count].getBlob()
       });
       count++;
     }
@@ -301,6 +301,24 @@ function _parseFakturaVision(blob, fileObj) {
     }
     
     return { items: items, supplier: supplier };
+}
+
+function _parseFakturaVisionBatch(batch) {
+    var result = [];
+    for (var i = 0; i < batch.length; i++) {
+        var b = batch[i];
+        var parsed = _parseFakturaVision(b.blob, b.file);
+        for (var j = 0; j < parsed.items.length; j++) {
+            var itm = parsed.items[j];
+            itm.docId = b.id;
+            result.push(itm);
+        }
+        // Free plan API limitiga urilmaslik (429) uchun har so'rovdan keyin 6 soniya kutamiz. (10 RPM)
+        if (i < batch.length - 1) {
+            Utilities.sleep(6000); 
+        }
+    }
+    return result;
 }
 
 if (typeof globalThis !== 'undefined') {

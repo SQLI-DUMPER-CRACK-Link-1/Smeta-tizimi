@@ -4613,3 +4613,66 @@ function _f2FonQadam() {
     _setF2Prog('❌ Хато: ' + (e.message || e));
   }
 }
+
+// ⚡ 2026-08-12: Eski kiritilgan F2 (Excel) faylini arxivdan qidirib topish (Tahrirlash uchun)
+function apiF2EskiFaylOqi(obyekt, oyNom) {
+  var a = typeof sozAsosiy === 'function' ? sozAsosiy() : {rootId: ''};
+  var parentName = typeof _cfgKalit === 'function' ? _cfgKalit(obyekt) : String(obyekt).split(' - ')[0].trim();
+  
+  var sk = typeof _keshOlStale === 'function' ? (_keshOlStale('skan') || []) : [];
+  var folderId = '';
+  for (var i = 0; i < sk.length; i++) {
+    var skNom = String(sk[i].obyekt||'').trim();
+    if (skNom === parentName || skNom === String(obyekt).trim() || String(obyekt).indexOf(skNom) === 0) {
+      folderId = sk[i].folderId; break;
+    }
+  }
+  if (!folderId) {
+    for (var s2 = 0; s2 < sk.length; s2++) {
+      var sNom = String(sk[s2].obyekt||'').trim();
+      if (!sNom || !sk[s2].folderId) continue;
+      var sKalit = (typeof _cfgKalit==='function') ? _cfgKalit(sNom) : sNom.split(' - ')[0].trim();
+      if (String(sKalit).trim() === String(parentName).trim()) { folderId = sk[s2].folderId; break; }
+    }
+  }
+  if (!folderId && a.rootId) {
+    try {
+      var root = DriveApp.getFolderById(a.rootId);
+      var fIt = root.getFoldersByName(parentName);
+      if (fIt.hasNext()) folderId = fIt.next().getId();
+    } catch(e) {}
+  }
+  
+  if (!folderId) return {ok: false, xabar: 'Объект папкаси топилмади (' + parentName + ')'};
+  
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    var f2Folder = null;
+    var subF2 = folder.getFolders();
+    while(subF2.hasNext()) {
+      var sub = subF2.next();
+      var n = sub.getName().toUpperCase();
+      if(n === 'F2' || n === 'Ф2') { f2Folder = sub; break; }
+    }
+    if(!f2Folder) return {ok: false, xabar: 'Ушбу объект учун F2 папкаси мавжуд эмас (архив топилмади)'};
+    
+    var expectedName = obyekt + ' F2 ' + (oyNom||'');
+    var dFiles = f2Folder.getFiles();
+    var foundFile = null;
+    while(dFiles.hasNext()) {
+       var dF = dFiles.next();
+       var dN = dF.getName();
+       if(dN === expectedName || dN.indexOf(expectedName+'.') === 0 || dN.indexOf(expectedName) === 0) {
+          foundFile = dF;
+          break;
+       }
+    }
+    
+    if(!foundFile) return {ok: false, xabar: 'Ушбу ' + oyNom + ' ойига тегишли F2 (Excel) файли Drive архивида топилмади. Tahrirlash imkonsiz.'};
+    
+    return {ok: true, fileId: foundFile.getId()};
+  } catch(ex) {
+    return {ok: false, xabar: 'Архивни қидиришда хато: ' + String(ex)};
+  }
+}
+

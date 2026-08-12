@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish,
+  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi
 } from '../../api/hooks';
 import {
   Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
@@ -143,6 +143,7 @@ export function F2Import() {
   const job = useF2JobHolat(true);
   const lrv = useHolat(obyekt);
   const useF2OyOchirishHook = useF2OyOchirish();
+  const useF2EskiFaylOqiHook = useF2EskiFaylOqi();
 
   // Umumiy obyektdagi Smeta va Oldingi F2 ni hisoblash
   const { umumiySmeta, umumiyOldingiF2 } = useMemo(() => {
@@ -1159,27 +1160,49 @@ export function F2Import() {
                       <div key={oy} className="flex flex-col gap-1.5 p-2 rounded border border-border bg-[var(--surface-2)]">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm text-accent">{oy}</span>
-                          <button 
-                            onClick={() => {
-                              if(window.confirm(`⚠️ "${oy}" oyi uchun yozilgan BARCHA qiymatlar (hajm/narx/summa) ushbu obyektdan BUTUNLAY o'chiriladi.\n\nDavom etamizmi?`)) {
-                                useF2OyOchirishHook.mutate({ obyekt, oyNom: oy }, {
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => {
+                                useF2EskiFaylOqiHook.mutate({ obyekt, oyNom: oy }, {
                                   onSuccess: (r) => {
                                     if(r.ok) {
-                                      toast(r.xabar || "Oy tozalandi", "ok");
-                                      lrv.refetch();
+                                      resetF2Store();
+                                      setState({ fid: r.fileId, oyNom: oy, faylNomi: `[Arxivdan] ${oy}`, varaq: '', cfg: null, aktTree: null, qadam: 0 });
+                                      toast("Fayl topildi. Iltimos varaqni tanlang.", "ok");
                                     } else {
                                       toast("Xato: " + r.xabar, "danger");
                                     }
                                   },
                                   onError: (e: any) => toast(e.message, "danger")
                                 });
-                              }
-                            }}
-                            disabled={useF2OyOchirishHook.isPending && useF2OyOchirishHook.variables?.oyNom === oy}
-                            className="text-[11px] px-2 py-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded transition-colors"
-                          >
-                            {useF2OyOchirishHook.isPending && useF2OyOchirishHook.variables?.oyNom === oy ? 'Tozalanmoqda...' : 'Tozalash'}
-                          </button>
+                              }}
+                              disabled={useF2EskiFaylOqiHook.isPending && useF2EskiFaylOqiHook.variables?.oyNom === oy}
+                              className="text-[11px] px-2 py-1 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded transition-colors"
+                            >
+                              {useF2EskiFaylOqiHook.isPending && useF2EskiFaylOqiHook.variables?.oyNom === oy ? 'Ochilmoqda...' : 'Tahrirlash'}
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if(window.confirm(`⚠️ "${oy}" oyi uchun yozilgan BARCHA qiymatlar (hajm/narx/summa) ushbu obyektdan BUTUNLAY o'chiriladi.\n\nDavom etamizmi?`)) {
+                                  useF2OyOchirishHook.mutate({ obyekt, oyNom: oy }, {
+                                    onSuccess: (r) => {
+                                      if(r.ok) {
+                                        toast(r.xabar || "Oy tozalandi", "ok");
+                                        lrv.refetch();
+                                      } else {
+                                        toast("Xato: " + r.xabar, "danger");
+                                      }
+                                    },
+                                    onError: (e: any) => toast(e.message, "danger")
+                                  });
+                                }
+                              }}
+                              disabled={useF2OyOchirishHook.isPending && useF2OyOchirishHook.variables?.oyNom === oy}
+                              className="text-[11px] px-2 py-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded transition-colors"
+                            >
+                              {useF2OyOchirishHook.isPending && useF2OyOchirishHook.variables?.oyNom === oy ? 'Tozalanmoqda...' : 'Tozalash'}
+                            </button>
+                          </div>
                         </div>
                         <div className="text-[12px] text-text-mute flex justify-between">
                           <span>Jami summa:</span>

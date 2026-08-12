@@ -450,6 +450,13 @@ export function useFakturaOCR() {
   });
 }
 
+export function useFakturaAiParse() {
+  return useMutation({
+    mutationFn: (payload: { base64: string; mimeType: string; nomi: string }) => 
+      gas<{ ok: boolean; items?: FakturaItem[]; supplier?: string; xabar?: string }>('apiFakturaAiParse', payload)
+  });
+}
+
 export type FakturaFolderStatus = { count: number; url: string };
 export type FakturaDriveHolatRes = {
   ok: boolean;
