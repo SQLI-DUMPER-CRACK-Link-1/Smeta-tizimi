@@ -1292,6 +1292,8 @@ const onAvtoMoslash = () => {
               </h4>
               {varaqlar.isLoading ? (
                 <div className="skel h-9 rounded" />
+              ) : varaqlar.isError ? (
+                <p className="text-sm text-danger whitespace-pre-wrap">{varaqlar.error?.message || "Noma'lum tarmoq xatosi (Varaqlar o'qilmadi)"}</p>
               ) : !varaqlar.data?.ok ? (
                 <p className="text-sm text-danger">{varaqlar.data?.xabar || "Varaqlar o'qilmadi"}</p>
               ) : (
