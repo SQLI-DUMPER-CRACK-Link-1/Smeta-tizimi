@@ -151,8 +151,9 @@ export function F2Import() {
 
   // Takliflar holati
   const [takliflar, setTakliflar] = useState<Record<string, any[]>>({});
-  const [taklifOchiqUid, setTaklifOchiqUid] = useState<string|null>(null);
-  const [f2SkrollTarget, setF2SkrollTarget] = useState<string|null>(null);
+    
+  
+  
 
   
   
@@ -207,11 +208,7 @@ export function F2Import() {
     return candidates.slice(0, 3);
   };
 
-  const [yangiRazdelSmeta, setYangiRazdelSmeta] = useState('');
-  const [yangiRazdelQator, setYangiRazdelQator] = useState('');
-  const [yangiRazdelNom, setYangiRazdelNom] = useState('');
-  const [razdelLoading, setRazdelLoading] = useState(false);
-
+        
   
   const onQatorSaqlash = async () => {
     if (!yangiSmeta || !yangiNom) {
@@ -225,7 +222,7 @@ export function F2Import() {
 
     setQatorLoading(true);
     try {
-      const res = await gas('apiSmetaQatorQosh', obyekt, yangiSmeta, yangiTur, yangiQator, yangiKod, yangiNom, yangiBirlik, yangiHajm, yangiNarx);
+      const res = await gas<any>('apiSmetaQatorQosh', obyekt, yangiSmeta, yangiTur, yangiQator, yangiKod, yangiNom, yangiBirlik, yangiHajm, yangiNarx);
       if (res && res.ok) {
         toast("Yangi qator muvaffaqiyatli qo'shildi!", "ok");
         setQatorQoshModal(false);
@@ -234,7 +231,7 @@ export function F2Import() {
       } else {
         toast(res?.error || res?.xabar || "Xatolik", "danger");
       }
-    } catch(e) {
+    } catch(e: any) {
       toast(e.message || String(e), "danger");
     }
     setQatorLoading(false);
@@ -1009,8 +1006,7 @@ export function F2Import() {
 
   const j = job.data?.job;
   const foiz = j?.total ? Math.round(((j.done || 0) / j.total) * 100) : 0;
-
-  // Barcha boglanmagan F2 qatorlari uchun takliflarni hisoblash
+// Barcha boglanmagan F2 qatorlari uchun takliflarni hisoblash
   useEffect(() => {
     if (!aktTree || !lrv.data?.tree) return;
     
@@ -1018,7 +1014,7 @@ export function F2Import() {
     const tkl: Record<string, any[]> = {};
     const yur = (nodes: any[]) => {
       nodes.forEach(n => {
-        if (n.type !== 'rz' && !bogMi(n.kalit) && !n.kalit.startsWith('dop_')) {
+        if (n.type !== 'rz' && !aktBogMi(n.kalit) && !n.kalit.startsWith('dop_')) {
            const t = topTakliflar(n);
            if (t.length > 0) tkl[n.kalit] = t;
         }
@@ -1027,7 +1023,91 @@ export function F2Import() {
     };
     yur(aktTree as any[]);
     setTakliflar(tkl);
-  }, [aktTree, lrv.data?.tree, qolBog, qolBekor, natija?.mosliklar]); // bogMi depends on these
+  }, [aktTree, lrv.data?.tree, qolBog, qolBekor, natija?.mosliklar]); // aktBogMi depends on these
+const onAvtoMoslash = () => {
+    if (!aktTree || !lrv.data?.tree) return;
+    let matchCount = 0;
+    
+    // Normalizatsiya (strict match)
+    const nNom = (s:string) => String(s||'').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+    const nKod = (s:string) => String(s||'').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '').replace(/^0+/, '');
+    const nBir = (s:string) => {
+      let b = String(s||'').toUpperCase().replace(/\s+/g,'').replace(/[^А-ЯЁA-Z]/g,'');
+      const m:any = {'ШТ':'ШТ','ДАНА':'ШТ','ШТУК':'ШТ','М3':'М3','КУБ':'М3','М2':'М2','КВ':'М2','Т':'Т','ТОННА':'Т','КГ':'КГ','М':'М','ПОГ':'М','КОМПЛ':'КОМПЛ','КМП':'КОМПЛ'};
+      return m[b] || b;
+    };
+    
+    // Smeta qatorlarini yig'ib chiqamiz
+    const smetaQatorlar: any[] = [];
+    const collectSmeta = (nodes: any[], rzNom: string) => {
+      nodes.forEach(n => {
+        if (n.type === 'rz') collectSmeta(n.children || [], n.nom);
+        else {
+          smetaQatorlar.push({...n, rzNom});
+          if (n.children) collectSmeta(n.children, rzNom);
+        }
+      });
+    };
+    collectSmeta(lrv.data.tree as any[], '');
+
+    // F2 ni aylanib chiqib, aniq moslik topsa bog'laymiz
+    const yangiBog: Record<string, {varaq: string, row: number}> = {};
+    const yur = (nodes: any[]) => {
+      nodes.forEach(n => {
+        if (n.type !== 'rz' && !aktBogMi(n.kalit) && !n.kalit.startsWith('dop_') && !yangiBog[n.kalit]) {
+           const fKod = nKod(n.kod);
+           const fNom = nNom(n.nom);
+           
+           // 100% mosini izlash (Kodi va Nomi mos)
+           const exact = smetaQatorlar.find(sq => {
+             // Band bo'lmasin
+             if (boglanganJoylar.has(sq.varaq + '#' + sq.row) || Object.values(yangiBog).some(b => b.varaq === sq.varaq && b.row === sq.row)) return false;
+             
+             const sKod = nKod(sq.kod);
+             const sNom = nNom(sq.nom);
+             
+             // Agar kod bo'lsa kod+nom, kod yo'q bo'lsa faqat nom bo'yicha qat'iy
+             if (fKod && sKod) return fKod === sKod && fNom === sNom;
+             return fNom === sNom;
+           });
+           
+           if (exact) {
+             yangiBog[n.kalit] = {varaq: exact.varaq, row: exact.row};
+             matchCount++;
+           }
+        }
+        if (n.children) yur(n.children);
+      });
+    };
+    yur(aktTree as any[]);
+    
+    if (matchCount > 0) {
+      setQolBog((p: any) => ({...p, ...yangiBog}));
+      toast(`Yuridik aniq mos tushgan ${matchCount} ta qator avtomatik bog'landi!`, "ok");
+    } else {
+      toast("Smetada sizning aktga 100% (so'zma so'z) mos keladigan bo'sh qatorlar topilmadi.", "danger");
+    }
+  };
+  const filterDaraxt = (tree: any[], qidiruv: string) => {
+    if(!qidiruv) return tree;
+    const q = qidiruv.toLowerCase();
+    const dfs = (nodes: any[]): any[] => {
+      let result: any[] = [];
+      nodes.forEach(n => {
+        let isMatch = (n.nom && n.nom.toLowerCase().includes(q)) || (n.kod && n.kod.toLowerCase().includes(q));
+        let children = n.children ? dfs(n.children) : [];
+        if (isMatch || children.length > 0) result.push({...n, children});
+      });
+      return result;
+    };
+    return dfs(tree);
+  };
+
+
+
+
+
+  
 
   return (
     <Sahifa
@@ -1518,13 +1598,8 @@ export function F2Import() {
 
           {/* ⭐ IKKI PANEL — panel'dagi kabi: chapda AKT, o'ngda SMETA */}
           <IkkiPanel
-            chapSarlavha={`AKT (fayldan) — ${aktBarglar.length} qator`}
-            ongSarlavha={
-              <div className="flex items-center justify-between w-full">
-                <span>SMETA (LRV) — {boglanganJoylar.size} qator band</span>
-                <button onClick={() => setQatorQoshModal(true)} className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-[11px] transition-colors"><FolderOpen size={13}/> + Yangi Razdel</button>
-              </div>
-            }
+            chapSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>AKT LOKALKASI (Ф2) - {oyNom}</span> <button onClick={onAvtoMoslash} className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-2 py-1 rounded text-[11px] transition-colors font-bold whitespace-nowrap"><Wand2 size={13}/> + Barchasini Avto-Moslash</button></div><Kiritma qiymat={f2Qidiruv} ozgardi={setF2Qidiruv} placeholder="F2 ichidan izlash (nomi yoki kodi)" w="full" /></div>}
+            ongSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>SMETA (LRV) — {boglanganJoylar.size} qator band</span><button onClick={() => setQatorQoshModal(true)} className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-[11px] transition-colors whitespace-nowrap"><FolderOpen size={13}/> + Qator Qo'shish</button></div><Kiritma qiymat={smetaQidiruv} ozgardi={setSmetaQidiruv} placeholder="Smeta ichidan izlash (nomi yoki kodi)" w="full" /></div>}
             chapOng={
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex gap-1 flex-shrink-0 bg-black/20 p-1 rounded-lg flex-wrap">
@@ -1548,7 +1623,7 @@ export function F2Import() {
               }
             chap={
               <F2Daraxt
-                tugunlar={aktDaraxt}
+                tugunlar={filterDaraxt(aktDaraxt, f2Qidiruv)}
                 bogMi={aktBogMi}
                 dopMi={(k) => !!qolDop[k]}
                 hover={hover}
@@ -1564,7 +1639,7 @@ export function F2Import() {
             }
             ong={
               <F2Daraxt
-                tugunlar={smetaDaraxt}
+                tugunlar={filterDaraxt(smetaDaraxt, smetaQidiruv)}
                 bogMi={(k) => boglanganJoylar.has(k)}
                 hover={hover}
                 setHover={setHover}
