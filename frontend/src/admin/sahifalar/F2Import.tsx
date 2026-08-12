@@ -10,7 +10,7 @@ import { FmtN } from '../../lib/format';
 import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
 import { F2Daraxt, type DaraxtTugun } from '../../umumiy/ui/F2Daraxt';
 import { toast } from '../../umumiy/ui/Toast';
-import { gas } from '../../api/gas';
+import { gas } from '../../api/client';
 import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send, FolderOpen, FolderClosed, ShieldAlert } from 'lucide-react';
 import type { AktNode, F2Moslik } from '../../api/types';
 import { resetF2Store, useF2Store } from '../store/useF2Store';
@@ -150,29 +150,12 @@ export function F2Import() {
   const [qatorLoading, setQatorLoading] = useState(false);
 
   // Takliflar holati
-  const [takliflar, setTakliflar] = useState<any[]>([]);
+  const [takliflar, setTakliflar] = useState<Record<string, any[]>>({});
   const [taklifOchiqUid, setTaklifOchiqUid] = useState<string|null>(null);
   const [f2SkrollTarget, setF2SkrollTarget] = useState<string|null>(null);
 
   
-  // Barcha boglanmagan F2 qatorlari uchun takliflarni hisoblash
-  useEffect(() => {
-    if (!aktTree || !lrv.data?.tree) return;
-    
-    // As in Panel.html, compute fuzzy matches for unlinked leaf nodes
-    const tkl: Record<string, any[]> = {};
-    const yur = (nodes: any[]) => {
-      nodes.forEach(n => {
-        if (n.type !== 'rz' && !bogMi(n.kalit) && !n.kalit.startsWith('dop_')) {
-           const t = topTakliflar(n);
-           if (t.length > 0) tkl[n.kalit] = t;
-        }
-        if (n.children) yur(n.children);
-      });
-    };
-    yur(aktTree as any[]);
-    setTakliflar(tkl);
-  }, [aktTree, lrv.data?.tree, qolBog, qolBekor, natija?.mosliklar]); // bogMi depends on these
+  
 
   // Taklif topish logikasi (fuzzy qidiruv)
   const topTakliflar = (f2Node: any) => {
@@ -242,7 +225,7 @@ export function F2Import() {
 
     setQatorLoading(true);
     try {
-      const res = await gas('apiSmetaQatorQosh', obyektOlim, yangiSmeta, yangiTur, yangiQator, yangiKod, yangiNom, yangiBirlik, yangiHajm, yangiNarx);
+      const res = await gas('apiSmetaQatorQosh', obyekt, yangiSmeta, yangiTur, yangiQator, yangiKod, yangiNom, yangiBirlik, yangiHajm, yangiNarx);
       if (res && res.ok) {
         toast("Yangi qator muvaffaqiyatli qo'shildi!", "ok");
         setQatorQoshModal(false);
@@ -1027,6 +1010,25 @@ export function F2Import() {
   const j = job.data?.job;
   const foiz = j?.total ? Math.round(((j.done || 0) / j.total) * 100) : 0;
 
+  // Barcha boglanmagan F2 qatorlari uchun takliflarni hisoblash
+  useEffect(() => {
+    if (!aktTree || !lrv.data?.tree) return;
+    
+    // As in Panel.html, compute fuzzy matches for unlinked leaf nodes
+    const tkl: Record<string, any[]> = {};
+    const yur = (nodes: any[]) => {
+      nodes.forEach(n => {
+        if (n.type !== 'rz' && !bogMi(n.kalit) && !n.kalit.startsWith('dop_')) {
+           const t = topTakliflar(n);
+           if (t.length > 0) tkl[n.kalit] = t;
+        }
+        if (n.children) yur(n.children);
+      });
+    };
+    yur(aktTree as any[]);
+    setTakliflar(tkl);
+  }, [aktTree, lrv.data?.tree, qolBog, qolBekor, natija?.mosliklar]); // bogMi depends on these
+
   return (
     <Sahifa
       sarlavha="Ф2 импорт"
@@ -1520,7 +1522,7 @@ export function F2Import() {
             ongSarlavha={
               <div className="flex items-center justify-between w-full">
                 <span>SMETA (LRV) — {boglanganJoylar.size} qator band</span>
-                <button onClick={() => setRazdelModalOchiq(true)} className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-[11px] transition-colors"><FolderOpen size={13}/> + Yangi Razdel</button>
+                <button onClick={() => setQatorQoshModal(true)} className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-[11px] transition-colors"><FolderOpen size={13}/> + Yangi Razdel</button>
               </div>
             }
             chapOng={
@@ -1704,20 +1706,16 @@ export function F2Import() {
                 <Tanlov
                   qiymat={yangiSmeta}
                   ozgardi={setYangiSmeta}
-                  variantlar={['', ...(lrv.data?.subs || [])]}
+                  variantlar={['', ...(lrv.data?.lokalkalar || [])]}
                 />
               </div>
               <div className="flex flex-col gap-2 w-1/2">
                 <label className="text-[13px] font-medium text-text-main">Qator turi:</label>
-                <Tanlov
-                  qiymat={yangiTur}
-                  ozgardi={setYangiTur}
-                  variantlar={[
-                    {qiymat: 'rz', nom: 'Razdel'},
-                    {qiymat: 'bl', nom: 'Ish turi'},
-                    {qiymat: 'rs', nom: 'Resurs (Material)'}
-                  ]}
-                />
+                <select value={yangiTur} onChange={(e) => setYangiTur(e.target.value)} className="bg-[var(--surface-3)] border border-border rounded px-3 py-1.5 text-[13px] text-white">
+     <option value="rz">Razdel</option>
+     <option value="bl">Ish turi</option>
+     <option value="rs">Resurs (Material)</option>
+   </select>
               </div>
             </div>
             
@@ -1768,14 +1766,14 @@ export function F2Import() {
               <Tugma 
                 tur="secondary" 
                 onBos={() => setQatorQoshModal(false)} 
-                disabled={qatorLoading}
+                band={qatorLoading}
               >
                 Bekor qilish
               </Tugma>
               <Tugma 
                 tur="primary" 
                 onBos={onQatorSaqlash} 
-                kutyapti={qatorLoading}
+                band={qatorLoading}
               >
                 Yuridik Saqlash
               </Tugma>
