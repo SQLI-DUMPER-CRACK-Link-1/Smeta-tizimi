@@ -545,6 +545,14 @@ export function useF2OyOchirish() {
   });
 }
 
+/** Eski kiritilgan F2 arxiv faylini Drive dan qidirish */
+export function useF2EskiFaylOqi() {
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom }: { obyekt: string; oyNom: string }) =>
+      gas<{ ok: boolean; fileId?: string; xabar?: string }>('apiF2EskiFaylOqi', obyekt, oyNom),
+  });
+}
+
 /** Yozuv holati — 3 soniyada bir so'raladi, tugagach to'xtaydi */
 export function useF2JobHolat(faol: boolean) {
   return useQuery({

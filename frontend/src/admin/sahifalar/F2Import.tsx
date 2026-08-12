@@ -1164,7 +1164,7 @@ export function F2Import() {
                             <button 
                               onClick={() => {
                                 useF2EskiFaylOqiHook.mutate({ obyekt, oyNom: oy }, {
-                                  onSuccess: (r) => {
+                                  onSuccess: (r: any) => {
                                     if(r.ok) {
                                       resetF2Store();
                                       setState({ fid: r.fileId, oyNom: oy, faylNomi: `[Arxivdan] ${oy}`, varaq: '', cfg: null, aktTree: null, qadam: 0 });

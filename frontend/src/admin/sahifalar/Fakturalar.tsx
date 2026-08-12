@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaOCR, useFakturaDriveHolat, useFakturaAvtoSinx, useFakturaSinxFonda, type FakturaItem } from '../../api/hooks';
+import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaAiParse, useFakturaDriveHolat, useFakturaAvtoSinx, useFakturaSinxFonda, type FakturaItem } from '../../api/hooks';
 import { Sahifa, Holatlar, Tugma } from '../../umumiy/ui/Sahifa';
 import { IlgorJadval, type IlgorUstun } from '../../umumiy/ui/IlgorJadval';
 import { toast } from '../../umumiy/ui/Toast';
@@ -10,7 +10,7 @@ export function Fakturalar() {
   const soragan = useFakturalarOl();
   const yoz = useFakturaYoz();
   const faylYoz = useFakturaFaylYoz();
-  const ocr = useFakturaOCR();
+  const aiParse = useFakturaAiParse();
   const drvHolat = useFakturaDriveHolat();
   const drvSinx = useFakturaAvtoSinx();
   const drvSinxFonda = useFakturaSinxFonda();
@@ -66,21 +66,6 @@ export function Fakturalar() {
     return { jami, jamiNds, soni: satrlar.length, katArr, postArr };
   }, [satrlar]);
 
-  const loadPdfJs = async () => {
-    if ((window as any).pdfjsLib) return (window as any).pdfjsLib;
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      script.onload = () => {
-        const pdfjsLib = (window as any).pdfjsLib;
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        resolve(pdfjsLib);
-      };
-      script.onerror = () => reject(new Error('pdf.js yuklanmadi'));
-      document.head.appendChild(script);
-    });
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -90,63 +75,39 @@ export function Fakturalar() {
     let barchaTovarlar: FakturaItem[] = [];
     
     try {
-      const pdfjsLib: any = await loadPdfJs();
-      
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setParsingStatus(`O'qilmoqda: ${i + 1} / ${files.length} (${file.name})`);
+        setParsingStatus(`AI o'qimoqda: ${i + 1} / ${files.length} (${file.name})`);
         
-        // 3. Faylni Base64 formatga o'tkazish
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
           reader.readAsDataURL(file);
         });
 
-        // 1. PDF yoki rasm matnini o'qish
-        let fullText = '';
-        if (file.type.startsWith('image/')) {
-          setParsingStatus(`Rasm o'qilmoqda (Google OCR): ${i + 1} / ${files.length} (${file.name})`);
-          const ocrRes = await ocr.mutateAsync({ base64, mimeType: file.type, nomi: file.name });
-          if (ocrRes?.ok && ocrRes.text) {
-            fullText = ocrRes.text.replace(/\s+/g, ' ');
-          } else {
-            toast(`OCR xatosi (${file.name}): ${ocrRes?.xabar}`, 'danger');
-          }
-        } else {
-          setParsingStatus(`PDF o'qilmoqda: ${i + 1} / ${files.length} (${file.name})`);
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          for (let j = 1; j <= pdf.numPages; j++) {
-            const page = await pdf.getPage(j);
-            const textContent = await page.getTextContent();
-            textContent.items.forEach((item: any) => { fullText += item.str + ' '; });
-          }
-          fullText = fullText.replace(/\s+/g, ' ');
+        const parseRes = await aiParse.mutateAsync({ 
+          base64, 
+          mimeType: file.type || 'application/pdf', 
+          nomi: file.name 
+        });
 
-          // Agar PDF bo'lsa lekin ichida matn yo'q bo'lsa (skaner PDF), OCR qilamiz
-          if (fullText.trim().length < 50) {
-            setParsingStatus(`Skaner PDF aniqlandi, OCR qilinmoqda: ${i + 1} / ${files.length}`);
-            const ocrRes = await ocr.mutateAsync({ base64, mimeType: 'application/pdf', nomi: file.name });
-            if (ocrRes?.ok && ocrRes.text) {
-              fullText = ocrRes.text.replace(/\s+/g, ' ');
-            }
-          }
+        if (!parseRes?.ok || !parseRes.items) {
+           toast(`${file.name} ni o'qishda xato: ${parseRes?.xabar}`, 'danger');
+           continue;
         }
-        
-        // 2. Matndan tovarlarni ajratish
-        const { items, supplier } = parseFakturaText(fullText);
-        
-        // 4. Orqa fonga PDF ni saqlash uchun yuborish
+
+        const items = parseRes.items;
+        const supplier = parseRes.supplier || "Noma'lum";
+
+        // Orqa fonga PDF ni saqlash uchun yuborish
         try {
           const fRes = await faylYoz.mutateAsync({ base64, nomi: file.name, postavshik: supplier });
           if (fRes && fRes.ok === false) {
              toast(`${file.name} xato: ${fRes.xabar}`, 'danger');
           } else if (fRes?.ok) {
              toast(`${file.name} Drive ga yuklandi`, 'ok');
-             // Update items with the returned file URL
              if (fRes.url) {
-                items.forEach(it => it.faylUrl = fRes.url);
+                items.forEach((it: FakturaItem) => it.faylUrl = fRes.url);
              }
           }
         } catch(err: any) {
@@ -159,14 +120,14 @@ export function Fakturalar() {
       
       if (barchaTovarlar.length > 0) {
         setYangiKiritmalar(barchaTovarlar);
-        toast(`Jami ${barchaTovarlar.length} ta tovar topildi`);
+        toast(`Jami ${barchaTovarlar.length} ta tovar topildi`, 'ok');
       } else {
-        toast("Fakturalar ichidan tovarlarni ajratib bo'lmadi.");
+        toast("Fakturalar ichidan tovarlarni ajratib bo'lmadi.", 'warn');
       }
       
     } catch (err: any) {
       console.error(err);
-      toast("Fakturani o'qishda xato: " + err.message);
+      toast("Fakturani o'qishda xato: " + (err.message || err));
     } finally {
       setIsParsing(false);
       setParsingStatus('');
