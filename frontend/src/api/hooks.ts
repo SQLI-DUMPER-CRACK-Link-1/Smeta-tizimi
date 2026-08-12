@@ -172,7 +172,13 @@ export function useHolatSaqla(obyekt: string) {
                 node.fakt = edit.fakt;
               }
               if (edit.oylar) {
-                node.oylar = { ...(node.oylar || {}), ...edit.oylar };
+                if (!node.oylar) node.oylar = {};
+                for (const oy of Object.keys(edit.oylar)) {
+                  node.oylar[oy] = {
+                    ...(node.oylar[oy] || { obyom: 0, narx: node.narx || 0 }),
+                    obyom: edit.oylar[oy]
+                  };
+                }
               }
             }
             if (node.children) {

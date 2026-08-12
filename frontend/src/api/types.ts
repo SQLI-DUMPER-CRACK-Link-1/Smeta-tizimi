@@ -14,7 +14,7 @@ export type TreeNode = {
   f2ol: number;
   f2mum: number;
   stFakt?: number; stF2?: number; stOst?: number;
-  oylar?: Record<string, number>;
+  oylar?: Record<string, { obyom: number; narx: number; narxIsFormula?: boolean; uid?: string; }>;
   isQosh?: boolean;
   isZamena?: boolean;
   d1?: string; d2?: string; d3?: string;

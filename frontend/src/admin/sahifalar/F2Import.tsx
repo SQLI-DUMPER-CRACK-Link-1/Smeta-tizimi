@@ -133,6 +133,7 @@ export function F2Import() {
   const [tahrirModalOy, setTahrirModalOy] = useState<string | null>(null);
   const [tanlanganFaylNomi, setTanlanganFaylNomi] = useState<string>('');
 
+  const restoredF2Ref = useRef(false);
   const faylRef = useRef<HTMLInputElement>(null);
 
   const loklar = useF2Lokalkalar(obyekt);
@@ -248,12 +249,13 @@ export function F2Import() {
       for (const n of nodes) {
         if (n.type !== 'rz') {
           const kalit = `${n.varaq}#${n.row}`;
-          const aktUid = joyMap.get(kalit);
-          if (aktUid) {
-            const aNode = aktBarchaTugun.find(a => a.uid === aktUid);
-            if (aNode && aNode.hajm && n.qoldiq != null && aNode.hajm > n.qoldiq) {
-              v.push({ nom: n.nom, farq: aNode.hajm - n.qoldiq });
-            }
+          const qoldiq = n.qoldiq || 0;
+          let yoz = 0;
+          for (const m of moslikMap.values()) {
+            if (`${m.varaq}#${m.row}` === kalit) yoz += m.hajm || 0;
+          }
+          if (yoz > qoldiq + 0.01) {
+            v.push({ nom: n.nom, farq: yoz - qoldiq });
           }
         }
         if (n.children) check(n.children);
@@ -261,7 +263,53 @@ export function F2Import() {
     };
     check(lrv.data.tree);
     return v;
-  }, [lrv.data, joyMap, aktBarchaTugun]);
+  }, [lrv.data, joyMap, aktBarchaTugun, qolDop, moslikMap]);
+
+  useEffect(() => {
+    if (qadam === 0) restoredF2Ref.current = false;
+  }, [qadam]);
+
+  useEffect(() => {
+    if (qadam === 1 && !restoredF2Ref.current && (faylNomi?.startsWith('[Arxivdan]') || faylNomi?.startsWith('[Qo\'lda tanlandi]')) && lrv.data?.tree && aktTree) {
+      restoredF2Ref.current = true;
+      const yangiBog = { ...qolBog };
+      let changed = false;
+
+      const scanSmeta = (nodes: any[]) => {
+        let normOy = oyNom.trim();
+        const m1 = normOy.match(/^0?(\d{1,2})\.(\d{4})$/);
+        if (m1) normOy = parseInt(m1[1], 10) + '.' + m1[2];
+        else normOy = normOy.toUpperCase();
+
+        nodes.forEach((n: any) => {
+          if (n.oylar && n.oylar[normOy] && n.oylar[normOy].uid) {
+             const u = n.oylar[normOy].uid;
+             const aktNode = aktBarchaTugun.find(a => a.uid === u);
+             if (aktNode) {
+               yangiBog[u] = { 
+                 uid: u, 
+                 varaq: n.varaq, 
+                 row: n.row, 
+                 kod: aktNode.kod || '',
+                 narx: aktNode.narx || 0,
+                 summa: aktNode.summa || 0,
+                 hajm: aktNode.hajm || aktNode.summa || 0 
+               };
+               changed = true;
+             }
+          }
+          if (n.children) scanSmeta(n.children);
+        });
+      };
+      
+      scanSmeta(lrv.data.tree);
+      
+      if (changed) {
+        setQolBog(yangiBog);
+        toast("Avvalgi bog'lanishlar tiklandi", "ok");
+      }
+    }
+  }, [qadam, faylNomi, lrv.data?.tree, aktTree, oyNom, aktBarchaTugun, qolBog, setQolBog]);
 
   const dopJami = useMemo(() => {
     return aktBarglar
@@ -834,7 +882,7 @@ export function F2Import() {
 
   /* ---------- 4. Yozish ---------- */
   async function yozish() {
-    if (!natija) return;
+    if (!natija && Object.keys(qolBog).length === 0 && Object.keys(qolDop).length === 0) return;
     if (!constOk) {
       if (!window.confirm("Diqqat! Akt jami summasi va bog'langan summa o'rtasida farq mavjud. Yozishni baribir davom ettirasizmi?")) {
         return;

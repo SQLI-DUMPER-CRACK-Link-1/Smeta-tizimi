@@ -422,22 +422,25 @@ export function Fakturalar() {
         {() => (
           <div className="flex flex-col gap-6">
 
-            {/* Analitika Kengash */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="karta p-5 shadow-lg border border-border bg-gradient-to-br from-black/40 to-black/10">
-                <h3 className="text-sm font-medium text-text-dim mb-1">Jami Qabul Qilingan Summa</h3>
-                <div className="text-3xl font-bold text-white mb-2"><FmtN val={analitika.jami} /> <span className="text-sm font-normal text-text-dim">so'm</span></div>
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-text-dim">Hujjatlar soni:</span>
-                  <span className="text-accent font-medium">{analitika.soni} ta</span>
+            {/* Analitika Kengash - Premium UI */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="karta p-6 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <FileText size={80} />
                 </div>
-                <div className="flex justify-between text-[13px] mt-1">
-                  <span className="text-text-dim">Jami NDS:</span>
-                  <span className="text-warning font-medium"><FmtN val={analitika.jamiNds} /></span>
+                <h3 className="text-sm font-medium text-text-dim mb-2 uppercase tracking-widest">Jami Qabul Qilingan Summa</h3>
+                <div className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-accent to-white mb-4"><FmtN val={analitika.jami} /> <span className="text-sm font-medium text-text-dim">so'm</span></div>
+                <div className="flex justify-between items-center text-[14px] bg-black/20 p-2 rounded-lg border border-white/5">
+                  <span className="text-text-dim flex items-center gap-2"><FolderOpen size={16}/> Hujjatlar:</span>
+                  <span className="text-accent font-bold text-lg">{analitika.soni} <span className="text-xs font-normal">ta</span></span>
+                </div>
+                <div className="flex justify-between items-center text-[14px] bg-black/20 p-2 rounded-lg border border-white/5 mt-2">
+                  <span className="text-text-dim flex items-center gap-2"><FileText size={16}/> Jami QQS:</span>
+                  <span className="text-warning font-bold"><FmtN val={analitika.jamiNds} /></span>
                 </div>
               </div>
 
-              <div className="karta p-4 shadow-lg border border-border overflow-hidden flex flex-col">
+              <div className="karta p-5 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl overflow-hidden flex flex-col">
                 <h3 className="text-[13px] font-medium text-text-dim mb-3 uppercase tracking-wider">Kategoriyalar bo'yicha</h3>
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
                   {analitika.katArr.length === 0 ? <span className="text-text-dim text-sm">Ma'lumot yo'q</span> : 
@@ -450,14 +453,14 @@ export function Fakturalar() {
                 </div>
               </div>
 
-              <div className="karta p-4 shadow-lg border border-border overflow-hidden flex flex-col">
-                <h3 className="text-[13px] font-medium text-text-dim mb-3 uppercase tracking-wider">Top-5 Yetkazib Beruvchilar</h3>
+              <div className="karta p-5 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl overflow-hidden flex flex-col">
+                <h3 className="text-[13px] font-medium text-text-dim mb-4 uppercase tracking-widest flex items-center gap-2"><FolderOpen size={16} className="text-accent"/> Top-5 Yetkazib Beruvchi</h3>
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                  {analitika.postArr.length === 0 ? <span className="text-text-dim text-sm">Ma'lumot yo'q</span> : 
+                  {analitika.postArr.length === 0 ? <span className="text-text-dim text-sm italic">Ma'lumot yo'q</span> : 
                    analitika.postArr.map(([p, s]) => (
-                    <div key={p} className="flex justify-between items-center text-sm">
-                      <span className="text-text truncate pr-2 flex-1" title={p}>{p}</span>
-                      <span className="font-semibold text-white shrink-0"><FmtN val={s} /></span>
+                    <div key={p} className="flex justify-between items-center text-sm p-2 hover:bg-white/5 rounded-lg transition-colors border border-transparent hover:border-white/5">
+                      <span className="text-white truncate pr-2 flex-1 font-medium" title={p}>{p}</span>
+                      <span className="font-bold text-accent shrink-0"><FmtN val={s} /></span>
                     </div>
                   ))}
                 </div>
@@ -624,28 +627,44 @@ export function Fakturalar() {
                     </span>
                   </div>
                   
-                  <div className="border border-border rounded-xl overflow-hidden bg-black/20 overflow-x-auto">
+                  <div className="border border-border rounded-xl overflow-hidden bg-black/20 overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                       <thead className="bg-[var(--surface-2)] border-b border-border text-text-dim">
                         <tr>
+                          <th className="px-3 py-2 font-medium">Faktura "-</th>
+                          <th className="px-3 py-2 font-medium">Sana</th>
                           <th className="px-3 py-2 font-medium">Postavshik</th>
                           <th className="px-3 py-2 font-medium">Y. STIR</th>
-                          <th className="px-3 py-2 font-medium">S. STIR</th>
-                          <th className="px-3 py-2 font-medium">Faktura "-</th>
                           <th className="px-3 py-2 font-medium">Nomi</th>
                           <th className="px-3 py-2 font-medium">Birlik</th>
                           <th className="px-3 py-2 font-medium text-right">Miqdor</th>
-                          <th className="px-3 py-2 font-medium text-right">Narxi (so'm)</th>
+                          <th className="px-3 py-2 font-medium text-right">Narxi</th>
+                          <th className="px-3 py-2 font-medium text-right">Aksiz</th>
+                          <th className="px-3 py-2 font-medium text-right">QQS %</th>
+                          <th className="px-3 py-2 font-medium text-right">Jami NDS siz</th>
                           <th className="px-3 py-2 font-medium text-right">Jami Summa</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {yangiKiritmalar.map((t, i) => {
                           const isDup = t.fakturaRaqami && t.postavshik && hammasi.some(x => x.fakturaRaqami === t.fakturaRaqami && x.postavshik === t.postavshik);
+                          // Matematik xatoni tekshirish (faqat agar narx/miqdor noldan katta bo'lsa)
+                          const hisoblanganNdsSiz = (t.miqdori || 0) * (t.narxi || 0);
+                          const xatoMath = (t.miqdori > 0 && t.narxi > 0) ? Math.abs(hisoblanganNdsSiz - (t.jamiNdsSiz || 0)) > 2 : false; // 2 so'm farqqa ruxsat
                           return (
-                          <tr key={i} className={`hover:bg-white/5 ${isDup ? 'opacity-50 bg-danger/10' : ''}`} title={isDup ? "Bu faktura oldin kiritilgan (Dublikat)" : ""}>
+                          <tr key={i} className={`hover:bg-white/5 ${isDup ? 'opacity-50 bg-danger/10' : ''} ${xatoMath ? 'bg-danger/20 border-l-2 border-danger' : ''}`} title={isDup ? "Dublikat!" : (xatoMath ? "Diqqat! Miqdor * Narx jami summaga to'g'ri kelmayapti." : "")}>
+                            <td className="px-3 py-2 w-24">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-accent text-sm" placeholder="Faktura №" value={t.fakturaRaqami} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].fakturaRaqami = e.target.value; setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
+                            <td className="px-3 py-2 w-24">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-text-dim text-sm" placeholder="Sana" value={t.kelganSana || ''} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].kelganSana = e.target.value; setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
                             <td className="px-3 py-2 max-w-[150px]">
-                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-white text-sm" placeholder="Postavshik" value={t.postavshik} onChange={(e) => {
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-white text-sm truncate" placeholder="Postavshik" value={t.postavshik} onChange={(e) => {
                                 const nw = [...yangiKiritmalar]; nw[i].postavshik = e.target.value; setYangiKiritmalar(nw);
                               }}/>
                             </td>
@@ -654,32 +673,41 @@ export function Fakturalar() {
                                 const nw = [...yangiKiritmalar]; nw[i].postavshikInn = e.target.value; setYangiKiritmalar(nw);
                               }}/>
                             </td>
-                            <td className="px-3 py-2 w-24">
-                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-text-dim text-sm" placeholder="S. STIR" value={t.sotibOluvchiInn || ''} onChange={(e) => {
-                                const nw = [...yangiKiritmalar]; nw[i].sotibOluvchiInn = e.target.value; setYangiKiritmalar(nw);
-                              }}/>
-                            </td>
-                            <td className="px-3 py-2 w-32">
-                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-text-dim text-sm" placeholder="Faktura №" value={t.fakturaRaqami} onChange={(e) => {
-                                const nw = [...yangiKiritmalar]; nw[i].fakturaRaqami = e.target.value; setYangiKiritmalar(nw);
-                              }}/>
-                            </td>
-                            <td className="px-3 py-2 max-w-[250px] truncate text-white" title={t.nomi}>
+                            <td className="px-3 py-2 max-w-[200px] truncate text-white">
                               <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none" value={t.nomi} onChange={(e) => {
                                 const nw = [...yangiKiritmalar]; nw[i].nomi = e.target.value; setYangiKiritmalar(nw);
                               }}/>
                             </td>
-                            <td className="px-3 py-2 text-text-dim w-24">
-                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none" value={t.birligi} onChange={(e) => {
+                            <td className="px-3 py-2 text-text-dim w-20">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-center" value={t.birligi} onChange={(e) => {
                                 const nw = [...yangiKiritmalar]; nw[i].birligi = e.target.value; setYangiKiritmalar(nw);
                               }}/>
                             </td>
                             <td className="px-3 py-2 text-right w-24">
-                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right font-medium" type="number" value={t.miqdori} onChange={(e) => {
+                              <input className={`w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right font-medium ${xatoMath ? 'text-warning' : ''}`} type="number" value={t.miqdori || ''} onChange={(e) => {
                                 const nw = [...yangiKiritmalar]; nw[i].miqdori = Number(e.target.value); setYangiKiritmalar(nw);
                               }}/>
                             </td>
-                            <td className="px-3 py-2 text-right w-32"><FmtN val={t.narxi} /></td>
+                            <td className="px-3 py-2 text-right w-28">
+                              <input className={`w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right ${xatoMath ? 'text-warning' : ''}`} type="number" value={t.narxi || ''} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].narxi = Number(e.target.value); setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
+                            <td className="px-3 py-2 text-right w-20">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right text-text-dim" type="number" value={t.aksizSummasi || ''} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].aksizSummasi = Number(e.target.value); setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
+                            <td className="px-3 py-2 text-right w-16">
+                              <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right text-text-dim" type="number" value={t.ndsStavkasi || ''} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].ndsStavkasi = Number(e.target.value); setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
+                            <td className="px-3 py-2 text-right w-28">
+                              <input className={`w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right ${xatoMath ? 'text-danger font-bold' : ''}`} type="number" value={t.jamiNdsSiz || ''} onChange={(e) => {
+                                const nw = [...yangiKiritmalar]; nw[i].jamiNdsSiz = Number(e.target.value); setYangiKiritmalar(nw);
+                              }}/>
+                            </td>
                             <td className="px-3 py-2 text-right font-bold text-ok w-32"><FmtN val={t.jamiNdsBilan} /></td>
                           </tr>
                           );
