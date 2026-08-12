@@ -883,11 +883,7 @@ export function F2Import() {
   /* ---------- 4. Yozish ---------- */
   async function yozish() {
     if (!natija && Object.keys(qolBog).length === 0 && Object.keys(qolDop).length === 0) return;
-    if (!constOk) {
-      if (!window.confirm("Diqqat! Akt jami summasi va bog'langan summa o'rtasida farq mavjud. Yozishni baribir davom ettirasizmi?")) {
-        return;
-      }
-    }
+    // window.confirm is blocked in Telegram WebApp. The button already says "(Farq mavjud!)".
     // Dopps endi boglanmagan ro'yxatidan EMAS, faqat qo'lda tasdiqlangan qolDop dan keladi!
     const dopps = Object.values(qolDop);
     try {
