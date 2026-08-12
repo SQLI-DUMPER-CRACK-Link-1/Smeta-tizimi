@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
   useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi
@@ -129,6 +129,9 @@ export function F2Import() {
   const setDopModalUid = createSetter('dopModalUid');
   const setDropState = createSetter('dropState');
   const setSmetaScrollTo = createSetter('smetaScrollTo');
+
+  const [tahrirModalOy, setTahrirModalOy] = useState<string | null>(null);
+  const [tanlanganFaylNomi, setTanlanganFaylNomi] = useState<string>('');
 
   const faylRef = useRef<HTMLInputElement>(null);
 
@@ -1170,7 +1173,11 @@ export function F2Import() {
                                       setState({ fid: r.fileId, oyNom: oy, faylNomi: `[Arxivdan] ${oy}`, varaq: '', cfg: null, aktTree: null, qadam: 0 });
                                       toast("Fayl topildi. Iltimos varaqni tanlang.", "ok");
                                     } else {
-                                      toast("Xato: " + r.xabar, "danger");
+                                      toast("Avtomatik topilmadi: " + r.xabar, "danger");
+                                      setTahrirModalOy(oy);
+                                      if (fayllar.data?.fayllar && fayllar.data.fayllar.length > 0) {
+                                          setTanlanganFaylNomi(fayllar.data.fayllar[0].name);
+                                      }
                                     }
                                   },
                                   onError: (e: any) => toast(e.message, "danger")
@@ -1441,6 +1448,68 @@ export function F2Import() {
               Yangi Ф2 import
             </Tugma>
           )}
+        </div>
+      )}
+      {/* TAHRIRLASH UCHUN QO'LDA FAYL TANLASH MODAL */}
+      {tahrirModalOy && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-[var(--surface-1)] border border-border w-full max-w-md rounded-lg shadow-2xl p-5 flex flex-col gap-4">
+            <h3 className="text-lg font-bold text-accent border-b border-border pb-2">
+              Faylni qo'lda tanlash
+            </h3>
+            
+            <div className="text-sm text-text-mute">
+              <b>{tahrirModalOy}</b> oyi uchun arxiv fayli avtomatik tarzda topilmadi. Iltimos, ushbu obyektga tegishli Excel fayllar ro'yxatidan keraklisini o'zingiz tanlang:
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-[13px] font-medium text-text-main">Mavjud Excel fayllar</label>
+              <Tanlov
+                qiymat={tanlanganFaylNomi}
+                ozgardi={setTanlanganFaylNomi}
+                variantlar={['', ...(fayllar.data?.fayllar?.map((f: any) => f.name) || [])]}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
+              <Tugma 
+                tur="secondary" 
+                onBos={() => {
+                  setTahrirModalOy(null);
+                  setTanlanganFaylNomi('');
+                }} 
+              >
+                Bekor qilish
+              </Tugma>
+              <Tugma 
+                tur="primary" 
+                onBos={() => {
+                  if (!tanlanganFaylNomi) {
+                    toast("Iltimos, faylni tanlang", "danger");
+                    return;
+                  }
+                  const f = fayllar.data?.fayllar?.find((x: any) => x.name === tanlanganFaylNomi);
+                  if (f) {
+                    resetF2Store();
+                    setState({ 
+                      fid: f.id, 
+                      oyNom: tahrirModalOy, 
+                      faylNomi: `[Qo'lda tanlandi] ${f.name}`, 
+                      varaq: '', 
+                      cfg: null, 
+                      aktTree: null, 
+                      qadam: 0 
+                    });
+                    toast("Fayl tanlandi. Iltimos varaqni tanlang.", "ok");
+                    setTahrirModalOy(null);
+                    setTanlanganFaylNomi('');
+                  }
+                }} 
+              >
+                Tanlash va Tahrirlash
+              </Tugma>
+            </div>
+          </div>
         </div>
       )}
     </Sahifa>
