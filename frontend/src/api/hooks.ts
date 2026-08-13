@@ -265,9 +265,17 @@ export function useShartnomaSaqla() {
 }
 
 
+/**
+ * Fakturalarni FON rejimida sinxronlash.
+ * ⚡ 2026-08-13 TUZATILDI: avval mavjud bo'lmagan `apiStartBackgroundSync`
+ * chaqirilardi — «Функция мавжуд эмас» qaytib, tugma hech narsa qilmasdi.
+ * Haqiqiy funksiya: `apiFakturaSinxAsosiy` (89c_FakturaSync.js) — u bir
+ * porsiyani bajarib, qolgani bo'lsa o'zi `apiFakturaSinxDavom` triggerini
+ * qo'yadi (GAS 6 daqiqa limitiga urilmaslik uchun).
+ */
 export function useFakturaSinxFonda() {
   return useMutation({
-    mutationFn: () => gas<any>('apiStartBackgroundSync')
+    mutationFn: () => gas<any>('apiFakturaSinxAsosiy')
   });
 }
 
@@ -758,15 +766,12 @@ export function useXarajatOchir() {
   });
 }
 
-export function useSkladOchir() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (qatorNo: number) => gas<string>('apiSkladOchir', qatorNo),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['skladQoldiq'] });
-    }
-  });
-}
+/* ⚠️ 2026-08-13: `useSkladOchir` OLIB TASHLANDI.
+ * U mavjud bo'lmagan `apiSkladOchir` GAS funksiyasini chaqirardi va hech
+ * qayerda (birorta sahifada) ishlatilmagan — ya'ni o'lik kod edi.
+ * Ombor qatorini O'CHIRISH — qaytarilmas amal; kerak bo'lsa avval GAS'da
+ * `apiSkladOchir` ni ehtiyotkorlik bilan (Приход/Расход tarixini saqlab)
+ * yozib, so'ng shu hook qaytariladi. Taxminan yozib qo'yilmaydi. */
 
 /* ============ ERP KADRLAR VA TABEL (87_ErpModullar.js) ============ */
 export function useKadrlarData(oy?: string) {
