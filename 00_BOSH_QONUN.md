@@ -83,6 +83,35 @@ Va UI'da bo'sh holatni **halol** ko'rsating:
 
 ---
 
+### Q1-a. FRONTEND CHAQIRGAN FUNKSIYA GAS'DA BORMI? (2026-08-13)
+
+Har `gas('apiXXX')` chaqiruvi uchun GAS'da **aynan shu nomli** funksiya
+bo'lishi shart. Yo'q bo'lsa `«Функция мавжуд эмас ёки ёпиқ»` qaytadi va
+tugma jimgina hech narsa qilmaydi.
+
+Jonli auditda **3 ta** shunday nomuvofiqlik topildi:
+| Frontend chaqirgan | Haqiqatda | Natija |
+|---|---|---|
+| `apiSmetaQatorQosh` | umuman yo'q edi | «Qator qo'shish» butunlay ishlamasdi |
+| `apiStartBackgroundSync` | `apiFakturaSinxAsosiy` | fon sinxronizatsiya tugmasi o'lik |
+| `apiSkladOchir` | yo'q (hook ham ishlatilmagan) | o'lik kod |
+
+**Har ish oxirida shu auditni yuritib turing:**
+
+```bash
+cd frontend/src && grep -ohE "'api[A-Za-z0-9_]+'" api/hooks.ts \
+  admin/sahifalar/*.tsx erp/sahifalar/*.tsx boss/sahifalar/*.tsx \
+  | tr -d "'" | sort -u > /tmp/fe.txt
+cd "../../Smeta tizimi" && grep -ohE "^function api[A-Za-z0-9_]+" *.js \
+  | sed 's/function //' | sort -u > /tmp/gas.txt
+comm -23 /tmp/fe.txt /tmp/gas.txt     # chiqish BO'SH bo'lishi kerak
+```
+
+> Yangi API kerak bo'lsa — mantiqni **noldan yozmang**. Avval o'xshash
+> ishonchli funksiya bor-yo'qligini qidiring va **adapter** yozing.
+> `apiSmetaQatorQosh` aynan shunday qilindi: u faqat argumentni tekshirib,
+> sinovdan o'tgan `apiRzQosh`/`apiBlQosh`/`apiRsQosh` ga yo'naltiradi.
+
 ### Q2. O'LIK TUGMA QO'YMANG
 
 Ko'rinadigan har bir tugma **haqiqiy ish bajarishi** shart. `onClick`siz
