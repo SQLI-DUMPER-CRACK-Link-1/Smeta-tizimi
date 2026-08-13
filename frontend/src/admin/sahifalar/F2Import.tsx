@@ -486,6 +486,32 @@ export function F2Import() {
     if (aktUid) bogBekor(aktUid);
   }
 
+  /* ⚡ 2026-08-13: SMETA daraxtidagi har qatordagi «＋» tugmasi shu funksiyani
+   * chaqiradi — modal SHU qatorning varag'i va qator raqami bilan OLDINDAN
+   * to'ldiriladi. Avval foydalanuvchi panel tepasidagi bitta tugmani bosib,
+   * varaqni va qator raqamini QO'LDA yozishi kerak edi (xatoga juda moyil). */
+  function qatorQoshBoshla(smetaKalit: string) {
+    // smetaKalit shakllari: «varaq#row» yoki «rz:nom:row»
+    let varaqNom = '';
+    let row = 0;
+    if (smetaKalit.startsWith('rz:')) {
+      const parts = smetaKalit.split(':');
+      row = Number(parts[2] || 0);
+      // rz kalitida varaq yo'q — razdelni daraxtdan topib varag'ini olamiz
+      const rz = smetaRazdellar.find(r => r.row === row && r.nom === parts[1]);
+      varaqNom = (rz as any)?.varaq || '';
+    } else {
+      const i = smetaKalit.lastIndexOf('#');
+      if (i < 0) { toast('Qator aniqlanmadi', 'danger'); return; }
+      varaqNom = smetaKalit.slice(0, i);
+      row = Number(smetaKalit.slice(i + 1)) || 0;
+    }
+    if (!varaqNom) { toast('Bu qatorning varag\'i aniqlanmadi', 'danger'); return; }
+    setYangiSmeta(varaqNom);
+    setYangiQator(String(row));
+    setQatorQoshModal(true);
+  }
+
   /** Sudrab tashlash: akt qatori → smeta qatori. «varaq#row» yoki rz:nom:row dan ajratamiz. */
   function qolBogla(aktKalit: string, smetaKalit: string) {
     if (smetaKalit.startsWith('rz:')) {
@@ -1740,6 +1766,7 @@ const onAvtoMoslash = () => {
                 onTashla={qolBogla}
                 onGapDrop={qolGapDop}
                 onBogBekor={smetaBogBekor}
+                onQatorQosh={qatorQoshBoshla}
                 scrollToKey={smetaScrollTo}
                 bosh={lrv.isLoading ? "Smeta o‘qilmoqda…" : "Smeta daraxti bo‘sh"}
                 filtr={filtr}
@@ -1864,9 +1891,18 @@ const onAvtoMoslash = () => {
       {qatorQoshModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-[var(--surface-1)] border border-border w-full max-w-lg rounded-lg shadow-2xl p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-accent border-b border-border pb-2">
-              Smetaga Yangi Qator Qo'shish (DOP)
-            </h3>
+            <div className="border-b border-border pb-2">
+              <h3 className="text-lg font-bold text-accent">
+                Smetaga Yangi Qator Qo'shish (DOP)
+              </h3>
+              {yangiQator && yangiSmeta && (
+                <p className="text-[12px] text-text-dim mt-1">
+                  «{yangiSmeta}» varag'ining <b className="text-text">{yangiQator}</b>-qatoridan
+                  KEYIN qo'shiladi. Saqlagandan so'ng F2 tarafdan kerakli qatorni
+                  sudrab shu yangi qatorga bog'lay olasiz.
+                </p>
+              )}
+            </div>
             
             <div className="flex gap-4">
               <div className="flex flex-col gap-2 w-1/2">

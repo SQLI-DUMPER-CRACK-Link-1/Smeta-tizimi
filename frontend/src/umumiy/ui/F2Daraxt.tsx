@@ -60,7 +60,7 @@ const GapZone = memo(function GapZone({
 const DaraxtQator = memo(function DaraxtQator({
   t, daraja, bolalari, bog, yoritilgan, drop, yopiqHas,
   sudraladi, tashlanadi, onTashla, setHover, setUstida, toggle, onBogBekor,
-  onDopClick, onOtishClick, takliflar, onTaklifTanlandi, scrollRef,
+  onDopClick, onOtishClick, takliflar, onTaklifTanlandi, scrollRef, onQatorQosh,
 }: {
   t: DaraxtTugun; daraja: number; bolalari: boolean; bog: boolean; yoritilgan: boolean; drop: boolean; yopiqHas: boolean;
   sudraladi?: boolean; tashlanadi?: boolean;
@@ -72,6 +72,8 @@ const DaraxtQator = memo(function DaraxtQator({
   takliflar?: Record<string, any[]>;
   onTaklifTanlandi?: (uid: string, cand: any) => void;
   scrollRef?: (el: HTMLDivElement | null) => void;
+  /** SMETA tomonida: shu qatordan KEYIN yangi qator qo'shish (rz/bl/rs) */
+  onQatorQosh?: (smetaKalit: string) => void;
 }) {
   return (
     <div
@@ -142,6 +144,19 @@ const DaraxtQator = memo(function DaraxtQator({
              </button>
            )}
 
+           {/* ⚡ 2026-08-13 SMETA tomoni: SHU QATORDAN KEYIN yangi qator qo'shish.
+               Avval bu faqat panel tepasidagi bitta tugma edi va qator raqamini
+               qo'lda yozish kerak bo'lardi. Endi har qatorda o'z tugmasi bor. */}
+           {onQatorQosh && (
+             <button
+               onClick={(e) => { e.stopPropagation(); onQatorQosh(t.kalit); }}
+               className="w-6 h-6 ml-0.5 flex items-center justify-center rounded bg-accent/15 text-accent hover:bg-accent hover:text-white hover:scale-110 transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+               title="Shu qatordan KEYIN yangi qator qo'shish (Razdel / Ish turi / Resurs)"
+             >
+               <span className="text-[13px] font-bold leading-none">＋</span>
+             </button>
+           )}
+
            {/* Takliflar (faqat chap taraf uchun) */}
            {!bog && takliflar && takliflar[t.kalit] && takliflar[t.kalit].length > 0 && onTaklifTanlandi && (
              <div className="relative group/taklif">
@@ -197,6 +212,7 @@ export function F2Daraxt({
   ochiqYopiqSignal = 0,
   onDopClick,
   onOtishClick,
+  onQatorQosh,
   scrollToKey, takliflar, onTaklifTanlandi,
 }: {
   tugunlar: DaraxtTugun[];
@@ -214,6 +230,8 @@ export function F2Daraxt({
   ochiqYopiqSignal?: number;
   onDopClick?: (kalit: string) => void;
   onOtishClick?: (kalit: string) => void;
+  /** SMETA tomoni: shu qatordan keyin yangi qator qo'shish (har qatorda «＋») */
+  onQatorQosh?: (smetaKalit: string) => void;
   scrollToKey?: string | null; takliflar?: Record<string, any[]>; onTaklifTanlandi?: (uid: string, cand: any) => void;
 }) {
   const [yopiq, setYopiq] = useState<Set<string>>(new Set());
@@ -375,6 +393,7 @@ export function F2Daraxt({
               onBogBekor={onBogBekor}
               onDopClick={onDopClick}
               onOtishClick={bog ? onOtishClick : undefined}
+              onQatorQosh={onQatorQosh}
               scrollRef={setScrollRef(t.kalit)} takliflar={takliflar} onTaklifTanlandi={onTaklifTanlandi}
             />
           </div>
