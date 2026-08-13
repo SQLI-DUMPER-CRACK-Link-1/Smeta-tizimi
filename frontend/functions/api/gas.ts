@@ -60,7 +60,7 @@ export const onRequestPost: PagesFunction<{
     
     // Agar Google 302/HTML qaytarsa, u JSON emas. Shuni ushlaymiz.
     if (text.trim().startsWith('<')) {
-      return new Response(JSON.stringify({ ok: false, error: 'Google Apps Script HTML qaytardi (302 redirect yoki xato URL: ' + ctx.env.GAS_URL + ').' }), {
+      return new Response(JSON.stringify({ ok: false, error: 'GAS HTML qaytardi: ' + text.slice(0, 300) }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }

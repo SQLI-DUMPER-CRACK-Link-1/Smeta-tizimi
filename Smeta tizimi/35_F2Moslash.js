@@ -696,6 +696,15 @@ function f2MoslashSelfTest(){
  */
 function apiF2Varaqlar(fileId){
   try{
+    // Excel fayllar SpreadsheetApp'ni qulatib, HTML 500 qaytarishining oldini olish:
+    var f = DriveApp.getFileById(fileId);
+    var mime = f.getMimeType();
+    if (mime === MimeType.MICROSOFT_EXCEL || 
+        mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+        mime === 'application/vnd.ms-excel') {
+      return {ok:false, xabar:'Бу Excel файли (.xlsx). Смета тизимида ишлаш учун Google Sheets форматида бўлиши керак. Илтимос, файлни очиб "Save as Google Sheets" қилинг ёки пастдаги "Компьютердан юклаш" орқали қайта юкланг (тизим ўзи конверт қилади).'};
+    }
+
     var ss = SpreadsheetApp.openById(fileId);
     var out = ss.getSheets().map(function(sh){
       return {
