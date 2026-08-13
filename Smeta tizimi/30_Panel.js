@@ -1637,7 +1637,18 @@ function apiBlQosh(params){
   var nom=String(params.nom||'').trim(), birlik=String(params.birlik||'').trim();
   var hajm=_toNum(params.hajm);
   if(!obyekt||!varaqNom||!afterRow||!nom) throw 'Параметрлар тўлиқ эмас';
-  if(hajm<=0) throw 'Ҳажм 0 дан катта бўлсин';
+  /* ⚡⚡⚡ 2026-08-13 ПЕРЕРАСЧЁТ (MANFIY HAJM) TUZATILDI
+   * Foydalanuvchi: «pererashchet obyomlar bor... avval olgan obyomimni MINUS
+   * qilganman, lekin F2 da o'sha minusni smetadagi joyiga zamena yoki
+   * qo'shimcha qilib bog'lasam UMUMAN YOZMAYAPTI».
+   * SABAB: bu yerda `hajm<=0` bo'lsa xato tashlanardi — ya'ni tuzatish
+   * (korrektirovka) qatorini smetaga yozishning YO'LI YO'Q edi.
+   * Tizim F2 fayldan manfiy перерасчет qatorlarini O'QIY olardi, lekin
+   * YOZA olmasdi — mantiq nomuvofiqligi.
+   * ENDI: manfiy hajm RUXSAT ETILADI (korrektirovka), faqat AYNAN 0 va
+   * son bo'lmagan qiymat rad etiladi (ular ma'nosiz qator yaratadi). */
+  if(!isFinite(hajm)) throw 'Ҳажм сон эмас';
+  if(hajm===0) throw 'Ҳажм 0 бўлмаслиги керак (манфий — перерасчёт учун — мумкин)';
   var plus=_plusTop(obyekt); if(!plus) throw 'LRV_PLUS топилмади';
   var sh=plus.getSheetByName(varaqNom); if(!sh) throw 'Варақ топилмади';
   if(afterRow<1||afterRow>sh.getLastRow()) throw 'afterRow нотўғри';
@@ -1753,8 +1764,13 @@ function apiRsQosh(params){
 
   var blRow=Number(params.blRow), nom=String(params.nom||'').trim();
   var birlik=String(params.birlik||'').trim(), norm=_toNum(params.norm);
-  if(!obyekt||!varaqNom||!blRow||!nom||!birlik||norm<0)
+  /* ⚡⚡⚡ 2026-08-13: avval `norm<0` bo'lsa «Параметрлар тўлиқ эмас» xatosi
+   * tashlanardi — перерасчёт (manfiy tuzatish) resursini smetaga yozish
+   * IMKONSIZ edi. Endi manfiy norma ruxsat etiladi (apiBlQosh bilan bir xil
+   * mantiq). Son bo'lmagan qiymat esa rad etiladi. */
+  if(!obyekt||!varaqNom||!blRow||!nom||!birlik)
     throw 'Параметрлар тўлиқ эмас';
+  if(!isFinite(norm)) throw 'Норма сон эмас';
   var plus=_plusTop(obyekt);
   if(!plus) throw 'LRV_PLUS топилмади';
   var sh=plus.getSheetByName(varaqNom);
@@ -4021,8 +4037,13 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
            var rCell = sh.getRange(row, c);
            rCell.setValue(_toNum(obyomV));
            if(uid) { rCell.setNote(uid); } else if (obyomV === 0 || obyomV === '') { rCell.clearNote(); }
-           if(Number(narxV)>0) sh.getRange(row, c+1).setValue(_toNum(narxV));
-           if(Number(summaV)>0) sh.getRange(row, c+2).setValue(_toNum(summaV));
+           /* ⚡⚡⚡ 2026-08-13 ПЕРЕРАСЧЁТ: avval shart `>0` edi — MANFIY narx/summa
+            * (korrektirovka) oy ustuniga UMUMAN YOZILMASDI. Natijada hajm minus
+            * bo'lib yozilsa ham SUMMA eski (musbat) qolib, F2 jami noto'g'ri
+            * chiqardi. Endi shart «nol emas» — manfiy ham yoziladi.
+            * Aynan 0 esa yozilmaydi (mavjud qiymatni bekorga o'chirmasin). */
+           if(Number(narxV)) sh.getRange(row, c+1).setValue(_toNum(narxV));
+           if(Number(summaV)) sh.getRange(row, c+2).setValue(_toNum(summaV));
            dopsYoz++;
         } catch(e){ dopXato.push('Ой ёзиш('+row+'): '+(e.message||e)); }
      }
@@ -4073,8 +4094,9 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
                              var rsRow2;
                              if(borRsRow2){ rsRow2 = borRsRow2; }
                              else {
-                                var cN2 = (cRs2.norma>0 ? cRs2.norma : cRs2.hajm);
-                                var rr3 = apiRsQosh({obyekt: obyekt, varaq: d.varaq, blRow: nBlRow, kod: cRs2.kod, nom: cRs2.nom, birlik: cRs2.bir, norm: cN2, cat: cRs2.type, kat: cRs2.kat, narx: cRs2.narx||0, eObyom: !(cRs2.norma>0), zamena: false, f2_mode: true, f2Uid: cRs2.uid});
+                                // ⚡ 2026-08-13: `>0` → `Number(...)` — manfiy (перерасчёт) norma ham norma deb qabul qilinadi
+                                var cN2 = (Number(cRs2.norma) ? cRs2.norma : cRs2.hajm);
+                                var rr3 = apiRsQosh({obyekt: obyekt, varaq: d.varaq, blRow: nBlRow, kod: cRs2.kod, nom: cRs2.nom, birlik: cRs2.bir, norm: cN2, cat: cRs2.type, kat: cRs2.kat, narx: cRs2.narx||0, eObyom: !Number(cRs2.norma), zamena: false, f2_mode: true, f2Uid: cRs2.uid});
                                 rsRow2 = rr3.rsRow;
                              }
                              _oyYozDarhol(d.varaq, rsRow2, cRs2.hajm, cRs2.narx, cRs2.summa, cRs2.uid);
@@ -4106,8 +4128,9 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
               } else {
                  _setF2Prog('➕ Ресурс: '+String(d.nom||'').substring(0,28)+' (обём '+d.hajm+', сумма '+(d.summa||0)+')');
                  // eObyom: F2 dagi F bo'sh bo'lgan (d.norma=0) → E to'liq obyom (ko'paytirilmaydi)
-                 var rNorm = (d.norma>0 ? d.norma : d.hajm);
-                 var rr = apiRsQosh({obyekt: obyekt, varaq: d.varaq, blRow: d.targetRow, kod: d.kod, nom: d.nom, birlik: d.bir, norm: rNorm, cat: d.type, kat: d.kat, narx: d.narx, eObyom: !(d.norma>0), zamena: !!d.zamena, f2_mode: true, f2Uid: d.uid});
+                 // ⚡ 2026-08-13: `>0` → `Number(...)` — manfiy (перерасчёт) norma yo'qolmasin
+                 var rNorm = (Number(d.norma) ? d.norma : d.hajm);
+                 var rr = apiRsQosh({obyekt: obyekt, varaq: d.varaq, blRow: d.targetRow, kod: d.kod, nom: d.nom, birlik: d.bir, norm: rNorm, cat: d.type, kat: d.kat, narx: d.narx, eObyom: !Number(d.norma), zamena: !!d.zamena, f2_mode: true, f2Uid: d.uid});
                  _oyYozDarhol(d.varaq, rr.rsRow, d.hajm, d.narx, d.summa, d.uid);
               }
            } else {
@@ -4144,8 +4167,9 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
                        if(borRs){
                           _oyYozDarhol(d.varaq, borRs, cRs.hajm, cRs.narx, cRs.summa, cRs.uid);
                        } else {
-                          var cNorm = (cRs.norma>0 ? cRs.norma : cRs.hajm);
-                          var rr2 = apiRsQosh({obyekt: obyekt, varaq: d.varaq, blRow: newBlRow, kod: cRs.kod, nom: cRs.nom, birlik: cRs.bir, norm: cNorm, cat: cRs.type, kat: cRs.kat, narx: cRs.narx||0, eObyom: !(cRs.norma>0), zamena: (d.action==='zamena_add'||!!d.zamena), f2_mode: true, f2Uid: cRs.uid});
+                          // ⚡ 2026-08-13: `>0` → `Number(...)` — manfiy (перерасчёт) norma yo'qolmasin
+                          var cNorm = (Number(cRs.norma) ? cRs.norma : cRs.hajm);
+                          var rr2 = apiRsQosh({obyekt: obyekt, varaq: d.varaq, blRow: newBlRow, kod: cRs.kod, nom: cRs.nom, birlik: cRs.bir, norm: cNorm, cat: cRs.type, kat: cRs.kat, narx: cRs.narx||0, eObyom: !Number(cRs.norma), zamena: (d.action==='zamena_add'||!!d.zamena), f2_mode: true, f2Uid: cRs.uid});
                           _oyYozDarhol(d.varaq, rr2.rsRow, cRs.hajm, cRs.narx, cRs.summa, cRs.uid);
                        }
                     }
@@ -4838,5 +4862,152 @@ function apiSmetaQatorQosh(obyekt, varaq, tur, afterRow, kod, nom, birlik, hajm,
     return {ok:false, xabar:'Нотўғри қатор тури: '+tur+' (rz/bl/rs кутилган)'};
   }catch(e){
     return {ok:false, xabar:'Қатор қўшилмади: '+String((e&&e.message)||e)};
+  }
+}
+
+/* ============ QAYSI SMETA(LAR) BILAN ISHLASH KERAK? ============
+ * ⚡⚡⚡ 2026-08-13 (foydalanuvchi: «man 1 yil oldin o'tkazgan F2 qaysi
+ * smetalardan kelganini bilmayman... shunchaki shu biriktirilgandan
+ * aniqlansin qaysi smetalarda ishlash kerak ekanligini»).
+ *
+ * MUAMMO: ko'p smetali obyektda (Amfiteatrda 15 ta) F2 qaysi smetaga
+ * tegishli ekani OLDINDAN bilinmaydi. Hammasini o'qish esa GAS 6 daqiqa
+ * limitiga uradi.
+ *
+ * YECHIM: YENGIL PROBE. To'liq daraxt QURILMAYDI (narxlash, bolalar, oy
+ * ustunlari — hech biri). Har smetadan FAQAT 3 ustun (MARKER, KOD, NOM)
+ * bitta getRange bilan o'qiladi va akt bilan ball beriladi:
+ *     razdel nomi mos    = +5 ball
+ *     ish/resurs kodi mos = +1 ball
+ * Natijada smetalar ball bo'yicha saralanadi — foydalanuvchi eng yuqori
+ * ballliklarni tanlab, FAQAT ularni yuklaydi.
+ *
+ * @param {string} obyekt   ota obyekt nomi
+ * @param {Array}  aktTree  F2 fayldan o'qilgan daraxt (apiF2FaylOqi natijasi)
+ * @return {{ok:boolean, takliflar:Array, xabar?:string}}
+ */
+/* ============ FAQAT TANLANGAN SMETALARNI O'QISH ============
+ * ⚡ 2026-08-13: apiHolatOl(ota) BARCHA sub-smetani o'qib timeout beradi,
+ * apiHolatOlLokalka esa FAQAT BITTASINI o'qiydi. Foydalanuvchiga esa
+ * ko'pincha 2-3 ta kerak. Bu funksiya aynan ko'rsatilganlarini o'qib,
+ * apiHolatOl bilan BIR XIL shaklda (varaq → "sub||varaq") birlashtiradi.
+ *
+ * @param {string} parent  ota obyekt
+ * @param {Array}  subs    o'qiladigan lokalka (sub-obyekt) nomlari
+ */
+function apiHolatOlLokalkalar(parent, subs, forceRefresh){
+  subs = (subs || []).filter(function(s){ return !!String(s||'').trim(); });
+  if (!subs.length) return apiHolatOl(parent, forceRefresh);
+
+  var tree = [], oylarSet = {}, xatolar = [];
+  var jamiP = {stSm:0, stFk:0, stF2:0, chel:0,mash:0,mat:0,ob:0,mk:0,kab:0,bez:0};
+
+  for (var si = 0; si < subs.length; si++) {
+    var sub = subs[si];
+    try {
+      var r = apiHolatOl(sub, forceRefresh);
+      (r.oylar || []).forEach(function(o){ oylarSet[o] = 1; });
+      if (r.jami){
+        jamiP.stSm+=r.jami.stSm||0; jamiP.stFk+=r.jami.stFk||0; jamiP.stF2+=r.jami.stF2||0;
+        jamiP.chel+=r.jami.chel||0; jamiP.mash+=r.jami.mash||0; jamiP.mat+=r.jami.mat||0;
+        jamiP.ob+=r.jami.ob||0; jamiP.mk+=r.jami.mk||0; jamiP.kab+=r.jami.kab||0; jamiP.bez+=r.jami.bez||0;
+      }
+      (r.tree || []).forEach(function(rz){
+        var clonedRz = JSON.parse(JSON.stringify(rz));
+        clonedRz.lokalka = sub;
+        _varaqPrefiks(clonedRz, sub);
+        tree.push(clonedRz);
+      });
+    } catch(e){ xatolar.push(sub + ': ' + (e.message || e)); }
+  }
+
+  return { tree: tree, oylar: Object.keys(oylarSet), jamlangan: true,
+           jami: jamiP, subs: subs, lokalkalar: _subObyektlar(parent),
+           tanlangan: subs, xatolar: xatolar };
+}
+
+/* ============ QAYSI SMETA(LAR) BILAN ISHLASH KERAK? ============
+ * ⚡⚡⚡ 2026-08-13 (foydalanuvchi: «man 1 yil oldin o'tkazgan F2 qaysi
+ * smetalardan kelganini bilmayman... shu biriktirilgandan aniqlansin
+ * qaysi smetalarda ishlash kerak ekanligini»).
+ *
+ * MUAMMO: ko'p smetali obyektda (Amfiteatrda 15 ta) F2 qaysi smetaga
+ * tegishli ekani OLDINDAN bilinmaydi. Hammasini o'qish 6 daqiqa limitiga
+ * (va Cloudflare ~100s limitiga) uradi — jonli sinovda tasdiqlandi: 15 ta
+ * smetani bitta chaqiruvda tekshirish 127s da 524 xatosi berdi.
+ *
+ * YECHIM: BITTALAB probe. Har chaqiruv FAQAT BITTA smetani tekshiradi
+ * (indeks bilan), client 0..soni-1 bo'yicha aylanib progress ko'rsatadi.
+ * To'liq daraxt QURILMAYDI — har varaqdan 3 ustun (MARKER/KOD/NOM) bitta
+ * getRange bilan o'qiladi va ball beriladi:
+ *     razdel nomi mos     = +5 ball
+ *     ish/resurs kodi mos = +1 ball
+ *
+ * @param {string} obyekt    ota obyekt nomi
+ * @param {Object} kalitlar  {rz:[normallashgan razdel nomlari], kod:[normallashgan kodlar]}
+ *                           — CLIENT tomonda hisoblanadi (yuk 258KB dan ~5KB ga tushadi)
+ * @param {number} indeks    tekshiriladigan smeta tartib raqami (0 dan)
+ */
+function apiF2LokalkaTaklif(obyekt, kalitlar, indeks){
+  try{
+    var subs = _subObyektlar(obyekt);
+    if (!subs.length) return {ok:true, kop:false, jami:0,
+      xabar:'Бу объектда битта смета — танлаш керак эмас'};
+
+    var i = parseInt(indeks, 10) || 0;
+    if (i < 0 || i >= subs.length)
+      return {ok:false, jami:subs.length, xabar:'Индекс чегарадан ташқари: '+i};
+
+    var rzSet = {}, kodSet = {};
+    ((kalitlar && kalitlar.rz)  || []).forEach(function(k){ if(k) rzSet[k]  = 1; });
+    ((kalitlar && kalitlar.kod) || []).forEach(function(k){ if(k) kodSet[k] = 1; });
+    if (!Object.keys(rzSet).length && !Object.keys(kodSet).length)
+      return {ok:false, jami:subs.length, xabar:'Солиштириш учун калитлар бўш'};
+
+    function nrmNom(s){ return String(s==null?'':s).toUpperCase().replace(/[^0-9A-ZА-ЯЁ]/g,''); }
+    function nrmKod(s){ return String(s==null?'':s).toUpperCase().replace(/[^0-9A-ZА-ЯЁ]/g,'').replace(/^0+/,''); }
+
+    var sub = subs[i];
+    var col = CFG.C;
+    var ball = 0, rzMos = 0, kodMos = 0, xato = '';
+    /* ⚡ Metrika: SMETA qatorlarini sanash ADOLATSIZ — katta smeta avtomatik
+     * yuqori ball olardi (jonli sinov: 206 vs 46, lekin bu faqat hajm farqi).
+     * Endi AKTning nechta UNIKAL kaliti qoplanganini sanaymiz → «qoplama %».
+     * Shunda kichik lekin aynan mos smeta ham to'g'ri birinchi chiqadi. */
+    var rzHit = {}, kodHit = {};
+    var rzJami = Object.keys(rzSet).length, kodJami = Object.keys(kodSet).length;
+    try {
+      var plus = _plusTop(sub);
+      if (!plus) throw 'LRV_PLUS йўқ (ҳисобланмаган)';
+      var shs = plus.getSheets();
+      var maxC = Math.max(col.MARKER, col.NOM, col.KOD);
+      for (var shi = 0; shi < shs.length; shi++) {
+        var sh = shs[shi];
+        var last = sh.getLastRow();
+        if (last < 2) continue;
+        var v = sh.getRange(1, 1, last, maxC).getValues();   // BITTA o'qish
+        for (var r = 0; r < v.length; r++) {
+          var mk = String(v[r][col.MARKER-1]||'').trim().toLowerCase().replace(/[+~]$/,'');
+          if (!mk) continue;
+          if (mk === 'rz') {
+            var rn = nrmNom(v[r][col.NOM-1]);
+            if (rn && rzSet[rn] && !rzHit[rn]) { rzHit[rn] = 1; rzMos++; ball += 5; }
+          } else if (mk === 'bl' || mk === 'rs' || mk === 'mat' || mk === 'ob') {
+            var kd = nrmKod(v[r][col.KOD-1]);
+            if (kd && kodSet[kd] && !kodHit[kd]) { kodHit[kd] = 1; kodMos++; ball += 1; }
+          }
+        }
+      }
+    } catch(e){ xato = String((e && e.message) || e); }
+
+    // Qoplama foizi — «aktning nechta foiz kaliti shu smetada bor»
+    var qoplama = (rzJami + kodJami) > 0
+      ? Math.round((rzMos + kodMos) / (rzJami + kodJami) * 100) : 0;
+
+    return {ok:true, kop:true, jami:subs.length, indeks:i,
+            natija:{lokalka:sub, ball:ball, rzMos:rzMos, kodMos:kodMos,
+                    rzJami:rzJami, kodJami:kodJami, qoplama:qoplama, xato:xato}};
+  }catch(e){
+    return {ok:false, xabar:'Смета таклифи хатоси: '+String((e&&e.message)||e)};
   }
 }

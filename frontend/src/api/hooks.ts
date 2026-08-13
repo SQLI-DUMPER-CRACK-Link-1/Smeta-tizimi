@@ -110,14 +110,48 @@ import type { HolatJami } from './types';
  *
  * @param lokalka bo'sh bo'lsa — barcha sub-smetalar (eski xatti-harakat)
  */
-export function useHolat(obyekt: string, forceRefresh: boolean = false, lokalka: string = '') {
+export function useHolat(
+  obyekt: string,
+  forceRefresh: boolean = false,
+  lokalka: string | string[] = '',
+) {
+  // Bir nechta smeta tanlangan bo'lishi mumkin (F2 bir necha smetaga tegishli)
+  const rq = Array.isArray(lokalka) ? lokalka.filter(Boolean) : (lokalka ? [lokalka] : []);
+  const kalit = rq.length ? rq.slice().sort().join('|') : 'barchasi';
+  type Javob = { tree: TreeNode[], lokalkalar: string[], jami?: HolatJami, oylar?: string[] };
   return useQuery({
-    queryKey: ['holat', obyekt, forceRefresh, lokalka || 'barchasi'],
-    queryFn: () => lokalka
-      ? gas<{ tree: TreeNode[], lokalkalar: string[], jami?: HolatJami, oylar?: string[] }>('apiHolatOlLokalka', obyekt, lokalka, forceRefresh)
-      : gas<{ tree: TreeNode[], lokalkalar: string[], jami?: HolatJami, oylar?: string[] }>('apiHolatOl', obyekt, forceRefresh),
+    queryKey: ['holat', obyekt, forceRefresh, kalit],
+    queryFn: () => {
+      if (rq.length === 1) return gas<Javob>('apiHolatOlLokalka', obyekt, rq[0], forceRefresh);
+      if (rq.length > 1)   return gas<Javob>('apiHolatOlLokalkalar', obyekt, rq, forceRefresh);
+      return gas<Javob>('apiHolatOl', obyekt, forceRefresh);
+    },
     staleTime: Infinity, // Extremely heavy, don't refetch unless forced
     enabled: !!obyekt,
+  });
+}
+
+/**
+ * «Bu F2 qaysi smeta(lar)dan kelgan?» — BITTALAB probe.
+ * ⚡ 2026-08-13: bir yil oldingi F2 qaysi smetaga tegishli ekani oldindan
+ * bilinmaydi. Bu yengil probe har chaqiruvda BITTA smetani tekshiradi
+ * (to'liq daraxt qurmasdan) va aktning nechta foiz kaliti qoplanganini
+ * qaytaradi. Hammasini bitta chaqiruvda tekshirish Cloudflare 100s
+ * limitiga urgani uchun ataylab bittalab qilingan.
+ */
+export type LokalkaTaklif = {
+  lokalka: string; ball: number; rzMos: number; kodMos: number;
+  rzJami: number; kodJami: number; qoplama: number; xato?: string;
+};
+
+export function useF2LokalkaTaklif() {
+  return useMutation({
+    mutationFn: ({ obyekt, kalitlar, indeks }: {
+      obyekt: string; kalitlar: { rz: string[]; kod: string[] }; indeks: number;
+    }) => gas<{
+      ok: boolean; kop: boolean; jami: number; indeks?: number;
+      natija?: LokalkaTaklif; xabar?: string;
+    }>('apiF2LokalkaTaklif', obyekt, kalitlar, indeks),
   });
 }
 

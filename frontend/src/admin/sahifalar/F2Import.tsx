@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
   useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
-  useObyektIshla
+  useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
 } from '../../api/hooks';
 import {
   Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
@@ -253,10 +253,67 @@ export function F2Import() {
   const moslash = useF2AvtoMoslash();
   const yoz = useF2Yoz();
   const job = useF2JobHolat(true);
-  // ⚡ 2026-08-13: lokalka tanlangan bo'lsa FAQAT shu smeta o'qiladi (timeout yechimi)
-  const lrv = useHolat(obyekt, false, lokalka);
+  /* ⚡⚡⚡ 2026-08-13: F2 bir NECHTA smetaga tegishli bo'lishi mumkin va qaysiligi
+   * oldindan bilinmaydi. `tanlanganLoklar` bo'sh bo'lsa — eski xatti-harakat
+   * (`lokalka` bittasi yoki hammasi). Bo'sh bo'lmasa — FAQAT tanlanganlar. */
+  const [tanlanganLoklar, setTanlanganLoklar] = useState<string[]>([]);
+  const lrv = useHolat(obyekt, false, tanlanganLoklar.length ? tanlanganLoklar : lokalka);
   // Smeta hisoblanmagan bo'lsa («_LRV_PLUS топилмади») shu yerdan ishga tushiramiz
   const obyektIshla = useObyektIshla();
+
+  // «Bu F2 qaysi smetalardan kelgan?» — bittalab probe holati
+  const lokTaklif = useF2LokalkaTaklif();
+  const [taklifNatija, setTaklifNatija] = useState<LokalkaTaklif[] | null>(null);
+  const [taklifJarayon, setTaklifJarayon] = useState<{ joriy: number; jami: number } | null>(null);
+
+  /** Aktdan yengil qidiruv kalitlarini yasaydi (GAS'dagi normalizatsiya bilan bir xil) */
+  function aktKalitlariniYasa(tree: any[]) {
+    const nrmNom = (s: any) => String(s ?? '').toUpperCase().replace(/[^0-9A-ZА-ЯЁ]/g, '');
+    const nrmKod = (s: any) => String(s ?? '').toUpperCase().replace(/[^0-9A-ZА-ЯЁ]/g, '').replace(/^0+/, '');
+    const rz = new Set<string>(), kod = new Set<string>();
+    const yur = (ns: any[]) => (ns ?? []).forEach((n: any) => {
+      if (!n) return;
+      if (n.type === 'rz') { const k = nrmNom(n.nom); if (k) rz.add(k); }
+      else { const k = nrmKod(n.kod); if (k) kod.add(k); }
+      if (n.children?.length) yur(n.children);
+    });
+    yur(tree);
+    return { rz: [...rz], kod: [...kod] };
+  }
+
+  /** Barcha smetalarni bittalab tekshirib, qoplama bo'yicha saralaydi */
+  async function smetalarniAniqla() {
+    if (!aktTree) { toast('Avval F2 faylni o\'qing', 'danger'); return; }
+    const kalitlar = aktKalitlariniYasa(aktTree as any[]);
+    if (!kalitlar.rz.length && !kalitlar.kod.length) {
+      toast('Aktda solishtirish uchun kod ham, razdel nomi ham topilmadi', 'danger'); return;
+    }
+    setTaklifNatija(null);
+    try {
+      const birinchi = await lokTaklif.mutateAsync({ obyekt, kalitlar, indeks: 0 });
+      if (!birinchi.ok) { toast(birinchi.xabar || 'Aniqlanmadi', 'danger'); return; }
+      if (!birinchi.kop) { toast('Bu obyektda bitta smeta — tanlash kerak emas', 'ok'); return; }
+      const jami = birinchi.jami;
+      const yigildi: LokalkaTaklif[] = birinchi.natija ? [birinchi.natija] : [];
+      setTaklifJarayon({ joriy: 1, jami });
+      for (let i = 1; i < jami; i++) {
+        const r = await lokTaklif.mutateAsync({ obyekt, kalitlar, indeks: i });
+        if (r.natija) yigildi.push(r.natija);
+        setTaklifJarayon({ joriy: i + 1, jami });
+      }
+      yigildi.sort((a, b) => b.qoplama - a.qoplama || b.ball - a.ball);
+      setTaklifNatija(yigildi);
+      // Eng yaxshining yarmidan yuqorilarini avtomatik belgilaymiz (tabiiy kesim)
+      const eng = yigildi[0]?.qoplama || 0;
+      const tavsiya = yigildi.filter(x => x.qoplama > 0 && x.qoplama >= eng / 2).map(x => x.lokalka);
+      setTanlanganLoklar(tavsiya);
+      toast(`${jami} smeta tekshirildi — ${tavsiya.length} tasi tavsiya etildi`, 'ok', undefined, 6000);
+    } catch (e: any) {
+      toast('Xato: ' + e.message, 'danger');
+    } finally {
+      setTaklifJarayon(null);
+    }
+  }
   const useF2OyOchirishHook = useF2OyOchirish();
   const useF2EskiFaylOqiHook = useF2EskiFaylOqi();
 
@@ -1423,6 +1480,90 @@ const onAvtoMoslash = () => {
           {/* ---- Fayl o'qildi — aniq «Davom etish» tugmasi ----
               ⚠️ Foydalanuvchi talabi: fayl/varaq tanlangach avtomatik
               o'tmasin, alohida tasdiqlash bosqichi bo'lsin. */}
+          {/* ⚡⚡⚡ 2026-08-13: «Bu F2 qaysi smetalardan kelgan?» — ko'p smetali
+              obyektda eng muhim qadam. Foydalanuvchi bir yil oldingi F2 qaysi
+              smetaga tegishli ekanini bilmaydi; tizim aktdagi kodlarni har
+              smeta bilan solishtirib QOPLAMA foizini chiqaradi. */}
+          {aktTree && loklar.data?.kop && (
+            <section className="pt-2 border-t border-border space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h4 className="text-text font-medium text-sm">Bu Ф2 qaysi smetalardan kelgan?</h4>
+                  <p className="text-[12px] text-text-dim">
+                    Bilmasangiz — tizim aktdagi kodlarni {(loklar.data.lokalkalar || []).length} ta
+                    smeta bilan solishtirib topadi. Faqat topilganlar yuklanadi (tez).
+                  </p>
+                </div>
+                <Tugma
+                  tur="secondary"
+                  band={!!taklifJarayon}
+                  onBos={smetalarniAniqla}
+                >
+                  {taklifJarayon
+                    ? `Tekshirilmoqda ${taklifJarayon.joriy}/${taklifJarayon.jami}…`
+                    : '🔍 Smetalarni aniqlash'}
+                </Tugma>
+              </div>
+
+              {taklifJarayon && (
+                <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all"
+                    style={{ width: `${Math.round(taklifJarayon.joriy / taklifJarayon.jami * 100)}%` }}
+                  />
+                </div>
+              )}
+
+              {taklifNatija && (
+                <div className="rounded-[10px] border border-border bg-surface-2/40 divide-y divide-border max-h-[280px] overflow-y-auto scrollbar-thin">
+                  {taklifNatija.map((t) => {
+                    const tanlangan = tanlanganLoklar.includes(t.lokalka);
+                    const qisqaNom = t.lokalka.replace(/^.*? - /, '');
+                    return (
+                      <label
+                        key={t.lokalka}
+                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors ${tanlangan ? 'bg-accent/[.07]' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={tanlangan}
+                          onChange={(e) => setTanlanganLoklar((p) =>
+                            e.target.checked ? [...p, t.lokalka] : p.filter(x => x !== t.lokalka))}
+                          className="accent-accent w-4 h-4 flex-shrink-0"
+                        />
+                        <span className={`tabular-nums text-[13px] font-bold w-12 text-right flex-shrink-0 ${
+                          t.qoplama >= 20 ? 'text-ok' : t.qoplama >= 8 ? 'text-warn' : 'text-text-mute'
+                        }`}>{t.qoplama}%</span>
+                        <span className="flex-1 min-w-0 text-[12px] text-text truncate" title={t.lokalka}>
+                          {qisqaNom}
+                        </span>
+                        <span className="text-[11px] text-text-mute tabular-nums flex-shrink-0">
+                          {t.kodMos}/{t.kodJami} kod
+                        </span>
+                        {t.xato && (
+                          <span className="text-[11px] text-danger flex-shrink-0" title={t.xato}>
+                            hisoblanmagan
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+
+              {taklifNatija && tanlanganLoklar.length > 0 && (
+                <p className="text-[12px] text-ok">
+                  ✓ {tanlanganLoklar.length} smeta tanlandi — «Davom etish» da faqat shular o'qiladi
+                </p>
+              )}
+              {taklifNatija && tanlanganLoklar.length === 0 && (
+                <p className="text-[12px] text-warn">
+                  ⚠ Birorta smeta tanlanmadi — «Davom etish» BARCHA smetani o'qiydi (sekin bo'lishi mumkin)
+                </p>
+              )}
+            </section>
+          )}
+
           {aktTree && (
             <section className="pt-2 border-t border-border">
               <div className="rounded-[10px] border border-ok/25 bg-ok/[.08] p-4 flex items-center justify-between gap-4 flex-wrap">
