@@ -711,6 +711,34 @@ function apiF2Varaqlar(fileId){
     if (meta.mimeType !== 'application/vnd.google-apps.spreadsheet') {
       var parent = (meta.parents && meta.parents[0]) || '';
       var yangiNom = String(meta.name||'F2').replace(/\.(xlsx|xlsm|xls|csv)$/i,'') + ' (GS)';
+      /* ⚡⚡⚡ 2026-08-13 #REF! MUAMMOSI: avval Drive.Files.copy bilan konvert
+       * qilinardi — u FORMULANI ko'chirib QAYTA HISOBLAYDI. Tashqi faylga
+       * havola (masalan [Kitob2]List1!A5) Google Sheets'da yo'q → #REF!,
+       * va Excel hisoblab qo'ygan HAQIQIY SON butunlay yo'qoladi. Natijada
+       * importda ko'p qator chiqmasdi (foydalanuvchi aytgan muammo).
+       * ENDI BIRINCHI YO'L: .xlsx ni ochib FAQAT <v> keshlangan qiymatlarni
+       * o'qiymiz (36_XlsxQiymat.js) — formula umuman ko'chirilmaydi, ya'ni
+       * #REF! paydo bo'lishi MUMKIN EMAS. */
+      try {
+        if (typeof apiXlsxQiymatBilanOch === 'function') {
+          var qres = apiXlsxQiymatBilanOch(fileId, parent);
+          if (qres && qres.ok && qres.fileId) {
+            yangiFileId = qres.fileId;
+            fileId = yangiFileId;
+            var ssQ = SpreadsheetApp.openById(fileId);
+            var outQ = ssQ.getSheets().map(function(sh){
+              return { nom: sh.getName(), qatorlar: sh.getLastRow(),
+                       ustunlar: sh.getLastColumn(), yashirin: sh.isSheetHidden() };
+            }).filter(function(v){ return !v.yashirin && v.qatorlar > 1; });
+            if (outQ.length) {
+              return {ok:true, varaqlar:outQ, nom:ssQ.getName(),
+                      yangiFileId:yangiFileId, faqatQiymat:true,
+                      aslFormulaKatak:qres.aslFormulaKatak, aslXatoKatak:qres.aslXatoKatak};
+            }
+          }
+        }
+      } catch(eq){ /* zaxira yo'lga o'tamiz */ }
+
       try {
         yangiFileId = _excelToNative(fileId, parent, yangiNom);
       } catch(ce) {

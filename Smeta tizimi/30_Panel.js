@@ -3471,8 +3471,17 @@ function apiF2FaylOqi(fileId, varaqName, colConfig) {
     if (meta.mimeType !== 'application/vnd.google-apps.spreadsheet') {
       var parent = (meta.parents && meta.parents[0]) || '';
       var yangiNom = String(meta.name||'F2').replace(/\.(xlsx|xlsm|xls|csv)$/i,'') + ' (GS)';
+      /* ⚡ 2026-08-13: avval FAQAT QIYMAT yo'li (formula ko'chirilmaydi →
+       * #REF! bo'lishi mumkin emas), u ishlamasa oddiy konvert. */
       try {
-        fileId = _excelToNative(fileId, parent, yangiNom);
+        if (typeof apiXlsxQiymatBilanOch === 'function') {
+          var qr = apiXlsxQiymatBilanOch(fileId, parent);
+          if (qr && qr.ok && qr.fileId) fileId = qr.fileId;
+        }
+      } catch(eq){}
+
+      try {
+        if (String(fileId) === String(meta.id)) fileId = _excelToNative(fileId, parent, yangiNom);
       } catch(ce) {
         return {ok:false, xabar:'«'+meta.name+'» файлини Google Sheets га конверт қилиб бўлмади (тури: '+meta.mimeType+'). '+
           'Файл шикастланган, парол билан ҳимояланган ёки аслида Excel эмас бўлиши мумкин. '+

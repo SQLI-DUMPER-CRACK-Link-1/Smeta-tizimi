@@ -444,7 +444,15 @@ export function F2Import() {
     const yangi = varaqlar.data?.yangiFileId;
     if (varaqlar.data?.ok && yangi && yangi !== fid) {
       setFid(yangi);
-      toast("Excel fayl avtomatik Google Sheets'ga aylantirildi — davom etishingiz mumkin", 'ok');
+      if (varaqlar.data.faqatQiymat) {
+        // ⚡ 2026-08-13: formula ko'chirilmagan — #REF!/#VALUE! bo'lishi mumkin emas
+        toast(
+          `Excel FAQAT QIYMAT bilan o'qildi (${varaqlar.data.aslFormulaKatak ?? 0} formula qiymatga aylantirildi) — #REF! bo'lmaydi`,
+          'ok', undefined, 7000,
+        );
+      } else {
+        toast("Excel fayl Google Sheets'ga aylantirildi — davom etishingiz mumkin", 'ok');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [varaqlar.data]);
@@ -1572,6 +1580,14 @@ const onAvtoMoslash = () => {
                   <p className="text-sm text-text-dim tabular-nums">
                     {barglar(aktTree).length} qator · <FmtN val={aktJami} /> so'm
                   </p>
+                  {/* ⚡ 2026-08-13: qaysi yo'l bilan o'qilgani — #REF! muammosi
+                      qaytmaganini foydalanuvchi ko'rib turishi kerak */}
+                  {varaqlar.data?.faqatQiymat && (
+                    <p className="text-[12px] text-ok mt-1">
+                      🛡 Faqat qiymat rejimi — {varaqlar.data.aslFormulaKatak ?? 0} formula
+                      Excel hisoblagan songa aylantirildi. #REF! / #VALUE! bo'lishi mumkin emas.
+                    </p>
+                  )}
                 </div>
                 <Tugma tur="primary" onBos={() => setQadam(1)}>
                   Davom etish →

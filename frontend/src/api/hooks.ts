@@ -731,7 +731,13 @@ export function useF2Varaqlar(fileId: string) {
     // yangiFileId — fayl Excel bo'lsa GAS uni avtomatik Google Sheets'ga
     // konvert qiladi va YANGI faylning ID'sini qaytaradi. UI fid'ni shu
     // ID'ga almashtirishi SHART (keyingi o'qishlar native fayldan bo'lsin).
-    queryFn: () => gas<{ ok: boolean; varaqlar?: F2Varaq[]; nom?: string; xabar?: string; yangiFileId?: string }>('apiF2Varaqlar', fileId),
+    // faqatQiymat — .xlsx FAQAT keshlangan qiymatlar bilan o'qildi (formula
+    // ko'chirilmadi) → #REF!/#VALUE! bo'lishi mumkin emas. 2026-08-13.
+    queryFn: () => gas<{
+      ok: boolean; varaqlar?: F2Varaq[]; nom?: string; xabar?: string;
+      yangiFileId?: string; faqatQiymat?: boolean;
+      aslFormulaKatak?: number; aslXatoKatak?: number;
+    }>('apiF2Varaqlar', fileId),
     enabled: !!fileId,
     staleTime: 5 * 60 * 1000,
   });
