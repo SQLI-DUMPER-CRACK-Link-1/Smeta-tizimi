@@ -15,3 +15,11 @@ node_modules/**
 
 test*.js
 fix*.js
+
+# ⚡ 2026-08-13: Antigravity qoldiradigan bir martalik Node patch skriptlari
+# GAS'ga tushsa require('fs') har ijroda yiqitadi — MUTLAQO push qilinmasin
+patch*.js
+add_*.js
+old_*.js
+*.bak
+*.cjs
