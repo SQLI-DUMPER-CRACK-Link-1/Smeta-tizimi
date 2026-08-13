@@ -3890,13 +3890,45 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
     _setF2Prog('1/4: Ой устуни текширилмоқда/яратилмоқда — '+oyNom);
     try {
        // ⚡ Faqat F2 da qatnashgan varaqlar (sub-obyektlar) uchungina oy ustuni yaratamiz
+       /* ⚡⚡⚡ 2026-08-13 «15 ta faylga kirib timeout» TUZATILDI (foydalanuvchi:
+        * «2 ta smetadan foydalanilishi kerak bo'lsa ham tizim 15 ta faylga
+        * kirib chiqib time limitga uraveradi — faqat ishlaydigan fayllarda
+        * ishlashi kerak»).
+        * SABAB: agar qatorda `sub||` prefiksi bo'lmasa, sub=OTA nom bo'lardi,
+        * apiOyQosh(ota) esa _subObyektlar() bilan BARCHA sub-obyektni aylanadi
+        * → 15 fayl → 6 daqiqa limiti. YECHIM: prefiksi yo'q varaqni
+        * varaq-nomi → sub xaritasi orqali AYNAN o'z smetasiga bog'laymiz
+        * (xarita faqat varaq NOMLARINI o'qiydi — katak o'qilmaydi, arzon). */
        var targetSubObs = {};
+       var nomXarita = null;   // {varaqNomi: sub} — faqat kerak bo'lsa quriladi
        (edits||[]).concat(dopps||[]).forEach(function(e){
-         if(e.varaq){
-            var sub = obyekt;
-            if(e.varaq.indexOf('||') >= 0) sub = e.varaq.split('||')[0];
-            targetSubObs[sub] = true;
+         if(!e.varaq) return;
+         var sub = null;
+         if(e.varaq.indexOf('||') >= 0){
+           sub = e.varaq.split('||')[0];
+         } else {
+           if(nomXarita === null){
+             nomXarita = {};
+             try{
+               var subLar = _subObyektlar(obyekt) || [];
+               for(var si=0; si<subLar.length; si++){
+                 try{
+                   var p = _plusTop(subLar[si]);
+                   if(!p) continue;
+                   var shl = p.getSheets();
+                   for(var sj=0; sj<shl.length; sj++){
+                     var nm = shl[sj].getName();
+                     if(nomXarita[nm] === undefined) nomXarita[nm] = subLar[si];
+                   }
+                 }catch(e1){}
+               }
+             }catch(e2){}
+           }
+           sub = nomXarita[e.varaq] || null;
          }
+         // Aniqlanmasa OTA nomга tushmaymiz (u 15 faylni aylanadi) — o'tkazib
+         // yuboramiz; pastda targets bo'sh bo'lsa zaxira yo'l ishlaydi.
+         if(sub) targetSubObs[sub] = true;
        });
        var targets = Object.keys(targetSubObs);
        if(targets.length > 0){
