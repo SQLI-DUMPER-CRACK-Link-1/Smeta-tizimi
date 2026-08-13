@@ -97,10 +97,25 @@ export function useBossObyekt(obNom: string) {
 
 import type { HolatJami } from './types';
 
-export function useHolat(obyekt: string, forceRefresh: boolean = false) {
+/**
+ * Obyekt holati (smeta daraxti).
+ *
+ * ⚡⚡⚡ 2026-08-13 TEZLIK/TIMEOUT TUZATISHI (foydalanuvchi: «Amfiteatrda 2 ta
+ * smeta kerak, lekin tizim 15 ta faylga kirib chiqib time limitga uraveradi»).
+ * SABAB: UI'da LOKALKA tanlagich bor edi, lekin bu hook uni HISOBGA OLMASDI —
+ * har doim `apiHolatOl(obyekt)` chaqirilib, ota obyektning BARCHA sub-smetalari
+ * skanerlanardi (GAS 6 daqiqa limitiga urilardi).
+ * GAS'da bitta lokalkani o'qiydigan `apiHolatOlLokalka(parent, sub)` ALLAQACHON
+ * mavjud edi — endi lokalka tanlangan bo'lsa SHU chaqiriladi (1 fayl ≈ 15x tez).
+ *
+ * @param lokalka bo'sh bo'lsa — barcha sub-smetalar (eski xatti-harakat)
+ */
+export function useHolat(obyekt: string, forceRefresh: boolean = false, lokalka: string = '') {
   return useQuery({
-    queryKey: ['holat', obyekt, forceRefresh],
-    queryFn: () => gas<{ tree: TreeNode[], lokalkalar: string[], jami?: HolatJami, oylar?: string[] }>('apiHolatOl', obyekt, forceRefresh),
+    queryKey: ['holat', obyekt, forceRefresh, lokalka || 'barchasi'],
+    queryFn: () => lokalka
+      ? gas<{ tree: TreeNode[], lokalkalar: string[], jami?: HolatJami, oylar?: string[] }>('apiHolatOlLokalka', obyekt, lokalka, forceRefresh)
+      : gas<{ tree: TreeNode[], lokalkalar: string[], jami?: HolatJami, oylar?: string[] }>('apiHolatOl', obyekt, forceRefresh),
     staleTime: Infinity, // Extremely heavy, don't refetch unless forced
     enabled: !!obyekt,
   });

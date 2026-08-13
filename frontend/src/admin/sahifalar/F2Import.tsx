@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi
+  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useObyektIshla
 } from '../../api/hooks';
 import {
   Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
@@ -252,7 +253,10 @@ export function F2Import() {
   const moslash = useF2AvtoMoslash();
   const yoz = useF2Yoz();
   const job = useF2JobHolat(true);
-  const lrv = useHolat(obyekt);
+  // ⚡ 2026-08-13: lokalka tanlangan bo'lsa FAQAT shu smeta o'qiladi (timeout yechimi)
+  const lrv = useHolat(obyekt, false, lokalka);
+  // Smeta hisoblanmagan bo'lsa («_LRV_PLUS топилмади») shu yerdan ishga tushiramiz
+  const obyektIshla = useObyektIshla();
   const useF2OyOchirishHook = useF2OyOchirish();
   const useF2EskiFaylOqiHook = useF2EskiFaylOqi();
 
@@ -1228,9 +1232,30 @@ const onAvtoMoslash = () => {
             </Maydon>
           </div>
 
+          {/* ⚡ 2026-08-13: ko'p smetali obyektda LOKALKA tanlash endi HAQIQATAN
+              ishlaydi — tanlansa faqat shu smeta o'qiladi (avval e'tiborsiz
+              qolib, 15 ta fayl skanerlanib timeout bo'lardi). */}
           {loklar.data?.kop && (
-            <Maydon nom="Lokalka" izoh="Bo'sh qoldirsangiz tizim o'zi aniqlaydi — tavsiya etiladi">
+            <Maydon
+              nom={`Qaysi smeta bilan ishlaymiz? (${(loklar.data.lokalkalar || []).length} ta mavjud)`}
+              izoh="Aniq smetani tanlash TEZKOR va TAVSIYA ETILADI. Bo'sh qoldirilsa barcha smetalar o'qiladi — katta obyektda vaqt limitiga urilishi mumkin."
+            >
               <Tanlov qiymat={lokalka} ozgardi={setLokalka} variantlar={['', ...(loklar.data.lokalkalar || [])]} />
+              {!lokalka && (loklar.data.lokalkalar || []).length > 2 && (
+                <p className="mt-1.5 text-[11px] text-warn flex items-start gap-1.5">
+                  <span>⚠</span>
+                  <span>
+                    Bu obyektda {(loklar.data.lokalkalar || []).length} ta smeta bor va hammasi
+                    o'qilmoqda. Ф2 aktingiz qaysi smetaga tegishli bo'lsa — shuni tanlang,
+                    yuklash bir necha barobar tezlashadi.
+                  </span>
+                </p>
+              )}
+              {lokalka && (
+                <p className="mt-1.5 text-[11px] text-ok">
+                  ✓ Faqat «{lokalka}» o'qiladi — tezkor rejim
+                </p>
+              )}
             </Maydon>
           )}
 
@@ -1397,7 +1422,47 @@ const onAvtoMoslash = () => {
                 <h3 className="font-medium text-sm">F2 Tarixi va Nazorat</h3>
               </div>
 
-              {!lrv.isLoading && (
+              {/* ⚡ 2026-08-13: smeta o'qilmasa — sababini ayting va TUZATISH
+                  tugmasini bering. Eng ko'p uchraydigan sabab: shu lokalkaning
+                  _LRV_PLUS fayli hali yasalmagan («Avval ishga tushir»). */}
+              {lrv.isError && (
+                <div className="mb-4 p-3 rounded border border-danger/30 bg-danger/[.08] text-[12px] space-y-2">
+                  <p className="text-danger font-medium">Smeta o'qilmadi</p>
+                  <p className="text-text-dim whitespace-pre-wrap break-words">
+                    {lrv.error?.message || "Noma'lum xato"}
+                  </p>
+                  {/LRV_PLUS|ишга тушир|ishga tushir/i.test(lrv.error?.message || '') && (
+                    <>
+                      <p className="text-text-dim">
+                        Bu smeta hali hisoblanmagan. Dvigatelni shu smeta uchun ishga
+                        tushiring — u fon rejimida bajariladi.
+                      </p>
+                      <button
+                        onClick={async () => {
+                          const nishon = lokalka || obyekt;
+                          try {
+                            const r = await obyektIshla.mutateAsync({ obyekt: nishon, tezkor: false });
+                            if (r.ok === false) { toast(r.xabar || 'Boshlanmadi', 'danger'); return; }
+                            toast(`«${nishon}» navbatga qo'yildi — tugagach «Qayta o'qish» ni bosing`, 'ok', undefined, 6000);
+                          } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+                        }}
+                        disabled={obyektIshla.isPending}
+                        className="w-full px-3 py-2 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent/90 transition-colors disabled:opacity-50"
+                      >
+                        {obyektIshla.isPending ? 'Navbatga qo\'yilmoqda…' : `▶ «${lokalka || obyekt}» ni hisoblash`}
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => lrv.refetch()}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-text text-[12px] hover:bg-white/10 transition-colors"
+                  >
+                    ↻ Qayta o'qish
+                  </button>
+                </div>
+              )}
+
+              {!lrv.isLoading && !lrv.isError && (
                 <div className="mb-4 space-y-1 p-2 rounded bg-white/5 text-[12px] border border-white/10">
                   <div className="flex justify-between">
                     <span className="text-text-mute">Smeta jami:</span>
