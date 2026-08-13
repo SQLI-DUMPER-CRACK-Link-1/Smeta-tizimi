@@ -4776,3 +4776,67 @@ function _f2OyKalit(s){
   return (oy && yil) ? (oy + '.' + yil) : '';
 }
 
+
+/* ============ SMETAGA YANGI QATOR QO'SHISH (F2 Import UI) ============
+ * ⚡⚡⚡ 2026-08-13: Frontend (F2Import «＋ Qator qo'shish» modali) allaqachon
+ * `apiSmetaQatorQosh` ni chaqirardi, lekin bu funksiya GAS'da UMUMAN YO'Q edi —
+ * ya'ni tugma bosilganda «Функция мавжуд эмас» xatosi qaytardi va hech narsa
+ * qo'shilmasdi (o'lik tugma).
+ *
+ * Bu yerda YANGI qator-kiritish mantig'i YOZILMAYDI — u nozik va allaqachon
+ * sinovdan o'tgan. Faqat pozitsion argumentlarni tekshirib, mavjud va ishonchli
+ * apiRzQosh / apiBlQosh / apiRsQosh ga yo'naltiramiz (adapter qatlami).
+ *
+ * @param {string} obyekt   Obyekt (yoki sub-obyekt) nomi
+ * @param {string} varaq    Varaq nomi ("sub||varaq" ham bo'lishi mumkin)
+ * @param {string} tur      'rz' | 'bl' | 'rs' (yoki 'mat'/'ob')
+ * @param {number} afterRow Shu qatordan KEYIN qo'shiladi (rs uchun — blok qatori)
+ * @return {{ok:boolean, row?:number, xabar?:string}}
+ */
+function apiSmetaQatorQosh(obyekt, varaq, tur, afterRow, kod, nom, birlik, hajm, narx){
+  try{
+    obyekt = String(obyekt||'').trim();
+    varaq  = String(varaq||'').trim();
+    tur    = String(tur||'').trim().toLowerCase();
+    nom    = String(nom||'').trim();
+    var qator = parseInt(afterRow, 10) || 0;
+
+    if(!obyekt) return {ok:false, xabar:'Объект танланмаган'};
+    if(!varaq)  return {ok:false, xabar:'Варақ танланмаган'};
+    if(!nom)    return {ok:false, xabar:'Номи киритилмаган'};
+
+    if(tur === 'rz'){
+      var rzRow = apiRzQosh({obyekt:obyekt, varaq:varaq, nom:nom, afterRow:qator});
+      return {ok:true, row:rzRow, tur:'rz',
+              xabar:'Раздел қўшилди'+(rzRow?(' ('+rzRow+'-қатор)'):'')};
+    }
+
+    if(tur === 'bl'){
+      if(!qator) return {ok:false, xabar:'«Қайси қатордан кейин» кўрсатилмаган'};
+      var blRow = apiBlQosh({
+        obyekt:obyekt, varaq:varaq, afterRow:qator, nom:nom,
+        kod:String(kod||''), birlik:String(birlik||''), hajm:_toNum(hajm), tur:'bl'
+      });
+      return {ok:true, row:blRow, tur:'bl',
+              xabar:'Иш тури қўшилди'+(blRow?(' ('+blRow+'-қатор)'):'')};
+    }
+
+    // rs / mat / ob — resurs. apiRsQosh RESURS ni BLOK ostiga qo'yadi,
+    // shuning uchun afterRow shu resursning ONA BLOK qatori bo'lishi kerak.
+    if(tur === 'rs' || tur === 'mat' || tur === 'ob'){
+      if(!qator) return {ok:false, xabar:'Ресурс қўшиш учун ОНА БЛОК қатори кўрсатилиши шарт'};
+      if(!String(birlik||'').trim()) return {ok:false, xabar:'Ресурс учун БИРЛИК шарт'};
+      var rsRow = apiRsQosh({
+        obyekt:obyekt, varaq:varaq, blRow:qator, nom:nom,
+        kod:String(kod||''), birlik:String(birlik||''),
+        norm:_toNum(hajm), narx:_toNum(narx), kat:(tur==='rs'?'':tur)
+      });
+      return {ok:true, row:rsRow, tur:tur,
+              xabar:'Ресурс қўшилди'+(rsRow?(' ('+rsRow+'-қатор)'):'')};
+    }
+
+    return {ok:false, xabar:'Нотўғри қатор тури: '+tur+' (rz/bl/rs кутилган)'};
+  }catch(e){
+    return {ok:false, xabar:'Қатор қўшилмади: '+String((e&&e.message)||e)};
+  }
+}

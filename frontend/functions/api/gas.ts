@@ -17,7 +17,7 @@ export const onRequestPost: PagesFunction<{
     // ham tasodifan bloklanib qoladi — shuning uchun har biri to'liq yoziladi.
     const YOZUVCHI = new RegExp('^api(' + [
       // Smeta / F2
-      'HolatSaqla', 'BlQosh', 'RsQosh', 'RzQosh', 'OyQosh',
+      'HolatSaqla', 'BlQosh', 'RsQosh', 'RzQosh', 'OyQosh', 'SmetaQatorQosh',
       'F2Qolla', 'F2QollaNavbatga', 'F2BoglanishBekorQil', 'F2OyOchirish',
       'Lock[A-Za-z]*',
       // Shartnoma / Buxgalteriya
