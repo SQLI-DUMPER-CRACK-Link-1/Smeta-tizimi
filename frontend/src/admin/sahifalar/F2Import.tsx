@@ -1026,9 +1026,15 @@ export function F2Import() {
     const tkl: Record<string, any[]> = {};
     const yur = (nodes: any[]) => {
       nodes.forEach(n => {
-        if (n.type !== 'rz' && !aktBogMi(n.kalit) && !n.kalit.startsWith('dop_')) {
+        /* ⚡⚡⚡ 2026-08-13 CRASH TUZATILDI: bu yerda `n.kalit` o'qilardi, lekin
+         * AKT daraxti tugunlari `uid` bilan kalitlanadi (AktNode.kalit YO'Q).
+         * Natijada `undefined.startsWith(...)` → «Cannot read properties of
+         * undefined (reading 'startsWith')» va 2-qadamga (bog'lash) o'tishda
+         * butun sahifa qulardi. Butun qolgan kod `uid` ishlatadi. */
+        const uid = n.uid;
+        if (uid && n.type !== 'rz' && !aktBogMi(uid) && !String(uid).startsWith('dop_')) {
            const t = topTakliflar(n);
-           if (t.length > 0) tkl[n.kalit] = t;
+           if (t.length > 0) tkl[uid] = t;
         }
         if (n.children) yur(n.children);
       });
@@ -1061,7 +1067,9 @@ const onAvtoMoslash = () => {
     const yangiBog: Record<string, {varaq: string, row: number}> = {};
     const yur = (nodes: any[]) => {
       nodes.forEach(n => {
-        if (n.type !== 'rz' && !aktBogMi(n.kalit) && !n.kalit.startsWith('dop_') && !yangiBog[n.kalit]) {
+        // ⚡ 2026-08-13: `n.kalit` → `n.uid` (yuqoridagi crash bilan bir xil sabab)
+        const uid = n.uid;
+        if (uid && n.type !== 'rz' && !aktBogMi(uid) && !String(uid).startsWith('dop_') && !yangiBog[uid]) {
            const fKod = nKod(n.kod);
            const fNom = nNom(n.nom);
            
@@ -1079,7 +1087,10 @@ const onAvtoMoslash = () => {
            });
            
            if (exact) {
-             yangiBog[n.kalit] = {varaq: exact.varaq, row: exact.row};
+             // ⚡ 2026-08-13: `n.kalit` (undefined) → `uid`. Avval kalit
+             // "undefined" bo'lib yozilardi va bog'lanish YO'QOLARDI —
+             // «avto moslashtirish ishlamaydi» shundan edi.
+             yangiBog[uid] = {varaq: exact.varaq, row: exact.row};
              matchCount++;
            }
         }
