@@ -191,8 +191,19 @@ function apiFakturaAiParse(payload) {
     
     // We assume _parseFakturaVision is available in the global scope (defined in 89c_FakturaSync.js)
     if (typeof _parseFakturaVision === 'function') {
-       var result = _parseFakturaVision(blob, null);
-       return { ok: true, items: result.items, supplier: result.supplier };
+       /* ⚡⚡⚡ 2026-08-13: bu INTERAKTIV yo'l — foydalanuvchi saytda PDF yuklab
+        * kutib turadi. Cloudflare so'rovni ~100s da uzadi, aiFetchRaw esa
+        * 5 urinish × 2 model bilan 4.5 daqiqagacha osilib qolishi mumkin →
+        * foydalanuvchi tushunarsiz «error code: 524» ko'rardi (jonli tasdiq).
+        * 70s chegara: chegaradan oshsa ANIQ xabar qaytadi. */
+       var result = _parseFakturaVision(blob, null, { maxWaitMs: 70000 });
+       var it = (result && result.items) || [];
+       if (!it.length) {
+         return { ok: false, items: [], supplier: '',
+                  xabar: (result && result.xato) || 'Hujjatdan tovar o\'qilmadi' };
+       }
+       return { ok: true, items: it, supplier: result.supplier,
+                ogohSoni: it.filter(function(x){ return x.summaOgoh; }).length };
     } else {
        return { ok: false, xabar: "_parseFakturaVision funksiyasi topilmadi." };
     }

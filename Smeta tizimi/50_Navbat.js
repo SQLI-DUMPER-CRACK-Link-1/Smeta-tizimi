@@ -396,7 +396,13 @@ function avtoYangilash(){
   
   var trs=ScriptApp.getProjectTriggers();
   var borFS=false;
-  for(var i=0;i<trs.length;i++) if(trs[i].getHandlerFunction()==='fakturaSinx'){ borFS=true; break; }
+  /* ⚡ 2026-08-13: bu yerda 'fakturaSinx' nomi qidirilardi, lekin BUNDAY
+   * handler umuman yo'q (haqiqiysi 'apiFakturaSinxAsosiy'). Natijada shart
+   * HAR DOIM bajarilib, trigger har safar o'chirilib qayta yaratilardi. */
+  for(var i=0;i<trs.length;i++){
+    var _h = trs[i].getHandlerFunction();
+    if(_h==='apiFakturaSinxAsosiy' || _h==='apiFakturaSinxDavom' || _h==='apiFakturaAvtoSinx'){ borFS=true; break; }
+  }
   if(!borFS){
     if(typeof fakturaSinxTriggerOrnat === 'function') {
       fakturaSinxTriggerOrnat();
