@@ -4671,24 +4671,108 @@ function apiF2EskiFaylOqi(obyekt, oyNom) {
       if(n === 'F2' || n === 'Ф2') { f2Folder = sub; break; }
     }
     if(!f2Folder) return {ok: false, xabar: 'Ушбу объект учун F2 папкаси мавжуд эмас (архив топилмади)'};
-    
-    var expectedName = obyekt + ' F2 ' + (oyNom||'');
+
+    /* ⚡⚡⚡ 2026-08-13 TUZATILDI: avval fayl nomi AYNAN
+     *   obyekt + ' F2 ' + oyNom
+     * bilan solishtirilardi. Haqiqiy arxivda nomlar XILMA-XIL:
+     *   «Amfiteatr F2 Dekabr-2025.xlsx» · «Amfiteatr F2 08.2026»
+     *   «Amfiteatr F2 Март 2026»        · «Amfiteatr - 109983_… F2 Март»
+     * Panel esa oy nomini lotincha («Mart 2026») ko'rsatadi — fayl kirilcha
+     * («Март 2026») bo'lsa MOS KELMASDI va tahrirlash hech qachon ochilmasdi.
+     * ENDI: oy KANONIK kalitga (MM.YYYY) keltirilib solishtiriladi; nomlar
+     * lotin/kiril, ajratgich (bo'shliq/tire/pastki chiziq) farqidan qat'i
+     * nazar topiladi. Yil ko'rsatilmagan fayl (masalan «F2 Март») ham
+     * nomzod sifatida qaytariladi — foydalanuvchi tanlaydi. */
+    var kutilganKalit = _f2OyKalit(oyNom);
+    var nomzodlar = [];
+    var aniqMos = null;
     var dFiles = f2Folder.getFiles();
-    var foundFile = null;
     while(dFiles.hasNext()) {
-       var dF = dFiles.next();
-       var dN = dF.getName();
-       if(dN === expectedName || dN.indexOf(expectedName+'.') === 0 || dN.indexOf(expectedName) === 0) {
-          foundFile = dF;
-          break;
-       }
+      var dF = dFiles.next();
+      var dN = String(dF.getName()||'');
+      var yozuv = {id: dF.getId(), nom: dN};
+      // Fayl nomidan «F2» dan keyingi qismni olamiz (oy shu yerda bo'ladi)
+      var m = dN.match(/(?:F2|Ф2)\s*(.*)$/i);
+      var oyQismi = m ? m[1] : dN;
+      var faylKalit = _f2OyKalit(oyQismi);
+      if (kutilganKalit && faylKalit && faylKalit === kutilganKalit) {
+        aniqMos = yozuv; break;
+      }
+      // Yilsiz oy ("Март") yoki umuman aniqlanmagan — nomzod ro'yxatiga
+      var oyRaqam = _f2OyRaqam(oyQismi);
+      var kutilganOy = kutilganKalit ? kutilganKalit.split('.')[0] : '';
+      if (oyRaqam && kutilganOy && oyRaqam === kutilganOy) nomzodlar.push(yozuv);
+      else if (!faylKalit) nomzodlar.push(yozuv);
     }
-    
-    if(!foundFile) return {ok: false, xabar: 'Ушбу ' + oyNom + ' ойига тегишли F2 (Excel) файли Drive архивида топилмади. Tahrirlash imkonsiz.'};
-    
-    return {ok: true, fileId: foundFile.getId()};
+
+    if (aniqMos) return {ok: true, fileId: aniqMos.id, faylNomi: aniqMos.nom};
+
+    if (nomzodlar.length) {
+      return {ok: false, nomzodlar: nomzodlar,
+        xabar: '«'+oyNom+'» учун АНИҚ мос файл топилмади, лекин '+nomzodlar.length+
+               ' та эҳтимолий файл бор. Керакли файлни қўлда танланг.'};
+    }
+
+    return {ok: false, xabar: 'Ушбу ' + oyNom + ' ойига тегишли F2 файли Drive архивида топилмади. Файлни қўлда танлашингиз мумкин.'};
   } catch(ex) {
     return {ok: false, xabar: 'Архивни қидиришда хато: ' + String(ex)};
   }
+}
+
+/* ============ OY NOMI NORMALIZATSIYASI (2026-08-13) ============
+ * Tizimda oy nomi kamida 4 xil ko'rinishda uchraydi:
+ *   «03.2026» · «3.2026» · «Mart 2026» · «Март 2026» · «Dekabr-2025»
+ * Solishtirish uchun hammasini KANONIK «MM.YYYY» ga keltiramiz.        */
+
+var _F2_OYLAR = [
+  ['01','ЯНВАР','JANVAR','YANVAR','JAN','ЯНВ'],
+  ['02','ФЕВРАЛ','FEVRAL','FEB','ФЕВ'],
+  ['03','МАРТ','MART','MAR'],
+  ['04','АПРЕЛ','APREL','APR','АПР'],
+  ['05','МАЙ','MAY','МАЯ'],
+  ['06','ИЮН','IYUN','JUN'],
+  ['07','ИЮЛ','IYUL','JUL'],
+  ['08','АВГУСТ','AVGUST','AUG','АВГ'],
+  ['09','СЕНТЯБР','SENTABR','SENTYABR','SEP','СЕН'],
+  ['10','ОКТЯБР','OKTABR','OKTYABR','OCT','ОКТ'],
+  ['11','НОЯБР','NOYABR','NOV','НОЯ'],
+  ['12','ДЕКАБР','DEKABR','DEC','ДЕК']
+];
+
+/** Matndan oy raqamini ('01'..'12') topadi, topilmasa ''. */
+function _f2OyRaqam(s){
+  var t = String(s||'').toUpperCase().replace(/[^0-9A-ZА-ЯЁ]/g,'');
+  if(!t) return '';
+  // Nom bo'yicha: UZUN variantlar birinchi tekshiriladi (qisqasi uzunning
+  // ichida bo'lib qolib, xato oyni bermasin).
+  var variantlar = [];
+  for(var i=0;i<_F2_OYLAR.length;i++){
+    for(var j=1;j<_F2_OYLAR[i].length;j++){
+      if(_F2_OYLAR[i][j]) variantlar.push({oy:_F2_OYLAR[i][0], v:_F2_OYLAR[i][j]});
+    }
+  }
+  variantlar.sort(function(a,b){ return b.v.length - a.v.length; });
+  for(var k=0;k<variantlar.length;k++){
+    if(t.indexOf(variantlar[k].v) >= 0) return variantlar[k].oy;
+  }
+  // Raqamli shakl: 03.2026 / 3-2026 / 032026
+  var m = String(s||'').match(/(^|[^0-9])(\d{1,2})[.\-\/_ ]?(\d{4})([^0-9]|$)/);
+  if(m){
+    var n = parseInt(m[2],10);
+    if(n>=1 && n<=12) return (n<10?'0':'')+n;
+  }
+  return '';
+}
+
+/** Matndan yilni ('2026') topadi, topilmasa ''. */
+function _f2OyYil(s){
+  var m = String(s||'').match(/(19|20)\d{2}/);
+  return m ? m[0] : '';
+}
+
+/** Kanonik oy kaliti «MM.YYYY». Oy yoki yil topilmasa '' qaytaradi. */
+function _f2OyKalit(s){
+  var oy = _f2OyRaqam(s), yil = _f2OyYil(s);
+  return (oy && yil) ? (oy + '.' + yil) : '';
 }
 

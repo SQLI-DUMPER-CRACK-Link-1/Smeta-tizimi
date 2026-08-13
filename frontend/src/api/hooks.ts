@@ -571,10 +571,18 @@ export function useF2OyOchirish() {
 }
 
 /** Eski kiritilgan F2 arxiv faylini Drive dan qidirish */
+/**
+ * Arxivdagi oy faylini topish (tahrirlash uchun).
+ * `nomzodlar` — aniq mos kelmasa, oyi mos keladigan ehtimoliy fayllar
+ * (2026-08-13: oy nomi lotin/kiril/raqamli shakllarda solishtiriladi).
+ */
 export function useF2EskiFaylOqi() {
   return useMutation({
     mutationFn: ({ obyekt, oyNom }: { obyekt: string; oyNom: string }) =>
-      gas<{ ok: boolean; fileId?: string; xabar?: string }>('apiF2EskiFaylOqi', obyekt, oyNom),
+      gas<{
+        ok: boolean; fileId?: string; faylNomi?: string; xabar?: string;
+        nomzodlar?: { id: string; nom: string }[];
+      }>('apiF2EskiFaylOqi', obyekt, oyNom),
   });
 }
 

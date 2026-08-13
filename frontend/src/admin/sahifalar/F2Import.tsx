@@ -1511,13 +1511,17 @@ const onAvtoMoslash = () => {
                                     if(r.ok) {
                                       resetF2Store();
                                       setState({ fid: r.fileId, oyNom: oy, faylNomi: `[Arxivdan] ${oy}`, varaq: '', cfg: null, aktTree: null, qadam: 0 });
-                                      toast("Fayl topildi. Iltimos varaqni tanlang.", "ok");
+                                      toast(`Arxiv fayli topildi${r.faylNomi ? `: ${r.faylNomi}` : ''}. Endi varaqni tanlang.`, "ok", undefined, 5000);
                                     } else {
-                                      toast("Avtomatik topilmadi: " + r.xabar, "danger");
+                                      /* ⚡ 2026-08-13: avval bu yerda ro'yxatdagi TASODIFIY
+                                       * birinchi fayl tanlab qo'yilardi. Endi backend oyi
+                                       * mos keladigan `nomzodlar` ni qaytaradi — shundan
+                                       * birinchisini tanlaymiz (ancha aniq taxmin). */
+                                      const nomzod = r.nomzodlar?.[0]?.nom;
+                                      toast(r.xabar || "Arxiv fayli avtomatik topilmadi", "warn", undefined, 6000);
                                       setTahrirModalOy(oy);
-                                      if (fayllar.data?.fayllar && fayllar.data.fayllar.length > 0) {
-                                          setTanlanganFaylNomi(fayllar.data.fayllar[0].name);
-                                      }
+                                      if (nomzod) setTanlanganFaylNomi(nomzod);
+                                      else if (fayllar.data?.fayllar?.length) setTanlanganFaylNomi(fayllar.data.fayllar[0].name);
                                     }
                                   },
                                   onError: (e: any) => toast(e.message, "danger")
