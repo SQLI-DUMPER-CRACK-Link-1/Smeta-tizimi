@@ -116,6 +116,7 @@ function apiFakturaAvtoSinx() {
   }
 
   var yangiKiritmalar = [];
+  var vaqtinchalikXato = 0;   // ⚡ AI bandligi sabab qoldirilgan fayllar
   var kochiriladi = [];   // ⚡ bazaga yozilgandan KEYIN ko'chiriladigan fayllar
   var batchSize = 5; // Fayllarni 5 tadan jamlab yuboramiz (API limitni tejash uchun)
 
@@ -133,14 +134,28 @@ function apiFakturaAvtoSinx() {
     if (batch.length === 0) break;
 
     try {
-      var parsedBatch = _parseFakturaVisionBatch(batch);
+      var _pb = _parseFakturaVisionBatch(batch);
+      var parsedBatch = _pb.items || _pb;          // eski shakl bilan mos
+      var parsedXato  = _pb.xatolar || {};         // {docId: xato matni}
       
       // Endi har bir faylni o'ziga tegishli papkaga jildiramiz
       for (var b = 0; b < batch.length; b++) {
          var fb = batch[b];
          var fileItems = parsedBatch.filter(function(x) { return x.docId === fb.id; });
          
+         /* ⚡⚡⚡ 2026-08-13: avval o'qilmagan fayl DARHOL «Xato_Oqilganlar» ga
+          * ko'chirilardi. Lekin sabab ko'pincha VAQTINCHALIK bo'ladi (Gemini
+          * bandligi/429, model o'chirilgani) — bunday fayl aslida SOG'LOM.
+          * U xato papkasiga ketsa boshqa QAYTA URINILMAYDI va abadiy yo'qoladi.
+          * Jonli hodisa: zaxira model o'chirilgani sababli 10 ta sog'lom faktura
+          * xato papkasiga tushdi. ENDI: vaqtinchalik xatoda fayl JOYIDA qoladi. */
          if (fileItems.length === 0 || !fileItems[0].nomi) {
+             var sabab = (parsedXato[fb.id] || '').toLowerCase();
+             var vaqtinchalik = !sabab || /band|limit|quota|429|no longer available|not found|timeout|kutish|deadline|500|503|unavailable/.test(sabab);
+             if (vaqtinchalik) {
+                 vaqtinchalikXato++;
+                 continue;   // «Yangi» da qoladi — keyingi ijroda qayta urinadi
+             }
              fb.file.moveTo(xatoPap);
              continue;
          }
@@ -224,6 +239,7 @@ function apiFakturaAvtoSinx() {
                  yozilganQatorlar: yozilganSoni, kochirilganFayllar: kochirildi,
                  qolganFayllar: qolgan > 0 ? qolgan : 0,
                  vaqtBilanToxtadi: vaqtBilanToxtadi,
+                 vaqtinchalikXato: vaqtinchalikXato,
                  davomiylikMs: Date.now() - _t0 };
   if(yozishXatosi){
     natija.xabar = 'Bazaga yozib bo\'lmadi — fayllar «Yangi» papkasida QOLDIRILDI '
@@ -451,22 +467,27 @@ function _parseFakturaVision(blob, fileObj, opts) {
     return { items: items, supplier: supplier, xato: oxirgiXato };
 }
 
+/** @return {{items:Array, xatolar:Object}} — xatolar: {docId: sabab}
+ *  ⚡ 2026-08-13: avval faqat massiv qaytarardi va XATO SABABI yo'qolardi;
+ *  chaqiruvchi «o'qilmadi» ni vaqtinchalik xatodan ajrata olmasdi. */
 function _parseFakturaVisionBatch(batch) {
-    var result = [];
+    var result = [], xatolar = {};
     for (var i = 0; i < batch.length; i++) {
         var b = batch[i];
         var parsed = _parseFakturaVision(b.blob, b.file);
-        for (var j = 0; j < parsed.items.length; j++) {
-            var itm = parsed.items[j];
+        if (parsed && parsed.xato) xatolar[b.id] = parsed.xato;
+        var pit = (parsed && parsed.items) || [];
+        for (var j = 0; j < pit.length; j++) {
+            var itm = pit[j];
             itm.docId = b.id;
             result.push(itm);
         }
-        // Free plan API limitiga urilmaslik (429) uchun har so'rovdan keyin 6 soniya kutamiz. (10 RPM)
+        // Free plan API limitiga urilmaslik (429) uchun har so'rovdan keyin kutamiz.
         if (i < batch.length - 1) {
-            Utilities.sleep(6000); 
+            Utilities.sleep(6000);
         }
     }
-    return result;
+    return { items: result, xatolar: xatolar };
 }
 
 if (typeof globalThis !== 'undefined') {

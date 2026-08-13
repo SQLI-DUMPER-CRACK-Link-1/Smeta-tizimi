@@ -207,7 +207,14 @@ function aiFetchRaw(model, payload, opts){
   var key=_aiGwKey(); if(!key) throw new Error("GEMINI_API_KEY yo'q. Kalit ulang (setkey:).");
   model = model || (typeof GEMINI_MODEL!=='undefined' ? GEMINI_MODEL : 'gemini-2.5-flash');
   var maxRetry=_aiCfg('AI_MAX_RETRY',5);
-  var fb=PropertiesService.getScriptProperties().getProperty('AI_MODEL_FALLBACK')||'gemini-2.0-flash';
+  /* ⚡⚡⚡ 2026-08-13 KRITIK: zaxira model 'gemini-2.0-flash' edi — Google uni
+   * BUTUNLAY O'CHIRGAN («This model is no longer available»). Asosiy model
+   * bandlikka (429) uchraganda zaxiraga o'tardi va u yerda 404 bilan o'lardi
+   * → butun chaqiruv muvaffaqiyatsiz. Faktura sinxronizatsiyasida 10 ta fayl
+   * shu sababdan «Xato_Oqilganlar» ga tushdi (jonli log bilan tasdiqlandi).
+   * Saqlangan qiymat ham eski bo'lishi mumkin — o'chirilgan modelni rad etamiz. */
+  var fb=PropertiesService.getScriptProperties().getProperty('AI_MODEL_FALLBACK')||'';
+  if(!fb || /^gemini-(1\.\d|2\.0)/.test(fb)) fb='gemini-2.5-flash-lite';
   var models=[model]; if(fb && fb!==model && opts.fallback!==false) models.push(fb);
   var lastErr='HTTP ?';
   // ⚡ 2026-07-12: INTERAKTIV chat (Panel/SmetaAI chatida foydalanuvchi jonli kutadi)
