@@ -180,6 +180,33 @@ function apiXlsxQiymatBilanOch(fileId, papkaId){
     if(!vlar.length) return {ok:false, xabar:'Файл ичида варақ топилмади (.xlsx эмасми?)'};
 
     var yangiNom = String(meta.name||'F2').replace(/\.(xlsx|xlsm|xls)$/i,'') + ' (қиймат)';
+
+    /* ⚡⚡⚡ 2026-08-13 DUBLIKAT TO'PLANISHI TUZATILDI: har safar fayl tanlanganda
+     * yangi nusxa yaratilardi — foydalanuvchi Ф2 ro'yxatida bir xil nomli 4-5 ta
+     * «(GS)»/«(қиймат)» fayl ko'rib chalkashardi (jonli skrinshot bilan tasdiq).
+     * Endi: shu papkada AYNAN shu nomli tayyor fayl bo'lsa — QAYTA
+     * ISHLATILADI (qayta konvert qilinmaydi, tezroq ham bo'ladi). */
+    var nishonPapka = papkaId || (meta.parents && meta.parents[0]) || '';
+    if (nishonPapka) {
+      try {
+        var mavjud = DriveApp.getFolderById(nishonPapka).getFilesByName(yangiNom);
+        while (mavjud.hasNext()) {
+          var mf = mavjud.next();
+          if (mf.getMimeType() !== 'application/vnd.google-apps.spreadsheet') continue;
+          var msS = SpreadsheetApp.openById(mf.getId());
+          var msOut = msS.getSheets().map(function(sh){
+            return { nom: sh.getName(), qatorlar: sh.getLastRow(),
+                     ustunlar: sh.getLastColumn(), yashirin: sh.isSheetHidden() };
+          }).filter(function(v){ return !v.yashirin && v.qatorlar > 1; });
+          if (msOut.length) {
+            return {ok:true, fileId: mf.getId(), nom: yangiNom, varaqlar: msOut,
+                    qaytaIshlatildi:true,
+                    xabar:'Тайёр «фақат қиймат» нусхаси топилди — қайта ишлатилди'};
+          }
+        }
+      } catch(em){}
+    }
+
     var ss = SpreadsheetApp.create(yangiNom);
     var natijaVaraq = [];
     var jamiXato = 0, jamiFormula = 0;

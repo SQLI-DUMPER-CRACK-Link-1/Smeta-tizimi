@@ -114,6 +114,9 @@ export function useHolat(
   obyekt: string,
   forceRefresh: boolean = false,
   lokalka: string | string[] = '',
+  /** ⚡ 2026-08-13: `false` bo'lsa so'rov YUBORILMAYDI. Ko'p smetali obyektda
+   *  «barchasini o'qish» ni tasodifan ishga tushirmaslik uchun (pastga qara). */
+  yoqilgan: boolean = true,
 ) {
   // Bir nechta smeta tanlangan bo'lishi mumkin (F2 bir necha smetaga tegishli)
   const rq = Array.isArray(lokalka) ? lokalka.filter(Boolean) : (lokalka ? [lokalka] : []);
@@ -127,7 +130,16 @@ export function useHolat(
       return gas<Javob>('apiHolatOl', obyekt, forceRefresh);
     },
     staleTime: Infinity, // Extremely heavy, don't refetch unless forced
-    enabled: !!obyekt,
+    enabled: !!obyekt && yoqilgan,
+    /* ⚡⚡⚡ 2026-08-13 «Failed to fetch» TUZATILDI. Jonli o'lchov: Amfiteatr
+     * (26 smeta) uchun apiHolatOl yolg'iz 10s / 4.45 MB, LEKIN sahifa boshqa
+     * chaqiruvlarni ham bir vaqtda yuboradi va GAS ularni NAVBATGA qo'yadi —
+     * o'sha so'rov 47.6s ga cho'zildi va brauzer ulanishni tashladi
+     * («Failed to fetch» — bu HTTP xato emas, ulanish uzilishi).
+     * Endi: og'ir so'rov uchun bosqichma-bosqich kutish bilan 3 marta
+     * qayta urinadi (global retry:1 bu yerda yetarli emas edi). */
+    retry: 3,
+    retryDelay: (urinish) => Math.min(4000 * 2 ** urinish, 30000),
   });
 }
 

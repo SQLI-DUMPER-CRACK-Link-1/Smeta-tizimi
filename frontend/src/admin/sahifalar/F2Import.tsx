@@ -257,7 +257,26 @@ export function F2Import() {
    * oldindan bilinmaydi. `tanlanganLoklar` bo'sh bo'lsa — eski xatti-harakat
    * (`lokalka` bittasi yoki hammasi). Bo'sh bo'lmasa — FAQAT tanlanganlar. */
   const [tanlanganLoklar, setTanlanganLoklar] = useState<string[]>([]);
-  const lrv = useHolat(obyekt, false, tanlanganLoklar.length ? tanlanganLoklar : lokalka);
+
+  /* ⚡⚡⚡ 2026-08-13 «Failed to fetch» TUZATILDI (foydalanuvchi skrinshoti:
+   * «Smeta o'qilmadi — Failed to fetch»). Jonli o'lchov: Amfiteatr (26 smeta)
+   * uchun BARCHASINI o'qish 4.45 MB javob va yolg'iz 10s; lekin sahifa boshqa
+   * so'rovlarni ham bir vaqtda yuboradi, GAS ularni navbatga qo'yadi va o'sha
+   * so'rov 47.6s ga cho'zilib brauzer ulanishni tashlaydi.
+   * YECHIM: ko'p smetali obyektda «barchasini o'qish» AVTOMATIK ishga
+   * tushmaydi — foydalanuvchi smeta tanlaydi (tez, 1 fayl) yoki ataylab
+   * «Hammasini o'qish» ni bosadi. */
+  const KOP_SMETA_CHEGARA = 4;
+  const [hammasiTasdiq, setHammasiTasdiq] = useState(false);
+  const smetaSoni = (loklar.data?.lokalkalar || []).length;
+  const tanlovBor = tanlanganLoklar.length > 0 || !!lokalka;
+  const kopSmetaOgoh = smetaSoni > KOP_SMETA_CHEGARA && !tanlovBor && !hammasiTasdiq;
+
+  const lrv = useHolat(
+    obyekt, false,
+    tanlanganLoklar.length ? tanlanganLoklar : lokalka,
+    !kopSmetaOgoh,   // ogohlantirish turgan payt so'rov yuborilmaydi
+  );
   // Smeta hisoblanmagan bo'lsa («_LRV_PLUS топилмади») shu yerdan ishga tushiramiz
   const obyektIshla = useObyektIshla();
 
@@ -1332,14 +1351,33 @@ const onAvtoMoslash = () => {
               izoh="Aniq smetani tanlash TEZKOR va TAVSIYA ETILADI. Bo'sh qoldirilsa barcha smetalar o'qiladi — katta obyektda vaqt limitiga urilishi mumkin."
             >
               <Tanlov qiymat={lokalka} ozgardi={setLokalka} variantlar={['', ...(loklar.data.lokalkalar || [])]} />
-              {!lokalka && (loklar.data.lokalkalar || []).length > 2 && (
-                <p className="mt-1.5 text-[11px] text-warn flex items-start gap-1.5">
-                  <span>⚠</span>
-                  <span>
-                    Bu obyektda {(loklar.data.lokalkalar || []).length} ta smeta bor va hammasi
-                    o'qilmoqda. Ф2 aktingiz qaysi smetaga tegishli bo'lsa — shuni tanlang,
-                    yuklash bir necha barobar tezlashadi.
-                  </span>
+              {/* ⚡ 2026-08-13: chegaradan ko'p smeta bo'lsa BARCHASINI o'qish
+                  avtomatik ishga tushmaydi — «Failed to fetch» aynan shundan
+                  bo'lardi (4.45 MB javob + GAS navbati = 47s, ulanish uziladi). */}
+              {kopSmetaOgoh && (
+                <div className="mt-2 rounded-[10px] border border-warn/30 bg-warn/[.07] p-3">
+                  <p className="text-[12px] text-warn flex items-start gap-1.5">
+                    <span>⚠</span>
+                    <span>
+                      Bu obyektda <b>{smetaSoni} ta smeta</b> bor. Hammasini birdan o'qish
+                      og'ir (~4 MB) va ulanish uzilib «Failed to fetch» berishi mumkin.
+                      <br />
+                      Ф2 aktingiz qaysi smetaga tegishli bo'lsa — <b>yuqoridan tanlang</b>
+                      {' '}(bir necha barobar tez), yoki bilmasangiz pastdagi
+                      {' '}<b>«Bu Ф2 qaysi smetadan kelgan?»</b> tugmasi aniqlab beradi.
+                    </span>
+                  </p>
+                  <button
+                    onClick={() => setHammasiTasdiq(true)}
+                    className="mt-2.5 text-[11px] px-3 py-1.5 rounded border border-warn/40 text-warn hover:bg-warn hover:text-black transition-colors"
+                  >
+                    Baribir hammasini o'qish ({smetaSoni} smeta)
+                  </button>
+                </div>
+              )}
+              {hammasiTasdiq && !tanlovBor && (
+                <p className="mt-1.5 text-[11px] text-warn">
+                  ⏳ Barcha {smetaSoni} smeta o'qilmoqda — bu 1 daqiqagacha olishi mumkin.
                 </p>
               )}
               {lokalka && (
