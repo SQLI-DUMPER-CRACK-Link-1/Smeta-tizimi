@@ -31,6 +31,9 @@ export function pulQisqa(n?: number | null): string {
 export function FmtN({ val, cl = '', qisqa = false }: { val?: number | null, cl?: string, qisqa?: boolean }) {
   if (qisqa) return <span className={`tabular-nums ${cl}`}>{pulQisqa(val)}</span>;
   if (val == null) return <span className={cl}>0.00</span>;
+  // ⚡ 2026-08-13: NaN "NaN.undefined" bo'lib chiqardi ("NaN".split('.')[1]
+  // = undefined). Soxta 0 ko'rsatmaymiz — noma'lumligini halol bildiramiz.
+  if (!isFinite(val)) return <span className={cl} title="Qiymat hisoblanmadi (manba noto'g'ri formatda)">—</span>;
 
   const isNegative = val < 0;
   const absVal = Math.abs(val);

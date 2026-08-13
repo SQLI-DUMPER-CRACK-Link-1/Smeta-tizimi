@@ -696,13 +696,30 @@ function f2MoslashSelfTest(){
  */
 function apiF2Varaqlar(fileId){
   try{
-    // Excel fayllar SpreadsheetApp'ni qulatib, HTML 500 qaytarishining oldini olish:
-    var f = DriveApp.getFileById(fileId);
-    var mime = f.getMimeType();
-    if (mime === MimeType.MICROSOFT_EXCEL || 
-        mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-        mime === 'application/vnd.ms-excel') {
-      return {ok:false, xabar:'Бу Excel файли (.xlsx). Смета тизимида ишлаш учун Google Sheets форматида бўлиши керак. Илтимос, файлни очиб "Save as Google Sheets" қилинг ёки пастдаги "Компьютердан юклаш" орқали қайта юкланг (тизим ўзи конверт қилади).'};
+    /* ⚡⚡⚡ 2026-08-13 ILDIZ TUZATISH (foydalanuvchi: Drive'dan .xlsx tanlasa
+     * «GAS HTML qaytardi» chiqaverdi). Avvalgi himoya 3 ta Excel-mime QORA
+     * ro'yxati edi — lekin Telegram/API orqali yuklangan fayl mime'i ko'pincha
+     * 'application/octet-stream' (yoki boshqa) bo'ladi, tekshiruvdan sirg'alib
+     * o'tib SpreadsheetApp.openById V8'ni qulatardi (try/catch HAM ushlamaydi,
+     * saytga Google'ning HTML sahifasi ketardi — jonli sinovda tasdiqlandi:
+     * xuddi shu fayl bilan guard turib ham HTML qaytdi).
+     * ENDI TESKARI: faqat haqiqiy GOOGLE_SHEETS ochiladi, qolgan HAMMASI
+     * _excelToNative (Drive.Files.copy REST — V8 xavfsiz) bilan avtomatik
+     * Google Sheets'ga KONVERT qilinadi va yangi ID qaytariladi. */
+    var meta = Drive.Files.get(fileId, {fields:'id,name,mimeType,parents'});
+    var yangiFileId = '';
+    if (meta.mimeType !== 'application/vnd.google-apps.spreadsheet') {
+      var parent = (meta.parents && meta.parents[0]) || '';
+      var yangiNom = String(meta.name||'F2').replace(/\.(xlsx|xlsm|xls|csv)$/i,'') + ' (GS)';
+      try {
+        yangiFileId = _excelToNative(fileId, parent, yangiNom);
+      } catch(ce) {
+        // Konvert bo'lmadi — fayl shikastlangan/parolli/soxta-xlsx. Aniq sabab + yo'l ko'rsatamiz.
+        return {ok:false, xabar:'«'+meta.name+'» файлини Google Sheets га конверт қилиб бўлмади (тури: '+meta.mimeType+'). '+
+          'Файл шикастланган, парол билан ҳимояланган ёки аслида Excel эмас бўлиши мумкин. '+
+          'Уни компьютерда очиб текширинг, сўнг «Компьютердан юклаш» орқали қайта юкланг. Техник хато: '+String((ce&&ce.message)||ce)};
+      }
+      fileId = yangiFileId;
     }
 
     var ss = SpreadsheetApp.openById(fileId);
@@ -715,7 +732,9 @@ function apiF2Varaqlar(fileId){
       };
     }).filter(function(v){ return !v.yashirin && v.qatorlar > 1; });
     if(!out.length) return {ok:false, xabar:'Файлда тўлдирилган варақ топилмади'};
-    return {ok:true, varaqlar:out, nom:ss.getName()};
+    // yangiFileId bo'lsa — frontend fid'ni SHU yangi (native) faylga almashtirishi shart,
+    // aks holda keyingi apiF2FaylOqi yana eski xlsx bilan chaqiriladi.
+    return {ok:true, varaqlar:out, nom:ss.getName(), yangiFileId:(yangiFileId||undefined)};
   }catch(e){
     return {ok:false, xabar:'Файлни очиб бўлмади: '+String(e.message||e)};
   }

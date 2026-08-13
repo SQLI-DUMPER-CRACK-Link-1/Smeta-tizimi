@@ -149,7 +149,7 @@ function apiWebApiSalom(){
     vaqt: new Date().toISOString(),
     zona: Session.getScriptTimeZone(),
     egasi: Session.getEffectiveUser().getEmail(),
-    versiya: 1
+    versiya: 20260813
   };
 }
 

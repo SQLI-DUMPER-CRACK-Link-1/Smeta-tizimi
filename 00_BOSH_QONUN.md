@@ -137,6 +137,36 @@ o'zgarmadi» deysiz, lekin kod aslida yuklangan bo'ladi.
 ⚠️ Apps Script'da maksimum **20 ta** aktiv deployment. Limit xatosi
 chiqsa — eskilarini `clasp undeploy <id>`.
 
+#### ⚡⚡⚡ Q4-a. BITTA deployment'ni yangilash YETMAYDI (2026-08-13 topildi)
+
+Loyihada **21 ta** deployment bor va Cloudflare'ning `GAS_URL` muhit
+o'zgaruvchisi lokal `.env` dagidan **BOSHQA** ID ga ishora qilishi mumkin
+(Cloudflare dashboard'dagi qiymat lokal fayl bilan sinxron emas).
+
+Jonli tasdiq: `35_F2Moslash.js` tuzatildi → `clasp push` + bitta produksiya
+ID ga `deploy` qilindi → sayt **hali eski kodni** ko'rsatdi. Faqat
+**hamma** deployment yangilangandan keyin tuzatish jonli bo'ldi.
+
+**Shuning uchun GAS o'zgarganda HAR DOIM hammasini yangilang:**
+
+```bash
+cd "Smeta tizimi"
+clasp push
+# yangi versiya yasab, uning raqamini olamiz:
+clasp deploy --deploymentId <PRODUKSIYA_ID> --description "nima o'zgardi"
+#   → chiqishda "@NNN" versiya raqami ko'rinadi
+
+# barcha qolgan deployment'larni SHU versiyaga o'tkazamiz:
+clasp deployments | grep -oE "AKfycb[A-Za-z0-9_-]+" | grep -v "<HEAD_ID>" \
+  | while read id; do clasp deploy --deploymentId "$id" --versionNumber NNN \
+      --description "vNNN"; done
+```
+
+**Tekshirish (majburiy):** `79_WebAPI.js` dagi `apiWebApiSalom` ichida
+`versiya:` maydoni bor. Uni har deploy'da o'zgartirib, saytdan
+so'rang — qaytgan qiymat siz kutgani bo'lsa, kod haqiqatan jonli.
+Bu «push qildim, lekin o'zgarmadi» chalkashligini bir soniyada yechadi.
+
 ---
 
 ### Q5. FRONTEND DEPLOY ZANJIRINI TO'LIQ BAJARING
@@ -430,6 +460,40 @@ F2 mantiqini o'zgartirsangiz — **avval** `_f2lab/` sinov stendida
 ### 6.5 Ф2 doim akt narxida
 
 Ф2 **hech qachon** smeta narxida hisoblanmaydi. Bu CONSTANTA.
+
+### 6.6 MIME tekshiruvi — QORA ro'yxat EMAS, OQ ro'yxat (2026-08-13)
+
+`SpreadsheetApp.openById()` ga Google Sheets bo'lmagan fayl berilsa, u
+oddiy JS xatosi bermaydi — **V8 dvigatelini butunlay qulatadi**.
+`try/catch` HAM ushlamaydi; saytga Google'ning HTML sahifasi ketadi va
+foydalanuvchi «GAS HTML qaytardi» degan tushunarsiz xatoni ko'radi.
+
+❌ **Ishlamaydigan yondashuv** (Antigravity urinishi):
+```js
+if (mime === MimeType.MICROSOFT_EXCEL || mime === '...spreadsheetml.sheet') { ... }
+```
+**Nega ishlamadi:** Telegram/API orqali yuklangan `.xlsx` Drive'da ba'zan
+**`application/zip`** mime bilan saqlanadi (xlsx aslida zip arxiv).
+Uchala Excel mime'iga ham tushmaydi, tekshiruvdan sirg'alib o'tadi.
+
+✅ **To'g'ri yondashuv** — faqat haqiqiy Sheets ochiladi, boshqasi konvert:
+```js
+var meta = Drive.Files.get(fileId, {fields:'id,name,mimeType,parents'});
+if (meta.mimeType !== 'application/vnd.google-apps.spreadsheet') {
+  fileId = _excelToNative(fileId, parent, yangiNom);   // Drive REST — xavfsiz
+}
+ss = SpreadsheetApp.openById(fileId);
+```
+
+`_excelToNative` (`05_Papka.js`) ikki bosqichli:
+1. `Drive.Files.copy` bilan konvert (tez);
+2. u «conversion is not supported» bersa (zip-mime holati) — fayl
+   baytlarini olib, MIME'ni majburan Excel deb belgilab
+   `Drive.Files.create` bilan qayta yaratadi.
+
+Konvertdan keyin **yangi fayl ID** qaytariladi (`yangiFileId`) — UI
+`fid`ni shu yangi ID ga almashtirishi shart, aks holda keyingi o'qish
+yana eski faylga uriladi.
 
 ---
 

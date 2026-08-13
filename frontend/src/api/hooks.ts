@@ -663,7 +663,10 @@ export function useRazdelYasat() {
 export function useF2Varaqlar(fileId: string) {
   return useQuery({
     queryKey: ['f2varaqlar', fileId],
-    queryFn: () => gas<{ ok: boolean; varaqlar?: F2Varaq[]; nom?: string; xabar?: string }>('apiF2Varaqlar', fileId),
+    // yangiFileId — fayl Excel bo'lsa GAS uni avtomatik Google Sheets'ga
+    // konvert qiladi va YANGI faylning ID'sini qaytaradi. UI fid'ni shu
+    // ID'ga almashtirishi SHART (keyingi o'qishlar native fayldan bo'lsin).
+    queryFn: () => gas<{ ok: boolean; varaqlar?: F2Varaq[]; nom?: string; xabar?: string; yangiFileId?: string }>('apiF2Varaqlar', fileId),
     enabled: !!fileId,
     staleTime: 5 * 60 * 1000,
   });

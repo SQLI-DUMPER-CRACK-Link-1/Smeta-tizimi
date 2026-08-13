@@ -376,6 +376,18 @@ export function F2Import() {
     if (qadam === 0) restoredF2Ref.current = false;
   }, [qadam]);
 
+  // ⚡ 2026-08-13: Drive'dan Excel (.xlsx) tanlansa GAS uni avtomatik Google
+  // Sheets'ga konvert qiladi va yangiFileId qaytaradi — fid'ni SHU yangi
+  // faylga almashtiramiz, aks holda keyingi o'qish yana eski xlsx'ga urilardi.
+  useEffect(() => {
+    const yangi = varaqlar.data?.yangiFileId;
+    if (varaqlar.data?.ok && yangi && yangi !== fid) {
+      setFid(yangi);
+      toast("Excel fayl avtomatik Google Sheets'ga aylantirildi — davom etishingiz mumkin", 'ok');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [varaqlar.data]);
+
   useEffect(() => {
     if (qadam === 1 && !restoredF2Ref.current && (faylNomi?.startsWith('[Arxivdan]') || faylNomi?.startsWith('[Qo\'lda tanlandi]')) && lrv.data?.tree && aktTree) {
       restoredF2Ref.current = true;
@@ -1404,8 +1416,10 @@ const onAvtoMoslash = () => {
                     let oySum = 0;
                     const barglarTugun = barglar(lrv.data?.tree as unknown as any[] || []);
                     barglarTugun.forEach(n => {
-                      const v = Number((n as any).oylar?.[oy] || (n as any).stF2?.[oy] || 0);
-                      const p = Number(n.narx || 0);
+                      // GAS ba'zan "1 234,5" ko'rinishida satr yuboradi — Number() uni NaN qiladi
+                      const raw = (n as any).oylar?.[oy] ?? (n as any).stF2?.[oy] ?? 0;
+                      const v = Number(String(raw).replace(/\s/g, '').replace(',', '.')) || 0;
+                      const p = Number(n.narx) || 0;
                       oySum += v * p;
                     });
                     

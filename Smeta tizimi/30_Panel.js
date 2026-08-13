@@ -3447,13 +3447,21 @@ function _f2UstunAniqla(data){
 function apiF2FaylOqi(fileId, varaqName, colConfig) {
   var ss;
   try {
-    // Excel fayllar SpreadsheetApp'ni qulatib, HTML 500 qaytarishining oldini olish:
-    var f = DriveApp.getFileById(fileId);
-    var mime = f.getMimeType();
-    if (mime === MimeType.MICROSOFT_EXCEL || 
-        mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-        mime === 'application/vnd.ms-excel') {
-      return {ok: false, xabar: 'Бу Excel файли (.xlsx). Смета тизимида ишлаш учун Google Sheets форматида бўлиши керак. Илтимос, файлни очиб "Save as Google Sheets" қилинг.'};
+    /* ⚡ 2026-08-13: apiF2Varaqlar dagi kabi — mime QORA ro'yxati o'rniga
+     * teskari tekshiruv. octet-stream kabi kutilmagan mime'lar openById'ni
+     * V8 darajasida qulatardi (try/catch ushlamaydi, saytga HTML ketardi).
+     * Endi: faqat haqiqiy GOOGLE_SHEETS ochiladi, boshqasi avto-konvert. */
+    var meta = Drive.Files.get(fileId, {fields:'id,name,mimeType,parents'});
+    if (meta.mimeType !== 'application/vnd.google-apps.spreadsheet') {
+      var parent = (meta.parents && meta.parents[0]) || '';
+      var yangiNom = String(meta.name||'F2').replace(/\.(xlsx|xlsm|xls|csv)$/i,'') + ' (GS)';
+      try {
+        fileId = _excelToNative(fileId, parent, yangiNom);
+      } catch(ce) {
+        return {ok:false, xabar:'«'+meta.name+'» файлини Google Sheets га конверт қилиб бўлмади (тури: '+meta.mimeType+'). '+
+          'Файл шикастланган, парол билан ҳимояланган ёки аслида Excel эмас бўлиши мумкин. '+
+          '«Компьютердан юклаш» орқали қайта юкланг. Техник хато: '+String((ce&&ce.message)||ce)};
+      }
     }
     ss = SpreadsheetApp.openById(fileId);
   } catch (e) {

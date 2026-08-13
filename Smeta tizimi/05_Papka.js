@@ -582,7 +582,24 @@ function _excelToNative(fileId, folderId, newName){
     if(copied && copied.id) return copied.id;
     throw 'Drive.Files.copy qaytarmadi';
   } catch(e){
-    throw 'Конвертация хатоси ('+newName+'): '+(e.message||e);
+    /* ⚡⚡⚡ 2026-08-13 ZAXIRA YO'L (jonli sinovda topildi): Telegram/API orqali
+     * yuklangan .xlsx Drive'da ba'zan 'application/zip' mime bilan saqlanadi
+     * (xlsx aslida zip arxiv). Bunda Drive.Files.copy "The requested conversion
+     * is not supported" beradi — Drive uni jadval deb bilmaydi.
+     * YECHIM: fayl baytlarini olib, MIME'ni majburan Excel deb belgilab,
+     * Google Sheets sifatida QAYTA YARATAMIZ (Drive endi konvertni tushunadi). */
+    try {
+      var blob = DriveApp.getFileById(fileId).getBlob()
+        .setContentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      var yaratildi = Drive.Files.create(
+        { name: newName, mimeType: MimeType.GOOGLE_SHEETS, parents: resource.parents },
+        blob
+      );
+      if (yaratildi && yaratildi.id) return yaratildi.id;
+      throw 'Drive.Files.create qaytarmadi';
+    } catch(e2){
+      throw 'Конвертация хатоси ('+newName+'): '+(e.message||e)+' | Заҳира йўл ҳам ишламади: '+(e2.message||e2);
+    }
   }
 }
 
