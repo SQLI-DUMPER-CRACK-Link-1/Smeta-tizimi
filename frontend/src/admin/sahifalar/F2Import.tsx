@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2YozSinov, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
   useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
 } from '../../api/hooks';
 import {
-  Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft, XatoHolat,
+  Sahifa, KpiKarta, Nishon, Tugma, Maydon, Kiritma, Tanlov, Juft,
 } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
@@ -132,6 +132,7 @@ export function F2Import() {
   const setDropState = createSetter('dropState');
   const setSmetaScrollTo = createSetter('smetaScrollTo');
 
+  const [radRoyxat, setRadRoyxat] = useState<any[]>([]);   // ⚡ o'tkazib yuborilgan qatorlar
   const [tahrirModalOy, setTahrirModalOy] = useState<string | null>(null);
 
   
@@ -252,7 +253,6 @@ export function F2Import() {
   const daraxt = useF2Daraxt();
   const moslash = useF2AvtoMoslash();
   const yoz = useF2Yoz();
-  const sinov = useF2YozSinov();   // ⚡ yozishdan oldin quruq tekshiruv
   const job = useF2JobHolat(true);
   /* ⚡⚡⚡ 2026-08-13: F2 bir NECHTA smetaga tegishli bo'lishi mumkin va qaysiligi
    * oldindan bilinmaydi. `tanlanganLoklar` bo'sh bo'lsa — eski xatti-harakat
@@ -1152,30 +1152,35 @@ export function F2Import() {
       };
     }) as F2Moslik[];
 
+    /* ⚡⚡⚡ 2026-08-14: avval bitta mos kelmagan qator BUTUN yozishni bloklardi
+     * (foydalanuvchi: «82 qator mos kelmadi — YOZILMADI... zaybal qildi»).
+     * ENDI: yaxshi qatorlar YOZILADI, muammolilari o'tkazib yuboriladi va
+     * ro'yxat sifatida ko'rsatiladi. Ish to'xtab qolmaydi. */
     try {
-      const s = await sinov.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
-      if (s.radEtilgan && s.radEtilgan > 0) {
-        const misol = (s.radRoyxat ?? []).slice(0, 3)
-          .map(x => `${x.row}-qator: kutilgan «${(x.kutilgan || '').slice(0, 28)}», topilgan «${(x.topilgan || '').slice(0, 28)}»`)
-          .join('\n');
-        toast(
-          `⚠ ${s.radEtilgan} qator mos kelmadi — YOZILMADI.\nSmetada qatorlar surilgan.\n${misol}\n\nSmetaga «Ishla» qilib, qaytadan bog'lang.`,
-          'danger', undefined, 15000,
-        );
+      const r = await yoz.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
+      const yozildi = r.yozilgan ?? 0;
+      const rad = r.radEtilgan ?? 0;
+
+      if (!yozildi && rad) {
+        setRadRoyxat(r.radRoyxat ?? []);
+        toast(`Hech bir qator yozilmadi — ${rad} ta bog'lanish noto'g'ri qatorga ishora qilyapti. Ro'yxatni ko'ring.`, 'danger', undefined, 10000);
         return;
       }
+      if (!r.ok && !yozildi) { toast(r.xabar || 'Yozilmadi', 'danger'); return; }
 
-      const r = await yoz.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
-      if (!r.ok) { toast(r.xabar || 'Yozilmadi', 'danger'); return; }
-      toast(r.xabar || `✅ ${r.yozilgan ?? 0} qator yozildi`, 'ok', undefined, 8000);
+      setRadRoyxat(rad ? (r.radRoyxat ?? []) : []);
+      toast(
+        rad ? `✅ ${yozildi} qator yozildi · ⚠ ${rad} ta o'tkazib yuborildi (pastda ro'yxat)`
+            : `✅ ${yozildi} qator yozildi`,
+        rad ? 'warn' : 'ok', undefined, 8000,
+      );
       setYozishBoshlandi(true);
       setQadam(2);
-      await Promise.all([job.refetch(), lrv.refetch()]);
+      await lrv.refetch();
     } catch (e: any) { toast(`Xato: ${e.message}`, 'danger'); }
   }
 
   const j = job.data?.job;
-  const foiz = j?.total ? Math.round(((j.done || 0) / j.total) * 100) : 0;
 // Barcha boglanmagan F2 qatorlari uchun takliflarni hisoblash
   useEffect(() => {
     if (!aktTree || !lrv.data?.tree) return;
@@ -2026,35 +2031,53 @@ const onAvtoMoslash = () => {
       {/* ---------- QADAM 4 ---------- */}
       {qadam === 2 && (
         <div className="karta p-6 max-w-2xl space-y-4">
+          {/* ⚡⚡⚡ 2026-08-14: yozish endi SINXRON (2-5 soniya) — bu yerga
+              kelgan bo'lsak, ish ALLAQACHON tugagan. Avval bu panel eski
+              fon-navbat holatiga qarardi va yozib bo'lgandan keyin ham
+              «Yozilmoqda» deb qotib turardi (foydalanuvchi shikoyati). */}
           <div className="flex items-center gap-3">
-            <FileSpreadsheet size={20} className="text-accent" />
+            <FileSpreadsheet size={20} className="text-ok" />
             <h3 className="text-[17px] font-semibold text-text">
-              {j?.status === 'tugadi' ? 'Yozildi' : j?.status === 'xato' ? 'Xato' : 'Yozilmoqda'}
+              {radRoyxat.length ? 'Yozildi (qisman)' : 'Yozildi'}
             </h3>
           </div>
 
           <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
-            <div
-              className="h-full bg-accent rounded-full transition-all duration-500"
-              style={{ width: `${j?.status === 'tugadi' ? 100 : foiz}%` }}
-            />
+            <div className="h-full bg-ok rounded-full" style={{ width: '100%' }} />
           </div>
+
+          {/* O'tkazib yuborilgan qatorlar — nima uchun ekani aniq ko'rinsin */}
+          {radRoyxat.length > 0 && (
+            <div className="rounded-[10px] border border-warn/30 bg-warn/[.06] p-3">
+              <p className="text-[13px] text-warn font-medium mb-2">
+                ⚠ {radRoyxat.length} ta qator o'tkazib yuborildi — bog'lanish noto'g'ri
+                smeta qatoriga ishora qilyapti:
+              </p>
+              <div className="max-h-48 overflow-y-auto scrollbar-thin space-y-1">
+                {radRoyxat.slice(0, 40).map((x, i) => (
+                  <div key={i} className="text-[11px] text-text-dim leading-snug">
+                    <b className="text-text">{x.row}-qator:</b> kutilgan «{String(x.kutilgan || '').slice(0, 40)}»,
+                    {' '}topilgan «{String(x.topilgan || '').slice(0, 40)}»
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-text-mute mt-2">
+                Bu qatorlarni 2-qadamda qo'lda qayta bog'lab, yana yozing.
+              </p>
+            </div>
+          )}
 
           <p className="text-sm text-text-dim tabular-nums">
             {j?.done ?? 0} / {j?.total ?? 0} qator{j?.xabar ? ` · ${j.xabar}` : ''}
           </p>
 
-          <div className="rounded-[10px] bg-ok/[.08] border border-ok/25 p-3 text-sm text-text-dim">
-            ✅ Kompyuterni o'chirsangiz ham yozuv davom etadi. Keyin qaytib kelib shu sahifadan kuzatasiz.
-          </div>
-
-          {job.error && <XatoHolat xato={job.error} qayta={() => job.refetch()} />}
+          
 
           {/* ⚡⚡⚡ 2026-08-14: TO'XTATISH tugmasi (foydalanuvchi talabi:
               «tiqilib qolganda F5 bossam ham yana shu eski navbatda turibdi...
                shu joyida bir to'xtatish tugmasi ham bo'lishi kerakda»).
               Avval qotib qolgan ishni tozalash imkoniyati UMUMAN yo'q edi. */}
-          {j?.status !== 'tugadi' && j?.status !== 'xato' && (
+          {false && (
             <div className="rounded-[10px] border border-warn/25 bg-warn/[.06] p-3 flex items-center justify-between gap-3 flex-wrap">
               <p className="text-[12px] text-warn">
                 Jarayon qotib qolgan bo'lsa (raqam uzoq vaqt o'zgarmasa) — to'xtatib qaytadan boshlang.
@@ -2077,7 +2100,7 @@ const onAvtoMoslash = () => {
             </div>
           )}
 
-          {(j?.status === 'tugadi' || j?.status === 'xato') && (
+          {true && (
             <Tugma
               tur="primary"
               onBos={() => {
