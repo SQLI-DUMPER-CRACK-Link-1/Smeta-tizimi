@@ -30,10 +30,8 @@
  * LRV'sida aynan shu bo'ldi: СУММА ustunida 10 715 681 turardi,
  * to'g'risi 102 585 edi — 104 barobar xato).
  *
- * QATOR SURILISHIDAN HIMOYA: yozishdan oldin har nishon qatorning
- * HAQIQIY nomi/kodi tekshiriladi. Mos kelmasa — O'SHA QATOR YOZILMAYDI
- * va hisobotda ko'rsatiladi. Ya'ni noto'g'ri joyga yozib qo'yish
- * MUMKIN EMAS.
+ * TEKSHIRUV YO'Q: foydalanuvchi panelda 100% qo'lda bog'laydi.
+ * BOG'LANGAN HAR BIR QATOR YOZILADI — bittasi ham qoldirilmaydi.
  ********************************************************************/
 
 /** Nom/kodni solishtirish uchun normallashtirish */
@@ -121,82 +119,64 @@ function apiF2TezYoz(obyekt, varaqNom, oyNom, satrlar, quruq){
       }
     }
 
-    /* ---- 3) Har qatorni TEKSHIRIB moslashtiramiz ---- */
-    var yoziladi = [];      // {row, hajm, narx, summa}
-    var radEtildi = [];     // nom/kod mos kelmagan qatorlar
+    /* ---- 3) Har qatorni tayyorlaymiz ----
+     * ⚡⚡⚡ 2026-08-14: NOM/KOD TEKSHIRUVI BUTUNLAY OLIB TASHLANDI.
+     * Foydalanuvchi panelda 100% qo'lda bog'laydi va bog'lanishlariga
+     * ishonadi. Tekshiruv HAQIQIY bog'lanishlarni rad etib ish qoldirardi:
+     * «F2 va smetada kiritilmay qolinishi keyingi ishlarni pachava qiladi —
+     *  ko'p yoki kam obyom olinib bir ikkitasi qamalib ketishi hech gap emas».
+     * QOIDA: BOG'LANGAN HAR BIR QATOR YOZILADI. Bittasi ham qoldirilmaydi.
+     *
+     * Eski (to'g'ri ishlagan)  semantikasi AYNAN saqlanadi:
+     *   obyom — DOIM yoziladi
+     *   narx  — faqat >0 bo'lsa (aks holda smeta narx formulasi tegilmaydi)
+     *   summa — F2 hujjatdagi AYNAN summa, !=0 bo'lsa (manfiy ham — перерасчёт).
+     *           Berilmasa hajm×narx bilan hisoblanadi.
+     *   uid   — katakka izoh (note) — kelib chiqishini kuzatish uchun */
+    var yoziladi = [];
+    var xatolar  = [];
     var minR = last+1, maxR = 0;
 
     for(var s=0; s<satrlar.length; s++){
       var it = satrlar[s] || {};
       var r = parseInt(it.row, 10) || 0;
       if(r < 1 || r > last){
-        radEtildi.push({row:r, nom:it.nom, sabab:'қатор чегарадан ташқари'});
+        xatolar.push({row:r, nom:String(it.nom||'').slice(0,45),
+                      sabab:'қатор варақ чегарасидан ташқари (1-'+last+')'});
         continue;
       }
-      var qKod = _tzKod(maydon[r-1][col.KOD-1]);
-      var qNom = _tzNorm(maydon[r-1][col.NOM-1]);
+      var hajm = _tzNum(it.hajm);
+      var narx = _tzNum(it.narx);
+      var summa = _tzNum(it.summa);
+      if(!summa) summa = Math.round(hajm*narx*10000)/10000;
 
-      /* ⚡⚡⚡ 2026-08-14 TUZATILDI — avvalgi mantiq XATO edi.
-       * Avval F2 nomi SMETA nomi bilan solishtirilardi. Lekin foydalanuvchi
-       * qatorlarni QO'LDA bog'laydi, aynan chunki nomlar HAR XIL:
-       *   F2:     «...ТРУБОПРОВОДОВ ВОДОСНАБЖЕНИЯ ИЗ НАПОРНЫХ...»
-       *   Smeta:  «...ТРУБОПРОВОДОВ ОТОПЛЕНИЯ ИЗ ПОЛИПРОПИЛЕНОВЫХ...»
-       * Bu BIR XIL ish, faqat hujjatlarda boshqacha atalgan. Eski tekshiruv
-       * ana shu HAQIQIY bog'lanishlarni rad etardi (9 qator yozilmadi).
-       *
-       * TO'G'RI SAVOL: «F2 nomi smetaga o'xshaydimi?» EMAS, balki
-       * «SMETA qatori bog'langandan keyin SURILDIMI?».
-       * Shuning uchun frontend SMETA tomonidagi nom/kodni yuboradi
-       * (smetaNom/smetaKod) va biz uni varaqdagi HOZIRGI qiymat bilan
-       * solishtiramiz. Qator surilsa — darhol ko'rinadi. */
-      var kutNom = _tzNorm(it.smetaNom), kutKod = _tzKod(it.smetaKod);
-
-      if(kutNom || kutKod){
-        var nomMos = kutNom && qNom && (kutNom === qNom);
-        var kodMos = kutKod && qKod && (kutKod === qKod);
-        if(!nomMos && !kodMos){
-          radEtildi.push({row:r, kutilgan:String(it.smetaNom||it.smetaKod||'').slice(0,45),
-                          topilgan:String(maydon[r-1][col.NOM-1]||'').slice(0,45),
-                          sabab:'смета қатори сурилган (боғлангандагидан бошқа қатор)'});
-          continue;
-        }
-      } else {
-        /* smetaNom berilmagan (eski chaqiruv) — hech bo'lmaganda qator
-         * BO'SH emasligini tekshiramiz, sarlavha/bo'sh joyga yozmaslik uchun */
-        if(!qNom && !qKod){
-          radEtildi.push({row:r, kutilgan:String(it.nom||'').slice(0,45),
-                          topilgan:'(бўш қатор)', sabab:'нишон қатор бўш'});
-          continue;
-        }
-      }
-
-      var hajm = _tzNum(it.hajm), narx = _tzNum(it.narx);
-      yoziladi.push({ row:r, hajm:hajm, narx:narx,
-                      summa: Math.round(hajm*narx*10000)/10000 });
+      yoziladi.push({ row:r, hajm:hajm, narx:narx, summa:summa, uid:it.uid||'' });
       if(r < minR) minR = r;
       if(r > maxR) maxR = r;
     }
 
     if(!yoziladi.length){
       return {ok:false, tekshirildi:satrlar.length, yozilgan:0,
-              radEtilgan:radEtildi.length, radRoyxat:radEtildi.slice(0,30),
+              radEtilgan:xatolar.length, radRoyxat:xatolar.slice(0,30),
               msVaqt:Date.now()-t0,
-              xabar:'Ҳеч бир қатор мос келмади — ёзилмади. Қаторлар сурилган бўлиши мумкин.'};
+              xabar:'Ёзиладиган қатор топилмади'};
     }
 
     /* ---- 4) BITTA setValues bilan yozish ---- */
     if(!quruq){
       var balandlik = maxR - minR + 1;
-      // Mavjud qiymatlarni olamiz (oraliqdagi tegilmaydigan qatorlar saqlansin)
-      var blok = sh.getRange(minR, oyCol, balandlik, 3).getValues();
+      var rng  = sh.getRange(minR, oyCol, balandlik, 3);
+      var blok = rng.getValues();
+      var izoh = rng.getNotes();
       for(var y=0; y<yoziladi.length; y++){
-        var w = yoziladi[y];
-        var idx = w.row - minR;
-        blok[idx][0] = w.hajm;
-        blok[idx][1] = w.narx;
-        blok[idx][2] = w.summa;   // FORMULA emas — tayyor son
+        var w = yoziladi[y], idx = w.row - minR;
+        blok[idx][0] = w.hajm;                          // obyom — DOIM
+        if(w.narx > 0)  blok[idx][1] = w.narx;          // narx — faqat >0
+        if(w.summa !== 0) blok[idx][2] = w.summa;       // summa — !=0 (manfiy ham)
+        if(w.uid) izoh[idx][0] = 'f2uid:' + w.uid;
       }
-      sh.getRange(minR, oyCol, balandlik, 3).setValues(blok);
+      rng.setValues(blok);
+      try{ rng.setNotes(izoh); }catch(e){}
       SpreadsheetApp.flush();
       try{ if(typeof _holatInvalidate==='function') _holatInvalidate(obyekt); }catch(e){}
     }
@@ -208,13 +188,13 @@ function apiF2TezYoz(obyekt, varaqNom, oyNom, satrlar, quruq){
       varaq: varaqNom, oy: oyNom, oyUstun: oyCol, yangiUstun: yangiUstun,
       tekshirildi: satrlar.length,
       yozilgan: yoziladi.length,
-      radEtilgan: radEtildi.length,
-      radRoyxat: radEtildi.slice(0,30),
+      radEtilgan: xatolar.length,
+      radRoyxat: xatolar.slice(0,30),
       jamiSumma: Math.round(jamiSumma*100)/100,
       msVaqt: Date.now()-t0,
       xabar: (quruq?'СИНОВ (ёзилмади): ':'✅ ')
            + yoziladi.length+' қатор'
-           + (radEtildi.length ? (', '+radEtildi.length+' та РАД ЭТИЛДИ (ном/код мос эмас)') : '')
+           + (xatolar.length ? (', '+xatolar.length+' та қатор ёзилмади (қатор чегарадан ташқари)') : '')
            + ' · '+Math.round((Date.now()-t0)/100)/10+' сония'};
   }catch(e){
     return {ok:false, xabar:'Тез ёзиш хатоси: '+String((e&&e.message)||e),
@@ -319,9 +299,8 @@ function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
       /* ⚡ 2026-08-14 BUG TUZATILDI: bu yerda smetaNom/smetaKod UZATILMASDAN
        * qolgandi → himoya ishlamasdi (jonli sinov: qator 1 ga surilgan
        * holatda ham 97/97 «mos» deb qabul qilinardi — xavfli). */
-      guruh[kalit].satrlar.push({row:e.row, nom:e.nom, kod:e.kod,
-                                 smetaNom:e.smetaNom, smetaKod:e.smetaKod,
-                                 hajm:e.hajm, narx:e.narx});
+      guruh[kalit].satrlar.push({row:e.row, uid:e.uid,
+                                 hajm:e.hajm, narx:e.narx, summa:e.summa});
     });
 
     var kalitlar = Object.keys(guruh);
