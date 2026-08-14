@@ -213,3 +213,124 @@ if (typeof globalThis !== 'undefined') {
   globalThis.apiF2TezYoz = apiF2TezYoz;
   globalThis.apiF2TezSinov = apiF2TezSinov;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * TO'LIQ YOZISH: mos qatorlar (TEZ) + qo'shimcha/zamena (qator qo'shish)
+ * ==================================================================
+ * ⚡ 2026-08-14: nega ikki xil yo'l kerak —
+ *   MOS QATORLAR  — smetada qator BOR, faqat 3 katakka qiymat yoziladi.
+ *                   Minglab bo'lsa ham BITTA setValues. Tez.
+ *   QO'SHIMCHA/ZAMENA — smetaga YANGI QATOR qo'shiladi. Har qo'shishda
+ *                   qator raqamlari suriladi, shuning uchun bittalab
+ *                   bajarilishi SHART (guruhlab bo'lmaydi).
+ * Tartib MUHIM: avval mos qatorlar (joriy raqamlar bo'yicha), keyin
+ * qo'shimchalar (ular raqamlarni suradi).
+ *
+ * Qo'shimcha mantiqi ATAYLAB qayta yozilmadi — u ancha nozik (rz+/bl+/rs+,
+ * zamena, uid-dedup, перерасчёт manfiy hajm). Mavjud, sinovdan o'tgan
+ * `apiF2Qolla` chaqiriladi, LEKIN faqat dopps bilan (edits bo'sh) va
+ * oy ustuni allaqachon tayyor deb belgilanadi.
+ * ══════════════════════════════════════════════════════════════════ */
+function apiF2YozTola(obyekt, varaqNom, oyNom, satrlar, dopps, quruq){
+  var t0 = Date.now();
+  try{
+    satrlar = satrlar || []; dopps = dopps || [];
+
+    /* --- 1-BOSQICH: mos qatorlar (tez) --- */
+    var tez = {yozilgan:0, radEtilgan:0, radRoyxat:[], msVaqt:0, jamiSumma:0};
+    if(satrlar.length){
+      tez = apiF2TezYoz(obyekt, varaqNom, oyNom, satrlar, quruq);
+      if(!tez.ok && !tez.yozilgan){
+        return {ok:false, bosqich:'mos qatorlar', xabar: tez.xabar,
+                radRoyxat: tez.radRoyxat || []};
+      }
+    }
+
+    /* --- 2-BOSQICH: qo'shimcha / zamena --- */
+    var dopNatija = null;
+    if(dopps.length && !quruq){
+      if(typeof apiF2Qolla !== 'function'){
+        return {ok:false, xabar:'apiF2Qolla топилмади — қўшимча қаторлар ёзилмади'};
+      }
+      /* oyTayyor:true — oy ustuni 1-bosqichda yaratilgan, qayta yaratilmasin
+       * (aynan shu qayta yaratish 26 smetaga tarqalib o'lim siklini bergandi) */
+      dopNatija = apiF2Qolla(obyekt, oyNom, [], dopps, 0,
+                             {oyTayyor:true, editStart:0, dopStart:0});
+    }
+
+    var ms = Date.now()-t0;
+    return {ok:true, quruq:!!quruq,
+      mos: {yozilgan: tez.yozilgan||0, radEtilgan: tez.radEtilgan||0,
+            radRoyxat: tez.radRoyxat||[], jamiSumma: tez.jamiSumma||0},
+      qoshimcha: dopNatija ? {ok:dopNatija.ok, xabar:dopNatija.xabar,
+                              davomEtadi: !!dopNatija.resume} : null,
+      msVaqt: ms,
+      xabar: (quruq?'СИНОВ: ':'✅ ')
+        + (tez.yozilgan||0)+' мос қатор'
+        + (tez.radEtilgan ? (', '+tez.radEtilgan+' РАД ЭТИЛДИ') : '')
+        + (dopps.length ? (', '+dopps.length+' қўшимча/замена') : '')
+        + ' · '+Math.round(ms/100)/10+' сония'
+        + (dopNatija && dopNatija.resume ? ' (қўшимчалар навбатда давом этади)' : '')};
+  }catch(e){
+    return {ok:false, xabar:'Тўлиқ ёзиш хатоси: '+String((e&&e.message)||e),
+            stack:String((e&&e.stack)||'').slice(0,500)};
+  }
+}
+
+/** Frontend uchun kirish nuqtasi — eski `apiF2QollaNavbatga` o'rniga.
+ *  edits[] ichida `varaq` "sub||LRV" ko'rinishida keladi — ajratamiz. */
+function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
+  try{
+    edits = edits || []; dopps = dopps || [];
+    if(!edits.length && !dopps.length) return {ok:false, xabar:'Ёзиш учун маълумот йўқ'};
+
+    /* varaq bo'yicha guruhlash: har smeta/varaq alohida yoziladi */
+    var guruh = {};
+    edits.forEach(function(e){
+      var v = String(e.varaq||'');
+      var sub = obyekt, varaqNom = v;
+      if(v.indexOf('||') >= 0){ sub = v.split('||')[0]; varaqNom = v.split('||')[1]; }
+      var kalit = sub + '||' + varaqNom;
+      if(!guruh[kalit]) guruh[kalit] = {sub:sub, varaq:varaqNom, satrlar:[]};
+      guruh[kalit].satrlar.push({row:e.row, nom:e.nom, kod:e.kod,
+                                 hajm:e.hajm, narx:e.narx});
+    });
+
+    var kalitlar = Object.keys(guruh);
+    if(!kalitlar.length && dopps.length){
+      // faqat qo'shimchalar bo'lsa — to'g'ridan-to'g'ri eski yo'lga
+      return apiF2YozTola(obyekt, '', oyNom, [], dopps, quruq);
+    }
+
+    var natijalar = [], jamiYoz = 0, jamiRad = 0, barchaRad = [];
+    for(var i=0;i<kalitlar.length;i++){
+      var g = guruh[kalitlar[i]];
+      // Qo'shimchalarni FAQAT oxirgi guruhda bir marta bajaramiz
+      var d = (i === kalitlar.length-1) ? dopps : [];
+      var r = apiF2YozTola(g.sub, g.varaq, oyNom, g.satrlar, d, quruq);
+      natijalar.push({smeta:g.sub, varaq:g.varaq, natija:r});
+      if(r.mos){ jamiYoz += r.mos.yozilgan||0; jamiRad += r.mos.radEtilgan||0;
+                 barchaRad = barchaRad.concat(r.mos.radRoyxat||[]); }
+    }
+
+    return {ok:true, quruq:!!quruq, smetalar:kalitlar.length,
+      yozilgan:jamiYoz, radEtilgan:jamiRad, radRoyxat:barchaRad.slice(0,40),
+      tafsilot:natijalar,
+      xabar:(quruq?'СИНОВ: ':'✅ ')+jamiYoz+' қатор ёзилди'
+        + (jamiRad?(', '+jamiRad+' РАД ЭТИЛДИ (ном/код мос эмас)'):'')
+        + ' · '+kalitlar.length+' сметада'};
+  }catch(e){
+    return {ok:false, xabar:'Хато: '+String((e&&e.message)||e)};
+  }
+}
+
+/** QURUQ sinov — hech narsa yozmaydi */
+function apiF2YozTezSinov2(obyekt, oyNom, edits, dopps, aktJami){
+  return apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, true);
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.apiF2YozTola = apiF2YozTola;
+  globalThis.apiF2YozTez2 = apiF2YozTez2;
+  globalThis.apiF2YozTezSinov2 = apiF2YozTezSinov2;
+}

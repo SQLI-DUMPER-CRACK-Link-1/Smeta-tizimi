@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useF2AvtoMoslash, useF2Yoz, useF2YozSinov, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
   useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
 } from '../../api/hooks';
 import {
@@ -252,6 +252,7 @@ export function F2Import() {
   const daraxt = useF2Daraxt();
   const moslash = useF2AvtoMoslash();
   const yoz = useF2Yoz();
+  const sinov = useF2YozSinov();   // ⚡ yozishdan oldin quruq tekshiruv
   const job = useF2JobHolat(true);
   /* ⚡⚡⚡ 2026-08-13: F2 bir NECHTA smetaga tegishli bo'lishi mumkin va qaysiligi
    * oldindan bilinmaydi. `tanlanganLoklar` bo'sh bo'lsa — eski xatti-harakat
@@ -1119,15 +1120,40 @@ export function F2Import() {
     // window.confirm is blocked in Telegram WebApp. The button already says "(Farq mavjud!)".
     // Dopps endi boglanmagan ro'yxatidan EMAS, faqat qo'lda tasdiqlangan qolDop dan keladi!
     const dopps = Object.values(qolDop);
+
+    /* ⚡⚡⚡ 2026-08-14 YANGI TEZ YO'L (37_F2TezYoz.js).
+     * 1) `nom` qo'shamiz — server qator surilganini AYNAN nom/kod bilan
+     *    tekshiradi va mos kelmasa YOZMAYDI (foydalanuvchi talabi).
+     * 2) AVVAL quruq sinov: yozmasdan nechta qator mos kelishini bilamiz.
+     *    Mos kelmagan bo'lsa — ogohlantiramiz va YOZMAYMIZ.
+     * 3) Toza bo'lsa — yozamiz. Javob DARHOL keladi (97 qator ≈ 2.7s),
+     *    navbat kutish shart emas. */
+    const nomBilan = [...moslikMap.values()].map((m: any) => {
+      const tugun = aktBarchaTugun.find((x) => x.uid === m.uid)
+                 ?? aktBarglar.find((x) => x.uid === m.uid);
+      return { ...m, nom: tugun?.nom ?? '', kod: m.kod ?? tugun?.kod ?? '' };
+    }) as F2Moslik[];
+
     try {
-      const r = await yoz.mutateAsync({
-        obyekt, oyNom, edits: [...moslikMap.values()] as F2Moslik[], dopps, aktJami,
-      });
-      if (!r.ok) { toast(r.xabar || 'Navbatga qo\'shilmadi'); return; }
+      const s = await sinov.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
+      if (s.radEtilgan && s.radEtilgan > 0) {
+        const misol = (s.radRoyxat ?? []).slice(0, 3)
+          .map(x => `${x.row}-qator: kutilgan «${(x.kutilgan || '').slice(0, 28)}», topilgan «${(x.topilgan || '').slice(0, 28)}»`)
+          .join('\n');
+        toast(
+          `⚠ ${s.radEtilgan} qator mos kelmadi — YOZILMADI.\nSmetada qatorlar surilgan.\n${misol}\n\nSmetaga «Ishla» qilib, qaytadan bog'lang.`,
+          'danger', undefined, 15000,
+        );
+        return;
+      }
+
+      const r = await yoz.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
+      if (!r.ok) { toast(r.xabar || 'Yozilmadi', 'danger'); return; }
+      toast(r.xabar || `✅ ${r.yozilgan ?? 0} qator yozildi`, 'ok', undefined, 8000);
       setYozishBoshlandi(true);
       setQadam(2);
-      await job.refetch();
-    } catch (e: any) { toast(`Xato: ${e.message}`); }
+      await Promise.all([job.refetch(), lrv.refetch()]);
+    } catch (e: any) { toast(`Xato: ${e.message}`, 'danger'); }
   }
 
   const j = job.data?.job;

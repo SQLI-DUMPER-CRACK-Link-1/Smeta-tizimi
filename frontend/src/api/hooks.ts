@@ -603,16 +603,38 @@ export function useF2AvtoMoslash() {
 }
 
 /** Fon rejimida yozish — kompyuter o'chsa ham davom etadi */
+/** F2 yozish natijasi (yangi tez yo'l) */
+export type F2YozNatija = {
+  ok: boolean; quruq?: boolean; xabar?: string;
+  smetalar?: number; yozilgan?: number; radEtilgan?: number;
+  radRoyxat?: { row: number; kutilgan?: string; topilgan?: string; sabab?: string }[];
+};
+
+/* ⚡⚡⚡ 2026-08-14 TEZ YO'LGA O'TKAZILDI (37_F2TezYoz.js).
+ * Eski `apiF2QollaNavbatga` fon navbatiga qo'yardi va 97 qator uchun ham
+ * 6 daqiqa limitiga urilib O'LIM SIKLIGA tushardi. Yangi yo'l 97 qatorni
+ * 2.7 soniyada yozadi (jonli o'lchov) — navbat KERAK EMAS, javob darhol.
+ * Qator surilgan bo'lsa nom/kod tekshiruvi ushlaydi va YOZMAYDI. */
 export function useF2Yoz() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
       obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
-    }) => gas<{ ok: boolean; fon?: boolean; xabar?: string }>(
-      'apiF2QollaNavbatga', obyekt, oyNom, edits, dopps, aktJami),
+    }) => gas<F2YozNatija>('apiF2YozTez2', obyekt, oyNom, edits, dopps, aktJami),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['f2job'] });
+      qc.invalidateQueries({ queryKey: ['holat'] });
     },
+  });
+}
+
+/** QURUQ SINOV — hech narsa yozmaydi, faqat nechta qator mos kelishini aytadi.
+ *  Yozishdan OLDIN chaqiriladi: qator surilgan bo'lsa darhol ko'rinadi. */
+export function useF2YozSinov() {
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
+      obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
+    }) => gas<F2YozNatija>('apiF2YozTezSinov2', obyekt, oyNom, edits, dopps, aktJami),
   });
 }
 
