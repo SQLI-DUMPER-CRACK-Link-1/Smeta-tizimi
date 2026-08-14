@@ -2006,6 +2006,33 @@ const onAvtoMoslash = () => {
 
           {job.error && <XatoHolat xato={job.error} qayta={() => job.refetch()} />}
 
+          {/* ⚡⚡⚡ 2026-08-14: TO'XTATISH tugmasi (foydalanuvchi talabi:
+              «tiqilib qolganda F5 bossam ham yana shu eski navbatda turibdi...
+               shu joyida bir to'xtatish tugmasi ham bo'lishi kerakda»).
+              Avval qotib qolgan ishni tozalash imkoniyati UMUMAN yo'q edi. */}
+          {j?.status !== 'tugadi' && j?.status !== 'xato' && (
+            <div className="rounded-[10px] border border-warn/25 bg-warn/[.06] p-3 flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-[12px] text-warn">
+                Jarayon qotib qolgan bo'lsa (raqam uzoq vaqt o'zgarmasa) — to'xtatib qaytadan boshlang.
+              </p>
+              <button
+                onClick={async () => {
+                  try {
+                    const r = await gas<any>('apiF2JobTozala');
+                    toast(r?.xabar || 'Ish to\'xtatildi', 'ok');
+                    await job.refetch();
+                    resetF2Store();
+                  } catch (e: any) {
+                    toast('Xato: ' + e.message, 'danger');
+                  }
+                }}
+                className="text-xs px-3 py-1.5 rounded border border-danger/40 text-danger hover:bg-danger hover:text-white transition-colors shrink-0"
+              >
+                ⏹ To'xtatish va tozalash
+              </button>
+            </div>
+          )}
+
           {(j?.status === 'tugadi' || j?.status === 'xato') && (
             <Tugma
               tur="primary"
