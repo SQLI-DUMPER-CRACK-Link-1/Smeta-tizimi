@@ -135,20 +135,39 @@ function apiF2TezYoz(obyekt, varaqNom, oyNom, satrlar, quruq){
       }
       var qKod = _tzKod(maydon[r-1][col.KOD-1]);
       var qNom = _tzNorm(maydon[r-1][col.NOM-1]);
-      var bKod = _tzKod(it.kod), bNom = _tzNorm(it.nom);
 
-      /* ⚡ QATOR SURILISHIDAN HIMOYA (foydalanuvchi talabi):
-       * «100% mos kelgan smeta va f2 qatorlarida qiymatlar solishtirilishi
-       *  kerak hech bo'lmaganda smetadagi nomi va f2 dagi nomi bilan».
-       * Nom YOKI kod mos kelsa — yozamiz. Ikkalasi ham mos kelmasa —
-       * bu boshqa qator, YOZMAYMIZ. */
-      var nomMos = bNom && qNom && (bNom === qNom);
-      var kodMos = bKod && qKod && (bKod === qKod);
-      if(!nomMos && !kodMos){
-        radEtildi.push({row:r, kutilgan:String(it.nom||'').slice(0,45),
-                        topilgan:String(maydon[r-1][col.NOM-1]||'').slice(0,45),
-                        sabab:'ном ҳам, код ҳам мос келмади (қатор сурилган?)'});
-        continue;
+      /* ⚡⚡⚡ 2026-08-14 TUZATILDI — avvalgi mantiq XATO edi.
+       * Avval F2 nomi SMETA nomi bilan solishtirilardi. Lekin foydalanuvchi
+       * qatorlarni QO'LDA bog'laydi, aynan chunki nomlar HAR XIL:
+       *   F2:     «...ТРУБОПРОВОДОВ ВОДОСНАБЖЕНИЯ ИЗ НАПОРНЫХ...»
+       *   Smeta:  «...ТРУБОПРОВОДОВ ОТОПЛЕНИЯ ИЗ ПОЛИПРОПИЛЕНОВЫХ...»
+       * Bu BIR XIL ish, faqat hujjatlarda boshqacha atalgan. Eski tekshiruv
+       * ana shu HAQIQIY bog'lanishlarni rad etardi (9 qator yozilmadi).
+       *
+       * TO'G'RI SAVOL: «F2 nomi smetaga o'xshaydimi?» EMAS, balki
+       * «SMETA qatori bog'langandan keyin SURILDIMI?».
+       * Shuning uchun frontend SMETA tomonidagi nom/kodni yuboradi
+       * (smetaNom/smetaKod) va biz uni varaqdagi HOZIRGI qiymat bilan
+       * solishtiramiz. Qator surilsa — darhol ko'rinadi. */
+      var kutNom = _tzNorm(it.smetaNom), kutKod = _tzKod(it.smetaKod);
+
+      if(kutNom || kutKod){
+        var nomMos = kutNom && qNom && (kutNom === qNom);
+        var kodMos = kutKod && qKod && (kutKod === qKod);
+        if(!nomMos && !kodMos){
+          radEtildi.push({row:r, kutilgan:String(it.smetaNom||it.smetaKod||'').slice(0,45),
+                          topilgan:String(maydon[r-1][col.NOM-1]||'').slice(0,45),
+                          sabab:'смета қатори сурилган (боғлангандагидан бошқа қатор)'});
+          continue;
+        }
+      } else {
+        /* smetaNom berilmagan (eski chaqiruv) — hech bo'lmaganda qator
+         * BO'SH emasligini tekshiramiz, sarlavha/bo'sh joyga yozmaslik uchun */
+        if(!qNom && !qKod){
+          radEtildi.push({row:r, kutilgan:String(it.nom||'').slice(0,45),
+                          topilgan:'(бўш қатор)', sabab:'нишон қатор бўш'});
+          continue;
+        }
       }
 
       var hajm = _tzNum(it.hajm), narx = _tzNum(it.narx);
@@ -241,7 +260,12 @@ function apiF2YozTola(obyekt, varaqNom, oyNom, satrlar, dopps, quruq){
     if(satrlar.length){
       tez = apiF2TezYoz(obyekt, varaqNom, oyNom, satrlar, quruq);
       if(!tez.ok && !tez.yozilgan){
+        /* ⚡ 2026-08-14: bu yerda `mos` qaytarilmasdi → chaqiruvchi
+         * hisoblagichi bo'sh qolib UI «0 мос, 0 рад» ko'rsatardi, holbuki
+         * 97 ta qator RAD ETILGAN edi. Endi sonlar ham qaytariladi. */
         return {ok:false, bosqich:'mos qatorlar', xabar: tez.xabar,
+                mos: {yozilgan:0, radEtilgan: tez.radEtilgan||0,
+                      radRoyxat: tez.radRoyxat||[], jamiSumma:0},
                 radRoyxat: tez.radRoyxat || []};
       }
     }
@@ -292,7 +316,11 @@ function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
       if(v.indexOf('||') >= 0){ sub = v.split('||')[0]; varaqNom = v.split('||')[1]; }
       var kalit = sub + '||' + varaqNom;
       if(!guruh[kalit]) guruh[kalit] = {sub:sub, varaq:varaqNom, satrlar:[]};
+      /* ⚡ 2026-08-14 BUG TUZATILDI: bu yerda smetaNom/smetaKod UZATILMASDAN
+       * qolgandi → himoya ishlamasdi (jonli sinov: qator 1 ga surilgan
+       * holatda ham 97/97 «mos» deb qabul qilinardi — xavfli). */
       guruh[kalit].satrlar.push({row:e.row, nom:e.nom, kod:e.kod,
+                                 smetaNom:e.smetaNom, smetaKod:e.smetaKod,
                                  hajm:e.hajm, narx:e.narx});
     });
 

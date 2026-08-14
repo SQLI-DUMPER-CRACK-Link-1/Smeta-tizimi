@@ -1128,10 +1128,28 @@ export function F2Import() {
      *    Mos kelmagan bo'lsa — ogohlantiramiz va YOZMAYMIZ.
      * 3) Toza bo'lsa — yozamiz. Javob DARHOL keladi (97 qator ≈ 2.7s),
      *    navbat kutish shart emas. */
+    /* ⚡ SMETA tomonidagi nom/kod — himoya AYNAN shu bilan ishlaydi.
+     * F2 nomi bilan solishtirish XATO edi: qo'lda bog'langan qatorlarda
+     * nomlar ataylab har xil (ВОДОСНАБЖЕНИЯ / ОТОПЛЕНИЯ) va ular rad
+     * etilardi. Endi «smeta qatori surildimi?» deb tekshiriladi. */
+    const smetaXarita = new Map<string, any>();
+    const smetaYur = (ns: any[]) => (ns ?? []).forEach((n) => {
+      if (n.varaq && n.row) smetaXarita.set(`${n.varaq}#${n.row}`, n);
+      if (n.children?.length) smetaYur(n.children);
+    });
+    smetaYur((lrv.data?.tree as any[]) ?? []);
+
     const nomBilan = [...moslikMap.values()].map((m: any) => {
-      const tugun = aktBarchaTugun.find((x) => x.uid === m.uid)
-                 ?? aktBarglar.find((x) => x.uid === m.uid);
-      return { ...m, nom: tugun?.nom ?? '', kod: m.kod ?? tugun?.kod ?? '' };
+      const akt = aktBarchaTugun.find((x) => x.uid === m.uid)
+               ?? aktBarglar.find((x) => x.uid === m.uid);
+      const sm = smetaXarita.get(`${m.varaq}#${m.row}`);
+      return {
+        ...m,
+        nom: akt?.nom ?? '',
+        kod: m.kod ?? akt?.kod ?? '',
+        smetaNom: sm?.nom ?? '',      // ← himoya shu bilan
+        smetaKod: sm?.kod ?? '',
+      };
     }) as F2Moslik[];
 
     try {
