@@ -259,6 +259,44 @@ export function F2Daraxt({
     }
   }, [ochiqYopiqSignal, tugunlar]);
 
+  /* ⚡⚡⚡ 2026-08-14 KATTA DARAXT MUZLASHI TUZATILDI (foydalanuvchi: «2000
+   * qatorlik F2 ni ochgandim qotib qolayapdi, umuman ishlab bo'lmaydigan
+   * darajada — 4 ta katta smeta ko'tara olmayapdi»).
+   * O'lchov: 2 ta katta smeta = 6710 tugun / 2.9 MB. 4 tasi ≈ 13 000 tugun,
+   * ustiga F2 tarafda 2000 — brauzer 15 000 DOM elementini birdan chiza
+   * olmaydi va sahifa muzlab qoladi.
+   * YECHIM: daraxt katta bo'lsa DASTLAB YOPIQ chiziladi — faqat razdel
+   * sarlavhalari (bir necha yuz element). Foydalanuvchi kerakligini ochadi.
+   * Kichik daraxtlarda (eski xatti-harakat) hammasi ochiq qoladi. */
+  const KATTA_CHEGARA = 600;
+  const dastlabHisob = useRef(false);
+  useEffect(() => {
+    dastlabHisob.current = false;         // yangi daraxt kelsa qayta hisoblanadi
+  }, [tugunlar]);
+  useEffect(() => {
+    if (dastlabHisob.current) return;
+    let jami = 0;
+    const sana = (ns: DaraxtTugun[]) => ns.forEach(n => {
+      jami++; if (n.children?.length) sana(n.children);
+    });
+    sana(tugunlar);
+    if (jami === 0) return;
+    dastlabHisob.current = true;
+    if (jami <= KATTA_CHEGARA) return;    // kichik — hammasi ochiq qolsin
+
+    const yigi = new Set<string>();
+    const yur = (ns: DaraxtTugun[], daraja: number) => ns.forEach(n => {
+      // 1-daraja razdellar OCHIQ qoladi (ular ko'rinib tursin),
+      // ichkarisi yopiladi — shunda ekranda faqat sarlavhalar bo'ladi
+      if (n.children?.length) {
+        if (daraja >= 1) yigi.add(n.kalit);
+        yur(n.children, daraja + 1);
+      }
+    });
+    yur(tugunlar, 0);
+    setYopiq(yigi);
+  }, [tugunlar]);
+
   const lastScrolled = useRef<string | null>(null);
 
   // scrollToKey o'zgarganda — shu qatorni ochib scroll qilamiz
