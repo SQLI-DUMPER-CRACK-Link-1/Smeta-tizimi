@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText } from 'lucide-react';
@@ -26,6 +26,11 @@ const MENYU = [
 export default function AdminShell() {
   const navigate = useNavigate();
   const sess = useSessiya();
+  const joy = useLocation();
+
+  /* ⚡ Og'ir ish sahifalari — bu yerda 3D bezak fon o'chiriladi (pastga qara) */
+  const OGIR = ['/admin/f2', '/admin/holat', '/admin/ierarxiya', '/admin/narxlar', '/admin/f2-tayyorlash'];
+  const ogirSahifa = OGIR.some(y => joy.pathname.startsWith(y));
 
   useEffect(() => {
     if (sess.isError && sess.error?.message === "Sessiya yo'q") {
@@ -41,10 +46,24 @@ export default function AdminShell() {
 
   return (
     <div className="flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30 bg-[#020617]">
-      {/* 3D Interactive Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-         <Sahna3D />
-      </div>
+      {/* ⚡⚡⚡ 2026-08-14 MUZLASH SABABI (foydalanuvchi taxmini TO'G'RI chiqdi:
+          «animatsiyalari yoki shunaqa 2-darajali ishlar uchun bo'lmayaptimi?»).
+          Sahna3D — to'liq WebGL sahna: EffectComposer + Bloom +
+          ChromaticAberration + Noise + Vignette post-ishlov, ustiga
+          MeshTransmissionMaterial (shisha sinishi — three.js dagi eng qimmat
+          materiallardan), 6 ta `useFrame` sikli. U HAR KADRDA (60 fps)
+          uzluksiz ishlaydi va GPU/CPU ni yeydi.
+          Yengil sahifada bu bilinmaydi, lekin F2 import 13 000+ DOM tugun
+          bilan birga kelganda ikkalasi resurs uchun kurashadi va sahifa
+          MUZLAB qoladi.
+          YECHIM: bezak fon faqat YENGIL sahifalarda. Ish sahifalarida
+          (F2 import, Holat, Ierarxiya, Narxlar) o'chiriladi — bu yerda
+          tezlik chiroylikdan muhimroq. */}
+      {!ogirSahifa && (
+        <div className="absolute inset-0 z-0 pointer-events-none">
+           <Sahna3D />
+        </div>
+      )}
 
       {/* Grid Overlay for texture */}
       <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.02] pointer-events-none" />
