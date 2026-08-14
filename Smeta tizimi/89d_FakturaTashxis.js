@@ -206,3 +206,66 @@ if (typeof globalThis !== 'undefined') {
   globalThis.apiFakturaXatoLoglar = apiFakturaXatoLoglar;
   globalThis.apiFakturaBittaSinov = apiFakturaBittaSinov;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * TIKLASH: «Xato_Oqilganlar» dagi fakturalarni «Yangi» ga qaytarish
+ * ==================================================================
+ * ⚡⚡⚡ 2026-08-13 HODISA: sinxronizatsiya ishga tushirilganda ~330 ta
+ * SOG'LOM faktura xato papkasiga tushib qoldi. Sabab: Google zaxira
+ * model `gemini-2.0-flash` ni o'chirgan + batch darajasidagi `catch`
+ * bitta xatoda BUTUN 5 talik to'plamni xato papkasiga surardi.
+ * Fayllar YO'QOLMAGAN — Drive'da turibdi. Bu funksiya ularni qaytaradi.
+ *
+ * @param {number} limit  bir chaqiruvda nechta fayl (default 200)
+ * @param {boolean} loglarniOchir  _CRASH.txt / _AI_XatoLog.txt larni o'chirish
+ * ══════════════════════════════════════════════════════════════════ */
+function apiFakturaXatodanTikla(limit, loglarniOchir){
+  try{
+    limit = parseInt(limit,10) || 200;
+    var root = DriveApp.getRootFolder().getFoldersByName('Fakturalar').next();
+    var xatoPap = root.getFoldersByName('Xato_Oqilganlar').next();
+    var yangiPap = root.getFoldersByName('Yangi').next();
+
+    var it = xatoPap.getFiles();
+    var qaytarildi = 0, logOchirildi = 0, qoldi = 0;
+    var t0 = Date.now();
+
+    while(it.hasNext()){
+      if(qaytarildi >= limit || (Date.now()-t0) > 4*60*1000){ qoldi++; continue; }
+      var f = it.next();
+      var nom = f.getName();
+      // Log fayllar — faktura emas
+      if(/_CRASH\.txt$|_AI_XatoLog\.txt$|\.txt$/i.test(nom)){
+        if(loglarniOchir){ try{ f.setTrashed(true); logOchirildi++; }catch(e){} }
+        continue;
+      }
+      try{ f.moveTo(yangiPap); qaytarildi++; }catch(e){}
+    }
+
+    return {ok:true, qaytarildi:qaytarildi, logOchirildi:logOchirildi,
+      xabar: qaytarildi + ' ta faktura «Yangi» papkasiga qaytarildi'
+           + (logOchirildi ? (', ' + logOchirildi + ' ta log o\'chirildi') : '')
+           + '. Qayta o\'qish uchun apiFakturaSinxTuzat() ni chaqiring.'};
+  }catch(e){
+    return {ok:false, xabar:'Tiklash xatosi: '+String((e&&e.message)||e)};
+  }
+}
+
+/** Sinxronizatsiyani TO'XTATISH — barcha faktura triggerlarini o'chiradi. */
+function apiFakturaSinxToxtat(){
+  try{
+    var n = 0, trs = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < trs.length; i++) {
+      var h = trs[i].getHandlerFunction();
+      if (h === 'apiFakturaAvtoSinx' || h === 'apiFakturaSinxAsosiy' || h === 'apiFakturaSinxDavom') {
+        ScriptApp.deleteTrigger(trs[i]); n++;
+      }
+    }
+    return {ok:true, ochirildi:n, xabar: n + ' ta faktura trigger o\'chirildi — sinxronizatsiya to\'xtadi'};
+  }catch(e){ return {ok:false, xabar:String((e&&e.message)||e)}; }
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.apiFakturaXatodanTikla = apiFakturaXatodanTikla;
+  globalThis.apiFakturaSinxToxtat = apiFakturaSinxToxtat;
+}
