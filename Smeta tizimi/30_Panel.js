@@ -3930,9 +3930,31 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
          // yuboramiz; pastda targets bo'sh bo'lsa zaxira yo'l ishlaydi.
          if(sub) targetSubObs[sub] = true;
        });
+       /* ⚡⚡⚡ 2026-08-14 O'LIM SIKLI TUZATILDI (foydalanuvchi: «kechasi bilan
+        * bitta F2 kirita olmadim», jurnal: _f2FonQadam 360s da qayta-qayta
+        * Timed Out, ish 24 soat «ishlayapti» da qotib qolgan).
+        * SABAB: oy ustuni bosqichida vaqt tekshiruvi YO'Q edi. Bir nechta
+        * smetaga oy ustuni qo'shish 6 daqiqadan oshsa ijro O'LADI —
+        * `oyTayyor` saqlanmaydi, keyingi trigger BOSHIDAN boshlaydi va yana
+        * o'ladi. Cheksiz aylanma, hech qachon qatorlarga yetib bormaydi.
+        * ENDI: har smetadan keyin vaqt tekshiriladi va tayyor bo'lganlari
+        * eslab qolinadi — keyingi ijro qolganidan davom etadi. */
        var targets = Object.keys(targetSubObs);
+       var _oyTayyorLar = (_job && _job.oyTayyorLar) || {};
        if(targets.length > 0){
-         targets.forEach(function(sub){ apiOyQosh(sub, oyNom); });
+         for(var _ti=0; _ti<targets.length; _ti++){
+           var _sub = targets[_ti];
+           if(_oyTayyorLar[_sub]) continue;          // bu smetaga allaqachon qo'shilgan
+           apiOyQosh(_sub, oyNom);
+           _oyTayyorLar[_sub] = true;
+           if(_ti < targets.length-1 && _vaqtTugadi()){
+             _setF2Prog('⏸ Ой устуни: '+(_ti+1)+'/'+targets.length+' смета тайёр — давом этади...');
+             var _rz = _resume({editStart:0, dopStart:0});
+             _rz.oyTayyor = false;                   // hali hammasi tayyor emas
+             _rz.oyTayyorLar = _oyTayyorLar;
+             return _rz;
+           }
+         }
        } else {
          apiOyQosh(obyekt, oyNom);
        }
@@ -4672,6 +4694,7 @@ function _f2FonQadam() {
       // ⏸ Vaqt byudjeti tugadi — keyingi trigger davom ettiradi (ma'lumot yo'qolmaydi)
       if(job){
         job.resume={dopStart:r.dopStart||0, editStart:r.editStart||0, oyTayyor:!!r.oyTayyor,
+                    oyTayyorLar:r.oyTayyorLar||null,   // ⚡ qaysi smetaga oy qo'shilgani
                     mappedYoz:r.mappedYoz||0, dopsYoz:r.dopsYoz||0};
         // Progress: mos qatorlar + qo'shimchalar birgalikda
         var _jami=(p.edits||[]).length+(p.dopps||[]).length;
@@ -5052,3 +5075,34 @@ function apiF2LokalkaTaklif(obyekt, kalitlar, indeks){
     return {ok:false, xabar:'Смета таклифи хатоси: '+String((e&&e.message)||e)};
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * ⚡⚡⚡ 2026-08-14: QOTIB QOLGAN F2 ISHINI TOZALASH
+ * ==================================================================
+ * Hodisa: ish 24 soat «ishlayapti» holatida qoldi (oy ustuni o'lim
+ * siklida edi). Foydalanuvchi yangi F2 kirita olmadi va tozalash
+ * imkoniyati YO'Q edi — faqat kutishdan boshqa chora qolmagandi.
+ * ══════════════════════════════════════════════════════════════════ */
+function apiF2JobTozala(){
+  try{
+    var eski = null;
+    try{ eski = _f2JobGet(); }catch(e){}
+    // Fon triggerini o'chiramiz (aks holda u yana ishga tushadi)
+    var n = 0, trs = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < trs.length; i++) {
+      if (trs[i].getHandlerFunction() === '_f2FonQadam') {
+        try{ ScriptApp.deleteTrigger(trs[i]); n++; }catch(e){}
+      }
+    }
+    try{ cacheDel('f2fon_payload'); }catch(e){}
+    try{ _f2JobSet(null); }catch(e){
+      try{ _f2JobSet({status:'tugadi', done:0, total:0, xabar:'Қўлда тозаланди'}); }catch(e2){}
+    }
+    try{ _setF2Prog('🧹 Ёзиш иши қўлда тозаланди — қайтадан юборишингиз мумкин'); }catch(e){}
+    return {ok:true, ochirilganTrigger:n,
+      eskiHolat: eski ? {status:eski.status, done:eski.done, total:eski.total,
+                         obyekt:eski.obyekt, oyNom:eski.oyNom} : null,
+      xabar:'Қотиб қолган иш тозаланди. Энди Ф2 ни қайтадан юборишингиз мумкин.'};
+  }catch(e){ return {ok:false, xabar:String((e&&e.message)||e)}; }
+}
+if (typeof globalThis !== 'undefined') globalThis.apiF2JobTozala = apiF2JobTozala;
