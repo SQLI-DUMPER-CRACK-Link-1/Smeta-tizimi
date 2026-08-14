@@ -3956,6 +3956,20 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
            }
          }
        } else {
+         /* ⚡⚡⚡ 2026-08-14 O'LCHOV BILAN TASDIQLANDI: bitta smetaga oy ustuni
+          * qo'shish 19.3 soniya (jonli o'lchov, Отопления smetasi). Amfiteatr'da
+          * 26 smeta bor → 26 × 19.3s = 502s = 8.4 daqiqa, GAS limiti esa 6 daqiqa.
+          * Ya'ni bu ZAXIRA YO'L ijroni HAR DOIM o'ldiradi va F2 hech qachon
+          * yozilmaydi (foydalanuvchi: «kechasi bilan bitta F2 kirita olmadim»).
+          * ENDI: butun obyektga tarqalmaymiz. Qaysi smeta ekani aniqlanmasa —
+          * tushunarli xato qaytaramiz, foydalanuvchi smetani tanlab qayta yuboradi. */
+         var _subJami = 0;
+         try{ _subJami = (_subObyektlar(obyekt)||[]).length; }catch(e){}
+         if(_subJami > 1){
+           return {ok:false, xabar:'❌ Ф2 қаторлари қайси сметага тегишли эканини аниқлаб бўлмади. '
+             + 'Бу объектда '+_subJami+' та смета бор — ҳаммасига ой устуни қўшиш вақт лимитидан ошади. '
+             + 'Илтимос, Ф2 импорт саҳифасида «Қайси смета билан ишлаймиз?» дан аниқ сметани танлаб, қайта юборинг.'};
+         }
          apiOyQosh(obyekt, oyNom);
        }
     } catch(e) {
