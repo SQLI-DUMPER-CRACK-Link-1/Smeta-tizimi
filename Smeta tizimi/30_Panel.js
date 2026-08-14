@@ -5095,7 +5095,12 @@ function apiF2JobTozala(){
       }
     }
     try{ cacheDel('f2fon_payload'); }catch(e){}
-    try{ _f2JobSet(null); }catch(e){
+    /* ⚡ 2026-08-14: avval `_f2JobSet(null)` yozilgandi — u ichida
+     * `j.yangilandi = ...` bor, null'da xato beradi va `catch` uni JIMGINA
+     * yutadi → ish TOZALANMASDAN qolardi (jonli sinovda tasdiqlandi).
+     * Endi xususiyat to'g'ridan-to'g'ri o'chiriladi. */
+    try{ PropertiesService.getScriptProperties().deleteProperty(_F2_JOB_KEY); }
+    catch(e){
       try{ _f2JobSet({status:'tugadi', done:0, total:0, xabar:'Қўлда тозаланди'}); }catch(e2){}
     }
     try{ _setF2Prog('🧹 Ёзиш иши қўлда тозаланди — қайтадан юборишингиз мумкин'); }catch(e){}
