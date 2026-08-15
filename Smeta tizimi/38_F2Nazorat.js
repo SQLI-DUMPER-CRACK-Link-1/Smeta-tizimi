@@ -185,6 +185,150 @@ function apiF2Nazorat(obyekt){
 }
 
 /* ══════════════════════════════════════════════════════════════════
+ * apiF2QatlamTahlil(obyekt) — «bl mi, rs mi?» SAVOLIGA MA'LUMOTDAN JAVOB
+ *
+ * MUAMMO: F2 ham `bl` (ish) qatoriga, ham uning ostidagi `rs` (resurs)
+ * qatorlariga yozilgan bo'lsa — ularni qo'shib yuborish PULNI IKKI BARAVAR
+ * sanaydi va «171 mlrd = 171 mlrd» tekshiruvi buziladi.
+ *
+ * Bu funksiya foydalanuvchidan SO'RAMAYDI — o'zi aniqlaydi. LRV_PLUS
+ * ketma-ket o'qiladi: `bl` qatori guruh boshlaydi, keyingi `rs` qatorlar
+ * uning bolalari. Har oy uchun solishtiradi:
+ *     blOzi  = bl qatorining O'Z summasi
+ *     rsBola = uning bolalari summalari yig'indisi
+ *
+ * XULOSA:
+ *   • faqat blOzi bor          → asos = 'bl'   (jami = blOzi)
+ *   • faqat rsBola bor         → asos = 'rs'   (jami = rsBola)
+ *   • ikkalasi bor va TENG     → TAKROR! (rs — bl ning yoyilmasi)
+ *                                jami = blOzi (bir marta sanaladi)
+ *   • ikkalasi bor, teng emas  → ARALASH — qo'lda ko'rish kerak,
+ *                                hech narsa taxmin qilinmaydi
+ * ══════════════════════════════════════════════════════════════════ */
+function apiF2QatlamTahlil(obyekt){
+  var t0 = Date.now();
+  try{
+    if(!obyekt) return {ok:false, xabar:'Обект берилмади'};
+    var col = CFG.C, obs = _nzObyektlar(obyekt), oyMap = {};
+
+    for(var oi=0; oi<obs.length; oi++){
+      var ob = obs[oi], plus = null;
+      try{ plus = _plusTop(ob); }catch(e){}
+      if(!plus) continue;
+
+      var shlar = plus.getSheets();
+      for(var si=0; si<shlar.length; si++){
+        var sh = shlar[si];
+        if(sh.getName().charAt(0) === '_') continue;
+
+        var last = sh.getLastRow(), lastC = sh.getLastColumn();
+        if(last < 2 || lastC < col.F2_BIRINCHI) continue;
+        var oylar = [];
+        try{ oylar = _f2Oylar(sh) || []; }catch(e){ continue; }
+        if(!oylar.length) continue;
+
+        var hr = 1; try{ hr = _hdrRow(sh); }catch(e){}
+        var bosh = hr + 1;
+        if(bosh > last) continue;
+        var qSoni = last - bosh + 1;
+
+        var mkUst = sh.getRange(bosh, col.MARKER, qSoni, 1).getValues();
+        var blok  = sh.getRange(bosh, col.F2_BIRINCHI, qSoni, lastC - col.F2_BIRINCHI + 1).getValues();
+
+        for(var k=0; k<oylar.length; k++){
+          var oyNom = oylar[k].nom;
+          var iSu = oylar[k].col - col.F2_BIRINCHI + 2;   // СУММА
+          if(iSu >= blok[0].length) continue;
+
+          if(!oyMap[oyNom]) oyMap[oyNom] = {
+            nom:oyNom, blOzi:0, rsBola:0, rsYetim:0,
+            blSoni:0, rsSoni:0, guruhTakror:0, guruhAjrim:0
+          };
+          var O = oyMap[oyNom];
+
+          /* Ketma-ket yurish: bl guruh ochadi, rs unga qo'shiladi */
+          var joriyBl = null;   // {ozi:, bola:}
+          var yopish = function(){
+            if(!joriyBl) return;
+            if(joriyBl.ozi && joriyBl.bola){
+              /* ikkalasida ham pul — teng bo'lsa TAKROR */
+              var farq = Math.abs(joriyBl.ozi - joriyBl.bola);
+              if(farq <= Math.max(1, Math.abs(joriyBl.ozi)*0.001)) O.guruhTakror++;
+              else O.guruhAjrim++;
+            }
+            joriyBl = null;
+          };
+
+          for(var r=0; r<qSoni; r++){
+            var mk = _nzMk(mkUst[r][0]);
+            var su = _nzNum(blok[r][iSu]);
+
+            if(mk === 'bl'){
+              yopish();
+              joriyBl = {ozi:su, bola:0};
+              if(su){ O.blOzi += su; O.blSoni++; }
+            }
+            else if(mk === 'rs' || mk === 'mat' || mk === 'ob'){
+              if(su){
+                O.rsSoni++;
+                if(joriyBl){ joriyBl.bola += su; O.rsBola += su; }
+                else       { O.rsYetim += su; }   // otasiz resurs
+              }
+            }
+            else if(mk === 'rz'){ yopish(); }
+          }
+          yopish();
+        }
+      }
+    }
+
+    /* Xulosa chiqarish */
+    var oyArr = [], jamiTogri = 0, aralashBor = false, takrorBor = false;
+    for(var kk in oyMap){
+      var o = oyMap[kk], asos, jami, izoh;
+
+      if(o.blOzi && !o.rsBola && !o.rsYetim){
+        asos = 'bl'; jami = o.blOzi;
+        izoh = 'F2 faqat ИШ (bl) qatorlariga yozilgan — ikki baravar sanash xavfi yo\'q';
+      } else if(!o.blOzi && (o.rsBola || o.rsYetim)){
+        asos = 'rs'; jami = o.rsBola + o.rsYetim;
+        izoh = 'F2 faqat RESURS qatorlariga yozilgan — ikki baravar sanash xavfi yo\'q';
+      } else if(o.blOzi && o.guruhTakror && !o.guruhAjrim){
+        asos = 'bl'; jami = o.blOzi + o.rsYetim; takrorBor = true;
+        izoh = 'ИШ va uning RESURSlari BIR XIL summani ko\'rsatmoqda (' + o.guruhTakror +
+               ' guruh) — resurslar ishning yoyilmasi. Jami BIR MARTA sanaldi (bl bo\'yicha).';
+      } else if(o.blOzi && (o.rsBola || o.rsYetim)){
+        asos = 'aralash'; jami = null; aralashBor = true;
+        izoh = 'ARALASH: ' + o.guruhTakror + ' guruh takror, ' + o.guruhAjrim +
+               ' guruh farqli. Avtomatik jam chiqarilmaydi — «Qatorlar» oynasida ko\'ring.';
+      } else {
+        asos = 'yoq'; jami = 0;
+        izoh = 'Bu oyga summa yozilmagan';
+      }
+
+      o.asos = asos; o.jamiTogri = jami; o.izoh = izoh;
+      if(jami !== null) jamiTogri += jami;
+      oyArr.push(o);
+    }
+    oyArr.sort(function(a,b){ return (b.jamiTogri||0) - (a.jamiTogri||0); });
+
+    return {ok:true, obyekt:obyekt, oylar:oyArr,
+            /* IKKI BARAVAR SANAMAYDIGAN jami */
+            jamiTogri: aralashBor ? null : jamiTogri,
+            takrorBor: takrorBor, aralashBor: aralashBor,
+            ishonchli: !aralashBor,
+            xulosa: aralashBor
+              ? 'Ba\'zi oylarda ИШ va RESURS summalari mos kelmadi — avtomatik jam chiqarilmadi.'
+              : (takrorBor
+                  ? 'Resurslar ishning yoyilmasi ekan — jami BIR MARTA sanaldi.'
+                  : 'Ikki baravar sanash xavfi topilmadi.'),
+            vaqt:((Date.now()-t0)/1000).toFixed(1)+'s'};
+  }catch(e){
+    return {ok:false, xabar:'apiF2QatlamTahlil: '+(e && e.message ? e.message : e)};
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
  * apiF2OyTafsilot(obyekt, oyNom) — BITTA OY, HAR BIR QATOR
  *
  * «har bir qatorni har qanaqasiga boshqara olishimiz kerak» —

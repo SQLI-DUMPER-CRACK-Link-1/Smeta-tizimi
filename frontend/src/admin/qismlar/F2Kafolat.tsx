@@ -18,7 +18,7 @@
  */
 import { useState } from 'react';
 import { X, Check, AlertTriangle, ShieldCheck, Pencil } from 'lucide-react';
-import { useF2Reestr, useF2ReestrHujjatJami, useF2ReestrTikla } from '../../api/hooks';
+import { useF2Reestr, useF2ReestrHujjatJami, useF2ReestrTikla, useF2QatlamTahlil } from '../../api/hooks';
 
 const fmt = (n: number | null | undefined) =>
   n === null || n === undefined
@@ -45,6 +45,8 @@ export default function F2Kafolat({
   const reestr = useF2Reestr(barchasi ? '' : obyekt, true);
   const hujjatJami = useF2ReestrHujjatJami();
   const tikla = useF2ReestrTikla();
+  /* «bl mi rs mi» — foydalanuvchidan so'ralmaydi, ma'lumotdan aniqlanadi */
+  const qatlam = useF2QatlamTahlil(obyekt, !barchasi);
 
   const [tahrirId, setTahrirId] = useState<string | null>(null);
   const [qiymat, setQiymat] = useState('');
@@ -135,6 +137,47 @@ export default function F2Kafolat({
                   ? `⚠ ${d.hujjatJamiKiritilmagan} ta yozuvda hujjat jami kiritilmagan — quyida to'ldiring, shundan keyin bu farq ishonchli bo'ladi.`
                   : '⚠ Farq bor — quyidagi ro\'yxatdan qaysi F2 da ekanini toping.'}
             </p>
+          </div>
+        )}
+
+        {/* ⚡⚡⚡ IKKI BARAVAR SANASH TEKSHIRUVI (apiF2QatlamTahlil).
+            «bl mi rs mi» degan savol foydalanuvchidan SO'RALMAYDI — tizim
+            LRV_PLUS ni ketma-ket o'qib, har ИШ qatorining o'z summasini
+            uning RESURSlari yig'indisi bilan solishtiradi va o'zi aniqlaydi. */}
+        {!barchasi && qatlam.data?.ok && (
+          <div className={`mx-4 mt-2 p-2.5 rounded-lg border text-[11px] ${
+            !qatlam.data.ishonchli ? 'bg-amber-500/10 border-amber-500/30'
+            : qatlam.data.takrorBor ? 'bg-blue-500/10 border-blue-500/30'
+            : 'bg-emerald-500/10 border-emerald-500/30'}`}>
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={13} className={`flex-shrink-0 mt-0.5 ${
+                !qatlam.data.ishonchli ? 'text-amber-400'
+                : qatlam.data.takrorBor ? 'text-blue-400' : 'text-emerald-400'}`} />
+              <div className="flex-1">
+                <div className="font-medium text-text mb-0.5">
+                  Ikki baravar sanash tekshiruvi
+                </div>
+                <p className="text-text-mute leading-snug">{qatlam.data.xulosa}</p>
+                {qatlam.data.jamiTogri !== null && (
+                  <p className="mt-1 text-text">
+                    To'g'ri jami (takrorsiz):{' '}
+                    <span className="font-medium">{fmt(qatlam.data.jamiTogri)}</span> so'm
+                  </p>
+                )}
+                {/* Oy kesimida asos qaysi qatlam ekani */}
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {qatlam.data.oylar.filter((o) => o.asos !== 'yoq').map((o) => (
+                    <span key={o.nom} title={o.izoh}
+                      className={`px-1.5 py-0.5 rounded text-[10px] ${
+                        o.asos === 'aralash' ? 'bg-amber-500/20 text-amber-300'
+                        : 'bg-white/10 text-text-mute'}`}>
+                      {o.nom}: {o.asos === 'aralash' ? '⚠ aralash'
+                                : o.asos === 'bl' ? 'ИШ' : 'РЕСУРС'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

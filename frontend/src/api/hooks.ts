@@ -690,6 +690,23 @@ export function useF2Nazorat(obyekt: string, enabled = true) {
   });
 }
 
+/** «bl mi rs mi» — ikki baravar sanash tekshiruvi (ma'lumotdan aniqlanadi) */
+export function useF2QatlamTahlil(obyekt: string, enabled = true) {
+  return useQuery({
+    queryKey: ['f2qatlam', obyekt],
+    queryFn: () => gas<{
+      ok: boolean;
+      oylar: Array<{ nom: string; asos: string; jamiTogri: number | null; izoh: string;
+                     blOzi: number; rsBola: number; rsYetim: number;
+                     guruhTakror: number; guruhAjrim: number }>;
+      jamiTogri: number | null; takrorBor: boolean; aralashBor: boolean;
+      ishonchli: boolean; xulosa: string; vaqt: string; xabar?: string;
+    }>('apiF2QatlamTahlil', obyekt),
+    enabled: enabled && !!obyekt,
+    staleTime: 120_000,
+  });
+}
+
 export type F2OyQator = {
   sub: string; varaq: string; row: number;
   marker: string; kod: string; nom: string; birlik: string;
