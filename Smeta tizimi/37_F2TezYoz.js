@@ -170,9 +170,41 @@ function apiF2TezYoz(obyekt, varaqNom, oyNom, satrlar, quruq){
       var izoh = rng.getNotes();
       for(var y=0; y<yoziladi.length; y++){
         var w = yoziladi[y], idx = w.row - minR;
-        blok[idx][0] = w.hajm;                          // obyom — DOIM
-        if(w.narx > 0)  blok[idx][1] = w.narx;          // narx — faqat >0
-        if(w.summa !== 0) blok[idx][2] = w.summa;       // summa — !=0 (manfiy ham)
+
+        /* ⚡⚡⚡ 2026-08-15 «ҲАЖМ БОР, ПУЛ ЙЎҚ» — ПУЛ ЙЎҚОЛИШИНИНГ ИЛДИЗИ.
+         *
+         * Foydalanuvchi QONUNI: «birortayam f2 qiymatlari yozilmay
+         * qolmasligi shart».
+         *
+         * ESKI KOD:
+         *     if(w.narx > 0)   blok[idx][1] = w.narx;
+         *     if(w.summa !== 0) blok[idx][2] = w.summa;
+         *
+         * IKKI TESHIK BOR EDI:
+         *
+         * 1) F2 da narx bo'sh bo'lsa (juda ko'p uchraydi — narx smeta
+         *    tomonidan beriladi), `summa = hajm × 0 = 0` chiqardi va
+         *    `summa !== 0` sharti tufayli СУММА КАТАГИ УМУМАН
+         *    ЁЗИЛМАСДИ. Qator «yozilgan» ko'rinardi (hajm bor), lekin
+         *    PUL KELTIRMASDI. Sentyabrda yetishmagan 220 mln ning
+         *    asosiy qismi shu.
+         *
+         * 2) `summa !== 0` sharti ESKI QIYMATNI joyida qoldirardi.
+         *    Qayta yozishda eski summa saqlanib qolib, yangi hajmga
+         *    mos kelmay qolardi — jim turadigan buzilish.
+         *
+         * ENDI: narx bo'sh bo'lsa varaqdagi MAVJUD narx ishlatiladi
+         * (u smeta narxi formulasi bo'lishi mumkin — `blok` allaqachon
+         * hisoblangan qiymatni tutadi), summa esa DOIM yoziladi.
+         * Narx ustuniga esa tegmaymiz — formula joyida qolsin. */
+        var joriyNarx = _tzNum(blok[idx][1]);
+        var tNarx = (w.narx > 0) ? w.narx : joriyNarx;
+        var tSumma = w.summa;
+        if(!tSumma) tSumma = Math.round(w.hajm * tNarx * 10000) / 10000;
+
+        blok[idx][0] = w.hajm;                    // ҲАЖМ — доим (манфий ҳам)
+        if(w.narx > 0) blok[idx][1] = w.narx;     // НАРХ — F2 берса; акс ҳолда формула қолсин
+        blok[idx][2] = tSumma;                    // СУММА — ДОИМ (0 ва манфий ҳам)
         if(w.uid) izoh[idx][0] = 'f2uid:' + w.uid;
       }
       rng.setValues(blok);
@@ -319,15 +351,65 @@ function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
       return apiF2YozTola(obyekt, '', oyNom, [], dopps, quruq);
     }
 
+    /* ⚡⚡⚡ 2026-08-15 QO'SHIMCHA/ZAMENA YO'QOLISHI — ILDIZ SABAB TUZATILDI.
+     *
+     * Foydalanuvchi: «hozirgi summadagi farqni asosiy sababi sifatida dop
+     * zamena qatorlarni qo'shilmasligi oqibatidan shunaqa bo'lganligini bir
+     * nechta joylarda ko'rdim, kecha bog'lagan joylarimda qo'shib bermagan
+     * ko'plab ish turlarini...»
+     *
+     * ESKI KOD: `var d = (i === kalitlar.length-1) ? dopps : [];`
+     * Ya'ni BARCHA qo'shimchalar FAQAT OXIRGI guruhga berilardi va
+     * `apiF2YozTola(g.sub, ...)` ularni O'SHA guruhning smetasiga yozishga
+     * urinardi. Qo'shimcha boshqa smetaga tegishli bo'lsa — noto'g'ri
+     * faylga tushardi yoki umuman yozilmasdi.
+     * Ko'p smetali obyektda (4-5 smeta) qo'shimchalarning katta qismi
+     * shu yerda YO'QOLARDI. Panel esa baribir «✅ N қўшимча» deb yozardi.
+     *
+     * ENDI: har qo'shimcha O'Z `varaq` i bo'yicha guruhlanadi — xuddi
+     * oddiy qatorlar kabi. Qo'shimchasi bor lekin oddiy qatori yo'q
+     * varaq uchun ALOHIDA guruh ochiladi (avval bunday varaq butunlay
+     * e'tiborsiz qolardi). */
+    var dopGuruh = {};
+    dopps.forEach(function(d){
+      var v = String(d.varaq||'');
+      var sub = obyekt, varaqNom = v;
+      if(v.indexOf('||') >= 0){ sub = v.split('||')[0]; varaqNom = v.split('||')[1]; }
+      var kalit = sub + '||' + varaqNom;
+      if(!dopGuruh[kalit]) dopGuruh[kalit] = [];
+      dopGuruh[kalit].push(d);
+      /* varaq faqat qo'shimchada uchrasa — unga ham guruh ochamiz */
+      if(!guruh[kalit]) guruh[kalit] = {sub:sub, varaq:varaqNom, satrlar:[]};
+    });
+    kalitlar = Object.keys(guruh);   // yangi varaqlar qo'shilgan bo'lishi mumkin
+
     var natijalar = [], jamiYoz = 0, jamiRad = 0, barchaRad = [];
+    var dopYoz = 0, dopXato = [];
     for(var i=0;i<kalitlar.length;i++){
       var g = guruh[kalitlar[i]];
-      // Qo'shimchalarni FAQAT oxirgi guruhda bir marta bajaramiz
-      var d = (i === kalitlar.length-1) ? dopps : [];
+      var d = dopGuruh[kalitlar[i]] || [];     // ← O'Z qo'shimchalari
       var r = apiF2YozTola(g.sub, g.varaq, oyNom, g.satrlar, d, quruq);
-      natijalar.push({smeta:g.sub, varaq:g.varaq, natija:r});
+      natijalar.push({smeta:g.sub, varaq:g.varaq, natija:r, dopSoni:d.length});
       if(r.mos){ jamiYoz += r.mos.yozilgan||0; jamiRad += r.mos.radEtilgan||0;
                  barchaRad = barchaRad.concat(r.mos.radRoyxat||[]); }
+      /* ⚡ QO'SHIMCHA NATIJASI ENDI TEKSHIRILADI.
+       * Avval `dopNatija.ok` umuman qaralmasdi — qo'shimchalar yozilmasa
+       * ham yuqorida «✅ ... N қўшимча» deb chiqaverardi. Sukut saqlagan
+       * xato eng yomoni: foydalanuvchi yozildi deb o'ylab ketaveradi. */
+      if(d.length){
+        if(quruq){
+          /* Quruq sinovda qo'shimchalar ATAYLAB yozilmaydi (qator qo'shish
+           * qaytarib bo'lmaydigan amal). Shuning uchun bu XATO emas —
+           * sinovda ular «yoziladi» deb sanaladi va foydalanuvchi
+           * tasdiqlash oynasida to'g'ri raqamni ko'radi. */
+          dopYoz += d.length;
+        } else if(r.qoshimcha && r.qoshimcha.ok){
+          dopYoz += d.length;
+        } else {
+          dopXato.push(g.varaq + ': ' +
+             ((r.qoshimcha && r.qoshimcha.xabar) || 'қўшимча ёзилмади'));
+        }
+      }
     }
 
     /* ⚡⚡⚡ 2026-08-15 F2 REESTRGA YOZISH (39_F2Reestr.js).
@@ -345,6 +427,16 @@ function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
       if(!s2) s2 = _tzNum(edits[e2].hajm) * _tzNum(edits[e2].narx);
       yozilganSum += s2;
     }
+    /* ⚡ 2026-08-15: QO'SHIMCHA/ZAMENA puli ham hisobga olinadi.
+     * Avval faqat `edits` yig'ilardi — qo'shimchalarning summasi
+     * kafolat hisobiga UMUMAN kirmasdi va farq soxta chiqardi. */
+    var dopSum = 0;
+    for(var d2=0; d2<dopps.length; d2++){
+      var ds = _tzNum(dopps[d2].summa);
+      if(!ds) ds = _tzNum(dopps[d2].hajm) * _tzNum(dopps[d2].narx);
+      dopSum += ds;
+    }
+    yozilganSum += dopSum;
 
     var reestr = null;
     if(!quruq){
@@ -364,18 +456,30 @@ function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
       }catch(e){ reestr = {ok:false, xabar:String((e&&e.message)||e)}; }
     }
 
-    return {ok:true, quruq:!!quruq, smetalar:kalitlar.length,
+    /* ⚡⚡⚡ QONUN (foydalanuvchi talabi 2026-08-15):
+     * «birortayam f2 qiymatlari yozilmay qolmasligi shart».
+     * Shuning uchun qo'shimcha yozilmasa `ok:false` qaytariladi —
+     * qisman muvaffaqiyat MUVAFFAQIYAT DEB HISOBLANMAYDI. */
+    var hammasiYozildi = (dopXato.length === 0);
+
+    return {ok: hammasiYozildi, quruq:!!quruq, smetalar:kalitlar.length,
       yozilgan:jamiYoz, radEtilgan:jamiRad, radRoyxat:barchaRad.slice(0,40),
       tafsilot:natijalar,
+      /* qo'shimchalar alohida hisobda — yashirilmaydi */
+      dopJami: dopps.length, dopYozildi: dopYoz, dopXato: dopXato,
+      dopSumma: dopSum,
       /* nazorat raqamlari — panel shularni ko'rsatadi */
       yozilganSumma: yozilganSum,
       hujjatJami: (aktJami===undefined||aktJami===null||aktJami==='') ? null : Number(aktJami)||0,
       farq: (aktJami===undefined||aktJami===null||aktJami==='')
               ? null : (Number(aktJami)||0) - yozilganSum,
       reestr: reestr,
-      xabar:(quruq?'СИНОВ: ':'✅ ')+jamiYoz+' қатор ёзилди'
+      xabar:(quruq ? 'СИНОВ: ' : (hammasiYozildi ? '✅ ' : '⚠ '))
+        + jamiYoz+' қатор ёзилди'
+        + (dopps.length ? (', '+dopYoz+'/'+dopps.length+' қўшимча/замена') : '')
         + (jamiRad?(', '+jamiRad+' РАД ЭТИЛДИ (ном/код мос эмас)'):'')
-        + ' · '+kalitlar.length+' сметада'};
+        + ' · '+kalitlar.length+' сметада'
+        + (dopXato.length ? (' — ХАТО: '+dopXato.slice(0,3).join(' | ')) : '')};
   }catch(e){
     return {ok:false, xabar:'Хато: '+String((e&&e.message)||e)};
   }

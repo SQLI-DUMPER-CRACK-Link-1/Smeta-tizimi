@@ -397,11 +397,28 @@ export function F2Daraxt({
     return out;
   }, [tugunlar, yopiq, bogMi, filtr]);
 
+  /* ⚡⚡⚡ 2026-08-15 «RASVO BO'LIB YOTIBDI» — QATORLAR USTMA-UST TUSHISHI.
+   *
+   * SABAB: virtualizator har qatorni QAT'IY 32px deb hisoblardi
+   * (`estimateSize: () => 32`) va o'ram div ga `height: 32px` QOTIRIB
+   * qo'yilgandi. Lekin qator ichidagi nom uzun bo'lsa (ruscha smeta
+   * nomlari odatda 100-200 belgi) matn 3-4 QATORGA o'raladi va haqiqiy
+   * balandlik 60-100px bo'ladi.
+   * Qatorlar `translateY(index × 32)` bilan joylashtirilgani uchun
+   * 4-qatorlik matn keyingi 2-3 qatorning ustiga chiqib ketardi —
+   * skrinshotdagi aralashib ketgan ko'rinish aynan shundan.
+   *
+   * YECHIM: haqiqiy balandlikni O'LCHAYMIZ. `measureElement` har qator
+   * DOM ga tushgach uning `getBoundingClientRect().height` ini oladi va
+   * virtualizator keyingi qatorlarni to'g'ri joyga qo'yadi.
+   * O'ram div dan qat'iy `height` OLIB TASHLANDI (pastga qara) — aks
+   * holda o'lchov baribir 32 chiqardi. */
   const rowVirtualizer = useVirtualizer({
     count: qatorlar.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 32,
     overscan: 10,
+    measureElement: (el) => (el as HTMLElement)?.getBoundingClientRect().height ?? 32,
   });
 
   if (!tugunlar.length) {
@@ -428,14 +445,19 @@ export function F2Daraxt({
           const prevType = idx > 0 ? qatorlar[idx - 1].t.type : null;
           
           return (
-            <div 
+            <div
               key={t.kalit}
+              /* ⚡ 2026-08-15: `data-index` + `measureElement` — virtualizator
+               * shu ikkisi orqali qatorning HAQIQIY balandligini biladi.
+               * `height` ATAYLAB YO'Q: qotirilgan balandlik o'lchovni buzadi
+               * va uzun nomlar keyingi qatorlar ustiga chiqib ketadi. */
+              data-index={idx}
+              ref={rowVirtualizer.measureElement}
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 width: '100%',
-                height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
