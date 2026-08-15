@@ -117,8 +117,8 @@ varaqda, qaysi qatorda ekani bir bosishda ochiladi. Taxmin qilish tugaydi.
 - [x] Oy → «Tahrirlash» → **qatorlar jadvali** (`apiF2OyTafsilot`)
 - [x] Har qatorda: smeta tomoni ↔ F2 tomoni yonma-yon
 - [x] Amallar: **qiymatni o'zgartirish · qatorni tozalash** (bekor qilinadi)
-- [ ] ⚠ «Boshqa qatorga ko'chirish» QILINMADI — hozir tozalab, kerakli
-      qatorga qayta bog'lash kerak
+- [x] **Boshqa qatorga ko'chirish** — eski qator tozalanadi + yangisiga
+      yoziladi, ikkalasi BIR chaqiruvda (oraliq holatda yo'qolmaydi)
 - [x] Saqlash → `apiF2QatorTahrir` → LRV_PLUS **darhol** yangilanadi
 - [x] Nomuvofiq qatorlar (`summa ≠ hajm×narx`) belgilanadi + filtri bor
 
@@ -139,13 +139,15 @@ chiqaramiz va hamma joyda ishlatamiz:
 
 Chap tomonda rangli chiziq + turi qisqartma bilan. `F2Daraxt.tsx` da `rz`
 YETISHMAYOTGAN edi (razdel rangsiz va belgisiz chiqardi) — qo'shildi.
-YETISHMAYOTGAN edi (razdel rangsiz chiqardi) — qo'shildi.
 
-### FAZA 6 — KAFOLAT PANELI 🔶 *(qisman)*
+### FAZA 6 — KAFOLAT PANELI ✅ *(bajarildi — F2Kafolat.tsx)*
 - [x] Yuqorida doimiy: `Hujjatlarda Σ` · `Smetaga tushgan Σ` · `FARQ`
 - [x] Farq ≠ 0 bo'lsa sariq + ishonchsizlik ogohlantirishi
-- [ ] «Sababni ko'rsat» tugmasi va reestr yozuvlari ro'yxati QILINMADI
-      (backend tayyor — `apiF2ReestrOl` yozuvlarni qaytaradi, UI qoldi)
+- [x] «🔍 Sababni ko'rsat» tugmasi → F2Kafolat oynasi
+- [x] Har F2 alohida qatorda: oy/fayl · hujjatda · smetada · farq · holat
+- [x] «Hujjatda» ustuni TAHRIRLANADI — eski yozuvlarga jami kiritiladi
+- [x] «Barcha obyektlar» rejimi — aynan 171 mlrd tekshiruvi
+- [x] Har qatordan «Qatorlar» → o'sha oy qator-baqator ochiladi
 
 ---
 
@@ -200,12 +202,12 @@ xabar. Siz bilmay qolmaysiz.
 
 ## 6. QOLGAN ISHLAR
 
-1. Jonli progress (yozuvchini navbat rejimiga o'tkazish)
-2. «Boshqa qatorga ko'chirish» amali
-3. Kafolat panelida reestr yozuvlari ro'yxati + «sababni ko'rsat»
-4. Taklif B: F2 ni `f2uid` bo'yicha butunlay bekor qilish (undo)
-5. Taklif C: oyni muhrlash (lock)
-6. Taklif A: yozishdan oldin majburiy quruq yurish
+1. Jonli progress (yozuvchini navbat rejimiga o'tkazish — GAS bitta
+   chaqiruvda ishlagani uchun oraliq qadam brauzerga kelmaydi)
+2. «Hisobotni saqlash» tugmasi (hozir hisobot faqat ekranda)
+3. Taklif B: F2 ni `f2uid` bo'yicha butunlay bekor qilish (undo)
+4. Taklif C: oyni muhrlash (lock)
+5. Taklif A: yozishdan oldin majburiy quruq yurish
 
 **Bloklovchi:** 4-bo'limdagi savollarga javob (ayniqsa **2-savol: bl mi rs mi**
 — noto'g'ri bo'lsa pul ikki baravar sanaladi).

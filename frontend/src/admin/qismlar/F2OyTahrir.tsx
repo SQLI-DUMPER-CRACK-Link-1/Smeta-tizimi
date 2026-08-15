@@ -14,7 +14,7 @@
  * Butun oy qayta yozilmaydi — faqat siz tekkan qatorlar.
  */
 import { useState, useMemo } from 'react';
-import { X, Save, Trash2, AlertTriangle, Search } from 'lucide-react';
+import { X, Save, Trash2, AlertTriangle, Search, MoveRight, Check } from 'lucide-react';
 import { useF2OyTafsilot, useF2QatorTahrir, type F2OyQator } from '../../api/hooks';
 import { rangFon, rangChiziq, turNomi, belgiRamka, turBelgi } from '../../umumiy/turRang';
 
@@ -68,7 +68,13 @@ export default function F2OyTahrir({
     return s;
   }, [qatorlar, ozgarishlar]);
 
-  const ozgarganSoni = Object.keys(ozgarishlar).length;
+  /* ⚡ KO'CHIRISH holati — `ozgarganSoni` shuni ham hisoblagani uchun
+   * BU YERDA e'lon qilinadi (pastda bo'lsa TDZ xatosi beradi). */
+  const [kochirId, setKochirId] = useState<string | null>(null);
+  const [kochirQator, setKochirQator] = useState('');
+  const [kochirishlar, setKochirishlar] = useState<Record<string, number>>({});
+
+  const ozgarganSoni = new Set([...Object.keys(ozgarishlar), ...Object.keys(kochirishlar)]).size;
 
   const yangila = (q: F2OyQator, maydon: keyof Ozg, qiymat: number | boolean) => {
     setOzgarishlar((p) => {
@@ -84,17 +90,44 @@ export default function F2OyTahrir({
     });
   };
 
+  /* KO'CHIRISH: qiymat noto'g'ri qatorga tushgan bo'lsa — eskisini
+   * tozalab, yangisiga yozadi. Ikkalasi BIR chaqiruvda ketadi, ya'ni
+   * oraliq holatda ma'lumot yo'qolmaydi. */
+  const kochirTasdiq = (q: F2OyQator) => {
+    const yangiRow = Number(kochirQator);
+    if (!isFinite(yangiRow) || yangiRow < 2) { toast('Qator raqamini to\'g\'ri kiriting', 'warn'); return; }
+    if (yangiRow === q.row) { setKochirId(null); return; }
+    setKochirishlar((p) => ({ ...p, [kalit(q)]: yangiRow }));
+    setKochirId(null);
+  };
+
   const saqla = () => {
     const roy = Object.entries(ozgarishlar).map(([k, v]) => {
       const [sub, varaq, row] = k.split('||');
       return { sub, varaq, row: Number(row), ...v };
     });
+
+    /* Ko'chirilganlar: eski qator tozalanadi + yangi qatorga yoziladi */
+    Object.entries(kochirishlar).forEach(([k, yangiRow]) => {
+      const [sub, varaq, row] = k.split('||');
+      const q = qatorlar.find((x) => kalit(x) === k);
+      if (!q) return;
+      const o = ozgarishlar[k] || {};
+      const h = o.hajm ?? q.hajm, n = o.narx ?? q.narx;
+      const s = o.summa ?? Math.round(h * n * 10000) / 10000;
+      /* eskisini ro'yxatdan olib tashlaymiz — o'rniga tozalash qo'yamiz */
+      const idx = roy.findIndex((r) => r.sub === sub && r.varaq === varaq && r.row === Number(row));
+      if (idx >= 0) roy.splice(idx, 1);
+      roy.push({ sub, varaq, row: Number(row), ochir: true });
+      roy.push({ sub, varaq, row: yangiRow, hajm: h, narx: n, summa: s });
+    });
+
     if (!roy.length) return;
     tahrir.mutate({ obyekt, oyNom, ozgarishlar: roy }, {
       onSuccess: (r) => {
         if (r.ok) {
           toast(r.xabar || `${r.yozildi} qator yangilandi`, 'ok', undefined, 6000);
-          setOzgarishlar({});
+          setOzgarishlar({}); setKochirishlar({});
         } else {
           toast(r.xabar || 'Saqlashda xato', 'danger', undefined, 8000);
         }
@@ -237,7 +270,22 @@ export default function F2OyTahrir({
                             aria-label="summa ≠ hajm × narx" />
                         )}
                       </td>
-                      <td className="px-2 py-1.5 align-top">
+                      <td className="px-2 py-1.5 align-top whitespace-nowrap">
+                        {kochirId === k ? (
+                          <span className="inline-flex items-center gap-1">
+                            <input autoFocus value={kochirQator} onChange={(e) => setKochirQator(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') kochirTasdiq(q); if (e.key === 'Escape') setKochirId(null); }}
+                              placeholder="qator" className="w-16 px-1 py-0.5 rounded bg-white/10 border border-accent/50 text-[11px] text-text outline-none" />
+                            <button onClick={() => kochirTasdiq(q)} className="p-1 rounded text-emerald-400 hover:bg-emerald-500/10"><Check size={12} /></button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => { setKochirId(k); setKochirQator(String(kochirishlar[k] ?? q.row)); }}
+                            title="Boshqa qatorga ko'chirish"
+                            className={`p-1 rounded transition-colors mr-0.5 ${kochirishlar[k] ? 'text-accent bg-accent/10' : 'text-text-mute hover:text-accent hover:bg-accent/10'}`}>
+                            <MoveRight size={13} />
+                          </button>
+                        )}
                         <button
                           onClick={() => yangila(q, 'ochir', !ochirilgan)}
                           title={ochirilgan ? 'Bekor qilish' : 'Bu qatorni tozalash'}
