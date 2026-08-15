@@ -148,9 +148,19 @@ function apiF2TezYoz(obyekt, varaqNom, oyNom, satrlar, quruq){
       var hajm = _tzNum(it.hajm);
       var narx = _tzNum(it.narx);
       var summa = _tzNum(it.summa);
+      /* Summa F2 da berilmagan bo'lsa — F2 NING O'Z hajm×narx idan
+       * hisoblanadi. Bu to'qish EMAS: ikkala ko'paytuvchi ham hujjatdan.
+       * Narx yo'q bo'lsa natija 0 bo'ladi va pastda BO'SH yoziladi. */
       if(!summa) summa = Math.round(hajm*narx*10000)/10000;
 
-      yoziladi.push({ row:r, hajm:hajm, narx:narx, summa:summa, uid:it.uid||'' });
+      /* «Narx yo'q» va «narx nol» — bir xil narsa emas. Berilmagan
+       * qiymat katakka BO'SH tushadi, 0 emas. Aks holda hujjatda
+       * bo'lmagan «0 so'm» degan da'vo paydo bo'ladi. */
+      yoziladi.push({ row:r,
+                      hajm:  hajm,
+                      narx:  narx  ? narx  : '',
+                      summa: summa ? summa : '',
+                      uid:   it.uid||'' });
       if(r < minR) minR = r;
       if(r > maxR) maxR = r;
     }
@@ -171,40 +181,31 @@ function apiF2TezYoz(obyekt, varaqNom, oyNom, satrlar, quruq){
       for(var y=0; y<yoziladi.length; y++){
         var w = yoziladi[y], idx = w.row - minR;
 
-        /* ⚡⚡⚡ 2026-08-15 «ҲАЖМ БОР, ПУЛ ЙЎҚ» — ПУЛ ЙЎҚОЛИШИНИНГ ИЛДИЗИ.
+        /* ⚡⚡⚡ 2026-08-15 OLTIN QOIDA — NARX O'ZIDAN TO'QILMAYDI.
          *
-         * Foydalanuvchi QONUNI: «birortayam f2 qiymatlari yozilmay
-         * qolmasligi shart».
+         * Foydalanuvchi (ayni shu kuni, mening XATO tuzatishimdan keyin):
+         *   «o'zidan to'qimasligi kerakda narx jigar. manga aynan f2 da
+         *    nima bo'lsa o'sha kelsin yetarli, bazi resurslar o'zi
+         *    narxlanmagan bo'ladi, ularga ham narx qo'yib mani qamatib
+         *    yubormasin jigar»
          *
-         * ESKI KOD:
-         *     if(w.narx > 0)   blok[idx][1] = w.narx;
-         *     if(w.summa !== 0) blok[idx][2] = w.summa;
+         * MENING XATOM: bir muddat bu yerda narx bo'sh bo'lsa VARAQDAGI
+         * (smeta) narxi olinib summa hisoblanardi. Bu — F2 hujjatida
+         * DA'VO QILINMAGAN pulni da'vo qilish. Buxgalteriya/tekshiruv
+         * nuqtai nazaridan bu soxta hujjat. QAYTARILDI.
          *
-         * IKKI TESHIK BOR EDI:
+         * ✅ AMALDAGI QOIDA: uchala katak ham FAQAT F2 dan keladi.
+         *    F2 da narx yo'q  → narx BO'SH, summa BO'SH.
+         *    Narxlanmagan resurs narxsiz qoladi — bu TO'G'RI holat,
+         *    tuzatilishi kerak bo'lgan xato emas.
          *
-         * 1) F2 da narx bo'sh bo'lsa (juda ko'p uchraydi — narx smeta
-         *    tomonidan beriladi), `summa = hajm × 0 = 0` chiqardi va
-         *    `summa !== 0` sharti tufayli СУММА КАТАГИ УМУМАН
-         *    ЁЗИЛМАСДИ. Qator «yozilgan» ko'rinardi (hajm bor), lekin
-         *    PUL KELTIRMASDI. Sentyabrda yetishmagan 220 mln ning
-         *    asosiy qismi shu.
-         *
-         * 2) `summa !== 0` sharti ESKI QIYMATNI joyida qoldirardi.
-         *    Qayta yozishda eski summa saqlanib qolib, yangi hajmga
-         *    mos kelmay qolardi — jim turadigan buzilish.
-         *
-         * ENDI: narx bo'sh bo'lsa varaqdagi MAVJUD narx ishlatiladi
-         * (u smeta narxi formulasi bo'lishi mumkin — `blok` allaqachon
-         * hisoblangan qiymatni tutadi), summa esa DOIM yoziladi.
-         * Narx ustuniga esa tegmaymiz — formula joyida qolsin. */
-        var joriyNarx = _tzNum(blok[idx][1]);
-        var tNarx = (w.narx > 0) ? w.narx : joriyNarx;
-        var tSumma = w.summa;
-        if(!tSumma) tSumma = Math.round(w.hajm * tNarx * 10000) / 10000;
-
-        blok[idx][0] = w.hajm;                    // ҲАЖМ — доим (манфий ҳам)
-        if(w.narx > 0) blok[idx][1] = w.narx;     // НАРХ — F2 берса; акс ҳолда формула қолсин
-        blok[idx][2] = tSumma;                    // СУММА — ДОИМ (0 ва манфий ҳам)
+         * Uchala katak DOIM yoziladi (bo'sh bo'lsa ham). Sababi: shart
+         * bilan o'tkazib yuborilsa ESKI qiymat joyida qolib ketardi va
+         * yangi hajmga mos kelmay, jim turadigan buzilish berardi.
+         * Bo'sh yozish — «bu yerda qiymat yo'q» degan ROST ma'lumot. */
+        blok[idx][0] = w.hajm;      // ҲАЖМ  — F2 дан (манфий ҳам)
+        blok[idx][1] = w.narx;      // НАРХ  — F2 дан (йўқ бўлса БЎШ)
+        blok[idx][2] = w.summa;     // СУММА — F2 дан (йўқ бўлса БЎШ)
         if(w.uid) izoh[idx][0] = 'f2uid:' + w.uid;
       }
       rng.setValues(blok);

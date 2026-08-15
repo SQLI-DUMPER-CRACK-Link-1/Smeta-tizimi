@@ -728,7 +728,7 @@ export function useF2Bosliqlar(obyekt: string, oyNom: string, hujjatJami?: numbe
     queryFn: () => gas<{
       ok: boolean; qatorSoni: number; yozilganJami: number;
       hujjatJami: number | null; yetishmayotgan: number | null;
-      hajmBorPulYoq: { soni: number; taxminiyPul: number; qatorlar: Array<Record<string, unknown>> };
+      hajmBorPulYoq: { soni: number; agarNarxlansaPul: number; qatorlar: Array<Record<string, unknown>> };
       summaNomuvofiq: { soni: number; farqPul: number; qatorlar: Array<Record<string, unknown>> };
       hajmYoqPulBor: { soni: number; pul: number; qatorlar: Array<Record<string, unknown>> };
       izohlanadi: number; xulosa: string; xabar?: string;

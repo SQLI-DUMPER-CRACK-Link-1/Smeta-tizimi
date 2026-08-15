@@ -290,17 +290,25 @@ export default function F2OyTahrir({
               </div>
               <p className="mt-1 text-text-mute leading-snug">{bosliq.data.xulosa}</p>
 
+              {/* ⚠ NARXSIZ QATORLAR — AYB EMAS, MA'LUMOT.
+                  Foydalanuvchi: «bazi resurslar o'zi narxlanmagan bo'ladi,
+                  ularga ham narx qo'yib mani qamatib yubormasin».
+                  Shuning uchun bu blok qizil OGOHLANTIRISH emas, xolis
+                  ma'lumot. «agar narxlansa» summasi hech qayerga
+                  yozilmaydi — u faqat kattaligini tasavvur qilish uchun. */}
               {bosliq.data.hajmBorPulYoq.soni > 0 && (
-                <button
-                  onClick={() => { setFaqatMuammo(false); setQidiruv(''); }}
-                  className="mt-1.5 w-full text-left px-2 py-1 rounded bg-red-500/10
-                             hover:bg-red-500/20 transition-colors">
-                  <span className="text-red-300 font-medium">
-                    ⚠ {bosliq.data.hajmBorPulYoq.soni} qatorda HAJM bor, PUL yo'q
+                <div className="mt-1.5 px-2 py-1 rounded bg-white/5">
+                  <span className="text-text font-medium">
+                    ℹ {bosliq.data.hajmBorPulYoq.soni} qator NARXSIZ
                   </span>
-                  <span className="text-text-mute"> — taxminan {fmt(bosliq.data.hajmBorPulYoq.taxminiyPul)} so'm.
-                    Sabab: F2 da narx bo'sh bo'lgan. Pastda narxni to'ldirsangiz summa o'zi hisoblanadi.</span>
-                </button>
+                  <span className="text-text-mute"> — F2 da ularga narx berilmagan.
+                    Bu odatda <b>normal</b> holat va tizim o'zidan narx <b>qo'ymaydi</b>.
+                    Agar narx bo'lishi kerak bo'lsa — F2 hujjatining o'zini tekshiring.</span>
+                  <div className="text-[10px] text-text-mute/70 mt-0.5">
+                    Ma'lumot uchun: smeta narxida bo'lganda ≈ {fmt(bosliq.data.hajmBorPulYoq.agarNarxlansaPul)} so'm
+                    bo'lardi (hech qayerga yozilmaydi).
+                  </div>
+                </div>
               )}
               {bosliq.data.summaNomuvofiq.soni > 0 && (
                 <p className="mt-1 text-amber-300">

@@ -670,12 +670,22 @@ function apiF2Bosliqlar(obyekt, oyNom, hujjatJami){
       /* A — hajm bor, pul yo'q. Yo'qolgan pulni SMETA narxi bilan
        * baholaymiz (q.smetaNarx) — bu TAXMIN, shuning uchun alohida
        * maydonda qaytariladi va jamiga qo'shilmaydi. */
+      /* ⚠ MUHIM (2026-08-15, foydalanuvchi ko'rsatmasi):
+       * «bazi resurslar o'zi narxlanmagan bo'ladi, ularga ham narx
+       *  qo'yib mani qamatib yubormasin»
+       * Ya'ni narxsiz qator — HAR DOIM XATO EMAS. Bu ko'pincha
+       * NORMAL holat: F2 da o'sha resurs narxlanmagan.
+       * Shuning uchun quyidagi `smetaNarx` bo'yicha baho — FAQAT
+       * «agar narxlanganda shuncha bo'lardi» degan MA'LUMOT.
+       * U hech qayerga avtomatik YOZILMAYDI va yetishmayotgan pulni
+       * «izohlangan» deb hisoblashga ham qo'shilmaydi. Qaror —
+       * foydalanuvchiniki. */
       if(h && !s){
         var taxminiy = h * _nzNum(q.smetaNarx);
         aPul += taxminiy;
         if(A.length < 60) A.push({varaq:q.varaq, row:q.row, kod:q.kod,
           nom:q.nom, hajm:h, narx:n, smetaNarx:q.smetaNarx,
-          taxminiySumma:taxminiy, marker:q.marker});
+          agarNarxlansa:taxminiy, marker:q.marker});
         continue;
       }
       /* B — summa hajm×narx ga mos emas */
@@ -704,21 +714,31 @@ function apiF2Bosliqlar(obyekt, oyNom, hujjatJami){
                ? null : (Number(hujjatJami)||0);
     var yetishmayotgan = (hj === null) ? null : (hj - yozilgan);
 
-    /* Naqshlar yetishmayotgan pulni qoplaydimi? */
-    var izohlanadi = aPul + Math.max(0, bPul);
+    /* ⚡ 2026-08-15 QAYTA KO'RIB CHIQILDI.
+     * Avval `aPul` (narxsiz qatorlarning smeta narxi bo'yicha bahosi)
+     * «izohlangan pul» ga qo'shilardi va tizim «yo'qolgan pul topildi»
+     * deb xulosa qilardi. Bu NOTO'G'RI: narxsiz resurs ko'pincha
+     * shunchaki narxlanmagan — F2 unga pul da'vo qilmagan.
+     * Bunday qatorni «yo'qolgan pul» deb ko'rsatish foydalanuvchini
+     * hujjatda yo'q summani qo'shishga undaydi.
+     * Endi FAQAT `bPul` (summa ≠ hajm×narx — haqiqiy hisob xatosi)
+     * izohlangan deb sanaladi. Narxsizlar alohida MA'LUMOT sifatida. */
+    var izohlanadi = Math.max(0, bPul);
     var xulosa;
     if(hj === null){
       xulosa = 'Ҳужжат жами берилмади — етишмаётган пул ҳисобланмади.';
     } else if(Math.abs(yetishmayotgan) <= Math.max(1, Math.abs(hj)*0.0001)){
       xulosa = '✓ Фарқ ЙЎҚ — ҳужжат билан смета тенг.';
     } else if(izohlanadi >= Math.abs(yetishmayotgan)*0.9){
-      xulosa = 'Етишмаётган пулнинг деярли ҳаммаси ТОПИЛДИ: '+
-               A.length+' та қаторда ҳажм бор лекин пул йўқ'+
-               (B.length ? (', '+B.length+' та қаторда сумма мос эмас') : '')+'.';
-    } else if(izohlanadi > 0){
-      xulosa = 'Етишмаётган пулнинг БИР ҚИСМИ топилди ('+
-               izohlanadi.toFixed(2)+'). Қолгани — Ф2 да бор лекин сметага '+
-               'УМУМАН боғланмаган қаторлар бўлиши мумкин.';
+      xulosa = 'Сабаб ТОПИЛДИ: '+B.length+' та қаторда сумма ҳажм×нарх га '+
+               'мос эмас. Буларни тўғрилаш керак.';
+    } else if(A.length){
+      xulosa = 'Ёзилган қаторларда ҳисоб хатоси топилмади. '+
+               A.length+' та қатор НАРХСИЗ — Ф2 да уларга нарх берилмаган. '+
+               'Бу одатда НОРМАЛ ҳолат (нарxланмаган ресурслар) ва тизим '+
+               'уларга ЎЗИДАН нарх қўймайди. Агар нарх бўлиши керак бўлса — '+
+               'Ф2 ҳужжатининг ўзида нарх йўқлигини текширинг. '+
+               'Қолган фарқ эса сметага БОҒЛАНМАГАН қаторлардан бўлиши мумкин.';
     } else {
       xulosa = 'Ёзилган қаторларда бўшлиқ ТОПИЛМАДИ. Демак етишмаётган пул — '+
                'Ф2 да бор лекин сметага БОҒЛАНМАГАН қаторлардан. '+
@@ -730,8 +750,10 @@ function apiF2Bosliqlar(obyekt, oyNom, hujjatJami){
             yozilganJami: yozilgan,
             hujjatJami: hj,
             yetishmayotgan: yetishmayotgan,
-            /* A: hajm bor pul yo'q — ENG EHTIMOLLI SABAB */
-            hajmBorPulYoq: {soni:A.length, taxminiyPul:aPul, qatorlar:A},
+            /* A: NARXSIZ qatorlar — ayb emas, MA'LUMOT. 
+             * faqat «agar narxlanganda shuncha bo'lardi» degan baho;
+             * hech qayerga avtomatik yozilmaydi. */
+            hajmBorPulYoq: {soni:A.length, agarNarxlansaPul:aPul, qatorlar:A},
             /* B: summa hajm×narx ga mos emas */
             summaNomuvofiq: {soni:B.length, farqPul:bPul, qatorlar:B},
             /* C: hajm yo'q pul bor */
