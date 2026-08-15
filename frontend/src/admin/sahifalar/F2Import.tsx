@@ -1218,6 +1218,55 @@ export function F2Import() {
       } else {
         satrlar.push(`  Hujjat jami uzatilmadi — farq tekshirilmadi`);
       }
+      /* ⚡⚡⚡ 2026-08-15 «16 MLRD EMASKU MANDAGI F2» — USTMA-UST YOZISH XAVFI.
+       *
+       * Nima bo'lgan edi: «Tozalash» buzuq edi (faqat nomi LRV bilan
+       * boshlanadigan varaqlarni tozalardi), shuning uchun eski sentyabr
+       * qiymatlari joyida qolgan. Yangi F2 ularning USTIGA yozilgan va
+       * oy jami IKKI HUJJATNING YIG'INDISI bo'lib ketgan:
+       *     7 931 314 902 (eski) + 8 151 662 266 (yangi) ≈ 16.1 mlrd
+       *
+       * Tizim bu haqda JIM turgan. Endi jim turmaydi: oyda allaqachon
+       * qiymat bo'lsa — YOZISHDAN OLDIN aniq raqam bilan ogohlantiradi
+       * va tozalashni taklif qiladi. O'zi o'chirmaydi (bu qaytarib
+       * bo'lmaydigan amal) — qaror foydalanuvchiniki. */
+      const oyd = lrv.data?.oylar?.find((x: string) => x === oyNom);
+      if (oyd) {
+        let borSum = 0, borQator = 0;
+        barglar(lrv.data?.tree as unknown as any[] || []).forEach((n: any) => {
+          const d = n.oylar?.[oyNom];
+          if (!d || typeof d !== 'object') return;
+          const son = (x: any) => Number(String(x ?? 0).replace(/\s/g, '').replace(',', '.')) || 0;
+          const sm = son(d.summa) || son(d.obyom) * son(d.narx);
+          if (sm || son(d.obyom)) { borSum += sm; borQator++; }
+        });
+        if (borQator > 0) {
+          const fm = (v: number) => v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const javob = window.confirm(
+            `⚠️ DIQQAT — «${oyNom}» oyida ALLAQACHON ma'lumot bor:\n\n` +
+            `    ${borQator} qator · ${fm(borSum)} so'm\n\n` +
+            `Ustiga yozsangiz ikkalasi QO'SHILIB ketadi va oy jami\n` +
+            `hujjatingizdan katta chiqadi (avval shunday bo'lgan).\n\n` +
+            `OK  → avval shu oyni TOZALAB, keyin yozamiz (tavsiya)\n` +
+            `Bekor → tozalamasdan, ustiga yozamiz`
+          );
+          if (javob) {
+            setYozOyna({ holat: 'ishlamoqda', oyNom,
+              yuborilgan: { qatorlar: nomBilan.length, dopps: dopps.length, hujjatJami: null },
+              natija: null, qadamMatn: `«${oyNom}» tozalanmoqda…` });
+            try {
+              const t = await useF2OyOchirishHook.mutateAsync({ obyekt, oyNom });
+              toast(t.xabar || 'Tozalandi', 'ok', undefined, 7000);
+              await lrv.refetch();
+            } catch (te) {
+              setYozOyna(null);
+              toast(`Tozalashda xato: ${(te as Error).message}. Yozish to'xtatildi.`, 'danger', undefined, 10000);
+              return;
+            }
+          }
+        }
+      }
+
       satrlar.push('', 'Yozamizmi?');
 
       if (!sYoz) {
