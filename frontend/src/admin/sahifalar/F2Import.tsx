@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import F2OyTahrir from '../qismlar/F2OyTahrir';
 import F2YozishOyna, { type YozishNatija } from '../qismlar/F2YozishOyna';
+import F2Kafolat from '../qismlar/F2Kafolat';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
   useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
@@ -345,6 +346,7 @@ export function F2Import() {
   const reestrTikla = useF2ReestrTikla();
   /* ⚡ 2026-08-15 qator darajasidagi tahrir oynasi */
   const [qatorTahrirOy, setQatorTahrirOy] = useState<string | null>(null);
+  const [kafolatOchiq, setKafolatOchiq] = useState(false);
   /* ⚡ 2026-08-15 yozish jarayoni/hisobot oynasi — «oxirida tugadi derdi» */
   const [yozOyna, setYozOyna] = useState<null | {
     holat: 'ishlamoqda' | 'tugadi' | 'xato'; oyNom: string;
@@ -1774,6 +1776,16 @@ const onAvtoMoslash = () => {
                       kiritilmagan — bu farq to'liq ishonchli emas.
                     </p>
                   )}
+                  {/* Farq qayerdan kelganini ochadi — har F2 alohida qatorda */}
+                  <button
+                    onClick={() => setKafolatOchiq(true)}
+                    className="mt-2 w-full px-2 py-1.5 rounded bg-white/10 hover:bg-white/20
+                               text-[11px] text-text transition-colors font-medium"
+                  >
+                    {reestr.data.farq === 0 && reestr.data.ishonchli
+                      ? '🔍 Solishtiruvni ko\'rish'
+                      : '🔍 Sababni ko\'rsat — qaysi F2 da farq bor?'}
+                  </button>
                   {reestr.data.soni === 0 && (
                     <button
                       onClick={() => reestrTikla.mutate({ obyekt }, {
@@ -2212,6 +2224,16 @@ const onAvtoMoslash = () => {
         </div>
       )}
       {/* TAHRIRLASH UCHUN QO'LDA FAYL TANLASH MODAL */}
+      {/* Kafolat — kirdi/tushdi solishtiruvi, har F2 alohida qatorda */}
+      {kafolatOchiq && (
+        <F2Kafolat
+          obyekt={obyekt}
+          onYopish={() => setKafolatOchiq(false)}
+          onQatorlar={(oy) => setQatorTahrirOy(oy)}
+          toast={toast as (m: string, t?: string, x?: unknown, ms?: number) => void}
+        />
+      )}
+
       {/* Yozish jarayoni + yakuniy hisobot */}
       {yozOyna && (
         <F2YozishOyna
