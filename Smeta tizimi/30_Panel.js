@@ -3850,16 +3850,34 @@ function apiF2BoglanishBekorQil(obyekt, oyNom, mappedArray) {
 function apiF2OyOchirish(obyekt, oyNom){
    oyNom = String(oyNom||'').trim();
    if(!oyNom) return {ok:false, xabar:'Ой номи бўш'};
-   var subObjects = _subObyektlar(obyekt);
-   var targets = subObjects.length ? subObjects : [obyekt];
-   var tozalandi = 0;
+   /* ⚡⚡⚡ 2026-08-15 «ТОЗАЛАШНИ БОСДИМ, ЛЕКИН СЕНТЯБРЬ ҲАЛИ ТУРИБДИ».
+    * IKKI SABAB BOR EDI:
+    *
+    * 1) `targets = subObjects.length ? subObjects : [obyekt]` — sub-obyekt
+    *    topilsa OTA obyektning O'ZI ro'yxatdan TUSHIB QOLARDI. Ota faylda
+    *    yozilgan oy hech qachon tozalanmasdi.
+    *
+    * 2) `sh.getName().indexOf(CFG.LRV_SHEET)!==0` — faqat nomi «LRV» bilan
+    *    BOSHLANADIGAN varaqlar tozalanardi. Lekin yozuvchi (apiF2TezYoz)
+    *    varaqni NOM bo'yicha ochadi va real varaqlar «Amfiteatr - 110081_
+    *    ALL_01-02-1_АРХИТЕКТУРНАЯ ЧАСТЬ...» kabi nomlanadi — ular bu
+    *    filtrdan o'tmasdi. Ya'ni yozish ishlardi, tozalash esa YO'Q.
+    *
+    * ENDI: ota + barcha sub-obyektlar, va varaq nomiga qaralmaydi —
+    * o'sha oy ustuni BOR bo'lsa tozalanadi (yozuvchi bilan bir xil qamrov).
+    * Faqat xizmat varaqlari («_» bilan boshlanadigan) chetlab o'tiladi. */
+   var subObjects = _subObyektlar(obyekt) || [];
+   var targets = [obyekt];
+   for(var _si=0; _si<subObjects.length; _si++)
+      if(targets.indexOf(subObjects[_si]) < 0) targets.push(subObjects[_si]);
+   var tozalandi = 0, tegilganVaraq = [];
    targets.forEach(function(subOb){
       var plus = _plusTop(subOb);
       if(!plus) return;
       var sheets = plus.getSheets();
       for(var s=0;s<sheets.length;s++){
          var sh = sheets[s];
-         if(sh.getName().indexOf(CFG.LRV_SHEET)!==0) continue;
+         if(String(sh.getName()).charAt(0) === '_') continue;   // xizmat varaqlari
          var oylar=_f2Oylar(sh), oCol=null;
          for(var o=0;o<oylar.length;o++){ if(_oyKey(oylar[o].nom)===_oyKey(oyNom)){ oCol=oylar[o].col; break; } }
          if(!oCol) continue;
@@ -3884,7 +3902,13 @@ function apiF2OyOchirish(obyekt, oyNom){
       try{ if(typeof _sbDirty==='function') _sbDirty(subOb); }catch(e){}
    });
    _holatInvalidate(obyekt);
-   return {ok:true, tozalandi:tozalandi, xabar:oyNom+' ойи учун '+tozalandi+' та қиймат бутунлай ўчирилди'};
+   /* Nechta varaqqa tegilgani ham qaytariladi — «bosdim lekin turibdi»
+    * holatida qaysi fayl tozalanganini KO'RSATISH uchun. */
+   return {ok:true, tozalandi:tozalandi, varaqlar:tegilganVaraq,
+           obyektlar:targets,
+           xabar: tozalandi
+             ? (oyNom+' ойи: '+tozalandi+' та қиймат ўчирилди ('+tegilganVaraq.length+' варақ)')
+             : (oyNom+' ойи ҳеч қайси варақда топилмади — ўчириладиган нарса йўқ')};
 }
 
 function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {

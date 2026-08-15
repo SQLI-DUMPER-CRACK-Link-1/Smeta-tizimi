@@ -42,7 +42,21 @@ export async function gas<T>(fn: string, ...args: unknown[]): Promise<T> {
     }
 
     if (!j) {
-      throw new Error('GAS javobi JSON emas');
+      /* ⚡⚡⚡ 2026-08-15: avval shunchaki «GAS javobi JSON emas» deb tashlanardi
+       * va HAQIQIY sabab YASHIRIN qolardi (foydalanuvchi: «asosiy debuglar
+       * xato topish o'zimga qolib ketayapdi»). Javob tanasi odatda aynan
+       * sababni aytadi: GAS timeout HTML sahifasi, Cloudflare 524, quota
+       * xabari va h.k. Endi o'sha matn ko'rsatiladi. */
+      const boshi = (raw || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      const ipucha =
+        /timed? ?out|exceeded maximum execution/i.test(raw) ? 'GAS vaqt chegarasiga urildi (6 daqiqa)' :
+        /524|gateway|cloudflare/i.test(raw)                 ? 'Cloudflare 100 soniya chegarasi' :
+        /sign in|accounts\.google/i.test(raw)               ? 'GAS sessiyasi tugagan — qayta kiring' :
+        '';
+      throw new Error(
+        (ipucha ? ipucha + ' — ' : 'GAS JSON qaytarmadi: ') +
+        (boshi ? boshi.slice(0, 220) : `bo'sh javob (status ${r.status})`)
+      );
     }
     if (!j.ok) throw new Error(j.error || 'GAS xato');
     

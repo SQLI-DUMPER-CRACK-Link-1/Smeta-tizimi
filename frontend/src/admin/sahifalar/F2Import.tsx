@@ -17,8 +17,9 @@ import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
 import { F2Daraxt, type DaraxtTugun } from '../../umumiy/ui/F2Daraxt';
 import { toast } from '../../umumiy/ui/Toast';
 import { gas } from '../../api/client';
-import { Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send, FolderOpen, FolderClosed, ShieldAlert } from 'lucide-react';
+import { Save, Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send, FolderOpen, FolderClosed, ShieldAlert } from 'lucide-react';
 import type { AktNode, F2Moslik } from '../../api/types';
+import { qoralamaSaqla, qoralamaOqi, qoralamaOchir, qoralamaVaqti } from '../store/f2Saqlash';
 import { resetF2Store, useF2Store } from '../store/useF2Store';
 
 /* Akt daraxtidagi BARCHA barg (leaf) tugunlar — jami summa faqat shulardan.
@@ -352,7 +353,36 @@ export function F2Import() {
     holat: 'ishlamoqda' | 'tugadi' | 'xato'; oyNom: string;
     yuborilgan: { qatorlar: number; dopps: number; hujjatJami: number | null };
     natija: YozishNatija | null; xato?: string;
+    /* ⚡ 2026-08-15: bo'laklab yozishda jonli qadam matni
+       («Bo'lak 3/6 — 200 qator») — foydalanuvchi jarayonni ko'rib tursin */
+    qadamMatn?: string;
   }>(null);
+
+  /* ⚡⚡⚡ 2026-08-15 BOG'LANISHLARNI AVTOSAQLASH.
+   * Foydalanuvchi 989 qatorni qo'lda bog'lab chiqdi, yozish xato berdi va
+   * butun mehnat brauzer xotirasida osilib qoldi — sahifa yangilansa
+   * yo'qolardi («shuncha ish bir tiyn bo'ldimi»).
+   * Endi har o'zgarish diskka (localStorage) tushadi. Brauzer yopilsa,
+   * tok o'chsa ham ish joyida qoladi va qaytganda tiklash taklif etiladi. */
+  const [tiklashTaklif, setTiklashTaklif] = useState<ReturnType<typeof qoralamaOqi>>(null);
+  useEffect(() => {
+    if (!obyekt || !oyNom) return;
+    const soni = Object.keys(qolBog).length + Object.keys(qolDop).length;
+    if (!soni) return;                       // bo'sh holatni saqlab o'tirmaymiz
+    const t = setTimeout(() => {
+      qoralamaSaqla({ obyekt, oyNom, faylNomi, qolBog, qolDop,
+                      natija, aktTree, lokalka, qatorSoni: soni });
+    }, 600);                                  // tez-tez yozmaslik uchun kechikish
+    return () => clearTimeout(t);
+  }, [obyekt, oyNom, faylNomi, qolBog, qolDop, natija, aktTree, lokalka]);
+
+  /* Sahifa ochilganda saqlangan qoralama bo'lsa — taklif qilamiz */
+  useEffect(() => {
+    const q = qoralamaOqi();
+    if (q && Object.keys(q.qolBog || {}).length + Object.keys(q.qolDop || {}).length > 0) {
+      setTiklashTaklif(q);
+    }
+  }, []);
 
   // Umumiy obyektdagi Smeta va Oldingi F2 ni hisoblash
   const { umumiySmeta, umumiyOldingiF2 } = useMemo(() => {
@@ -1199,10 +1229,69 @@ export function F2Import() {
         yuborilgan: { qatorlar: nomBilan.length, dopps: dopps.length,
                       hujjatJami: (aktJami === undefined || aktJami === null) ? null : Number(aktJami) },
         natija: null });
-      const r = await yoz.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
-      setYozOyna((p) => p ? { ...p, holat: 'tugadi', natija: r as YozishNatija } : p);
-      const yozildi = r.yozilgan ?? 0;
-      const rad = r.radEtilgan ?? 0;
+
+      /* ⚡⚡⚡ 2026-08-15 «GAS JAVOBI JSON EMAS» — ILDIZ SABAB VA YECHIM.
+       *
+       * Foydalanuvchi 989 qator + 40 qo'shimchani BITTA so'rovda yubordi va
+       * javob HTML bo'lib qaytdi (GAS/Cloudflare vaqt chegarasi). Bir necha
+       * soatlik qo'l mehnati «bir tiyin» bo'lib qoldi.
+       *
+       * SABAB: qo'shimchalar yo'li (apiF2Qolla) HAR BIR qator uchun alohida
+       * `insertRowsAfter` qiladi — bu sekin operatsiya. 40 qo'shimcha
+       * (bolalari bilan yuzlab qator) + 989 qator bitta so'rovda Cloudflare
+       * ning ~100 soniyalik chegarasidan oshib ketadi. Javob kelmaydi.
+       *
+       * YECHIM: ish BO'LAKLARGA bo'linadi. Har bo'lak alohida so'rov —
+       * hech biri chegaraga yaqinlashmaydi. Bo'lak muvaffaqiyatli tushsa
+       * qoralamadan o'chiriladi, ya'ni uzilib qolsa BOSHIDAN emas,
+       * QOLGAN JOYIDAN davom etadi. */
+      const BOLAK_QATOR = 200;   // oddiy qatorlar — tez yo'l (~1s / 200 qator)
+      const BOLAK_DOP   = 5;     // qo'shimchalar — sekin (qator qo'shish)
+
+      const bolaklar: Array<{ edits: F2Moslik[]; dopps: unknown[] }> = [];
+      for (let i = 0; i < nomBilan.length; i += BOLAK_QATOR)
+        bolaklar.push({ edits: nomBilan.slice(i, i + BOLAK_QATOR), dopps: [] });
+      for (let i = 0; i < dopps.length; i += BOLAK_DOP)
+        bolaklar.push({ edits: [], dopps: dopps.slice(i, i + BOLAK_DOP) });
+      if (!bolaklar.length) bolaklar.push({ edits: [], dopps: [] });
+
+      let yozildi = 0, rad = 0, dopYozildi = 0;
+      const radYig: unknown[] = [];
+      const bolakXato: string[] = [];
+
+      for (let b = 0; b < bolaklar.length; b++) {
+        const bo = bolaklar[b];
+        setYozOyna((p) => p ? { ...p, qadamMatn:
+          `Bo'lak ${b + 1}/${bolaklar.length} — ` +
+          (bo.dopps.length ? `${bo.dopps.length} qo'shimcha` : `${bo.edits.length} qator`) } : p);
+        try {
+          const rb = await yoz.mutateAsync({
+            obyekt, oyNom, edits: bo.edits as F2Moslik[], dopps: bo.dopps,
+            /* hujjat jami FAQAT birinchi bo'lakda — reestrda takror bo'lmasin */
+            aktJami: b === 0 ? aktJami : 0,
+          });
+          yozildi    += rb.yozilgan ?? 0;
+          rad        += rb.radEtilgan ?? 0;
+          dopYozildi += (rb as { dopYozildi?: number }).dopYozildi ?? 0;
+          if (rb.radRoyxat?.length) radYig.push(...rb.radRoyxat);
+          if ((rb as { dopXato?: string[] }).dopXato?.length)
+            bolakXato.push(...((rb as { dopXato?: string[] }).dopXato ?? []));
+        } catch (eb) {
+          /* Bitta bo'lak yiqilsa QOLGANI DAVOM ETADI — hammasi yo'qolmaydi */
+          bolakXato.push(`Bo'lak ${b + 1}: ${(eb as Error).message}`);
+        }
+      }
+
+      const r = {
+        ok: bolakXato.length === 0,
+        yozilgan: yozildi, radEtilgan: rad, radRoyxat: radYig,
+        dopYozildi, dopJami: dopps.length, dopXato: bolakXato,
+        xabar: `${yozildi} qator` + (dopps.length ? `, ${dopYozildi}/${dopps.length} qo'shimcha` : '') +
+               (bolakXato.length ? ` — ${bolakXato.length} bo'lakda xato` : ''),
+      } as unknown as YozishNatija;
+
+      setYozOyna((p) => p ? { ...p, holat: bolakXato.length ? 'xato' : 'tugadi',
+                              natija: r, xato: bolakXato[0] } : p);
 
       if (!yozildi && rad) {
         setRadRoyxat(r.radRoyxat ?? []);
@@ -1217,6 +1306,8 @@ export function F2Import() {
             : `✅ ${yozildi} qator yozildi`,
         rad ? 'warn' : 'ok', undefined, 8000,
       );
+      /* Smetaga tushdi — qoralama endi kerak emas */
+      if (!bolakXato.length) qoralamaOchir();
       setYozishBoshlandi(true);
       setQadam(2);
       await lrv.refetch();
@@ -2100,6 +2191,51 @@ const onAvtoMoslash = () => {
           </div>}
 
           {/* Himoyalar */}
+          {/* ⚡⚡⚡ 2026-08-15 SAQLANGAN ISHNI TIKLASH.
+              Yozish uzilib qolsa yoki brauzer yopilsa — bog'lanishlar
+              diskda qoladi va shu yerda tiklash taklif qilinadi.
+              Qayta soatlab bog'lash kerak emas. */}
+          {tiklashTaklif && (
+            <div className="rounded-[10px] border border-emerald-500/30 bg-emerald-500/[.08] p-4 space-y-2">
+              <div className="flex gap-2 items-center">
+                <Save size={16} className="text-emerald-400" />
+                <span className="text-sm font-medium text-text">Saqlangan ish topildi</span>
+              </div>
+              <p className="text-[12px] text-text-mute">
+                <b>«{tiklashTaklif.oyNom}»</b> · {tiklashTaklif.faylNomi || 'fayl nomi yo\'q'} ·
+                <b className="text-emerald-400"> {tiklashTaklif.qatorSoni} ta bog'lanish</b> ·
+                {' '}{qoralamaVaqti(tiklashTaklif.vaqt)} saqlangan.
+                Bog'lash ishingiz yo'qolmagan — tiklab, qolgan joyidan davom etsangiz bo'ladi.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const q = tiklashTaklif;
+                    setState({
+                      obyekt: q.obyekt, oyNom: q.oyNom, faylNomi: q.faylNomi,
+                      qolBog: q.qolBog as any, qolDop: q.qolDop as any,
+                      natija: (q.natija ?? null) as any,
+                      aktTree: (q.aktTree ?? null) as any,
+                      lokalka: q.lokalka as any,
+                      qadam: q.aktTree ? 1 : 0,
+                    });
+                    setTiklashTaklif(null);
+                    toast(`${q.qatorSoni} ta bog'lanish tiklandi`, 'ok', undefined, 6000);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300
+                             hover:bg-emerald-500/30 text-[12px] font-medium transition-colors">
+                  ↺ Ishni tiklash
+                </button>
+                <button
+                  onClick={() => { qoralamaOchir(); setTiklashTaklif(null); }}
+                  className="px-3 py-1.5 rounded-lg bg-white/5 text-text-mute
+                             hover:bg-white/10 text-[12px] transition-colors">
+                  O'chirish
+                </button>
+              </div>
+            </div>
+          )}
+
           {natija && (natija.stat.birlikBlok > 0 || natija.stat.zamenaShubha > 0) && (
             <div className="rounded-[10px] border border-warn/25 bg-warn/[.08] p-4 space-y-2">
               <div className="flex gap-2 items-center">
