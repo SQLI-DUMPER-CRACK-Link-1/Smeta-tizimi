@@ -95,30 +95,30 @@ varaqda, qaysi qatorda ekani bir bosishda ochiladi. Taxmin qilish tugaydi.
 - [x] Frontend to'g'ri o'qishi + «Yozilgan qatorlar»
 - [x] `38_F2Nazorat.js` — nazorat/tafsilot/tahrir API lari
 
-### FAZA 2 — REESTR (poydevor)
-- [ ] `F2_REESTR` varag'i + `39_F2Reestr.js`
-- [ ] Yozuvchi (`37_F2TezYoz.js`) yozib tugagach **reestrga qator qo'shsin**
-- [ ] `apiF2ReestrOl(obyekt?)` — ro'yxat + jami/farq
-- [ ] **Retro-to'ldirish**: mavjud oylarni `apiF2Nazorat` bilan skanlab
+### FAZA 2 — REESTR (poydevor) ✅ *(bajarildi)*
+- [x] `F2_REESTR` varag'i + `39_F2Reestr.js`
+- [x] Yozuvchi (`37_F2TezYoz.js`) yozib tugagach **reestrga qator qo'shsin**
+- [x] `apiF2ReestrOl(obyekt?)` — ro'yxat + jami/farq
+- [x] **Retro-to'ldirish**: mavjud oylarni `apiF2Nazorat` bilan skanlab
       reestrga kiritish (`HUJJAT_JAMI` bo'sh — qo'lda kiritiladi yoki
       arxiv fayldan o'qiladi)
 
-### FAZA 3 — JARAYON OYNASI *(«avvalgi tizimda alohida oynaga o'tilardi»)*
-- [ ] Yozish bosilganda modal ochilsin, real vaqtda qadamlar:
+### FAZA 3 — JARAYON OYNASI ✅ *(bajarildi — F2YozishOyna.tsx)*
+- [x] Yozish bosilganda modal ochilsin, real vaqtda qadamlar:
       `Varaq 1/4 · АРХИТЕКТУРНАЯ · 412 qator o'qildi · yozildi ✓`
-- [ ] Oxirida **yakuniy hisobot**: yozildi / o'tkazib yuborildi / xato,
+- [x] Oxirida **yakuniy hisobot**: yozildi / o'tkazib yuborildi / xato,
       har biri ro'yxat bilan
-- [ ] «Yopish» emas — «**Hisobotni saqlash**» (reestrga bog'lanadi)
+- [x] «Yopish» emas — «**Hisobotni saqlash**» (reestrga bog'lanadi)
 
-### FAZA 4 — QATOR DARAJASIDA BOSHQARUV
-- [ ] Oy → «Tahrirlash» → **qatorlar jadvali** (`apiF2OyTafsilot`)
-- [ ] Har qatorda: smeta tomoni ↔ F2 tomoni yonma-yon
-- [ ] Amallar: **qiymatni o'zgartirish · bog'lanishni uzish · boshqa
+### FAZA 4 — QATOR DARAJASIDA BOSHQARUV ✅ *(bajarildi — F2OyTahrir.tsx)*
+- [x] Oy → «Tahrirlash» → **qatorlar jadvali** (`apiF2OyTafsilot`)
+- [x] Har qatorda: smeta tomoni ↔ F2 tomoni yonma-yon
+- [x] Amallar: **qiymatni o'zgartirish · bog'lanishni uzish · boshqa
       qatorga ko'chirish · o'chirish**
-- [ ] Saqlash → `apiF2QatorTahrir` → LRV_PLUS **darhol** yangilanadi
-- [ ] Nomuvofiq qatorlar (`summa ≠ hajm×narx`) qizil bilan tepada
+- [x] Saqlash → `apiF2QatorTahrir` → LRV_PLUS **darhol** yangilanadi
+- [x] Nomuvofiq qatorlar (`summa ≠ hajm×narx`) qizil bilan tepada
 
-### FAZA 5 — RANGLAR *(mavjud konvensiyani kengaytirish)*
+### FAZA 5 — RANGLAR ✅ *(bajarildi — umumiy/turRang.ts)*
 
 `F2Tayyorlash.tsx:18` da allaqachon bor — uni **umumiy modulga**
 chiqaramiz va hamma joyda ishlatamiz:
@@ -136,10 +136,10 @@ chiqaramiz va hamma joyda ishlatamiz:
 Chap tomonda 3px rangli chiziq + turi qisqartma bilan — ko'z bir qarashda
 ajratadi.
 
-### FAZA 6 — KAFOLAT PANELI
-- [ ] Yuqorida doimiy: `Kiritilgan Σ` · `Yozilgan Σ` · `FARQ`
-- [ ] Farq ≠ 0 bo'lsa qizil + «Sababni ko'rsat» tugmasi
-- [ ] Ro'yxat: qaysi F2, qancha farq, qaysi varaq
+### FAZA 6 — KAFOLAT PANELI ✅ *(asosiy blok bajarildi)*
+- [x] Yuqorida doimiy: `Kiritilgan Σ` · `Yozilgan Σ` · `FARQ`
+- [x] Farq ≠ 0 bo'lsa qizil + «Sababni ko'rsat» tugmasi
+- [x] Ro'yxat: qaysi F2, qancha farq, qaysi varaq
 
 ---
 
