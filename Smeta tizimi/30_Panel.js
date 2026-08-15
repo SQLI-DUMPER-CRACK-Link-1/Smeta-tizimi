@@ -1678,6 +1678,29 @@ function apiBlQosh(params){
   var sh=plus.getSheetByName(varaqNom); if(!sh) throw 'Варақ топилмади';
   if(afterRow<1||afterRow>sh.getLastRow()) throw 'afterRow нотўғри';
   var col=CFG.C, CL=_cl;
+  /* ⚡⚡⚡ 2026-08-15: afterRow BL (ish) qatori bo'lsa — yangi qator uning
+   * RESURSLARIDAN KEYIN tushadi. Avval to'g'ridan-to'g'ri bl+1 ga tiqilib,
+   * ishni o'z resurslaridan AJRATIB qo'yardi (foydalanuvchi: «ish turiga
+   * qo'shimcha yoki zamena biriktirilganida shu ish tur bl qatori ostidan
+   * qo'shib uni o'zini resurslaridan ajratib qo'yayapdida»).
+   * apiRsQosh dagi bilan AYNAN bir xil skan: keyingi bl/rz gacha bo'lgan
+   * oxirgi rs/mat/ob topiladi. afterRow rs/mat bo'lsa (gap-drop — aniq
+   * joy ko'rsatilgan) — tegilmaydi. */
+  try{
+    var _mkA = String(sh.getRange(afterRow, col.MARKER).getValue()||'')
+                 .trim().toLowerCase().replace(/[+~]$/,'');
+    if(_mkA === 'bl'){
+      var _lastR = sh.getLastRow();
+      if(afterRow < _lastR){
+        var _mv = sh.getRange(afterRow+1, col.MARKER, _lastR-afterRow, 1).getValues();
+        for(var _mi=0; _mi<_mv.length; _mi++){
+          var _m2 = String(_mv[_mi][0]||'').trim().toLowerCase().replace(/[+~]$/,'');
+          if(_m2==='bl'||_m2==='rz') break;
+          if(_m2==='rs'||_m2==='mat'||_m2==='ob') afterRow = afterRow+1+_mi;
+        }
+      }
+    }
+  }catch(e){}
   sh.insertRowsAfter(afterRow,1);
   var r=afterRow+1;
   var kod = String(params.kod || '').trim();

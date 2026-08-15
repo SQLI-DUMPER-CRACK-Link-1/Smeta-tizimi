@@ -108,7 +108,7 @@ const QADAMLAR = ['Fayl', "Moslashtirish va bog'lash", 'Yozish'];
 export function F2Import() {
   const obyektlar = useObyektlar();
   const [state, setState] = useF2Store();
-  const { obyekt, oyNom, lokalka, qadam, aktTree, natija, yozishBoshlandi, fid, faylNomi, varaq, cfg, hover, filtr, ochiqSignal, qolBekor, qolBog, qolDop, dopModalUid, dropState, smetaScrollTo } = state;
+  const { obyekt, oyNom, lokalka, qadam, aktTree, natija, yozishBoshlandi, fid, faylNomi, varaq, cfg, filtr, ochiqSignal, qolBekor, qolBog, qolDop, dopModalUid, dropState, smetaScrollTo } = state;
 
   const createSetter = <K extends keyof typeof state>(key: K) => {
     return (val: (typeof state)[K] | ((prev: (typeof state)[K]) => (typeof state)[K])) => {
@@ -127,7 +127,6 @@ export function F2Import() {
   const setFaylNomi = createSetter('faylNomi');
   const setVaraq = createSetter('varaq');
   const setCfg = createSetter('cfg');
-  const setHover = createSetter('hover');
   const setFiltr = createSetter('filtr');
   const setOchiqSignal = createSetter('ochiqSignal');
   const setQolBekor = createSetter('qolBekor');
@@ -1044,6 +1043,10 @@ export function F2Import() {
         nom: n.nom,
         kod: n.kod,
         bir: n.birlik,
+        /* ⚡ 2026-08-15: oldin kiritilgan qo'shimcha/zamena endi belgili
+           ko'rinadi (LRV marker bl+/rs~ dan) — chalkashlik tugadi */
+        isQosh: !!n.isQosh,
+        isZamena: !!n.isZamena,
         belgi: n.type === 'rz' ? undefined : (
           <div className="flex flex-col items-end">
             <div className="flex gap-2 items-center text-[11px] opacity-80 whitespace-nowrap">
@@ -1328,6 +1331,20 @@ const onAvtoMoslash = () => {
     };
     return dfs(tree);
   };
+
+  /* ⚡⚡⚡ 2026-08-15 QOTISH TUZATISHI: avval `filterDaraxt(...)` JSX ichida
+   * INLINE chaqirilardi — sahifaning HAR render'ida (har toast, har drop)
+   * yangi massiv yaratilib, F2Daraxt `tugunlar` prop'i "o'zgargan" deb
+   * 15 000 tugunni qayta flatten qilardi va virtualizatorni qayta yuritardi.
+   * Endi faqat daraxt yoki qidiruv HAQIQATAN o'zgarganda hisoblanadi. */
+  const aktDaraxtFiltrlangan = useMemo(
+    () => filterDaraxt(aktDaraxt, f2Qidiruv),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [aktDaraxt, f2Qidiruv]);
+  const smetaDaraxtFiltrlangan = useMemo(
+    () => filterDaraxt(smetaDaraxt, smetaQidiruv),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [smetaDaraxt, smetaQidiruv]);
 
 
 
@@ -2131,13 +2148,11 @@ const onAvtoMoslash = () => {
               }
             chap={
               <F2Daraxt
-                tugunlar={filterDaraxt(aktDaraxt, f2Qidiruv)}
+                tugunlar={aktDaraxtFiltrlangan}
                 bogMi={aktBogMi}
                 takliflar={takliflar}
                 onTaklifTanlandi={(_uid, cand) => { setSmetaScrollTo(cand); toast('Topildi!', 'ok'); }}
                 dopMi={(k) => !!qolDop[k]}
-                hover={hover}
-                setHover={setHover}
                 onBogBekor={bogBekor}
                 sudraladi
                 onDopClick={handleDopClick}
@@ -2149,10 +2164,8 @@ const onAvtoMoslash = () => {
             }
             ong={
               <F2Daraxt
-                tugunlar={filterDaraxt(smetaDaraxt, smetaQidiruv)}
+                tugunlar={smetaDaraxtFiltrlangan}
                 bogMi={(k) => boglanganJoylar.has(k)}
-                hover={hover}
-                setHover={setHover}
                 tashlanadi
                 onTashla={qolBogla}
                 onGapDrop={qolGapDop}

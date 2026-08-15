@@ -11,6 +11,13 @@ export type DaraxtTugun = {
   hajm?: number;
   summa?: number;
   belgi?: ReactNode;          // o'ng chetdagi qiymat
+  /* ⚡ 2026-08-15: oldingi oylarda QO'SHIMCHA/ZAMENA sifatida kiritilgan
+   * qatorlar keyingi F2 importda ODDIY smeta qatoriday ko'rinardi —
+   * foydalanuvchi: «u smeta obyomi emas qo'shimcha ish ekanligini
+   * bildiradigan hech balo yo'q ekan... katta chalkashliklarga olib
+   * kelayapti». LRV markeridagi +/~ belgisidan keladi (bl+/rs~). */
+  isQosh?: boolean;
+  isZamena?: boolean;
   children?: DaraxtTugun[];
 };
 
@@ -66,13 +73,13 @@ const GapZone = memo(function GapZone({
 
 const DaraxtQator = memo(function DaraxtQator({
   t, daraja, bolalari, bog, yoritilgan, drop, yopiqHas,
-  sudraladi, tashlanadi, onTashla, setHover, setUstida, toggle, onBogBekor,
+  sudraladi, tashlanadi, onTashla, setUstida, toggle, onBogBekor,
   onDopClick, onOtishClick, takliflar, onTaklifTanlandi, scrollRef, onQatorQosh,
 }: {
   t: DaraxtTugun; daraja: number; bolalari: boolean; bog: boolean; yoritilgan: boolean; drop: boolean; yopiqHas: boolean;
   sudraladi?: boolean; tashlanadi?: boolean;
   onTashla?: (aktKalit: string, smetaKalit: string) => void;
-  setHover: (k: string | null) => void; setUstida: (k: string | null) => void;
+  setUstida: (k: string | null) => void;
   toggle: (k: string) => void; onBogBekor?: (kalit: string) => void;
   onDopClick?: (kalit: string) => void;
   onOtishClick?: (kalit: string) => void;
@@ -95,8 +102,6 @@ const DaraxtQator = memo(function DaraxtQator({
         const aktKalit = e.dataTransfer.getData('text/plain');
         if (aktKalit && onTashla) onTashla(aktKalit, t.kalit);
       } : undefined}
-      onMouseEnter={() => setHover(t.kalit)}
-      onMouseLeave={() => setHover(null)}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest('button')) return;
         if (bolalari) toggle(t.kalit);
@@ -119,6 +124,16 @@ const DaraxtQator = memo(function DaraxtQator({
         )}
       </span>
 
+      {/* ⚡ 2026-08-15: oldin kiritilgan QO'SHIMCHA/ZAMENA endi belgili —
+          «u smeta obyomi emas qo'shimcha ish ekanligini bildiradigan
+          hech balo yo'q ekan» muammosi. LRV marker +/~ dan keladi. */}
+      {(t.isZamena || t.isQosh) && (
+        <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide border ${
+          t.isZamena ? 'bg-rose-500/15 text-rose-300 border-rose-500/40'
+                     : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'}`}>
+          {t.isZamena ? '~ ЗАМЕНА' : '+ ҚЎШИМЧА'}
+        </span>
+      )}
       {t.type !== 'rz' && (
         <div className="flex-shrink-0 flex items-center gap-1" style={{ width: 88 }}>
            {bog ? (
@@ -210,10 +225,19 @@ const DaraxtQator = memo(function DaraxtQator({
       <span className={`flex-shrink-0 tabular-nums text-[13px] max-w-[240px] ${bog ? 'text-emerald-400 font-bold' : 'text-slate-400 font-medium'}`}>{t.belgi}</span>
     </div>
   );
-});
+}, (a, b) =>
+  /* ⚡ 2026-08-15: sahifa har render'da callback'larni qayta yaratadi va
+   * oddiy memo hech qachon ishlamasdi — ekrandagi ~40 qator har safar
+   * qayta chizilardi. Endi faqat KO'RINISHGA ta'sir qiluvchi proplar
+   * solishtiriladi. Daraxt o'zgarsa `t` yangi obyekt bo'ladi va qator
+   * yangi callback'lar bilan qayta chiziladi — eskirgan closure xavfi yo'q. */
+  a.t === b.t && a.daraja === b.daraja && a.bolalari === b.bolalari &&
+  a.bog === b.bog && a.yoritilgan === b.yoritilgan && a.drop === b.drop &&
+  a.yopiqHas === b.yopiqHas && a.sudraladi === b.sudraladi &&
+  a.tashlanadi === b.tashlanadi && a.takliflar === b.takliflar);
 
 export function F2Daraxt({
-  tugunlar, bogMi, dopMi, hover, setHover, onBogBekor,
+  tugunlar, bogMi, dopMi, onBogBekor,
   sudraladi, tashlanadi, onTashla, onGapDrop, bosh,
   filtr = 'hammasi',
   ochiqYopiqSignal = 0,
@@ -225,8 +249,12 @@ export function F2Daraxt({
   tugunlar: DaraxtTugun[];
   bogMi: (kalit: string) => boolean;
   dopMi?: (kalit: string) => boolean;
-  hover: string | null;
-  setHover: (k: string | null) => void;
+  /* ⚡ 2026-08-15 OLIB TASHLANDI: hover sahifa store'ida saqlanardi —
+   * HAR sichqoncha harakati BUTUN sahifani (ikkala 15k-tugunli daraxtni)
+   * qayta chizardi. Bu doimiy og'irlikning asosiy manbai edi.
+   * Endi hover faqat CSS (:hover) — hech qanday state yo'q. */
+  hover?: string | null;
+  setHover?: (k: string | null) => void;
   onBogBekor?: (kalit: string) => void;
   sudraladi?: boolean;
   tashlanadi?: boolean;
@@ -276,19 +304,27 @@ export function F2Daraxt({
    * sarlavhalari (bir necha yuz element). Foydalanuvchi kerakligini ochadi.
    * Kichik daraxtlarda (eski xatti-harakat) hammasi ochiq qoladi. */
   const KATTA_CHEGARA = 600;
-  const dastlabHisob = useRef(false);
+  /* ⚡⚡⚡ 2026-08-15 «HAR TASHLAGANIMDA HAMMA RZ OCHILIB KETADI» TUZATILDI.
+   * Avval bu effekt daraxt MASSIVI yangilanganda (har bog'lashda smetaDaraxt
+   * qayta quriladi — bu normal) QAYTA ISHLAB, yopiq to'plamni O'Z holatiga
+   * qayta yozardi: 1-daraja razdellar OCHIQ, ichi yopiq. Foydalanuvchi
+   * atay bittagina rz ochib ishlayotgan bo'lsa — har drop'da hammasi
+   * ochilib, ish joyi yo'qolardi («mani ham adashtirayapdida»).
+   * ENDI: daraxtning IMZOSI (tugun soni + birinchi kalit) o'zgarmagan
+   * bo'lsa — foydalanuvchining ochiq/yopiq holatiga TEGILMAYDI. Imzo
+   * faqat haqiqatan boshqa daraxt kelganda (boshqa smeta, boshqa akt)
+   * o'zgaradi va faqat o'shanda dastlabki yig'ish ishlaydi. */
+  const dastlabImzo = useRef('');
   useEffect(() => {
-    dastlabHisob.current = false;         // yangi daraxt kelsa qayta hisoblanadi
-  }, [tugunlar]);
-  useEffect(() => {
-    if (dastlabHisob.current) return;
     let jami = 0;
     const sana = (ns: DaraxtTugun[]) => ns.forEach(n => {
       jami++; if (n.children?.length) sana(n.children);
     });
     sana(tugunlar);
     if (jami === 0) return;
-    dastlabHisob.current = true;
+    const imzo = jami + '|' + (tugunlar[0]?.kalit ?? '') + '|' + tugunlar.length;
+    if (imzo === dastlabImzo.current) return;   // shu daraxt — holat saqlanadi
+    dastlabImzo.current = imzo;
     if (jami <= KATTA_CHEGARA) return;    // kichik — hammasi ochiq qolsin
 
     const yigi = new Set<string>();
@@ -439,7 +475,7 @@ export function F2Daraxt({
           const { t, daraja } = qatorlar[idx];
           const bog = bogMi(t.kalit);
           const drop = ustida === t.kalit;
-          const yoritilgan = yoritilganKey === t.kalit || (hover !== null && hover === t.kalit);
+          const yoritilgan = yoritilganKey === t.kalit;
           const bolalari = !!(t.children?.length);
           const yopiqHas = yopiq.has(t.kalit);
           const prevType = idx > 0 ? qatorlar[idx - 1].t.type : null;
@@ -481,7 +517,6 @@ export function F2Daraxt({
                 sudraladi={sudraladi}
                 tashlanadi={tashlanadi}
                 onTashla={onTashla}
-                setHover={setHover}
                 setUstida={setUstida}
                 toggle={toggle}
                 onBogBekor={onBogBekor}
