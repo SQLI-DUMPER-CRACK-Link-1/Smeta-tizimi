@@ -721,6 +721,23 @@ export function useF2PriamoyZatrat(obyekt: string, oyNom: string, enabled = true
   });
 }
 
+/** Yo'qolgan pulni O'ZI topadi — foydalanuvchi raqam solishtirmaydi */
+export function useF2Bosliqlar(obyekt: string, oyNom: string, hujjatJami?: number | null, enabled = true) {
+  return useQuery({
+    queryKey: ['f2bosliq', obyekt, oyNom, hujjatJami ?? null],
+    queryFn: () => gas<{
+      ok: boolean; qatorSoni: number; yozilganJami: number;
+      hujjatJami: number | null; yetishmayotgan: number | null;
+      hajmBorPulYoq: { soni: number; taxminiyPul: number; qatorlar: Array<Record<string, unknown>> };
+      summaNomuvofiq: { soni: number; farqPul: number; qatorlar: Array<Record<string, unknown>> };
+      hajmYoqPulBor: { soni: number; pul: number; qatorlar: Array<Record<string, unknown>> };
+      izohlanadi: number; xulosa: string; xabar?: string;
+    }>('apiF2Bosliqlar', obyekt, oyNom, hujjatJami ?? ''),
+    enabled: enabled && !!obyekt && !!oyNom,
+    staleTime: 30_000,
+  });
+}
+
 export type F2OyQator = {
   sub: string; varaq: string; row: number;
   marker: string; kod: string; nom: string; birlik: string;

@@ -16,7 +16,7 @@
 import { useState, useMemo } from 'react';
 import { X, Save, Trash2, AlertTriangle, Search, MoveRight, Check, Lock, Unlock, Undo2 } from 'lucide-react';
 import { useF2OyTafsilot, useF2QatorTahrir, useF2PriamoyZatrat,
-         useF2Undo, useF2Muhr, useF2MuhrHolat, type F2OyQator } from '../../api/hooks';
+         useF2Undo, useF2Muhr, useF2MuhrHolat, useF2Bosliqlar, type F2OyQator } from '../../api/hooks';
 import { rangFon, rangChiziq, turNomi, belgiRamka, turBelgi } from '../../umumiy/turRang';
 
 const fmt = (n: number) =>
@@ -38,6 +38,10 @@ export default function F2OyTahrir({
   const muhr = useF2Muhr();
   const muhrHolat = useF2MuhrHolat(obyekt, oyNom);
   const qulf = !!muhrHolat.data?.muhrlangan;
+  /* Hujjat jamini kiritsangiz — tizim yo'qolgan pulni O'ZI qidiradi */
+  const [hujJami, setHujJami] = useState('');
+  const [hujQidir, setHujQidir] = useState<number | null>(null);
+  const bosliq = useF2Bosliqlar(obyekt, oyNom, hujQidir);
 
   /* Faqat o'zgargan qatorlar saqlanadi — kalit: sub||varaq||row */
   const [ozgarishlar, setOzgarishlar] = useState<Record<string, Ozg>>({});
@@ -238,6 +242,81 @@ export default function F2OyTahrir({
             )}
           </div>
         )}
+
+        {/* ⚡⚡⚡ 2026-08-15 BO'SHLIQ TOPUVCHI (apiF2Bosliqlar).
+            Jonli holat: Sentyabr-2025 da hujjatda 8 151 662 266.27,
+            smetada 7 931 314 902.06 — 220 347 364.21 yetishmayapti.
+            Foydalanuvchidan «raqamlarni solishtiring» deb SO'RAMAYMIZ —
+            hujjat jamini kiriting, tizim yo'qolgan pulni O'ZI qidiradi. */}
+        <div className="px-4 py-2 border-b border-border bg-white/[0.02]">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-text-mute whitespace-nowrap">
+              Hujjat jami (итог):
+            </span>
+            <input
+              value={hujJami}
+              onChange={(e) => setHujJami(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                const v = Number(hujJami.replace(/\s/g, '').replace(',', '.'));
+                if (isFinite(v) && v > 0) setHujQidir(v);
+              }}
+              placeholder="8151662266.27"
+              className="w-44 px-2 py-1 rounded bg-white/5 border border-white/10
+                         text-[12px] text-text outline-none focus:border-accent/50" />
+            <button
+              onClick={() => {
+                const v = Number(hujJami.replace(/\s/g, '').replace(',', '.'));
+                if (!isFinite(v) || v <= 0) { toast('Summani kiriting', 'warn'); return; }
+                setHujQidir(v);
+              }}
+              className="px-2.5 py-1 rounded bg-accent/15 text-accent hover:bg-accent/25
+                         text-[11px] font-medium transition-colors">
+              🔍 Yo'qolgan pulni top
+            </button>
+          </div>
+
+          {bosliq.data?.ok && bosliq.data.yetishmayotgan !== null && (
+            <div className={`mt-2 p-2 rounded border text-[11px] ${
+              Math.abs(bosliq.data.yetishmayotgan) < 1
+                ? 'bg-emerald-500/10 border-emerald-500/30'
+                : 'bg-amber-500/10 border-amber-500/30'}`}>
+              <div className="flex justify-between font-medium text-text">
+                <span>Yetishmayotgan:</span>
+                <span className={Math.abs(bosliq.data.yetishmayotgan) < 1
+                                   ? 'text-emerald-400' : 'text-amber-300'}>
+                  {fmt(bosliq.data.yetishmayotgan)} so'm
+                </span>
+              </div>
+              <p className="mt-1 text-text-mute leading-snug">{bosliq.data.xulosa}</p>
+
+              {bosliq.data.hajmBorPulYoq.soni > 0 && (
+                <button
+                  onClick={() => { setFaqatMuammo(false); setQidiruv(''); }}
+                  className="mt-1.5 w-full text-left px-2 py-1 rounded bg-red-500/10
+                             hover:bg-red-500/20 transition-colors">
+                  <span className="text-red-300 font-medium">
+                    ⚠ {bosliq.data.hajmBorPulYoq.soni} qatorda HAJM bor, PUL yo'q
+                  </span>
+                  <span className="text-text-mute"> — taxminan {fmt(bosliq.data.hajmBorPulYoq.taxminiyPul)} so'm.
+                    Sabab: F2 da narx bo'sh bo'lgan. Pastda narxni to'ldirsangiz summa o'zi hisoblanadi.</span>
+                </button>
+              )}
+              {bosliq.data.summaNomuvofiq.soni > 0 && (
+                <p className="mt-1 text-amber-300">
+                  ⚠ {bosliq.data.summaNomuvofiq.soni} qatorda summa ≠ hajm×narx
+                  ({fmt(bosliq.data.summaNomuvofiq.farqPul)} so'm) — «faqat nomuvofiqlar» filtrini yoqing
+                </p>
+              )}
+              {bosliq.data.hajmYoqPulBor.soni > 0 && (
+                <p className="mt-1 text-amber-300">
+                  ⚠ {bosliq.data.hajmYoqPulBor.soni} qatorda hajm yo'q lekin pul bor
+                  ({fmt(bosliq.data.hajmYoqPulBor.pul)} so'm)
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Asboblar */}
         <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-white/[0.02]">

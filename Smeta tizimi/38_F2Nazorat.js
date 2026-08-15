@@ -628,3 +628,119 @@ function apiF2QatorTahrir(obyekt, oyNom, ozgarishlar){
     return {ok:false, xabar:'apiF2QatorTahrir: '+(e && e.message ? e.message : e)};
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * apiF2Bosliqlar(obyekt, oyNom, hujjatJami) — YO'QOLGAN PULNI TOPADI
+ *
+ * Jonli holat (2026-08-15, Sentyabr-2025):
+ *     F2 hujjatda (итог):  8 151 662 266.27
+ *     Smetada:             7 931 314 902.06
+ *     YETISHMAYAPTI:         220 347 364.21   (900 qator yozilgan)
+ *
+ * Foydalanuvchidan «uchta raqamni solishtiring» deb SO'RAMAYMIZ —
+ * tizim o'zi qidiradi. Bu funksiya pul yo'qoladigan HAR BIR
+ * naqshni alohida sanaydi va aybdor qatorlarni ro'yxat qilib beradi:
+ *
+ *   A) HAJM BOR, PUL YO'Q  — eng ehtimolli sabab. Yozuvchi narxni
+ *      faqat `narx > 0` bo'lganda yozadi; F2 da narx bo'sh bo'lsa
+ *      summa 0 bo'lib qoladi va qator "yozilgan" ko'rinadi, lekin
+ *      pul olib kelmaydi.
+ *   B) SUMMA ≠ HAJM × NARX — qiymat buzilgan yoki qo'lda o'zgargan
+ *   C) HAJM YO'Q, PUL BOR   — teskari nomuvofiqlik
+ *   D) NOL QATORLAR         — bog'langan, lekin ikkalasi ham bo'sh
+ *
+ * `hujjatJami` berilsa — yetishmayotgan summa ham hisoblanadi va
+ * yuqoridagi naqshlar uni QOPLAYDIMI degan savolga javob beradi.
+ * ══════════════════════════════════════════════════════════════════ */
+function apiF2Bosliqlar(obyekt, oyNom, hujjatJami){
+  var t0 = Date.now();
+  try{
+    var t = apiF2OyTafsilot(obyekt, oyNom);
+    if(!t.ok) return t;
+
+    var A = [], B = [], C = [], D = [];
+    var aPul = 0, bPul = 0, cPul = 0;
+    var yozilgan = 0;
+
+    for(var i=0;i<t.qatorlar.length;i++){
+      var q = t.qatorlar[i];
+      var h = _nzNum(q.hajm), n = _nzNum(q.narx), s = _nzNum(q.summa);
+      yozilgan += s;
+
+      /* A — hajm bor, pul yo'q. Yo'qolgan pulni SMETA narxi bilan
+       * baholaymiz (q.smetaNarx) — bu TAXMIN, shuning uchun alohida
+       * maydonda qaytariladi va jamiga qo'shilmaydi. */
+      if(h && !s){
+        var taxminiy = h * _nzNum(q.smetaNarx);
+        aPul += taxminiy;
+        if(A.length < 60) A.push({varaq:q.varaq, row:q.row, kod:q.kod,
+          nom:q.nom, hajm:h, narx:n, smetaNarx:q.smetaNarx,
+          taxminiySumma:taxminiy, marker:q.marker});
+        continue;
+      }
+      /* B — summa hajm×narx ga mos emas */
+      if(h && n && s){
+        var kutilgan = h * n;
+        if(Math.abs(s - kutilgan) > Math.max(1, Math.abs(kutilgan)*0.001)){
+          bPul += (kutilgan - s);
+          if(B.length < 60) B.push({varaq:q.varaq, row:q.row, kod:q.kod,
+            nom:q.nom, hajm:h, narx:n, summa:s, kutilgan:kutilgan,
+            farq:kutilgan - s, marker:q.marker});
+        }
+        continue;
+      }
+      /* C — hajm yo'q, pul bor */
+      if(!h && s){
+        cPul += s;
+        if(C.length < 60) C.push({varaq:q.varaq, row:q.row, kod:q.kod,
+          nom:q.nom, summa:s, marker:q.marker});
+        continue;
+      }
+      /* D — ikkalasi ham bo'sh (bu yerga kelmasligi kerak) */
+      if(!h && !s && D.length < 30) D.push({varaq:q.varaq, row:q.row, nom:q.nom});
+    }
+
+    var hj = (hujjatJami === undefined || hujjatJami === null || hujjatJami === '')
+               ? null : (Number(hujjatJami)||0);
+    var yetishmayotgan = (hj === null) ? null : (hj - yozilgan);
+
+    /* Naqshlar yetishmayotgan pulni qoplaydimi? */
+    var izohlanadi = aPul + Math.max(0, bPul);
+    var xulosa;
+    if(hj === null){
+      xulosa = 'Ҳужжат жами берилмади — етишмаётган пул ҳисобланмади.';
+    } else if(Math.abs(yetishmayotgan) <= Math.max(1, Math.abs(hj)*0.0001)){
+      xulosa = '✓ Фарқ ЙЎҚ — ҳужжат билан смета тенг.';
+    } else if(izohlanadi >= Math.abs(yetishmayotgan)*0.9){
+      xulosa = 'Етишмаётган пулнинг деярли ҳаммаси ТОПИЛДИ: '+
+               A.length+' та қаторда ҳажм бор лекин пул йўқ'+
+               (B.length ? (', '+B.length+' та қаторда сумма мос эмас') : '')+'.';
+    } else if(izohlanadi > 0){
+      xulosa = 'Етишмаётган пулнинг БИР ҚИСМИ топилди ('+
+               izohlanadi.toFixed(2)+'). Қолгани — Ф2 да бор лекин сметага '+
+               'УМУМАН боғланмаган қаторлар бўлиши мумкин.';
+    } else {
+      xulosa = 'Ёзилган қаторларда бўшлиқ ТОПИЛМАДИ. Демак етишмаётган пул — '+
+               'Ф2 да бор лекин сметага БОҒЛАНМАГАН қаторлардан. '+
+               'Ф2 ни қайта очиб боғланмаганларини кўринг.';
+    }
+
+    return {ok:true, obyekt:obyekt, oyNom:oyNom,
+            qatorSoni: t.qatorlar.length,
+            yozilganJami: yozilgan,
+            hujjatJami: hj,
+            yetishmayotgan: yetishmayotgan,
+            /* A: hajm bor pul yo'q — ENG EHTIMOLLI SABAB */
+            hajmBorPulYoq: {soni:A.length, taxminiyPul:aPul, qatorlar:A},
+            /* B: summa hajm×narx ga mos emas */
+            summaNomuvofiq: {soni:B.length, farqPul:bPul, qatorlar:B},
+            /* C: hajm yo'q pul bor */
+            hajmYoqPulBor: {soni:C.length, pul:cPul, qatorlar:C},
+            bosh: {soni:D.length, qatorlar:D},
+            izohlanadi: izohlanadi,
+            xulosa: xulosa,
+            vaqt:((Date.now()-t0)/1000).toFixed(1)+'s'};
+  }catch(e){
+    return {ok:false, xabar:'apiF2Bosliqlar: '+(e && e.message ? e.message : e)};
+  }
+}
