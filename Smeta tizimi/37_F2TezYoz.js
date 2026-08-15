@@ -288,6 +288,16 @@ function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
     edits = edits || []; dopps = dopps || [];
     if(!edits.length && !dopps.length) return {ok:false, xabar:'Ёзиш учун маълумот йўқ'};
 
+    /* ⚡ 2026-08-15 MUHR TEKSHIRUVI (39_F2Reestr.js).
+     * Tekshirilgan va topshirilgan oy tasodifan qayta yozilmasin.
+     * Quruq sinovga ruxsat — u hech narsa o'zgartirmaydi. */
+    if(!quruq && typeof _f2rMuhrTekshir === 'function'){
+      var _m = _f2rMuhrTekshir(obyekt, oyNom);
+      if(_m.muhrlangan) return {ok:false, muhr:true,
+        xabar:'«'+oyNom+'» МУҲРЛАНГАН — қайта ёзиш тақиқланган. '+
+              'Аввал муҳрни очинг (Ф2 тарихи → муҳр белгиси).'};
+    }
+
     /* varaq bo'yicha guruhlash: har smeta/varaq alohida yoziladi */
     var guruh = {};
     edits.forEach(function(e){

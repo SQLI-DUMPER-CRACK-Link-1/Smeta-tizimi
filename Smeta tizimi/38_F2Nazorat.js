@@ -547,6 +547,13 @@ function apiF2QatorTahrir(obyekt, oyNom, ozgarishlar){
     oyNom = String(oyNom||'').trim();
     if(!oyNom) return {ok:false, xabar:'Ой номи бўш'};
 
+    /* ⚡ 2026-08-15 MUHR TEKSHIRUVI — muhrlangan oy tahrirlanmaydi */
+    if(typeof _f2rMuhrTekshir === 'function'){
+      var _m = _f2rMuhrTekshir(obyekt, oyNom);
+      if(_m.muhrlangan) return {ok:false, muhr:true,
+        xabar:'«'+oyNom+'» МУҲРЛАНГАН — таҳрирлаш тақиқланган. Аввал муҳрни очинг.'};
+    }
+
     var oyK = (typeof _oyKey === 'function') ? _oyKey(oyNom) : oyNom.toLowerCase();
 
     /* sub+varaq bo'yicha guruhlash — har varaq bir marta ochiladi */

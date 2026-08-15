@@ -243,3 +243,164 @@ function apiF2ReestrTikla(obyekt){
     return {ok:false, xabar:'apiF2ReestrTikla: '+(e && e.message ? e.message : e)};
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * apiF2Undo(obyekt, oyNom, uid) — BITTA F2 NI BEKOR QILISH
+ *
+ * Foydalanuvchi tanlagan ustuvor ishlardan biri.
+ *
+ * MUAMMO: hozirgi «Тозалаш» BUTUN OYNI o'chiradi. Agar bir oyga ikkita
+ * F2 tushgan bo'lsa — ikkalasi ham yo'qoladi va ikkinchisini qaytadan
+ * kiritishga to'g'ri keladi.
+ *
+ * BU FUNKSIYA: `f2uid:` izohi bo'yicha AYNAN o'sha F2 dan kelgan
+ * qatorlarni tozalaydi, qo'shnisiga tegmaydi.
+ *
+ * uid bo'sh bo'lsa — HECH NARSA qilmaydi (butun oyni o'chirib yuborish
+ * xavfi bor). Butun oyni tozalash uchun alohida `apiF2OyOchirish` bor.
+ * ══════════════════════════════════════════════════════════════════ */
+function apiF2Undo(obyekt, oyNom, uid){
+  var t0 = Date.now();
+  try{
+    if(!obyekt) return {ok:false, xabar:'Обект берилмади'};
+    oyNom = String(oyNom||'').trim();
+    uid   = String(uid||'').trim();
+    if(!oyNom) return {ok:false, xabar:'Ой номи бўш'};
+    if(!uid)   return {ok:false, xabar:'uid берилмади — бутун ойни ўчириб '+
+                                       'юбормаслик учун бўш uid рад этилади'};
+
+    /* Muhr tekshiruvi */
+    var m = _f2rMuhrTekshir(obyekt, oyNom);
+    if(m.muhrlangan) return {ok:false, muhr:true,
+      xabar:'«'+oyNom+'» МУҲРЛАНГАН — аввал муҳрни очинг'};
+
+    var col = CFG.C, obs = _nzObyektlar(obyekt);
+    var oyK = (typeof _oyKey==='function') ? _oyKey(oyNom) : oyNom.toLowerCase();
+    var tozalandi = 0, summa = 0, varaqlar = [];
+
+    for(var oi=0; oi<obs.length; oi++){
+      var ob = obs[oi], plus = null;
+      try{ plus = _plusTop(ob); }catch(e){}
+      if(!plus) continue;
+
+      var shlar = plus.getSheets();
+      for(var si=0; si<shlar.length; si++){
+        var sh = shlar[si];
+        if(sh.getName().charAt(0) === '_') continue;
+
+        var oylar = [];
+        try{ oylar = _f2Oylar(sh) || []; }catch(e){ continue; }
+        var oyCol = 0;
+        for(var k=0;k<oylar.length;k++){
+          var kk = (typeof _oyKey==='function') ? _oyKey(oylar[k].nom) : String(oylar[k].nom).toLowerCase();
+          if(kk === oyK){ oyCol = oylar[k].col; break; }
+        }
+        if(!oyCol) continue;
+
+        var last = sh.getLastRow();
+        var hr = 1; try{ hr = _hdrRow(sh); }catch(e){}
+        var bosh = hr + 1;
+        if(bosh > last) continue;
+        var qSoni = last - bosh + 1;
+
+        var rng  = sh.getRange(bosh, oyCol, qSoni, 3);
+        var blok = rng.getValues();
+        var izoh = rng.getNotes();
+        var ozgardi = false, vSoni = 0;
+
+        for(var r=0; r<qSoni; r++){
+          var n = String(izoh[r][0]||'');
+          if(n.indexOf('f2uid:'+uid) < 0) continue;      // boshqa F2 — tegmaymiz
+          summa += _nzNum(blok[r][2]);
+          blok[r][0] = ''; blok[r][1] = ''; blok[r][2] = '';
+          izoh[r][0] = '';
+          ozgardi = true; tozalandi++; vSoni++;
+        }
+
+        if(ozgardi){
+          rng.setValues(blok);
+          try{ rng.setNotes(izoh); }catch(e){}
+          varaqlar.push({sub:ob, varaq:sh.getName(), qatorlar:vSoni});
+        }
+      }
+    }
+
+    try{ SpreadsheetApp.flush(); }catch(e){}
+
+    /* Reestrni yangilaymiz — yozilgan jami kamaydi */
+    try{
+      var n2 = apiF2Nazorat(obyekt);
+      if(n2.ok){
+        for(var z=0; z<n2.oylar.length; z++){
+          if(n2.oylar[z].nom !== oyNom) continue;
+          apiF2ReestrYoz({f2Id:'RETRO-'+obyekt+'-'+oyNom, obyekt:obyekt, oy:oyNom,
+            hujjatJami:'', yozilganJami:n2.oylar[z].summa,
+            qatorJami:n2.oylar[z].qatorlar, qatorYozildi:n2.oylar[z].qatorlar,
+            varaqlar:[], izoh:'uid '+uid+' бекор қилинди'});
+        }
+      }
+    }catch(e){}
+
+    return {ok:tozalandi>0, uid:uid, tozalandi:tozalandi, summa:summa,
+            varaqlar:varaqlar, vaqt:((Date.now()-t0)/1000).toFixed(1)+'s',
+            xabar: tozalandi
+              ? (tozalandi+' қатор бекор қилинди ('+summa.toFixed(2)+' сўм). '+
+                 'Бошқа Ф2 ларга тегилмади.')
+              : 'Бу uid бўйича қатор топилмади: '+uid};
+  }catch(e){
+    return {ok:false, xabar:'apiF2Undo: '+(e && e.message ? e.message : e)};
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * MUHRLASH (lock) — tekshirilgan oyni tasodifan qayta yozishdan saqlaydi
+ * ══════════════════════════════════════════════════════════════════ */
+
+/* Muhrlar `F2_REESTR` ning IZOH ustunida emas, alohida xususiyatda —
+ * reestr qayta yozilganda muhr yo'qolib ketmasligi uchun. */
+function _f2rMuhrKalit(obyekt, oyNom){
+  return 'F2MUHR::' + String(obyekt||'') + '::' + String(oyNom||'');
+}
+
+function _f2rMuhrTekshir(obyekt, oyNom){
+  try{
+    var v = PropertiesService.getScriptProperties().getProperty(_f2rMuhrKalit(obyekt, oyNom));
+    if(!v) return {muhrlangan:false};
+    return {muhrlangan:true, malumot:JSON.parse(v)};
+  }catch(e){ return {muhrlangan:false}; }
+}
+
+function apiF2Muhr(obyekt, oyNom, och){
+  try{
+    if(!obyekt || !oyNom) return {ok:false, xabar:'Обект/ой керак'};
+    var props = PropertiesService.getScriptProperties();
+    var kalit = _f2rMuhrKalit(obyekt, oyNom);
+
+    if(och){
+      props.deleteProperty(kalit);
+      return {ok:true, muhrlangan:false, xabar:'«'+oyNom+'» муҳри ОЧИЛДИ'};
+    }
+
+    var kim = '';
+    try{ kim = Session.getActiveUser().getEmail() || ''; }catch(e){}
+    /* Muhrlashda o'sha paytdagi jamini ham saqlaymiz — keyin o'zgargani bilinadi */
+    var jami = 0;
+    try{
+      var n = apiF2Nazorat(obyekt);
+      if(n.ok) for(var i=0;i<n.oylar.length;i++) if(n.oylar[i].nom===oyNom) jami = n.oylar[i].summa;
+    }catch(e){}
+
+    props.setProperty(kalit, JSON.stringify({sana:new Date().toISOString(), kim:kim, jami:jami}));
+    return {ok:true, muhrlangan:true, jami:jami,
+            xabar:'«'+oyNom+'» МУҲРЛАНДИ — тасодифан қайта ёзилмайди'};
+  }catch(e){
+    return {ok:false, xabar:'apiF2Muhr: '+(e && e.message ? e.message : e)};
+  }
+}
+
+function apiF2MuhrHolat(obyekt, oyNom){
+  try{
+    var m = _f2rMuhrTekshir(obyekt, oyNom);
+    return {ok:true, muhrlangan:m.muhrlangan, malumot:m.malumot||null};
+  }catch(e){ return {ok:false, xabar:String((e&&e.message)||e)}; }
+}

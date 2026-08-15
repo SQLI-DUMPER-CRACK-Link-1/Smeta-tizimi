@@ -762,6 +762,41 @@ export function useF2QatorTahrir() {
   });
 }
 
+/** Bitta F2 ni f2uid bo'yicha bekor qilish — qo'shnisiga tegmaydi */
+export function useF2Undo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom, uid }: { obyekt: string; oyNom: string; uid: string }) =>
+      gas<{ ok: boolean; tozalandi?: number; summa?: number; muhr?: boolean; xabar?: string }>(
+        'apiF2Undo', obyekt, oyNom, uid),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['f2oytafsilot'] });
+      qc.invalidateQueries({ queryKey: ['f2reestr'] });
+      qc.invalidateQueries({ queryKey: ['holat'] });
+    },
+  });
+}
+
+/** Oyni muhrlash / muhrni ochish */
+export function useF2Muhr() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom, och }: { obyekt: string; oyNom: string; och?: boolean }) =>
+      gas<{ ok: boolean; muhrlangan?: boolean; xabar?: string }>('apiF2Muhr', obyekt, oyNom, !!och),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['f2muhr'] }),
+  });
+}
+
+export function useF2MuhrHolat(obyekt: string, oyNom: string, enabled = true) {
+  return useQuery({
+    queryKey: ['f2muhr', obyekt, oyNom],
+    queryFn: () => gas<{ ok: boolean; muhrlangan: boolean;
+      malumot: { sana: string; kim: string; jami: number } | null }>('apiF2MuhrHolat', obyekt, oyNom),
+    enabled: enabled && !!obyekt && !!oyNom,
+    staleTime: 60_000,
+  });
+}
+
 /** Reestrsiz davrdan qolgan oylarni daftarga tushirish */
 export function useF2ReestrTikla() {
   const qc = useQueryClient();

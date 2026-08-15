@@ -14,8 +14,9 @@
  * Butun oy qayta yozilmaydi — faqat siz tekkan qatorlar.
  */
 import { useState, useMemo } from 'react';
-import { X, Save, Trash2, AlertTriangle, Search, MoveRight, Check } from 'lucide-react';
-import { useF2OyTafsilot, useF2QatorTahrir, useF2PriamoyZatrat, type F2OyQator } from '../../api/hooks';
+import { X, Save, Trash2, AlertTriangle, Search, MoveRight, Check, Lock, Unlock, Undo2 } from 'lucide-react';
+import { useF2OyTafsilot, useF2QatorTahrir, useF2PriamoyZatrat,
+         useF2Undo, useF2Muhr, useF2MuhrHolat, type F2OyQator } from '../../api/hooks';
 import { rangFon, rangChiziq, turNomi, belgiRamka, turBelgi } from '../../umumiy/turRang';
 
 const fmt = (n: number) =>
@@ -33,6 +34,10 @@ export default function F2OyTahrir({
   const tahrir = useF2QatorTahrir();
   /* ПРЯМЫЕ ЗАТРАТЫ — F2 hujjatidagi raqam bilan to'g'ridan-to'g'ri solishtiriladi */
   const pz = useF2PriamoyZatrat(obyekt, oyNom);
+  const undo = useF2Undo();
+  const muhr = useF2Muhr();
+  const muhrHolat = useF2MuhrHolat(obyekt, oyNom);
+  const qulf = !!muhrHolat.data?.muhrlangan;
 
   /* Faqat o'zgargan qatorlar saqlanadi — kalit: sub||varaq||row */
   const [ozgarishlar, setOzgarishlar] = useState<Record<string, Ozg>>({});
@@ -77,6 +82,13 @@ export default function F2OyTahrir({
   const [kochirishlar, setKochirishlar] = useState<Record<string, number>>({});
 
   const ozgarganSoni = new Set([...Object.keys(ozgarishlar), ...Object.keys(kochirishlar)]).size;
+
+  /* Bu oyga qaysi F2 lar tushgan — har biri alohida bekor qilinadi */
+  const uidRoyxat = useMemo(() => {
+    const m = new Map<string, number>();
+    qatorlar.forEach((q) => { if (q.uid) m.set(q.uid, (m.get(q.uid) || 0) + 1); });
+    return [...m.entries()].map(([uid, soni]) => ({ uid, soni }));
+  }, [qatorlar]);
 
   const yangila = (q: F2OyQator, maydon: keyof Ozg, qiymat: number | boolean) => {
     setOzgarishlar((p) => {
@@ -159,10 +171,43 @@ export default function F2OyTahrir({
               )}
             </p>
           </div>
-          <button onClick={onYopish} className="p-1.5 rounded hover:bg-white/10 text-text-mute">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* ⚡ MUHR — tekshirilgan oyni tasodifan qayta yozishdan saqlaydi.
+                Muhrlangan bo'lsa GAS ham yozishdan bosh tortadi (37/38 da tekshiruv). */}
+            <button
+              onClick={() => {
+                const och = qulf;
+                if (!och && !window.confirm(
+                  `«${oyNom}» muhrlanadi.\n\nBundan keyin bu oyga F2 yozib bo'lmaydi va ` +
+                  `qatorlari tahrirlanmaydi — tasodifan buzilmasligi uchun.\n\nDavom etamizmi?`)) return;
+                muhr.mutate({ obyekt, oyNom, och }, {
+                  onSuccess: (r) => toast(r.xabar || 'Bajarildi', r.ok ? 'ok' : 'danger', undefined, 6000),
+                  onError: (e: Error) => toast(e.message, 'danger'),
+                });
+              }}
+              disabled={muhr.isPending}
+              title={qulf ? 'Muhrni ochish' : 'Bu oyni muhrlash'}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] transition-colors
+                          disabled:opacity-40 ${qulf
+                            ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
+                            : 'bg-white/5 text-text-mute hover:bg-white/10'}`}>
+              {qulf ? <Lock size={12} /> : <Unlock size={12} />}
+              {qulf ? 'Muhrlangan' : 'Muhrlash'}
+            </button>
+            <button onClick={onYopish} className="p-1.5 rounded hover:bg-white/10 text-text-mute">
+              <X size={18} />
+            </button>
+          </div>
         </div>
+
+        {/* Muhrlangan bo'lsa — nima uchun tahrirlab bo'lmasligini aytamiz */}
+        {qulf && (
+          <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-[11px] text-amber-200">
+            🔒 Bu oy muhrlangan — tahrirlash va qayta yozish taqiqlangan.
+            {muhrHolat.data?.malumot?.kim && <span className="opacity-80"> ({muhrHolat.data.malumot.kim})</span>}
+            {' '}O'zgartirish uchun avval muhrni oching.
+          </div>
+        )}
 
         {/* ⚡⚡⚡ ПРЯМЫЕ ЗАТРАТЫ — foydalanuvchi javobi bo'yicha (2026-08-15):
             «rs mat ob qatorlarini chel-chas, mash-chas, resurs, oborudovaniya
@@ -212,6 +257,27 @@ export default function F2OyTahrir({
             Faqat nomuvofiqlar
           </label>
           <div className="flex-1" />
+          {/* ⚡ UNDO — bu oyga tushgan har bir F2 alohida bekor qilinadi.
+              Hozirgi «Tozalash» butun oyni o'chiradi; bir oyga ikki F2
+              tushgan bo'lsa ikkalasi ham yo'qolardi. */}
+          {uidRoyxat.map((u) => (
+            <button key={u.uid}
+              onClick={() => {
+                if (!window.confirm(
+                  `«${u.uid.slice(0, 12)}…» F2 dan kelgan ${u.soni} qator BEKOR QILINADI.\n\n` +
+                  `Bu oydagi boshqa F2 larga tegilmaydi.\n\nDavom etamizmi?`)) return;
+                undo.mutate({ obyekt, oyNom, uid: u.uid }, {
+                  onSuccess: (r) => toast(r.xabar || 'Bajarildi', r.ok ? 'ok' : 'warn', undefined, 8000),
+                  onError: (e: Error) => toast(e.message, 'danger'),
+                });
+              }}
+              disabled={qulf || undo.isPending}
+              title={`Bu F2 ni bekor qilish (${u.soni} qator)`}
+              className="flex items-center gap-1 px-1.5 py-1 rounded bg-red-500/10 text-red-400
+                         hover:bg-red-500/20 text-[10px] transition-colors disabled:opacity-30">
+              <Undo2 size={11} /> {u.uid.slice(0, 6)} ({u.soni})
+            </button>
+          ))}
           <div className="text-[12px] text-text-mute">
             Jami: <span className="font-medium text-text">{fmt(jonliJami)}</span> so'm
             {ozgarganSoni > 0 && (
@@ -348,7 +414,7 @@ export default function F2OyTahrir({
                          text-[12px] text-text hover:bg-white/10 transition-colors">
               Yopish
             </button>
-            <button onClick={saqla} disabled={!ozgarganSoni || tahrir.isPending}
+            <button onClick={saqla} disabled={!ozgarganSoni || tahrir.isPending || qulf}
               className="px-3 py-1.5 rounded-lg bg-accent text-white text-[12px] font-medium
                          hover:bg-accent/90 transition-colors disabled:opacity-40
                          flex items-center gap-1.5">
