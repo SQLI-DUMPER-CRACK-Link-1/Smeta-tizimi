@@ -14,10 +14,16 @@ export type DaraxtTugun = {
   children?: DaraxtTugun[];
 };
 
+/* ⚡ 2026-08-15: `rz` (razdel) YETISHMAYOTGAN edi — razdel qatorlari
+ * rangsiz va belgisiz chiqardi, ya'ni ierarxiya ko'zga tashlanmasdi.
+ * Foydalanuvchi: «eski tizimda rz rs mat ob bl har biri uchun vizual
+ * qulay ajrata olish uchun ranglar bilan ajratilgan edi».
+ * Palitra `umumiy/turRang.ts` bilan bir xil (indigo/binafsha/ko'k/sariq/moviy). */
 const TUR_RANG: Record<string, string> = {
+  rz: 'var(--t-rz, #818cf8)',
   bl: 'var(--t-bl, #c084fc)', rs: 'var(--t-rs, #60a5fa)', mat: 'var(--t-mat, #facc15)', ob: 'var(--t-ob, #2dd4bf)',
 };
-const TUR_NOM: Record<string, string> = { bl: 'ИШ', rs: 'РЕС', mat: 'МАТ', ob: 'ОБ' };
+const TUR_NOM: Record<string, string> = { rz: 'РЗ', bl: 'ИШ', rs: 'РЕС', mat: 'МАТ', ob: 'ОБ' };
 
 // Gap drop zone — smeta qatorlari orasiga tashlash uchun
 const GapZone = memo(function GapZone({

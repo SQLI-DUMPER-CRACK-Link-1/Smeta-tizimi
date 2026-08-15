@@ -690,6 +690,47 @@ export function useF2Nazorat(obyekt: string, enabled = true) {
   });
 }
 
+export type F2OyQator = {
+  sub: string; varaq: string; row: number;
+  marker: string; kod: string; nom: string; birlik: string;
+  smetaHajm: number; smetaNarx: number;
+  hajm: number; narx: number; summa: number;
+  uid: string; nomuvofiq: boolean;
+};
+
+/** Oyning HAR BIR yozilgan qatori — manzili, qiymatlari, qaysi F2 dan kelgani */
+export function useF2OyTafsilot(obyekt: string, oyNom: string, enabled = true) {
+  return useQuery({
+    queryKey: ['f2oytafsilot', obyekt, oyNom],
+    queryFn: () => gas<{
+      ok: boolean; qatorlar: F2OyQator[]; soni: number; jamiSumma: number;
+      uidSoni: number; nomuvofiqSoni: number; vaqt: string; xabar?: string;
+    }>('apiF2OyTafsilot', obyekt, oyNom),
+    enabled: enabled && !!obyekt && !!oyNom,
+    staleTime: 30_000,
+  });
+}
+
+/** Nuqtali tahrir — faqat ko'rsatilgan qatorlar, butun oy qayta yozilmaydi */
+export function useF2QatorTahrir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom, ozgarishlar }: {
+      obyekt: string; oyNom: string;
+      ozgarishlar: Array<{ sub: string; varaq: string; row: number;
+                           hajm?: number; narx?: number; summa?: number; ochir?: boolean }>;
+    }) => gas<{ ok: boolean; yozildi: number; ochirildi: number;
+                xatolar: string[]; xabar?: string }>(
+      'apiF2QatorTahrir', obyekt, oyNom, ozgarishlar),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['f2oytafsilot'] });
+      qc.invalidateQueries({ queryKey: ['f2reestr'] });
+      qc.invalidateQueries({ queryKey: ['f2nazorat'] });
+      qc.invalidateQueries({ queryKey: ['lrv'] });
+    },
+  });
+}
+
 /** Reestrsiz davrdan qolgan oylarni daftarga tushirish */
 export function useF2ReestrTikla() {
   const qc = useQueryClient();

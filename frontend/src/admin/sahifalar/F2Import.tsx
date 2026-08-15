@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import F2OyTahrir from '../qismlar/F2OyTahrir';
+import F2YozishOyna, { type YozishNatija } from '../qismlar/F2YozishOyna';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
   useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
@@ -341,6 +343,14 @@ export function F2Import() {
   /* ⚡ 2026-08-15 kafolat daftari — obyekt bo'yicha */
   const reestr = useF2Reestr(obyekt, !!obyekt);
   const reestrTikla = useF2ReestrTikla();
+  /* ⚡ 2026-08-15 qator darajasidagi tahrir oynasi */
+  const [qatorTahrirOy, setQatorTahrirOy] = useState<string | null>(null);
+  /* ⚡ 2026-08-15 yozish jarayoni/hisobot oynasi — «oxirida tugadi derdi» */
+  const [yozOyna, setYozOyna] = useState<null | {
+    holat: 'ishlamoqda' | 'tugadi' | 'xato'; oyNom: string;
+    yuborilgan: { qatorlar: number; dopps: number; hujjatJami: number | null };
+    natija: YozishNatija | null; xato?: string;
+  }>(null);
 
   // Umumiy obyektdagi Smeta va Oldingi F2 ni hisoblash
   const { umumiySmeta, umumiyOldingiF2 } = useMemo(() => {
@@ -1144,7 +1154,12 @@ export function F2Import() {
      * ENDI: yaxshi qatorlar YOZILADI, muammolilari o'tkazib yuboriladi va
      * ro'yxat sifatida ko'rsatiladi. Ish to'xtab qolmaydi. */
     try {
+      setYozOyna({ holat: 'ishlamoqda', oyNom,
+        yuborilgan: { qatorlar: nomBilan.length, dopps: dopps.length,
+                      hujjatJami: (aktJami === undefined || aktJami === null) ? null : Number(aktJami) },
+        natija: null });
       const r = await yoz.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
+      setYozOyna((p) => p ? { ...p, holat: 'tugadi', natija: r as YozishNatija } : p);
       const yozildi = r.yozilgan ?? 0;
       const rad = r.radEtilgan ?? 0;
 
@@ -1164,7 +1179,12 @@ export function F2Import() {
       setYozishBoshlandi(true);
       setQadam(2);
       await lrv.refetch();
-    } catch (e: any) { toast(`Xato: ${e.message}`, 'danger'); }
+    } catch (e: any) {
+      /* Xato ham OYNADA ko'rinsin — toast o'tib ketadi, foydalanuvchi
+       * «tugadimi yo'qmi?» degan holatda qolmasin. */
+      setYozOyna((p) => p ? { ...p, holat: 'xato', xato: e.message } : p);
+      toast(`Xato: ${e.message}`, 'danger');
+    }
   }
 
   const j = job.data?.job;
@@ -1856,7 +1876,21 @@ const onAvtoMoslash = () => {
                               disabled={useF2EskiFaylOqiHook.isPending && useF2EskiFaylOqiHook.variables?.oyNom === oy}
                               className="text-[11px] px-2 py-1 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded transition-colors"
                             >
-                              {useF2EskiFaylOqiHook.isPending && useF2EskiFaylOqiHook.variables?.oyNom === oy ? 'Ochilmoqda...' : 'Tahrirlash'}
+                              {useF2EskiFaylOqiHook.isPending && useF2EskiFaylOqiHook.variables?.oyNom === oy ? 'Ochilmoqda...' : 'Fayldan'}
+                            </button>
+                            {/* ⚡⚡⚡ 2026-08-15 QATORLAR — foydalanuvchi: «tahrirlash
+                                bosilgan aynan o'sha f2 ni smeta tarafi bilan
+                                bog'lanishi ochilishi kerak... o'sha joyning
+                                o'zidagi o'zgarish lrv plusda ham bo'lsin».
+                                Bu tugma faylni qayta o'qimaydi — smetaga NIMA
+                                YOZILGAN bo'lsa o'shani ochadi va joyida
+                                tahrirlashga beradi. */}
+                            <button
+                              onClick={() => setQatorTahrirOy(oy)}
+                              className="text-[11px] px-2 py-1 bg-accent/15 text-accent
+                                         hover:bg-accent/25 rounded transition-colors font-medium"
+                            >
+                              Qatorlar
                             </button>
                             <button 
                               onClick={() => {
@@ -2178,6 +2212,28 @@ const onAvtoMoslash = () => {
         </div>
       )}
       {/* TAHRIRLASH UCHUN QO'LDA FAYL TANLASH MODAL */}
+      {/* Yozish jarayoni + yakuniy hisobot */}
+      {yozOyna && (
+        <F2YozishOyna
+          holat={yozOyna.holat}
+          oyNom={yozOyna.oyNom}
+          yuborilgan={yozOyna.yuborilgan}
+          natija={yozOyna.natija}
+          xato={yozOyna.xato}
+          onYopish={() => { setYozOyna(null); lrv.refetch(); }}
+        />
+      )}
+
+      {/* Qator darajasidagi tahrir — smeta tarafi ↔ F2 tarafi yonma-yon */}
+      {qatorTahrirOy && (
+        <F2OyTahrir
+          obyekt={obyekt}
+          oyNom={qatorTahrirOy}
+          onYopish={() => { setQatorTahrirOy(null); lrv.refetch(); }}
+          toast={toast as (m: string, t?: string, x?: unknown, ms?: number) => void}
+        />
+      )}
+
       {tahrirModalOy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-[var(--surface-1)] border border-border w-full max-w-md rounded-lg shadow-2xl p-5 flex flex-col gap-4">

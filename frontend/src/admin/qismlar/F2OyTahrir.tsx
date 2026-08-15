@@ -1,0 +1,283 @@
+/**
+ * F2OyTahrir.tsx — KIRITILGAN F2 NI QATOR DARAJASIDA BOSHQARISH
+ *
+ * Foydalanuvchi: «kiritilgan f2 ni tahrirlash mumkin bo'lishi kerak, qaysi
+ * f2 bilan bog'langani va tahrirlash bosilgan aynan o'sha f2 ni smeta tarafi
+ * bilan bog'lanishi ochilishi kerak, agar xato bog'langan yoki boshqacha
+ * bo'lsa o'sha joyni o'zidagi o'zgarish lrv plusda ham shu o'zgarishni
+ * bera olishi kerak».
+ *
+ * BU OYNA: oyga yozilgan HAR BIR qatorni ko'rsatadi —
+ *   chapda SMETA tarafi (kod/nom/birlik/smeta hajmi va narxi)
+ *   o'ngda  F2 tarafi (hajm/narx/summa) — TAHRIRLANADI
+ * Saqlash → `apiF2QatorTahrir` → LRV_PLUS darhol yangilanadi.
+ * Butun oy qayta yozilmaydi — faqat siz tekkan qatorlar.
+ */
+import { useState, useMemo } from 'react';
+import { X, Save, Trash2, AlertTriangle, Search } from 'lucide-react';
+import { useF2OyTafsilot, useF2QatorTahrir, type F2OyQator } from '../../api/hooks';
+import { rangFon, rangChiziq, turNomi, belgiRamka, turBelgi } from '../../umumiy/turRang';
+
+const fmt = (n: number) =>
+  (Number(n) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+type Ozg = { hajm?: number; narx?: number; summa?: number; ochir?: boolean };
+
+export default function F2OyTahrir({
+  obyekt, oyNom, onYopish, toast,
+}: {
+  obyekt: string; oyNom: string; onYopish: () => void;
+  toast: (m: string, t?: string, x?: unknown, ms?: number) => void;
+}) {
+  const tafsilot = useF2OyTafsilot(obyekt, oyNom);
+  const tahrir = useF2QatorTahrir();
+
+  /* Faqat o'zgargan qatorlar saqlanadi — kalit: sub||varaq||row */
+  const [ozgarishlar, setOzgarishlar] = useState<Record<string, Ozg>>({});
+  const [qidiruv, setQidiruv] = useState('');
+  const [faqatMuammo, setFaqatMuammo] = useState(false);
+
+  const kalit = (q: F2OyQator) => `${q.sub}||${q.varaq}||${q.row}`;
+
+  const qatorlar = tafsilot.data?.qatorlar ?? [];
+
+  const korinadigan = useMemo(() => {
+    const s = qidiruv.trim().toLowerCase();
+    return qatorlar.filter((q) => {
+      if (faqatMuammo && !q.nomuvofiq) return false;
+      if (!s) return true;
+      return (q.nom || '').toLowerCase().includes(s) ||
+             (q.kod || '').toLowerCase().includes(s) ||
+             (q.varaq || '').toLowerCase().includes(s);
+    });
+  }, [qatorlar, qidiruv, faqatMuammo]);
+
+  /* Jonli jami — tahrirlar hisobga olinadi, saqlashdan oldin ko'rinadi */
+  const jonliJami = useMemo(() => {
+    let s = 0;
+    qatorlar.forEach((q) => {
+      const o = ozgarishlar[kalit(q)];
+      if (o?.ochir) return;
+      if (o && o.summa !== undefined) { s += o.summa; return; }
+      if (o && (o.hajm !== undefined || o.narx !== undefined)) {
+        s += (o.hajm ?? q.hajm) * (o.narx ?? q.narx);
+        return;
+      }
+      s += q.summa;
+    });
+    return s;
+  }, [qatorlar, ozgarishlar]);
+
+  const ozgarganSoni = Object.keys(ozgarishlar).length;
+
+  const yangila = (q: F2OyQator, maydon: keyof Ozg, qiymat: number | boolean) => {
+    setOzgarishlar((p) => {
+      const k = kalit(q);
+      const yangi = { ...(p[k] || {}), [maydon]: qiymat } as Ozg;
+      /* hajm yoki narx o'zgarsa summa qayta hisoblanadi (qo'lda kiritilmagan bo'lsa) */
+      if ((maydon === 'hajm' || maydon === 'narx') && yangi.summa === undefined) {
+        const h = yangi.hajm ?? q.hajm;
+        const n = yangi.narx ?? q.narx;
+        yangi.summa = Math.round(h * n * 10000) / 10000;
+      }
+      return { ...p, [k]: yangi };
+    });
+  };
+
+  const saqla = () => {
+    const roy = Object.entries(ozgarishlar).map(([k, v]) => {
+      const [sub, varaq, row] = k.split('||');
+      return { sub, varaq, row: Number(row), ...v };
+    });
+    if (!roy.length) return;
+    tahrir.mutate({ obyekt, oyNom, ozgarishlar: roy }, {
+      onSuccess: (r) => {
+        if (r.ok) {
+          toast(r.xabar || `${r.yozildi} qator yangilandi`, 'ok', undefined, 6000);
+          setOzgarishlar({});
+        } else {
+          toast(r.xabar || 'Saqlashda xato', 'danger', undefined, 8000);
+        }
+        if (r.xatolar?.length) toast(r.xatolar.slice(0, 3).join(' · '), 'warn', undefined, 9000);
+      },
+      onError: (e: Error) => toast(e.message, 'danger'),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-[var(--surface)] border border-border rounded-xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl">
+
+        {/* Sarlavha */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div>
+            <h3 className="font-medium text-text">«{oyNom}» — yozilgan qatorlar</h3>
+            <p className="text-[11px] text-text-mute mt-0.5">
+              {tafsilot.isLoading ? 'O\'qilmoqda…' : (
+                <>
+                  {tafsilot.data?.soni ?? 0} qator · {tafsilot.data?.uidSoni ?? 0} ta F2 dan
+                  {(tafsilot.data?.nomuvofiqSoni ?? 0) > 0 && (
+                    <span className="text-amber-400"> · {tafsilot.data?.nomuvofiqSoni} nomuvofiq</span>
+                  )}
+                  {tafsilot.data?.vaqt && <span className="opacity-60"> · {tafsilot.data.vaqt}</span>}
+                </>
+              )}
+            </p>
+          </div>
+          <button onClick={onYopish} className="p-1.5 rounded hover:bg-white/10 text-text-mute">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Asboblar */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-white/[0.02]">
+          <div className="relative flex-1 max-w-xs">
+            <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-mute" />
+            <input
+              value={qidiruv} onChange={(e) => setQidiruv(e.target.value)}
+              placeholder="Nom, kod yoki varaq…"
+              className="w-full pl-7 pr-2 py-1.5 rounded bg-white/5 border border-white/10
+                         text-[12px] text-text placeholder:text-text-mute outline-none
+                         focus:border-accent/50"
+            />
+          </div>
+          <label className="flex items-center gap-1.5 text-[11px] text-text-mute cursor-pointer">
+            <input type="checkbox" checked={faqatMuammo}
+                   onChange={(e) => setFaqatMuammo(e.target.checked)} />
+            Faqat nomuvofiqlar
+          </label>
+          <div className="flex-1" />
+          <div className="text-[12px] text-text-mute">
+            Jami: <span className="font-medium text-text">{fmt(jonliJami)}</span> so'm
+            {ozgarganSoni > 0 && (
+              <span className="ml-2 text-amber-300">({ozgarganSoni} o'zgardi)</span>
+            )}
+          </div>
+        </div>
+
+        {/* Jadval */}
+        <div className="flex-1 overflow-auto">
+          {tafsilot.isLoading ? (
+            <div className="p-6 space-y-2">
+              {[0, 1, 2, 3].map((i) => <div key={i} className="skel h-9 rounded" />)}
+            </div>
+          ) : !korinadigan.length ? (
+            <p className="text-center text-sm text-text-mute py-10">
+              {qatorlar.length ? 'Filtrga mos qator yo\'q' : 'Bu oyga hech narsa yozilmagan'}
+            </p>
+          ) : (
+            <table className="w-full text-[12px]">
+              <thead className="sticky top-0 bg-[var(--surface-2)] text-text-mute">
+                <tr className="text-left">
+                  <th className="px-2 py-1.5 font-medium">Tur</th>
+                  <th className="px-2 py-1.5 font-medium">Smeta tarafi</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Smeta hajmi</th>
+                  <th className="px-2 py-1.5 font-medium text-right">F2 hajm</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Narx</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Summa</th>
+                  <th className="px-2 py-1.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {korinadigan.map((q) => {
+                  const k = kalit(q);
+                  const o = ozgarishlar[k];
+                  const ochirilgan = !!o?.ochir;
+                  const belgi = turBelgi(q.marker);
+                  return (
+                    <tr key={k}
+                        className={`border-b border-white/5 border-l-2 ${rangChiziq(q.marker)}
+                                    ${ochirilgan ? 'opacity-40 line-through' : ''}
+                                    ${o && !ochirilgan ? 'bg-amber-500/5' : ''}
+                                    hover:bg-white/[0.03]`}>
+                      <td className="px-2 py-1.5 align-top">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium
+                                          ${rangFon(q.marker)} ${belgiRamka(q.marker)}`}>
+                          {turNomi(q.marker)}
+                        </span>
+                        {belgi && (
+                          <span className={`ml-1 text-[9px] ${belgi === 'zamena' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {belgi === 'zamena' ? '~' : '+'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5 align-top max-w-[280px]">
+                        <div className="text-text truncate" title={q.nom}>{q.nom || '—'}</div>
+                        <div className="text-[10px] text-text-mute truncate">
+                          {q.kod && <span className="mr-1">{q.kod}</span>}
+                          <span className="opacity-70">{q.varaq}:{q.row}</span>
+                          {q.uid && <span className="ml-1 opacity-50" title={`F2 uid: ${q.uid}`}>· {q.uid.slice(0, 8)}</span>}
+                        </div>
+                      </td>
+                      <td className="px-2 py-1.5 text-right align-top text-text-mute whitespace-nowrap">
+                        {fmt(q.smetaHajm)} <span className="opacity-60">{q.birlik}</span>
+                      </td>
+                      <td className="px-2 py-1.5 text-right align-top">
+                        <input type="number" step="any" disabled={ochirilgan}
+                          defaultValue={q.hajm}
+                          onChange={(e) => yangila(q, 'hajm', Number(e.target.value) || 0)}
+                          className="w-24 px-1.5 py-1 rounded bg-white/5 border border-white/10
+                                     text-right text-text outline-none focus:border-accent/50
+                                     disabled:opacity-40" />
+                      </td>
+                      <td className="px-2 py-1.5 text-right align-top">
+                        <input type="number" step="any" disabled={ochirilgan}
+                          defaultValue={q.narx}
+                          onChange={(e) => yangila(q, 'narx', Number(e.target.value) || 0)}
+                          className="w-28 px-1.5 py-1 rounded bg-white/5 border border-white/10
+                                     text-right text-text outline-none focus:border-accent/50
+                                     disabled:opacity-40" />
+                      </td>
+                      <td className="px-2 py-1.5 text-right align-top whitespace-nowrap">
+                        <span className={q.nomuvofiq ? 'text-amber-300' : 'text-text'}>
+                          {fmt(o?.summa ?? q.summa)}
+                        </span>
+                        {q.nomuvofiq && (
+                          <AlertTriangle size={11} className="inline ml-1 text-amber-400"
+                            aria-label="summa ≠ hajm × narx" />
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5 align-top">
+                        <button
+                          onClick={() => yangila(q, 'ochir', !ochirilgan)}
+                          title={ochirilgan ? 'Bekor qilish' : 'Bu qatorni tozalash'}
+                          className={`p-1 rounded transition-colors ${
+                            ochirilgan ? 'text-emerald-400 hover:bg-emerald-500/10'
+                                       : 'text-text-mute hover:text-red-400 hover:bg-red-500/10'}`}>
+                          <Trash2 size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Pastki panel */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+          <p className="text-[11px] text-text-mute">
+            {ozgarganSoni
+              ? `${ozgarganSoni} qator o'zgardi — saqlansa LRV_PLUS darhol yangilanadi`
+              : 'O\'zgarish yo\'q'}
+          </p>
+          <div className="flex gap-2">
+            <button onClick={onYopish}
+              className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10
+                         text-[12px] text-text hover:bg-white/10 transition-colors">
+              Yopish
+            </button>
+            <button onClick={saqla} disabled={!ozgarganSoni || tahrir.isPending}
+              className="px-3 py-1.5 rounded-lg bg-accent text-white text-[12px] font-medium
+                         hover:bg-accent/90 transition-colors disabled:opacity-40
+                         flex items-center gap-1.5">
+              <Save size={13} />
+              {tahrir.isPending ? 'Saqlanmoqda…' : 'Saqlash'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
