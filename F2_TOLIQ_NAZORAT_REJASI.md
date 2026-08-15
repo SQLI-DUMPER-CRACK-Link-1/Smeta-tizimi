@@ -218,10 +218,44 @@ chaqiruv**, oraliq qadam brauzerga kelmaydi. `50_Navbat.js` da naqsh bor.
 Eng katta ish. **Ehtiyot bo'ling** — yozuvchi hozir tez va to'g'ri ishlayapti,
 uni buzib qo'ymang.
 
+### ✅ TEKSHIRILDI: haqiqiy F2 fayl tuzilishi (2026-08-15)
+
+Fayl: `Desktop/Для ф2/Ой/Август/Август старт.xlsx` (6 varaq, 373 qator).
+Sarlavha 9-qatorda: `на.ед.изм. │ общая │ chel-ch │ narx │ mash-narx`
+(indekslar 7 │ 8 │ 9 │ 10 │ 11).
+
+**Sizning qoidangiz TASDIQLANDI.** 1-guruh o'lchovi:
+
+```
+ИШ qatori (13):                  6 790 853.1238
+resurslarining «общая» yig'indisi: 6 790 853.1238   ✓ MOS
+resurslarining ЧЕЛ+МАШ ustunlari:  6 790 853.1238   ✓ MOS
+```
+
+Ya'ni: (a) kategoriya ustunlari haqiqatan jamini beradi, (b) **ИШ qatori o'z
+resurslarining yig'indisi** — uni qo'shish ikki baravar sanash bo'ladi.
+`apiF2PriamoyZatrat` dagi «bl qatorlarini tashla» qoidasi **to'g'ri**.
+
+**⚠ LEKIN butun varaq bo'yicha mos kelmadi:**
+```
+nuqtasiz raqamli (ИШ) qatorlar jami : 508 539 468.88
+nuqtali (resurs) qatorlar jami      : 468 924 732.14
+farq                                 :  39 614 736.74
+```
+Guruh darajasida aniq, varaq darajasida emas — demak varaqda bo'lim
+sarlavhalari yoki bolasiz ИШ qatorlari bor. **Butun fayl uchun yagona qoida
+qo'yish XAVFLI.** Shuning uchun `apiF2QatlamTahlil` bunday holatda «aralash»
+deb belgilaydi va avtomatik jam CHIQARMAYDI — bu qaror haqiqiy ma'lumot
+bilan tasdiqlandi.
+
 ### 2. Arxiv fayllardan hujjat jamini avtomat o'qish
-Foydalanuvchi tanlovi. `apiF2EskiFaylOqi` oy bo'yicha faylni topadi; jami esa
-4-bo'limdagi qoida bilan hisoblanadi (`rs`/`mat`/`ob` qatorlarining
-ЧЕЛ/МАШ/МАТ/ОБ/М-К/КАБ ustunlari — `apiF2PriamoyZatrat` da tayyor mantiq bor).
-`apiF2ReestrTikla` shuni chaqirsin.
+Ustun indekslari endi **ma'lum** (yuqoridagi tekshiruv): «общая»=8, ЧЕЛ=10,
+МАШ=11, sarlavha 9-qatorda. `apiF2EskiFaylOqi` oy bo'yicha faylni topadi.
+
+**Lekin butun varaqqa yagona qoida qo'yilmasin** — yuqorida ko'rsatilganidek
+ota/bola varaq darajasida mos kelmaydi. **Guruh-guruh** yurish kerak: ИШ
+qatori topilsa uning resurslari yig'iladi va ota bilan solishtiriladi; mos
+kelsa hisobga olinadi, kelmasa «tekshirilmagan» deb belgilanadi.
+Son taxmin qilinmasin.
 
 **Eslatma:** har F2 o'zgarishidan keyin `_f2lab` stendida sinang.
