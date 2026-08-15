@@ -4,7 +4,7 @@ import F2YozishOyna, { type YozishNatija } from '../qismlar/F2YozishOyna';
 import F2Kafolat from '../qismlar/F2Kafolat';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useF2AvtoMoslash, useF2Yoz, useF2YozSinov, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
   useF2Reestr,
   useF2ReestrTikla,
   useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
@@ -347,6 +347,7 @@ export function F2Import() {
   /* ⚡ 2026-08-15 qator darajasidagi tahrir oynasi */
   const [qatorTahrirOy, setQatorTahrirOy] = useState<string | null>(null);
   const [kafolatOchiq, setKafolatOchiq] = useState(false);
+  const yozSinov = useF2YozSinov();
   /* ⚡ 2026-08-15 yozish jarayoni/hisobot oynasi — «oxirida tugadi derdi» */
   const [yozOyna, setYozOyna] = useState<null | {
     holat: 'ishlamoqda' | 'tugadi' | 'xato'; oyNom: string;
@@ -1156,6 +1157,41 @@ export function F2Import() {
      * ENDI: yaxshi qatorlar YOZILADI, muammolilari o'tkazib yuboriladi va
      * ro'yxat sifatida ko'rsatiladi. Ish to'xtab qolmaydi. */
     try {
+      /* ⚡⚡⚡ 2026-08-15 MAJBURIY QURUQ YURISH (foydalanuvchi tanlovi).
+       * Yozishdan OLDIN hech narsa o'zgartirmasdan sinab ko'ramiz va
+       * raqamlarni ko'rsatamiz. Xato yozib qo'yib keyin qidirishdan
+       * ko'ra, yozishdan oldin ko'rgan yaxshi.
+       * `apiF2YozTezSinov2` — yozuvchining o'zi, `quruq` rejimida. */
+      const sinov = await yozSinov.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
+      const sYoz = sinov.yozilgan ?? 0;
+      const sSum = (sinov as { yozilganSumma?: number }).yozilganSumma ?? 0;
+      const sFarq = (sinov as { farq?: number | null }).farq;
+
+      const satrlar = [
+        `«${oyNom}» yoziladi:`,
+        ``,
+        `  Qatorlar:  ${sYoz} ta${dopps.length ? ` (+${dopps.length} qo'shimcha)` : ''}`,
+        `  Smetalar:  ${sinov.smetalar ?? 0} ta`,
+        `  Summa:     ${sSum.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} so'm`,
+      ];
+      if (aktJami) {
+        satrlar.push(`  Hujjat:    ${Number(aktJami).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} so'm`);
+        satrlar.push(
+          sFarq !== null && sFarq !== undefined && Math.abs(sFarq) > 0.01
+            ? `  ⚠ FARQ:    ${sFarq.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} so'm`
+            : `  ✓ FARQ:    0 — hujjat bilan mos`
+        );
+      } else {
+        satrlar.push(`  Hujjat jami uzatilmadi — farq tekshirilmadi`);
+      }
+      satrlar.push('', 'Yozamizmi?');
+
+      if (!sYoz) {
+        toast(sinov.xabar || 'Sinovda birorta qator yozilmadi — bog\'lanishlarni tekshiring', 'danger', undefined, 10000);
+        return;
+      }
+      if (!window.confirm(satrlar.join('\n'))) return;
+
       setYozOyna({ holat: 'ishlamoqda', oyNom,
         yuborilgan: { qatorlar: nomBilan.length, dopps: dopps.length,
                       hujjatJami: (aktJami === undefined || aktJami === null) ? null : Number(aktJami) },
