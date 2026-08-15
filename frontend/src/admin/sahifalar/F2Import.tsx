@@ -365,6 +365,23 @@ export function F2Import() {
    * yo'qolardi («shuncha ish bir tiyn bo'ldimi»).
    * Endi har o'zgarish diskka (localStorage) tushadi. Brauzer yopilsa,
    * tok o'chsa ham ish joyida qoladi va qaytganda tiklash taklif etiladi. */
+  /* ⚡ 2026-08-15 OY TANLAGICH uchun yordamchilar */
+  const [yangiOyRejim, setYangiOyRejim] = useState(false);
+  const mavjudOylar = useMemo(() => (lrv.data?.oylar ?? []) as string[], [lrv.data?.oylar]);
+  /** Tanlangan oyda hozir nima turibdi — «davom etyapmanmi yoki ustiga yozyapmanmi» */
+  const tanlanganOyHolat = useMemo(() => {
+    let summa = 0, qatorlar = 0;
+    if (!oyNom) return { summa, qatorlar };
+    barglar(lrv.data?.tree as unknown as any[] || []).forEach((n: any) => {
+      const d = n.oylar?.[oyNom];
+      if (!d || typeof d !== 'object') return;
+      const son = (x: any) => Number(String(x ?? 0).replace(/\s/g, '').replace(',', '.')) || 0;
+      const sm = son(d.summa) || son(d.obyom) * son(d.narx);
+      if (sm || son(d.obyom)) { summa += sm; qatorlar++; }
+    });
+    return { summa, qatorlar };
+  }, [oyNom, lrv.data?.tree]);
+
   const [tiklashTaklif, setTiklashTaklif] = useState<ReturnType<typeof qoralamaOqi>>(null);
   useEffect(() => {
     if (!obyekt || !oyNom) return;
@@ -1242,13 +1259,50 @@ export function F2Import() {
         });
         if (borQator > 0) {
           const fm = (v: number) => v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+          /* ⚡⚡⚡ 2026-08-15 «DAVOM ETTIRISH» ni «USTMA-UST YOZISH» dan AJRATISH.
+           *
+           * Foydalanuvchi rejasi: «2000 qatorlik f2 ni bo'laklarga bo'lib
+           * yozib chiqardim». Bunda har bo'lakdan keyin oyda ma'lumot BO'LADI
+           * — bu MUAMMO EMAS, bu o'sha odamning o'z ishi.
+           * Agar bu yerda ko'r-ko'rona «tozalaymizmi?» deb so'ralsa va
+           * foydalanuvchi OK bossa — OLDINGI BO'LAKLARI O'CHIB KETARDI.
+           * Tuzoq aynan shu edi.
+           *
+           * Farqni smetadagi `f2uid` izohlari aytadi: oydagi mavjud qatorlar
+           * SHU aktning uid lariga tegishli bo'lsa — bu o'sha hujjatning
+           * davomi, tozalash TAKLIF QILINMAYDI. Begona uid bo'lsa — boshqa
+           * hujjat, o'shanda ogohlantiramiz. */
+          let davomMi = false;
+          try {
+            const t = await bogTikla.mutateAsync({ obyekt, oyNom });
+            if (t.ok && t.qatorlar?.length) {
+              const aktUidlar = new Set(aktBarchaTugun.map((x: any) => x.uid));
+              let oz = 0, begona = 0;
+              t.qatorlar.forEach((q) => {
+                if (!q.uid) return;
+                aktUidlar.has(q.uid) ? oz++ : begona++;
+              });
+              /* uid larning ko'pi shu aktdan bo'lsa — davom ettirilyapti */
+              davomMi = oz > 0 && oz >= begona;
+            }
+          } catch { /* aniqlay olmasak — ehtiyot uchun ogohlantiramiz */ }
+
+          if (davomMi) {
+            toast(
+              `«${oyNom}» oyida shu F2 ning oldingi bo'lagi bor ` +
+              `(${borQator} qator · ${fm(borSum)} so'm). Davom ettiramiz — eskisi o'chmaydi.`,
+              'ok', undefined, 8000,
+            );
+          } else {
           const javob = window.confirm(
-            `⚠️ DIQQAT — «${oyNom}» oyida ALLAQACHON ma'lumot bor:\n\n` +
+            `⚠️ DIQQAT — «${oyNom}» oyida BOSHQA hujjatning ma'lumoti bor:\n\n` +
             `    ${borQator} qator · ${fm(borSum)} so'm\n\n` +
             `Ustiga yozsangiz ikkalasi QO'SHILIB ketadi va oy jami\n` +
             `hujjatingizdan katta chiqadi (avval shunday bo'lgan).\n\n` +
-            `OK  → avval shu oyni TOZALAB, keyin yozamiz (tavsiya)\n` +
-            `Bekor → tozalamasdan, ustiga yozamiz`
+            `OK  → avval shu oyni TOZALAB, keyin yozamiz\n` +
+            `Bekor → tozalamasdan, ustiga yozamiz (bo'laklab yozayotgan\n` +
+            `        bo'lsangiz SHUNI tanlang)`
           );
           if (javob) {
             setYozOyna({ holat: 'ishlamoqda', oyNom,
@@ -1264,6 +1318,7 @@ export function F2Import() {
               return;
             }
           }
+          }   /* davomMi else */
         }
       }
 
@@ -1589,8 +1644,50 @@ const onAvtoMoslash = () => {
                 variantlar={['', ...obNomlari]}
               />
             </Maydon>
-            <Maydon nom="Oy" izoh="MM.YYYY">
-              <Kiritma qiymat={oyNom} ozgardi={setOyNom} placeholder="07.2026" />
+            {/* ⚡⚡⚡ 2026-08-15 OY TANLAGICH (foydalanuvchi taklifi):
+                «kiritilgan oylarni tanlash yoki yangi oy qo'shish qilishimiz
+                 kerak. agar shu mavjud oy tanlansa o'sha oygagina yozishimiz
+                 kerak, shunda man 2000 qatorlik f2 ni bo'laklarga bo'lib
+                 yozib chiqardim»
+                Erkin matn xavfli edi: bitta harf farqi («Sentyabr-2025» va
+                «SENTYABR-2025») YANGI ustun ochib yuborardi va pul ikki
+                joyga bo'linib ketardi. Endi mavjud oylar ro'yxatdan
+                tanlanadi, yangisi esa ATAYLAB qo'shiladi. */}
+            <Maydon nom="Oy" izoh={mavjudOylar.length
+              ? `${mavjudOylar.length} ta oy mavjud — ro'yxatdan tanlang yoki yangi qo'shing`
+              : 'Hali oy yo\'q — yangi oy nomini kiriting'}>
+              {yangiOyRejim || !mavjudOylar.length ? (
+                <div className="flex gap-2">
+                  <Kiritma qiymat={oyNom} ozgardi={setOyNom} placeholder="SENTYABR-2025" />
+                  {mavjudOylar.length > 0 && (
+                    <button
+                      onClick={() => { setYangiOyRejim(false); setOyNom(''); }}
+                      className="px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-text-mute
+                                 text-[12px] whitespace-nowrap transition-colors">
+                      ↩ Ro'yxatdan
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Tanlov qiymat={oyNom} ozgardi={setOyNom} variantlar={['', ...mavjudOylar]} />
+                  <button
+                    onClick={() => { setYangiOyRejim(true); setOyNom(''); }}
+                    className="px-2.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
+                               text-[12px] whitespace-nowrap transition-colors">
+                    ＋ Yangi oy
+                  </button>
+                </div>
+              )}
+              {/* Mavjud oy tanlansa — hozirgi holatini darhol ko'rsatamiz,
+                  «ustiga yozib qo'ydimmi?» degan savol tug'ilmasin */}
+              {!yangiOyRejim && oyNom && mavjudOylar.includes(oyNom) && (
+                <p className="mt-1 text-[11px] text-sky-300/90">
+                  Bu oyda hozir <b>{tanlanganOyHolat.qatorlar} qator</b> ·{' '}
+                  <b><FmtN val={tanlanganOyHolat.summa} /> so'm</b> yozilgan.
+                  Bo'laklab yozayotgan bo'lsangiz — davom etaverasiz, eskisi o'chmaydi.
+                </p>
+              )}
             </Maydon>
           </div>
 
