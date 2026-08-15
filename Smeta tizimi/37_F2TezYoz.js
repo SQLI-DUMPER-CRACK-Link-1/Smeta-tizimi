@@ -320,9 +320,49 @@ function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
                  barchaRad = barchaRad.concat(r.mos.radRoyxat||[]); }
     }
 
+    /* ⚡⚡⚡ 2026-08-15 F2 REESTRGA YOZISH (39_F2Reestr.js).
+     * Foydalanuvchi: «171 mlrd kiritsam, 171 mlrd smetada turishi kerak».
+     * Ilgari yozuvchi ishini bajarib TARQAB KETARDI — qaysi hujjat, qancha
+     * edi, qancha tushdi degan yozuv qolmasdi. Solishtirish uchun ikkinchi
+     * tomon yo'q edi. Endi har yozuv daftarga tushadi va farq ko'rinadi.
+     *
+     * `aktJami` — F2 hujjatining O'Z jami (frontend uzatadi).
+     * `yozilganSum` — biz smetaga yozgan summalar yig'indisi.
+     * Ikkalasi teng bo'lishi kerak; teng bo'lmasa reestr «ҚИСМАН» deydi. */
+    var yozilganSum = 0;
+    for(var e2=0; e2<edits.length; e2++){
+      var s2 = _tzNum(edits[e2].summa);
+      if(!s2) s2 = _tzNum(edits[e2].hajm) * _tzNum(edits[e2].narx);
+      yozilganSum += s2;
+    }
+
+    var reestr = null;
+    if(!quruq){
+      try{
+        if(typeof apiF2ReestrYoz === 'function'){
+          reestr = apiF2ReestrYoz({
+            obyekt: obyekt, oy: oyNom,
+            hujjatJami: (aktJami === undefined || aktJami === null || aktJami === '')
+                          ? '' : aktJami,        // noma'lum bo'lsa BO'SH — taxmin yo'q
+            yozilganJami: yozilganSum,
+            qatorJami: edits.length + dopps.length,
+            qatorYozildi: jamiYoz,
+            varaqlar: kalitlar,
+            izoh: dopps.length ? (dopps.length+' та қўшимча') : ''
+          });
+        }
+      }catch(e){ reestr = {ok:false, xabar:String((e&&e.message)||e)}; }
+    }
+
     return {ok:true, quruq:!!quruq, smetalar:kalitlar.length,
       yozilgan:jamiYoz, radEtilgan:jamiRad, radRoyxat:barchaRad.slice(0,40),
       tafsilot:natijalar,
+      /* nazorat raqamlari — panel shularni ko'rsatadi */
+      yozilganSumma: yozilganSum,
+      hujjatJami: (aktJami===undefined||aktJami===null||aktJami==='') ? null : Number(aktJami)||0,
+      farq: (aktJami===undefined||aktJami===null||aktJami==='')
+              ? null : (Number(aktJami)||0) - yozilganSum,
+      reestr: reestr,
       xabar:(quruq?'СИНОВ: ':'✅ ')+jamiYoz+' қатор ёзилди'
         + (jamiRad?(', '+jamiRad+' РАД ЭТИЛДИ (ном/код мос эмас)'):'')
         + ' · '+kalitlar.length+' сметада'};
