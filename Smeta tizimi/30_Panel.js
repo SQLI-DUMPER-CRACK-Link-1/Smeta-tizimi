@@ -3875,6 +3875,7 @@ function apiF2OyOchirish(obyekt, oyNom){
       var plus = _plusTop(subOb);
       if(!plus) return;
       var sheets = plus.getSheets();
+      var subOzgardi = false;
       for(var s=0;s<sheets.length;s++){
          var sh = sheets[s];
          if(String(sh.getName()).charAt(0) === '_') continue;   // xizmat varaqlari
@@ -3891,15 +3892,26 @@ function apiF2OyOchirish(obyekt, oyNom){
             vals[r][0]=''; vals[r][1]=''; vals[r][2]='';
             tozalandi++; changed=true;
          }
-         if(changed){
-            rng.setValues(vals);
-            sh.getRange(1, oCol, last, 1).clearNote();
-         }
+         if(!changed) continue;            // o'zgarmagan varaqqa TEGILMAYDI
+         rng.setValues(vals);
+         sh.getRange(1, oCol, last, 1).clearNote();
+         tegilganVaraq.push(subOb+' / '+sh.getName());
+         subOzgardi = true;
          try{ _oyYigindiFormulalarYangila(sh); }catch(e){}
       }
-      try{ if(typeof _nakrutkaSheetYoz==='function') _nakrutkaSheetYoz(plus, subOb); }catch(e){}
-      try{ serverYozFile(subOb, plus, sozAsosiy()); }catch(e){}
-      try{ if(typeof _sbDirty==='function') _sbDirty(subOb); }catch(e){}
+      /* ⚡⚡⚡ 2026-08-15 TEZLIK — «5 daqiqadan beri tozalanmoqda deyapdi,
+       * yana failed to fetch dedi». Bu MENING kechagi o'zgarishim oqibati:
+       * varaq-nomi filtrini olib tashlaganimda funksiya 26 ta sub-obyektni
+       * aylanib, HAR BIRI uchun og'ir yakuniy ishlarni yuritadigan bo'ldi —
+       * eng og'iri `serverYozFile` (dashboardni qayta hisoblab yozadi).
+       * Hech narsa tozalanmagan sub uchun ham to'liq sinxron ishlardi va
+       * GAS 6 daqiqa limitiga urilardi.
+       * ENDI: og'ir ishlar FAQAT haqiqatan o'zgargan sub uchun. */
+      if(subOzgardi){
+         try{ if(typeof _nakrutkaSheetYoz==='function') _nakrutkaSheetYoz(plus, subOb); }catch(e){}
+         try{ serverYozFile(subOb, plus, sozAsosiy()); }catch(e){}
+         try{ if(typeof _sbDirty==='function') _sbDirty(subOb); }catch(e){}
+      }
    });
    _holatInvalidate(obyekt);
    /* Nechta varaqqa tegilgani ham qaytariladi — «bosdim lekin turibdi»
