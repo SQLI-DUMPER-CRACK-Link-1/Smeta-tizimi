@@ -161,11 +161,13 @@ F2 faylida **qat'iy bir katakda** turadimi (masalan «Всего прямых з
 qatori), yoki har hujjatda har xil joydami? Agar qat'iy bo'lsa —
 avtomatik o'qiyman.
 
-**2. `bl` va `rs` — qaysi biri asos?**
-F2 ni bog'laganda **ish qatoriga** (bl) yozasizmi, yoki uning ostidagi
-**resurslarga** (rs) ham? Ikkalasiga ham yozilsa jamlashda ikki baravar
-chiqadi. `apiF2Nazorat` buni endi ogohlantiradi, lekin qaysi biri
-«haqiqiy» ekanini siz aytishingiz kerak.
+**2. ~~`bl` va `rs` — qaysi biri asos?~~ ✅ JAVOB KERAK EMAS**
+Bu savolni bergandim, lekin javobsiz 171 mlrd tekshiruvi ishonchsiz
+qolardi. Endi tizim O'ZI aniqlaydi: `apiF2QatlamTahlil` LRV_PLUS ni
+ketma-ket o'qib, har ИШ qatorining o'z summasini uning РЕСУРСlari
+yig'indisi bilan solishtiradi. Teng bo'lsa — resurslar ishning yoyilmasi,
+jami bir marta sanaladi. Teng bo'lmasa — «aralash» deb belgilaydi va
+avtomatik jam CHIQARMAYDI (son taxmin qilinmaydi).
 
 **3. 171 mlrd — bitta obyektmi yoki hammasi?**
 Ekрandagi panel bitta obyekt uchun (44.39 mlrd smeta). 171 mlrd —
