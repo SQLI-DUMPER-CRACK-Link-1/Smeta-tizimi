@@ -646,6 +646,72 @@ export function useF2OyOchirish() {
   });
 }
 
+/* ⚡⚡⚡ 2026-08-15 F2 NAZORAT QATLAMI (38_F2Nazorat.js + 39_F2Reestr.js).
+ * Foydalanuvchi: «manga aniqlik kerak... 171 mlrd kiritsam 171 mlrd
+ * smetada turishi kerak». Bu hooklar aynan shu solishtiruvni ochadi. */
+
+export type F2ReestrYozuv = {
+  f2Id: string; obyekt: string; oy: string; faylNom: string;
+  sana: string; kim: string;
+  hujjatJami: number | null; yozilganJami: number; farq: number | null;
+  qatorJami: number; qatorYozildi: number;
+  holat: string; varaqlar: string; izoh: string;
+};
+
+/** F2 REESTR — kafolat daftari. obyekt bo'sh = BARCHA obyektlar. */
+export function useF2Reestr(obyekt?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['f2reestr', obyekt || '*'],
+    queryFn: () => gas<{
+      ok: boolean; yozuvlar: F2ReestrYozuv[]; soni: number;
+      jamiHujjat: number; jamiYozilgan: number; farq: number;
+      hujjatJamiKiritilmagan: number; ishonchli: boolean; xabar?: string;
+    }>('apiF2ReestrOl', obyekt || ''),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+/** LRV_PLUS dan haqiqiy oy summalari — taxmin emas, qog'ozdagi raqam */
+export function useF2Nazorat(obyekt: string, enabled = true) {
+  return useQuery({
+    queryKey: ['f2nazorat', obyekt],
+    queryFn: () => gas<{
+      ok: boolean; jamiSumma: number; varaqSoni: number;
+      oylar: Array<{
+        nom: string; summa: number; obyom: number; qatorlar: number;
+        pulliQatlamlar: string[]; ikkiBaravarXavfi?: boolean;
+        varaqlar: Array<{ sub: string; varaq: string; summa: number; qatorlar: number }>;
+      }>;
+      ogohlantirish: string[]; vaqt: string; xabar?: string;
+    }>('apiF2Nazorat', obyekt),
+    enabled: enabled && !!obyekt,
+    staleTime: 60_000,
+  });
+}
+
+/** Reestrsiz davrdan qolgan oylarni daftarga tushirish */
+export function useF2ReestrTikla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt }: { obyekt: string }) =>
+      gas<{ ok: boolean; qoshildi: number; yangilandi: number;
+            eslatma?: string; xabar?: string }>('apiF2ReestrTikla', obyekt),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['f2reestr'] }); },
+  });
+}
+
+/** Eski yozuvga hujjat jamini qo'lda kiritish (farq hisobi ishonchli bo'lishi uchun) */
+export function useF2ReestrHujjatJami() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ f2Id, summa }: { f2Id: string; summa: number }) =>
+      gas<{ ok: boolean; farq?: number; holat?: string; xabar?: string }>(
+        'apiF2ReestrHujjatJami', f2Id, summa),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['f2reestr'] }); },
+  });
+}
+
 /** Eski kiritilgan F2 arxiv faylini Drive dan qidirish */
 /**
  * Arxivdagi oy faylini topish (tahrirlash uchun).

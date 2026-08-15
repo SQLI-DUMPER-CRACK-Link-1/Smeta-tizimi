@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
   useF2AvtoMoslash, useF2Yoz, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useF2Reestr,
+  useF2ReestrTikla,
   useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
 } from '../../api/hooks';
 import {
@@ -336,6 +338,9 @@ export function F2Import() {
   }
   const useF2OyOchirishHook = useF2OyOchirish();
   const useF2EskiFaylOqiHook = useF2EskiFaylOqi();
+  /* ⚡ 2026-08-15 kafolat daftari — obyekt bo'yicha */
+  const reestr = useF2Reestr(obyekt, !!obyekt);
+  const reestrTikla = useF2ReestrTikla();
 
   // Umumiy obyektdagi Smeta va Oldingi F2 ni hisoblash
   const { umumiySmeta, umumiyOldingiF2 } = useMemo(() => {
@@ -1711,6 +1716,59 @@ const onAvtoMoslash = () => {
                   >
                     ↻ Qayta o'qish
                   </button>
+                </div>
+              )}
+
+              {/* ⚡⚡⚡ 2026-08-15 KAFOLAT BLOKI (39_F2Reestr.js).
+                  Foydalanuvchi: «171 122 545 454 so'm kiritgan bo'lsam,
+                  171 122 545 454 so'm smetada ham turishi kerak».
+                  Ikki tomon yonma-yon: hujjatlarda qancha bor, smetaga
+                  qancha tushgan, farq qancha. Farq ≠ 0 → qizil. */}
+              {!lrv.isLoading && !lrv.isError && reestr.data?.ok && (
+                <div className={`mb-3 p-2 rounded text-[12px] border ${
+                  reestr.data.farq === 0 && reestr.data.ishonchli
+                    ? 'bg-emerald-500/10 border-emerald-500/30'
+                    : 'bg-amber-500/10 border-amber-500/30'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-text">🔒 Kafolat</span>
+                    <span className="text-[10px] text-text-mute">{reestr.data.soni} yozuv</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-mute">Hujjatlarda:</span>
+                    <span className="text-text"><FmtN val={reestr.data.jamiHujjat} /></span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-mute">Smetaga tushgan:</span>
+                    <span className="text-text"><FmtN val={reestr.data.jamiYozilgan} /></span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/10 pt-1 mt-1 font-medium">
+                    <span className="text-text-mute">FARQ:</span>
+                    <span className={reestr.data.farq === 0 ? 'text-emerald-400' : 'text-amber-300'}>
+                      <FmtN val={reestr.data.farq} />
+                    </span>
+                  </div>
+                  {/* HALOLLIK: hujjat jami kiritilmagan yozuvlar farqni ishonchsiz qiladi */}
+                  {!reestr.data.ishonchli && (
+                    <p className="mt-1 text-[10px] text-amber-300/90 leading-snug">
+                      ⚠ {reestr.data.hujjatJamiKiritilmagan} ta yozuvda hujjat jami
+                      kiritilmagan — bu farq to'liq ishonchli emas.
+                    </p>
+                  )}
+                  {reestr.data.soni === 0 && (
+                    <button
+                      onClick={() => reestrTikla.mutate({ obyekt }, {
+                        onSuccess: (r: any) => toast(
+                          r.ok ? `${r.qoshildi} oy daftarga tushdi. ${r.eslatma || ''}`
+                               : (r.xabar || 'Xato'), r.ok ? 'ok' : 'danger', undefined, 9000),
+                        onError: (e: any) => toast(e.message, 'danger'),
+                      })}
+                      disabled={reestrTikla.isPending}
+                      className="mt-2 w-full px-2 py-1.5 rounded bg-white/10 hover:bg-white/20
+                                 text-[11px] text-text transition-colors disabled:opacity-50"
+                    >
+                      {reestrTikla.isPending ? 'Tiklanmoqda…' : '↺ Eski oylarni daftarga tushirish'}
+                    </button>
+                  )}
                 </div>
               )}
 
