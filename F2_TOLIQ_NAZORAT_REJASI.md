@@ -200,14 +200,28 @@ xabar. Siz bilmay qolmaysiz.
 
 ---
 
-## 6. QOLGAN ISHLAR
+## 6. QOLGAN ISHLAR (aniq spetsifikatsiya bilan)
 
-1. Jonli progress (yozuvchini navbat rejimiga o'tkazish — GAS bitta
-   chaqiruvda ishlagani uchun oraliq qadam brauzerga kelmaydi)
-2. «Hisobotni saqlash» tugmasi (hozir hisobot faqat ekranda)
-3. Taklif B: F2 ni `f2uid` bo'yicha butunlay bekor qilish (undo)
-4. Taklif C: oyni muhrlash (lock)
-5. Taklif A: yozishdan oldin majburiy quruq yurish
+✅ **Quruq yurish** — BAJARILDI. Yozishdan oldin sinov + raqamlar + tasdiq.
 
-**Bloklovchi:** 4-bo'limdagi savollarga javob (ayniqsa **2-savol: bl mi rs mi**
-— noto'g'ri bo'lsa pul ikki baravar sanaladi).
+### 1. F2 ni butunlay bekor qilish (undo)
+ —  izohi bo'yicha AYNAN o'sha
+yozuvlarni tozalaydi, boshqasiga tegmaydi. Hozirgi «Tozalash» butun oyni
+o'chiradi — bir oyga ikki F2 tushgan bo'lsa ikkalasi ham yo'qoladi.
+Manba:  allaqachon har qatorning  ini qaytaradi.
+
+### 2. Oyni muhrlash (lock)
+ ga  ustuni. Muhrlangan oyga  va
+ yozishdan BOSH TORTADI. Ochish alohida amal + jurnal.
+
+### 3. Jonli progress
+Yozuvchini navbat (trigger) rejimiga o'tkazish kerak — hozir GAS da
+BITTA chaqiruv, oraliq qadam brauzerga kelmaydi.  naqshi bor.
+Eng katta ish; ehtiyot bo'ling — yozuvchi hozir tez va to'g'ri ishlayapti.
+
+### 4. Arxiv fayllardan hujjat jamini avtomat o'qish
+Foydalanuvchi tanlovi.  oy bo'yicha faylni topadi;
+jami esa 4-bo'limdagi qoida bilan hisoblanadi (rs/mat/ob qatorlarining
+ЧЕЛ/МАШ/МАТ/ОБ/М-К/КАБ ustunlari).  shuni chaqirsin.
+
+**Eslatma:** har o'zgarishdan keyin  stendida sinang.
