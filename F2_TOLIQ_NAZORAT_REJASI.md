@@ -103,20 +103,24 @@ varaqda, qaysi qatorda ekani bir bosishda ochiladi. Taxmin qilish tugaydi.
       reestrga kiritish (`HUJJAT_JAMI` bo'sh — qo'lda kiritiladi yoki
       arxiv fayldan o'qiladi)
 
-### FAZA 3 — JARAYON OYNASI ✅ *(bajarildi — F2YozishOyna.tsx)*
-- [x] Yozish bosilganda modal ochilsin, real vaqtda qadamlar:
-      `Varaq 1/4 · АРХИТЕКТУРНАЯ · 412 qator o'qildi · yozildi ✓`
-- [x] Oxirida **yakuniy hisobot**: yozildi / o'tkazib yuborildi / xato,
-      har biri ro'yxat bilan
-- [x] «Yopish» emas — «**Hisobotni saqlash**» (reestrga bog'lanadi)
+### FAZA 3 — JARAYON OYNASI ✅ *(asosan bajarildi — F2YozishOyna.tsx)*
+- [x] Yozish bosilganda modal ochiladi (ishlamoqda / tugadi / xato)
+- [x] **Yakuniy hisobot**: yozilgan qatorlar, smetalar kesimi, summa, FARQ
+- [x] Xato ham oynada qoladi (toast o'tib ketadi)
+- [ ] ⚠ **Qadam-baqadam jonli progress QILINMADI.** Yozish GAS tarafida
+      BITTA chaqiruvda bajariladi — oraliq qadamlar brauzerga kelmaydi.
+      Soxta animatsiya ko'rsatmadim. Haqiqiy progress uchun yozuvchini
+      navbat (trigger) rejimiga o'tkazish kerak — alohida ish.
+- [ ] «Hisobotni saqlash» tugmasi — hozir hisobot faqat ekranda
 
 ### FAZA 4 — QATOR DARAJASIDA BOSHQARUV ✅ *(bajarildi — F2OyTahrir.tsx)*
 - [x] Oy → «Tahrirlash» → **qatorlar jadvali** (`apiF2OyTafsilot`)
 - [x] Har qatorda: smeta tomoni ↔ F2 tomoni yonma-yon
-- [x] Amallar: **qiymatni o'zgartirish · bog'lanishni uzish · boshqa
-      qatorga ko'chirish · o'chirish**
+- [x] Amallar: **qiymatni o'zgartirish · qatorni tozalash** (bekor qilinadi)
+- [ ] ⚠ «Boshqa qatorga ko'chirish» QILINMADI — hozir tozalab, kerakli
+      qatorga qayta bog'lash kerak
 - [x] Saqlash → `apiF2QatorTahrir` → LRV_PLUS **darhol** yangilanadi
-- [x] Nomuvofiq qatorlar (`summa ≠ hajm×narx`) qizil bilan tepada
+- [x] Nomuvofiq qatorlar (`summa ≠ hajm×narx`) belgilanadi + filtri bor
 
 ### FAZA 5 — RANGLAR ✅ *(bajarildi — umumiy/turRang.ts)*
 
@@ -133,13 +137,15 @@ chiqaramiz va hamma joyda ishlatamiz:
 | `~` zamena | rose ramka | Almashtirilgan |
 | `+` qo'shimcha | emerald ramka | Qo'shimcha ish |
 
-Chap tomonda 3px rangli chiziq + turi qisqartma bilan — ko'z bir qarashda
-ajratadi.
+Chap tomonda rangli chiziq + turi qisqartma bilan. `F2Daraxt.tsx` da `rz`
+YETISHMAYOTGAN edi (razdel rangsiz va belgisiz chiqardi) — qo'shildi.
+YETISHMAYOTGAN edi (razdel rangsiz chiqardi) — qo'shildi.
 
-### FAZA 6 — KAFOLAT PANELI ✅ *(asosiy blok bajarildi)*
-- [x] Yuqorida doimiy: `Kiritilgan Σ` · `Yozilgan Σ` · `FARQ`
-- [x] Farq ≠ 0 bo'lsa qizil + «Sababni ko'rsat» tugmasi
-- [x] Ro'yxat: qaysi F2, qancha farq, qaysi varaq
+### FAZA 6 — KAFOLAT PANELI 🔶 *(qisman)*
+- [x] Yuqorida doimiy: `Hujjatlarda Σ` · `Smetaga tushgan Σ` · `FARQ`
+- [x] Farq ≠ 0 bo'lsa sariq + ishonchsizlik ogohlantirishi
+- [ ] «Sababni ko'rsat» tugmasi va reestr yozuvlari ro'yxati QILINMADI
+      (backend tayyor — `apiF2ReestrOl` yozuvlarni qaytaradi, UI qoldi)
 
 ---
 
@@ -192,7 +198,14 @@ xabar. Siz bilmay qolmaysiz.
 
 ---
 
-## 6. KEYINGI QADAM
+## 6. QOLGAN ISHLAR
 
-Sizdan javob kelguncha men **FAZA 2 (reestr)** ni boshlayman — u qolgan
-hamma narsaning poydevori va savollaringizga javobsiz ham qurilaveradi.
+1. Jonli progress (yozuvchini navbat rejimiga o'tkazish)
+2. «Boshqa qatorga ko'chirish» amali
+3. Kafolat panelida reestr yozuvlari ro'yxati + «sababni ko'rsat»
+4. Taklif B: F2 ni `f2uid` bo'yicha butunlay bekor qilish (undo)
+5. Taklif C: oyni muhrlash (lock)
+6. Taklif A: yozishdan oldin majburiy quruq yurish
+
+**Bloklovchi:** 4-bo'limdagi savollarga javob (ayniqsa **2-savol: bl mi rs mi**
+— noto'g'ri bo'lsa pul ikki baravar sanaladi).
