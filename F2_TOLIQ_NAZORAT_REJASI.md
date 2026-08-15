@@ -204,23 +204,21 @@ xabar. Siz bilmay qolmaysiz.
 
 ✅ **Quruq yurish** — BAJARILDI. Yozishdan oldin sinov + raqamlar + tasdiq.
 
-### 1. F2 ni butunlay bekor qilish (undo)
-`apiF2Undo(obyekt, oyNom, f2Id)` — `f2uid` izohi bo'yicha **aynan o'sha**
-yozuvlarni tozalaydi, boshqasiga tegmaydi. Hozirgi «Tozalash» butun oyni
-o'chiradi — bir oyga ikki F2 tushgan bo'lsa ikkalasi ham yo'qoladi.
-Manba tayyor: `apiF2OyTafsilot` har qatorning `uid` ini qaytaradi.
+✅ **F2 ni bekor qilish (undo)** — BAJARILDI (`apiF2Undo`, v304).
+`f2uid` bo'yicha aynan o'sha F2 tozalanadi, qo'shnisiga tegilmaydi.
+Bo'sh uid rad etiladi (butun oyni o'chirib yubormaslik uchun).
 
-### 2. Oyni muhrlash (lock)
-`F2_REESTR` ga `MUHR` ustuni qo'shiladi. Muhrlangan oyga `apiF2TezYoz` va
-`apiF2QatorTahrir` yozishdan **bosh tortadi**. Ochish alohida amal + jurnal.
+✅ **Oyni muhrlash (lock)** — BAJARILDI (`apiF2Muhr`, v304).
+Muhr `ScriptProperties` da (reestr qayta yozilganda yo'qolmasin).
+Tekshiruv **uch joyda**: `apiF2YozTez2`, `apiF2QatorTahrir`, `apiF2Undo`.
 
-### 3. Jonli progress
+### 1. Jonli progress
 Yozuvchini navbat (trigger) rejimiga o'tkazish kerak — hozir GAS da **bitta
 chaqiruv**, oraliq qadam brauzerga kelmaydi. `50_Navbat.js` da naqsh bor.
 Eng katta ish. **Ehtiyot bo'ling** — yozuvchi hozir tez va to'g'ri ishlayapti,
 uni buzib qo'ymang.
 
-### 4. Arxiv fayllardan hujjat jamini avtomat o'qish
+### 2. Arxiv fayllardan hujjat jamini avtomat o'qish
 Foydalanuvchi tanlovi. `apiF2EskiFaylOqi` oy bo'yicha faylni topadi; jami esa
 4-bo'limdagi qoida bilan hisoblanadi (`rs`/`mat`/`ob` qatorlarining
 ЧЕЛ/МАШ/МАТ/ОБ/М-К/КАБ ustunlari — `apiF2PriamoyZatrat` da tayyor mantiq bor).
