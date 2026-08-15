@@ -738,6 +738,20 @@ export function useF2Bosliqlar(obyekt: string, oyNom: string, hujjatJami?: numbe
   });
 }
 
+/** ⚡ 2026-08-15: smetadagi `f2uid` izohlaridan bog'lanishlarni tiklash.
+ *  Yozuvchi har qatorga f2uid qo'yadi — ya'ni bog'lash ishi VARAQNING
+ *  O'ZIDA saqlangan. Brauzer yopilsa ham qayta bog'lash SHART EMAS. */
+export function useF2BoglanishTikla() {
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom }: { obyekt: string; oyNom: string }) =>
+      gas<{ ok: boolean; qatorlar: Array<{
+        sub: string; varaq: string; row: number; uid: string;
+        kod: string; nom: string; hajm: number; narx: number; summa: number;
+      }>; soni: number; uidSoni: number; xabar?: string }>(
+        'apiF2OyTafsilot', obyekt, oyNom),
+  });
+}
+
 export type F2OyQator = {
   sub: string; varaq: string; row: number;
   marker: string; kod: string; nom: string; birlik: string;

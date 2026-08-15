@@ -4,7 +4,7 @@ import F2YozishOyna, { type YozishNatija } from '../qismlar/F2YozishOyna';
 import F2Kafolat from '../qismlar/F2Kafolat';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2YozSinov, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useF2AvtoMoslash, useF2Yoz, useF2YozSinov, useF2BoglanishTikla, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
   useF2Reestr,
   useF2ReestrTikla,
   useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
@@ -348,6 +348,7 @@ export function F2Import() {
   const [qatorTahrirOy, setQatorTahrirOy] = useState<string | null>(null);
   const [kafolatOchiq, setKafolatOchiq] = useState(false);
   const yozSinov = useF2YozSinov();
+  const bogTikla = useF2BoglanishTikla();
   /* ⚡ 2026-08-15 yozish jarayoni/hisobot oynasi — «oxirida tugadi derdi» */
   const [yozOyna, setYozOyna] = useState<null | {
     holat: 'ishlamoqda' | 'tugadi' | 'xato'; oyNom: string;
@@ -2195,6 +2196,60 @@ const onAvtoMoslash = () => {
               Yozish uzilib qolsa yoki brauzer yopilsa — bog'lanishlar
               diskda qoladi va shu yerda tiklash taklif qilinadi.
               Qayta soatlab bog'lash kerak emas. */}
+          {/* ⚡⚡⚡ 2026-08-15 SMETADAN BOG'LANISHNI TIKLASH.
+              Yozuvchi har qatorga `f2uid` izohini qo'yadi — ya'ni bog'lash
+              ishi VARAQNING O'ZIDA saqlanadi. Yozish uzilib qolgan bo'lsa
+              ham tez yo'l (oddiy qatorlar) allaqachon tushgan bo'ladi.
+              Shu tugma o'sha izohlardan bog'lanishlarni QAYTA TIKLAYDI —
+              soatlab qayta bog'lash SHART EMAS.
+              Foydalanuvchi: «boshqatdan kiritib chiqishim kerakmi yana» — YO'Q. */}
+          {obyekt && oyNom && aktTree && (
+            <div className="rounded-[10px] border border-sky-500/30 bg-sky-500/[.07] p-3 flex items-center gap-3">
+              <div className="flex-1 text-[12px] text-text-mute">
+                <b className="text-sky-300">Smetadan tiklash</b> — «{oyNom}» uchun avval
+                yozilgan qatorlar smetada <b>f2uid</b> izohi bilan turibdi.
+                Yozish uzilib qolgan bo'lsa, bog'lanishlarni shundan qaytarib olasiz.
+              </div>
+              <button
+                onClick={() => bogTikla.mutate({ obyekt, oyNom }, {
+                  onSuccess: (r) => {
+                    if (!r.ok || !r.qatorlar?.length) {
+                      toast('Smetada bu oy uchun yozuv topilmadi', 'warn', undefined, 6000);
+                      return;
+                    }
+                    /* uid → bog'lanish yozuvi. Faqat AKT daraxtida bor
+                       uid lar olinadi (begona yozuv tushmasin). */
+                    const aktUidlar = new Set(aktBarchaTugun.map((x: any) => x.uid));
+                    const yangi: Record<string, any> = {};
+                    let mos = 0, begona = 0;
+                    r.qatorlar.forEach((q) => {
+                      if (!q.uid) return;
+                      if (!aktUidlar.has(q.uid)) { begona++; return; }
+                      const vRaq = q.sub && q.sub !== obyekt ? `${q.sub}||${q.varaq}` : q.varaq;
+                      yangi[q.uid] = { uid: q.uid, varaq: vRaq, row: q.row,
+                                       kod: q.kod ?? '', hajm: q.hajm ?? 0,
+                                       narx: q.narx ?? 0, summa: q.summa ?? 0 };
+                      mos++;
+                    });
+                    if (!mos) {
+                      toast(`Smetada ${r.qatorlar.length} qator bor, lekin hozirgi F2 fayl bilan mos uid topilmadi`, 'warn', undefined, 8000);
+                      return;
+                    }
+                    setQolBog((p: any) => ({ ...p, ...yangi }));
+                    toast(`${mos} ta bog'lanish smetadan tiklandi` +
+                          (begona ? ` (${begona} ta boshqa F2 dan — olinmadi)` : ''),
+                          'ok', undefined, 9000);
+                  },
+                  onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
+                })}
+                disabled={bogTikla.isPending}
+                className="px-3 py-1.5 rounded-lg bg-sky-500/20 text-sky-300 hover:bg-sky-500/30
+                           text-[12px] font-medium transition-colors disabled:opacity-50 whitespace-nowrap">
+                {bogTikla.isPending ? 'Tiklanmoqda…' : '↻ Smetadan tiklash'}
+              </button>
+            </div>
+          )}
+
           {tiklashTaklif && (
             <div className="rounded-[10px] border border-emerald-500/30 bg-emerald-500/[.08] p-4 space-y-2">
               <div className="flex gap-2 items-center">
