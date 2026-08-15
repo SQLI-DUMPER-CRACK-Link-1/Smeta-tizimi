@@ -151,32 +151,30 @@ YETISHMAYOTGAN edi (razdel rangsiz va belgisiz chiqardi) — qo'shildi.
 
 ---
 
-## 4. SIZDAN SO'RAYDIGAN SAVOLLARIM
+## 4. SAVOLLAR — JAVOB OLINDI (2026-08-15)
 
-Bularga javob bersangiz reja aniqlashadi:
+**1. `HUJJAT_JAMI` qayerdan? → KATAKDAN EMAS, HISOBLANADI.**
+> «uni rs mat ob qatorlarini chel-chas, mash-chas, resurs, oborudovaniya
+> kabi yonda ajratiladigan ustunlaridan yig'ilishi kerak»
 
-**1. `HUJJAT_JAMI` ni qayerdan olay?**
-Siz `8 277 622 548,30602` raqamini F2 ning o'zidan o'qidingiz. Bu
-F2 faylida **qat'iy bir katakda** turadimi (masalan «Всего прямых затрат»
-qatori), yoki har hujjatda har xil joydami? Agar qat'iy bo'lsa —
-avtomatik o'qiyman.
+Ya'ni `ПРЯМЫЕ ЗАТРАТЫ` = `rs`/`mat`/`ob` qatorlari bo'yicha kategoriya
+ustunlari yig'indisi: **ЧЕЛ + МАШ + МАТ + ОБ + М/К + КАБ**.
+Bitta «Всего» katagi qidirilmaydi — qatorlab yig'iladi.
 
-**2. ~~`bl` va `rs` — qaysi biri asos?~~ ✅ JAVOB KERAK EMAS**
-Bu savolni bergandim, lekin javobsiz 171 mlrd tekshiruvi ishonchsiz
-qolardi. Endi tizim O'ZI aniqlaydi: `apiF2QatlamTahlil` LRV_PLUS ni
-ketma-ket o'qib, har ИШ qatorining o'z summasini uning РЕСУРСlari
-yig'indisi bilan solishtiradi. Teng bo'lsa — resurslar ishning yoyilmasi,
-jami bir marta sanaladi. Teng bo'lmasa — «aralash» deb belgilaydi va
-avtomatik jam CHIQARMAYDI (son taxmin qilinmaydi).
+**2. ~~bl mi rs mi?~~ ✅ KODDA HAL QILINDI** — `apiF2QatlamTahlil` o'zi aniqlaydi.
 
-**3. 171 mlrd — bitta obyektmi yoki hammasi?**
-Ekрandagi panel bitta obyekt uchun (44.39 mlrd smeta). 171 mlrd —
-barcha obyektlar yig'indisimi? Kafolat panelini shunga qarab quraman.
+**3. 171 122 545 454 — MISOL uchun yozilgan raqam.**
+> «man bu summani shunchaki misol tariqasida yozganman»
 
-**4. Eski oylar uchun retro-reestr kerakmi?**
-Mart 2026, Iyul-2025, Sentyabr-2025, Dekabr-2025 — bularning hujjat
-jamilarini bilasizmi? Bilsangiz kiritamiz va o'tmish ham nazoratga
-tushadi.
+Aniq qamrov belgilanmagan. Kafolat oynasi ikkala rejimda ham ishlaydi
+(bitta obyekt / «Barcha obyektlar» belgisi) — qo'shimcha sozlash kerak emas.
+
+**4. Eski oylar → ARXIV FAYLLARDAN AVTOMAT O'QILSIN.**
+Drive dagi eski F2 fayllari topilib, 1-javobdagi qoida bo'yicha
+`ПРЯМЫЕ ЗАТРАТЫ` hisoblanadi va reestrga tushadi.
+
+**5. Ustuvorlik: TO'RTALASI HAM kerak** — jonli progress · F2 ni bekor
+qilish (undo) · quruq yurish · oyni muhrlash.
 
 ---
 

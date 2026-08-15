@@ -185,6 +185,108 @@ function apiF2Nazorat(obyekt){
 }
 
 /* ══════════════════════════════════════════════════════════════════
+ * apiF2PriamoyZatrat(obyekt, oyNom) — «ПРЯМЫЕ ЗАТРАТЫ» HISOBI
+ *
+ * Foydalanuvchi javobi (2026-08-15), «hujjat jamisi qayerdan olinadi?»:
+ *   «uni rs mat ob qatorlarini chel-chas, mash-chas, resurs,
+ *    oborudovaniya kabi yonda ajratiladigan ustunlaridan yig'ilishi kerak»
+ *
+ * Ya'ni bitta «Всего» katagi QIDIRILMAYDI. Jami QATORLAB yig'iladi:
+ * faqat `rs`/`mat`/`ob` qatorlari olinadi (ish `bl` qatorlari EMAS —
+ * ular resurslarning yig'indisi bo'lgani uchun ikki baravar sanaladi),
+ * har biri o'z kategoriyasiga qo'shiladi:
+ *
+ *     ЧЕЛ + МАШ + МАТ + ОБ + М/К + КАБ  =  ПРЯМЫЕ ЗАТРАТЫ
+ *
+ * Kategoriya aniqlash mantig'i daraxt quruvchidagi bilan AYNAN bir xil
+ * (30_Panel.js `rkat`) — ikki joyda ikki xil bo'lib qolmasligi uchun.
+ * ЧЕЛ/МАШ faqat o'z ustunidan aniqlanadi, qolgani МАТ ga tushadi.
+ * ══════════════════════════════════════════════════════════════════ */
+function apiF2PriamoyZatrat(obyekt, oyNom){
+  var t0 = Date.now();
+  try{
+    if(!obyekt) return {ok:false, xabar:'Обект берилмади'};
+    oyNom = String(oyNom||'').trim();
+    if(!oyNom) return {ok:false, xabar:'Ой номи бўш'};
+
+    var col = CFG.C, obs = _nzObyektlar(obyekt);
+    var oyK = (typeof _oyKey==='function') ? _oyKey(oyNom) : oyNom.toLowerCase();
+
+    var kat = {'ЧЕЛ':0, 'МАШ':0, 'МАТ':0, 'ОБ':0, 'М/К':0, 'КАБ':0};
+    var qatorlar = 0, blOtkazildi = 0, jami = 0, varaqlar = [];
+
+    for(var oi=0; oi<obs.length; oi++){
+      var ob = obs[oi], plus = null;
+      try{ plus = _plusTop(ob); }catch(e){}
+      if(!plus) continue;
+
+      var shlar = plus.getSheets();
+      for(var si=0; si<shlar.length; si++){
+        var sh = shlar[si];
+        if(sh.getName().charAt(0) === '_') continue;
+
+        var oylar = [];
+        try{ oylar = _f2Oylar(sh) || []; }catch(e){ continue; }
+        var oyCol = 0;
+        for(var k=0;k<oylar.length;k++){
+          var kk = (typeof _oyKey==='function') ? _oyKey(oylar[k].nom) : String(oylar[k].nom).toLowerCase();
+          if(kk === oyK){ oyCol = oylar[k].col; break; }
+        }
+        if(!oyCol) continue;
+
+        var last = sh.getLastRow();
+        var hr = 1; try{ hr = _hdrRow(sh); }catch(e){}
+        var bosh = hr + 1;
+        if(bosh > last) continue;
+        var qSoni = last - bosh + 1;
+
+        var enKeng = Math.max(col.MARKER, col.CHEL, col.MASH, col.OB, col.MK, col.KAB);
+        var chap = sh.getRange(bosh, 1, qSoni, enKeng).getValues();
+        var oyD  = sh.getRange(bosh, oyCol, qSoni, 3).getValues();
+
+        var vJami = 0, vQator = 0;
+        for(var r=0; r<qSoni; r++){
+          var summa = _nzNum(oyD[r][2]);
+          var hajm  = _nzNum(oyD[r][0]);
+          if(!summa && !hajm) continue;
+
+          var mk = _nzMk(chap[r][col.MARKER-1]);
+          /* ИШ (bl) qatorlari ATAYLAB o'tkazib yuboriladi — ular
+           * resurslarning yig'indisi, qo'shilsa ikki baravar bo'ladi */
+          if(mk === 'bl'){ blOtkazildi++; continue; }
+          if(mk !== 'rs' && mk !== 'mat' && mk !== 'ob') continue;
+
+          /* kategoriya — 30_Panel.js `rkat` bilan bir xil tartib */
+          var k2 = 'МАТ';
+          if(_nzNum(chap[r][col.CHEL-1])>0)      k2='ЧЕЛ';
+          else if(_nzNum(chap[r][col.MASH-1])>0) k2='МАШ';
+          else if(_nzNum(chap[r][col.OB-1])>0)   k2='ОБ';
+          else if(_nzNum(chap[r][col.MK-1])>0)   k2='М/К';
+          else if(_nzNum(chap[r][col.KAB-1])>0)  k2='КАБ';
+
+          kat[k2] += summa; jami += summa;
+          qatorlar++; vJami += summa; vQator++;
+        }
+        if(vQator) varaqlar.push({sub:ob, varaq:sh.getName(), summa:vJami, qatorlar:vQator});
+      }
+    }
+
+    return {ok:true, obyekt:obyekt, oyNom:oyNom,
+            priamoyZatrat: jami,
+            kategoriyalar: kat,
+            qatorlar: qatorlar,
+            blOtkazildi: blOtkazildi,
+            varaqlar: varaqlar,
+            izoh: 'ЧЕЛ+МАШ+МАТ+ОБ+М/К+КАБ, faqat rs/mat/ob qatorlari. '+
+                  'ИШ (bl) qatorlari qo\'shilmadi ('+blOtkazildi+' ta) — '+
+                  'ular resurslarning yig\'indisi.',
+            vaqt:((Date.now()-t0)/1000).toFixed(1)+'s'};
+  }catch(e){
+    return {ok:false, xabar:'apiF2PriamoyZatrat: '+(e && e.message ? e.message : e)};
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
  * apiF2QatlamTahlil(obyekt) — «bl mi, rs mi?» SAVOLIGA MA'LUMOTDAN JAVOB
  *
  * MUAMMO: F2 ham `bl` (ish) qatoriga, ham uning ostidagi `rs` (resurs)

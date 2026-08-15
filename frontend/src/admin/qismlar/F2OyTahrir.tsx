@@ -15,7 +15,7 @@
  */
 import { useState, useMemo } from 'react';
 import { X, Save, Trash2, AlertTriangle, Search, MoveRight, Check } from 'lucide-react';
-import { useF2OyTafsilot, useF2QatorTahrir, type F2OyQator } from '../../api/hooks';
+import { useF2OyTafsilot, useF2QatorTahrir, useF2PriamoyZatrat, type F2OyQator } from '../../api/hooks';
 import { rangFon, rangChiziq, turNomi, belgiRamka, turBelgi } from '../../umumiy/turRang';
 
 const fmt = (n: number) =>
@@ -31,6 +31,8 @@ export default function F2OyTahrir({
 }) {
   const tafsilot = useF2OyTafsilot(obyekt, oyNom);
   const tahrir = useF2QatorTahrir();
+  /* ПРЯМЫЕ ЗАТРАТЫ — F2 hujjatidagi raqam bilan to'g'ridan-to'g'ri solishtiriladi */
+  const pz = useF2PriamoyZatrat(obyekt, oyNom);
 
   /* Faqat o'zgargan qatorlar saqlanadi — kalit: sub||varaq||row */
   const [ozgarishlar, setOzgarishlar] = useState<Record<string, Ozg>>({});
@@ -161,6 +163,36 @@ export default function F2OyTahrir({
             <X size={18} />
           </button>
         </div>
+
+        {/* ⚡⚡⚡ ПРЯМЫЕ ЗАТРАТЫ — foydalanuvchi javobi bo'yicha (2026-08-15):
+            «rs mat ob qatorlarini chel-chas, mash-chas, resurs, oborudovaniya
+            kabi yonda ajratiladigan ustunlaridan yig'ilishi kerak».
+            Bitta «Всего» katagi qidirilmaydi — QATORLAB yig'iladi va ИШ (bl)
+            qatorlari qo'shilmaydi (ular resurslarning yig'indisi). Shu raqam
+            F2 hujjatidagi «прямые затраты» bilan to'g'ridan-to'g'ri solishtiriladi. */}
+        {pz.data?.ok && (
+          <div className="px-4 py-2 border-b border-border bg-accent/5">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[11px] text-text-mute">ПРЯМЫЕ ЗАТРАТЫ (hujjat bilan solishtiring):</span>
+              <span className="text-[14px] font-medium text-text">{fmt(pz.data.priamoyZatrat)} so'm</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {Object.entries(pz.data.kategoriyalar)
+                .filter(([, v]) => Number(v) !== 0)
+                .map(([k, v]) => (
+                  <span key={k} className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] text-text-mute">
+                    {k}: <span className="text-text">{fmt(Number(v))}</span>
+                  </span>
+                ))}
+            </div>
+            {pz.data.blOtkazildi > 0 && (
+              <p className="text-[10px] text-text-mute mt-1">
+                {pz.data.blOtkazildi} ta ИШ (bl) qatori qo'shilmadi — ular resurslarning
+                yig'indisi, qo'shilsa ikki baravar sanalardi.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Asboblar */}
         <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-white/[0.02]">

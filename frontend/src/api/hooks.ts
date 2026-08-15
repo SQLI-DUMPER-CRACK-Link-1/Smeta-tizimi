@@ -707,6 +707,20 @@ export function useF2QatlamTahlil(obyekt: string, enabled = true) {
   });
 }
 
+/** ПРЯМЫЕ ЗАТРАТЫ — qatorlab yig'iladi (ЧЕЛ+МАШ+МАТ+ОБ+М/К+КАБ), bl qatorlarsiz */
+export function useF2PriamoyZatrat(obyekt: string, oyNom: string, enabled = true) {
+  return useQuery({
+    queryKey: ['f2pz', obyekt, oyNom],
+    queryFn: () => gas<{
+      ok: boolean; priamoyZatrat: number;
+      kategoriyalar: Record<string, number>;
+      qatorlar: number; blOtkazildi: number; izoh: string; xabar?: string;
+    }>('apiF2PriamoyZatrat', obyekt, oyNom),
+    enabled: enabled && !!obyekt && !!oyNom,
+    staleTime: 60_000,
+  });
+}
+
 export type F2OyQator = {
   sub: string; varaq: string; row: number;
   marker: string; kod: string; nom: string; birlik: string;
