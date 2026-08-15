@@ -1741,16 +1741,32 @@ const onAvtoMoslash = () => {
               ) : (
                 <div className="space-y-2">
                   {lrv.data.oylar.map((oy) => {
-                    let oySum = 0;
+                    /* ⚡⚡⚡ 2026-08-15 «ОЙ СУММАСИ 0.00» ТУЗАТИЛДИ.
+                     * Eski kod: `Number(n.oylar?.[oy]) * n.narx`.
+                     * Uch xato bir joyda edi:
+                     *   1) `oylar[oy]` — bu OBYEKT ({obyom,narx}), son emas.
+                     *      Number(obyekt) = NaN → 0. Ya'ni natija DOIM 0.
+                     *   2) `stF2?.[oy]` — `stF2` SON, uni obyekt kabi
+                     *      indekslash ham doim undefined beradi.
+                     *   3) GAS `rs` (resurs) tugunlariga `oylar` ni umuman
+                     *      qo'shmasdi, panel esa aynan barglar=rs bo'yicha
+                     *      yig'adi → topadigan narsaning o'zi yo'q edi.
+                     * Endi GAS СУММА ustunini uzatadi (30_Panel.js) va biz
+                     * shuni to'g'ridan-to'g'ri qo'shamiz — hisoblash emas,
+                     * qog'ozdagi haqiqiy raqam. */
+                    let oySum = 0, oyQator = 0;
                     const barglarTugun = barglar(lrv.data?.tree as unknown as any[] || []);
                     barglarTugun.forEach(n => {
-                      // GAS ba'zan "1 234,5" ko'rinishida satr yuboradi — Number() uni NaN qiladi
-                      const raw = (n as any).oylar?.[oy] ?? (n as any).stF2?.[oy] ?? 0;
-                      const v = Number(String(raw).replace(/\s/g, '').replace(',', '.')) || 0;
-                      const p = Number(n.narx) || 0;
-                      oySum += v * p;
+                      const oyd = (n as any).oylar?.[oy];
+                      if (!oyd || typeof oyd !== 'object') return;
+                      const son = (x: any) =>
+                        Number(String(x ?? 0).replace(/\s/g, '').replace(',', '.')) || 0;
+                      let s = son(oyd.summa);
+                      if (!s) s = son(oyd.obyom) * son(oyd.narx);   // eski yozuvlar uchun zaxira
+                      if (!s && !son(oyd.obyom)) return;
+                      oySum += s; oyQator++;
                     });
-                    
+
                     return (
                       <div key={oy} className="flex flex-col gap-1.5 p-2 rounded border border-border bg-[var(--surface-2)]">
                         <div className="flex items-center justify-between">
@@ -1810,6 +1826,15 @@ const onAvtoMoslash = () => {
                         <div className="text-[12px] text-text-mute flex justify-between">
                           <span>Jami summa:</span>
                           <span className="font-medium text-text"><FmtN val={oySum} /> so'm</span>
+                        </div>
+                        {/* ⚡ 2026-08-15: qator soni — «yozildimi yo'qmi?» degan
+                            savolga eng tez javob. 0 qator = umuman yozilmagan;
+                            qator bor lekin summa 0 = narx qo'yilmagan. */}
+                        <div className="text-[11px] flex justify-between">
+                          <span className="text-text-mute">Yozilgan qatorlar:</span>
+                          <span className={oyQator ? 'text-emerald-400 font-medium' : 'text-red-400 font-medium'}>
+                            {oyQator ? `${oyQator} ta` : 'yo\'q'}
+                          </span>
                         </div>
                       </div>
                     );

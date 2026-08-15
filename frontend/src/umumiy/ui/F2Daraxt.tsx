@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useCallback, type ReactNode, memo } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronRight, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export type DaraxtTugun = {
@@ -297,6 +298,7 @@ export function F2Daraxt({
     setYopiq(yigi);
   }, [tugunlar]);
 
+  const parentRef = useRef<HTMLDivElement>(null);
   const lastScrolled = useRef<string | null>(null);
 
   // scrollToKey o'zgarganda — shu qatorni ochib scroll qilamiz
@@ -389,54 +391,81 @@ export function F2Daraxt({
     return out;
   }, [tugunlar, yopiq, bogMi, filtr]);
 
+  const rowVirtualizer = useVirtualizer({
+    count: qatorlar.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 32,
+    overscan: 10,
+  });
+
   if (!tugunlar.length) {
     return <div className="p-6 text-center text-text-mute text-sm">{bosh ?? 'Bo\'sh'}</div>;
   }
 
   return (
-    <div className="text-[13px]">
-      {qatorlar.map(({ t, daraja }, idx) => {
-        const bog = bogMi(t.kalit);
-        const drop = ustida === t.kalit;
-        const yoritilgan = yoritilganKey === t.kalit || (hover !== null && hover === t.kalit);
-        const bolalari = !!(t.children?.length);
-        const yopiqHas = yopiq.has(t.kalit);
-        const prevType = idx > 0 ? qatorlar[idx - 1].t.type : null;
-        
-        return (
-          <div key={t.kalit}>
-            {/* Gap drop zone — faqat smeta tarafida, qatorlar orasida */}
-            {tashlanadi && onGapDrop && t.type !== 'rz' && prevType && prevType !== 'rz' && (
-              <GapZone
-                smetaKalit={t.kalit}
+    <div ref={parentRef} className="text-[13px] overflow-y-auto h-full w-full">
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const idx = virtualRow.index;
+          const { t, daraja } = qatorlar[idx];
+          const bog = bogMi(t.kalit);
+          const drop = ustida === t.kalit;
+          const yoritilgan = yoritilganKey === t.kalit || (hover !== null && hover === t.kalit);
+          const bolalari = !!(t.children?.length);
+          const yopiqHas = yopiq.has(t.kalit);
+          const prevType = idx > 0 ? qatorlar[idx - 1].t.type : null;
+          
+          return (
+            <div 
+              key={t.kalit}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              {/* Gap drop zone — faqat smeta tarafida, qatorlar orasida */}
+              {tashlanadi && onGapDrop && t.type !== 'rz' && prevType && prevType !== 'rz' && (
+                <GapZone
+                  smetaKalit={t.kalit}
+                  daraja={daraja}
+                  onGapDrop={onGapDrop}
+                />
+              )}
+              
+              <DaraxtQator
+                t={t}
                 daraja={daraja}
-                onGapDrop={onGapDrop}
+                bolalari={bolalari}
+                bog={bog}
+                yoritilgan={yoritilgan}
+                drop={drop}
+                yopiqHas={yopiqHas}
+                sudraladi={sudraladi}
+                tashlanadi={tashlanadi}
+                onTashla={onTashla}
+                setHover={setHover}
+                setUstida={setUstida}
+                toggle={toggle}
+                onBogBekor={onBogBekor}
+                onDopClick={onDopClick}
+                onOtishClick={bog ? onOtishClick : undefined}
+                onQatorQosh={onQatorQosh}
+                scrollRef={setScrollRef(t.kalit)} takliflar={takliflar} onTaklifTanlandi={onTaklifTanlandi}
               />
-            )}
-            
-            <DaraxtQator
-              t={t}
-              daraja={daraja}
-              bolalari={bolalari}
-              bog={bog}
-              yoritilgan={yoritilgan}
-              drop={drop}
-              yopiqHas={yopiqHas}
-              sudraladi={sudraladi}
-              tashlanadi={tashlanadi}
-              onTashla={onTashla}
-              setHover={setHover}
-              setUstida={setUstida}
-              toggle={toggle}
-              onBogBekor={onBogBekor}
-              onDopClick={onDopClick}
-              onOtishClick={bog ? onOtishClick : undefined}
-              onQatorQosh={onQatorQosh}
-              scrollRef={setScrollRef(t.kalit)} takliflar={takliflar} onTaklifTanlandi={onTaklifTanlandi}
-            />
-          </div>
-        );
-      })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1064,6 +1064,15 @@ function apiHolatOl(obyekt, forceRefresh){
           oyVal[oylar[o].nom]={
             obyom:_toNum(g[i][oCol-1]),
             narx:_toNum(narxCell),
+            /* ⚡⚡⚡ 2026-08-15 «F2 ОЙЛАРИ 0.00 ТУРИБДИ» ТУЗАТИШИ.
+             * Har oy LRV_PLUS da UCHTA ustun: [ОБЪЁМ | ₊нарх | ₊сумма].
+             * Bu yerda faqat birinchi ikkitasi o'qilardi — СУММА ustuni
+             * (oCol+1) hech qachon uzatilmasdi. Natijada panel oy jamini
+             * hisoblay olmay 0.00 ko'rsatardi va foydalanuvchi «F2 yozildimi
+             * yo'qmi?» degan savolga javob ololmasdi.
+             * Endi haqiqiy summa aynan qog'ozdagi ustundan olinadi —
+             * ko'paytirish/taxmin yo'q. */
+            summa:_toNum(g[i][oCol+1]),
             narxIsFormula:narxIsFormula     // true=hali smeta narxi (G) bo'yicha default
           };
         }
@@ -1111,8 +1120,24 @@ function apiHolatOl(obyekt, forceRefresh){
         else if(_toNum(g[i][col.OB-1])>0) rkat='ОБ';
         else if(_toNum(g[i][col.MK-1])>0) rkat='М/К';
         else if(_toNum(g[i][col.KAB-1])>0) rkat='КАБ';
+        /* ⚡⚡⚡ 2026-08-15: RESURS qatorlariga ham oylar kesimi qo'shildi.
+         * Ilgari `oylar` FAQAT `bl` (blok) tugunlarga qo'shilardi. Panel esa
+         * daraxtning BARGLARI bo'yicha yig'adi — barglar aynan `rs`. Ya'ni
+         * panel oy jamini yig'ganda hech qachon hech narsa topmasdi → 0.00.
+         * Endi resurs qatorida ham oy kesimi bor va jam to'g'ri chiqadi. */
+        var rsOyVal={};
+        for(var ro=0; ro<oylar.length; ro++){
+          var rOCol=oylar[ro].col;
+          var rObyom=_toNum(g[i][rOCol-1]);
+          var rSumma=_toNum(g[i][rOCol+1]);
+          if(!rObyom && !rSumma) continue;      // bo'sh oylarni yubormaymiz (hajm tejaladi)
+          rsOyVal[oylar[ro].nom]={
+            obyom:rObyom, narx:_toNum(g[i][rOCol]), summa:rSumma
+          };
+        }
         var rsNode={
           type:'rs', nom:nom, varaq:nm, row:r, kat:rkat,
+          oylar:     rsOyVal,
           kod: String(g[i][col.KOD-1]||'').trim(),
           birlik:   String(g[i][col.BIRLIK-1]||''),
           smetaHajm: _toNum(g[i][col.E-1]),
