@@ -4,7 +4,7 @@ import F2YozishOyna, { type YozishNatija } from '../qismlar/F2YozishOyna';
 import F2Kafolat from '../qismlar/F2Kafolat';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2YozEski, useF2YozishgaRuxsat, useF2BoglanishTikla, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useF2AvtoMoslash, useF2YozEski, useF2YozishgaRuxsat, useF2BoglanishTikla, useF2JobHolat, useF2JobTozala, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
   useF2Reestr,
   useF2ReestrTikla,
   useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
@@ -349,6 +349,7 @@ export function F2Import() {
   const [qatorTahrirOy, setQatorTahrirOy] = useState<string | null>(null);
   const [kafolatOchiq, setKafolatOchiq] = useState(false);
   const bogTikla = useF2BoglanishTikla();
+  const jobTozala = useF2JobTozala();
   /* ⚡ 2026-08-15 yozish jarayoni/hisobot oynasi — «oxirida tugadi derdi» */
   const [yozOyna, setYozOyna] = useState<null | {
     holat: 'ishlamoqda' | 'tugadi' | 'xato'; oyNom: string;
@@ -2578,10 +2579,30 @@ const onAvtoMoslash = () => {
                 )}
 
                 {ishlayapti && (
-                  <p className="text-[11px] text-text-mute">
-                    Brauzerni yopsangiz ham davom etadi — ish serverda bajarilmoqda.
-                    Istagan vaqt qaytib holatni ko'rasiz.
-                  </p>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-[11px] text-text-mute flex-1 min-w-[220px]">
+                      Brauzerni yopsangiz ham davom etadi — ish serverda bajarilmoqda.
+                      Istagan vaqt qaytib holatni ko'rasiz.
+                    </p>
+                    {/* ⚡ 2026-08-16: TO'XTATISH bu yerda ham (chipda ham bor) */}
+                    <button
+                      onClick={() => {
+                        if (!window.confirm(
+                          'Yozish ishi to\'xtatiladi va navbat tozalanadi.\n\n' +
+                          'Smetaga ALLAQACHON yozilgan qatorlar JOYIDA QOLADI.\n\n' +
+                          'Davom etamizmi?')) return;
+                        jobTozala.mutate(undefined, {
+                          onSuccess: (r) => toast(r.xabar || 'To’xtatildi', 'ok', undefined, 8000),
+                          onError: (e: Error) => toast(e.message, 'danger'),
+                        });
+                      }}
+                      disabled={jobTozala.isPending}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-danger/20 border border-border
+                                 hover:border-danger/40 text-[11px] text-text-mute hover:text-danger
+                                 transition-colors disabled:opacity-50 whitespace-nowrap">
+                      {jobTozala.isPending ? 'To’xtatilmoqda…' : '⏹ To’xtatish'}
+                    </button>
+                  </div>
                 )}
               </>
             );
