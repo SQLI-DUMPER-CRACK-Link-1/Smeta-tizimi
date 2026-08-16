@@ -1398,3 +1398,91 @@ export function useObyektTekshir() {
       gas<{ ok: boolean; xabar?: string; muammolar?: string[] }>('apiObyektFayllarniTekshir', obyekt),
   });
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * ESKI PANELDAN QOLGAN 3 BO'LIM (2026-08-16)
+ * Ҳужжатлар · Шахсий смета · Supabase
+ * GAS API lari BOR edi — sayt ularni chaqirmasdi.
+ * ══════════════════════════════════════════════════════════════════ */
+
+/* ── Ҳужжатлар (akt / prixod / viborka + M-29) ─────────────────── */
+export type HujjatTuri = { tur: string; nom: string; url: string; icon: string };
+
+export function useHujjatlar() {
+  return useQuery({
+    queryKey: ['hujjatlar'],
+    queryFn: () => gas<HujjatTuri[]>('apiHujjatlarRoyxat'),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+/** M-29 material hisoboti — obyekt + oy bo'yicha yangi hujjat yaratadi */
+export function useM29Yarat() {
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom }: { obyekt: string; oyNom: string }) =>
+      gas<{ ok: boolean; url?: string; nom?: string; xabar?: string }>('apiM29Yarat', obyekt, oyNom),
+  });
+}
+
+/* ── Шахсий смета ──────────────────────────────────────────────── */
+export type ShaxsiySmeta = { id: string; nom: string; url: string; sana: string };
+
+export function useShaxsiySmetalar() {
+  return useQuery({
+    queryKey: ['shaxsiySmetalar'],
+    queryFn: () => gas<ShaxsiySmeta[]>('apiShaxsiySmetalar'),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useIshTurQidir() {
+  return useMutation({
+    mutationFn: ({ soz, limit }: { soz: string; limit?: number }) =>
+      gas<Array<{ kod: string; nom: string; birlik: string; narx?: number }>>(
+        'apiIshTurQidir', soz, limit ?? 40),
+  });
+}
+
+export function useShaxsiySmetaYarat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ config, ishlar }: { config: Record<string, unknown>; ishlar: unknown[] }) =>
+      gas<{ ok: boolean; url?: string; nom?: string; xabar?: string }>(
+        'apiShaxsiySmetaYarat', config, ishlar),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shaxsiySmetalar'] }),
+  });
+}
+
+/* ── Supabase sozlamalari ──────────────────────────────────────── */
+export function useSupabaseSozlama() {
+  return useQuery({
+    queryKey: ['supaSozlama'],
+    queryFn: () => gas<{ url?: string; key?: string; ulangan?: boolean }>('apiSupabaseSozlamaOl'),
+    staleTime: 60_000,
+  });
+}
+
+export function useSupabaseSozlamaSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ url, key }: { url: string; key: string }) =>
+      gas<{ ok: boolean; xabar?: string }>('apiSupabaseSozlamaSaqla', url, key),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['supaSozlama'] }),
+  });
+}
+
+export function useSupabaseKursor() {
+  return useQuery({
+    queryKey: ['supaKursor'],
+    queryFn: () => gas<Record<string, unknown>>('apiSupabaseSinxKursor'),
+    staleTime: 30_000,
+  });
+}
+
+export function useSupabaseReset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => gas<{ ok: boolean; xabar?: string }>('apiSupabaseSinxReset'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['supaKursor'] }),
+  });
+}

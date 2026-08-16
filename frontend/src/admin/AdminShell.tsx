@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
-import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2 } from 'lucide-react';
+import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3D';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 
@@ -22,6 +22,9 @@ const MENYU = [
   { yol: '/admin/taminot',    nom: "Ta'minot",     Ikonka: ShoppingCart },
   { yol: '/admin/sifat',      nom: 'Sifat (QA)',   Ikonka: ShieldAlert },
   { yol: '/admin/fayl-boglash', nom: 'Fayl bog’lash', Ikonka: Link2 },
+  { yol: '/admin/hujjatlar', nom: 'Hujjatlar', Ikonka: FileStack },
+  { yol: '/admin/shaxsiy-smeta', nom: 'Shaxsiy smeta', Ikonka: NotebookPen },
+  { yol: '/admin/supabase', nom: 'Supabase', Ikonka: Database },
   { yol: '/admin/sozlamalar', nom: 'Sozlamalar',   Ikonka: Settings },
 ];
 
