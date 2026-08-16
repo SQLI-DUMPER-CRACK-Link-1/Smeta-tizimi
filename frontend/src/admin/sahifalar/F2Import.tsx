@@ -264,6 +264,16 @@ export function F2Import() {
    * oldindan bilinmaydi. `tanlanganLoklar` bo'sh bo'lsa — eski xatti-harakat
    * (`lokalka` bittasi yoki hammasi). Bo'sh bo'lmasa — FAQAT tanlanganlar. */
   const [tanlanganLoklar, setTanlanganLoklar] = useState<string[]>([]);
+  /* ⚡⚡⚡ 2026-08-16 (audit H4 — TASDIQLANDI): obyekt almashsa tanlangan
+   * smetalar TOZALANMASDI. Boshqa loyihaning varaq nomlari qolib ketib,
+   * yangi obyektda «smeta topilmadi» yoki BEGONA varaqqa yozish xavfi
+   * bor edi. Endi obyekt o'zgarganda tanlov ham, probe natijasi ham
+   * tozalanadi. */
+  useEffect(() => {
+    setTanlanganLoklar([]);
+    setTaklifNatija(null);
+    setHammasiTasdiq(false);
+  }, [obyekt]);
 
   /* ⚡⚡⚡ 2026-08-13 «Failed to fetch» TUZATILDI (foydalanuvchi skrinshoti:
    * «Smeta o'qilmadi — Failed to fetch»). Jonli o'lchov: Amfiteatr (26 smeta)

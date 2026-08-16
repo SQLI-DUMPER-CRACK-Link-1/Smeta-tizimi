@@ -57,7 +57,12 @@ export default function F2Kafolat({
 
   const saqlaJami = (f2Id: string) => {
     const s = Number(qiymat.replace(/\s/g, '').replace(',', '.'));
-    if (!isFinite(s) || s <= 0) { toast('Summani to\'g\'ri kiriting', 'warn'); return; }
+    /* ⚡⚡⚡ 2026-08-16 (audit H12 — TASDIQLANDI): `s <= 0` sharti MANFIY
+     * summani rad etardi. ПЕРЕРАСЧЁТ (korrektirovka) hujjatlarining jamisi
+     * QONUNIY ravishda manfiy bo'ladi — ular kafolat daftariga umuman
+     * kiritilmasdi va farq hisobi buzilardi.
+     * Endi faqat SON EMASLIGI rad etiladi. */
+    if (!isFinite(s)) { toast('Summani to\'g\'ri kiriting', 'warn'); return; }
     hujjatJami.mutate({ f2Id, summa: s }, {
       onSuccess: (r) => {
         if (r.ok) { toast(`Saqlandi · farq: ${fmt(r.farq)} · ${r.holat}`, 'ok', undefined, 6000); setTahrirId(null); }

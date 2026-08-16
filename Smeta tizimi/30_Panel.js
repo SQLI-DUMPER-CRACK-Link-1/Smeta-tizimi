@@ -3928,6 +3928,28 @@ function apiF2OyOchirish(obyekt, oyNom){
    _holatInvalidate(obyekt);
    /* Nechta varaqqa tegilgani ham qaytariladi — «bosdim lekin turibdi»
     * holatida qaysi fayl tozalanganini KO'RSATISH uchun. */
+   /* ⚡⚡⚡ 2026-08-16 (audit H22 — TASDIQLANDI): oy TOZALANGANDA reestr
+    * yangilanmasdi. Natijada smeta bo'sh, F2_REESTR da esa «100 mln
+    * yozilgan» deb turardi — kafolat hisobi («qancha kirdi = qancha
+    * tushdi») yolg'on ko'rsatardi va foydalanuvchi sababini topolmasdi.
+    * Endi tozalangan bo'lsa reestrdagi mos yozuv ham nolga tushiriladi.
+    * O'chirmaymiz — TARIX qoladi, izohda sababi yoziladi. */
+   if(tozalandi){
+     try{
+       if(typeof apiF2ReestrYoz === 'function'){
+         apiF2ReestrYoz({
+           obyekt: obyekt, oy: oyNom,
+           hujjatJami: '',            // hujjat jami endi ma'nosiz — bo'sh
+           yozilganJami: 0,
+           qatorJami: 0, qatorYozildi: 0,
+           varaqlar: tegilganVaraq,
+           izoh: 'Ой тозаланди ('+tozalandi+' қиймат ўчирилди) — '
+               + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm')
+         });
+       }
+     }catch(eR){}
+   }
+
    return {ok:true, tozalandi:tozalandi, varaqlar:tegilganVaraq,
            obyektlar:targets,
            xabar: tozalandi

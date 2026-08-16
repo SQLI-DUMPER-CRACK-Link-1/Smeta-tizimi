@@ -602,11 +602,19 @@ function apiF2QatorTahrir(obyekt, oyNom, ozgarishlar){
             blok[idx][0] = ''; blok[idx][1] = ''; blok[idx][2] = '';
             ochirildi++;
           } else {
+            /* ⚡⚡⚡ 2026-08-16 (audit H20 — TASDIQLANDI): `if(n > 0)` sharti
+             * tufayli narxni TOZALAB bo'lmasdi — foydalanuvchi maydonni
+             * bo'shatsa ham ESKI narx joyida qolardi va summa unga
+             * bog'lanib xato chiqardi.
+             * Endi uchala katak ham qiymatga qarab yoziladi; bo'sh
+             * berilgan bo'lsa katak ham BO'SH bo'ladi (0 emas — «narx
+             * yo'q» va «narx nol» boshqa-boshqa narsa,
+             * [[narx-oz-idan-toqilmaydi]] qoidasi). */
             var h = _nzNum(o.hajm), n = _nzNum(o.narx), s = _nzNum(o.summa);
             if(!s) s = Math.round(h*n*10000)/10000;
-            blok[idx][0] = h;
-            if(n > 0) blok[idx][1] = n;
-            blok[idx][2] = s;
+            blok[idx][0] = h ? h : '';
+            blok[idx][1] = n ? n : '';
+            blok[idx][2] = s ? s : '';
             yozildi++;
           }
         });
