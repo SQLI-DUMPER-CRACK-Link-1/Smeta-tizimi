@@ -4827,12 +4827,60 @@ function apiF2QollaNavbatga(obyekt, oyNom, edits, dopps, aktJami) {
   return {ok: true, fon: true, xabar: '✅ Навбатга қўшилди — фонда (серверда) ёзилади. Компьютерни ўчирсангиз ҳам давом этади; истаган вақт мониторингда кўрасиз.'};
 }
 
+/* ⚡⚡⚡ 2026-08-16 TRIGGER LIMITI HIMOYASI (audit C8 — TASDIQLANDI).
+ *
+ * Google Apps Script da bitta loyihada MAKSIMUM 20 ta trigger bo'ladi.
+ * Eski kod faqat `_f2FonQadam` triggerlarini tozalab, yangisini
+ * so'zsiz yaratardi. Agar loyihada boshqa triggerlar (kunlik
+ * yangilanish, faktura sinxroni, jarvis worker) to'planib 20 taga
+ * yetgan bo'lsa — `create()` XATO tashlaydi.
+ * Bu xato yuqorida tutilmasdi va FON NAVBATI BUTUNLAY TO'XTAB qolardi:
+ * ish «ishlayapti» holatida qotib, hech qachon davom etmasdi
+ * (foydalanuvchi «1 soatdan beri turibdi» degan holat shundan ham
+ * bo'lishi mumkin edi).
+ *
+ * ENDI: joy yetmasa AVVAL eskirgan bir martalik triggerlar tozalanadi,
+ * shundan keyin ham joy bo'lmasa — ish holatiga ANIQ sabab yoziladi
+ * (jim qotib qolmaydi). */
 function _f2FonTriggerQoy(kechikish){
-  var trs = ScriptApp.getProjectTriggers();
+  var trs = [];
+  try{ trs = ScriptApp.getProjectTriggers() || []; }catch(e){}
+
+  /* 1) O'z eski triggerlarimizni tozalaymiz */
   for (var i = 0; i < trs.length; i++) {
     if (trs[i].getHandlerFunction() === '_f2FonQadam') { try { ScriptApp.deleteTrigger(trs[i]); } catch(e){} }
   }
-  ScriptApp.newTrigger('_f2FonQadam').timeBased().after(kechikish||2000).create();
+
+  /* 2) Limitga yaqinmi? Bo'lsa — eskirgan bir martalik (clock) triggerlarni
+   *    tozalaymiz. Vaqt bo'yicha bir martalik triggerlar ishlagach ham
+   *    ba'zan ro'yxatda qolib ketadi va joyni band qiladi. */
+  try{
+    trs = ScriptApp.getProjectTriggers() || [];
+    if (trs.length >= 18) {
+      var BIR_MARTALIK = {'_f2FonQadam':1, '_navbatQadam':1, '_navbatWatchdog':1};
+      for (var j = 0; j < trs.length && trs.length >= 18; j++) {
+        var fn = trs[j].getHandlerFunction();
+        if (BIR_MARTALIK[fn]) { try { ScriptApp.deleteTrigger(trs[j]); } catch(e){} }
+      }
+      trs = ScriptApp.getProjectTriggers() || [];
+    }
+  }catch(e){}
+
+  /* 3) Yaratamiz. Xato bo'lsa JIM QOLMAYMIZ — ish holatiga sabab yoziladi,
+   *    aks holda foydalanuvchi soatlab «ishlayapti» ni kuzatib o'tiradi. */
+  try{
+    ScriptApp.newTrigger('_f2FonQadam').timeBased().after(kechikish||2000).create();
+  }catch(eT){
+    var xabar = '❌ Trigger yaratilmadi (' + ((eT && eT.message) || eT) + '). '
+              + 'Ehtimol Google trigger limiti (20 ta) to\'lgan. '
+              + 'Sozlamalar → tizim tashxisidan triggerlarni ko\'ring.';
+    try{ _setF2Prog(xabar); }catch(e){}
+    try{
+      var j2 = _f2JobGet();
+      if(j2){ j2.status='xato'; j2.xabar=xabar; _f2JobSet(j2); }
+    }catch(e){}
+    throw eT;
+  }
 }
 
 function _f2FonQadam() {

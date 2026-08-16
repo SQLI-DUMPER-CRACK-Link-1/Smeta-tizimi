@@ -434,13 +434,34 @@ export function F2Daraxt({
       });
     }
     
+    /* ⚡⚡⚡ 2026-08-16 TUZATILDI (audit C5 — TASDIQLANDI).
+     *
+     * ESKI KOD `scrollRefs` dan DOM elementini olib `scrollIntoView`
+     * qilardi. Lekin daraxt VIRTUALIZATSIYA qilingan: 15 000 qatordan
+     * ekranda faqat ~30 tasi DOM da mavjud. Maqsadli qator ekrandan
+     * tashqarida bo'lsa `get()` undefined qaytaradi va scroll JIM
+     * ishlamaydi — foydalanuvchi «→» tugmasini bosadi, hech narsa
+     * bo'lmaydi va sababi ham aytilmaydi.
+     *
+     * ENDI: virtualizatorning O'ZIGA indeks beriladi — u kerakli joyga
+     * o'zi surib, qatorni chizadi. DOM da bor-yo'qligi ahamiyatsiz. */
     const timer = setTimeout(() => {
-      const el = scrollRefs.current.get(scrollToKey);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const idx = qatorlar.findIndex((x) => x.t.kalit === scrollToKey);
+      if (idx >= 0) {
+        rowVirtualizer.scrollToIndex(idx, { align: 'center', behavior: 'smooth' });
         setYoritilganKey(scrollToKey);
         lastScrolled.current = scrollToKey;
         setTimeout(() => setYoritilganKey(null), 2500);
+      } else {
+        /* Qator filtr/yopiq daraxt tufayli ro'yxatda yo'q — jim
+         * qolmaymiz, DOM dan urinib ko'ramiz (zaxira yo'l) */
+        const el = scrollRefs.current.get(scrollToKey);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setYoritilganKey(scrollToKey);
+          lastScrolled.current = scrollToKey;
+          setTimeout(() => setYoritilganKey(null), 2500);
+        }
       }
     }, 180);
     return () => clearTimeout(timer);

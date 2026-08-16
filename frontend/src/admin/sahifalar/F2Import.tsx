@@ -1536,6 +1536,33 @@ const onAvtoMoslash = () => {
     };
     collectSmeta(lrv.data.tree as any[], '');
 
+    /* ⚡⚡⚡ 2026-08-16 O(N³) → O(N) (audit C2 — TASDIQLANDI va JIDDIY).
+     *
+     * ESKI KOD ichma-ich IKKITA chiziqli qidiruv qilardi:
+     *   har akt qatori uchun  → smetaQatorlar.find(...)        [N]
+     *   uning ichida          → Object.values(yangiBog).some() [N]
+     * Ya'ni 1500 akt × 2500 smeta × 1500 bog'lanish ≈ 5.6 MILLIARD amal.
+     * Bularning hammasi UI oqimida bajarilardi — brauzer butunlay
+     * qotib qolardi va foydalanuvchi «osilib qoldi» deb sahifani yopardi.
+     *
+     * ENDI:
+     *   • smeta qatorlari NOM bo'yicha bir marta indekslanadi (Map)
+     *   • band joylar Set da (O(1) tekshiruv, massiv skani yo'q)
+     * Moslik QOIDASI o'zgarmadi — aynan eski shart saqlangan:
+     *   ikkalasida ham kod bor  → kod VA nom teng bo'lsin
+     *   smetada kod yo'q        → faqat nom teng bo'lsin
+     * Nomzodlar asl tartibda saqlanadi, shuning uchun natija ham
+     * eski kod bilan bir xil chiqadi (birinchi bo'sh mos qator). */
+    const nomIndeks = new Map<string, any[]>();
+    smetaQatorlar.forEach((sq) => {
+      const k = nNom(sq.nom);
+      if (!k) return;
+      const bor = nomIndeks.get(k);
+      if (bor) bor.push(sq); else nomIndeks.set(k, [sq]);
+    });
+    /* Band joylar — `boglanganJoylar` (mavjud) + shu yurishda olinganlar */
+    const bandJoy = new Set<string>();
+
     // F2 ni aylanib chiqib, aniq moslik topsa bog'laymiz
     const yangiBog: Record<string, {varaq: string, row: number}> = {};
     const yur = (nodes: any[]) => {
@@ -1545,21 +1572,20 @@ const onAvtoMoslash = () => {
         if (uid && n.type !== 'rz' && !aktBogMi(uid) && !String(uid).startsWith('dop_') && !yangiBog[uid]) {
            const fKod = nKod(n.kod);
            const fNom = nNom(n.nom);
-           
-           // 100% mosini izlash (Kodi va Nomi mos)
-           const exact = smetaQatorlar.find(sq => {
-             // Band bo'lmasin
-             if (boglanganJoylar.has(sq.varaq + '#' + sq.row) || Object.values(yangiBog).some(b => b.varaq === sq.varaq && b.row === sq.row)) return false;
-             
+
+           /* Faqat nomi mos keladigan nomzodlar — butun ro'yxat emas */
+           const nomzodlar = fNom ? (nomIndeks.get(fNom) ?? []) : [];
+           const exact = nomzodlar.find((sq) => {
+             const joy = sq.varaq + '#' + sq.row;
+             if (bandJoy.has(joy) || boglanganJoylar.has(joy)) return false;
              const sKod = nKod(sq.kod);
-             const sNom = nNom(sq.nom);
-             
-             // Agar kod bo'lsa kod+nom, kod yo'q bo'lsa faqat nom bo'yicha qat'iy
-             if (fKod && sKod) return fKod === sKod && fNom === sNom;
-             return fNom === sNom;
+             /* Eski shart: ikkalasida kod bo'lsa kod ham teng bo'lsin */
+             if (fKod && sKod) return fKod === sKod;
+             return true;   /* nom allaqachon teng (indeks kaliti) */
            });
-           
+
            if (exact) {
+             bandJoy.add(exact.varaq + '#' + exact.row);
              // ⚡ 2026-08-13: `n.kalit` (undefined) → `uid`. Avval kalit
              // "undefined" bo'lib yozilardi va bog'lanish YO'QOLARDI —
              // «avto moslashtirish ishlamaydi» shundan edi.
