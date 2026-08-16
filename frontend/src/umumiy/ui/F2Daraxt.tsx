@@ -26,11 +26,27 @@ export type DaraxtTugun = {
  * Foydalanuvchi: «eski tizimda rz rs mat ob bl har biri uchun vizual
  * qulay ajrata olish uchun ranglar bilan ajratilgan edi».
  * Palitra `umumiy/turRang.ts` bilan bir xil (indigo/binafsha/ko'k/sariq/moviy). */
-const TUR_RANG: Record<string, string> = {
-  rz: 'var(--t-rz, #818cf8)',
-  bl: 'var(--t-bl, #c084fc)', rs: 'var(--t-rs, #60a5fa)', mat: 'var(--t-mat, #facc15)', ob: 'var(--t-ob, #2dd4bf)',
+/* ⚡⚡⚡ 2026-08-16 TO'LIQ RANG TIZIMI (foydalanuvchi 2-marta so'radi:
+ * «avval aytgandim qator turiga qarab ranglashni, lekin hali ham hech
+ *  balo ranglanmagan»).
+ *
+ * NIMA UCHUN ILGARI KO'RINMASDI:
+ *   1) rang belgisi `t.type !== 'rz'` blokining ICHIDA edi — RAZDEL
+ *      (eng muhim daraja) umuman ranglanmasdi;
+ *   2) belgi 10px, opacity-70 — ko'zga tashlanmasdi;
+ *   3) qatorning O'ZIDA hech qanday rang yo'q edi, faqat mayda yorliq.
+ *
+ * ENDI har tur uchun UCHTA belgi: chap chiziq + fon chipi + nom rangi. */
+type TurUslub = { chiziq: string; chip: string; matn: string; nom: string };
+const TUR: Record<string, TurUslub> = {
+  rz:  { chiziq:'#818cf8', chip:'bg-indigo-500/20 text-indigo-200 border-indigo-400/40', matn:'text-indigo-100', nom:'РАЗДЕЛ' },
+  bl:  { chiziq:'#c084fc', chip:'bg-purple-500/15 text-purple-200 border-purple-400/30', matn:'text-purple-50',  nom:'ИШ' },
+  rs:  { chiziq:'#60a5fa', chip:'bg-blue-500/15  text-blue-200  border-blue-400/30',    matn:'text-slate-200',  nom:'РЕС' },
+  mat: { chiziq:'#facc15', chip:'bg-yellow-500/15 text-yellow-200 border-yellow-400/30', matn:'text-yellow-50', nom:'МАТ' },
+  ob:  { chiziq:'#2dd4bf', chip:'bg-teal-500/15  text-teal-200  border-teal-400/30',    matn:'text-teal-50',    nom:'ОБ' },
 };
-const TUR_NOM: Record<string, string> = { rz: 'РЗ', bl: 'ИШ', rs: 'РЕС', mat: 'МАТ', ob: 'ОБ' };
+const TUR_ZAX: TurUslub = { chiziq:'#64748b', chip:'bg-slate-500/15 text-slate-300 border-slate-400/30', matn:'text-slate-300', nom:'?' };
+const turUslub = (t: string): TurUslub => TUR[t] || TUR_ZAX;
 
 // Gap drop zone — smeta qatorlari orasiga tashlash uchun
 const GapZone = memo(function GapZone({
@@ -110,11 +126,17 @@ const DaraxtQator = memo(function DaraxtQator({
                   transition-colors duration-[120ms] min-h-[32px] group
                   ${drop ? 'bg-emerald-500/20 ring-1 ring-emerald-500'
                     : yoritilgan ? 'bg-[var(--accent)]/[.15] ring-1 ring-[var(--accent)]/30'
-                    : bog ? 'bg-emerald-500/10 border-l-[3px] border-l-emerald-500' 
-                    : t.type === 'rz' ? 'bg-[var(--surface-2)]/40 border-l-[3px] border-l-transparent'
-                    : 'hover:bg-[var(--surface-2)]/40 border-l-[3px] border-l-transparent'}
+                    : bog ? 'bg-emerald-500/10'
+                    : t.type === 'rz' ? 'bg-[var(--surface-2)]/60'
+                    : 'hover:bg-[var(--surface-2)]/40'}
                   ${sudraladi && t.type !== 'rz' ? 'cursor-grab active:cursor-grabbing' : bolalari ? 'cursor-pointer' : ''}`}
-      style={{ paddingLeft: 8 + daraja * 18, paddingRight: 10 }}
+      /* ⚡ 2026-08-16: chap chiziq endi TUR RANGIDA — daraxtga bir qarashda
+         qaysi daraja qayerda ekani ko'rinadi. Bog'langan qator yashil
+         qoladi (bu holat rangi turdan muhimroq). */
+      style={{ paddingLeft: 8 + daraja * 18, paddingRight: 10,
+               borderLeft: `4px solid ${bog ? '#10b981' : turUslub(t.type).chiziq}`,
+               background: t.type === 'rz' && !bog && !drop && !yoritilgan
+                 ? `linear-gradient(90deg, ${turUslub('rz').chiziq}22 0%, transparent 55%)` : undefined }}
     >
       <span className="w-5 flex-shrink-0 text-text-mute flex items-center justify-center">
         {bolalari && (
@@ -203,15 +225,24 @@ const DaraxtQator = memo(function DaraxtQator({
              </div>
            )}
 
-           {/* Tur belgisi */}
-           <span className="text-[10px] font-bold tracking-wider opacity-70 ml-0.5" style={{ color: TUR_RANG[t.type] || '#ccc' }} title={TUR_NOM[t.type]}>
-              {TUR_NOM[t.type]}
-           </span>
         </div>
       )}
 
+      {/* ⚡⚡⚡ 2026-08-16 TUR CHIPI — HAR qator uchun (rz ham!).
+          Avval bu belgi `t.type !== 'rz'` blokining ichida edi, ya'ni
+          RAZDEL umuman belgilanmasdi; ustiga 10px/opacity-70 bo'lgani
+          uchun ko'zga ham tashlanmasdi. Endi fonli, chegarali chip. */}
+      <span className={`flex-shrink-0 px-1.5 py-0.5 rounded border text-[10px]
+                        font-bold tracking-wider ${turUslub(t.type).chip}`}
+            title={turUslub(t.type).nom}>
+        {turUslub(t.type).nom}
+      </span>
+
       <div className={`min-w-0 flex-1 py-1.5 ${bog ? 'opacity-100' : 'opacity-80'}`}>
-        <div className={`whitespace-normal leading-tight break-words ${t.type === 'rz' ? 'text-white font-bold tracking-wide' : bog ? 'text-emerald-50 font-medium' : 'text-slate-200'}`} title={t.nom}>
+        <div className={`whitespace-normal leading-tight break-words ${
+            t.type === 'rz' ? 'text-white font-bold tracking-wide text-[14px]'
+            : bog ? 'text-emerald-50 font-medium'
+            : turUslub(t.type).matn}`} title={t.nom}>
           {t.nom}
         </div>
         {(t.kod || t.bir) && (
@@ -455,6 +486,16 @@ export function F2Daraxt({
     estimateSize: () => 32,
     overscan: 10,
     measureElement: (el) => (el as HTMLElement)?.getBoundingClientRect().height ?? 32,
+    /* ⚡⚡⚡ 2026-08-16 «ОЧИБ-ЁПГАНДА МАТНЛАР ЧАЛКАШИБ КЕТАДИ» ТУЗАТИШИ.
+     * Virtualizator o'lchangan balandliklarni INDEKS bo'yicha keshlaydi.
+     * Razdel ochilganda/yopilganda ro'yxat uzayadi-qisqaradi va barcha
+     * keyingi qatorlarning indeksi SURILADI — 5-indeksdagi eski o'lchov
+     * endi butunlay boshqa qatorga tegishli bo'lib qoladi. Natija:
+     * qator o'z balandligidan qisqa/uzun joyga tushadi va matnlar
+     * bir-birining ustiga chiqadi.
+     * `getItemKey` bilan o'lchov QATOR KALITIGA bog'lanadi — indeks
+     * surilsa ham har qator o'z balandligini olib yuradi. */
+    getItemKey: (index) => qatorlar[index]?.t.kalit ?? index,
   });
 
   if (!tugunlar.length) {

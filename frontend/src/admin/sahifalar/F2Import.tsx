@@ -1610,7 +1610,67 @@ const onAvtoMoslash = () => {
               nom={`Qaysi smeta bilan ishlaymiz? (${(loklar.data.lokalkalar || []).length} ta mavjud)`}
               izoh="Aniq smetani tanlash TEZKOR va TAVSIYA ETILADI. Bo'sh qoldirilsa barcha smetalar o'qiladi — katta obyektda vaqt limitiga urilishi mumkin."
             >
-              <Tanlov qiymat={lokalka} ozgardi={setLokalka} variantlar={['', ...(loklar.data.lokalkalar || [])]} />
+              {/* ⚡⚡⚡ 2026-08-16 KO'P SMETANI QO'LDA TANLASH.
+                  Foydalanuvchi: «smetalarni qo'lda tanlash imkoniyati ham
+                  bo'lishi kerak, hozir bor lekin u FAQAT BITTASINI tanlab
+                  oladi; smetalarni tekshirishni bosganda tanlash mumkin
+                  lekin unda juda ko'p vaqt ketib qolayapdi».
+                  `useHolat` allaqachon massiv qabul qiladi
+                  (`apiHolatOlLokalkalar`) — faqat UI yo'q edi. */}
+              <div className="rounded-[10px] border border-border bg-[var(--surface-2)]/30 p-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] text-text-mute">
+                    {tanlanganLoklar.length
+                      ? `${tanlanganLoklar.length} ta smeta tanlandi`
+                      : 'Kerakli smetalarni belgilang (bir nechtasini ham)'}
+                  </span>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setTanlanganLoklar(loklar.data?.lokalkalar || [])}
+                      className="text-[10px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-text-mute transition-colors">
+                      Hammasi
+                    </button>
+                    <button
+                      onClick={() => { setTanlanganLoklar([]); setLokalka(''); }}
+                      className="text-[10px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-text-mute transition-colors">
+                      Tozalash
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-52 overflow-y-auto scrollbar-thin space-y-0.5">
+                  {(loklar.data.lokalkalar || []).map((L: string) => {
+                    const belgilangan = tanlanganLoklar.includes(L);
+                    /* probe natijasi bo'lsa — qoplama foizini ko'rsatamiz */
+                    const p = (taklifNatija || []).find((x) => x.lokalka === L);
+                    return (
+                      <label key={L}
+                        className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer text-[12px]
+                                    transition-colors ${belgilangan
+                                      ? 'bg-accent/15 text-text' : 'hover:bg-white/5 text-text-dim'}`}>
+                        <input type="checkbox" checked={belgilangan}
+                          onChange={() => setTanlanganLoklar(
+                            belgilangan ? tanlanganLoklar.filter((x) => x !== L)
+                                        : [...tanlanganLoklar, L])}
+                          className="accent-[var(--accent)] cursor-pointer" />
+                        <span className="flex-1 truncate" title={L}>{L}</span>
+                        {p && p.qoplama > 0 && (
+                          <span className={`text-[10px] px-1.5 rounded ${
+                            p.qoplama >= 50 ? 'bg-emerald-500/20 text-emerald-300'
+                                            : 'bg-amber-500/20 text-amber-300'}`}>
+                            {Math.round(p.qoplama)}%
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+                {tanlanganLoklar.length > 1 && (
+                  <p className="mt-1.5 text-[10px] text-text-mute">
+                    {tanlanganLoklar.length} ta smeta birlashtirilib bitta daraxt sifatida
+                    o'qiladi — F2 ularning istalganiga bog'lanishi mumkin.
+                  </p>
+                )}
+              </div>
               {/* ⚡ 2026-08-13: chegaradan ko'p smeta bo'lsa BARCHASINI o'qish
                   avtomatik ishga tushmaydi — «Failed to fetch» aynan shundan
                   bo'lardi (4.45 MB javob + GAS navbati = 47s, ulanish uziladi). */}

@@ -250,12 +250,34 @@ function f2MoslashEngine(aktTree, lrvTree, opts){
     if (cands.length === 1) return !smetaTaken(cands[0].varaq, cands[0].row) ? cands[0] : null;
     return _ekvivmi(cands) ? _birinchiBosh(cands) : null;
   }
+  /* ⚡⚡⚡ 2026-08-16 «АВТО МОСЛАШТИРИШ ХАТО ЖОЙЛАРГА БОҒЛАБ ЮБОРАЯПДИ» —
+   * ИЛДИЗ ШУ ЕРДА ЭДИ.
+   *
+   * Foydalanuvchi: «uni shunchalik aniq ishlaydigan qilginki FAQAT ANIQ
+   * o'zini joyini topa olsagina bog'lasin, bo'lmasa yo'q».
+   *
+   * ESKI KOD:
+   *     if (ok.length === 1) return ...;
+   *     return _birinchiBosh(ok);   // ← nomzodlar HAR XIL bo'lsa ham
+   *                                 //   birinchi bo'shini olib bog'lardi
+   *
+   * Ya'ni bir kalit (kod yoki nom+birlik) bo'yicha 5 ta TURLI qator
+   * topilsa, tizim ularning birinchisini tanlab qo'yardi — pul butunlay
+   * boshqa ishga yozilardi. Bu jim ketadigan xato: panel «bog'landi»
+   * deb yashil ko'rsatadi, lekin manzil noto'g'ri.
+   *
+   * ENDI: nomzodlar bir-biriga EKVIVALENT bo'lsagina (kod+nom+birlik+narx
+   * AYNAN teng — ya'ni qaysi biri tanlansa ham natija bir xil) birinchi
+   * bo'shi olinadi. Aks holda BOG'LANMAYDI va qator qo'lda bog'lash uchun
+   * qoladi. `findUnique` allaqachon shunday ishlardi — ikki tanlagich
+   * o'rtasidagi bu nomuvofiqlik xatoning manbai edi. */
   function pickUnique(cands){
     if (!cands || !cands.length) return null;
     var ok = cands.filter(function(c){ return c.type !== 'rz'; });
     if (!ok.length) return null;
     if (ok.length === 1) return smetaTaken(ok[0].varaq, ok[0].row) ? null : ok[0];
-    return _birinchiBosh(ok); // Yanada kuchaytirildi: bir xil qatorlar orasidan birinchisini olish
+    /* Bir nechta nomzod — faqat ekvivalent bo'lsa tanlaymiz */
+    return _ekvivmi(ok) ? _birinchiBosh(ok) : null;
   }
   /* QAT'IY: faqat AYNAN bitta nomzod. Ekvivalent-qisqartma ham, fuzzy ham yo'q.
    * Generic resurs (000001 = ЗАТРАТЫ ТРУДА) 153 joyda bir xil — aralashmasin. */
