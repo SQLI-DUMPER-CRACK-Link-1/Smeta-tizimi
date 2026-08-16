@@ -1486,3 +1486,85 @@ export function useSupabaseReset() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['supaKursor'] }),
   });
 }
+
+/* ── Hujjat MA'LUMOTLARI (2026-08-16) ─────────────────────────────
+ * Avval «Hujjatlar» sahifasi faqat fayl HAVOLASINI berardi.
+ * Aslida GAS da to'liq o'qish API lari bor: akt reestri, prixod,
+ * viborka nazorati. Ular saytda umuman ochilmasdi. */
+
+export type AktQator = {
+  id: string; num: string; work: string; obj: string;
+  status: string; comm: string; start: string; end: string;
+  progress: string; pdf: string; url: string; ref: string; row: number;
+};
+
+export function useAktlar(limit = 100, qidiruv = '') {
+  return useQuery({
+    queryKey: ['aktlar', limit, qidiruv],
+    queryFn: () => gas<{ rows: AktQator[]; jami: number; statlar?: Record<string, number> }>(
+      'apiAktlarOl', limit, qidiruv),
+    staleTime: 60_000,
+  });
+}
+
+export type PrixodQator = {
+  nom: string; razdel: string; birlik: string; hajm: number;
+  sana: string; postavshik: string; row: number;
+};
+
+export function usePrixod(limit = 100, qidiruv = '') {
+  return useQuery({
+    queryKey: ['prixod', limit, qidiruv],
+    queryFn: () => gas<{ rows: PrixodQator[]; jami: number; url?: string }>(
+      'apiPrixodOl', limit, qidiruv),
+    staleTime: 60_000,
+  });
+}
+
+export type ViborkaQator = {
+  nom: string; birlik: string; plan: number; qabul: number;
+  narx: number; summa: number; qoldiq: number; foiz: string;
+  sana: string; postavshik: string; izoh: string;
+  holat: string; zamena: string; row: number;
+};
+
+export function useViborka(limit = 100, qidiruv = '') {
+  return useQuery({
+    queryKey: ['viborka', limit, qidiruv],
+    queryFn: () => gas<{
+      rows: ViborkaQator[]; jami: number; url?: string; xabar?: string;
+      jamiPlan?: number; jamiQabul?: number; jamiSumma?: number;
+    }>('apiViborkaOl', limit, qidiruv),
+    staleTime: 60_000,
+  });
+}
+
+/* ── Diagnostika (Monitoring sahifasi uchun) ──────────────────── */
+export function useTolaDiagnostika() {
+  return useMutation({
+    mutationFn: () => gas<Record<string, unknown>>('apiTolaDiagnostika'),
+  });
+}
+
+export function useObyektDiagnostika() {
+  return useMutation({
+    mutationFn: ({ obyekt }: { obyekt: string }) =>
+      gas<Record<string, unknown>>('apiObyektDiagnostika', obyekt),
+  });
+}
+
+export function useKeshHolat() {
+  return useQuery({
+    queryKey: ['keshHolat'],
+    queryFn: () => gas<Record<string, unknown>>('apiKeshHolat'),
+    staleTime: 30_000,
+  });
+}
+
+export function useTriggerlar() {
+  return useQuery({
+    queryKey: ['triggerlar'],
+    queryFn: () => gas<Array<{ fn?: string; tur?: string; [k: string]: unknown }>>('apiTriggerlarRoyxat'),
+    staleTime: 60_000,
+  });
+}
