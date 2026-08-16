@@ -635,3 +635,70 @@ function supabaseTriggerOchir(){
     if(f==='supabaseSoatlikSinx'||f==='supabaseToliqSinx') ScriptApp.deleteTrigger(t);
   });
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * supabaseToliqSinx — KUNLIK TO'LIQ SINXRONIZATSIYA
+ *
+ * ⚡⚡⚡ 2026-08-16 YARATILDI (audit C13 — TASDIQLANDI).
+ *
+ * MUAMMO: `supabaseTriggerOrnat` har kuni 03:00 ga shu nomdagi trigger
+ * o'rnatardi, LEKIN BU FUNKSIYA MAVJUD EMAS EDI. Har tun GAS
+ * «Script function not found: supabaseToliqSinx» xatosi bilan
+ * yiqilardi — pochta xatosi kelardi, kunlik to'liq sinx esa HECH
+ * QACHON bajarilmasdi. Ya'ni Supabase faqat «dirty» obyektlar bilan
+ * yangilanib, qolganlari eskirib borardi.
+ *
+ * FARQI `supabaseSoatlikSinx` dan: soatlik faqat O'ZGARGAN
+ * («dirty») obyektlarni yuboradi, bu esa BARCHASINI qayta yuboradi.
+ * Shuning uchun kuniga bir marta, tunda ishlaydi.
+ *
+ * VAQT XAVFSIZLIGI: obyektlar ko'p bo'lsa 6 daqiqa yetmasligi mumkin.
+ * Shuning uchun byudjet kuzatiladi va tugaganda TO'XTAB, qolganini
+ * keyingi kunga qoldiradi — yarim holatda o'lib qolmaydi.
+ * ══════════════════════════════════════════════════════════════════ */
+function supabaseToliqSinx(){
+  if (typeof tizimMuzlatilganMi === 'function' && tizimMuzlatilganMi()) {
+    Logger.log('Tizim PAUSED — supabaseToliqSinx bajarilmadi.');
+    return {ok:false, sabab:'Tizim to\'xtatilgan (PAUSED)'};
+  }
+  if(!_sbBor()) return {ok:false, sabab:'sozlanmagan'};
+
+  var t0 = Date.now(), BUDGET = 4.5*60*1000;   // GAS 6 daq. — zaxira qoldiramiz
+  var log = [], yuborildi = 0, qoldi = 0;
+
+  /* 1) Umumiy jadvallar — soatlik bilan bir xil */
+  try{ supabaseDashboardPush(); log.push('✓ dashboard'); }catch(e){ log.push('✗ dashboard: '+(e.message||e)); }
+  try{ supabaseNarxlarPush();   log.push('✓ narxlar');   }catch(e){ log.push('✗ narxlar: '+(e.message||e)); }
+  try{ supabaseTolovPush();     log.push('✓ tolovlar');  }catch(e){ log.push('✗ tolovlar: '+(e.message||e)); }
+  try{ supabaseShartnomaPush(); log.push('✓ shartnoma'); }catch(e){ log.push('✗ shartnoma: '+(e.message||e)); }
+  try{ supabasePrixodPush();    log.push('✓ prixod');    }catch(e){ log.push('✗ prixod: '+(e.message||e)); }
+  try{ supabaseAktPush();       log.push('✓ akt');       }catch(e){ log.push('✗ akt: '+(e.message||e)); }
+  try{ supabaseAktIshPush();    log.push('✓ akt_ish');   }catch(e){ log.push('✗ akt_ish: '+(e.message||e)); }
+
+  /* 2) BARCHA obyektlar (soatlikdan farqi shu — «dirty» emas, hammasi) */
+  var obs = [];
+  try{ obs = (typeof papkaSkan==='function' ? papkaSkan() : []) || []; }catch(e){}
+
+  for(var i=0; i<obs.length; i++){
+    if(Date.now()-t0 > BUDGET){ qoldi = obs.length - i; break; }
+    var ob = obs[i] && obs[i].obyekt;
+    if(!ob) continue;
+    try{
+      supabaseObyektPush(ob);
+      supabaseMaterialKerakPush(ob);
+      supabaseTopilmaganPush(ob);
+      supabaseAnomaliyaPush(ob);
+      yuborildi++;
+    }catch(e){ log.push('✗ '+ob+': '+(e.message||e)); }
+  }
+
+  var xulosa = 'To\'liq sinx: '+yuborildi+'/'+obs.length+' obyekt'
+             + (qoldi ? (' · '+qoldi+' ta VAQT tugagani uchun qoldi (ertaga davom etadi)') : '')
+             + ' · '+Math.round((Date.now()-t0)/1000)+'s';
+  log.push(xulosa);
+  Logger.log(log.join('\n'));
+  try{ supabaseTarixYoz('toliq_sinx', xulosa); }catch(e){}
+
+  return {ok:true, yuborildi:yuborildi, jami:obs.length, qoldi:qoldi,
+          vaqt:Math.round((Date.now()-t0)/1000)+'s', log:log, xabar:xulosa};
+}

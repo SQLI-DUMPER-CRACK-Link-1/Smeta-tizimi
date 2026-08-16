@@ -2362,11 +2362,37 @@ function _oyYigindiFormulalarYangila(sh) {
   _f2OyColsInv(sh);                    // oy qo'shilgan bo'lishi mumkin — kesh yangilanadi
   var _oyColsY = _f2OyCols(sh);        // mavjud oylar — _f2sum ANIQ kataklar bilan yozadi
   
+  /* ⚡⚡⚡ 2026-08-16 RAZDEL JAMILARI O'CHIB KETISHI (audit C10 — TASDIQLANDI).
+   *
+   * Pastdagi siklda `rz` (razdel) qatorlar `else` shoxiga tushib, ularning
+   * F2OL / F2MUM / ST_F2 / ST_OST kataklariga BO'SH ('') yozilardi.
+   * Lekin `_jamiQator` izohida aniq yozilgan: «rz qatorlar ST_F2/ST_OST da
+   * LEAF YIG'INDISINI saqlaydi (drill-down ko'rinishi)» — ya'ni u yerda
+   * SUMIF formulalari turishi KERAK.
+   * Bu funksiya har F2 yozuvidan keyin chaqiriladi, demak har safar
+   * razdel darajasidagi «F2 olingan» va «Qoldiq» jamilari O'CHIB ketardi
+   * va faqat keyingi to'liq «Ишла» da tiklanardi.
+   *
+   * YECHIM: `rz` qatorlarga TEGILMAYDI — mavjud formula/qiymat o'qib
+   * olinib, o'z joyiga qaytariladi. Boshqa marker turlari (bo'sh qator,
+   * sarlavha) ham shu tarzda saqlanadi: bu funksiya FAQAT bl/rs/mat/ob
+   * qatorlarni yangilashi kerak, qolganiga aralashmasligi kerak. */
+  var eskiF2OL  = sh.getRange(start, col.F2OL,   n, 1).getFormulas();
+  var eskiF2MUM = sh.getRange(start, col.F2MUM,  n, 1).getFormulas();
+  var eskiSTF2  = sh.getRange(start, col.ST_F2,  n, 1).getFormulas();
+  var eskiSTOST = sh.getRange(start, col.ST_OST, n, 1).getFormulas();
+  var qF2OL     = sh.getRange(start, col.F2OL,   n, 1).getValues();
+  var qF2MUM    = sh.getRange(start, col.F2MUM,  n, 1).getValues();
+  var qSTF2     = sh.getRange(start, col.ST_F2,  n, 1).getValues();
+  var qSTOST    = sh.getRange(start, col.ST_OST, n, 1).getValues();
+  /* formula bo'lsa formula, aks holda qiymat (qiymat ham yo'qolmasin) */
+  function _saqla(f, v, i){ return f[i][0] ? f[i][0] : v[i][0]; }
+
   var vF2OL = [];
   var vF2MUM = [];
   var vST_F2 = [];
   var vST_OST = [];
-  
+
   for (var i = 0; i < n; i++) {
     var r = start + i;
     var mk = String(marker[i][0] || '').trim().toLowerCase().replace(/[+~]$/,'');
@@ -2376,10 +2402,12 @@ function _oyYigindiFormulalarYangila(sh) {
       vST_F2.push([_f2sum(r, 2, _oyColsY)]);
       vST_OST.push(['=$' + CL(col.F2MUM) + r + '*$' + CL(col.NARX) + r]);
     } else {
-      vF2OL.push(['']);
-      vF2MUM.push(['']);
-      vST_F2.push(['']);
-      vST_OST.push(['']);
+      /* ⚡ 2026-08-16 (audit C10): avval bu yerda '' yozilib RAZDEL
+       * jamilari o'chib ketardi. Endi mavjud formula/qiymat saqlanadi. */
+      vF2OL.push([_saqla(eskiF2OL,  qF2OL,  i)]);
+      vF2MUM.push([_saqla(eskiF2MUM, qF2MUM, i)]);
+      vST_F2.push([_saqla(eskiSTF2,  qSTF2,  i)]);
+      vST_OST.push([_saqla(eskiSTOST, qSTOST, i)]);
     }
   }
   

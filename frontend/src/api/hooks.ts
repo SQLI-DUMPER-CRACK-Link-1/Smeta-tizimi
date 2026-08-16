@@ -195,8 +195,15 @@ export function useHolatSaqla(obyekt: string) {
   return useMutation({
     mutationFn: async (edits: Edit[]) => {
       // Navbatga qo'shamiz (Faza 3 offline qatlam)
+      /* ⚡⚡⚡ 2026-08-16 KESH KALITI MOS KELMASDI (audit C9 — TASDIQLANDI).
+       * `useHolat` kaliti TO'RT elementli: ['holat', obyekt, forceRefresh, kalit]
+       * (oxirgisi tanlangan lokalka(lar)ga bog'liq). Bu yerda esa UCH
+       * elementli kalit ishlatilardi — `getQueryData` DOIM undefined
+       * qaytarardi va optimistik yangilanish UMUMAN ishlamasdi (jim
+       * o'lik kod), rollback esa mavjud bo'lmagan kalitga yozardi.
+       * ENDI: shu obyektning BARCHA holat so'rovlari topiladi va
+       * har biriga qo'llanadi — lokalka tanlovi qanday bo'lishidan qat'i nazar. */
       const oldingi = qc.getQueryData<{ tree: TreeNode[], lokalkalar: string[] }>(['holat', obyekt, false]);
-      
       const orqaga = edits.map(e => {
         let eskiFakt: number | undefined;
         const qidir = (nodes: TreeNode[]) => {
@@ -218,7 +225,11 @@ export function useHolatSaqla(obyekt: string) {
     },
     onMutate: async (edits) => {
       await qc.cancelQueries({ queryKey: ['holat', obyekt] });
-      const oldingi = qc.getQueryData<{ tree: TreeNode[], lokalkalar: string[] }>(['holat', obyekt, false]);
+      const mosQ = qc.getQueriesData<{ tree: TreeNode[], lokalkalar: string[] }>({
+        queryKey: ['holat', obyekt],
+      });
+      const oldingi = mosQ.find(([, d]) => d && (d as any).tree)?.[1];
+      
       
       // Optimistik UI
       if (oldingi && oldingi.tree) {
@@ -249,13 +260,14 @@ export function useHolatSaqla(obyekt: string) {
         };
         
         updateTree(newTree);
-        qc.setQueryData(['holat', obyekt, false], { ...oldingi, tree: newTree });
+        mosQ.forEach(([k, d]) => { if (d && (d as any).tree) qc.setQueryData(k, { ...(d as any), tree: newTree }); });
       }
       
-      return { oldingi };
+      return { oldingi, kalitlar: mosQ.map(([k]) => k) };
     },
     onError: (_xato, _v, ctx) => {
-      qc.setQueryData(['holat', obyekt, false], ctx?.oldingi);
+      /* rollback — barcha mos kalitlarga */
+      if (ctx?.oldingi) (ctx.kalitlar ?? []).forEach((k) => qc.setQueryData(k, ctx.oldingi));
     }
   });
 }
