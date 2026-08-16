@@ -2794,6 +2794,49 @@ const onAvtoMoslash = () => {
               />
             </div>
 
+            {/* ⚡⚡⚡ 2026-08-16 F2 DAN AVTOMATIK TO'LDIRISH.
+                Foydalanuvchi: «razdel qo'shish resurs qo'shish... maksimal
+                qulay bo'lishi shart».
+                Avval nom/kod/birlik/hajm/narxni QO'LDA yozish kerak edi —
+                F2 da o'sha ma'lumot turgan bo'lsa ham. Endi bog'lanmagan
+                F2 qatorlaridan birini tanlasangiz forma o'zi to'ladi. */}
+            {yangiTur !== 'rz' && boglanmagan.length > 0 && (
+              <div className="rounded-md border border-sky-500/30 bg-sky-500/[.07] p-2.5">
+                <label className="text-[12px] font-medium text-sky-300 block mb-1.5">
+                  ⚡ Ф2 dan to'ldirish ({boglanmagan.length} ta bog'lanmagan qator)
+                </label>
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const n = boglanmagan.find((x) => x.uid === e.target.value);
+                    if (!n) return;
+                    setYangiNom(String(n.nom || ''));
+                    setYangiKod(String(n.kod || ''));
+                    setYangiBirlik(String(n.bir || ''));
+                    setYangiHajm(String(n.hajm ?? ''));
+                    setYangiNarx(String(n.narx ?? ''));
+                    if (n.type === 'bl' || n.type === 'rs' || n.type === 'mat' || n.type === 'ob') {
+                      setYangiTur(n.type === 'bl' ? 'bl' : 'rs');
+                    }
+                    toast(`To'ldirildi: ${String(n.nom).slice(0, 40)}`, 'ok');
+                  }}
+                  className="w-full bg-[var(--surface-3)] border border-border rounded
+                             px-2 py-1.5 text-[12px] text-white">
+                  <option value="">— Ф2 qatorini tanlang (nom, kod, birlik, hajm, narx o'zi to'ladi) —</option>
+                  {boglanmagan.slice(0, 300).map((n) => (
+                    <option key={n.uid} value={n.uid}>
+                      [{(n.type || '').toUpperCase()}] {String(n.kod || 'kodsiz')} · {String(n.nom).slice(0, 60)}
+                      {n.bir ? ` (${n.bir})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-text-mute mt-1">
+                  Tanlagandan keyin maydonlarni tahrirlashingiz mumkin. Saqlagach
+                  o'sha Ф2 qatorini yangi smeta qatoriga sudrab bog'laysiz.
+                </p>
+              </div>
+            )}
+
             {yangiTur !== 'rz' && (
               <div className="grid grid-cols-2 gap-4 bg-[var(--surface-2)] p-3 rounded-md border border-[var(--surface-3)]">
                 <div className="flex flex-col gap-2">
