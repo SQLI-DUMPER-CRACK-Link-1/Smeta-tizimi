@@ -484,16 +484,7 @@ export function F2Import() {
   }, [moslikMap]);
   const boglanganJoylar = useMemo(() => new Set(joyMap.keys()), [joyMap]);
 
-  const aktBogMi = (k: string) => {
-    if (moslikMap.has(k)) return true;
-    if (qolDop[k]) return true;
-    for (const dop of Object.values(qolDop)) {
-      if (dop.childUids?.includes(k)) return true;
-    }
-    // Agar server qaytargan stat ichida qolibDopps bo'lsa (kelajakda):
-    if ((natija?.stat as any)?.qolibDopps?.some((d: any) => d.uid === k || d.childUids?.includes(k))) return true;
-    return false;
-  };
+
 
   const boglanganJami = useMemo(
     () => [...moslikMap.values()].filter((m) => bargUidlar.has(m.uid)).reduce((a, m) => a + (m.summa || 0), 0),
@@ -514,6 +505,36 @@ export function F2Import() {
     });
     return s;
   }, [qolDop]);
+
+  /* ⚡⚡⚡ 2026-08-16 «ҚАТОРЛАРНИ ОЧИБ-ЁПГАНДА ЖУДА СЕКИН» — IKKI SABAB.
+   *
+   * 1) Bu funksiya ODDIY ARROW edi — har renderda YANGI identity.
+   *    F2Daraxt dagi `qatorlar` useMemo uning identity'siga bog'liq
+   *    (`[tugunlar, yopiq, bogMi, filtr]`), shuning uchun sahifaning
+   *    HAR renderida butun akt daraxti QAYTA TEKISLANARDI (~2000 tugun).
+   *
+   * 2) Ichida `Object.values(qolDop)` aylanardi — HAR TUGUN uchun yangi
+   *    massiv + chiziqli qidiruv. 2000 tugun × 40 dop = 80 000 amal,
+   *    ustiga 2000 ta massiv allokatsiyasi.
+   *
+   * ENDI: `useCallback` (barqaror identity) + `doppedUids` tayyor Set
+   * (O(1)). `doppedUids` allaqachon yuqorida hisoblanadi va dop'larning
+   * bolalarini ham o'z ichiga oladi. */
+  const aktBogMi = useCallback((k: string) => {
+    if (moslikMap.has(k)) return true;
+    if (doppedUids.has(k)) return true;
+    return false;
+  }, [moslikMap, doppedUids]);
+
+  /** Dop qilinganini bilish — ilgari inline `(k) => !!qolDop[k]` edi */
+  const aktDopMi = useCallback((k: string) => !!qolDop[k], [qolDop]);
+
+  /** Taklif tanlash — ilgari JSX ichida inline arrow edi */
+  const taklifTanlandi = useCallback((_uid: string, cand: string) => {
+    setSmetaScrollTo(cand);
+    toast('Topildi!', 'ok');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const boglanmagan = useMemo(() => {
     return aktBarglar.filter((n) => !moslikMap.has(n.uid) && !doppedUids.has(n.uid));
@@ -2549,8 +2570,8 @@ const onAvtoMoslash = () => {
                 tugunlar={aktDaraxtFiltrlangan}
                 bogMi={aktBogMi}
                 takliflar={takliflar}
-                onTaklifTanlandi={(_uid, cand) => { setSmetaScrollTo(cand); toast('Topildi!', 'ok'); }}
-                dopMi={(k) => !!qolDop[k]}
+                onTaklifTanlandi={taklifTanlandi}
+                dopMi={aktDopMi}
                 onBogBekor={bogBekor}
                 sudraladi
                 onDopClick={handleDopClick}
