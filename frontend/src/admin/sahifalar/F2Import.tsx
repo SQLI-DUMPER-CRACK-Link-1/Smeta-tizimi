@@ -322,17 +322,44 @@ export function F2Import() {
       const jami = birinchi.jami;
       const yigildi: LokalkaTaklif[] = birinchi.natija ? [birinchi.natija] : [];
       setTaklifJarayon({ joriy: 1, jami });
-      for (let i = 1; i < jami; i++) {
-        const r = await lokTaklif.mutateAsync({ obyekt, kalitlar, indeks: i });
-        if (r.natija) yigildi.push(r.natija);
-        setTaklifJarayon({ joriy: i + 1, jami });
+
+      /* ⚡⚡⚡ 2026-08-16 PARALLEL PROBE (Antigravity taklifi — to'g'ri taklif).
+       * Avval smetalar KETMA-KET tekshirilardi: har biri 3-5 soniya,
+       * 26 smeta = 2 daqiqadan ko'p kutish. Foydalanuvchi: «smetalarni
+       * tekshirishni bosganda juda ko'p vaqt ketib qolayapdi».
+       *
+       * Endi bir vaqtda 4 tadan yuboriladi. 4 dan ko'p qilmaymiz —
+       * GAS chaqiruvlarni FOYDALANUVCHI bo'yicha navbatga qo'yadi va
+       * ortiqcha parallellik faqat navbatni uzaytiradi, tezlik bermaydi
+       * (bu «Failed to fetch» ning eski sababi ham edi).
+       * Natija: 26 smeta ≈ 20-30 soniya. */
+      const PARALLEL = 4;
+      let tugagan = 1;
+      for (let bosh = 1; bosh < jami; bosh += PARALLEL) {
+        const guruh: Promise<{ natija?: LokalkaTaklif }>[] = [];
+        for (let i = bosh; i < Math.min(bosh + PARALLEL, jami); i++) {
+          guruh.push(lokTaklif.mutateAsync({ obyekt, kalitlar, indeks: i }));
+        }
+        /* allSettled — bitta smeta xato bersa qolganlari baribir keladi */
+        const natijalar = await Promise.allSettled(guruh);
+        natijalar.forEach((n) => {
+          if (n.status === 'fulfilled' && n.value?.natija) yigildi.push(n.value.natija);
+        });
+        tugagan += guruh.length;
+        setTaklifJarayon({ joriy: Math.min(tugagan, jami), jami });
+        /* Har guruhdan keyin oraliq natijani ko'rsatamiz — foydalanuvchi
+         * hammasi tugashini kutmasdan ko'ra boshlaydi */
+        setTaklifNatija([...yigildi].sort((a, b) => b.qoplama - a.qoplama || b.ball - a.ball));
       }
+
       yigildi.sort((a, b) => b.qoplama - a.qoplama || b.ball - a.ball);
       setTaklifNatija(yigildi);
-      // Eng yaxshining yarmidan yuqorilarini avtomatik belgilaymiz (tabiiy kesim)
-      const eng = yigildi[0]?.qoplama || 0;
-      const tavsiya = yigildi.filter(x => x.qoplama > 0 && x.qoplama >= eng / 2).map(x => x.lokalka);
-      setTanlanganLoklar(tavsiya);
+      /* ⚡ 2026-08-16: kesim 30% ga o'zgartirildi (Antigravity taklifi).
+       * Avval «eng yaxshining yarmi» edi — eng yaxshisi 20% bo'lsa
+       * 10% li begona smetalar ham tavsiya etilardi. */
+      const tavsiya = yigildi.filter(x => x.qoplama >= 30).map(x => x.lokalka);
+      setTanlanganLoklar(tavsiya.length ? tavsiya
+        : yigildi.filter(x => x.qoplama > 0).slice(0, 1).map(x => x.lokalka));
       toast(`${jami} smeta tekshirildi — ${tavsiya.length} tasi tavsiya etildi`, 'ok', undefined, 6000);
     } catch (e: any) {
       toast('Xato: ' + e.message, 'danger');

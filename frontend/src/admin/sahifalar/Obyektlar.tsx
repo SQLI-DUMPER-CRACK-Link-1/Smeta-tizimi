@@ -317,8 +317,60 @@ export function Obyektlar() {
                         </div>
                       )}
 
+                      {/* ⚡⚡⚡ 2026-08-16 ADMIN UCHUN TEXNIK MA'LUMOT.
+                          Foydalanuvchi: «obyektlar tabida nima bajariladi
+                          tushunmayapmanda... saytda malumot juda kam admin uchun».
+                          `apiPapkaSkan` bu ma'lumotlarni ALLAQACHON qaytarardi
+                          (lokName, svodName, format, folderId), lekin ekranda
+                          faqat nom va KPI ko'rsatilardi. Admin uchun eng muhimi:
+                          smeta va SVODKA fayllari joyidami — svodka bo'lmasa
+                          narxlash umuman ishlamaydi va obyekt «hisoblanmadi»
+                          bo'lib qoladi, sababi esa ko'rinmasdi. */}
+                      {(() => {
+                        const it = group.items[0];
+                        if (!it) return null;
+                        const svodYoq = !it.svodName || it.svodName === "(yo'q)";
+                        const lokYoq  = !it.lokName  || it.lokName  === "(yo'q)";
+                        return (
+                          <div className="mt-4 pt-3 border-t border-white/10 space-y-1.5 text-[11px]">
+                            <div className="flex items-start gap-2">
+                              <span className="text-slate-500 w-[52px] flex-shrink-0">Smeta:</span>
+                              <span className={`flex-1 truncate ${lokYoq ? 'text-danger' : 'text-slate-300'}`}
+                                    title={it.lokName}>
+                                {lokYoq ? '⚠ topilmadi' : it.lokName}
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="text-slate-500 w-[52px] flex-shrink-0">Svodka:</span>
+                              <span className={`flex-1 truncate ${svodYoq ? 'text-warn' : 'text-slate-300'}`}
+                                    title={it.svodName}>
+                                {svodYoq ? '⚠ yo\'q — narxlash ishlamaydi' : it.svodName}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                              <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400">
+                                {it.format || 'TN'}
+                              </span>
+                              {group.items.length > 1 && (
+                                <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400">
+                                  {group.items.length} lokalka
+                                </span>
+                              )}
+                              {it.folderId && (
+                                <a href={`https://drive.google.com/drive/folders/${it.folderId}`}
+                                   target="_blank" rel="noreferrer"
+                                   onClick={(e) => e.stopPropagation()}
+                                   className="px-1.5 py-0.5 rounded bg-white/5 text-accent hover:bg-accent/20 transition-colors">
+                                  📁 Drive
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* ⚡ Shu obyektni qayta hisoblash (dvigatel, fon navbatida) */}
-                      <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
+                      <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); group.items.forEach(it => bittasiniIshla(it.obyekt, true)); }}
                           disabled={navbatFaol || obyektIshla.isPending}

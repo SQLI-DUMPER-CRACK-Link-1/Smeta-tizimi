@@ -44,15 +44,20 @@ export type DaraxtTugun = {
  *   3) qatorning O'ZIDA hech qanday rang yo'q edi, faqat mayda yorliq.
  *
  * ENDI har tur uchun UCHTA belgi: chap chiziq + fon chipi + nom rangi. */
-type TurUslub = { chiziq: string; chip: string; matn: string; nom: string };
+/* ⚡⚡⚡ 2026-08-16: `fon` qo'shildi — BUTUN QATOR bo'yaladi.
+ * Foydalanuvchi 3-marta so'radi. Avval faqat chap chiziq + kichik chip
+ * bor edi; qatorning o'zi rangsiz qolgani uchun daraxt ierarxiyasi
+ * baribir ko'zga tashlanmasdi. Ranglar ATAYLAB juda och (4-8%) —
+ * matn o'qilishi buzilmasin, lekin daraja bir qarashda bilinsin. */
+type TurUslub = { chiziq: string; chip: string; matn: string; nom: string; fon: string };
 const TUR: Record<string, TurUslub> = {
-  rz:  { chiziq:'#818cf8', chip:'bg-indigo-500/20 text-indigo-200 border-indigo-400/40', matn:'text-indigo-100', nom:'РАЗДЕЛ' },
-  bl:  { chiziq:'#c084fc', chip:'bg-purple-500/15 text-purple-200 border-purple-400/30', matn:'text-purple-50',  nom:'ИШ' },
-  rs:  { chiziq:'#60a5fa', chip:'bg-blue-500/15  text-blue-200  border-blue-400/30',    matn:'text-slate-200',  nom:'РЕС' },
-  mat: { chiziq:'#facc15', chip:'bg-yellow-500/15 text-yellow-200 border-yellow-400/30', matn:'text-yellow-50', nom:'МАТ' },
-  ob:  { chiziq:'#2dd4bf', chip:'bg-teal-500/15  text-teal-200  border-teal-400/30',    matn:'text-teal-50',    nom:'ОБ' },
+  rz:  { chiziq:'#818cf8', chip:'bg-indigo-500/20 text-indigo-200 border-indigo-400/40', matn:'text-indigo-100', nom:'РАЗДЕЛ', fon:'rgba(99,102,241,0.13)' },
+  bl:  { chiziq:'#c084fc', chip:'bg-purple-500/15 text-purple-200 border-purple-400/30', matn:'text-purple-50',  nom:'ИШ',     fon:'rgba(168,85,247,0.07)' },
+  rs:  { chiziq:'#60a5fa', chip:'bg-blue-500/15  text-blue-200  border-blue-400/30',    matn:'text-slate-200',  nom:'РЕС',    fon:'rgba(59,130,246,0.05)' },
+  mat: { chiziq:'#facc15', chip:'bg-yellow-500/15 text-yellow-200 border-yellow-400/30', matn:'text-yellow-50', nom:'МАТ',    fon:'rgba(234,179,8,0.05)' },
+  ob:  { chiziq:'#2dd4bf', chip:'bg-teal-500/15  text-teal-200  border-teal-400/30',    matn:'text-teal-50',    nom:'ОБ',     fon:'rgba(20,184,166,0.05)' },
 };
-const TUR_ZAX: TurUslub = { chiziq:'#64748b', chip:'bg-slate-500/15 text-slate-300 border-slate-400/30', matn:'text-slate-300', nom:'?' };
+const TUR_ZAX: TurUslub = { chiziq:'#64748b', chip:'bg-slate-500/15 text-slate-300 border-slate-400/30', matn:'text-slate-300', nom:'?', fon:'transparent' };
 const turUslub = (t: string): TurUslub => TUR[t] || TUR_ZAX;
 
 // Gap drop zone — smeta qatorlari orasiga tashlash uchun
@@ -141,11 +146,17 @@ const DaraxtQator = memo(function DaraxtQator({
          qaysi daraja qayerda ekani ko'rinadi. Bog'langan qator yashil
          qoladi (bu holat rangi turdan muhimroq). */
       style={{ paddingLeft: 8 + daraja * 18, paddingRight: 10,
+               paddingTop: t.type === 'rz' ? 6 : undefined,
+               paddingBottom: t.type === 'rz' ? 6 : undefined,
                borderLeft: `4px solid ${bog ? '#10b981' : turUslub(t.type).chiziq}`,
-               background: t.manfiy && !bog && !drop && !yoritilgan
-                 ? 'rgba(249,115,22,0.07)'
-                 : (t.type === 'rz' && !bog && !drop && !yoritilgan
-                    ? `linear-gradient(90deg, ${turUslub('rz').chiziq}22 0%, transparent 55%)` : undefined) }}
+               /* ⚡ 2026-08-16 BUTUN QATOR FONI. Ustuvorlik:
+                  bog'langan/drop/yoritilgan (holat rangi) → manfiy →
+                  razdel gradienti → tur foni. */
+               background: (bog || drop || yoritilgan) ? undefined
+                 : t.manfiy ? 'rgba(244,63,94,0.09)'
+                 : t.type === 'rz'
+                   ? `linear-gradient(90deg, ${turUslub('rz').fon} 0%, rgba(99,102,241,0.03) 70%, transparent 100%)`
+                   : turUslub(t.type).fon }}
     >
       <span className="w-5 flex-shrink-0 text-text-mute flex items-center justify-center">
         {bolalari && (
