@@ -13,6 +13,7 @@ import { Shartnoma } from './admin/sahifalar/Shartnoma';
 import { Sklad } from './admin/sahifalar/Sklad';
 import { Monitoring } from './admin/sahifalar/Monitoring';
 import { Sozlamalar } from './admin/sahifalar/Sozlamalar';
+import FaylBoglash from './admin/sahifalar/FaylBoglash';
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
 import { Narxlar } from './admin/sahifalar/Narxlar';
@@ -58,6 +59,8 @@ export default function App() {
           <Route path="ierarxiya" element={<Ierarxiya />} />
           <Route path="monitoring" element={<Monitoring />} />
           <Route path="sozlamalar" element={<Sozlamalar />} />
+          {/* ⚡ 2026-08-16: eski GAS paneldagi «Файл боғлаш» tabi */}
+          <Route path="fayl-boglash" element={<FaylBoglash />} />
           {/* ERP routes for Admin */}
           <Route path="kadrlar" element={<ErpKadrlar />} />
           <Route path="texnika" element={<ErpTexnika />} />

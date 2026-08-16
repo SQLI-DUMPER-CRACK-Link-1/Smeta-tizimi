@@ -1337,3 +1337,64 @@ export function useTashxis(enabled: boolean) {
     staleTime: 60 * 1000,
   });
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * FAYL BOG'LASH (2026-08-16) — eski GAS paneldagi «Файл боғлаш» tabi.
+ *
+ * Foydalanuvchi: «hali ham eski paneldagi ko'plab funksiyalar yo'qda».
+ * Audit natijasi: eski panelda 12 bo'lim bor edi, saytda 4 tasi yo'q.
+ * Bu — eng muhimi: usiz YANGI OBYEKTNI umuman sozlab bo'lmaydi
+ * (qaysi fayl smeta, qaysi fayl svodka, qaysi varaqlar, ustunlar).
+ * GAS API lari BOR edi, faqat sayt ularni chaqirmasdi.
+ * ══════════════════════════════════════════════════════════════════ */
+
+/** Faylning varaq nomlari — bog'lash sozlamasida tanlash uchun */
+export function useSheetlar(fileId: string) {
+  return useQuery({
+    queryKey: ['sheetlar', fileId],
+    queryFn: () => gas<string[]>('apiSheetlarOl', fileId),
+    enabled: !!fileId,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export type BoglashYozuv = {
+  obyekt: string;
+  lokId?: string; lokName?: string;
+  svodId?: string; svodName?: string;
+  format?: string;
+  lokSheets?: string[]; svodSheets?: string[];
+  svodCols?: { nom?: number; bir?: number; narx?: number; blok?: number; qty?: number; summa?: number };
+  narxTayyor?: boolean;
+};
+
+/** Bog'lash sozlamalarini saqlash. DIQQAT: server BUTUN varaqni qayta
+ *  yozadi — shuning uchun BARCHA obyektlar ro'yxati yuboriladi. */
+export function useBoglashSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (pairs: BoglashYozuv[]) => gas<unknown>('apiBoglashSaqla', pairs),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['obyektlar'] });
+      qc.invalidateQueries({ queryKey: ['holat'] });
+    },
+  });
+}
+
+/** Svodka ustunlarini saqlash — papkadagi BARCHA lokalkaga tarqaladi */
+export function useSvodUstunSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt, svodCols }: { obyekt: string; svodCols: Record<string, number> }) =>
+      gas<unknown>('apiSvodUstunSaqla', obyekt, svodCols),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['obyektlar'] }),
+  });
+}
+
+/** Obyekt fayllarini tekshirish — nima yetishmayotganini aytadi */
+export function useObyektTekshir() {
+  return useMutation({
+    mutationFn: ({ obyekt }: { obyekt: string }) =>
+      gas<{ ok: boolean; xabar?: string; muammolar?: string[] }>('apiObyektFayllarniTekshir', obyekt),
+  });
+}

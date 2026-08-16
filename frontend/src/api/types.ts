@@ -31,6 +31,13 @@ export type PapkaObyekt = {
   format: string;
   lokSheets: string[];
   svodSheets: string[];
+  /* ⚡ 2026-08-16: bularni `apiPapkaSkan` ALLAQACHON qaytaradi, lekin
+   * tipda yo'q edi — shuning uchun «Fayl bog'lash» sahifasi qurilmagan
+   * va obyektni saytdan sozlab bo'lmasdi (eski GAS panelga qaytish
+   * kerak bo'lardi). */
+  svodCols?: { nom?: number; bir?: number; narx?: number; blok?: number; qty?: number; summa?: number };
+  narxTayyor?: boolean;
+  candidates?: Array<{ id: string; name: string }>;
 };
 
 export type BossObyekt = {
