@@ -319,7 +319,10 @@ export function F2Daraxt({
   onTashla?: (aktKalit: string, smetaKalit: string) => void;
   onGapDrop?: (aktKalit: string, smetaKalit: string) => void;
   bosh?: string;
-  filtr?: 'hammasi' | 'boglanmagan' | 'boglangan' | 'qolDop';
+  /* ⚡ 2026-08-16 'manfiy' qo'shildi — ПЕРЕРАСЧЁТ rejimi.
+   * Korrektirovka oyida faqat manfiy (qaytariladigan) qatorlarni
+   * ko'rish kerak bo'ladi; ular butun ro'yxat ichida yo'qolib ketardi. */
+  filtr?: 'hammasi' | 'boglanmagan' | 'boglangan' | 'qolDop' | 'manfiy';
   ochiqYopiqSignal?: number;
   onDopClick?: (kalit: string) => void;
   onOtishClick?: (kalit: string) => void;
@@ -471,6 +474,7 @@ export function F2Daraxt({
           else if (filtr === 'boglangan') matches = bog && !dop;
           else if (filtr === 'boglanmagan') matches = !bog && !dop;
           else if (filtr === 'qolDop') matches = dop;
+          else if (filtr === 'manfiy') matches = !!n.manfiy;
 
           let fBolalar: DaraxtTugun[] = [];
           if (n.children?.length) fBolalar = filtrla(n.children);

@@ -536,6 +536,21 @@ export function F2Import() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ⚡⚡⚡ 2026-08-16 ПЕРЕРАСЧЁТ ХИСОБИ.
+   * Foydalanuvchi: «smetasi chiqib pereraschet qilingan obyekt uchun
+   * maksimal qulay bo'lishi shart».
+   * Manfiy qatorlar — oldingi oyda ortiqcha yozilgan ishni QAYTARISH.
+   * Ular oddiy qatorlar bilan aralashib ketsa tekshiruvda «nega minus?»
+   * degan savolga javob berib bo'lmaydi. Endi soni va summasi ALOHIDA
+   * ko'rsatiladi va filtr bilan ajratib olinadi. */
+  const manfiyQatorlar = useMemo(
+    () => aktBarglar.filter((n) => Number(n.hajm) < 0 || Number(n.summa) < 0),
+    [aktBarglar]);
+  const manfiySoni = manfiyQatorlar.length;
+  const manfiySumma = useMemo(
+    () => manfiyQatorlar.reduce((a, n) => a + (Number(n.summa) || 0), 0),
+    [manfiyQatorlar]);
+
   const boglanmagan = useMemo(() => {
     return aktBarglar.filter((n) => !moslikMap.has(n.uid) && !doppedUids.has(n.uid));
   }, [aktBarglar, moslikMap, doppedUids]);
@@ -1385,6 +1400,14 @@ export function F2Import() {
     if (!window.confirm(
       `«${oyNom}» yoziladi.\n\n` +
       `Qatorlar: ${edits.length} ta\nQo'shimchalar: ${dopps.length} ta` +
+      /* ⚡ 2026-08-16 ПЕРЕРАСЧЁТ ogohlantirishi — manfiy qator smeta
+         qoldig'ini KAMAYTIRADI, bu ataylab qilinadigan amal. Tasdiqdan
+         oldin foydalanuvchi buni ko'rishi kerak, keyin «nega kamaydi?»
+         degan savol tug'ilmasin. */
+      (manfiySoni > 0
+        ? `\n\n− ПЕРЕРАСЧЁТ: ${manfiySoni} ta manfiy qator` +
+          `\n   ${manfiySumma.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} so'm smetadan QAYTARILADI`
+        : '') +
       ruxsatMatn +
       `\n\nYozish SERVER NAVBATIGA qo'yiladi — brauzerni yopsangiz ham davom etadi.\n\n` +
       `Davom ettiramizmi?`
@@ -2404,6 +2427,25 @@ const onAvtoMoslash = () => {
               }
             />
             <Juft nom="Qo'shimcha ish (Dop)" qiymat={<FmtN val={dopJami} />} />
+            {/* ⚡⚡⚡ 2026-08-16 ПЕРЕРАСЧЁТ KARTASI — faqat manfiy qator bo'lsa.
+                Foydalanuvchi: «pereraschet qilingan obyekt uchun maksimal
+                qulay bo'lishi shart». Manfiy summa umumiy jamiga qo'shilib
+                ketsa, «nega jami kam?» degan savolga javob topilmasdi.
+                Endi alohida ko'rinadi va bosilsa faqat o'shalar filtrlanadi. */}
+            {manfiySoni > 0 && (
+              <Juft
+                nom="− Перерасчёт (qaytariladigan)"
+                qiymat={
+                  <button
+                    onClick={() => setFiltr('manfiy' as any)}
+                    className="text-rose-400 hover:text-rose-300 underline decoration-dotted
+                               underline-offset-2 transition-colors cursor-pointer"
+                    title="Bosing — faqat manfiy qatorlar ko'rsatiladi">
+                    <FmtN val={manfiySumma} /> <span className="text-[11px]">({manfiySoni} qator)</span>
+                  </button>
+                }
+              />
+            )}
             <Juft
               nom="Farq (Qoldiq)"
               qiymat={
@@ -2547,11 +2589,19 @@ const onAvtoMoslash = () => {
             chapOng={
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex gap-1 flex-shrink-0 bg-black/20 p-1 rounded-lg flex-wrap">
-                    {(['hammasi', 'boglanmagan', 'boglangan', 'qolDop'] as const).map((f) => (
+                    {(['hammasi', 'boglanmagan', 'boglangan', 'qolDop', 'manfiy'] as const).map((f) => (
                       <button key={f} onClick={() => setFiltr(f as any)}
                         className={`flex-1 h-7 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer shadow-sm whitespace-nowrap
                           ${filtr === f ? 'bg-accent text-white scale-100' : 'text-slate-400 hover:text-white hover:bg-white/10 scale-95'}`}>
-                        {f === 'hammasi' ? 'Barchasi' : f === 'boglangan' ? '✓ Bog‘langan' : f === 'qolDop' ? '➕ Doplar' : '○ Bog‘lanmagan'}
+                        {f === 'hammasi' ? 'Barchasi'
+                          : f === 'boglangan' ? '✓ Bog‘langan'
+                          : f === 'qolDop' ? '➕ Doplar'
+                          /* ⚡ 2026-08-16 ПЕРЕРАСЧЁТ filtri — korrektirovka
+                             oyida faqat manfiy (qaytariladigan) qatorlarni
+                             ko'rish uchun. Ular butun ro'yxatda yo'qolib
+                             ketardi va tekshirib bo'lmasdi. */
+                          : f === 'manfiy' ? `− Перерасчёт${manfiySoni ? ` (${manfiySoni})` : ''}`
+                          : '○ Bog‘lanmagan'}
                       </button>
                     ))}
                   </div>
