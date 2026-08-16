@@ -1756,7 +1756,11 @@ function apiBlQosh(params){
     }
     sh.getRange(r,col.NOM).setNote(_izoh);
   }catch(eZm){}
-  sh.getRange(r,1,1,col.ST_OST).setBackground(CFG.RANG_QOSH);
+  /* ⚡ 2026-08-16: butun qatorga QORA shrift — `insertRowsAfter` yuqoridagi
+   * qatordan format meros qiladi va u `bl` bo'lsa shrift OQ bo'ladi
+   * (RANG_BL_FONT). Och fon + oq shrift = raqamlar ko'rinmaydi.
+   * KOD/NOM/BIRLIK keyin ko'k qilinadi (pastda). */
+  sh.getRange(r,1,1,col.ST_OST).setBackground(CFG.RANG_QOSH).setFontColor('#000000');
   sh.getRange(r,col.KOD).setFontWeight('bold').setFontColor('#0070c0');
   sh.getRange(r,col.NOM).setFontWeight('bold').setFontColor('#0070c0').setWrap(true);
   sh.getRange(r,col.BIRLIK).setFontWeight('bold').setFontColor('#0070c0');
@@ -1792,8 +1796,16 @@ function apiRzQosh(params){
   var r=afterRow+1;
   sh.getRange(r,col.NOM).setValue(nom);
   sh.getRange(r,col.MARKER).setValue('rz+');
-  sh.getRange(r,1,1,col.ST_OST).setBackground(CFG.RANG.rz||'#FFFF00');
-  sh.getRange(r,col.NOM).setFontWeight('bold').setWrap(true);
+  /* ⚡⚡⚡ 2026-08-16 «САРИҚ РЗ ҚАТОРДА ОҚ БИЛАН ЁЗДИ — УМУМАН КЎРИНМАЙ ҚОЛДИ».
+   * Sabab: sariq fon (#FFFF00) qo'yilardi, lekin SHRIFT RANGI belgilanmasdi.
+   * `insertRowsAfter` yangi qatorga yuqoridagi qatorning formatini meros
+   * qiladi — agar u `bl` qatori bo'lsa, shrifti OQ (RANG_BL_FONT) bo'ladi.
+   * Oq shrift + sariq fon = o'qib bo'lmaydi.
+   * ENDI: butun qator uchun shrift rangi ATAYLAB qora qilib qo'yiladi. */
+  sh.getRange(r,1,1,col.ST_OST)
+    .setBackground(CFG.RANG.rz||'#FFFF00')
+    .setFontColor('#000000');
+  sh.getRange(r,col.NOM).setFontWeight('bold').setWrap(true).setFontColor('#000000');
   if(params.f2Uid) sh.getRange(r,col.KOD).setNote(String(params.f2Uid));
   if(!params.f2_mode){ lrvYoz(obyekt, sh); SpreadsheetApp.flush(); }
   return {ok:true, rzRow:r, xabar:'Янги раздел қўшилди: '+nom};

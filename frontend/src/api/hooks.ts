@@ -635,9 +635,16 @@ export function useF2YozEski() {
     mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
       obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
     }) => gas<{ ok: boolean; fon?: boolean; xabar?: string }>('apiF2QollaNavbatga', obyekt, oyNom, edits, dopps, aktJami),
+    /* ⚡⚡⚡ 2026-08-16: `holat` (smeta daraxti) BU YERDA YANGILANMAYDI.
+     * Sabab: bu `onSuccess` ish NAVBATGA QO'YILGANDA ishlaydi (~1 soniya),
+     * ish esa hali BOSHLANMAGAN. O'sha payt daraxtni qayta o'qish ESKI
+     * qator raqamlarini keltiradi; keyin fon ishi razdel/qator qo'shib
+     * hammasini suradi va frontend eskisini tutib qoladi — obyomlar
+     * 1 qator NOTO'G'RI joyga tushadi (foydalanuvchi shikoyati:
+     * «bitta rz qo'shdim, shundan keyin obyomlar bir qator tepaga surildi»).
+     * Daraxt endi ish TUGAGANDA yangilanadi (F2Import.tsx dagi effekt). */
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['f2job'] });
-      qc.invalidateQueries({ queryKey: ['holat'] });
     },
   });
 }

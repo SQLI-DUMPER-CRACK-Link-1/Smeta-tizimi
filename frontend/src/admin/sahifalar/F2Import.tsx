@@ -626,6 +626,49 @@ export function F2Import() {
     if (qadam !== 2) setQadam(2);
   }, [job.data?.job?.status, qadam, yozishBoshlandi]);
 
+  /* ⚡⚡⚡ 2026-08-16 «F2 OBYOMLARI BIR QATOR TEPAGA SURILIB QOLDI» —
+   * ILDIZ SABAB VA TUZATISH.
+   *
+   * Foydalanuvchi: «bitta rz qo'shib ko'rdim... shundan keyin kiritilayotgan
+   * f2 obyomlari bir qator tepaga surilib qolib hamma joy xato bo'lib ketdi».
+   *
+   * NIMA BO'LGAN:
+   *   1. Yozish NAVBATGA qo'yiladi va ~1 soniyada javob qaytadi.
+   *   2. `useF2YozEski.onSuccess` o'sha zahoti `invalidateQueries(['holat'])`
+   *      qilardi — daraxt QAYTA O'QILARDI.
+   *   3. Lekin ish hali BOSHLANMAGAN! Razdel/qo'shimcha qatorlari hali
+   *      qo'shilmagan. Ya'ni qayta o'qilgan daraxt ESKI qator raqamlari
+   *      bilan keladi.
+   *   4. Keyin fon ishi razdel qo'shadi → o'sha qatordan pastdagi HAMMA
+   *      qator 1 taga suriladi.
+   *   5. Frontenddagi daraxt esa eski raqamlarni tutib turadi. Keyingi
+   *      bog'lash va yozishda obyomlar 1 qator NOTO'G'RI joyga tushadi.
+   *
+   * YECHIM: daraxt ish TUGAGANDA qayta o'qiladi, navbatga qo'yilganda emas.
+   * Ish davom etayotganda esa yangi bog'lash BLOKLANADI (pastda ogohlantirish)
+   * — chunki o'sha payt qator raqamlari o'zgarish jarayonida. */
+  const oxirgiJobHolat = useRef<string | null>(null);
+  useEffect(() => {
+    const holat = job.data?.job?.status;
+    if (!holat) return;
+    const oldingi = oxirgiJobHolat.current;
+    oxirgiJobHolat.current = holat;
+    /* faqat «ishlayapti/navbat» → «tugadi» o'tishida */
+    if (holat === 'tugadi' && oldingi && oldingi !== 'tugadi') {
+      lrv.refetch();
+      toast(
+        'Yozish tugadi — smeta daraxti qayta o\'qildi. ' +
+        'Qator raqamlari yangilandi (qo\'shilgan razdel/qatorlar tufayli surilgan bo\'lishi mumkin).',
+        'ok', undefined, 10000,
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.data?.job?.status]);
+
+  /** Fon ishi ketayotganda qator raqamlari o'zgarishi mumkin — bog'lash xavfli */
+  const yozishKetyapti = job.data?.job?.status === 'navbat'
+                      || job.data?.job?.status === 'ishlayapti';
+
   /** Hamma bog'lanishlarni bekor qilish: moslikMap ham, qolDop ham. Farzandlarini ham qo'shib bekor qiladi */
   function bogBekor(uid: string) {
     const toRemove = new Set<string>([uid]);
@@ -692,6 +735,13 @@ export function F2Import() {
 
   /** Sudrab tashlash: akt qatori → smeta qatori. «varaq#row» yoki rz:nom:row dan ajratamiz. */
   function qolBogla(aktKalit: string, smetaKalit: string) {
+    /* ⚡ 2026-08-16: fon ishi ketayotganda qator raqamlari O'ZGARISH
+     * jarayonida (razdel/qo'shimcha qo'shilmoqda). O'sha payt bog'lash
+     * eskirgan raqamga tushadi va obyom noto'g'ri qatorga yoziladi. */
+    if (yozishKetyapti) {
+      toast('Yozish ishi ketmoqda — tugagach bog\'laysiz. Hozir qator raqamlari o\'zgarmoqda.', 'warn', undefined, 7000);
+      return;
+    }
     if (smetaKalit.startsWith('rz:')) {
       const parts = smetaKalit.split(':');
       const row = Number(parts[2] || 0);
