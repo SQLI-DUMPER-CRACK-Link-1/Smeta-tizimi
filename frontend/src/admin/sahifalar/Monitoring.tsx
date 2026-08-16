@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import { useApiLog } from '../../api/hooks';
+import { useApiLog, useTolaDiagnostika, useKeshHolat, useTriggerlar } from '../../api/hooks';
+import { Stethoscope } from 'lucide-react';
+import { toast } from '../../umumiy/ui/Toast';
 import { Sahifa, Holatlar, Jadval, Nishon, KpiKarta, type Ustun } from '../../umumiy/ui/Sahifa';
 import type { ApiLogYozuv } from '../../api/types';
 
@@ -104,6 +106,10 @@ function Ekg({ yozuvlar }: { yozuvlar: ApiLogYozuv[] }) {
 
 export function Monitoring() {
   const soragan = useApiLog();
+  /* ⚡ 2026-08-16: tizim tashxisi — eski paneldan yetishmayotgan qism */
+  const tashxis = useTolaDiagnostika();
+  const kesh    = useKeshHolat();
+  const trig    = useTriggerlar();
   const yozuvlar = soragan.data ?? [];
 
   const stat = useMemo(() => {
@@ -170,6 +176,72 @@ export function Monitoring() {
       onYangila={() => soragan.refetch()}
       yangilanmoqda={soragan.isFetching}
     >
+      {/* ⚡⚡⚡ 2026-08-16 TIZIM TASHXISI — eski paneldan yetishmayotgan qism.
+          GAS da `apiTolaDiagnostika`, `apiKeshHolat`, `apiTriggerlarRoyxat`
+          BOR edi, lekin saytdan chaqirilmasdi. Nimadir buzilganda sababni
+          faqat GAS logidan ko'rish mumkin edi. Endi shu yerda. */}
+      <div className="karta p-4 mb-4">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div>
+            <h3 className="text-[14px] font-semibold text-text flex items-center gap-2">
+              <Stethoscope size={16} className="text-accent" /> Tizim tashxisi
+            </h3>
+            <p className="text-[11px] text-text-mute mt-0.5">
+              Sozlamalar, papkalar, kesh va triggerlar joyidami — bir bosishda tekshiradi
+            </p>
+          </div>
+          <button
+            onClick={() => tashxis.mutate(undefined, {
+              onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
+            })}
+            disabled={tashxis.isPending}
+            className="px-3 py-1.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
+                       text-[12px] font-medium transition-colors disabled:opacity-50">
+            {tashxis.isPending ? 'Tekshirilmoqda…' : '🩺 Tashxis o‘tkazish'}
+          </button>
+        </div>
+
+        {tashxis.data != null && (
+          <pre className="text-[11px] text-text-dim bg-[var(--surface-2)]/50 rounded p-3
+                          overflow-auto max-h-64 leading-relaxed mt-2">
+{JSON.stringify(tashxis.data, null, 2)}
+          </pre>
+        )}
+
+        {/* Kesh va triggerlar — doim ko'rinadi, tugma bosish shart emas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+          <div className="rounded-lg border border-border bg-[var(--surface-2)]/30 p-2.5">
+            <p className="text-[11px] uppercase tracking-wide text-text-dim mb-1.5">Kesh holati</p>
+            {kesh.isLoading && <div className="skel h-10 rounded" />}
+            {kesh.isError && <p className="text-[11px] text-danger">O‘qilmadi</p>}
+            {kesh.data != null && (
+              <pre className="text-[10px] text-text-dim overflow-auto max-h-28 leading-relaxed">
+{JSON.stringify(kesh.data, null, 1)}
+              </pre>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-border bg-[var(--surface-2)]/30 p-2.5">
+            <p className="text-[11px] uppercase tracking-wide text-text-dim mb-1.5">
+              Triggerlar {Array.isArray(trig.data) ? `(${trig.data.length})` : ''}
+            </p>
+            {trig.isLoading && <div className="skel h-10 rounded" />}
+            {trig.isError && <p className="text-[11px] text-danger">O‘qilmadi</p>}
+            {Array.isArray(trig.data) && (
+              trig.data.length
+                ? <div className="space-y-0.5 max-h-28 overflow-auto">
+                    {trig.data.map((t, i) => (
+                      <div key={i} className="text-[10px] text-text-dim font-mono truncate">
+                        {String(t.fn || t.handler || JSON.stringify(t))}
+                      </div>
+                    ))}
+                  </div>
+                : <p className="text-[11px] text-text-mute italic">Trigger yo‘q</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* ⚡ EKG — vaqt bo'yicha jarayon. Har chaqiruv bitta cho'qqi:
           balandligi = davomiylik, rangi = natija. Sekinlari darhol ko'zga tashlanadi. */}
       {yozuvlar.length > 1 && (

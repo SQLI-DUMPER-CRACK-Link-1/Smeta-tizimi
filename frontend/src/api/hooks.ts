@@ -1568,3 +1568,50 @@ export function useTriggerlar() {
     staleTime: 60_000,
   });
 }
+
+/* ── ORALIQLAR (2026-08-16) — narxlash oraliqlari ─────────────────
+ * Svodka faylida qaysi qatordan qaysi qatorgacha qaysi KATEGORIYA
+ * (ЧЕЛ/МАШ/МАТ/ОБ) turishini belgilaydi. Narxlash dvigateli aynan
+ * shundan foydalanadi — noto'g'ri bo'lsa resurs xato kategoriyaga
+ * tushadi va narx ham xato bo'ladi.
+ * GAS da 3 ta API bor edi, saytda umuman yo'q edi. */
+export type Oraliq = { varaq: string; qator: number; kat: string; sarlavha: string };
+
+export function useOraliqlar(obyekt: string) {
+  return useQuery({
+    queryKey: ['oraliqlar', obyekt],
+    queryFn: () => gas<Oraliq[]>('apiOraliqlarOl', obyekt),
+    enabled: !!obyekt,
+    staleTime: 60_000,
+  });
+}
+
+/** Svodkani skanlab oraliqlarni AVTOMATIK topadi (tasdiqlash kerak) */
+export function useOraliqlarSkan() {
+  return useMutation({
+    mutationFn: ({ obyekt }: { obyekt: string }) =>
+      gas<Oraliq[]>('apiOraliqlarSkan', obyekt),
+  });
+}
+
+export function useOraliqlarSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt, oraliqlar }: { obyekt: string; oraliqlar: Oraliq[] }) =>
+      gas<unknown>('apiOraliqlarSaqla', obyekt, oraliqlar),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['oraliqlar', v.obyekt] });
+      qc.invalidateQueries({ queryKey: ['holat'] });
+    },
+  });
+}
+
+/** Obyektning накрутка koeffitsienti */
+export function useNakrutkaKoef(obyekt: string) {
+  return useQuery({
+    queryKey: ['nakrutkaKoef', obyekt],
+    queryFn: () => gas<{ koef?: number; vsego?: number; smeta?: number }>('apiNakrutkaKoef', obyekt),
+    enabled: !!obyekt,
+    staleTime: 5 * 60 * 1000,
+  });
+}

@@ -1,12 +1,13 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useNarxlar, useNarxBelgilangan, useNarxKat } from '../../api/hooks';
+import { useNarxlar, useNarxBelgilangan, useNarxKat, useObyektlar,
+         useOraliqlar, useOraliqlarSkan, useOraliqlarSaqla, type Oraliq } from '../../api/hooks';
 import {
   Sahifa, Holatlar, Jadval, Nishon, KpiKarta, Qidiruv, Yon, Juft,
   Maydon, Kiritma, Tanlov, Tugma, type Ustun,
 } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
-import { AlertTriangle, Save, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Save, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import type { NarxQator } from '../../api/types';
 
 /* ЧЕЛ va МАШ — birlikdan avtomat aniqlanadi va QULFLANGAN (qat'iy qoida).
@@ -20,6 +21,13 @@ const KAT_RANG: Record<string, 'ok' | 'warn' | 'danger' | 'neytral'> = {
 
 export function Narxlar() {
   const [filter, setFilter] = useState('ALL');
+  /* ⚡ 2026-08-16 ORALIQLAR bloki uchun */
+  const obyektlar = useObyektlar();
+  const [orObyekt, setOrObyekt] = useState('');
+  const [orTahrir, setOrTahrir] = useState<Oraliq[] | null>(null);
+  const oraliqlar = useOraliqlar(orObyekt);
+  const orSkan = useOraliqlarSkan();
+  const orSaqla = useOraliqlarSaqla();
   const soragan = useNarxlar(filter);
   const belgila = useNarxBelgilangan();
   const katSaqla = useNarxKat();
@@ -128,6 +136,144 @@ export function Narxlar() {
         </div>
       }
     >
+      {/* ⚡⚡⚡ 2026-08-16 ORALIQLAR — eski paneldan yetishmayotgan qism.
+          Svodka faylida qaysi qatordan boshlab qaysi KATEGORIYA (ЧЕЛ/МАШ/
+          МАТ/ОБ) turishini belgilaydi. Narxlash dvigateli AYNAN shundan
+          foydalanadi — noto'g'ri bo'lsa resurs xato kategoriyaga tushadi
+          va narxi ham xato bo'ladi.
+          GAS da uchta API bor edi (apiOraliqlarOl/Skan/Saqla), saytda
+          umuman yo'q edi — sozlash uchun eski panelga qaytish kerak edi. */}
+      <details className="karta p-4 mb-4 group">
+        <summary className="cursor-pointer list-none flex items-center justify-between">
+          <div>
+            <h3 className="text-[14px] font-semibold text-text flex items-center gap-2">
+              <SlidersHorizontal size={16} className="text-accent" />
+              Svodka oraliqlari
+            </h3>
+            <p className="text-[11px] text-text-mute mt-0.5">
+              Qaysi qatordan qaysi kategoriya boshlanadi — narxlash shunga tayanadi
+            </p>
+          </div>
+          <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
+          <span className="text-[11px] text-text-mute hidden group-open:inline">yopish ▴</span>
+        </summary>
+
+        <div className="mt-3 space-y-3">
+          <div className="flex items-end gap-2 flex-wrap">
+            <div className="flex-1 min-w-[220px]">
+              <label className="text-[12px] font-medium text-text block mb-1.5">Obyekt</label>
+              <select value={orObyekt} onChange={(e) => { setOrObyekt(e.target.value); setOrTahrir(null); }}
+                className="w-full bg-[var(--surface-2)] border border-border rounded
+                           px-2 py-1.5 text-[12px] text-text">
+                <option value="">— tanlang —</option>
+                {(obyektlar.data ?? []).map((o) => (
+                  <option key={o.obyekt} value={o.obyekt}>{o.obyekt}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={() => {
+                if (!orObyekt) { toast('Obyekt tanlang', 'warn'); return; }
+                orSkan.mutate({ obyekt: orObyekt }, {
+                  onSuccess: (r) => {
+                    setOrTahrir(r || []);
+                    toast(`${(r || []).length} ta oraliq topildi — tekshirib saqlang`, 'ok', undefined, 8000);
+                  },
+                  onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
+                });
+              }}
+              disabled={orSkan.isPending || !orObyekt}
+              className="px-3 py-1.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
+                         text-[12px] font-medium transition-colors disabled:opacity-40">
+              {orSkan.isPending ? 'Skanlanmoqda…' : '🔍 Svodkani skanlash'}
+            </button>
+          </div>
+
+          {(() => {
+            const royxat = orTahrir ?? oraliqlar.data ?? [];
+            if (oraliqlar.isLoading) return <div className="skel h-16 rounded" />;
+            if (!orObyekt) {
+              return <p className="text-[12px] text-text-mute italic">Avval obyekt tanlang</p>;
+            }
+            if (!royxat.length) {
+              return (
+                <p className="text-[12px] text-warn">
+                  Bu obyekt uchun oraliq belgilanmagan. «Svodkani skanlash» bilan
+                  avtomatik topib ko'ring — tizim kategoriya sarlavhalarini qidiradi.
+                </p>
+              );
+            }
+            return (
+              <>
+                <div className="max-h-64 overflow-auto scrollbar-thin rounded border border-border">
+                  <table className="w-full text-[12px]">
+                    <thead className="text-text-mute text-[11px] sticky top-0 bg-[var(--surface-2)]">
+                      <tr className="text-left">
+                        <th className="py-1.5 px-2">Varaq</th>
+                        <th className="py-1.5 px-2 text-right">Qator</th>
+                        <th className="py-1.5 px-2">Kategoriya</th>
+                        <th className="py-1.5 px-2">Sarlavha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {royxat.map((o, i) => (
+                        <tr key={`${o.varaq}-${o.qator}-${i}`}
+                          className="border-t border-border/60 hover:bg-white/[.03]">
+                          <td className="py-1 px-2 text-text-dim truncate max-w-[160px]">{o.varaq}</td>
+                          <td className="py-1 px-2 text-right tabular-nums text-text-dim">{o.qator}</td>
+                          <td className="py-1 px-2">
+                            {orTahrir ? (
+                              <select value={o.kat}
+                                onChange={(e) => setOrTahrir((p) => (p ?? []).map((x, j) =>
+                                  j === i ? { ...x, kat: e.target.value } : x))}
+                                className="bg-[var(--surface-3)] border border-border rounded
+                                           px-1.5 py-0.5 text-[11px] text-text">
+                                {['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'].map((k) =>
+                                  <option key={k} value={k}>{k}</option>)}
+                              </select>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-white/5 text-text">{o.kat}</span>
+                            )}
+                          </td>
+                          <td className="py-1 px-2 text-text-mute truncate max-w-[260px]"
+                              title={o.sarlavha}>{o.sarlavha}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {orTahrir && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => orSaqla.mutate({ obyekt: orObyekt, oraliqlar: orTahrir }, {
+                        onSuccess: () => {
+                          toast('Oraliqlar saqlandi — endi obyektni qayta hisoblang', 'ok', undefined, 9000);
+                          setOrTahrir(null);
+                        },
+                        onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
+                      })}
+                      disabled={orSaqla.isPending}
+                      className="px-3 py-1.5 rounded-lg bg-accent text-white text-[12px]
+                                 font-medium hover:bg-accent/90 transition-colors disabled:opacity-50">
+                      {orSaqla.isPending ? 'Saqlanmoqda…' : 'Tasdiqlash va saqlash'}
+                    </button>
+                    <button onClick={() => setOrTahrir(null)}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10
+                                 text-[12px] text-text-mute transition-colors">
+                      Bekor qilish
+                    </button>
+                    <span className="text-[11px] text-warn">
+                      Saqlangach obyektni «Ishla» bilan qayta hisoblang
+                    </span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      </details>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <KpiKarta nom="Resurslar" qiymat={stat.jami} />
         <KpiKarta nom="Qo'lda belgilangan" qiymat={stat.belgilangan} ost="smetadan ustun" />
