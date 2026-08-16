@@ -1,13 +1,21 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaAiParse, useFakturaDriveHolat, useFakturaAvtoSinx, useFakturaSinxFonda, type FakturaItem } from '../../api/hooks';
+import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaAiParse, useFakturaDriveHolat, useFakturaAvtoSinx, useFakturaSinxFonda, type FakturaItem,
+  useFakturaSinxToxtat, useFakturaSinxDavom, useFakturaOxirgiIjro,
+  useFakturaXatoLoglar, useFakturaXatodanTikla } from '../../api/hooks';
 import { Sahifa, Holatlar, Tugma } from '../../umumiy/ui/Sahifa';
 import { IlgorJadval, type IlgorUstun } from '../../umumiy/ui/IlgorJadval';
 import { toast } from '../../umumiy/ui/Toast';
-import { FileUp, Save, X, RefreshCw, FolderOpen, FolderArchive, FolderX, ExternalLink, FileText } from 'lucide-react';
+import { FileUp, Save, X, RefreshCw, FolderOpen, FolderArchive, FolderX, ExternalLink, FileText, Wrench } from 'lucide-react';
 import { FmtN } from '../../lib/format';
 
 export function Fakturalar() {
   const soragan = useFakturalarOl();
+  /* ⚡ 2026-08-16: sinxron boshqaruvi va tiklash asboblari */
+  const fToxtat = useFakturaSinxToxtat();
+  const fDavom  = useFakturaSinxDavom();
+  const fOxirgi = useFakturaOxirgiIjro();
+  const fXato   = useFakturaXatoLoglar(30);
+  const fTikla  = useFakturaXatodanTikla();
   const yoz = useFakturaYoz();
   const faylYoz = useFakturaFaylYoz();
   const aiParse = useFakturaAiParse();
@@ -418,6 +426,92 @@ export function Fakturalar() {
         </div>
       }
     >
+      {/* ⚡⚡⚡ 2026-08-16 FAKTURA BOSHQARUVI VA TIKLASH.
+          `89d_FakturaTashxis.js` da bu asboblar yozilgan edi — o'shanda
+          328 ta fayl xato papkasidan qutqarilgandi — lekin ular saytga
+          ULANMAGAN edi: faqat GAS muharriridan chaqirish mumkin edi.
+          Endi to'g'ridan-to'g'ri shu yerda. */}
+      <details className="karta p-4 mb-4 group">
+        <summary className="cursor-pointer list-none flex items-center justify-between">
+          <div>
+            <h3 className="text-[14px] font-semibold text-text flex items-center gap-2">
+              <Wrench size={16} className="text-accent" /> Sinxron boshqaruvi va tiklash
+            </h3>
+            <p className="text-[11px] text-text-mute mt-0.5">
+              To'xtatish · davom ettirish · xato loglar · xato papkasidan qaytarish
+            </p>
+          </div>
+          <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
+          <span className="text-[11px] text-text-mute hidden group-open:inline">yopish ▴</span>
+        </summary>
+
+        <div className="mt-3 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => fToxtat.mutate(undefined, {
+                onSuccess: (r) => toast(r.xabar || 'To’xtatildi', 'ok', undefined, 7000),
+                onError: (e: Error) => toast(e.message, 'danger'),
+              })}
+              disabled={fToxtat.isPending}
+              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-warn/20 border border-border
+                         hover:border-warn/40 text-[12px] text-text-mute hover:text-warn
+                         transition-colors disabled:opacity-50">
+              ⏸ Sinxronni to‘xtatish
+            </button>
+            <button onClick={() => fDavom.mutate(undefined, {
+                onSuccess: (r) => toast(r.xabar || 'Davom ettirildi', 'ok', undefined, 7000),
+                onError: (e: Error) => toast(e.message, 'danger'),
+              })}
+              disabled={fDavom.isPending}
+              className="px-3 py-1.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
+                         text-[12px] font-medium transition-colors disabled:opacity-50">
+              ▶ Davom ettirish
+            </button>
+            <button onClick={() => {
+                if (!window.confirm(
+                  'Xato papkasidagi fayllar QAYTA ISHLASHGA qaytariladi.\n\n' +
+                  'Ular yana o‘qishga urinib ko‘riladi. Ma’lumot o‘chmaydi.\n\nDavom etamizmi?')) return;
+                fTikla.mutate({ limit: 200, loglarniOchir: false }, {
+                  onSuccess: (r) => toast(
+                    r.xabar || `${r.tiklandi ?? 0} ta fayl qaytarildi`, 'ok', undefined, 9000),
+                  onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
+                });
+              }}
+              disabled={fTikla.isPending}
+              className="px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300
+                         hover:bg-emerald-500/25 text-[12px] font-medium transition-colors
+                         disabled:opacity-50">
+              {fTikla.isPending ? 'Qaytarilmoqda…' : '↺ Xato papkasidan qaytarish'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-lg border border-border bg-[var(--surface-2)]/30 p-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-text-dim mb-1.5">
+                Oxirgi ijro
+              </p>
+              {fOxirgi.isLoading && <div className="skel h-10 rounded" />}
+              {fOxirgi.data != null && (
+                <pre className="text-[10px] text-text-dim overflow-auto max-h-32 leading-relaxed">
+{JSON.stringify(fOxirgi.data, null, 1)}
+                </pre>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-border bg-[var(--surface-2)]/30 p-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-text-dim mb-1.5">
+                Xato loglar
+              </p>
+              {fXato.isLoading && <div className="skel h-10 rounded" />}
+              {fXato.data != null && (
+                <pre className="text-[10px] text-danger/80 overflow-auto max-h-32 leading-relaxed">
+{JSON.stringify(fXato.data, null, 1)}
+                </pre>
+              )}
+            </div>
+          </div>
+        </div>
+      </details>
+
       <Holatlar soragan={soragan} bosh={{ matn: 'Fakturalar jurnali bo\'sh', izoh: 'Hali hech qanday faktura kiritilmagan.' }}>
         {() => (
           <div className="flex flex-col gap-6">

@@ -1654,3 +1654,63 @@ export function useKategoriyaSaqla() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kategoriya'] }),
   });
 }
+
+/* ── FAKTURA BOSHQARUVI (2026-08-16) ──────────────────────────────
+ * `89d_FakturaTashxis.js` da tashxis va tiklash asboblari yozilgan edi
+ * (328 ta fayl xato papkasidan qutqarilgandi), lekin ular saytga
+ * ULANMAGAN edi — faqat GAS muharriridan chaqirish mumkin edi. */
+
+export function useFakturaSinxToxtat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => gas<{ ok?: boolean; xabar?: string }>('apiFakturaSinxToxtat'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fakturaOxirgi'] }),
+  });
+}
+
+export function useFakturaSinxDavom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => gas<{ ok?: boolean; xabar?: string }>('apiFakturaSinxDavom'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fakturaOxirgi'] }),
+  });
+}
+
+export function useFakturaOxirgiIjro() {
+  return useQuery({
+    queryKey: ['fakturaOxirgi'],
+    queryFn: () => gas<Record<string, unknown>>('apiFakturaOxirgiIjro'),
+    staleTime: 20_000,
+  });
+}
+
+export function useFakturaXatoLoglar(limit = 30) {
+  return useQuery({
+    queryKey: ['fakturaXato', limit],
+    queryFn: () => gas<Array<Record<string, unknown>> | { loglar?: Array<Record<string, unknown>> }>(
+      'apiFakturaXatoLoglar', limit),
+    staleTime: 30_000,
+  });
+}
+
+/** Xato papkasidagi fayllarni qayta ishlashga qaytaradi */
+export function useFakturaXatodanTikla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ limit, loglarniOchir }: { limit: number; loglarniOchir?: boolean }) =>
+      gas<{ ok?: boolean; tiklandi?: number; xabar?: string }>(
+        'apiFakturaXatodanTikla', limit, !!loglarniOchir),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fakturaXato'] });
+      qc.invalidateQueries({ queryKey: ['fakturalar'] });
+    },
+  });
+}
+
+/** Bitta faylni sinov uchun o'qish — AI sozlamasini tekshirish */
+export function useFakturaBittaSinov() {
+  return useMutation({
+    mutationFn: ({ faylNomi }: { faylNomi: string }) =>
+      gas<Record<string, unknown>>('apiFakturaBittaSinov', faylNomi),
+  });
+}
