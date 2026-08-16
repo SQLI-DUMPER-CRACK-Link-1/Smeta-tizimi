@@ -4,7 +4,7 @@ import F2YozishOyna, { type YozishNatija } from '../qismlar/F2YozishOyna';
 import F2Kafolat from '../qismlar/F2Kafolat';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2Yoz, useF2YozSinov, useF2BoglanishTikla, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useF2AvtoMoslash, useF2YozEski, useF2YozishgaRuxsat, useF2BoglanishTikla, useF2JobHolat, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
   useF2Reestr,
   useF2ReestrTikla,
   useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
@@ -137,7 +137,7 @@ export function F2Import() {
   const setDropState = createSetter('dropState');
   const setSmetaScrollTo = createSetter('smetaScrollTo');
 
-  const [radRoyxat, setRadRoyxat] = useState<any[]>([]);   // ⚡ o'tkazib yuborilgan qatorlar
+  const [radRoyxat] = useState<any[]>([]);   // o'tkazib yuborilgan qatorlar (navbat javobidan)
   const [tahrirModalOy, setTahrirModalOy] = useState<string | null>(null);
 
   
@@ -257,7 +257,8 @@ export function F2Import() {
   const ustun = useF2Ustunlar();
   const daraxt = useF2Daraxt();
   const moslash = useF2AvtoMoslash();
-  const yoz = useF2Yoz();
+  const yozEski = useF2YozEski();
+  const ruxsat = useF2YozishgaRuxsat();
   const job = useF2JobHolat(true);
   /* ⚡⚡⚡ 2026-08-13: F2 bir NECHTA smetaga tegishli bo'lishi mumkin va qaysiligi
    * oldindan bilinmaydi. `tanlanganLoklar` bo'sh bo'lsa — eski xatti-harakat
@@ -347,7 +348,6 @@ export function F2Import() {
   /* ⚡ 2026-08-15 qator darajasidagi tahrir oynasi */
   const [qatorTahrirOy, setQatorTahrirOy] = useState<string | null>(null);
   const [kafolatOchiq, setKafolatOchiq] = useState(false);
-  const yozSinov = useF2YozSinov();
   const bogTikla = useF2BoglanishTikla();
   /* ⚡ 2026-08-15 yozish jarayoni/hisobot oynasi — «oxirida tugadi derdi» */
   const [yozOyna, setYozOyna] = useState<null | {
@@ -1186,243 +1186,104 @@ export function F2Import() {
   /* ---------- 4. Yozish ---------- */
   async function yozish() {
     if (!natija && Object.keys(qolBog).length === 0 && Object.keys(qolDop).length === 0) return;
-    // window.confirm is blocked in Telegram WebApp. The button already says "(Farq mavjud!)".
-    // Dopps endi boglanmagan ro'yxatidan EMAS, faqat qo'lda tasdiqlangan qolDop dan keladi!
+    const edits = [...moslikMap.values()] as F2Moslik[];
     const dopps = Object.values(qolDop);
-
-    /* ⚡⚡⚡ 2026-08-14 YANGI TEZ YO'L (37_F2TezYoz.js).
-     * 1) `nom` qo'shamiz — server qator surilganini AYNAN nom/kod bilan
-     *    tekshiradi va mos kelmasa YOZMAYDI (foydalanuvchi talabi).
-     * 2) AVVAL quruq sinov: yozmasdan nechta qator mos kelishini bilamiz.
-     *    Mos kelmagan bo'lsa — ogohlantiramiz va YOZMAYMIZ.
-     * 3) Toza bo'lsa — yozamiz. Javob DARHOL keladi (97 qator ≈ 2.7s),
-     *    navbat kutish shart emas. */
-    /* ⚡⚡⚡ 2026-08-14: nom/kod tekshiruvi OLIB TASHLANDI.
-     * Foydalanuvchi panelda 100% qo'lda bog'laydi — server shunchaki
-     * BOG'LANGAN HAR BIR QATORNI yozadi, bittasi ham qoldirilmaydi.
-     * (Tekshiruv haqiqiy bog'lanishlarni rad etib ish qoldirardi.) */
-    const nomBilan = [...moslikMap.values()] as F2Moslik[];
-
-    /* ⚡⚡⚡ 2026-08-14: avval bitta mos kelmagan qator BUTUN yozishni bloklardi
-     * (foydalanuvchi: «82 qator mos kelmadi — YOZILMADI... zaybal qildi»).
-     * ENDI: yaxshi qatorlar YOZILADI, muammolilari o'tkazib yuboriladi va
-     * ro'yxat sifatida ko'rsatiladi. Ish to'xtab qolmaydi. */
+    
+    /* ⚡⚡⚡ 2026-08-16 QAROR SERVERDA (arxitektura qoidasi).
+     * Avval frontend o'zi «oyda ma'lumot bormi? tozalaymizmi?» deb hisoblab,
+     * o'zi qaror qilardi. Bo'laklab yozganda bu har bo'lakda qayta so'rab,
+     * OLDINGI BO'LAKNI o'chirib yuborish tuzog'ini yaratardi.
+     * Endi GAS `apiF2YozishgaRuxsat` javob beradi — frontend faqat
+     * ko'rsatadi. Biznes mantiq bu yerda YOZILMAYDI. */
+    let ruxsatMatn = '';
     try {
-      /* ⚡⚡⚡ 2026-08-15 MAJBURIY QURUQ YURISH (foydalanuvchi tanlovi).
-       * Yozishdan OLDIN hech narsa o'zgartirmasdan sinab ko'ramiz va
-       * raqamlarni ko'rsatamiz. Xato yozib qo'yib keyin qidirishdan
-       * ko'ra, yozishdan oldin ko'rgan yaxshi.
-       * `apiF2YozTezSinov2` — yozuvchining o'zi, `quruq` rejimida. */
-      const sinov = await yozSinov.mutateAsync({ obyekt, oyNom, edits: nomBilan, dopps, aktJami });
-      const sYoz = sinov.yozilgan ?? 0;
-      const sSum = (sinov as { yozilganSumma?: number }).yozilganSumma ?? 0;
-      const sFarq = (sinov as { farq?: number | null }).farq;
-
-      const satrlar = [
-        `«${oyNom}» yoziladi:`,
-        ``,
-        `  Qatorlar:  ${sYoz} ta${dopps.length ? ` (+${dopps.length} qo'shimcha)` : ''}`,
-        `  Smetalar:  ${sinov.smetalar ?? 0} ta`,
-        `  Summa:     ${sSum.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} so'm`,
-      ];
-      if (aktJami) {
-        satrlar.push(`  Hujjat:    ${Number(aktJami).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} so'm`);
-        satrlar.push(
-          sFarq !== null && sFarq !== undefined && Math.abs(sFarq) > 0.01
-            ? `  ⚠ FARQ:    ${sFarq.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} so'm`
-            : `  ✓ FARQ:    0 — hujjat bilan mos`
-        );
-      } else {
-        satrlar.push(`  Hujjat jami uzatilmadi — farq tekshirilmadi`);
-      }
-      /* ⚡⚡⚡ 2026-08-15 «16 MLRD EMASKU MANDAGI F2» — USTMA-UST YOZISH XAVFI.
-       *
-       * Nima bo'lgan edi: «Tozalash» buzuq edi (faqat nomi LRV bilan
-       * boshlanadigan varaqlarni tozalardi), shuning uchun eski sentyabr
-       * qiymatlari joyida qolgan. Yangi F2 ularning USTIGA yozilgan va
-       * oy jami IKKI HUJJATNING YIG'INDISI bo'lib ketgan:
-       *     7 931 314 902 (eski) + 8 151 662 266 (yangi) ≈ 16.1 mlrd
-       *
-       * Tizim bu haqda JIM turgan. Endi jim turmaydi: oyda allaqachon
-       * qiymat bo'lsa — YOZISHDAN OLDIN aniq raqam bilan ogohlantiradi
-       * va tozalashni taklif qiladi. O'zi o'chirmaydi (bu qaytarib
-       * bo'lmaydigan amal) — qaror foydalanuvchiniki. */
-      const oyd = lrv.data?.oylar?.find((x: string) => x === oyNom);
-      if (oyd) {
-        let borSum = 0, borQator = 0;
-        barglar(lrv.data?.tree as unknown as any[] || []).forEach((n: any) => {
-          const d = n.oylar?.[oyNom];
-          if (!d || typeof d !== 'object') return;
-          const son = (x: any) => Number(String(x ?? 0).replace(/\s/g, '').replace(',', '.')) || 0;
-          const sm = son(d.summa) || son(d.obyom) * son(d.narx);
-          if (sm || son(d.obyom)) { borSum += sm; borQator++; }
-        });
-        if (borQator > 0) {
-          const fm = (v: number) => v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-          /* ⚡⚡⚡ 2026-08-15 «DAVOM ETTIRISH» ni «USTMA-UST YOZISH» dan AJRATISH.
-           *
-           * Foydalanuvchi rejasi: «2000 qatorlik f2 ni bo'laklarga bo'lib
-           * yozib chiqardim». Bunda har bo'lakdan keyin oyda ma'lumot BO'LADI
-           * — bu MUAMMO EMAS, bu o'sha odamning o'z ishi.
-           * Agar bu yerda ko'r-ko'rona «tozalaymizmi?» deb so'ralsa va
-           * foydalanuvchi OK bossa — OLDINGI BO'LAKLARI O'CHIB KETARDI.
-           * Tuzoq aynan shu edi.
-           *
-           * Farqni smetadagi `f2uid` izohlari aytadi: oydagi mavjud qatorlar
-           * SHU aktning uid lariga tegishli bo'lsa — bu o'sha hujjatning
-           * davomi, tozalash TAKLIF QILINMAYDI. Begona uid bo'lsa — boshqa
-           * hujjat, o'shanda ogohlantiramiz. */
-          let davomMi = false;
-          try {
-            const t = await bogTikla.mutateAsync({ obyekt, oyNom });
-            if (t.ok && t.qatorlar?.length) {
-              const aktUidlar = new Set(aktBarchaTugun.map((x: any) => x.uid));
-              let oz = 0, begona = 0;
-              t.qatorlar.forEach((q) => {
-                if (!q.uid) return;
-                aktUidlar.has(q.uid) ? oz++ : begona++;
-              });
-              /* uid larning ko'pi shu aktdan bo'lsa — davom ettirilyapti */
-              davomMi = oz > 0 && oz >= begona;
-            }
-          } catch { /* aniqlay olmasak — ehtiyot uchun ogohlantiramiz */ }
-
-          if (davomMi) {
-            toast(
-              `«${oyNom}» oyida shu F2 ning oldingi bo'lagi bor ` +
-              `(${borQator} qator · ${fm(borSum)} so'm). Davom ettiramiz — eskisi o'chmaydi.`,
-              'ok', undefined, 8000,
-            );
-          } else {
-          const javob = window.confirm(
-            `⚠️ DIQQAT — «${oyNom}» oyida BOSHQA hujjatning ma'lumoti bor:\n\n` +
-            `    ${borQator} qator · ${fm(borSum)} so'm\n\n` +
-            `Ustiga yozsangiz ikkalasi QO'SHILIB ketadi va oy jami\n` +
-            `hujjatingizdan katta chiqadi (avval shunday bo'lgan).\n\n` +
-            `OK  → avval shu oyni TOZALAB, keyin yozamiz\n` +
-            `Bekor → tozalamasdan, ustiga yozamiz (bo'laklab yozayotgan\n` +
-            `        bo'lsangiz SHUNI tanlang)`
+      const rx = await ruxsat.mutateAsync({
+        obyekt, oyNom, uidlar: edits.map((e) => (e as { uid?: string }).uid || '').filter(Boolean),
+      });
+      if (rx.ok) {
+        ruxsatMatn = '\n\n' + (rx.xabar || '');
+        if (rx.ogohlantirish) {
+          const t = window.confirm(
+            `⚠️ «${oyNom}» — SERVER OGOHLANTIRISHI\n\n${rx.xabar}\n\n` +
+            (rx.tozalashTavsiya
+              ? `OK  → avval oyni TOZALAB, keyin yozamiz\nBekor → tozalamasdan yozamiz`
+              : `OK  → baribir davom etamiz\nBekor → to'xtatamiz`)
           );
-          if (javob) {
+          if (rx.tozalashTavsiya && t) {
             setYozOyna({ holat: 'ishlamoqda', oyNom,
-              yuborilgan: { qatorlar: nomBilan.length, dopps: dopps.length, hujjatJami: null },
+              yuborilgan: { qatorlar: edits.length, dopps: dopps.length, hujjatJami: null },
               natija: null, qadamMatn: `«${oyNom}» tozalanmoqda…` });
             try {
-              const t = await useF2OyOchirishHook.mutateAsync({ obyekt, oyNom });
-              toast(t.xabar || 'Tozalandi', 'ok', undefined, 7000);
+              const tz = await useF2OyOchirishHook.mutateAsync({ obyekt, oyNom });
+              toast(tz.xabar || 'Tozalandi', 'ok', undefined, 7000);
               await lrv.refetch();
             } catch (te) {
               setYozOyna(null);
               toast(`Tozalashda xato: ${(te as Error).message}. Yozish to'xtatildi.`, 'danger', undefined, 10000);
               return;
             }
+          } else if (!rx.tozalashTavsiya && !t) {
+            return;   // foydalanuvchi to'xtatdi
           }
-          }   /* davomMi else */
         }
       }
+    } catch (e) {
+      /* Tekshiruv ishlamasa yozishni to'xtatmaymiz — faqat ogohlantiramiz */
+      ruxsatMatn = `\n\n(Server tekshiruvi ishlamadi: ${(e as Error).message})`;
+    }
 
-      satrlar.push('', 'Yozamizmi?');
+    if (!window.confirm(
+      `«${oyNom}» yoziladi.\n\n` +
+      `Qatorlar: ${edits.length} ta\nQo'shimchalar: ${dopps.length} ta` +
+      ruxsatMatn +
+      `\n\nYozish SERVER NAVBATIGA qo'yiladi — brauzerni yopsangiz ham davom etadi.\n\n` +
+      `Davom ettiramizmi?`
+    )) return;
 
-      if (!sYoz) {
-        toast(sinov.xabar || 'Sinovda birorta qator yozilmadi — bog\'lanishlarni tekshiring', 'danger', undefined, 10000);
-        return;
+    setYozOyna({
+      holat: 'ishlamoqda', oyNom,
+      yuborilgan: { qatorlar: edits.length, dopps: dopps.length, hujjatJami: (aktJami === undefined || aktJami === null) ? null : Number(aktJami) },
+      natija: null, qadamMatn: `Eski yozish usulida navbatga qo'yilmoqda...`
+    });
+
+    try {
+      const r = await yozEski.mutateAsync({ obyekt, oyNom, edits, dopps, aktJami: aktJami || 0 });
+      if (r.fon) {
+        toast(r.xabar || 'Yozish fon navbatiga qo\'yildi (uzoq vaqt olishi mumkin)', 'ok');
+        setYozOyna({ holat: 'tugadi', oyNom, yuborilgan: { qatorlar: edits.length, dopps: dopps.length, hujjatJami: aktJami || null }, natija: r as any });
+        qoralamaOchir();
+        setYozishBoshlandi(true);
+        setQadam(2);
+      } else if (r.ok) {
+        toast(r.xabar || 'Yozildi', 'ok');
+        setYozOyna({ holat: 'tugadi', oyNom, yuborilgan: { qatorlar: edits.length, dopps: dopps.length, hujjatJami: aktJami || null }, natija: r as any });
+        qoralamaOchir();
+        setYozishBoshlandi(true);
+        setQadam(2);
+        await lrv.refetch();
+      } else {
+        toast(r.xabar || 'Yozilmadi', 'danger');
+        setYozOyna((p) => p ? { ...p, holat: 'xato', xato: r.xabar } : null);
       }
-      if (!window.confirm(satrlar.join('\n'))) return;
-
-      setYozOyna({ holat: 'ishlamoqda', oyNom,
-        yuborilgan: { qatorlar: nomBilan.length, dopps: dopps.length,
-                      hujjatJami: (aktJami === undefined || aktJami === null) ? null : Number(aktJami) },
-        natija: null });
-
-      /* ⚡⚡⚡ 2026-08-15 «GAS JAVOBI JSON EMAS» — ILDIZ SABAB VA YECHIM.
-       *
-       * Foydalanuvchi 989 qator + 40 qo'shimchani BITTA so'rovda yubordi va
-       * javob HTML bo'lib qaytdi (GAS/Cloudflare vaqt chegarasi). Bir necha
-       * soatlik qo'l mehnati «bir tiyin» bo'lib qoldi.
-       *
-       * SABAB: qo'shimchalar yo'li (apiF2Qolla) HAR BIR qator uchun alohida
-       * `insertRowsAfter` qiladi — bu sekin operatsiya. 40 qo'shimcha
-       * (bolalari bilan yuzlab qator) + 989 qator bitta so'rovda Cloudflare
-       * ning ~100 soniyalik chegarasidan oshib ketadi. Javob kelmaydi.
-       *
-       * YECHIM: ish BO'LAKLARGA bo'linadi. Har bo'lak alohida so'rov —
-       * hech biri chegaraga yaqinlashmaydi. Bo'lak muvaffaqiyatli tushsa
-       * qoralamadan o'chiriladi, ya'ni uzilib qolsa BOSHIDAN emas,
-       * QOLGAN JOYIDAN davom etadi. */
-      const BOLAK_QATOR = 200;   // oddiy qatorlar — tez yo'l (~1s / 200 qator)
-      const BOLAK_DOP   = 5;     // qo'shimchalar — sekin (qator qo'shish)
-
-      const bolaklar: Array<{ edits: F2Moslik[]; dopps: unknown[] }> = [];
-      for (let i = 0; i < nomBilan.length; i += BOLAK_QATOR)
-        bolaklar.push({ edits: nomBilan.slice(i, i + BOLAK_QATOR), dopps: [] });
-      for (let i = 0; i < dopps.length; i += BOLAK_DOP)
-        bolaklar.push({ edits: [], dopps: dopps.slice(i, i + BOLAK_DOP) });
-      if (!bolaklar.length) bolaklar.push({ edits: [], dopps: [] });
-
-      let yozildi = 0, rad = 0, dopYozildi = 0;
-      const radYig: unknown[] = [];
-      const bolakXato: string[] = [];
-
-      for (let b = 0; b < bolaklar.length; b++) {
-        const bo = bolaklar[b];
-        setYozOyna((p) => p ? { ...p, qadamMatn:
-          `Bo'lak ${b + 1}/${bolaklar.length} — ` +
-          (bo.dopps.length ? `${bo.dopps.length} qo'shimcha` : `${bo.edits.length} qator`) } : p);
-        try {
-          const rb = await yoz.mutateAsync({
-            obyekt, oyNom, edits: bo.edits as F2Moslik[], dopps: bo.dopps,
-            /* hujjat jami FAQAT birinchi bo'lakda — reestrda takror bo'lmasin */
-            aktJami: b === 0 ? aktJami : 0,
-          });
-          yozildi    += rb.yozilgan ?? 0;
-          rad        += rb.radEtilgan ?? 0;
-          dopYozildi += (rb as { dopYozildi?: number }).dopYozildi ?? 0;
-          if (rb.radRoyxat?.length) radYig.push(...rb.radRoyxat);
-          if ((rb as { dopXato?: string[] }).dopXato?.length)
-            bolakXato.push(...((rb as { dopXato?: string[] }).dopXato ?? []));
-        } catch (eb) {
-          /* Bitta bo'lak yiqilsa QOLGANI DAVOM ETADI — hammasi yo'qolmaydi */
-          bolakXato.push(`Bo'lak ${b + 1}: ${(eb as Error).message}`);
-        }
-      }
-
-      const r = {
-        ok: bolakXato.length === 0,
-        yozilgan: yozildi, radEtilgan: rad, radRoyxat: radYig,
-        dopYozildi, dopJami: dopps.length, dopXato: bolakXato,
-        xabar: `${yozildi} qator` + (dopps.length ? `, ${dopYozildi}/${dopps.length} qo'shimcha` : '') +
-               (bolakXato.length ? ` — ${bolakXato.length} bo'lakda xato` : ''),
-      } as unknown as YozishNatija;
-
-      setYozOyna((p) => p ? { ...p, holat: bolakXato.length ? 'xato' : 'tugadi',
-                              natija: r, xato: bolakXato[0] } : p);
-
-      if (!yozildi && rad) {
-        setRadRoyxat(r.radRoyxat ?? []);
-        toast(`Hech bir qator yozilmadi — ${rad} ta bog'lanish noto'g'ri qatorga ishora qilyapti. Ro'yxatni ko'ring.`, 'danger', undefined, 10000);
-        return;
-      }
-      if (!r.ok && !yozildi) { toast(r.xabar || 'Yozilmadi', 'danger'); return; }
-
-      setRadRoyxat(rad ? (r.radRoyxat ?? []) : []);
-      toast(
-        rad ? `✅ ${yozildi} qator yozildi · ⚠ ${rad} ta o'tkazib yuborildi (pastda ro'yxat)`
-            : `✅ ${yozildi} qator yozildi`,
-        rad ? 'warn' : 'ok', undefined, 8000,
-      );
-      /* Smetaga tushdi — qoralama endi kerak emas */
-      if (!bolakXato.length) qoralamaOchir();
-      setYozishBoshlandi(true);
-      setQadam(2);
-      await lrv.refetch();
     } catch (e: any) {
-      /* Xato ham OYNADA ko'rinsin — toast o'tib ketadi, foydalanuvchi
-       * «tugadimi yo'qmi?» degan holatda qolmasin. */
-      setYozOyna((p) => p ? { ...p, holat: 'xato', xato: e.message } : p);
       toast(`Xato: ${e.message}`, 'danger');
+      setYozOyna((p) => p ? { ...p, holat: 'xato', xato: e.message } : null);
     }
   }
+
+  /* ⚡⚡⚡ 2026-08-16 OLIB TASHLANDI: «yozishClaude» — frontendda bo'laklab
+   * yozadigan yo'l (BOLAK_QATOR=200, quruq yurish, tozalash qarori).
+   *
+   * NIMA UCHUN: bu ARXITEKTURA BUZILISHI edi. Og'ir mantiq, bo'laklash va
+   * biznes qarorlar GAS da bo'lishi kerak, frontend faqat oyna.
+   * Oqibatlari: «failed to fetch», bo'laklar orasida tozalash tuzog'i
+   * (1-bo'lakni o'chirib yuborish), ortiqcha confirm oynalari.
+   *
+   * TO'G'RI YO'L allaqachon mavjud edi va endi ishlatiladi:
+   *     yozish()  →  apiF2QollaNavbatga   (GAS navbati, trigger-worker,
+   *                                        vaqt tugasa saqlab davom etadi)
+   *               →  useF2JobHolat        (har 3 soniyada foiz)
+   * 241 qator o'lik kod o'chirildi. */
 
   const j = job.data?.job;
 // Barcha boglanmagan F2 qatorlari uchun takliflarni hisoblash
@@ -2259,7 +2120,7 @@ const onAvtoMoslash = () => {
             <div className="flex items-center gap-3 flex-shrink-0">
               <Tugma onBos={() => { setQadam(0); setNatija(null); }}>Orqaga</Tugma>
               {(natija || Object.keys(qolBog).length > 0 || Object.keys(qolDop).length > 0) && (
-                <Tugma tur="primary" onBos={yozish} band={yoz.isPending} ikonka={<Send size={16} />}>
+                <Tugma tur="primary" onBos={yozish} band={yozEski.isPending} ikonka={<Send size={16} />}>
                   Smetaga yozish {constOk ? '' : '(Farq mavjud!)'}
                 </Tugma>
               )}

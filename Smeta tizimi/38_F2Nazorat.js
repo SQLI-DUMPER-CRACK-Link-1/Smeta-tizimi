@@ -766,3 +766,89 @@ function apiF2Bosliqlar(obyekt, oyNom, hujjatJami){
     return {ok:false, xabar:'apiF2Bosliqlar: '+(e && e.message ? e.message : e)};
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * apiF2YozishgaRuxsat(obyekt, oyNom, uidlar) — YOZISHDAN OLDINGI TEKSHIRUV
+ *
+ * Arxitektura qoidasi (2026-08-16): biznes qaror FRONTENDDA emas,
+ * SERVERDA qabul qilinadi. Frontend faqat shu javobni ko'rsatadi.
+ *
+ * Avval frontend o'zi qaror qilardi («oyda ma'lumot bormi? tozalaymizmi?»)
+ * va bo'laklab yozganda har bo'lakda qayta so'rab, OLDINGI BO'LAKNI
+ * o'chirib yuborish tuzog'ini yaratardi.
+ *
+ * Bu funksiya hech narsani o'zgartirmaydi — faqat HOLATNI aytadi:
+ *   holat: 'toza'      — oy bo'sh, bemalol yoziladi
+ *          'davom'     — oyda SHU hujjatning oldingi bo'lagi bor
+ *                        (uid lar mos) → tozalash KERAK EMAS
+ *          'begona'    — oyda BOSHQA hujjat ma'lumoti bor → ogohlantirish
+ *          'aralash'   — ikkalasi ham bor
+ *
+ * `uidlar` — hozir yozilmoqchi bo'lgan akt qatorlarining uid ro'yxati.
+ * ══════════════════════════════════════════════════════════════════ */
+function apiF2YozishgaRuxsat(obyekt, oyNom, uidlar){
+  var t0 = Date.now();
+  try{
+    if(!obyekt) return {ok:false, xabar:'Обект берилмади'};
+    oyNom = String(oyNom||'').trim();
+    if(!oyNom) return {ok:false, xabar:'Ой номи бўш'};
+
+    var t = apiF2OyTafsilot(obyekt, oyNom);
+    if(!t.ok) return t;
+
+    /* Oy bo'sh — hech qanday savol yo'q */
+    if(!t.qatorlar.length){
+      return {ok:true, holat:'toza', ogohlantirish:false,
+              borQator:0, borSumma:0, ozQator:0, begonaQator:0,
+              xabar:'«'+oyNom+'» ойи бўш — бемалол ёзилади.',
+              vaqt:((Date.now()-t0)/1000).toFixed(1)+'s'};
+    }
+
+    var kutilgan = {};
+    (uidlar||[]).forEach(function(u){ if(u) kutilgan[String(u)] = 1; });
+    var bilamiz = Object.keys(kutilgan).length > 0;
+
+    var oz = 0, begona = 0, izsiz = 0, borSumma = 0;
+    for(var i=0;i<t.qatorlar.length;i++){
+      var q = t.qatorlar[i];
+      borSumma += _nzNum(q.summa);
+      if(!q.uid){ izsiz++; continue; }            // izohsiz yozuv (eski/qo'lda)
+      if(!bilamiz) continue;
+      kutilgan[q.uid] ? oz++ : begona++;
+    }
+
+    var holat;
+    if(!bilamiz)                 holat = 'nomalum'; // uid berilmadi — baho bermaymiz
+    else if(oz && !begona)       holat = 'davom';
+    else if(!oz && (begona||izsiz)) holat = 'begona';
+    else if(oz && begona)        holat = 'aralash';
+    else                         holat = 'begona';
+
+    var xabar;
+    if(holat === 'davom'){
+      xabar = 'Бу ойда ШУ ҳужжатнинг олдинги бўлаги бор ('+oz+' қатор). '+
+              'Давом эттирилади — эскиси ЎЧМАЙДИ, тозалаш КЕРАК ЭМАС.';
+    } else if(holat === 'aralash'){
+      xabar = 'Бу ойда ҳам шу ҳужжатдан ('+oz+' қатор), ҳам БОШҚАСИДАН ('+
+              begona+' қатор) ёзув бор. Тозалансa бошқа ҳужжат ҳам ўчади — '+
+              'эҳтиёт бўлинг.';
+    } else if(holat === 'begona'){
+      xabar = 'Бу ойда БОШҚА ҳужжатнинг маълумоти бор: '+t.qatorlar.length+
+              ' қатор · '+borSumma.toFixed(2)+' сўм. Устига ёзилса иккаласи '+
+              'ҚЎШИЛИБ кетади ва ой жамиси ҳужжатдан катта чиқади.';
+    } else {
+      xabar = 'Бу ойда '+t.qatorlar.length+' қатор бор, лекин уларнинг '+
+              'қайси ҳужжатдан экани аниқланмади (uid йўқ).';
+    }
+
+    return {ok:true, holat:holat,
+            /* faqat 'begona'/'aralash'/'nomalum' da foydalanuvchidan so'raladi */
+            ogohlantirish: (holat !== 'toza' && holat !== 'davom'),
+            tozalashTavsiya: (holat === 'begona'),
+            borQator:t.qatorlar.length, borSumma:borSumma,
+            ozQator:oz, begonaQator:begona, izsizQator:izsiz,
+            xabar:xabar, vaqt:((Date.now()-t0)/1000).toFixed(1)+'s'};
+  }catch(e){
+    return {ok:false, xabar:'apiF2YozishgaRuxsat: '+(e && e.message ? e.message : e)};
+  }
+}

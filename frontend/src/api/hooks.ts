@@ -628,6 +628,20 @@ export function useF2Yoz() {
   });
 }
 
+/** Eski yozish usuli (navbat bilan, eski xatti-harakatlar saqlanadi) */
+export function useF2YozEski() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
+      obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
+    }) => gas<{ ok: boolean; fon?: boolean; xabar?: string }>('apiF2QollaNavbatga', obyekt, oyNom, edits, dopps, aktJami),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['f2job'] });
+      qc.invalidateQueries({ queryKey: ['holat'] });
+    },
+  });
+}
+
 /** QURUQ SINOV — hech narsa yozmaydi, faqat nechta qator mos kelishini aytadi.
  *  Yozishdan OLDIN chaqiriladi: qator surilgan bo'lsa darhol ko'rinadi. */
 export function useF2YozSinov() {
@@ -749,6 +763,17 @@ export function useF2BoglanishTikla() {
         kod: string; nom: string; hajm: number; narx: number; summa: number;
       }>; soni: number; uidSoni: number; xabar?: string }>(
         'apiF2OyTafsilot', obyekt, oyNom),
+  });
+}
+
+/** Yozishdan oldingi tekshiruv — QAROR SERVERDA (38_F2Nazorat.js).
+ *  Frontend biznes mantiq yozmaydi, faqat shu javobni ko'rsatadi. */
+export function useF2YozishgaRuxsat() {
+  return useMutation({
+    mutationFn: ({ obyekt, oyNom, uidlar }: { obyekt: string; oyNom: string; uidlar: string[] }) =>
+      gas<{ ok: boolean; holat: string; ogohlantirish: boolean; tozalashTavsiya: boolean;
+            borQator: number; borSumma: number; ozQator: number; begonaQator: number;
+            xabar: string }>('apiF2YozishgaRuxsat', obyekt, oyNom, uidlar),
   });
 }
 
