@@ -32,12 +32,28 @@ export function Holat() {
   const [dragTarget, setDragTarget] = useState<TreeNode | null>(null);
 
   const { id: yoldagiObyekt } = useParams<{ id: string }>();
+  /* ⚡⚡⚡ 2026-08-16 URL QULFI TUZATILDI (audit C2 — TASDIQLANDI).
+   *
+   * Effekt bog'liqliklarida `selectedObyekt` bor edi. Ya'ni foydalanuvchi
+   * ro'yxatdan BOSHQA obyekt tanlasa → `selectedObyekt` o'zgaradi →
+   * effekt QAYTA ishlaydi → uni DARHOL URL dagi obyektga qaytarib
+   * tashlaydi. Natijada sahifada obyektni umuman almashtirib bo'lmasdi
+   * (URL bilan kirilgan bo'lsa).
+   *
+   * ENDI: URL dagi obyekt FAQAT URL o'zgarganda qo'llanadi
+   * (`yoldagiObyekt` deps da, `selectedObyekt` YO'Q). Birinchi obyektni
+   * tanlash esa alohida effektda, faqat hali hech narsa tanlanmagan
+   * bo'lsa ishlaydi. */
   useEffect(() => {
     if (yoldagiObyekt && obyektlar?.some(o => o.obyekt === yoldagiObyekt)) {
       setSelectedObyekt(yoldagiObyekt);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yoldagiObyekt, obyektlar]);
+
+  useEffect(() => {
     if (!selectedObyekt && obyektlar?.length) setSelectedObyekt(obyektlar[0].obyekt);
-  }, [yoldagiObyekt, obyektlar, selectedObyekt]);
+  }, [obyektlar, selectedObyekt]);
 
   const { data: holatData, isLoading: isHolatLoading, error } = useHolat(selectedObyekt);
   const saqla = useHolatSaqla(selectedObyekt);

@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useObyektlar, useHolat, useF2HujjatYarat, useAiSmartF2 } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
-import { FmtN } from '../../lib/format';
+import {FmtN, pulQisqa } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
 import { FileOutput, ExternalLink, ChevronDown, ChevronRight, Search, Building2, Calendar, FileText, CheckCircle, Database, Wand2, Loader2, Sparkles } from 'lucide-react';
 import type { TreeNode } from '../../api/types';
@@ -136,7 +136,7 @@ export function F2Tayyorlash() {
            newTanlov[kalit] = e.hajmToTake;
         });
         setTanlov(newTanlov);
-        toast(`✨ AI Smetani qidirdi: ${res.edits.length} ta pozitsiyadan ${FmtN({val: res.sum, qisqa: true}).props.children} lik ish yig'ildi.`, 'ok', undefined, 4000);
+        toast(`✨ AI Smetani qidirdi: ${res.edits.length} ta pozitsiyadan ${pulQisqa(res.sum)} lik ish yig'ildi.`, 'ok', undefined, 4000);
       }
     } catch (e: any) {
       toast(`AI Xato: ${e.message}`, 'danger');

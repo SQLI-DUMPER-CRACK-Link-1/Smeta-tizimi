@@ -74,6 +74,36 @@ export function Fakturalar() {
     return { jami, jamiNds, soni: satrlar.length, katArr, postArr };
   }, [satrlar]);
 
+  /* ⚡⚡⚡ 2026-08-16 (audit C1 + H1 — IKKALASI TASDIQLANDI).
+   *
+   * C1: miqdor yoki narx tahrirlanganda `jamiNdsSiz` va `jamiNdsBilan`
+   *     QAYTA HISOBLANMASDI — tuzatilgan qator ESKI (AI o'qigan) summa
+   *     bilan bazaga tushardi. Ya'ni foydalanuvchi xatoni tuzatadi,
+   *     lekin PUL eskiligicha qoladi.
+   * H1: `const nw = [...arr]; nw[i].x = v` — spread SAYOZ nusxa,
+   *     `nw[i]` AYNAN o'sha obyekt. State to'g'ridan-to'g'ri
+   *     mutatsiya qilinardi (React qoidasi buzilishi).
+   *
+   * Bu yordamchi ikkalasini ham hal qiladi: qator NUSXALANADI va
+   * summalar qayta hisoblanadi. */
+  const qatorYangila = (i: number, maydon: keyof FakturaItem, qiymat: number | string) => {
+    setYangiKiritmalar((oldin) => oldin.map((q, j) => {
+      if (j !== i) return q;
+      const y: FakturaItem = { ...q, [maydon]: qiymat } as FakturaItem;
+      /* miqdor/narx/aksiz/NDS o'zgarsa summalar qayta hisoblanadi */
+      if (maydon === 'miqdori' || maydon === 'narxi' || maydon === 'aksizSummasi' || maydon === 'ndsStavkasi') {
+        const miq = Number(y.miqdori) || 0;
+        const nar = Number(y.narxi) || 0;
+        const aks = Number(y.aksizSummasi) || 0;
+        const stv = Number(y.ndsStavkasi) || 0;
+        y.jamiNdsSiz = Math.round((miq * nar + aks) * 100) / 100;
+        y.ndsSummasi = Math.round(y.jamiNdsSiz * stv / 100 * 100) / 100;
+        y.jamiNdsBilan = Math.round((y.jamiNdsSiz + y.ndsSummasi) * 100) / 100;
+      }
+      return y;
+    }));
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -779,27 +809,27 @@ export function Fakturalar() {
                             </td>
                             <td className="px-3 py-2 text-right w-24">
                               <input className={`w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right font-medium ${xatoMath ? 'text-warning' : ''}`} type="number" value={t.miqdori || ''} onChange={(e) => {
-                                const nw = [...yangiKiritmalar]; nw[i].miqdori = Number(e.target.value); setYangiKiritmalar(nw);
+                                qatorYangila(i, 'miqdori', Number(e.target.value));
                               }}/>
                             </td>
                             <td className="px-3 py-2 text-right w-28">
                               <input className={`w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right ${xatoMath ? 'text-warning' : ''}`} type="number" value={t.narxi || ''} onChange={(e) => {
-                                const nw = [...yangiKiritmalar]; nw[i].narxi = Number(e.target.value); setYangiKiritmalar(nw);
+                                qatorYangila(i, 'narxi', Number(e.target.value));
                               }}/>
                             </td>
                             <td className="px-3 py-2 text-right w-20">
                               <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right text-text-dim" type="number" value={t.aksizSummasi || ''} onChange={(e) => {
-                                const nw = [...yangiKiritmalar]; nw[i].aksizSummasi = Number(e.target.value); setYangiKiritmalar(nw);
+                                qatorYangila(i, 'aksizSummasi', Number(e.target.value));
                               }}/>
                             </td>
                             <td className="px-3 py-2 text-right w-16">
                               <input className="w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right text-text-dim" type="number" value={t.ndsStavkasi || ''} onChange={(e) => {
-                                const nw = [...yangiKiritmalar]; nw[i].ndsStavkasi = Number(e.target.value); setYangiKiritmalar(nw);
+                                qatorYangila(i, 'ndsStavkasi', Number(e.target.value));
                               }}/>
                             </td>
                             <td className="px-3 py-2 text-right w-28">
                               <input className={`w-full bg-transparent border-b border-transparent focus:border-accent outline-none text-right ${xatoMath ? 'text-danger font-bold' : ''}`} type="number" value={t.jamiNdsSiz || ''} onChange={(e) => {
-                                const nw = [...yangiKiritmalar]; nw[i].jamiNdsSiz = Number(e.target.value); setYangiKiritmalar(nw);
+                                qatorYangila(i, 'jamiNdsSiz', Number(e.target.value));
                               }}/>
                             </td>
                             <td className="px-3 py-2 text-right font-bold text-ok w-32"><FmtN val={t.jamiNdsBilan} /></td>
