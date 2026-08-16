@@ -26,6 +26,13 @@ export type F2Qoralama = {
   qolBog: Record<string, unknown>;
   /** akt uid → qo'shimcha/zamena yozuvi (qolDop) */
   qolDop: Record<string, unknown>;
+  /* ⚡⚡⚡ 2026-08-16 QO'SHILDI (Antigravity auditi C4 — TASDIQLANDI).
+   * `qolBekor` — foydalanuvchi QO'LDA BEKOR QILGAN avto-mosliklar.
+   * U qoralamada SAQLANMASDI: foydalanuvchi 50 ta noto'g'ri moslikni
+   * bekor qiladi, brauzer yopiladi, qoralama tiklanadi — va bekor
+   * qilishlar YO'QOLADI, noto'g'ri bog'lanishlar QAYTIB KELADI.
+   * Ya'ni tuzatish ishi jim bekor bo'lardi. */
+  qolBekor?: string[];
   /** avto-moslashtirish natijasi (qayta hisoblamaslik uchun) */
   natija: unknown;
   aktTree: unknown;

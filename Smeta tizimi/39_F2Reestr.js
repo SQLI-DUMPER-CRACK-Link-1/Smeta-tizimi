@@ -94,10 +94,40 @@ function apiF2ReestrYoz(yozuv){
     qator[_f2rIdx('VARAQLAR')]     = (yozuv.varaqlar||[]).join(' | ');
     qator[_f2rIdx('IZOH')]         = yozuv.izoh || '';
 
-    /* Mavjud f2Id ni qidiramiz */
+    /* ⚡⚡⚡ 2026-08-16 TAKRORIY QATOR TUZATILDI (Antigravity auditi C6 —
+     * TASDIQLANDI va JIDDIY).
+     *
+     * MUAMMO: `apiF2YozTez2` bu funksiyani `f2Id` BERMASDAN chaqirardi.
+     * Yuqorida f2Id bo'sh bo'lsa TASODIFIY yangi ID yasaladi — va o'sha
+     * ID hech qachon topilmaydi, chunki u shu daqiqada yaratilgan.
+     * Natijada har yozishda YANGI QATOR qo'shilardi:
+     *     1-yozish → 100 mln
+     *     qayta yozish → yana 100 mln (jami 200 mln!)
+     *     yana → 300 mln...
+     * Kafolat hisobi («qancha kirdi = qancha tushdi») butunlay yolg'on
+     * bo'lib ketardi — aynan shu raqamga ishonib ish qilinadi.
+     *
+     * YECHIM: f2Id berilmagan bo'lsa OBYEKT + OY bo'yicha mavjud qator
+     * qidiriladi va YANGILANADI (upsert). Bir obyekt-oy uchun reestrda
+     * DOIM bitta qator bo'ladi.
+     * f2Id ATAYLAB berilgan bo'lsa (retro tiklash kabi) — eski mantiq. */
     var mavjud = _erpRows(sh), topRow = 0;
+    var f2IdBerilgan = !!(yozuv.f2Id);
     for(var i=0;i<mavjud.length;i++){
-      if(String(mavjud[i][_f2rIdx('F2_ID')]||'').trim() === f2Id){ topRow = i+2; break; }
+      if(f2IdBerilgan){
+        if(String(mavjud[i][_f2rIdx('F2_ID')]||'').trim() === f2Id){ topRow = i+2; break; }
+      } else {
+        /* f2Id yo'q — obyekt+oy bo'yicha topamiz */
+        var mOb = String(mavjud[i][_f2rIdx('OBYEKT')]||'').trim();
+        var mOy = String(mavjud[i][_f2rIdx('OY')]||'').trim();
+        if(mOb === String(yozuv.obyekt).trim() && mOy === String(yozuv.oy).trim()){
+          topRow = i+2;
+          /* mavjud ID ni SAQLAB qolamiz — undo/tiklash unga bog'langan */
+          f2Id = String(mavjud[i][_f2rIdx('F2_ID')]||'').trim() || f2Id;
+          qator[_f2rIdx('F2_ID')] = f2Id;
+          break;
+        }
+      }
     }
 
     if(topRow) sh.getRange(topRow, 1, 1, F2R_USTUN.length).setValues([qator]);

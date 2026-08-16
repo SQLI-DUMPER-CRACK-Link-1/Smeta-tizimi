@@ -98,8 +98,16 @@ export default function F2OyTahrir({
     setOzgarishlar((p) => {
       const k = kalit(q);
       const yangi = { ...(p[k] || {}), [maydon]: qiymat } as Ozg;
-      /* hajm yoki narx o'zgarsa summa qayta hisoblanadi (qo'lda kiritilmagan bo'lsa) */
-      if ((maydon === 'hajm' || maydon === 'narx') && yangi.summa === undefined) {
+      /* ⚡⚡⚡ 2026-08-16 TUZATILDI (Antigravity auditi C3 — TASDIQLANDI).
+       * Sharti `yangi.summa === undefined` edi. Ketma-ketlik:
+       *   1) foydalanuvchi HAJM ni o'zgartiradi → summa hisoblanadi
+       *   2) keyin NARX ni o'zgartiradi → `yangi.summa` endi undefined EMAS
+       *      (1-qadamda yozilgan) → shart bajarilmaydi → SUMMA ESKI QOLADI
+       * Natijada narx o'zgargan, summa esa eski — smetaga NOTO'G'RI pul
+       * yoziladi va buni ko'z bilan payqash qiyin.
+       * ENDI: hajm yoki narx tegilsa summa DOIM qayta hisoblanadi.
+       * (Summani qo'lda kiritish alohida maydon orqali — u bu yerga tushmaydi.) */
+      if (maydon === 'hajm' || maydon === 'narx') {
         const h = yangi.hajm ?? q.hajm;
         const n = yangi.narx ?? q.narx;
         yangi.summa = Math.round(h * n * 10000) / 10000;

@@ -422,11 +422,19 @@ function apiF2YozTez2(obyekt, oyNom, edits, dopps, aktJami, quruq){
      * `aktJami` — F2 hujjatining O'Z jami (frontend uzatadi).
      * `yozilganSum` — biz smetaga yozgan summalar yig'indisi.
      * Ikkalasi teng bo'lishi kerak; teng bo'lmasa reestr «ҚИСМАН» deydi. */
+    /* ⚡⚡⚡ 2026-08-16 TUZATILDI (Antigravity auditi C7 — TASDIQLANDI).
+     *
+     * ESKI KOD `edits` MASSIVINING HAMMASINI qo'shardi — ya'ni RAD ETILGAN
+     * (yozilmagan) qatorlar ham reestrga «yozildi» deb tushardi. Natijada
+     * reestrdagi jami smetadagidan KATTA chiqib, «farq» soxta ko'rinardi.
+     *
+     * ENDI: har varaq yozuvchisi (`apiF2TezYoz`) HAQIQATAN yozilgan
+     * qatorlarning summasini `jamiSumma` da qaytaradi — o'shani yig'amiz.
+     * Ya'ni raqam taxmin emas, yozuvchining o'z hisoboti. */
     var yozilganSum = 0;
-    for(var e2=0; e2<edits.length; e2++){
-      var s2 = _tzNum(edits[e2].summa);
-      if(!s2) s2 = _tzNum(edits[e2].hajm) * _tzNum(edits[e2].narx);
-      yozilganSum += s2;
+    for(var n2=0; n2<natijalar.length; n2++){
+      var nr = natijalar[n2] && natijalar[n2].natija;
+      if(nr && nr.mos && nr.mos.jamiSumma) yozilganSum += Number(nr.mos.jamiSumma)||0;
     }
     /* ⚡ 2026-08-15: QO'SHIMCHA/ZAMENA puli ham hisobga olinadi.
      * Avval faqat `edits` yig'ilardi — qo'shimchalarning summasi

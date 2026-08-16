@@ -416,11 +416,14 @@ export function F2Import() {
     const soni = Object.keys(qolBog).length + Object.keys(qolDop).length;
     if (!soni) return;                       // bo'sh holatni saqlab o'tirmaymiz
     const t = setTimeout(() => {
+      /* ⚡ 2026-08-16: `qolBekor` ham saqlanadi (audit C4) — aks holda
+         bekor qilingan noto'g'ri mosliklar tiklanishda QAYTIB kelardi */
       qoralamaSaqla({ obyekt, oyNom, faylNomi, qolBog, qolDop,
+                      qolBekor: Array.from(qolBekor),
                       natija, aktTree, lokalka, qatorSoni: soni });
     }, 600);                                  // tez-tez yozmaslik uchun kechikish
     return () => clearTimeout(t);
-  }, [obyekt, oyNom, faylNomi, qolBog, qolDop, natija, aktTree, lokalka]);
+  }, [obyekt, oyNom, faylNomi, qolBog, qolDop, qolBekor, natija, aktTree, lokalka]);
 
   /* Sahifa ochilganda saqlangan qoralama bo'lsa — taklif qilamiz */
   useEffect(() => {
@@ -1353,6 +1356,24 @@ export function F2Import() {
     if (!natija && Object.keys(qolBog).length === 0 && Object.keys(qolDop).length === 0) return;
     const edits = [...moslikMap.values()] as F2Moslik[];
     const dopps = Object.values(qolDop);
+
+    /* ⚡⚡⚡ 2026-08-16 KONSTANTA FARQI — ANIQ TASDIQ (audit C1).
+     * Avval UI «yozish bloklandi» derdi, lekin bloklamasdi. Endi rost:
+     * to'xtatmaymiz, ammo farqni RAQAM bilan ko'rsatib tasdiq so'raymiz.
+     * Foydalanuvchi bilib turib davom etsa — bu uning qarori. */
+    if (!constOk) {
+      const fm = (v: number) => v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (!window.confirm(
+        `⚠️ KONSTANTA FARQI BOR\n\n` +
+        `  Hujjat jami:      ${fm(aktJami)}\n` +
+        `  Bog'langan:       ${fm(boglanganJami)}\n` +
+        `  Qo'shimchalar:    ${fm(dopJami)}\n` +
+        `  ──────────────────────────\n` +
+        `  FARQ:             ${fm(farq)}\n\n` +
+        `Bu odatda bir necha qator bog'lanmaganini bildiradi.\n` +
+        `Baribir yozamizmi?`
+      )) return;
+    }
     
     /* ⚡⚡⚡ 2026-08-16 QAROR SERVERDA (arxitektura qoidasi).
      * Avval frontend o'zi «oyda ma'lumot bormi? tozalaymizmi?» deb hisoblab,
@@ -2454,9 +2475,23 @@ const onAvtoMoslash = () => {
                 </span>
               }
             />
+            {/* ⚡⚡⚡ 2026-08-16 YOLG'ON XABAR TUZATILDI (Antigravity auditi C1 —
+                TASDIQLANDI). Bu yerda «yozish BLOKLANDI» deb yozilardi, lekin
+                aslida HECH NARSA bloklamasdi — tugma ishlayverardi. Ya'ni
+                interfeys foydalanuvchini chalg'itardi: u «tizim meni himoya
+                qilyapti» deb o'ylab, farq bilan yozib yuborardi.
+
+                Qattiq bloklamadim ATAYLAB: farq qonuniy bo'lishi mumkin
+                (masalan hujjat jami hali kiritilmagan yoki qo'shimchalar
+                alohida sanaladi), va foydalanuvchi qoidasi — «birortayam
+                f2 qiymati yozilmay qolmasligi shart». Buning o'rniga
+                yozishdan oldin ANIQ raqam bilan tasdiq so'raladi
+                (`yozish()` ichida). */}
             {!constOk && (
-              <p className="text-sm text-danger mt-3">
-                Farq nolga teng emas — yozish bloklandi. Akt fayli noto'g'ri o'qilgan bo'lishi mumkin.
+              <p className="text-sm text-warn mt-3">
+                ⚠ Farq nolga teng emas. Yozish <b>to'xtatilmaydi</b>, lekin
+                tasdiqlashdan oldin farqni tekshiring — akt fayli noto'g'ri
+                o'qilgan yoki bir necha qator bog'lanmagan bo'lishi mumkin.
               </p>
             )}
           </div>}
@@ -2539,6 +2574,9 @@ const onAvtoMoslash = () => {
                     setState({
                       obyekt: q.obyekt, oyNom: q.oyNom, faylNomi: q.faylNomi,
                       qolBog: q.qolBog as any, qolDop: q.qolDop as any,
+                      /* ⚡ 2026-08-16 (audit C4): bekor qilinganlar ham tiklanadi —
+                         aks holda noto'g'ri avto-mosliklar qaytib kelardi */
+                      qolBekor: new Set(q.qolBekor ?? []) as any,
                       natija: (q.natija ?? null) as any,
                       aktTree: (q.aktTree ?? null) as any,
                       lokalka: q.lokalka as any,
