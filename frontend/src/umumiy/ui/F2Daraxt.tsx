@@ -18,6 +18,13 @@ export type DaraxtTugun = {
    * kelayapti». LRV markeridagi +/~ belgisidan keladi (bl+/rs~). */
   isQosh?: boolean;
   isZamena?: boolean;
+  /* ⚡ 2026-08-16 ПЕРЕРАСЧЁТ: manfiy hajm — oldingi oyda ortiqcha
+   * yozilgan ishni qaytarish. Foydalanuvchi: «smetasi chiqib pereraschet
+   * qilingan obyekt uchun maksimal qulay bo'lishi shart».
+   * Bunday qator ODDIY qatorday ko'rinsa, tekshiruvda «nega minus?»
+   * degan savol tug'iladi va tushuntirib bo'lmaydi — shuning uchun
+   * ochiq belgilanadi. */
+  manfiy?: boolean;
   children?: DaraxtTugun[];
 };
 
@@ -135,8 +142,10 @@ const DaraxtQator = memo(function DaraxtQator({
          qoladi (bu holat rangi turdan muhimroq). */
       style={{ paddingLeft: 8 + daraja * 18, paddingRight: 10,
                borderLeft: `4px solid ${bog ? '#10b981' : turUslub(t.type).chiziq}`,
-               background: t.type === 'rz' && !bog && !drop && !yoritilgan
-                 ? `linear-gradient(90deg, ${turUslub('rz').chiziq}22 0%, transparent 55%)` : undefined }}
+               background: t.manfiy && !bog && !drop && !yoritilgan
+                 ? 'rgba(249,115,22,0.07)'
+                 : (t.type === 'rz' && !bog && !drop && !yoritilgan
+                    ? `linear-gradient(90deg, ${turUslub('rz').chiziq}22 0%, transparent 55%)` : undefined) }}
     >
       <span className="w-5 flex-shrink-0 text-text-mute flex items-center justify-center">
         {bolalari && (
@@ -149,6 +158,13 @@ const DaraxtQator = memo(function DaraxtQator({
       {/* ⚡ 2026-08-15: oldin kiritilgan QO'SHIMCHA/ZAMENA endi belgili —
           «u smeta obyomi emas qo'shimcha ish ekanligini bildiradigan
           hech balo yo'q ekan» muammosi. LRV marker +/~ dan keladi. */}
+      {t.manfiy && (
+        <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold
+                         tracking-wide border bg-orange-500/20 text-orange-300 border-orange-400/50"
+              title="Манфий ҳажм — олдинги ойдаги ортиқча ишни қайтариш (перерасчёт)">
+          − ПЕРЕРАСЧЁТ
+        </span>
+      )}
       {(t.isZamena || t.isQosh) && (
         <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide border ${
           t.isZamena ? 'bg-rose-500/15 text-rose-300 border-rose-500/40'
@@ -453,7 +469,20 @@ export function F2Daraxt({
       return res;
     };
 
-    const filtrlanganTugunlar = filtrla(tugunlar);
+    /* ⚡⚡⚡ 2026-08-16 «ҚАТОРЛАРНИ ОЧИБ-ЁПГАНДА ЖУДА СЕКИН» ТУЗАТИШИ.
+     *
+     * `filtrla` har tugun uchun `{...n, children: fBolalar}` — YANGI
+     * OBYEKT yasaydi. Filtr «hammasi» bo'lganda (eng ko'p uchraydigan
+     * holat) u hech narsani filtrlamaydi, faqat BUTUN DARAXTNI
+     * NUSXALAYDI: 15 000 obyekt allokatsiyasi HAR ochib-yopishda.
+     *
+     * Ustiga bu memoizatsiyani ham buzardi — `DaraxtQator` `a.t === b.t`
+     * bo'yicha solishtiradi, nusxa esa har safar yangi havola, ya'ni
+     * ekrandagi HAR qator qayta chizilardi.
+     *
+     * ENDI: filtr yo'q bo'lsa asl massiv O'ZI ishlatiladi — nusxa yo'q,
+     * havolalar barqaror, memo ishlaydi. */
+    const filtrlanganTugunlar = filtr === 'hammasi' ? tugunlar : filtrla(tugunlar);
     const yur = (ns: DaraxtTugun[], d: number) => {
       ns.forEach((t) => {
         out.push({ t, daraja: d });

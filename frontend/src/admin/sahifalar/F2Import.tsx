@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import F2OyTahrir from '../qismlar/F2OyTahrir';
 import F2YozishOyna, { type YozishNatija } from '../qismlar/F2YozishOyna';
 import F2Kafolat from '../qismlar/F2Kafolat';
@@ -1009,6 +1009,7 @@ export function F2Import() {
       kod: n.kod,
       bir: n.bir,
       summa: n.summa,
+      manfiy: Number(n.hajm) < 0 || Number(n.summa) < 0,
       belgi: n.type === 'rz' ? undefined : (
         <div className="flex gap-3 items-center text-[12px] whitespace-nowrap">
           {n.hajm ? <span>Hajm: <span className="font-medium text-emerald-400">{formatVol(n.hajm)}</span></span> : null}
@@ -1031,6 +1032,9 @@ export function F2Import() {
    *      massiv → 1000 allokatsiya + 1000 × 40 solishtirish
    * Ikkalasi ham endi BIR MARTA indekslanadi va O(1) bo'ladi. */
   const BOSH_DOP = useMemo(() => [] as any[], []);
+  /* ⚡ 2026-08-16: inline arrow bo'lsa har render'da yangi havola bo'lib
+   * daraxtdagi flatten memo HECH QACHON keshlanmasdi. */
+  const smetaBogMi = useCallback((k: string) => boglanganJoylar.has(k), [boglanganJoylar]);
   const aktUidIndeks = useMemo(() => {
     const m = new Map<string, any>();
     (aktBarchaTugun as any[]).forEach((a) => { if (a?.uid) m.set(a.uid, a); });
@@ -1134,6 +1138,8 @@ export function F2Import() {
            ko'rinadi (LRV marker bl+/rs~ dan) — chalkashlik tugadi */
         isQosh: !!n.isQosh,
         isZamena: !!n.isZamena,
+        /* ⚡ 2026-08-16 перерасчёт: smeta tarafida manfiy qoldiq/hajm */
+        manfiy: Number(n.smetaHajm) < 0 || Number(n.qoldiq) < 0,
         belgi: n.type === 'rz' ? undefined : (
           <div className="flex flex-col items-end">
             <div className="flex gap-2 items-center text-[11px] opacity-80 whitespace-nowrap">
@@ -2473,7 +2479,7 @@ const onAvtoMoslash = () => {
             ong={
               <F2Daraxt
                 tugunlar={smetaDaraxtFiltrlangan}
-                bogMi={(k) => boglanganJoylar.has(k)}
+                bogMi={smetaBogMi}
                 tashlanadi
                 onTashla={qolBogla}
                 onGapDrop={qolGapDop}
