@@ -4213,7 +4213,16 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
         // ⚡⚡⚡ 2026-07-17 VAQT-BYUDJET CHECKPOINT: fon rejimida (~4.5 daq oshsa) —
         // qolgan dopps'ni KEYINGI trigger davom ettiradi. Qismlarga bo'lingani +
         // uid-note dedup tufayli 6 daqiqalik GAS limiti endi ma'lumot yo'qotmaydi.
-        if(_JOBM && i>_dopStart && _vaqtTugadi()){
+        /* ⚡⚡⚡ 2026-08-16: `i > _dopStart` sharti OLIB TASHLANDI.
+         * U «bu yurishda kamida bitta qo'shimcha bajarilsin» degani edi,
+         * lekin oqibati: agar bitta qo'shimcha o'zi butun byudjetni yeb
+         * qo'ysa, tekshiruv umuman ishlamay jarayon GAS ning qattiq
+         * limitida O'LDIRILARDI va `resume` saqlanmasdi — ish o'sha
+         * nuqtada abadiy qotib qolardi (foydalanuvchi: «1 soatdan beri
+         * shu ahvolda»).
+         * Endi byudjet tugagan bo'lsa DARHOL saqlab chiqamiz; keyingi
+         * trigger toza byudjet bilan o'sha qatordan davom ettiradi. */
+        if(_JOBM && _vaqtTugadi()){
            _setF2Prog('⏸ Вақт лимити — навбатда давом этади ('+i+'/'+dopps.length+' қўшимча)...');
            return _resume({editStart:edits.length, dopStart:i, done:i, total:dopps.length});
         }
@@ -4785,7 +4794,46 @@ function _f2FonQadam() {
     return;
   }
   var resume = (job && job.resume) || {dopStart:0,mappedYoz:0,dopsYoz:0};
-  if(job){ job.status='ishlayapti'; _f2JobSet(job); }
+
+  /* ⚡⚡⚡ 2026-08-16 «1 SOATDAN BERI QOTIB TURIBDI» — OLDINGA SILJISH KAFOLATI.
+   *
+   * Foydalanuvchi holati: 988/1014, «3/3: Қўшимча/замена ишлар ёзилмоқда (36)»
+   * va bir soat davomida shu joyda. Avtomat tiklash 2 marta ishlagan, lekin
+   * har safar AYNAN o'sha nuqtadan boshlab yana o'lgan.
+   *
+   * SABAB: qo'shimcha yozish sikli har qatorda bir nechta spreadsheet amali
+   * qiladi (insertRows + setValue lar). Agar BITTA qo'shimcha GAS ning
+   * 6 daqiqalik qattiq limitidan uzoq ketsa, jarayon O'LDIRILADI — `catch`
+   * ishlamaydi, `resume` SAQLANMAYDI. Keyingi urinish `dopStart` ni o'sha
+   * eski qiymatida topib, O'SHA qatordan qayta boshlaydi va yana o'ladi.
+   * Cheksiz halqa: ish hech qachon oldinga siljimaydi.
+   *
+   * YECHIM: har urinishda `dopStart` ni eslab qolamiz. Agar u OLDINGI
+   * urinishdagidek bo'lsa — demak o'tgan safar hech narsa siljimagan.
+   * 2 marta shunday bo'lsa, o'sha qator ZAHARLI deb belgilanadi va
+   * O'TKAZIB YUBORILADI (dopStart+1). Ish oxirigacha boradi, o'tkazib
+   * yuborilgani esa xabarda ochiq aytiladi — jim yo'qolmaydi. */
+  if(job){
+    var _joriy = Number(resume.dopStart)||0;
+    if(job.oxirgiDopStart === _joriy && job.status === 'ishlayapti'){
+      job.qotdi = (job.qotdi||0) + 1;
+      if(job.qotdi >= 2){
+        job.zaharli = job.zaharli || [];
+        job.zaharli.push(_joriy);
+        resume.dopStart = _joriy + 1;      // ← ZAHARLI QATORNI O'TKAZIB YUBORAMIZ
+        job.resume = resume;
+        job.qotdi = 0;
+        job.xabar = '⚠ '+(_joriy+1)+'-қўшимча 2 марта тугамади — ЎТКАЗИБ ЮБОРИЛДИ, '+
+                    'иш давом этмоқда (жами ўтказилган: '+job.zaharli.length+')';
+        try{ _setF2Prog(job.xabar); }catch(e){}
+      }
+    } else {
+      job.qotdi = 0;
+    }
+    job.oxirgiDopStart = Number(resume.dopStart)||0;
+    job.status='ishlayapti';
+    _f2JobSet(job);
+  }
   try {
     var r = apiF2Qolla(p.obyekt, p.oyNom, p.edits, p.dopps, p.aktJami, resume);
     if (r && r.resume) {

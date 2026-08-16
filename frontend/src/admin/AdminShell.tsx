@@ -4,6 +4,7 @@ import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3D';
+import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 
 const MENYU = [
   { yol: '/admin/obyektlar',  nom: 'Obyektlar',   Ikonka: Building2 },
@@ -128,6 +129,11 @@ export default function AdminShell() {
       <main className="relative z-10 flex-1 overflow-hidden flex flex-col bg-transparent">
         <Outlet />
       </main>
+
+      {/* ⚡ 2026-08-16: fon rejimidagi Ф2 yozish ishi ISTALGAN sahifada
+          ko'rinib turadi — «yangi import bossam joriy navbatdagini
+          ko'ra olmayman» muammosi. Faol ish bo'lmasa hech narsa chizmaydi. */}
+      <F2NavbatChip />
     </div>
   );
 }

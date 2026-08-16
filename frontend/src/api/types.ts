@@ -188,7 +188,12 @@ export type F2MoslashNatija = {
 export type F2JobHolat = {
   job: {
     status?: string; obyekt?: string; oyNom?: string;
-    done?: number; total?: number; boshlandi?: number; xabar?: string;
+    done?: number; total?: number; boshlandi?: number;
+    /* ⚡ 2026-08-16: server har qadamda yangilaydi — qotib qolganini
+     * aniqlash uchun (F2NavbatChip). */
+    yangilandi?: number;
+    qotdi?: number;
+    zaharli?: number[]; xabar?: string;
   } | null;
   hozir?: string;
   log?: string[];

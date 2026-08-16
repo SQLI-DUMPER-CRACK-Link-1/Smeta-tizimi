@@ -892,6 +892,15 @@ export function useF2EskiFaylOqi() {
 }
 
 /** Yozuv holati — 3 soniyada bir so'raladi, tugagach to'xtaydi */
+/** Qotib qolgan yozish ishini tozalash — trigger + kesh + holat o'chadi. */
+export function useF2JobTozala() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => gas<{ ok: boolean; ochirilganTrigger?: number; xabar?: string }>('apiF2JobTozala'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['f2job'] }); },
+  });
+}
+
 export function useF2JobHolat(faol: boolean) {
   return useQuery({
     queryKey: ['f2job'],
