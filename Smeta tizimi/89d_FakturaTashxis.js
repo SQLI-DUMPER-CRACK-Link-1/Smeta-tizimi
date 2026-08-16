@@ -231,7 +231,18 @@ function apiFakturaXatodanTikla(limit, loglarniOchir){
     var t0 = Date.now();
 
     while(it.hasNext()){
-      if(qaytarildi >= limit || (Date.now()-t0) > 4*60*1000){ qoldi++; continue; }
+      /* ⚡⚡⚡ 2026-08-16 CHEKSIZ TSIKL TUZATILDI (audit C11 — TASDIQLANDI).
+       * Eski kod: `if(limit yetdi){ qoldi++; continue; }`
+       * `continue` iteratorni SURMAYDI (`it.next()` chaqirilmaydi) —
+       * `it.hasNext()` abadiy `true` qaytaradi va sikl cheksiz aylanadi.
+       * `qoldi` ham millionlab oshib ketardi. Jarayon GAS ning 6 daqiqalik
+       * limitida o'ldirilardi va foydalanuvchi «tiklash qotib qoldi» degan
+       * holatga tushardi.
+       * ENDI: limit yetganda sikldan CHIQAMIZ va qolganini SANAB qaytaramiz. */
+      if(qaytarildi >= limit || (Date.now()-t0) > 4*60*1000){
+        while(it.hasNext()){ it.next(); qoldi++; }   // qolganini sanaymiz
+        break;
+      }
       var f = it.next();
       var nom = f.getName();
       // Log fayllar — faktura emas

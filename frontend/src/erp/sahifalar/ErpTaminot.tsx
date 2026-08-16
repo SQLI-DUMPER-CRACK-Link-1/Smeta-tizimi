@@ -31,12 +31,12 @@ export default function ErpTaminot() {
   }
 
   const filtrlanganZayavkalar = data.zayavkalar.filter((z: any) => 
-    z.material.toLowerCase().includes(qidiruv.toLowerCase()) || 
-    z.prorab.toLowerCase().includes(qidiruv.toLowerCase())
+    String(z.material ?? '').toLowerCase().includes(qidiruv.toLowerCase()) || 
+    String(z.prorab ?? '').toLowerCase().includes(qidiruv.toLowerCase())
   );
 
   const filtrlanganMateriallar = data.materiallar.filter((m: any) => 
-    m.nom.toLowerCase().includes(qidiruv.toLowerCase())
+    String(m.nom ?? '').toLowerCase().includes(qidiruv.toLowerCase())
   );
 
   const holatOzgartir = async (id: string, status: ZayavkaStatus) => {

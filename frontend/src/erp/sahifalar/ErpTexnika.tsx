@@ -27,8 +27,8 @@ export default function ErpTexnika() {
   }
 
   const filtrlanganTexnikalar = data.texnikalar.filter((t: any) => {
-    const mosKeladi = t.nom.toLowerCase().includes(qidiruv.toLowerCase()) || 
-                      t.davlatRaqami.toLowerCase().includes(qidiruv.toLowerCase());
+    const mosKeladi = String(t.nom ?? '').toLowerCase().includes(qidiruv.toLowerCase()) || 
+                      String(t.davlatRaqami ?? '').toLowerCase().includes(qidiruv.toLowerCase());
     
     if (filtir === 'ishlayapti') return mosKeladi && t.holat === 'Ishlayapti';
     if (filtir === 'remontda') return mosKeladi && t.holat === 'Remontda';

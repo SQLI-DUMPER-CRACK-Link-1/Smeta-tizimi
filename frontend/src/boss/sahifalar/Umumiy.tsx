@@ -127,7 +127,7 @@ function FinancialChart({ objects }: { objects: any[] }) {
   
   if (!allSubItems || allSubItems.length === 0) return null;
   
-  const chartData = allSubItems.sort((a, b) => b.smeta - a.smeta).slice(0, 15).map(o => ({
+  const chartData = [...allSubItems].sort((a, b) => b.smeta - a.smeta).slice(0, 15).map(o => ({
     name: o.nom.length > 20 ? o.nom.substring(0, 20) + '...' : o.nom,
     Smeta: o.smeta,
     Fakt: o.fakt,
@@ -400,7 +400,7 @@ function RazdelRow({ nom }: { nom: string }) {
 
   return (
     <>
-      {data.rzList.sort((a, b) => (b.res || 0) - (a.res || 0)).map((rz, idx) => {
+      {[...(data.rzList ?? [])].sort((a, b) => (b.res || 0) - (a.res || 0)).map((rz, idx) => {
         const pCol = rz.progress >= 70 ? 'text-ok' : rz.progress >= 30 ? 'text-warn' : 'text-danger';
         const bgCol = rz.progress >= 70 ? 'bg-ok' : rz.progress >= 30 ? 'bg-warn' : 'bg-danger';
         return (
@@ -604,7 +604,7 @@ function KpiModal({ kpi, onClose }: { kpi: any, onClose: () => void }) {
               </tr>
             </thead>
             <tbody>
-              {kpi.items.sort((a:any, b:any) => b.val - a.val).map((item:any, idx:number) => (
+              {[...(kpi.items ?? [])].sort((a:any, b:any) => b.val - a.val).map((item:any, idx:number) => (
                 <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.04] transition-colors">
                   <td className="py-4 px-6 font-medium text-white/80">
                     <div className="flex items-center gap-3">
@@ -932,7 +932,7 @@ export default function Umumiy() {
                 </tr>
               </thead>
               <tbody>
-                {(data.objects || []).sort((a,b) => b.smeta - a.smeta).map((sh, idx) => (
+                {[...(data.objects || [])].sort((a,b) => b.smeta - a.smeta).map((sh, idx) => (
                   <ShartnomaRow key={idx} shartnoma={sh} />
                 ))}
               </tbody>

@@ -38,8 +38,8 @@ export default function ErpKadrlar() {
   }
 
   const filtrlanganIshchilar = data.ishchilar.filter((ishchi: any) => {
-    const mosKeladi = ishchi.ism.toLowerCase().includes(qidiruv.toLowerCase()) || 
-                      ishchi.kasb.toLowerCase().includes(qidiruv.toLowerCase());
+    const mosKeladi = String(ishchi.ism ?? '').toLowerCase().includes(qidiruv.toLowerCase()) || 
+                      String(ishchi.kasb ?? '').toLowerCase().includes(qidiruv.toLowerCase());
     return mosKeladi;
   });
 

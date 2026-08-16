@@ -24,8 +24,8 @@ export default function ErpSifat() {
   }
 
   const filtrlanganNuqsonlar = data.nuqsonlar.filter((n: any) => {
-    const mosKeladi = n.tavsif.toLowerCase().includes(qidiruv.toLowerCase()) || 
-                      n.obyekt.toLowerCase().includes(qidiruv.toLowerCase());
+    const mosKeladi = String(n.tavsif ?? '').toLowerCase().includes(qidiruv.toLowerCase()) || 
+                      String(n.obyekt ?? '').toLowerCase().includes(qidiruv.toLowerCase());
     if (filterStatus !== 'Barchasi') {
       return mosKeladi && n.status === filterStatus;
     }

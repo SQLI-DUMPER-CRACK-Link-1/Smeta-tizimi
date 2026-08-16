@@ -175,7 +175,13 @@ export function Buxgalteriya() {
                                <div className="text-sm font-bold text-white">Ta'minot va Materiallar</div>
                                <div className="text-xs text-slate-400">Markaziy Ombordan kiritilgan</div>
                              </div>
-                             <div className="text-lg font-mono text-rose-300">- <FmtN val={18500000} /> so'm</div>
+                             {/* ⚡⚡⚡ 2026-08-16 SOXTA RAQAM OLIB TASHLANDI (audit C5).
+                                 Bu yerda `18500000` QO'LDA YOZILGAN test raqami turgandi
+                                 va u HAQIQIY moliyaviy ma'lumot sifatida ko'rsatilardi.
+                                 Rahbar shu raqamga qarab qaror qabul qilishi mumkin edi.
+                                 Ta'minot moduli buxgalteriya daftariga hali ulanmagan —
+                                 shuni ROSTINI aytamiz, son o'ylab topmaymiz. */}
+                             <div className="text-[12px] text-slate-500 italic">ma'lumot ulanmagan</div>
                           </div>
                           <div className="flex items-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
                              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400"><HardHat size={20}/></div>
@@ -183,7 +189,7 @@ export function Buxgalteriya() {
                                <div className="text-sm font-bold text-white">Kadrlar va Oylik Maoshlar</div>
                                <div className="text-xs text-slate-400">Tabel bo'yicha hisoblangan qarz</div>
                              </div>
-                             <div className="text-lg font-mono text-rose-300">- <FmtN val={5500000} /> so'm</div>
+                             <div className="text-[12px] text-slate-500 italic">ma'lumot ulanmagan</div>
                           </div>
                           <div className="flex items-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
                              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400"><Truck size={20}/></div>
@@ -191,7 +197,7 @@ export function Buxgalteriya() {
                                <div className="text-sm font-bold text-white">Texnika va Yoqilg'i</div>
                                <div className="text-xs text-slate-400">Avtomat sarflandi va remont</div>
                              </div>
-                             <div className="text-lg font-mono text-rose-300">- <FmtN val={2400000} /> so'm</div>
+                             <div className="text-[12px] text-slate-500 italic">ma'lumot ulanmagan</div>
                           </div>
                        </div>
                        
