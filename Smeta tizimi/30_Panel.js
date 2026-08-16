@@ -3981,6 +3981,8 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
   var col = CFG.C;
   // ⚡ 2026-07-27: resume'da mappedYoz/dopsYoz avvalgi bo'lakdan davom etadi
   var mappedYoz = (_job && _job.mappedYoz) || 0, dopsYoz = (_job && _job.dopsYoz) || 0;
+  /* ⚡ 2026-08-16: surilish tuzatgich hisobotlari (pastdagi izohga qara) */
+  _f2SurilishLog = []; _f2ShubhaLog = []; _f2NomKeshTozala();
 
   if(!_oyTayyor){
     _setF2Prog('1/4: Ой устуни текширилмоқда/яратилмоқда — '+oyNom);
@@ -4093,6 +4095,37 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
         for(var i=0; i<_slice.length; i++) {
            var e = _slice[i];
            if(!e || !e.varaq || !e.row) continue;
+           /* ⚡⚡⚡ 2026-08-16 SURILISHNI O'ZI TUZATADIGAN HIMOYA.
+            *
+            * Foydalanuvchi holati: «bitta rz qo'shdim, shundan keyin f2
+            * obyomlari bir qator tepaga surilib hamma joy xato bo'ldi».
+            * Frontend tarafi tuzatildi (daraxt ish tugagach yangilanadi),
+            * lekin bu SINF xato yana takrorlanishi mumkin — masalan
+            * boshqa foydalanuvchi ayni paytda qator qo'shsa.
+            *
+            * MUHIM: bu RAD ETMAYDI. Foydalanuvchi qonuni — «birortayam f2
+            * qiymati yozilmay qolmasligi shart». Shuning uchun mantiq:
+            *   • nom mos kelsa       → o'sha qatorga yoziladi (odatiy yo'l)
+            *   • mos kelmasa         → ±3 qator atrofida qidiriladi
+            *   • topilsa             → TUZATILGAN qatorga yoziladi
+            *   • topilmasa           → BARIBIR asl qatorga yoziladi,
+            *                           faqat ogohlantirish qayd etiladi
+            * Ya'ni eng yomon holatda ham hech narsa yo'qolmaydi. */
+           if(e.nom){
+              try{
+                 var _tz = _f2SurilishTuzat(obyekt, e.varaq, e.row, e.nom, e.kod);
+                 if(_tz.row !== e.row){
+                    _f2SurilishLog.push(e.varaq+'#'+e.row+' → '+_tz.row+
+                                        ' («'+String(e.nom).slice(0,30)+'»)');
+                    e = {varaq:e.varaq, row:_tz.row, hajm:e.hajm, narx:e.narx,
+                         summa:e.summa, uid:e.uid, nom:e.nom, kod:e.kod};
+                 } else if(_tz.shubha){
+                    _f2ShubhaLog.push(e.varaq+'#'+e.row+' — смета «'+
+                                      String(_tz.topilgan||'').slice(0,25)+
+                                      '», Ф2 «'+String(e.nom).slice(0,25)+'»');
+                 }
+              }catch(_es){}
+           }
            // ⚡ _oyObj: narx faqat >0 bo'lsa (aks holda 0 yozilib smeta-narx formulani buzardi);
            // e.summa — F2 hujjatdagi TAYYOR summa (bo'lsa) STATIK yoziladi (yaxlitlash farqisiz)
            // e.uid — F2 hujjatdagi uid ni izohga (note) yozish uchun yuboramiz.
@@ -4411,6 +4444,16 @@ function apiF2Qolla(obyekt, oyNom, edits, dopps, aktJami, _job) {
     xabar = '✅ '+oyNom+' ойига сақланди: '+mappedYoz+' та мослаштирилган'+(dopsYoz?(' + '+dopsYoz+' та янги (қўшимча) иш'):'')+' = жами '+jami+' та.';
   }
   if(dopXato && dopXato.length) xabar += ' ⚠ '+dopXato.length+' та қўшимчада хато: '+dopXato.slice(0,3).join('; ');
+  /* ⚡ 2026-08-16: surilish tuzatilgan bo'lsa — JIM QOLMAYMIZ.
+   * Foydalanuvchi qaysi qatorlar ko'chirilganini bilishi kerak. */
+  if(_f2SurilishLog.length){
+    xabar += ' 🔧 '+_f2SurilishLog.length+' та қатор СУРИЛГАН эди — тўғри жойига ёзилди: '+
+             _f2SurilishLog.slice(0,3).join(' · ');
+  }
+  if(_f2ShubhaLog.length){
+    xabar += ' ⚠ '+_f2ShubhaLog.length+' та қаторда смета номи Ф2 номига мос эмас '+
+             '(барибир ёзилди, текширинг): '+_f2ShubhaLog.slice(0,2).join(' · ');
+  }
 
   // ⚡⚡⚡ 2026-07-16 YAKUNIY SOLISHTIRUV (foydalanuvchi printsipi: «АКТ СУММАСИ —
   // ҲАҚИҚАТ. 1 млрд киритсам АЙНАН 1 млрд тушиши керак»). Yozib bo'lingach server
@@ -5269,3 +5312,93 @@ function apiF2JobTozala(){
   }catch(e){ return {ok:false, xabar:String((e&&e.message)||e)}; }
 }
 if (typeof globalThis !== 'undefined') globalThis.apiF2JobTozala = apiF2JobTozala;
+
+/* ══════════════════════════════════════════════════════════════════
+ * SURILISH TUZATGICH (2026-08-16)
+ *
+ * Foydalanuvchi: «bitta rz qo'shdim, shundan keyin f2 obyomlari bir
+ * qator tepaga surilib hamma joy xato bo'lib ketdi».
+ *
+ * Qator raqami — mo'rt manzil: smetaga bitta qator qo'shilsa pastdagi
+ * hamma raqam suriladi. Frontend eskirgan raqam bilan yozsa pul
+ * BOSHQA ishga tushadi va bu JIM ketadi.
+ *
+ * Bu tuzatgich yozishdan oldin qatorning NOMINI tekshiradi. Mos
+ * kelmasa ±3 qator atrofidan qidiradi (surilish odatda 1-2 qator).
+ *
+ * ⚠ QAT'IY QOIDA: bu funksiya HECH QACHON «yozma» demaydi. U faqat
+ * TO'G'RI MANZILNI taklif qiladi. Topa olmasa asl qator qaytariladi
+ * va yozish baribir bajariladi — «birortayam f2 qiymati yozilmay
+ * qolmasligi shart» qonuniga muvofiq.
+ * ══════════════════════════════════════════════════════════════════ */
+var _f2SurilishLog = [];   // tuzatilganlar
+var _f2ShubhaLog   = [];   // nomi mos kelmadi, lekin atrofda ham topilmadi
+
+/** Nomni solishtirish uchun soddalashtirish */
+function _f2SurNorm(s){
+  return String(s||'').toUpperCase()
+    .replace(/[Ё]/g,'Е').replace(/\s+/g,' ')
+    .replace(/[^А-ЯA-Z0-9 ]/g,'').trim();
+}
+
+/* Varaq nomlari keshi — har chaqiruvda varaqni qayta o'qimaslik uchun */
+var _F2_NOM_KESH = {};
+function _f2VaraqNomlari(obyekt, varaqFull){
+  var kalit = obyekt+'||'+varaqFull;
+  if(_F2_NOM_KESH[kalit]) return _F2_NOM_KESH[kalit];
+  var sub = obyekt, varaqNom = varaqFull;
+  if(String(varaqFull).indexOf('||') >= 0){
+    var p = String(varaqFull).split('||'); sub = p[0]; varaqNom = p[1];
+  }
+  var out = {nom:[], kod:[]};
+  try{
+    var plus = _plusTop(sub);
+    var sh = plus && plus.getSheetByName(varaqNom);
+    if(sh){
+      var last = sh.getLastRow();
+      if(last > 0){
+        var col = CFG.C;
+        out.nom = sh.getRange(1, col.NOM, last, 1).getValues();
+        out.kod = sh.getRange(1, col.KOD, last, 1).getValues();
+      }
+    }
+  }catch(e){}
+  _F2_NOM_KESH[kalit] = out;
+  return out;
+}
+function _f2NomKeshTozala(){ _F2_NOM_KESH = {}; }
+
+/**
+ * @return {{row:number, shubha:boolean, topilgan:string}}
+ *   row     — yoziladigan qator (tuzatilgan yoki asl)
+ *   shubha  — nom mos kelmadi va atrofdan ham topilmadi
+ */
+function _f2SurilishTuzat(obyekt, varaqFull, row, kutilganNom, kutilganKod){
+  var d = _f2VaraqNomlari(obyekt, varaqFull);
+  if(!d.nom.length) return {row:row, shubha:false, topilgan:''};
+
+  var kutN = _f2SurNorm(kutilganNom);
+  if(!kutN) return {row:row, shubha:false, topilgan:''};
+
+  var joriy = (row >= 1 && row <= d.nom.length) ? _f2SurNorm(d.nom[row-1][0]) : '';
+  if(joriy === kutN) return {row:row, shubha:false, topilgan:joriy};   // ✓ joyida
+
+  /* Atrofdan qidiramiz — avval yaqinroq (±1), keyin uzoqroq (±3) */
+  for(var d1=1; d1<=3; d1++){
+    var nomzodlar = [row-d1, row+d1];
+    for(var z=0; z<nomzodlar.length; z++){
+      var r2 = nomzodlar[z];
+      if(r2 < 1 || r2 > d.nom.length) continue;
+      if(_f2SurNorm(d.nom[r2-1][0]) !== kutN) continue;
+      /* Kod ham berilgan bo'lsa — u ham mos kelsin (ikki xil ishning
+       * nomi bir xil bo'lishi mumkin) */
+      if(kutilganKod){
+        var k2 = String((d.kod[r2-1]||[])[0]||'').trim();
+        if(k2 && String(kutilganKod).trim() && k2 !== String(kutilganKod).trim()) continue;
+      }
+      return {row:r2, shubha:false, topilgan:kutN};   // ✓ surilish topildi
+    }
+  }
+  /* Topilmadi — ASL qatorga yoziladi, faqat shubha qayd etiladi */
+  return {row:row, shubha:true, topilgan:joriy};
+}

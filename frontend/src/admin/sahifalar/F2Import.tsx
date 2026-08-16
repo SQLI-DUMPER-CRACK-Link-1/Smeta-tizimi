@@ -846,6 +846,12 @@ export function F2Import() {
     const newBog: Record<string, any> = { [aktKalit]: {
       uid: aktKalit, varaq: varaqNom, row: smetaRow,
       kod: n.kod ?? '', hajm: n.hajm ?? 0, narx: n.narx ?? 0, summa: n.summa ?? 0,
+      /* ⚡⚡⚡ 2026-08-16: `nom` SERVERGA yuboriladi — u yerda SURILISH
+       * TUZATGICH ishlatadi. Agar smetaga qator qo'shilib raqamlar surilgan
+       * bo'lsa, server ±3 qator atrofidan shu nomni topib TO'G'RI joyga
+       * yozadi. Bu RAD ETISH emas — topa olmasa baribir yozadi.
+       * (Foydalanuvchi: «bitta rz qo'shdim, obyomlar bir qator surildi») */
+      nom: n.nom ?? '',
     } };
 
     // Agar BL bo'lsa va ichida rs lari bo'lsa, va ular bog'lanmagan bo'lsa, ularni ham Dop qilib qo'shamiz!
