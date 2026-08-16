@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Save, Percent, HardHat, Database, FolderOpen, Loader2 } from 'lucide-react';
+import { Settings, Save, Percent, HardHat, Database, FolderOpen, Loader2, PauseCircle, PlayCircle } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { Skelet } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
@@ -8,6 +8,7 @@ import {
   useTizimSozlama, useTizimSozlamaSaqla,
   useNakrutka, useNakrutkaSaqla,
   useObyektlar, useStavka, useStavkaSaqla,
+  useTizimHolat, useTizimHolatOzgartir,
 } from '../../api/hooks';
 import type { NakrutkaKoef, TizimSozlama } from '../../api/types';
 
@@ -57,6 +58,9 @@ export function Sozlamalar() {
 
 /* ══════════════ TIZIM ══════════════ */
 function TizimBolimi() {
+  /* ⚡ 2026-08-16: tizimni muzlatish kaliti */
+  const tizim = useTizimHolat();
+  const tizimOzgart = useTizimHolatOzgartir();
   const { data, isLoading } = useTizimSozlama();
   const saqla = useTizimSozlamaSaqla();
   const [form, setForm] = useState<TizimSozlama | null>(null);
@@ -74,6 +78,55 @@ function TizimBolimi() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      {/* ⚡⚡⚡ 2026-08-16 TIZIMNI MUZLATISH — eski paneldan yetishmayotgan kalit.
+          Muzlatilsa BARCHA avtomatik ish (triggerlar, fon navbati, kunlik
+          yangilanish) to'xtaydi. Katta tuzatish yoki tekshiruv paytida kerak:
+          aks holda fon ishlari yarim holatda ma'lumotni buzishi mumkin.
+          `apiTizimHolatOl/Ozgartir` GAS da BOR edi, saytda kalit yo'q edi. */}
+      <GlassCard className="p-5 mb-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3">
+            {tizim.data?.paused
+              ? <PauseCircle size={20} className="text-warn flex-shrink-0 mt-0.5" />
+              : <PlayCircle size={20} className="text-ok flex-shrink-0 mt-0.5" />}
+            <div>
+              <h2 className="font-semibold text-slate-200 text-[15px]">
+                {tizim.isLoading ? 'Tizim holati…'
+                  : tizim.data?.paused ? 'Tizim MUZLATILGAN' : 'Tizim faol'}
+              </h2>
+              <p className="text-[12px] text-slate-400 mt-0.5 leading-snug max-w-xl">
+                {tizim.data?.paused
+                  ? 'Barcha avtomatik ish to\'xtatilgan: triggerlar, fon navbati, kunlik '
+                    + 'yangilanish. Qo\'lda ishlar (F2 yozish, hisoblash) ishlaydi.'
+                  : 'Triggerlar va fon navbati normal ishlamoqda. Katta tuzatish '
+                    + 'oldidan muzlatib qo\'yish tavsiya etiladi.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const yangi = !tizim.data?.paused;
+              if (yangi && !window.confirm(
+                'Tizim MUZLATILADI.\n\n' +
+                'Barcha avtomatik ish to\'xtaydi (triggerlar, fon navbati).\n' +
+                'Ma\'lumotga TEGILMAYDI.\n\nDavom etamizmi?')) return;
+              tizimOzgart.mutate({ paused: yangi }, {
+                onSuccess: () => toast(yangi ? 'Tizim muzlatildi' : 'Tizim faollashtirildi',
+                                       yangi ? 'warn' : 'ok', undefined, 7000),
+                onError: (e: Error) => toast(e.message, 'danger'),
+              });
+            }}
+            disabled={tizimOzgart.isPending || tizim.isLoading}
+            className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors
+                        disabled:opacity-50 whitespace-nowrap ${tizim.data?.paused
+              ? 'bg-ok/20 text-ok hover:bg-ok/30'
+              : 'bg-warn/15 text-warn hover:bg-warn/25'}`}>
+            {tizimOzgart.isPending ? 'Bajarilmoqda…'
+              : tizim.data?.paused ? '▶ Faollashtirish' : '⏸ Muzlatish'}
+          </button>
+        </div>
+      </GlassCard>
+
       <GlassCard className="p-6">
         <div className="flex items-center gap-2 mb-6 text-slate-300">
           <FolderOpen size={18} className="text-accent" />

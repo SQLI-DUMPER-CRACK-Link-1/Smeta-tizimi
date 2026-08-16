@@ -1615,3 +1615,42 @@ export function useNakrutkaKoef(obyekt: string) {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+/* ── TIZIM HOLATI (2026-08-16) — «muzlatish» kaliti ───────────────
+ * Tizim muzlatilsa barcha avtomatik ish (triggerlar, navbat) to'xtaydi.
+ * Katta o'zgarish/tuzatish paytida kerak — aks holda fon ishlari
+ * yarim holatda ma'lumotni buzishi mumkin.
+ * GAS da bor edi, saytda kalit yo'q edi. */
+export function useTizimHolat() {
+  return useQuery({
+    queryKey: ['tizimHolat'],
+    queryFn: () => gas<{ paused: boolean }>('apiTizimHolatOl'),
+    staleTime: 30_000,
+  });
+}
+
+export function useTizimHolatOzgartir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ paused }: { paused: boolean }) =>
+      gas<{ ok?: boolean; xabar?: string }>('apiTizimHolatOzgartir', paused),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tizimHolat'] }),
+  });
+}
+
+/** Kategoriya aniqlash qoidalari (blok kalit so'zlari) */
+export function useKategoriya() {
+  return useQuery({
+    queryKey: ['kategoriya'],
+    queryFn: () => gas<Record<string, unknown>>('apiKategoriyaOl'),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useKategoriyaSaqla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (o: Record<string, unknown>) => gas<unknown>('apiKategoriyaSaqla', o),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kategoriya'] }),
+  });
+}
