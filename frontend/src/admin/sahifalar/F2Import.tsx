@@ -137,7 +137,8 @@ export function F2Import() {
   const setDropState = createSetter('dropState');
   const setSmetaScrollTo = createSetter('smetaScrollTo');
 
-  const [radRoyxat] = useState<any[]>([]);   // o'tkazib yuborilgan qatorlar (navbat javobidan)
+  /* ⚡ 2026-08-16 (audit H5): 2-qadamga faqat BIR MARTA sakraymiz */
+  const qadamOtildi = useRef(false);
   const [tahrirModalOy, setTahrirModalOy] = useState<string | null>(null);
 
   
@@ -668,11 +669,23 @@ export function F2Import() {
   }, [aktBarglar, doppedUids, moslikMap]);
 
   useEffect(() => {
+    /* ⚡⚡⚡ 2026-08-16 «QADAM 2 DAN CHIQIB BO'LMAYDI» (audit H5 — TASDIQLANDI).
+     *
+     * Bu effekt ish ketayotgan HAR safar `setQadam(2)` qilardi. Natijada
+     * foydalanuvchi «Yangi Ф2 import» yoki «Orqaga» bossa, effekt uni
+     * DARHOL 2-qadamga qaytarib tashlardi — fon ishi tugagunicha (soatlab)
+     * boshqa hech narsa qilib bo'lmasdi. Foydalanuvchi shikoyati
+     * «yangi import bossam joriy navbatdagini ko'ra olmayman» qisman
+     * shundan ham edi.
+     *
+     * ENDI: 2-qadamga FAQAT BIR MARTA — ish endi boshlanganda — o'tiladi.
+     * Undan keyin foydalanuvchi xohlagan joyga bemalol o'tadi; jarayonni
+     * esa doimiy navbat chipi (F2NavbatChip) orqali kuzatadi. */
     const holat = job.data?.job?.status;
     if (!holat) return;
-    if (holat !== 'navbat' && holat !== 'ishlayapti') return;
+    if (holat !== 'navbat' && holat !== 'ishlayapti') { qadamOtildi.current = false; return; }
     if (!yozishBoshlandi) setYozishBoshlandi(true);
-    if (qadam !== 2) setQadam(2);
+    if (!qadamOtildi.current) { qadamOtildi.current = true; if (qadam !== 2) setQadam(2); }
   }, [job.data?.job?.status, qadam, yozishBoshlandi]);
 
   /* ⚡⚡⚡ 2026-08-16 «F2 OBYOMLARI BIR QATOR TEPAGA SURILIB QOLDI» —
@@ -2764,7 +2777,7 @@ const onAvtoMoslash = () => {
                     {xato ? 'Xato' :
                      st === 'navbat' ? 'Navbatda — server boshlashini kutmoqda' :
                      st === 'ishlayapti' ? `Yozilmoqda… ${foiz}%` :
-                     tugadi ? (radRoyxat.length ? 'Yozildi (qisman)' : 'Yozildi') :
+                     tugadi ? 'Yozildi' :
                      'Holat aniqlanmoqda…'}
                   </h3>
                   {ishlayapti && (
@@ -2836,26 +2849,15 @@ const onAvtoMoslash = () => {
             );
           })()}
 
-          {/* O'tkazib yuborilgan qatorlar — nima uchun ekani aniq ko'rinsin */}
-          {radRoyxat.length > 0 && (
-            <div className="rounded-[10px] border border-warn/30 bg-warn/[.06] p-3">
-              <p className="text-[13px] text-warn font-medium mb-2">
-                ⚠ {radRoyxat.length} ta qator o'tkazib yuborildi — bog'lanish noto'g'ri
-                smeta qatoriga ishora qilyapti:
-              </p>
-              <div className="max-h-48 overflow-y-auto scrollbar-thin space-y-1">
-                {radRoyxat.slice(0, 40).map((x, i) => (
-                  <div key={i} className="text-[11px] text-text-dim leading-snug">
-                    <b className="text-text">{x.row}-qator:</b> kutilgan «{String(x.kutilgan || '').slice(0, 40)}»,
-                    {' '}topilgan «{String(x.topilgan || '').slice(0, 40)}»
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-text-mute mt-2">
-                Bu qatorlarni 2-qadamda qo'lda qayta bog'lab, yana yozing.
-              </p>
-            </div>
-          )}
+          {/* ⚡⚡⚡ 2026-08-16 OLIB TASHLANDI (audit H1 — TASDIQLANDI):
+              «o'tkazib yuborilgan qatorlar» bloki. `radRoyxat` setter'siz
+              `useState([])` edi — ya'ni DOIM bo'sh va bu blok HECH QACHON
+              chizilmasdi. 20 qator o'lik kod interfeys bor narsani
+              va'da qilardi: foydalanuvchi «rad etilganlar ko'rsatiladi»
+              deb o'ylardi, aslida ko'rsatilmasdi.
+              Rad etish endi navbat yo'lida yo'q (nom/kod tekshiruvi
+              foydalanuvchi talabi bilan olib tashlangan), shuning uchun
+              blok tiklanmadi — o'chirildi. */}
 
           <p className="text-sm text-text-dim tabular-nums">
             {j?.done ?? 0} / {j?.total ?? 0} qator{j?.xabar ? ` · ${j.xabar}` : ''}
@@ -2867,28 +2869,9 @@ const onAvtoMoslash = () => {
               «tiqilib qolganda F5 bossam ham yana shu eski navbatda turibdi...
                shu joyida bir to'xtatish tugmasi ham bo'lishi kerakda»).
               Avval qotib qolgan ishni tozalash imkoniyati UMUMAN yo'q edi. */}
-          {false && (
-            <div className="rounded-[10px] border border-warn/25 bg-warn/[.06] p-3 flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-[12px] text-warn">
-                Jarayon qotib qolgan bo'lsa (raqam uzoq vaqt o'zgarmasa) — to'xtatib qaytadan boshlang.
-              </p>
-              <button
-                onClick={async () => {
-                  try {
-                    const r = await gas<any>('apiF2JobTozala');
-                    toast(r?.xabar || 'Ish to\'xtatildi', 'ok');
-                    await job.refetch();
-                    resetF2Store();
-                  } catch (e: any) {
-                    toast('Xato: ' + e.message, 'danger');
-                  }
-                }}
-                className="text-xs px-3 py-1.5 rounded border border-danger/40 text-danger hover:bg-danger hover:text-white transition-colors shrink-0"
-              >
-                ⏹ To'xtatish va tozalash
-              </button>
-            </div>
-          )}
+          {/* ⚡ 2026-08-16 O'CHIRILDI (audit M1): `{false && (...)}` ichida
+              22 qatorlik o'lik debug bloki turgandi — hech qachon
+              chizilmasdi, faqat faylni uzaytirardi. */}
 
           {true && (
             <Tugma
