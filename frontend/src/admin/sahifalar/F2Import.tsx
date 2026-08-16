@@ -1021,13 +1021,49 @@ export function F2Import() {
   }, [aktTree]);
 
   /** SMETA daraxti — LRV_PLUS ierarxiyasi */
+  /* ⚡⚡⚡ 2026-08-16 QOTISHGA QARSHI INDEKSLAR.
+   * Foydalanuvchi: «har bir bog'lanishda qotib qolayapdiku bu».
+   * Smeta daraxti har bog'lashda qayta quriladi (joyMap o'zgaradi) va
+   * ichida ikkita og'ir amal bor edi:
+   *   1) `aktBarchaTugun.find(uid)` — har bog'langan qator uchun chiziqli
+   *      qidiruv → 989 × 2000 ≈ 2 mln amal
+   *   2) `Object.values(qolDop).filter(...)` — har tugun uchun yangi
+   *      massiv → 1000 allokatsiya + 1000 × 40 solishtirish
+   * Ikkalasi ham endi BIR MARTA indekslanadi va O(1) bo'ladi. */
+  const BOSH_DOP = useMemo(() => [] as any[], []);
+  const aktUidIndeks = useMemo(() => {
+    const m = new Map<string, any>();
+    (aktBarchaTugun as any[]).forEach((a) => { if (a?.uid) m.set(a.uid, a); });
+    return m;
+  }, [aktBarchaTugun]);
+  const dopIndeks = useMemo(() => {
+    const m = new Map<string, any[]>();
+    Object.values(qolDop).forEach((d: any) => {
+      /* dop ikkita maydondan biri bo'yicha qatorga biriktiriladi */
+      [d.droppedOnRow, d.targetRow].forEach((r) => {
+        if (r === undefined || r === null) return;
+        const k = `${d.varaq}#${r}`;
+        const bor = m.get(k);
+        if (bor) { if (bor.indexOf(d) < 0) bor.push(d); }
+        else m.set(k, [d]);
+      });
+    });
+    return m;
+  }, [qolDop]);
+
   const smetaDaraxt = useMemo((): DaraxtTugun[] => {
     const map = (ns: any[]): DaraxtTugun[] => (ns ?? []).map((n) => {
       const kalit = n.type === 'rz' ? `rz:${n.nom}:${n.row ?? ''}` : `${n.varaq}#${n.row}`;
       const boglanganAktUid = joyMap.get(kalit);
       let boglanganAktText = null;
       if (boglanganAktUid) {
-        const aktQator = aktBarchaTugun.find(a => a.uid === boglanganAktUid);
+        /* ⚡⚡⚡ 2026-08-16 QOTISH ILDIZI: bu yerda `aktBarchaTugun.find(...)`
+         * turardi — HAR bog'langan qator uchun butun akt massivi bo'ylab
+         * CHIZIQLI qidiruv. 989 bog'lanish × ~2000 akt tuguni ≈ 2 MILLION
+         * amal, va bu HAR bog'lashda qaytadan bajarilardi (chunki joyMap
+         * o'zgarib butun daraxt qayta quriladi). Sahifa shundan qotardi.
+         * Endi tayyor indeks (Map) — O(1). */
+        const aktQator = aktUidIndeks.get(boglanganAktUid);
         if (aktQator) {
            const farq = (n.qoldiq ?? 0) - (aktQator.hajm ?? 0);
            boglanganAktText = (
@@ -1046,7 +1082,10 @@ export function F2Import() {
 
       let mappedChildren = n.children?.length ? map(n.children) : undefined;
 
-      const rowDopps = Object.values(qolDop).filter(d => d.varaq === n.varaq && (d.droppedOnRow === n.row || d.targetRow === n.row));
+      /* ⚡ 2026-08-16: avval bu yerda HAR tugun uchun `Object.values(qolDop)`
+       * yaratilib filtrlanardi (1000 tugun × 40 dop + 1000 ta massiv
+       * allokatsiyasi). Endi tayyor indeksdan olinadi. */
+      const rowDopps = dopIndeks.get(`${n.varaq}#${n.row}`) || BOSH_DOP;
       
       const doppsContent = rowDopps.length > 0 ? (
         <div className="flex flex-col gap-1 mt-1 w-full max-w-[600px]">
@@ -1110,7 +1149,7 @@ export function F2Import() {
       };
     });
     return map(lrv.data?.tree ?? []);
-  }, [lrv.data, joyMap, aktBarchaTugun, qolDop]);
+  }, [lrv.data, joyMap, aktUidIndeks, dopIndeks, BOSH_DOP]);
 
   const farq = aktJami - (boglanganJami + dopJami);
   const constOk = Math.abs(farq) < 1;
@@ -1249,8 +1288,19 @@ export function F2Import() {
     try {
       const r = await yozEski.mutateAsync({ obyekt, oyNom, edits, dopps, aktJami: aktJami || 0 });
       if (r.fon) {
-        toast(r.xabar || 'Yozish fon navbatiga qo\'yildi (uzoq vaqt olishi mumkin)', 'ok');
-        setYozOyna({ holat: 'tugadi', oyNom, yuborilgan: { qatorlar: edits.length, dopps: dopps.length, hujjatJami: aktJami || null }, natija: r as any });
+        /* ⚡⚡⚡ 2026-08-16 «YOZILDI» DEB YOLG'ON AYTARDI.
+         * Foydalanuvchi: «navbatga qo'yildi deyapdi lekin ayni vaqtda nima
+         * bo'layapdi bilib bo'lmayapdi... har bir qadam monitoringda
+         * ko'rinib o'tirishi kerak».
+         * SABAB: `fon:true` (ya'ni endi NAVBATGA QO'YILDI) holatida ham
+         * `holat:'tugadi'` qo'yilardi — ekranda to'la yashil chiziq va
+         * «Yozildi» chiqardi, aslida server hali boshlamagan ham edi.
+         * ENDI: 'ishlamoqda' bo'lib qoladi va `useF2JobHolat` (har 3 soniya)
+         * haqiqiy qadamlarni to'ldirib boradi. */
+        toast(r.xabar || 'Server navbatiga qo\'yildi', 'ok');
+        setYozOyna({ holat: 'ishlamoqda', oyNom,
+          yuborilgan: { qatorlar: edits.length, dopps: dopps.length, hujjatJami: aktJami || null },
+          natija: null, qadamMatn: 'Navbatga qo\'yildi — server boshlashini kutmoqda…' });
         qoralamaOchir();
         setYozishBoshlandi(true);
         setQadam(2);
@@ -2389,20 +2439,87 @@ const onAvtoMoslash = () => {
       {/* ---------- QADAM 4 ---------- */}
       {qadam === 2 && (
         <div className="karta p-6 max-w-2xl space-y-4">
-          {/* ⚡⚡⚡ 2026-08-14: yozish endi SINXRON (2-5 soniya) — bu yerga
-              kelgan bo'lsak, ish ALLAQACHON tugagan. Avval bu panel eski
-              fon-navbat holatiga qarardi va yozib bo'lgandan keyin ham
-              «Yozilmoqda» deb qotib turardi (foydalanuvchi shikoyati). */}
-          <div className="flex items-center gap-3">
-            <FileSpreadsheet size={20} className="text-ok" />
-            <h3 className="text-[17px] font-semibold text-text">
-              {radRoyxat.length ? 'Yozildi (qisman)' : 'Yozildi'}
-            </h3>
-          </div>
+          {/* ⚡⚡⚡ 2026-08-16 JONLI MONITORING (foydalanuvchi: «navbatga
+              qo'yildi deyapdi lekin ayni vaqtda nima bo'layapdi bilib
+              bo'lmayapdi... har bir qadam monitoringda ko'rinib o'tirishi
+              kerak. hozir nima qilayapdi qayerdan bilaman?»).
 
-          <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
-            <div className="h-full bg-ok rounded-full" style={{ width: '100%' }} />
-          </div>
+              SABAB: bu panel yozish SINXRON bo'lgan davrdan qolgan edi —
+              doim «Yozildi» va 100% yashil chiziq ko'rsatardi. Yozish
+              navbatga o'tgandan keyin ham o'sha yolg'onni aytaverdi.
+
+              ENDI: `useF2JobHolat` har 3 soniyada serverdan holatni oladi
+              (`job.status`, `done/total`, `hozir` — joriy qadam matni,
+              `log` — bajarilgan qadamlar ro'yxati) va shu yerda
+              ko'rsatiladi. */}
+          {(() => {
+            const st = j?.status;
+            const ishlayapti = st === 'navbat' || st === 'ishlayapti';
+            const xato = st === 'xato';
+            const tugadi = st === 'tugadi';
+            const jami = j?.total || 0;
+            const bajarildi = j?.done || 0;
+            const foiz = jami ? Math.min(100, Math.round((bajarildi / jami) * 100)) : (tugadi ? 100 : 0);
+            return (
+              <>
+                <div className="flex items-center gap-3">
+                  <FileSpreadsheet size={20}
+                    className={xato ? 'text-danger' : tugadi ? 'text-ok' : 'text-accent'} />
+                  <h3 className="text-[17px] font-semibold text-text">
+                    {xato ? 'Xato' :
+                     st === 'navbat' ? 'Navbatda — server boshlashini kutmoqda' :
+                     st === 'ishlayapti' ? `Yozilmoqda… ${foiz}%` :
+                     tugadi ? (radRoyxat.length ? 'Yozildi (qisman)' : 'Yozildi') :
+                     'Holat aniqlanmoqda…'}
+                  </h3>
+                  {ishlayapti && (
+                    <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                  )}
+                </div>
+
+                <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${
+                    xato ? 'bg-danger' : tugadi ? 'bg-ok' : 'bg-accent'}`}
+                    style={{ width: `${xato ? 100 : foiz}%` }} />
+                </div>
+
+                {/* HOZIR NIMA QILINYAPTI — server aytadi */}
+                {job.data?.hozir && (
+                  <div className="rounded-[10px] border border-accent/25 bg-accent/[.06] p-2.5">
+                    <p className="text-[12px] text-text leading-snug">
+                      <span className="text-text-mute">Hozir: </span>
+                      {String(job.data.hozir)}
+                    </p>
+                  </div>
+                )}
+
+                {/* BAJARILGAN QADAMLAR — oxirgisi tepada */}
+                {!!job.data?.log?.length && (
+                  <div className="rounded-[10px] border border-border bg-[var(--surface-2)]/40 p-2">
+                    <p className="text-[11px] text-text-mute mb-1.5">
+                      Qadamlar ({job.data.log.length}):
+                    </p>
+                    <div className="max-h-56 overflow-y-auto scrollbar-thin space-y-0.5">
+                      {[...job.data.log].reverse().map((qadamMatn: unknown, i: number) => (
+                        <div key={i}
+                          className={`text-[11px] leading-snug px-1.5 py-0.5 rounded ${
+                            i === 0 ? 'text-text bg-white/5' : 'text-text-dim'}`}>
+                          {String(qadamMatn)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ishlayapti && (
+                  <p className="text-[11px] text-text-mute">
+                    Brauzerni yopsangiz ham davom etadi — ish serverda bajarilmoqda.
+                    Istagan vaqt qaytib holatni ko'rasiz.
+                  </p>
+                )}
+              </>
+            );
+          })()}
 
           {/* O'tkazib yuborilgan qatorlar — nima uchun ekani aniq ko'rinsin */}
           {radRoyxat.length > 0 && (
