@@ -1,7 +1,10 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useFakturalarOl, useFakturaYoz, useFakturaFaylYoz, useFakturaAiParse, useFakturaDriveHolat, useFakturaAvtoSinx, useFakturaSinxFonda, type FakturaItem,
   useFakturaSinxToxtat, useFakturaSinxDavom, useFakturaOxirgiIjro,
-  useFakturaXatoLoglar, useFakturaXatodanTikla } from '../../api/hooks';
+  useFakturaXatoLoglar, useFakturaXatodanTikla,
+  /* ⚡ 2026-08-17 (audit): ulanmagan edi — «nega o'qilmayapti» ni bir
+     faylda tekshirish uchun */
+  useFakturaBittaSinov } from '../../api/hooks';
 import { Sahifa, Holatlar, Tugma } from '../../umumiy/ui/Sahifa';
 import { IlgorJadval, type IlgorUstun } from '../../umumiy/ui/IlgorJadval';
 import { toast } from '../../umumiy/ui/Toast';
@@ -16,6 +19,16 @@ export function Fakturalar() {
   const fOxirgi = useFakturaOxirgiIjro();
   const fXato   = useFakturaXatoLoglar(30);
   const fTikla  = useFakturaXatodanTikla();
+  const fSinov  = useFakturaBittaSinov();
+  const [sinovFayl, setSinovFayl] = useState('');
+
+  const bittaSinov = () => {
+    const nom = sinovFayl.trim();
+    if (!nom) { toast('Fayl nomini kiriting', 'warn'); return; }
+    fSinov.mutate({ faylNomi: nom }, {
+      onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
+    });
+  };
   const yoz = useFakturaYoz();
   const faylYoz = useFakturaFaylYoz();
   const aiParse = useFakturaAiParse();
@@ -476,6 +489,41 @@ export function Fakturalar() {
         </summary>
 
         <div className="mt-3 space-y-3">
+          {/* ⚡⚡⚡ 2026-08-17 (audit): BITTA FAYL SINOVI (`apiFakturaBittaSinov`).
+              Hook YOZILGAN, GAS funksiyasi ham BOR edi — lekin ulanmagan.
+              Nima uchun kerak: sinx 340 ta faylni o'qiy olmasa, sabab AI
+              kalitida yoki fayl formatida bo'lishi mumkin. Hammasini qayta
+              yurgizib ko'rish o'rniga BITTA faylni sinab, xatoni darhol
+              ko'rish mumkin — «nega o'qilmayapti» savolini bir bosishda
+              tekshiradi. */}
+          <div className="rounded-lg border border-border bg-[var(--surface-2)]/30 p-2.5">
+            <p className="text-[11px] uppercase tracking-wide text-text-dim mb-2">
+              Bitta faylni sinash (AI sozlamasi ishlayaptimi?)
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={sinovFayl}
+                onChange={(e) => setSinovFayl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && sinovFayl.trim()) bittaSinov(); }}
+                placeholder="fayl nomi (Drive dagi «Yangi» papkasidan)"
+                className="flex-1 min-w-[220px] bg-[var(--surface-2)] border border-border rounded-lg
+                           px-2 py-1.5 text-[12px] text-text outline-none focus:border-accent/50" />
+              <button
+                onClick={bittaSinov}
+                disabled={fSinov.isPending || !sinovFayl.trim()}
+                className="px-3 py-1.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
+                           text-[12px] font-medium transition-colors disabled:opacity-50">
+                {fSinov.isPending ? 'Sinalmoqda…' : 'Sinab ko‘rish'}
+              </button>
+            </div>
+            {fSinov.data != null && (
+              <pre className="text-[11px] text-text-dim bg-[var(--surface-3)]/50 rounded p-2.5
+                              overflow-auto max-h-56 leading-relaxed mt-2">
+{JSON.stringify(fSinov.data, null, 2)}
+              </pre>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <button onClick={() => fToxtat.mutate(undefined, {
                 onSuccess: (r) => toast(r.xabar || 'To’xtatildi', 'ok', undefined, 7000),

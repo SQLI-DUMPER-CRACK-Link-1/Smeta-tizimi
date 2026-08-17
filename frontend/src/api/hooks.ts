@@ -15,6 +15,54 @@ import type {
   TizimSozlama, NakrutkaKoef, Stavka,
 } from './types';
 
+/* ══════════════════════════════════════════════════════════════════════
+ * ATAYLAB EKRANGA ULANMAGAN HOOK'LAR — RO'YXAT VA SABABI
+ * ══════════════════════════════════════════════════════════════════════
+ * 2026-08-17 auditida «yozilgan, lekin hech qayerda chaqirilmagan»
+ * hook'lar skanlandi: 141 dan 30 tasi ulanmagan edi. 17 tasi haqiqiy
+ * bo'shliq bo'lib chiqdi va ulandi (shartnoma/to'lov o'chirish,
+ * xarajatlar, qo'shimcha ishlar, obyekt bog'lash, ishchi/texnika/
+ * postavshik tahriri, fayl tashxisi, obyekt tashxisi, tasnif qoidalari,
+ * F2 nazorati, faktura bitta-fayl sinovi).
+ *
+ * Quyidagilar ATAYLAB ulanmagan — keyingi skanlarda qayta «kamchilik»
+ * deb belgilanmasin:
+ *
+ *   useLockStatus / useLockAcquire / useLockRelease
+ *       Qulflash F2 yozish yo'lida SERVER TOMONDA hal qilinadi
+ *       (`apiF2YozishgaRuxsat` + navbat). Frontend qulf bosishi ikki
+ *       manba yasab, «kim band qildi» chalkashligini keltiradi.
+ *
+ *   useOyQosh
+ *       Yangi oy ustuni F2 YOZUVCHISI tomonidan yaratiladi. Alohida
+ *       tugma bo'lsa bo'sh ustun ochilib, «nega bo'sh oy turadi»
+ *       savolini tug'diradi.
+ *
+ *   useShartnomaDashboard
+ *       Shartnoma sahifasi kerakli raqamlarni `useShartnomalar` +
+ *       `useTolovlar` + `useQoshIshlar` dan hisoblaydi. Dashboard
+ *       so'rovi barcha obyekt qatorlarini o'qiydi — og'ir va takroriy.
+ *
+ *   useTolovOl
+ *       `useTolovlar` bilan bir xil ma'lumot. Ikkinchi o'quvchi kesh
+ *       kalitini ikkiga bo'lib, yangilanish nomuvofiqligini keltiradi.
+ *
+ *   useF2FaylOqi / useF2Yoz / useF2YozSinov
+ *       ESKI F2 yozish yo'li. Hozirgi yo'l — `apiF2QollaNavbatga` +
+ *       `useF2JobHolat` (timeout'ga chidamli, resumable). Eskisini
+ *       ulash ikki xil yozish mantiqini yonma-yon qo'yadi.
+ *
+ *   useFakturaOCR
+ *       Xom matn qaytaradi; uni `useFakturaAiParse` almashtirgan
+ *       (to'g'ridan-to'g'ri tovar qatorlariga ajratadi).
+ *
+ *   useTashxis / useNakrutkaKoef
+ *       Ma'lumoti boshqa, ULANGAN yo'llar bilan qoplanadi
+ *       (`useObyektDiagnostika`, Holat dagi накрутка jadvali).
+ *       Ikkalasining TIPI xato edi — tuzatildi, lekin ortiqcha so'rov
+ *       qo'shilmadi.
+ * ══════════════════════════════════════════════════════════════════════ */
+
 /* ============ DVIGATEL: OBYEKTNI ISHLASH (НАВБАТ) ============
  * ⚠️ Barcha obyektni skan qiluvchi ish SINXRON emas — GAS 6 daqiqa limitiga
  * urilmasligi uchun navbat (trigger) orqali fonda bajariladi. UI faqat
@@ -1680,11 +1728,28 @@ export function useOraliqlarSaqla() {
   });
 }
 
-/** Obyektning накрутка koeffitsienti */
+/** Obyektning накрутка koeffitsient jadvali.
+ *
+ * ⚠️ 2026-08-17 (audit): TIP NOTO'G'RI edi — `{koef?, vsego?, smeta?}` deb
+ * yozilgan, GAS esa `{shNo, kf, nk}` qaytaradi (`80_Shartnoma.js`):
+ *   shNo — obyekt bog'langan shartnoma raqami (bo'sh bo'lsa umumiy накрутка)
+ *   kf   — `_nakrutkaKoefTable(nk)` koeffitsient jadvali
+ *   nk   — xom накрутка qatorlari
+ * Eski tipdagi uch maydonning HECH BIRI javobda yo'q — ya'ni bu tipga
+ * ishonib yozilgan kod doim `undefined` olardi.
+ *
+ * ATAYLAB ULANMAGAN: Holat sahifasi накрутка ni obyekt javobining o'zidan
+ * ko'rsatadi («Nakrutka — barcha xarajatlar jami» jadvali), ya'ni alohida
+ * so'rov kerak emas. Tipi kelajakda kimga kerak bo'lsa to'g'ri bo'lsin
+ * deb tuzatildi, lekin ortiqcha so'rov qo'shilmadi. */
 export function useNakrutkaKoef(obyekt: string) {
   return useQuery({
     queryKey: ['nakrutkaKoef', obyekt],
-    queryFn: () => gas<{ koef?: number; vsego?: number; smeta?: number }>('apiNakrutkaKoef', obyekt),
+    queryFn: () => gas<{
+      shNo: string;
+      kf: Record<string, number>;
+      nk: unknown;
+    }>('apiNakrutkaKoef', obyekt),
     enabled: !!obyekt,
     staleTime: 5 * 60 * 1000,
   });
