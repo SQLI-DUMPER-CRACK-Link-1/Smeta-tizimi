@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useApiLog, useTolaDiagnostika, useKeshHolat, useTriggerlar,
-         useObyektDiagnostika, useObyektlar } from '../../api/hooks';
-import { Stethoscope } from 'lucide-react';
+         useObyektDiagnostika, useObyektlar, useKodVersiya } from '../../api/hooks';
+import { Stethoscope, Server } from 'lucide-react';
 import { toast } from '../../umumiy/ui/Toast';
 import { Sahifa, Holatlar, Jadval, Nishon, KpiKarta, type Ustun } from '../../umumiy/ui/Sahifa';
 import type { ApiLogYozuv } from '../../api/types';
@@ -115,6 +115,9 @@ export function Monitoring() {
   const obDiag  = useObyektDiagnostika();
   const obyektlar = useObyektlar();
   const [obTashxis, setObTashxis] = useState('');
+  /* ⚡ 2026-08-17: deploy versiyasi — probe qurilgan edi, lekin
+     foydalanuvchi unga yetib bora olmasdi */
+  const ver = useKodVersiya();
   const yozuvlar = soragan.data ?? [];
 
   const stat = useMemo(() => {
@@ -181,6 +184,49 @@ export function Monitoring() {
       onYangila={() => soragan.refetch()}
       yangilanmoqda={soragan.isFetching}
     >
+      {/* ⚡⚡⚡ 2026-08-17 DEPLOY VERSIYASI — «sayt yangi kodni ishlatyaptimi?»
+          GAS da 21 ta aktiv deployment bor. `clasp push` muvaffaqiyatli
+          chiqsa ham, deployment'lar yangi versiyaga ko'chirilmasa sayt ESKI
+          KODNI ishlatadi — buni tashqaridan bilishning yo'li YO'Q edi va
+          «tuzatdim, lekin tuzalmadi» holatida vaqt kodni qayta o'qishga
+          ketardi. Endi raqam SHU YERDA turadi: xato haqida gapirishdan
+          oldin shuni ko'rish kerak. */}
+      <div className="karta p-3 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Server size={15} className="text-accent flex-shrink-0" />
+          <div className="min-w-0">
+            <span className="text-[12px] text-text">Server kodi versiyasi</span>
+            <p className="text-[11px] text-text-mute leading-snug">
+              «Tuzatdim, lekin tuzalmadi» holatida avval shu raqamni tekshiring —
+              kutilganidan kichik bo'lsa muammo koddа emas, deploy'da.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {ver.isLoading && <span className="text-[12px] text-text-mute">o'qilmoqda…</span>}
+          {ver.isError && (
+            <span className="text-[12px] text-danger">
+              versiya o'qilmadi — server javob bermayapti
+            </span>
+          )}
+          {ver.data && (
+            <>
+              <span className="text-[18px] font-semibold text-text tabular-nums">
+                v{ver.data.versiya}
+              </span>
+              <span className="text-[11px] text-text-mute tabular-nums">{ver.data.vaqt}</span>
+            </>
+          )}
+          <button
+            onClick={() => ver.refetch()}
+            disabled={ver.isFetching}
+            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-border
+                       text-[11px] text-text-mute hover:text-text transition-colors disabled:opacity-50">
+            {ver.isFetching ? '…' : 'Tekshirish'}
+          </button>
+        </div>
+      </div>
+
       {/* ⚡⚡⚡ 2026-08-16 TIZIM TASHXISI — eski paneldan yetishmayotgan qism.
           GAS da `apiTolaDiagnostika`, `apiKeshHolat`, `apiTriggerlarRoyxat`
           BOR edi, lekin saytdan chaqirilmasdi. Nimadir buzilganda sababni

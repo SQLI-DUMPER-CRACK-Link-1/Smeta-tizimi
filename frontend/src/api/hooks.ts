@@ -25,12 +25,37 @@ import type {
  * postavshik tahriri, fayl tashxisi, obyekt tashxisi, tasnif qoidalari,
  * F2 nazorati, faktura bitta-fayl sinovi).
  *
- * Quyidagilar ATAYLAB ulanmagan — keyingi skanlarda qayta «kamchilik»
- * deb belgilanmasin:
+ * ── O'CHIRILGANLAR (5 ta) ────────────────────────────────────────────
+ * Quyidagilar ROSTDAN O'LIK edi — hech qayerda ishlatilmasdi va
+ * ishlatilishi ZARARLI bo'lardi, shuning uchun kod bazasidan
+ * BUTUNLAY olib tashlandi (izoh bilan qoldirish yetarli emas: keyingi
+ * o'quvchi ularni «bor ekan» deb ishlatib qo'yishi mumkin):
+ *
+ *   useF2Yoz / useF2YozSinov   → `apiF2YozTez2` ni TO'G'RIDAN chaqirardi.
+ *       Hozirgi yo'l — `apiF2QollaNavbatga` + `useF2JobHolat`
+ *       (timeout'ga chidamli, resumable). Ikki xil yozish mantig'i
+ *       yonma-yon turishi eng xatarli holat: kimdir eskisini ishlatsa,
+ *       6 daqiqa limitida yarim yozilgan F2 qoladi.
+ *   useF2FaylOqi               → `apiF2FaylOqi` ni to'g'ridan o'qirdi;
+ *       hozir fayl o'qish F2 store/daraxt orqali boradi.
+ *   useTolovOl                 → `useTolovlar` bilan AYNAN bir xil
+ *       ma'lumot. Ikkinchi o'quvchi kesh kalitini ikkiga bo'lib,
+ *       «bir joyda yangilandi, boshqasida yo'q» holatini yasardi.
+ *   useFakturaOCR              → xom matn qaytarardi; uni
+ *       `useFakturaAiParse` almashtirgan (to'g'ridan tovar qatorlariga).
+ *
+ * Shu auditda `useF2YozEski` → `useF2Navbatga` deb QAYTA NOMLANDI: nomi
+ * «eski» deyardi, lekin YANGI navbat yo'lini chaqirardi (nomi bilan
+ * vazifasi teskari — tuzoq edi).
+ *
+ * ── ATAYLAB ULANMAGAN (8 ta) ─────────────────────────────────────────
+ * Bular O'LIK EMAS: GAS funksiyasi tirik va kerak bo'lsa ishlatiladi,
+ * lekin BUGUN ekranda ko'rsatish ZARARLI bo'lardi. Keyingi skanlarda
+ * qayta «kamchilik» deb belgilanmasin:
  *
  *   useLockStatus / useLockAcquire / useLockRelease
  *       Qulflash F2 yozish yo'lida SERVER TOMONDA hal qilinadi
- *       (`apiF2YozishgaRuxsat` + navbat). Frontend qulf bosishi ikki
+ *       (`apiF2YozishgaRuxsat` + navbat). Frontend qulf bosishi ikkinchi
  *       manba yasab, «kim band qildi» chalkashligini keltiradi.
  *
  *   useOyQosh
@@ -41,26 +66,15 @@ import type {
  *   useShartnomaDashboard
  *       Shartnoma sahifasi kerakli raqamlarni `useShartnomalar` +
  *       `useTolovlar` + `useQoshIshlar` dan hisoblaydi. Dashboard
- *       so'rovi barcha obyekt qatorlarini o'qiydi — og'ir va takroriy.
- *
- *   useTolovOl
- *       `useTolovlar` bilan bir xil ma'lumot. Ikkinchi o'quvchi kesh
- *       kalitini ikkiga bo'lib, yangilanish nomuvofiqligini keltiradi.
- *
- *   useF2FaylOqi / useF2Yoz / useF2YozSinov
- *       ESKI F2 yozish yo'li. Hozirgi yo'l — `apiF2QollaNavbatga` +
- *       `useF2JobHolat` (timeout'ga chidamli, resumable). Eskisini
- *       ulash ikki xil yozish mantiqini yonma-yon qo'yadi.
- *
- *   useFakturaOCR
- *       Xom matn qaytaradi; uni `useFakturaAiParse` almashtirgan
- *       (to'g'ridan-to'g'ri tovar qatorlariga ajratadi).
+ *       so'rovi BARCHA obyekt qatorlarini o'qiydi — og'ir va takroriy.
  *
  *   useTashxis / useNakrutkaKoef
  *       Ma'lumoti boshqa, ULANGAN yo'llar bilan qoplanadi
  *       (`useObyektDiagnostika`, Holat dagi накрутка jadvali).
  *       Ikkalasining TIPI xato edi — tuzatildi, lekin ortiqcha so'rov
  *       qo'shilmadi.
+ *
+ *   useF2Nazorat / useObyektTekshir bilan bir qatorda: BULAR ULANDI.
  * ══════════════════════════════════════════════════════════════════════ */
 
 /* ============ DVIGATEL: OBYEKTNI ISHLASH (НАВБАТ) ============
@@ -466,13 +480,6 @@ export function useQoshIshOchir() {
   });
 }
 
-export function useTolovOl() {
-  return useQuery({
-    queryKey: ['tolovlar'],
-    queryFn: () => gas<any>('apiTolovOl'),
-  });
-}
-
 /* ⚠️ GAS'da `apiTolovSaqla` YO'Q — funksiya nomi `apiTolovYoz`.
  * Avvalgi nom bilan chaqirilsa server «функция мавжуд эмас» qaytarardi. */
 export function useTolovSaqla() {
@@ -614,13 +621,6 @@ export function useFakturaYoz() {
   });
 }
 
-export function useFakturaOCR() {
-  return useMutation({
-    mutationFn: (payload: { base64: string; mimeType: string; nomi: string }) => 
-      gas<{ ok: boolean; text?: string; xabar?: string }>('apiFakturaOCR', payload)
-  });
-}
-
 export function useFakturaAiParse() {
   return useMutation({
     mutationFn: (payload: { base64: string; mimeType: string; nomi: string }) => 
@@ -678,14 +678,6 @@ export function useF2FaylYukla() {
   });
 }
 
-/** Yuklangan faylni daraxt qilib o'qish */
-export function useF2FaylOqi() {
-  return useMutation({
-    mutationFn: ({ fileId, varaq }: { fileId: string; varaq?: string }) =>
-      gas<{ ok: boolean; tree?: AktNode[]; xabar?: string }>('apiF2FaylOqi', fileId, varaq || ''),
-  });
-}
-
 /** ⭐ Avto-moslashtirish — dvigatel GAS'da (35_F2Moslash.js), saytda TAKRORLANMAYDI */
 export function useF2AvtoMoslash() {
   return useMutation({
@@ -702,26 +694,18 @@ export type F2YozNatija = {
   radRoyxat?: { row: number; kutilgan?: string; topilgan?: string; sabab?: string }[];
 };
 
-/* ⚡⚡⚡ 2026-08-14 TEZ YO'LGA O'TKAZILDI (37_F2TezYoz.js).
- * Eski `apiF2QollaNavbatga` fon navbatiga qo'yardi va 97 qator uchun ham
- * 6 daqiqa limitiga urilib O'LIM SIKLIGA tushardi. Yangi yo'l 97 qatorni
- * 2.7 soniyada yozadi (jonli o'lchov) — navbat KERAK EMAS, javob darhol.
- * Qator surilgan bo'lsa nom/kod tekshiruvi ushlaydi va YOZMAYDI. */
-export function useF2Yoz() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
-      obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
-    }) => gas<F2YozNatija>('apiF2YozTez2', obyekt, oyNom, edits, dopps, aktJami),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['f2job'] });
-      qc.invalidateQueries({ queryKey: ['holat'] });
-    },
-  });
-}
-
-/** Eski yozish usuli (navbat bilan, eski xatti-harakatlar saqlanadi) */
-export function useF2YozEski() {
+/** F2 ni NAVBATGA qo'yish — hozirgi (yagona) yozish yo'li.
+ *
+ * ⚠️ 2026-08-17 (audit): bu hook avval `useF2YozEski` deb atalgan va izohi
+ * «Eski yozish usuli» edi — LEKIN u `apiF2QollaNavbatga` ni chaqiradi, ya'ni
+ * YANGI, timeout'ga chidamli (resumable) yo'lni. Nomi bilan vazifasi
+ * TESKARI edi: kim kodni o'qisa «eski, ishlatmaslik kerak» deb tushunib,
+ * o'rniga haqiqatan eski `apiF2YozTez2` ga o'tishi mumkin edi.
+ *
+ * Shu auditda haqiqiy eski yo'l hook'lari (`useF2Yoz`, `useF2YozSinov`,
+ * `useF2FaylOqi`) O'CHIRILDI — ular hech qayerda ishlatilmasdi va ikki xil
+ * yozish mantig'ini yonma-yon saqlab turardi. Endi yozish yo'li BITTA. */
+export function useF2Navbatga() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
@@ -738,16 +722,6 @@ export function useF2YozEski() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['f2job'] });
     },
-  });
-}
-
-/** QURUQ SINOV — hech narsa yozmaydi, faqat nechta qator mos kelishini aytadi.
- *  Yozishdan OLDIN chaqiriladi: qator surilgan bo'lsa darhol ko'rinadi. */
-export function useF2YozSinov() {
-  return useMutation({
-    mutationFn: ({ obyekt, oyNom, edits, dopps, aktJami }: {
-      obyekt: string; oyNom: string; edits: F2Moslik[]; dopps: unknown[]; aktJami: number;
-    }) => gas<F2YozNatija>('apiF2YozTezSinov2', obyekt, oyNom, edits, dopps, aktJami),
   });
 }
 
@@ -1672,6 +1646,26 @@ export function useObyektDiagnostika() {
   return useMutation({
     mutationFn: ({ obyekt }: { obyekt: string }) =>
       gas<Record<string, unknown>>('apiObyektDiagnostika', obyekt),
+  });
+}
+
+/** ⚡⚡⚡ 2026-08-17: DEPLOY PROBE — «sayt YANGI kodni ishlatyaptimi?»
+ *
+ * MUAMMO: GAS proyektida 21 ta aktiv deployment bor. `clasp push`
+ * muvaffaqiyatli chiqsa ham, deployment'lar yangi versiyaga ko'chirilmasa
+ * sayt ESKI KODNI ishlatib turadi. Buni TASHQARIDAN bilishning yo'li
+ * yo'q edi — natijada tuzatilgan xato «tuzalmadi» ko'rinib, vaqt kodni
+ * qayta o'qishga ketardi.
+ *
+ * `apiKodVersiya` (79_WebAPI.js) yengil probe: jadval o'qimaydi, darhol
+ * `{versiya, vaqt, deployment}` qaytaradi. Endi Monitoring sahifasida
+ * ko'rinadi — foydalanuvchi «ishlamayapti» deganda avval SHU RAQAMNI
+ * aytadi, kodni ayblashdan oldin. */
+export function useKodVersiya() {
+  return useQuery({
+    queryKey: ['kodVersiya'],
+    queryFn: () => gas<{ versiya: number; vaqt: string; deployment: string }>('apiKodVersiya'),
+    staleTime: 60_000,
   });
 }
 

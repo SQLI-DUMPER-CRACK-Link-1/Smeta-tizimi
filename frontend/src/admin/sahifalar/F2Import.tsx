@@ -4,7 +4,7 @@ import F2YozishOyna, { type YozishNatija } from '../qismlar/F2YozishOyna';
 import F2Kafolat from '../qismlar/F2Kafolat';
 import {
   useObyektlar, useF2Lokalkalar, useF2FaylYukla,
-  useF2AvtoMoslash, useF2YozEski, useF2YozishgaRuxsat, useF2BoglanishTikla, useF2JobHolat, useF2JobTozala, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
+  useF2AvtoMoslash, useF2Navbatga, useF2YozishgaRuxsat, useF2BoglanishTikla, useF2JobHolat, useF2JobTozala, useF2Fayllar, useF2Varaqlar, useF2Ustunlar, useF2Daraxt, useHolat, useF2OyOchirish, useF2EskiFaylOqi,
   useF2Reestr,
   useF2ReestrTikla,
   useObyektIshla, useF2LokalkaTaklif, type LokalkaTaklif
@@ -258,7 +258,7 @@ export function F2Import() {
   const ustun = useF2Ustunlar();
   const daraxt = useF2Daraxt();
   const moslash = useF2AvtoMoslash();
-  const yozEski = useF2YozEski();
+  const yozEski = useF2Navbatga();
   const ruxsat = useF2YozishgaRuxsat();
   const job = useF2JobHolat(true);
   /* ⚡⚡⚡ 2026-08-13: F2 bir NECHTA smetaga tegishli bo'lishi mumkin va qaysiligi
@@ -696,7 +696,7 @@ export function F2Import() {
    *
    * NIMA BO'LGAN:
    *   1. Yozish NAVBATGA qo'yiladi va ~1 soniyada javob qaytadi.
-   *   2. `useF2YozEski.onSuccess` o'sha zahoti `invalidateQueries(['holat'])`
+   *   2. `useF2Navbatga.onSuccess` o'sha zahoti `invalidateQueries(['holat'])`
    *      qilardi — daraxt QAYTA O'QILARDI.
    *   3. Lekin ish hali BOSHLANMAGAN! Razdel/qo'shimcha qatorlari hali
    *      qo'shilmagan. Ya'ni qayta o'qilgan daraxt ESKI qator raqamlari
