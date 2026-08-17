@@ -18,7 +18,17 @@
  */
 import { useState } from 'react';
 import { X, Check, AlertTriangle, ShieldCheck, Pencil } from 'lucide-react';
-import { useF2Reestr, useF2ReestrHujjatJami, useF2ReestrTikla, useF2QatlamTahlil } from '../../api/hooks';
+import { useF2Reestr, useF2ReestrHujjatJami, useF2ReestrTikla, useF2QatlamTahlil,
+         /* ⚡⚡⚡ 2026-08-17 (audit): `apiF2Nazorat` MUSTAQIL UCHINCHI MANBA.
+            Reestr — «biz nima yozgan deb O'YLAYMIZ» (daftardagi yozuv).
+            Nazorat — LRV_PLUS varaqlarini BEVOSITA o'qib, «jadvalda
+            HAQIQATAN nima turgani» ni aytadi.
+            Ikkisi bir xil bo'lsa — kafolat qattiq. Farq qilsa, aynan
+            «pul yo'qolishi» holati: daftarda yozilgan, jadvalda yo'q
+            (yoki teskarisi). Bu hook YOZILGAN edi, lekin hech qayerda
+            chaqirilmasdi — ya'ni eng ishonchli tekshiruv ishlamay
+            turgan edi. */
+         useF2Nazorat } from '../../api/hooks';
 
 const fmt = (n: number | null | undefined) =>
   n === null || n === undefined
@@ -47,6 +57,11 @@ export default function F2Kafolat({
   const tikla = useF2ReestrTikla();
   /* «bl mi rs mi» — foydalanuvchidan so'ralmaydi, ma'lumotdan aniqlanadi */
   const qatlam = useF2QatlamTahlil(obyekt, !barchasi);
+  /* Mustaqil uchinchi manba — jadvalda haqiqatan turgan summa.
+     «Barcha obyektlar» rejimida so'ralmaydi: har obyekt uchun LRV_PLUS
+     ochiladi, bu og'ir so'rov (Cloudflare 100s limitiga urilib «Failed to
+     fetch» beradi — [[failed-to-fetch-gas-navbati]]). */
+  const nazorat = useF2Nazorat(obyekt, !barchasi && !!obyekt);
 
   const [tahrirId, setTahrirId] = useState<string | null>(null);
   const [qiymat, setQiymat] = useState('');
@@ -143,6 +158,73 @@ export default function F2Kafolat({
                   : '⚠ Farq bor — quyidagi ro\'yxatdan qaysi F2 da ekanini toping.'}
             </p>
           </div>
+        )}
+
+        {/* ⚡⚡⚡ 2026-08-17 (audit): MUSTAQIL QARSHI-TEKSHIRUV (apiF2Nazorat).
+            Yuqoridagi tenglik REESTR (daftar) bo'yicha hisoblanadi — ya'ni
+            «biz nima yozgan deb o'ylayapmiz». Bu blok esa LRV_PLUS
+            varaqlarini BEVOSITA o'qiydi: «jadvalda HAQIQATAN nima turgan».
+            Ikkisi teng bo'lsa kafolat ikki tomonlama isbotlangan bo'ladi.
+            Farq qilsa — aynan pul yo'qolishi holati va uni SHU YERDA
+            ko'rish kerak, keyinroq emas. */}
+        {!barchasi && nazorat.data?.ok && (
+          <div className="mx-4 mt-2 p-3 rounded-lg border bg-white/[0.03] border-white/10">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="text-[11px] font-medium text-text">
+                Jadvalda haqiqatan turgan summa
+                <span className="text-text-mute font-normal">
+                  {' '}· {nazorat.data.oylar.length} oy · {nazorat.data.varaqSoni} varaq
+                </span>
+              </div>
+              <div className="text-[14px] font-medium text-text tabular-nums flex-shrink-0">
+                {fmt(nazorat.data.jamiSumma)}
+              </div>
+            </div>
+
+            {/* Daftar bilan solishtirish — asosiy xulosa */}
+            {d?.ok && (() => {
+              const nazFarq = (nazorat.data!.jamiSumma || 0) - (d.jamiYozilgan || 0);
+              const teng = Math.abs(nazFarq) < 1;
+              return (
+                <p className={`text-[11px] leading-snug ${teng ? 'text-emerald-300' : 'text-amber-200'}`}>
+                  {teng
+                    ? '✓ Daftardagi «smetaga tushgan» summa jadvaldagi haqiqiy summaga TENG — ikki mustaqil manba bir xil.'
+                    : `⚠ Daftar ${fmt(d.jamiYozilgan)} deydi, jadvalda esa ${fmt(nazorat.data!.jamiSumma)} — `
+                      + `farq ${fmt(nazFarq)}. Ya'ni daftar bilan jadval mos kelmayapti; quyidagi oylar ro'yxatidan qaysi oyda ekanini toping.`}
+                </p>
+              );
+            })()}
+
+            {/* Oy kesimida — qaysi oyda qancha */}
+            {nazorat.data.oylar.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {nazorat.data.oylar.map((o) => (
+                  <span key={o.nom}
+                    title={`${o.qatorlar} qator · ${o.varaqlar.length} varaq`
+                      + (o.pulliQatlamlar.length ? ` · qatlam: ${o.pulliQatlamlar.join(', ')}` : '')}
+                    className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums ${
+                      o.ikkiBaravarXavfi
+                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-200'
+                        : 'bg-white/5 border-white/10 text-text-mute'}`}>
+                    {o.nom}: {fmt(o.summa)}
+                    {o.ikkiBaravarXavfi && ' ⚠'}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* GAS o'zi topgan ogohlantirishlar — jim qoldirilmaydi */}
+            {nazorat.data.ogohlantirish.length > 0 && (
+              <ul className="mt-2 space-y-0.5">
+                {nazorat.data.ogohlantirish.map((x, i) => (
+                  <li key={i} className="text-[11px] text-amber-200 leading-snug">⚠ {x}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {!barchasi && nazorat.isLoading && (
+          <div className="mx-4 mt-2 skel h-16 rounded-lg" />
         )}
 
         {/* ⚡⚡⚡ IKKI BARAVAR SANASH TEKSHIRUVI (apiF2QatlamTahlil).
