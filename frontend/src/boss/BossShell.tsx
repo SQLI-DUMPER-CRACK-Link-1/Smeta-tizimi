@@ -1,13 +1,65 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
+import { gas } from '../api/client';
+import ReactMarkdown from 'react-markdown';
 import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert, Bot, X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+/* ⚠️ 2026-08-17 (audit): bu darcha AVVAL SOXTA MAKET edi — ichida qo'lda
+   yozilgan «Toshkent City - Lot 4», «Sement M400: 45 000 000 so'm» kabi
+   TO'QILGAN raqamlar turardi va rahbar ularni bugungi haqiqiy xarajat deb
+   o'qishi mumkin edi. Kiritish maydoni ham hech narsaga ulanmagan edi.
+   Endi darcha AiHelper bilan bir xil `apiTitanAi` ga ulangan — javoblar
+   faqat tizimdagi haqiqiy ma'lumotdan keladi.
+   (AiHelper `/boss` da o'zini yashiradi, shuning uchun rahbarga faqat
+   shu darcha qoladi — u ishlashi SHART.) */
+type BossAiXabar = { role: 'user' | 'ai'; text: string };
+
+const BOSS_AI_SALOM: BossAiXabar = {
+  role: 'ai',
+  text: 'Assalomu alaykum, Rahbar! Tizimdagi haqiqiy ma\'lumot bo\'yicha javob beraman.\n\n' +
+        'Masalan:\n\n' +
+        '- Qaysi obyektda F2 orqada qolgan?\n' +
+        '- Amfiteatrda bu oy qancha fakt bajarildi?\n' +
+        '- Umumiy qoldiq qancha?',
+};
 
 export default function BossShell() {
   const navigate = useNavigate();
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [aiMatn, setAiMatn] = useState('');
+  const [aiXabarlar, setAiXabarlar] = useState<BossAiXabar[]>([BOSS_AI_SALOM]);
+  const [aiYuklanmoqda, setAiYuklanmoqda] = useState(false);
+  const aiOxiriRef = useRef<HTMLDivElement>(null);
   const sess = useSessiya();
+
+  useEffect(() => {
+    if (isAiOpen) aiOxiriRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [aiXabarlar, aiYuklanmoqda, isAiOpen]);
+
+  const aiYubor = async () => {
+    const savol = aiMatn.trim();
+    if (!savol || aiYuklanmoqda) return;
+    setAiMatn('');
+    setAiXabarlar((p) => [...p, { role: 'user', text: savol }]);
+    setAiYuklanmoqda(true);
+    try {
+      /* Tarix: salomlashish yuborilmaydi (u AI javobi emas, UI matni) */
+      const tarix = aiXabarlar
+        .filter((m) => m !== BOSS_AI_SALOM)
+        .map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', parts: [{ text: m.text }] }));
+      const res = await gas<any>('apiTitanAi', { obyekt: '', text: savol, history: tarix, mode: 'auto' });
+      const javob = typeof res === 'string'
+        ? res
+        : (res?.text || res?.reply || res?.javob || res?.error || 'Javob bo\'sh keldi');
+      setAiXabarlar((p) => [...p, { role: 'ai', text: javob }]);
+    } catch (e: any) {
+      setAiXabarlar((p) => [...p, { role: 'ai', text: `Xatolik yuz berdi: ${e?.message || e}` }]);
+    } finally {
+      setAiYuklanmoqda(false);
+    }
+  };
 
   useEffect(() => {
     if (sess.isError && sess.error?.message === "Sessiya yo'q") {
@@ -169,33 +221,46 @@ export default function BossShell() {
             </div>
             
             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-sm w-[85%]">
-                <p className="text-sm text-slate-300">Assalomu alaykum, Rahbar! Men tizimdagi barcha ma'lumotlarni tahlil qilib turibman. Obyektlar, xarajatlar yoki xodimlar bo'yicha qanday savolingiz bor?</p>
-              </div>
-              {/* Fake user message just for UI mockup */}
-              <div className="bg-blue-600 p-4 rounded-2xl rounded-tr-sm w-[85%] self-end shadow-lg shadow-blue-500/20">
-                <p className="text-sm text-white">Bugungi eng katta xarajat qayerda bo'ldi?</p>
-              </div>
-              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-sm w-[85%] flex flex-col gap-2">
-                <p className="text-sm text-slate-300">Bugun eng katta xarajat <strong>"Toshkent City - Lot 4"</strong> obyektida qayd etildi.</p>
-                <div className="bg-black/30 p-2 rounded-lg border border-white/5 text-xs text-slate-400 font-mono">
-                  Sement M400: 45,000,000 so'm<br/>
-                  Armatura (14mm): 120,000,000 so'm
+              {aiXabarlar.map((m, i) => (
+                <div key={i}
+                  className={m.role === 'user'
+                    ? 'bg-blue-600 p-4 rounded-2xl rounded-tr-sm w-[85%] self-end shadow-lg shadow-blue-500/20'
+                    : 'bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-sm w-[85%]'}>
+                  <div className={`prose prose-invert prose-sm max-w-none text-sm ${
+                    m.role === 'user' ? 'text-white' : 'text-slate-300'}`}>
+                    <ReactMarkdown>{m.text}</ReactMarkdown>
+                  </div>
                 </div>
-              </div>
+              ))}
+              {aiYuklanmoqda && (
+                <div className="bg-white/5 border border-white/10 px-4 py-3 rounded-2xl rounded-tl-sm w-fit flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              )}
+              <div ref={aiOxiriRef} />
             </div>
 
             <div className="p-4 border-t border-white/10 bg-black/40">
               <div className="relative">
-                <input 
-                  type="text" 
-                  placeholder="AI ga savol bering..." 
+                <input
+                  type="text"
+                  value={aiMatn}
+                  onChange={(e) => setAiMatn(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') aiYubor(); }}
+                  placeholder="AI ga savol bering..."
                   className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-blue-500/50"
                 />
-                <button aria-label="Yuborish" title="Yuborish" className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-lg flex items-center justify-center text-white transition-colors">
+                <button onClick={aiYubor} disabled={!aiMatn.trim() || aiYuklanmoqda}
+                  aria-label="Yuborish" title="Yuborish"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-lg flex items-center justify-center text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                   <Send size={14} />
                 </button>
               </div>
+              <p className="text-[10px] text-slate-500 text-center mt-2">
+                AI xato qilishi mumkin. Moliya qarorlarida e'tiborli bo'ling.
+              </p>
             </div>
           </motion.div>
         )}
