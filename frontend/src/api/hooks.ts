@@ -356,9 +356,36 @@ export function useShartnomaBogSaqla() {
     mutationFn: ({ obyekt, tanlov, soni }: { obyekt: string, tanlov: string, soni: number }) => 
       gas<any>('apiShartnomaBogSaqla', obyekt, tanlov, soni),
     onSuccess: () => {
+      /* ⚠️ 2026-08-17: `shartnomaBog` kaliti YETISHMAYOTGAN edi — obyekt
+         bog'langandan keyin «Bog'langan obyektlar» ro'yxati yangilanmasdi,
+         ya'ni amal bajarilgan-bajarilmagani ko'rinmasdi. */
+      qc.invalidateQueries({ queryKey: ['shartnomaBog'] });
       qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
       qc.invalidateQueries({ queryKey: ['bossData'] });
     },
+  });
+}
+
+/** ⚡⚡⚡ 2026-08-17 (audit): QO'SHIMCHA ISHLAR — O'QUVCHI HOOK YO'Q EDI.
+ *
+ * `apiQoshIshOl` GAS da (80_Shartnoma.js:577) BOR, yozish/o'chirish hook'lari
+ * ham yozilgan edi — lekin O'QISH hook'i umuman yo'q edi. Ya'ni shartnomaga
+ * qo'shimcha ish qo'shish/o'chirish mumkin ko'rinardi, ammo mavjudlarini
+ * KO'RSATIB BERADIGAN yo'l yo'q edi: funksiya saytda butunlay ishlamasdi.
+ *
+ * Qo'shimcha ish — shartnoma summasidan TASHQARI bajarilgan ish. U
+ * `apiShartnomaDashboard` da alohida hisoblanadi (qoshSmeta/qoshFakt/qoshF2),
+ * ya'ni asl smetaga qo'shilib ketmaydi. */
+export type QoshIsh = {
+  row: number; shNo: string; nomi: string;
+  smeta: number; fakt: number; f2ol: number; f2mum: number; izoh: string;
+};
+
+export function useQoshIshlar() {
+  return useQuery({
+    queryKey: ['qoshIshlar'],
+    queryFn: () => gas<QoshIsh[]>('apiQoshIshOl'),
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -367,6 +394,10 @@ export function useQoshIshSaqla() {
   return useMutation({
     mutationFn: (data: any) => gas<any>('apiQoshIshSaqla', data),
     onSuccess: () => {
+      /* ⚠️ 2026-08-17: `qoshIshlar` kaliti YETISHMAYOTGAN edi — yangi o'quvchi
+         hook qo'shilgach, ro'yxat saqlagandan keyin ham eski holatda qolib
+         ketardi («qo'shdim, lekin ko'rinmadi»). */
+      qc.invalidateQueries({ queryKey: ['qoshIshlar'] });
       qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
       qc.invalidateQueries({ queryKey: ['buxDash'] });
       qc.invalidateQueries({ queryKey: ['bossData'] });
@@ -379,6 +410,7 @@ export function useQoshIshOchir() {
   return useMutation({
     mutationFn: (row: number) => gas<any>('apiQoshIshOchir', row),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['qoshIshlar'] });
       qc.invalidateQueries({ queryKey: ['shartnomaDash'] });
       qc.invalidateQueries({ queryKey: ['buxDash'] });
       qc.invalidateQueries({ queryKey: ['bossData'] });

@@ -7,6 +7,18 @@ import {
      summani abadiy shishirib turardi va qoldiq noto'g'ri chiqardi;
      tuzatishning yagona yo'li Google Sheets ni qo'lda ochish edi. */
   useShartnomaOchir, useTolovOchir,
+  /* ⚡⚡⚡ 2026-08-17 (audit) — IKKI BUTUN FUNKSIYA SAYTDA YO'Q EDI:
+     1) QO'SHIMCHA ISHLAR: `apiQoshIshOl/Saqla/Ochir` GAS da bor, lekin
+        o'quvchi hook YOZILMAGAN edi — ya'ni shartnomadan tashqari bajarilgan
+        ishlarni saytda ko'rish ham, kiritish ham imkonsiz edi. Bu summalar
+        `apiShartnomaDashboard` da alohida hisoblanadi (asl smetaga qo'shilib
+        ketmaydi), demak ular kiritilmasa buxgalteriya to'liq bo'lmaydi.
+     2) OBYEKT BOG'LASH: bog'langan obyektlar KO'RINARDI, lekin
+        `useShartnomaBogSaqla` ulanmagani uchun bog'lash/uzish imkoni yo'q
+        edi. Bog'lanmagan obyekt «—» guruhida qolib, shartnoma bo'yicha
+        fakt/F2 hisobiga TUSHMAYDI. */
+  useQoshIshlar, useQoshIshSaqla, useQoshIshOchir,
+  useShartnomaBogSaqla, useObyektlar,
 } from '../../api/hooks';
 import {
   Sahifa, Holatlar, Jadval, Nishon, KpiKarta, Qidiruv, Yon, Juft,
@@ -14,7 +26,7 @@ import {
 } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
-import { Plus, Save, Building2, Trash2 } from 'lucide-react';
+import { Plus, Save, Building2, Trash2, Unlink } from 'lucide-react';
 import type { Shartnoma as ShTur, Tolov } from '../../api/types';
 
 const HOLATLAR = ['Фаол', 'Якунланган', 'Тўхтатилган'];
@@ -27,11 +39,18 @@ export function Shartnoma() {
   const tolovYoz = useTolovSaqla();
   const shOchir = useShartnomaOchir();
   const tolovOchir = useTolovOchir();
+  const qoshIshlar = useQoshIshlar();
+  const qoshIshSaqla = useQoshIshSaqla();
+  const qoshIshOchir = useQoshIshOchir();
+  const bogSaqla = useShartnomaBogSaqla();
+  const obyektlar = useObyektlar();
 
   const [q, setQ] = useState('');
   const [tanlangan, setTanlangan] = useState<ShTur | null>(null);
   const [shakl, setShakl] = useState<ShTur | null>(null);
   const [yangiTolov, setYangiTolov] = useState({ sana: '', summa: '', izoh: '', obyekt: '' });
+  const [yangiQosh, setYangiQosh] = useState({ nomi: '', smeta: '', izoh: '' });
+  const [bogObyekt, setBogObyekt] = useState('');
 
   useEffect(() => { setShakl(tanlangan ? { ...tanlangan } : null); }, [tanlangan]);
 
@@ -125,6 +144,59 @@ export function Shartnoma() {
       toast(`${tanlangan.no} o'chirildi`, 'ok');
       setTanlangan(null);
     } catch (e: any) { toast(`O'chirilmadi: ${e.message}`, 'danger', undefined, 9000); }
+  }
+
+  /** Shu shartnomaga tegishli qo'shimcha ishlar */
+  const shQoshIshlari = useMemo(
+    /* `qi` — tashqi `q` (qidiruv matni) bilan chalkashmasligi uchun */
+    () => (qoshIshlar.data ?? []).filter((qi) => qi.shNo === tanlangan?.no),
+    [qoshIshlar.data, tanlangan],
+  );
+
+  async function qoshIshQoshish() {
+    if (!tanlangan) return;
+    if (!yangiQosh.nomi.trim()) { toast('Ish nomini kiriting', 'warn'); return; }
+    try {
+      await qoshIshSaqla.mutateAsync({
+        shNo: tanlangan.no,
+        nomi: yangiQosh.nomi.trim(),
+        smeta: Number(String(yangiQosh.smeta).replace(/[^\d.-]/g, '')) || 0,
+        izoh: yangiQosh.izoh,
+      });
+      setYangiQosh({ nomi: '', smeta: '', izoh: '' });
+      toast("Qo'shimcha ish saqlandi", 'ok');
+    } catch (e: any) { toast(`Saqlanmadi: ${e.message}`, 'danger', undefined, 9000); }
+  }
+
+  async function qoshIshOchirish(qi: { row: number; nomi: string; smeta: number }) {
+    if (!window.confirm(`Qo'shimcha ish o'chirilsinmi?\n${qi.nomi}\n`
+      + `${(qi.smeta || 0).toLocaleString('ru-RU')} so'm`)) return;
+    try {
+      await qoshIshOchir.mutateAsync(qi.row);
+      toast("O'chirildi", 'ok');
+    } catch (e: any) { toast(`O'chirilmadi: ${e.message}`, 'danger', undefined, 9000); }
+  }
+
+  async function obyektBoglash() {
+    if (!tanlangan || !bogObyekt) return;
+    try {
+      /* `soni` — shartnoma necha obyektga bo'linishi. Bitta obyekt
+         bog'lanayotgani uchun 1. */
+      await bogSaqla.mutateAsync({ obyekt: bogObyekt, tanlov: tanlangan.no, soni: 1 });
+      toast(`${bogObyekt} → ${tanlangan.no}`, 'ok');
+      setBogObyekt('');
+    } catch (e: any) { toast(`Bog'lanmadi: ${e.message}`, 'danger', undefined, 9000); }
+  }
+
+  async function obyektUzish(ob: string) {
+    if (!window.confirm(`«${ob}» shu shartnomadan uzilsinmi?\n\n`
+      + `Uzilgandan keyin bu obyektning fakt/F2 summasi shartnoma hisobiga `
+      + `TUSHMAYDI («—» guruhiga o'tadi).`)) return;
+    try {
+      /* Bo'sh tanlov = bog'lanish olib tashlanadi */
+      await bogSaqla.mutateAsync({ obyekt: ob, tanlov: '', soni: 1 });
+      toast(`${ob} uzildi`, 'ok');
+    } catch (e: any) { toast(`Uzilmadi: ${e.message}`, 'danger', undefined, 9000); }
   }
 
   async function tolovOchirish(t: Tolov) {
@@ -236,21 +308,122 @@ export function Shartnoma() {
               <Juft nom="Qoldiq" qiymat={<span className="text-warn"><FmtN val={(shakl.jami || 0) - (tolanganMap[shakl.no] || 0)} /></span>} />
             </section>
 
-            {/* Bog'langan obyektlar */}
+            {/* Bog'langan obyektlar — ⚡ 2026-08-17 (audit): avval faqat
+                KO'RSATILARDI. Endi bog'lash/uzish ham mumkin: bog'lanmagan
+                obyektning fakt/F2 summasi shartnoma hisobiga tushmaydi, ya'ni
+                bu ro'yxat to'g'ri bo'lishi moliyaviy ahamiyatga ega. */}
             <section>
-              <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim mb-2">Bog'langan obyektlar</h4>
+              <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim mb-2">
+                Bog'langan obyektlar ({(obyektMap[shakl.no] || []).length})
+              </h4>
               {(obyektMap[shakl.no] || []).length === 0 ? (
-                <p className="text-sm text-text-mute">Bu shartnomaga obyekt bog'lanmagan.</p>
+                <p className="text-sm text-text-mute mb-2">Bu shartnomaga obyekt bog'lanmagan.</p>
               ) : (
-                <ul className="space-y-1">
+                <ul className="space-y-1 mb-2">
                   {(obyektMap[shakl.no] || []).map((ob) => (
-                    <li key={ob} className="flex items-center gap-2 text-sm text-text">
+                    <li key={ob} className="flex items-center gap-2 text-sm text-text group">
                       <Building2 size={14} className="text-accent flex-shrink-0" />
-                      <span className="truncate" title={ob}>{ob}</span>
+                      <span className="truncate flex-1" title={ob}>{ob}</span>
+                      <button
+                        onClick={() => obyektUzish(ob)}
+                        disabled={bogSaqla.isPending}
+                        aria-label="Bog'lanishni uzish"
+                        title="Bog'lanishni uzish"
+                        className="p-1 rounded text-text-mute hover:text-danger hover:bg-danger/10
+                                   opacity-0 group-hover:opacity-100 focus-visible:opacity-100
+                                   transition-all disabled:opacity-40">
+                        <Unlink size={13} />
+                      </button>
                     </li>
                   ))}
                 </ul>
               )}
+              <div className="flex gap-2">
+                <Tanlov
+                  qiymat={bogObyekt}
+                  ozgardi={setBogObyekt}
+                  variantlar={['', ...(obyektlar.data ?? [])
+                    .map((o: any) => o.obyekt)
+                    /* Allaqachon SHU shartnomaga bog'langanlarini ko'rsatmaymiz */
+                    .filter((o: string) => !(obyektMap[shakl.no] || []).includes(o))]} />
+                <Tugma onBos={obyektBoglash} band={bogSaqla.isPending}>Bog'lash</Tugma>
+              </div>
+              {/* Obyekt boshqa shartnomaga bog'langan bo'lsa — ogohlantiramiz:
+                  GAS bitta obyektni faqat BITTA shartnomaga bog'laydi
+                  (nom bo'yicha qator almashtiriladi), ya'ni jim ko'chib ketadi */}
+              {bogObyekt && (bog.data ?? {})[bogObyekt] && (bog.data ?? {})[bogObyekt] !== shakl.no && (
+                <p className="text-[11px] text-warn mt-1.5">
+                  Diqqat: «{bogObyekt}» hozir «{(bog.data ?? {})[bogObyekt]}» shartnomasiga
+                  bog'langan. Bog'lasangiz u yerdan UZILADI (bir obyekt — bir shartnoma).
+                </p>
+              )}
+            </section>
+
+            {/* ⚡⚡⚡ 2026-08-17 (audit): QO'SHIMCHA ISHLAR — bu bo'lim saytda
+                BUTUNLAY yo'q edi (GAS API si bor, o'quvchi hook yozilmagan).
+                Bular shartnoma summasidan TASHQARI bajarilgan ishlar; ular
+                asl smetaga qo'shilmaydi, alohida hisoblanadi. */}
+            <section>
+              <h4 className="text-[11px] uppercase tracking-[0.04em] text-text-dim mb-2">
+                Qo'shimcha ishlar ({shQoshIshlari.length})
+              </h4>
+              {qoshIshlar.isLoading ? (
+                <div className="skel h-12 rounded mb-3" />
+              ) : shQoshIshlari.length === 0 ? (
+                <p className="text-sm text-text-mute mb-3">
+                  Shartnomadan tashqari ish qayd etilmagan.
+                </p>
+              ) : (
+                <div className="karta divide-y divide-border mb-3">
+                  {shQoshIshlari.map((qi) => (
+                    <div key={qi.row} className="px-3 py-2 flex items-center justify-between gap-3 text-sm group">
+                      <div className="min-w-0">
+                        <div className="text-text truncate" title={qi.nomi}>{qi.nomi}</div>
+                        {qi.izoh && <div className="text-[11px] text-text-mute truncate">{qi.izoh}</div>}
+                        {(qi.fakt || qi.f2ol) ? (
+                          <div className="text-[11px] text-text-mute tabular-nums">
+                            fakt <FmtN val={qi.fakt} /> · F2 <FmtN val={qi.f2ol} />
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-accent tabular-nums"><FmtN val={qi.smeta} /></span>
+                        <button
+                          onClick={() => qoshIshOchirish(qi)}
+                          disabled={qoshIshOchir.isPending}
+                          aria-label="Qo'shimcha ishni o'chirish"
+                          title="O'chirish"
+                          className="p-1 rounded text-text-mute hover:text-danger hover:bg-danger/10
+                                     opacity-0 group-hover:opacity-100 focus-visible:opacity-100
+                                     transition-all disabled:opacity-40">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="karta p-3 space-y-3">
+                <p className="text-[11px] uppercase tracking-[0.04em] text-text-dim">Yangi qo'shimcha ish</p>
+                <Maydon nom="Ish nomi">
+                  <Kiritma qiymat={yangiQosh.nomi}
+                    ozgardi={(v) => setYangiQosh({ ...yangiQosh, nomi: v })}
+                    placeholder="masalan: Qo'shimcha drenaj" />
+                </Maydon>
+                <Maydon nom="Smeta summasi">
+                  <Kiritma tur="number" qiymat={yangiQosh.smeta}
+                    ozgardi={(v) => setYangiQosh({ ...yangiQosh, smeta: v })} />
+                </Maydon>
+                <Maydon nom="Izoh">
+                  <Kiritma qiymat={yangiQosh.izoh}
+                    ozgardi={(v) => setYangiQosh({ ...yangiQosh, izoh: v })}
+                    placeholder="ixtiyoriy" />
+                </Maydon>
+                <Tugma onBos={qoshIshQoshish} band={qoshIshSaqla.isPending} ikonka={<Plus size={16} />}>
+                  Qo'shimcha ish qo'shish
+                </Tugma>
+              </div>
             </section>
 
             {/* Tahrirlash */}
