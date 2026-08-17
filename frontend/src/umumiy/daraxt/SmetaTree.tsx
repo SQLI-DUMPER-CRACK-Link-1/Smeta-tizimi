@@ -19,9 +19,44 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
+  const [qidiruv, setQidiruv] = useState('');
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const flatNodes = useMemo(() => flattenTree(data, expandedMap), [data, expandedMap]);
+  /* ⚠️ 2026-08-17 (audit): «Qidiruv…» maydoni hech narsaga ULANMAGAN edi —
+     yozish mumkin, lekin daraxt o'zgarmasdi. Minglab qatorli smetada bu
+     eng kerakli asbob, shuning uchun haqiqiy filtr qilib ulandi.
+     Mantiq: mos kelgan tugun VA uning butun ota-zanjiri qoladi (aks holda
+     topilgan resurs qaysi razdelniki ekani ko'rinmaydi); mos kelganning
+     bolalari ham qoladi. */
+  const filtrlangan = useMemo(() => {
+    const s = qidiruv.trim().toLowerCase();
+    if (!s) return data;
+    const mos = (n: TreeNode) =>
+      String(n.nom || '').toLowerCase().includes(s) ||
+      String((n as any).kod || '').toLowerCase().includes(s);
+    const suz = (nodes: TreeNode[]): TreeNode[] => {
+      const chiq: TreeNode[] = [];
+      for (const n of nodes) {
+        const bolalar = n.children ? suz(n.children) : [];
+        if (mos(n)) chiq.push(n);            // o'zi mos — butun shoxi bilan
+        else if (bolalar.length) chiq.push({ ...n, children: bolalar });
+      }
+      return chiq;
+    };
+    return suz(data);
+  }, [data, qidiruv]);
+
+  /* Qidiruvda hamma shox ochiq bo'lishi kerak, aks holda mos kelgan
+     ichkaridagi qator ko'rinmay qoladi. */
+  const kengaytirilgan = useMemo(
+    () => (qidiruv.trim()
+      ? Object.fromEntries(getAllKeys(filtrlangan).map((k) => [k, true]))
+      : expandedMap),
+    [qidiruv, filtrlangan, expandedMap]);
+
+  const flatNodes = useMemo(
+    () => flattenTree(filtrlangan, kengaytirilgan),
+    [filtrlangan, kengaytirilgan]);
 
   const rowVirtualizer = useVirtualizer({
     count: flatNodes.length,
@@ -52,11 +87,21 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
     <div className="flex flex-col h-full bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
       <div className="h-14 border-b border-border bg-surface-2/50 flex items-center px-4 justify-between sticky top-0 z-10 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <input 
-            type="text" 
-            placeholder="Qidiruv..." 
+          <input
+            type="text"
+            value={qidiruv}
+            onChange={(e) => setQidiruv(e.target.value)}
+            placeholder="Qidiruv..."
+            aria-label="Daraxtdan qidirish"
             className="bg-bg border border-border rounded-md px-3 py-1.5 text-sm w-64 focus:outline-none focus:border-accent"
           />
+          {!!qidiruv.trim() && (
+            <span className="text-[11px] text-text-mute whitespace-nowrap">
+              {flatNodes.length} qator
+              <button onClick={() => setQidiruv('')}
+                className="ml-2 text-accent hover:underline">tozalash</button>
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={expandAll} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">Hammasini yoyish</button>
