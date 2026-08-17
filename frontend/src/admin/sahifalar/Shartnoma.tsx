@@ -21,7 +21,7 @@ export function Shartnoma() {
   const [q, setQ] = useState('');
   const [tanlangan, setTanlangan] = useState<ShTur | null>(null);
   const [shakl, setShakl] = useState<ShTur | null>(null);
-  const [yangiTolov, setYangiTolov] = useState({ sana: '', summa: '', izoh: '' });
+  const [yangiTolov, setYangiTolov] = useState({ sana: '', summa: '', izoh: '', obyekt: '' });
 
   useEffect(() => { setShakl(tanlangan ? { ...tanlangan } : null); }, [tanlangan]);
 
@@ -76,13 +76,17 @@ export function Shartnoma() {
     try {
       await tolovYoz.mutateAsync({
         shNo: tanlangan.no,
-        obyekt: (obyektMap[tanlangan.no] || [])[0] || '',
+        /* ⚡ 2026-08-16 (audit M): avval DOIM birinchi obyekt olinardi —
+           shartnoma bir necha obyektga tegishli bo'lsa to'lov NOTO'G'RI
+           obyektga yozilardi va obyekt bo'yicha hisob buzilardi.
+           Endi foydalanuvchi tanlaydi (bitta bo'lsa o'zi qo'yiladi). */
+        obyekt: yangiTolov.obyekt || (obyektMap[tanlangan.no] || [])[0] || '',
         summa,
         sana: yangiTolov.sana || undefined,
         tur: 'Тўлов',
         izoh: yangiTolov.izoh,
       });
-      setYangiTolov({ sana: '', summa: '', izoh: '' });
+      setYangiTolov({ sana: '', summa: '', izoh: '', obyekt: '' });
       toast("To'lov qo'shildi");
       tolovlar.refetch();
     } catch (e: any) { toast(`Qo'shilmadi: ${e.message}`); }
@@ -238,6 +242,16 @@ export function Shartnoma() {
               <div className="karta p-3 space-y-3">
                 <p className="text-[11px] uppercase tracking-[0.04em] text-text-dim">Yangi to'lov</p>
                 <div className="grid grid-cols-2 gap-3">
+                  {/* ⚡ 2026-08-16: shartnoma bir necha obyektga tegishli bo'lsa
+                      to'lov qaysi biriga yozilishini TANLASH kerak */}
+                  {((obyektMap[tanlangan?.no ?? ''] || []).length > 1) && (
+                    <Maydon nom="Qaysi obyektga" izoh="Bu shartnoma bir necha obyektga tegishli">
+                      <Tanlov
+                        qiymat={yangiTolov.obyekt || (obyektMap[tanlangan?.no ?? ''] || [])[0] || ''}
+                        ozgardi={(v) => setYangiTolov({ ...yangiTolov, obyekt: v })}
+                        variantlar={obyektMap[tanlangan?.no ?? ''] || []} />
+                    </Maydon>
+                  )}
                   <Maydon nom="Sana"><Kiritma tur="date" qiymat={yangiTolov.sana} ozgardi={(v) => setYangiTolov({ ...yangiTolov, sana: v })} /></Maydon>
                   <Maydon nom="Summa"><Kiritma tur="number" qiymat={yangiTolov.summa} ozgardi={(v) => setYangiTolov({ ...yangiTolov, summa: v })} /></Maydon>
                 </div>

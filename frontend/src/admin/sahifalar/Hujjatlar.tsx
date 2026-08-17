@@ -13,7 +13,7 @@
  * va haqiqiy sarf solishtiriladi. `apiM29Yarat` GAS da BOR edi, lekin
  * uni ishga tushiradigan tugma hech qayerda yo'q edi.
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { FileText, ExternalLink, Play, Calendar, FolderOpen, Search } from 'lucide-react';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
@@ -33,9 +33,19 @@ export default function Hujjatlar() {
   /* ⚡ 2026-08-16: hujjat ichini saytdan ko'rish uchun */
   const [tab, setTab] = useState<'akt' | 'prixod' | 'viborka'>('akt');
   const [qidiruv, setQidiruv] = useState('');
-  const aktlar  = useAktlar(100, tab === 'akt' ? qidiruv : '');
-  const prixod  = usePrixod(100, tab === 'prixod' ? qidiruv : '');
-  const viborka = useViborka(100, tab === 'viborka' ? qidiruv : '');
+  /* ⚡ 2026-08-16 (audit H9): qidiruv HAR HARFDA serverga so'rov
+   * yuborardi — «beton» yozsangiz 5 ta GAS chaqiruvi. GAS so'rovlarni
+   * foydalanuvchi bo'yicha NAVBATGA qo'yadi, shuning uchun oxirgi
+   * (kerakli) so'rov eng oxirida bajarilardi va natija kech kelardi.
+   * Endi yozish to'xtagach 400 ms kutib bir marta yuboriladi. */
+  const [qidiruvKech, setQidiruvKech] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setQidiruvKech(qidiruv), 400);
+    return () => clearTimeout(t);
+  }, [qidiruv]);
+  const aktlar  = useAktlar(100, tab === 'akt' ? qidiruvKech : '');
+  const prixod  = usePrixod(100, tab === 'prixod' ? qidiruvKech : '');
+  const viborka = useViborka(100, tab === 'viborka' ? qidiruvKech : '');
   const joriySoro = tab === 'akt' ? aktlar : tab === 'prixod' ? prixod : viborka;
   const joriyQatorSoni =
     tab === 'akt' ? (aktlar.data?.rows?.length ?? 0)
