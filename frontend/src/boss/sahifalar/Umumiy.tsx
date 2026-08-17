@@ -198,7 +198,11 @@ function ProfitAndLoss({ jami, objects, onKpiClick }: { jami: any, objects: any[
   const asoSmeta = jami.smetaToza || jami.smeta || 0;
   const rentabellik = asoSmeta > 0 ? (sofFoyda / asoSmeta) * 100 : 0;
   
-  const realFoyda = (jami.tolangan || 0) - (umumiyXarajat > 0 ? (umumiyXarajat * (jami.progress/100)) : 0); // Keltirilgan foyda
+  /* ⚡ 2026-08-16 (audit H12): `jami.progress` kelmasa (server hali
+     hisoblamagan bo'lsa) `undefined/100 = NaN` bo'lib, RAHBAR EKRANIDA
+     foyda «NaN» ko'rinardi. Endi 0 deb olinadi. */
+  const _progress = Number(jami.progress) || 0;
+  const realFoyda = (jami.tolangan || 0) - (umumiyXarajat > 0 ? (umumiyXarajat * (_progress / 100)) : 0);
 
   const handleClick = () => {
     const items = objects.map(o => {
@@ -425,7 +429,10 @@ function RazdelRow({ nom }: { nom: string }) {
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(`/boss/holat/${encodeURIComponent(nom.split(' - ')[1] || nom)}`, '_blank');
+                  /* ⚡ 2026-08-16 (audit H11): `split(' - ')[1]` nomda IKKI marta
+                     « - » bo'lsa faqat O'RTA bo'lagini olardi va sahifa
+                     topilmasdi. Endi to'liq nom uzatiladi. */
+                  window.open(`/boss/holat/${encodeURIComponent(nom)}`, '_blank');
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-semibold border border-blue-500/20 transition-all hover:scale-105 active:scale-95"
                 title="Batafsil ma'lumot (Drill-Down)"

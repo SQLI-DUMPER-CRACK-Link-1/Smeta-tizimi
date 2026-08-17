@@ -59,9 +59,17 @@ export default function ShaxsiySmeta() {
     yarat.mutate({ config: { nom: nom.trim() }, ishlar }, {
       onSuccess: (r) => {
         if (r.ok && r.url) {
-          toast('Smeta yaratildi', 'ok', undefined, 8000);
+          /* ⚡ 2026-08-16 (audit H16): `window.open` ASYNC javobdan keyin
+             chaqirilgani uchun brauzer uni «foydalanuvchi bosmagan» deb
+             hisoblab BLOKLAYDI — smeta yaratiladi, lekin ochilmaydi va
+             foydalanuvchi havolani ham topolmaydi.
+             Endi: ochishga urinamiz; bloklansa havola ro'yxatda qoladi
+             (pastda «Yaratilgan smetalar» da darhol ko'rinadi). */
+          const w = window.open(r.url, '_blank');
+          toast(w ? 'Smeta yaratildi — yangi oynada ochildi'
+                  : 'Smeta yaratildi. Brauzer yangi oynani bloklab qo’ydi — pastdagi ro’yxatdan oching.',
+                'ok', undefined, 9000);
           setIshlar([]); setNom('');
-          window.open(r.url, '_blank');
         } else {
           toast(r.xabar || 'Yaratilmadi', 'danger', undefined, 9000);
         }
