@@ -42,6 +42,12 @@ export default function ErpKadrlar() {
    * u UMUMAN ISHLATILMASDI — tugma bosilardi, ro'yxat o'zgarmasdi.
    * Endi BUGUNGI kun davomati bo'yicha filtrlanadi. */
   const bugungiKun = new Date().getDate();   /* oy ichidagi kun raqami */
+  /* ⚡ 2026-08-16 (audit M): tabelda 31 kun QOTIRIB yozilgandi —
+   * fevralda 29-31 kataklari ham chiziladi va ularni bosib MAVJUD
+   * BO'LMAGAN sanaga davomat yozib qo'yish mumkin edi (28 kunlik oyda
+   * «31-fevral»). Endi oyning haqiqiy kun soni hisoblanadi. */
+  const _bugun = new Date();
+  const oyKunlari = new Date(_bugun.getFullYear(), _bugun.getMonth() + 1, 0).getDate();
   const filtrlanganIshchilar = data.ishchilar.filter((ishchi: any) => {
     const mosKeladi = String(ishchi.ism ?? '').toLowerCase().includes(qidiruv.toLowerCase()) || 
                       String(ishchi.kasb ?? '').toLowerCase().includes(qidiruv.toLowerCase());
@@ -152,7 +158,7 @@ export default function ErpKadrlar() {
                   <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider sticky left-0 bg-[#121620] z-30 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">F.I.O va Kasbi</th>
                   <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-center">Ishlagan</th>
                   <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-right border-r border-white/10">Xisoblangan</th>
-                  {Array.from({length: 31}, (_, i) => (
+                  {Array.from({length: oyKunlari}, (_, i) => (
                     <th key={i} className="py-4 px-2 text-[10px] text-slate-500 font-bold uppercase text-center w-8 min-w-[32px]">{i+1}</th>
                   ))}
                 </tr>
@@ -179,7 +185,7 @@ export default function ErpKadrlar() {
                       <td className="py-3 px-6 text-right font-mono font-bold text-emerald-400/90 text-sm border-r border-white/10">
                         <FmtN val={tabel.xisoblanganOylik} />
                       </td>
-                      {Array.from({length: 31}, (_, i) => {
+                      {Array.from({length: oyKunlari}, (_, i) => {
                          const kunHolati = tabel.kunlar.find((k: any) => k.sana === i + 1)?.holat;
                          let bg = 'bg-white/5 border-white/10 text-slate-600';
                          let txt = '-';
