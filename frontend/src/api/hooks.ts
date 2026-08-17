@@ -1372,12 +1372,22 @@ export function useStavkaSaqla() {
   });
 }
 
-/** Tizim tashxisi — nima ishlamayotganini ko'rsatadi */
-export function useTashxis(enabled: boolean) {
+/** OBYEKT tashxisi — kategoriya kesimida summalar (ЧЕЛ/МАШ/МАТ/ОБ/М-К/КАБ),
+ *  asl smeta / qo'shimcha / zamena alohida, narxsiz qatorlar ro'yxati.
+ *
+ * ⚠️ 2026-08-17 (audit) — BU HOOK HECH QACHON ISHLAY OLMASDI.
+ * `gas('apiTashxis')` deb ARGUMENTSIZ chaqirilardi, GAS funksiyasi esa
+ * (30_Panel.js:2394) birinchi qatorda obyektni TALAB qiladi:
+ *     var plus = _plusTop(obyekt); if(!plus) throw 'LRV_PLUS топилмади: '+obyekt;
+ * Ya'ni chaqirilsa DOIM «LRV_PLUS топилмади: undefined» xatosi qaytardi.
+ * Hook ishlatilmagani uchun bu jim turgan edi. Izoh ham noto'g'ri edi
+ * («tizim tashxisi» — aslida OBYEKT tashxisi; tizim tashxisi bu
+ * `useTolaDiagnostika`). Endi obyekt majburiy. */
+export function useTashxis(obyekt: string, enabled = true) {
   return useQuery({
-    queryKey: ['tashxis'],
-    queryFn: () => gas<unknown>('apiTashxis'),
-    enabled,
+    queryKey: ['tashxis', obyekt],
+    queryFn: () => gas<unknown>('apiTashxis', obyekt),
+    enabled: enabled && !!obyekt,
     staleTime: 60 * 1000,
   });
 }

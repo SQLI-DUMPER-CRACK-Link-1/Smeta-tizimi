@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { useApiLog, useTolaDiagnostika, useKeshHolat, useTriggerlar } from '../../api/hooks';
+import { useMemo, useState } from 'react';
+import { useApiLog, useTolaDiagnostika, useKeshHolat, useTriggerlar,
+         useObyektDiagnostika, useObyektlar } from '../../api/hooks';
 import { Stethoscope } from 'lucide-react';
 import { toast } from '../../umumiy/ui/Toast';
 import { Sahifa, Holatlar, Jadval, Nishon, KpiKarta, type Ustun } from '../../umumiy/ui/Sahifa';
@@ -110,6 +111,10 @@ export function Monitoring() {
   const tashxis = useTolaDiagnostika();
   const kesh    = useKeshHolat();
   const trig    = useTriggerlar();
+  /* ⚡ 2026-08-17 (audit): obyekt bo'yicha tashxis — ulanmagan edi */
+  const obDiag  = useObyektDiagnostika();
+  const obyektlar = useObyektlar();
+  const [obTashxis, setObTashxis] = useState('');
   const yozuvlar = soragan.data ?? [];
 
   const stat = useMemo(() => {
@@ -207,6 +212,49 @@ export function Monitoring() {
 {JSON.stringify(tashxis.data, null, 2)}
           </pre>
         )}
+
+        {/* ⚡⚡⚡ 2026-08-17 (audit): OBYEKT TASHXISI — yuqoridagi tugma butun
+            TIZIMNI tekshiradi (sozlama/papka/kesh/trigger). Bitta obyekt
+            ichida nima bo'layotganini ko'rsatadigan `apiObyektDiagnostika`
+            esa GAS da bor va hook'i ham yozilgan edi, lekin hech qayerda
+            chaqirilmasdi. «Bu obyektning summasi nega bunday?» degan savol
+            aynan shu yerda hal bo'ladi. */}
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-[11px] uppercase tracking-wide text-text-dim mb-2">
+            Bitta obyekt bo'yicha tashxis
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={obTashxis}
+              onChange={(e) => setObTashxis(e.target.value)}
+              aria-label="Obyekt tanlash"
+              className="bg-[var(--surface-2)] border border-border rounded-lg px-2 py-1.5
+                         text-[12px] text-text outline-none focus:border-accent/50 max-w-[280px]">
+              <option value="">— obyekt tanlang —</option>
+              {(obyektlar.data ?? []).map((o) => (
+                <option key={o.obyekt} value={o.obyekt}>{o.obyekt}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => {
+                if (!obTashxis) { toast('Avval obyekt tanlang', 'warn'); return; }
+                obDiag.mutate({ obyekt: obTashxis }, {
+                  onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
+                });
+              }}
+              disabled={obDiag.isPending || !obTashxis}
+              className="px-3 py-1.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
+                         text-[12px] font-medium transition-colors disabled:opacity-50">
+              {obDiag.isPending ? 'Tekshirilmoqda…' : 'Tekshirish'}
+            </button>
+          </div>
+          {obDiag.data != null && (
+            <pre className="text-[11px] text-text-dim bg-[var(--surface-2)]/50 rounded p-3
+                            overflow-auto max-h-64 leading-relaxed mt-2">
+{JSON.stringify(obDiag.data, null, 2)}
+            </pre>
+          )}
+        </div>
 
         {/* Kesh va triggerlar — doim ko'rinadi, tugma bosish shart emas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">

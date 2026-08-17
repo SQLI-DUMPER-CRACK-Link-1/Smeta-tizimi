@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Save, Percent, HardHat, Database, FolderOpen, Loader2, PauseCircle, PlayCircle } from 'lucide-react';
+import { Settings, Save, Percent, HardHat, Database, FolderOpen, Loader2, PauseCircle, PlayCircle, Tags } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { Skelet } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
@@ -9,11 +9,12 @@ import {
   useNakrutka, useNakrutkaSaqla,
   useObyektlar, useStavka, useStavkaSaqla,
   useTizimHolat, useTizimHolatOzgartir,
+  useKategoriya, useKategoriyaSaqla,
 } from '../../api/hooks';
 import type { NakrutkaKoef, TizimSozlama } from '../../api/types';
 
 export function Sozlamalar() {
-  const [tab, setTab] = useState<'tizim' | 'nakrutka' | 'stavka'>('tizim');
+  const [tab, setTab] = useState<'tizim' | 'nakrutka' | 'stavka' | 'kategoriya'>('tizim');
 
   return (
     <AuroraBackground>
@@ -33,6 +34,9 @@ export function Sozlamalar() {
             { id: 'tizim', nom: 'Tizim', icon: Database },
             { id: 'nakrutka', nom: 'Накрутка', icon: Percent },
             { id: 'stavka', nom: 'Ish haqi stavkasi', icon: HardHat },
+            /* ⚡ 2026-08-17 (audit): `apiKategoriyaOl/Saqla` GAS da bor,
+               hook'lari yozilgan — lekin saytda tahrirlash yo'li yo'q edi. */
+            { id: 'kategoriya', nom: 'Tasnif qoidalari', icon: Tags },
           ] as const).map(t => (
             <button
               key={t.id}
@@ -50,6 +54,7 @@ export function Sozlamalar() {
           {tab === 'tizim' && <TizimBolimi />}
           {tab === 'nakrutka' && <NakrutkaBolimi />}
           {tab === 'stavka' && <StavkaBolimi />}
+          {tab === 'kategoriya' && <KategoriyaBolimi />}
         </div>
       </div>
     </AuroraBackground>
@@ -329,6 +334,125 @@ function StavkaBolimi() {
             </button>
           </div>
         )}
+      </GlassCard>
+    </motion.div>
+  );
+}
+
+/* ══════════════ TASNIF QOIDALARI ══════════════
+ *
+ * ⚡⚡⚡ 2026-08-17 (audit): `apiKategoriyaOl` / `apiKategoriyaSaqla` GAS da
+ * BOR va hook'lari (`useKategoriya` / `useKategoriyaSaqla`) ham YOZILGAN
+ * edi — lekin hech bir sahifa ularni chaqirmasdi. Ya'ni tasnif qoidalarini
+ * o'zgartirishning saytdagi yo'li yo'q edi, faqat Google Sheets dagi
+ * СОЗЛАМА_КАТ varag'ini qo'lda tahrirlash.
+ *
+ * NIMA UCHUN MUHIM: bu kalit so'zlar dvigatel har resursni qaysi
+ * kategoriyaga (ЧЕЛ / МАШ / МАТ / ОБ / М-К / КАБ) qo'yishini belgilaydi.
+ * Kategoriya esa to'g'ridan-to'g'ri PRYAMOY ZATRAT hisobiga kiradi, ya'ni
+ * xato kalit so'z butun obyekt raqamlarini siljitadi.
+ *
+ * ⚠️ ATAYLAB OGOHLANTIRISH QO'YILDI: ЧЕЛ/МАШ faqat BIRLIK bo'yicha
+ * aniqlanadi (qat'iy qoida — «чел/час», «маш/час»). Bu yerdagi BLOK_*
+ * kalitlari faqat blok (ish) sarlavhasiga tegishli. Ikkisini
+ * aralashtirish avval material qatorlarini МАШ ga zaharlagan.
+ */
+function KategoriyaBolimi() {
+  const { data, isLoading } = useKategoriya();
+  const saqla = useKategoriyaSaqla();
+  const [shakl, setShakl] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => { if (data && !shakl) setShakl({ ...data }); }, [data, shakl]);
+
+  if (isLoading) return <Skelet qatorlar={5} />;
+  if (!shakl) return <Skelet qatorlar={5} />;
+
+  const MAYDONLAR: Array<{ kalit: string; nom: string; izoh: string }> = [
+    { kalit: 'blokChel', nom: 'BLOK_CHEL', izoh: 'Blok (ish) sarlavhasida shu so\'z bo\'lsa — ishchi kuchi bloki' },
+    { kalit: 'blokMash', nom: 'BLOK_MASH', izoh: 'Blok sarlavhasida shu so\'z bo\'lsa — mexanizm bloki' },
+    { kalit: 'blokMat',  nom: 'BLOK_MAT',  izoh: 'Blok sarlavhasida shu so\'z bo\'lsa — material bloki' },
+    { kalit: 'blokOb',   nom: 'BLOK_OB',   izoh: 'Blok sarlavhasida shu so\'z bo\'lsa — uskuna (оборудование) bloki' },
+    { kalit: 'kwKab',    nom: 'KW_KAB',    izoh: 'Resurs nomida shu so\'z bo\'lsa — КАБЕЛ deb hisoblanadi' },
+    { kalit: 'kwMk',     nom: 'KW_MK',     izoh: 'Resurs nomida shu so\'z bo\'lsa — М-К (metall konstruksiya)' },
+    { kalit: 'kwOb',     nom: 'KW_OB',     izoh: 'Resurs nomida shu so\'z bo\'lsa — ОБОРУДОВАНИЕ' },
+    { kalit: 'kwBezsklad', nom: 'KW_BEZSKLAD', izoh: 'Omborsiz (без склада) hisoblanadigan resurslar' },
+    { kalit: 'kwStop',   nom: 'KW_STOP',   izoh: 'Bu so\'zlar uchraydigan qatorlar hisobga OLINMAYDI' },
+  ];
+
+  const saqlash = () => {
+    saqla.mutate(shakl, {
+      onSuccess: () => toast('Tasnif qoidalari saqlandi. Keyin obyektlarni «Ishla» qilish kerak.', 'ok', undefined, 9000),
+      onError: (e: Error) => toast('Saqlanmadi: ' + e.message, 'danger', undefined, 9000),
+    });
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <GlassCard className="p-4 bg-amber-500/[0.06] border-amber-500/25">
+        <p className="text-[12px] text-amber-200 leading-relaxed">
+          <strong>Diqqat.</strong> Bu kalit so'zlar dvigatel har resursni qaysi kategoriyaga
+          qo'yishini belgilaydi, kategoriya esa to'g'ridan-to'g'ri pryamoy zatrat hisobiga kiradi —
+          xato so'z butun obyekt raqamlarini siljitadi.
+          <br />
+          <strong>ЧЕЛ va МАШ</strong> bu yerdagi so'zlar bilan emas, <strong>BIRLIK</strong> bilan
+          aniqlanadi («чел/час», «маш/час»). BLOK_CHEL / BLOK_MASH faqat blok (ish) sarlavhasiga
+          tegishli.
+          <br />
+          Saqlagandan keyin o'zgarish kuchga kirishi uchun obyektlarni qayta <strong>«Ishla»</strong> qilish kerak.
+        </p>
+      </GlassCard>
+
+      <GlassCard className="p-5 space-y-4">
+        {MAYDONLAR.map((m) => (
+          <div key={m.kalit}>
+            <label className="flex items-baseline justify-between gap-3 mb-1.5">
+              <span className="text-[12px] font-mono font-bold text-slate-200">{m.nom}</span>
+              <span className="text-[11px] text-slate-500 text-right">{m.izoh}</span>
+            </label>
+            <input
+              value={String(shakl[m.kalit] ?? '')}
+              onChange={(e) => setShakl({ ...shakl, [m.kalit]: e.target.value })}
+              placeholder="so'zlarni | belgisi bilan ajratib yozing"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm
+                         text-white font-mono focus:outline-none focus:border-accent/60 transition-colors"
+            />
+          </div>
+        ))}
+
+        {/* OVERRIDE qatorlari — faqat KO'RSATILADI. Ular uch ustunli
+            (naqsh / narx / kategoriya) va bu yerda tahrirlash uchun alohida
+            jadval kerak; son o'ylab topmaslik uchun hozir faqat o'qish. */}
+        {Array.isArray((shakl as { over?: unknown[] }).over)
+          && ((shakl as { over: unknown[] }).over.length > 0) && (
+          <div className="pt-3 border-t border-white/10">
+            <p className="text-[11px] uppercase tracking-widest text-slate-500 mb-2">
+              OVERRIDE qatorlari ({(shakl as { over: unknown[] }).over.length}) — faqat ko'rish
+            </p>
+            <div className="space-y-1">
+              {((shakl as { over: Array<{ pat: string; narx: unknown; cat: string }> }).over).map((o, i) => (
+                <div key={i} className="flex items-center gap-3 text-[11px] font-mono
+                                        bg-black/30 border border-white/5 rounded px-2 py-1.5">
+                  <span className="flex-1 text-slate-300 truncate" title={o.pat}>{o.pat}</span>
+                  <span className="text-slate-400">{String(o.narx ?? '')}</span>
+                  <span className="text-accent">{o.cat}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1.5">
+              OVERRIDE ni o'zgartirish uchun СОЗЛАМА_КАТ varag'ini oching — bu yerda tahrirlash
+              hali qo'shilmagan (uch ustunli tuzilma, xato kiritish xavfi yuqori).
+            </p>
+          </div>
+        )}
+
+        <button
+          onClick={saqlash}
+          disabled={saqla.isPending}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent text-white
+                     font-medium hover:bg-accent/90 transition-colors disabled:opacity-40"
+        >
+          <Save size={16} /> {saqla.isPending ? 'Saqlanmoqda…' : 'Saqlash'}
+        </button>
       </GlassCard>
     </motion.div>
   );
