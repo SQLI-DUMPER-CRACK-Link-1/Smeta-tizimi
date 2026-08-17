@@ -221,14 +221,32 @@ function apiSupabaseSinxKursor() {
       if (cursor === 0) {
         supabaseDashboardPush();
         log.push('✓ Dashboard');
+        /* ⚠️ 2026-08-17 (audit): dirty ro'yxatini BOSHIDA tozalaymiz, oxirida
+           emas. To'liq sinx BARCHA obyektni qayta push qiladi, ya'ni boshda
+           to'plangan belgilar baribir bajariladi — shuning uchun boshda
+           tozalash to'g'ri. Oxirida tozalash esa ikki xato tug'dirardi:
+             1) push YIQILGAN obyekt ham ro'yxatdan chiqib ketardi va boshqa
+                qayta urinilmasdi (Supabase da eskirgan holda qolardi);
+             2) sinx ishlab turgan 5-10 daqiqada `_sbDirty` bilan belgilangan
+                YANGI o'zgarishlar ham o'chib ketardi (poyga).
+           Endi: boshda tozalanadi, ishlash paytida yiqilgan yoki yangi
+           o'zgargan obyekt qayta belgilanadi va keyingi soatlik sinxda
+           push qilinadi. */
+        _sbDirtyTozala();
       } else if (cursor <= obs.length) {
         var ob = obs[cursor-1];
         if (_plusBormi(ob.obyekt, ob.folderId)) {
-          supabaseObyektPush(ob.obyekt);
-          supabaseMaterialKerakPush(ob.obyekt);
-          supabaseTopilmaganPush(ob.obyekt);
-          supabaseAnomaliyaPush(ob.obyekt);
-          log.push('✓ ' + ob.obyekt);
+          try{
+            supabaseObyektPush(ob.obyekt);
+            supabaseMaterialKerakPush(ob.obyekt);
+            supabaseTopilmaganPush(ob.obyekt);
+            supabaseAnomaliyaPush(ob.obyekt);
+            log.push('✓ ' + ob.obyekt);
+          }catch(eOb){
+            /* Yiqilgan obyektni QAYTA dirty qilamiz — jim tashlab ketmaymiz */
+            log.push('✗ ' + ob.obyekt + ': ' + (eOb.message||eOb));
+            _sbDirty(ob.obyekt);
+          }
         }
       } else {
         // N+1 qadam: Globals
@@ -238,7 +256,8 @@ function apiSupabaseSinxKursor() {
         try { supabasePrixodPush(); log.push('✓ prixod'); } catch(e) { log.push('✗ prixod: '+(e.message||e)); }
         try { supabaseAktPush(); log.push('✓ akt'); } catch(e) { log.push('✗ akt: '+(e.message||e)); }
         try { supabaseAktIshPush(); log.push('✓ akt_ish'); } catch(e) { log.push('✗ akt_ish: '+(e.message||e)); }
-        _sbDirtyTozala();
+        /* `_sbDirtyTozala()` bu yerdan OLIB TASHLANDI — yuqoridagi cursor===0
+           izohiga qara (yiqilgan/yangi obyektlar o'chib ketmasin). */
       }
     } catch(e) {
       log.push('✗ XATO (qadam ' + cursor + '): ' + (e.message||e));
@@ -579,14 +598,61 @@ function _sbDirty(obyekt){
     var set={}; (JSON.parse(p.getProperty('SB_DIRTY')||'[]')).forEach(function(x){set[x]=1;});
     set[obyekt]=1;
     p.setProperty('SB_DIRTY', JSON.stringify(Object.keys(set)));
-  }catch(e){}
+  }catch(e){
+    /* ⚠️ 2026-08-17 (audit): avval `catch(e){}` — mutlaqo jim edi.
+       Belgi yozilmasa obyekt «o'zgargan» deb sanalmaydi va soatlik sinx
+       uni HECH QACHON push qilmaydi — Supabase da eski ma'lumot abadiy
+       qolib ketadi, sayt esa uni haqiqat deb ko'rsatadi.
+       Kunlik to'liq sinx (03:00) baribir tuzatadi, lekin oradagi 24 soat
+       davomida raqamlar noto'g'ri turadi — bu jim o'tmasligi kerak. */
+    Logger.log('⚠️ _sbDirty: «'+obyekt+'» dirty belgilanmadi — soatlik sinx uni '
+             + 'o\'tkazib yuboradi (kunlik to\'liq sinx tuzatadi): '
+             + (e && e.message ? e.message : e));
+  }
 }
 function _sbDirtyOl(){
   try{ return JSON.parse(PropertiesService.getScriptProperties().getProperty('SB_DIRTY')||'[]'); }
-  catch(e){ return []; }
+  catch(e){ Logger.log('_sbDirtyOl xato: '+e); return []; }
 }
 function _sbDirtyTozala(){
-  try{ PropertiesService.getScriptProperties().deleteProperty('SB_DIRTY'); }catch(e){}
+  try{ PropertiesService.getScriptProperties().deleteProperty('SB_DIRTY'); }
+  catch(e){ Logger.log('_sbDirtyTozala xato: '+e); }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * _sbDirtyOchir(nomlar) — FAQAT MUVAFFAQIYATLI PUSH QILINGANLARNI O'CHIRISH
+ *
+ * ⚠️ 2026-08-17 (audit). Avval soatlik sinx quyidagicha ishlardi:
+ *     var dirty = _sbDirtyOl();
+ *     dirty.forEach(... try{ push }catch(e){ log.push('✗ '+ob) } );
+ *     _sbDirtyTozala();          // ← BUTUN ro'yxatni o'chiradi
+ *
+ * Ya'ni push YIQILGAN obyekt ham ro'yxatdan chiqib ketardi — u boshqa
+ * hech qachon qayta urinilmasdi. Izohda «muvaffaqiyatli push → tozalandi»
+ * deb yozilgan edi, lekin kod muvaffaqiyatga QARAMASDI. Natija: bir marta
+ * yiqilgan obyekt Supabase da eskirib qolar, sayt esa eski raqamni
+ * ko'rsatar va sababi ko'rinmasdi.
+ *
+ * Ikkinchi nozik joy — POYGA: sinx ishlab turgan paytda `_sbDirty` bilan
+ * belgilangan yangi o'zgarish ham `deleteProperty` bilan o'chib ketardi.
+ * Nom bo'yicha o'chirish bu tuzoqni ham yopadi.
+ *
+ * ENDI: faqat berilgan nomlar olib tashlanadi, qolganlari keyingi soatda
+ * qayta urinadi.
+ * ══════════════════════════════════════════════════════════════════ */
+function _sbDirtyOchir(nomlar){
+  if(!nomlar || !nomlar.length) return;
+  try{
+    var p = PropertiesService.getScriptProperties();
+    var qoldi = JSON.parse(p.getProperty('SB_DIRTY')||'[]');
+    var ochir = {}; nomlar.forEach(function(n){ ochir[n] = 1; });
+    qoldi = qoldi.filter(function(n){ return !ochir[n]; });
+    if(qoldi.length) p.setProperty('SB_DIRTY', JSON.stringify(qoldi));
+    else             p.deleteProperty('SB_DIRTY');
+  }catch(e){
+    Logger.log('⚠️ _sbDirtyOchir xato — ro\'yxat o\'zgarmadi (obyektlar keyingi '
+             + 'soatda qayta push qilinadi, zarari yo\'q): ' + e);
+  }
 }
 
 
@@ -609,6 +675,12 @@ function supabaseSoatlikSinx(){
   try{ supabaseAktIshPush();    log.push('✓ akt_ish'); }catch(e){ log.push('✗ akt_ish: '+(e.message||e)); }
 
   var dirty=_sbDirtyOl();
+  /* ⚠️ 2026-08-17 (audit): avval tsikldan keyin `_sbDirtyTozala()` — BUTUN
+     ro'yxat o'chirilardi, push yiqilgan obyekt ham. U boshqa hech qachon
+     qayta urinilmasdi va Supabase da eskirib qolardi (izohda «muvaffaqiyatli
+     push → tozalandi» deb yozilgan, lekin kod muvaffaqiyatga qaramasdi).
+     ENDI: faqat MUVAFFAQIYATLI bo'lganlar ro'yxatdan chiqadi. */
+  var pushOk = [], pushXato = [];
   dirty.forEach(function(ob){
     try{
       supabaseObyektPush(ob);
@@ -616,12 +688,21 @@ function supabaseSoatlikSinx(){
       supabaseTopilmaganPush(ob);
       supabaseAnomaliyaPush(ob);
       log.push('✓ '+ob);
-    }catch(e){ log.push('✗ '+ob+': '+(e.message||e)); }
+      pushOk.push(ob);
+    }catch(e){
+      log.push('✗ '+ob+': '+(e.message||e));
+      pushXato.push(ob);
+    }
   });
-  _sbDirtyTozala();                                    // muvaffaqiyatli push → tozalandi
+  _sbDirtyOchir(pushOk);            // yiqilganlar ro'yxatda QOLADI → keyingi soatda qayta urinadi
+  if(pushXato.length){
+    Logger.log('⚠️ SB soatlik: '+pushXato.length+' obyekt push bo\'lmadi, dirty ro\'yxatda '
+             + 'qoldirildi (keyingi soatda qayta urinadi): '+pushXato.join(', '));
+  }
   var sek=Math.round((Date.now()-t0)/1000);
   Logger.log('SB soatlik ('+sek+'s): '+log.join(' | '));
-  return {ok:true, sek:sek, dirty:dirty.length, log:log};
+  return {ok:true, sek:sek, dirty:dirty.length, pushOk:pushOk.length,
+          pushXato:pushXato.length, xatoRoyxat:pushXato, log:log};
 }
 
 

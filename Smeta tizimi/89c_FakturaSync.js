@@ -222,15 +222,32 @@ function apiFakturaAvtoSinx() {
     }catch(ey){ yozishXatosi = String((ey&&ey.message)||ey); }
   }
 
-  /* ⚡ 2) FAQAT yozish muvaffaqiyatli bo'lgandagina fayllarni Arxivga surish */
-  var kochirildi = 0;
+  /* ⚡ 2) FAQAT yozish muvaffaqiyatli bo'lgandagina fayllarni Arxivga surish
+   *
+   * ⚠️ 2026-08-17 (audit): bu tsiklda `catch(ek){}` — MUTLAQO JIM edi.
+   * Ko'chirish yiqilsa (Drive ruxsati, papka o'chirilgan, kvota) fayl
+   * «Янги» papkasida QOLADI. Pul ikki marta sanalmaydi — `existingMap`
+   * dedupi ushlaydi — LEKIN fayl HAR IJRODA qaytadan o'qiladi va qaytadan
+   * AI/OCR ga yuboriladi: bir marta ko'chmagan fayl umrbod har tsiklda
+   * bekorga pul va vaqt sarflaydi, natijada esa 0 yangi qator qo'shadi.
+   * Bunday «osilib qolgan» fayllar to'planib borsa sinx sekinlashadi va
+   * sababi ko'rinmaydi (aynan shu «фактура ўқилмай туради» alomati).
+   *
+   * ENDI: xato logga yoziladi, sanaladi va NATIJAGA chiqadi — UI
+   * «N файл архивга кўчмади» deb ko'rsata oladi. */
+  var kochirildi = 0, kochmadi = 0, kochmaganlar = [];
   if(!yozishXatosi){
     for(var kc=0; kc<kochiriladi.length; kc++){
+      var t = kochiriladi[kc];
       try{
-        var t = kochiriladi[kc];
         t.file.moveTo(getOrCreateFolder(arxivPap, t.papka));
         kochirildi++;
-      }catch(ek){}
+      }catch(ek){
+        kochmadi++;
+        var nm = ''; try{ nm = t.file.getName(); }catch(e2){}
+        if(kochmaganlar.length < 10) kochmaganlar.push(nm);
+        Logger.log('⚠️ Арxивга ко\'чмади: ' + nm + ' → ' + (ek && ek.message ? ek.message : ek));
+      }
     }
   }
 
@@ -245,12 +262,29 @@ function apiFakturaAvtoSinx() {
     natija.xabar = 'Bazaga yozib bo\'lmadi — fayllar «Yangi» papkasida QOLDIRILDI '
                  + '(yo\'qolmadi, keyingi ijroda qayta urinadi): ' + yozishXatosi;
   }
-  /* ⚡ Oxirgi ijro natijasini saqlaymiz — UI «nega ishlamadi» ni ko'rsata olsin */
+  /* ⚠️ 2026-08-17 (audit): arxivga ko'chmagan fayllar NATIJAGA chiqariladi —
+     ular «Янги» da qolib har ijroda bekorga qayta o'qiladi, shuning uchun
+     bu jim o'tib ketmasligi kerak. */
+  if(kochmadi > 0){
+    natija.kochmaganFayllar = kochmadi;
+    natija.kochmaganRoyxat  = kochmaganlar;
+    natija.xabar = (natija.xabar ? natija.xabar + ' | ' : '') +
+      '⚠️ ' + kochmadi + ' файл архивга кўчмади — улар «Янги» папкасида қолди ва ' +
+      'ҳар ижрода қайта ўқилади. Drive рухсати/папкани текширинг: ' +
+      kochmaganlar.slice(0, 5).join(', ');
+  }
+  /* ⚡ Oxirgi ijro natijasini saqlaymiz — UI «nega ishlamadi» ni ko'rsata olsin.
+     ⚠️ 2026-08-17: bu yozuvning O'ZI jim edi — ya'ni «nega ishlamadi» ni
+     ko'rsatish uchun saqlanayotgan ma'lumot ham jim yo'qolishi mumkin edi.
+     Endi kamida logga tushadi. */
   try{
     PropertiesService.getScriptProperties()
       .setProperty('FAKTURA_OXIRGI_IJRO', JSON.stringify({
         sana: new Date().toISOString(), natija: natija }));
-  }catch(e){}
+  }catch(e){
+    Logger.log('⚠️ FAKTURA_OXIRGI_IJRO saqlanmadi — UI oxirgi ijro holatini ' +
+               'ko\'rsatmaydi: ' + (e && e.message ? e.message : e));
+  }
   return natija;
 }
 
