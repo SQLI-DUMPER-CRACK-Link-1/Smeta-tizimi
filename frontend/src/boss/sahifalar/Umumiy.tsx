@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBossData, useBossObyekt } from '../../api/hooks';
 import { FmtN, formatPercent } from '../../lib/format';
 import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
@@ -103,17 +103,47 @@ const useUiSound = () => {
   return { playHover, playClick };
 };
 
+/* ⚠️⚠️ 2026-08-17 — QOTIB QOLISH SABABI (foydalanuvchi: «шу табда
+ * ҳаммасини очишни босдим ва пастга тушмоқчи бўлдим — қимирламай қолган»).
+ *
+ * Avval bu komponentda `useState` bor edi va `onMouseMove` HAR PIKSEL
+ * harakatida `setMousePosition` chaqirardi. Ya'ni sichqoncha karta ustidan
+ * o'tganda React shu kartani QAYTA CHIZARDI — sekundda yuzlab marta.
+ * Obyektlar sahifasida bunday kartalar o'nlab, ustiga 60 fps ishlaydigan
+ * WebGL sahna — scroll paytida sichqoncha kartalar ustidan sirg'alib
+ * o'tadi va butun oyna muzlab qoladi.
+ *
+ * ENDI: React holati YO'Q. Sichqoncha koordinatasi to'g'ridan-to'g'ri CSS
+ * o'zgaruvchisiga (`--mx`/`--my`) yoziladi va gradient shuni o'qiydi.
+ * Natija ko'z uchun AYNI, lekin qayta chizish soni — NOL.
+ * Ustiga `requestAnimationFrame` bilan siqamiz: kadrda bir martadan
+ * ko'p yozilmaydi.
+ *
+ * ⚠️ Bu yerga `useState` QAYTARMANG — hover effekti uchun holat kerak emas. */
 export function GlassCard({ children, className = '', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const { playClick } = useUiSound();
+  const ref = useRef<HTMLDivElement>(null);
+  const kadrRef = useRef<number | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (window.innerWidth < 768) return;
-    const rect = e.currentTarget.getBoundingClientRect();
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    setMousePosition({ x, y });
+    /* Kadrga bitta yozuv — sichqoncha 1000 hz bo'lsa ham ortiqcha ish yo'q */
+    if (kadrRef.current != null) return;
+    kadrRef.current = requestAnimationFrame(() => {
+      kadrRef.current = null;
+      el.style.setProperty('--mx', `${x}px`);
+      el.style.setProperty('--my', `${y}px`);
+    });
   };
+
+  useEffect(() => () => {
+    if (kadrRef.current != null) cancelAnimationFrame(kadrRef.current);
+  }, []);
 
   const handleClick = () => {
     if (onClick) {
@@ -123,15 +153,18 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
   };
 
   return (
-    <div 
+    <div
+      ref={ref}
       onClick={handleClick}
       onMouseMove={handleMouseMove}
       className={`relative bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden group/card hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20 ${className} laser-border`}
+      style={{ ['--mx' as string]: '50%', ['--my' as string]: '50%' }}
     >
-      <div 
+      <div
         className="pointer-events-none absolute -inset-px z-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover/card:opacity-100 mix-blend-overlay"
         style={{
-          background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255,255,255,0.15), transparent 40%)`
+          background:
+            'radial-gradient(800px circle at var(--mx) var(--my), rgba(255,255,255,0.15), transparent 40%)'
         }}
       />
       <div className="relative z-10 w-full h-full">
