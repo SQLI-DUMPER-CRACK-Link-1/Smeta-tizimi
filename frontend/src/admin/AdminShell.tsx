@@ -49,6 +49,46 @@ export default function AdminShell() {
     window.location.href = '/';
   };
 
+  /* ⚡⚡⚡ 2026-08-16 KIRISH DARVOZASI (audit H17).
+   *
+   * MA'LUMOT XAVFSIZLIGI ALLAQACHON BOR: `functions/api/gas.ts` sessiyasiz
+   * so'rovga 401, rahbar rolida yozishga 403 qaytaradi — ya'ni URL ni
+   * qo'lda yozib kirgan odam HECH QANDAY ma'lumot ololmaydi.
+   *
+   * LEKIN sessiya tekshiruvi tugagunicha admin oynasi (menyu, sarlavhalar)
+   * bir zum KO'RINIB turardi va faqat keyin login sahifasiga otib
+   * yuborardi. Bu chalg'itadi va tizim «ochiq» degan taassurot qoldiradi.
+   * Endi tekshiruv tugamaguncha faqat yuklanish ko'rsatiladi. */
+  if (sess.isLoading) {
+    return (
+      <div className="h-screen bg-[#020617] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-accent rounded-full
+                          animate-spin mx-auto mb-3" />
+          <p className="text-text-dim text-sm">Kirish tekshirilmoqda…</p>
+        </div>
+      </div>
+    );
+  }
+  if (sess.isError) {
+    return (
+      <div className="h-screen bg-[#020617] flex items-center justify-center">
+        <div className="text-center max-w-sm px-6">
+          <AlertTriangle size={28} className="text-warn mx-auto mb-3" />
+          <p className="text-text font-medium mb-1">Kirish talab qilinadi</p>
+          <p className="text-text-dim text-sm mb-4">
+            Sessiya topilmadi yoki muddati tugagan.
+          </p>
+          <button onClick={() => { window.location.href = '/'; }}
+            className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium
+                       hover:bg-accent/90 transition-colors">
+            Kirish sahifasiga
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30 bg-[#020617]">
       {/* ⚡⚡⚡ 2026-08-14 MUZLASH SABABI (foydalanuvchi taxmini TO'G'RI chiqdi:

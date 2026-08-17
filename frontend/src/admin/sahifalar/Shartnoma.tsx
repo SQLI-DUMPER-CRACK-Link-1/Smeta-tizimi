@@ -199,10 +199,15 @@ export function Shartnoma() {
               <Maydon nom="Nomi"><Kiritma qiymat={shakl.nomi} ozgardi={(v) => setShakl({ ...shakl, nomi: v })} /></Maydon>
               <Maydon nom="Taraf"><Kiritma qiymat={shakl.taraf} ozgardi={(v) => setShakl({ ...shakl, taraf: v })} /></Maydon>
               <div className="grid grid-cols-2 gap-3">
-                <Maydon nom="Summa"><Kiritma tur="number" qiymat={shakl.summa} ozgardi={(v) => setShakl({ ...shakl, summa: Number(v) || 0 })} /></Maydon>
-                <Maydon nom="NDS"><Kiritma tur="number" qiymat={shakl.nds} ozgardi={(v) => setShakl({ ...shakl, nds: Number(v) || 0 })} /></Maydon>
+                <Maydon nom="Summa"><Kiritma tur="number" qiymat={shakl.summa} ozgardi={(v) => { const sm = Number(v) || 0; setShakl({ ...shakl, summa: sm, jami: sm + (Number(shakl.nds) || 0) }); }} /></Maydon>
+                <Maydon nom="NDS"><Kiritma tur="number" qiymat={shakl.nds} ozgardi={(v) => { const nd = Number(v) || 0; setShakl({ ...shakl, nds: nd, jami: (Number(shakl.summa) || 0) + nd }); }} /></Maydon>
               </div>
-              <Maydon nom="Jami" izoh="Summa + NDS">
+              {/* ⚡⚡⚡ 2026-08-16 (audit H15 — TASDIQLANDI): Summa yoki NDS
+                  o'zgarganda JAMI qayta hisoblanmasdi — shartnoma ESKI jami
+                  bilan saqlanardi va buxgalteriyaga NOTO'G'RI summa tushardi.
+                  Endi ikkalasi ham Jami ni yangilaydi. Jami qo'lda ham
+                  tuzatilishi mumkin (yaxlitlash farqi uchun). */}
+              <Maydon nom="Jami" izoh="Summa + NDS (avtomatik, qo'lda ham tuzatsa bo'ladi)">
                 <Kiritma tur="number" qiymat={shakl.jami} ozgardi={(v) => setShakl({ ...shakl, jami: Number(v) || 0 })} />
               </Maydon>
               <Maydon nom="Holat"><Tanlov qiymat={shakl.holat || HOLATLAR[0]} ozgardi={(v) => setShakl({ ...shakl, holat: v })} variantlar={HOLATLAR} /></Maydon>
