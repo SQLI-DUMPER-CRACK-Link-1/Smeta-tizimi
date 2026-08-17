@@ -33,7 +33,13 @@
 var GEMINI_MODEL     = 'gemini-2.5-flash';   // barqaror, butun tizim standarti
 var GEMINI_MODEL_PRO = 'gemini-2.5-pro';     // og'ir tahlil uchun (ixtiyoriy)
 var AI_DATA_TEMP     = 0.2;
-var AI_DETAIL_MAX    = 45;   /* tafsilot — SqlEngine da */
+/* ⚠️ 2026-08-17 (audit): `AI_DETAIL_MAX` shu yerda ham, `66b_AI_SqlEngine.js:17`
+   da ham e'lon qilingan edi. GAS da hamma fayl BITTA global doirada — alifbo
+   tartibida keyin yuklangan fayl (66b) birinchisini JIM O'CHIRADI.
+   Hozir ikkalasi ham 45 bo'lgani uchun xulq farq qilmasdi, lekin biri
+   o'zgartirilsa ikkinchisi sababsiz g'olib chiqib, «o'zgartirdim — ta'sir
+   qilmadi» degan tuzoq yasardi.
+   Yechim: konstanta FAQAT ishlatiladigan joyida (66b_AI_SqlEngine.js) qoldi. */
 /* AI_MAX_ROWS — eski; endi _aiDalilV2 to'liq yig'indi ishlatadi */
 
 /* --- GEMINI UMUMIY CHAQIRUV (retry + quota muloyim xabar) ------ */

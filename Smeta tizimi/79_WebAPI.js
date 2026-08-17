@@ -39,7 +39,7 @@ var WAPI_LOG_KEY   = 'WEB_API_LOG';
  * ⚠️ QO'LDA YANGILANADI: har `clasp version` dan keyin shu raqam
  * o'sha versiya raqamiga tenglashtiriladi.
  * ================================================================== */
-var KOD_VERSIYA = 327;
+var KOD_VERSIYA = 329;
 
 /** Yengil probe: hech qanday jadval o'qimaydi, darhol javob beradi. */
 function apiKodVersiya(){
@@ -176,7 +176,11 @@ function apiWebApiSalom(){
     vaqt: new Date().toISOString(),
     zona: Session.getScriptTimeZone(),
     egasi: Session.getEffectiveUser().getEmail(),
-    versiya: 20260813
+    /* ⚠️ 2026-08-17 (audit): avval `versiya: 20260813` — qo'lda yozilgan sana
+       edi va bir marta ham yangilanmagan. Ikkita versiya manbai bo'lishi
+       («salom» dagi sana va haqiqiy deploy) chalkashlik yasaydi, shuning
+       uchun endi YAGONA manba — `KOD_VERSIYA`. */
+    versiya: KOD_VERSIYA
   };
 }
 
