@@ -546,11 +546,42 @@ function apiPrixodOl(limit, qidiruv){
   return {rows:rows, jami:jami, url:_hujUrl('prixod')};
 }
 
+/* ══════════════════════════════════════════════════════════════════
+ * _prixodVaraq(ss) — «Приход» VARAG'I, YOZISH UCHUN QAT'IY
+ *
+ * ⚠️ 2026-08-17 (audit). O'qish funksiyalarida `getSheetByName('Приход')
+ * || ss.getSheets()[0]` fallback'i ZARARSIZ — varaq topilmasa bo'sh
+ * ro'yxat chiqadi, hech nima buzilmaydi.
+ *
+ * YOZISHDA esa xuddi shu fallback XATARLI: agar «Приход» varag'i
+ * o'chirilgan, qayta nomlangan yoki fayl almashtirilgan bo'lsa, kirim
+ * qatori faylning BIRINCHI varag'iga — ya'ni BUTUNLAY BOSHQA jadvalga
+ * yozilib ketadi. Hech qanday xato chiqmaydi, foydalanuvchi «saqlandi»
+ * degan xabar ko'radi, ma'lumot esa noto'g'ri joyda turadi va
+ * `apiPrixodOl` uni HECH QACHON ko'rmaydi.
+ *
+ * Shu naqsh bu faylda ALLAQACHON bir marta xato bergan (audit C12,
+ * 2026-08-16): `apiRashodYozMass` `getSheets()[0]` ga yozardi.
+ *
+ * QOIDA: yozishdan oldin varaq ANIQ topilishi shart; topilmasa
+ * tushunarli xato bilan TO'XTAYMIZ — jim buzish o'rniga ko'rinadigan
+ * to'xtash. ([[narx-oz-idan-toqilmaydi]] bilan bir falsafa.)
+ * ══════════════════════════════════════════════════════════════════ */
+function _prixodVaraq(ss){
+  var sh = ss ? ss.getSheetByName('Приход') : null;
+  if(sh) return sh;
+  var bor = [];
+  try{ bor = ss.getSheets().map(function(s){ return s.getName(); }); }catch(e){}
+  throw new Error('«Приход» варағи топилмади. Файлдаги варақлар: ' +
+                  (bor.length ? bor.join(', ') : '—') +
+                  '. Кирим/чиқим ёзилмади — нотўғри варақга ёзиб қўймаслик учун тўхтатилди.');
+}
+
 /* PRIXOD — YOZISH
  * data = {nom, razdel, birlik, hajm, sana, postavshik, narx, obyekt} */
 function apiPrixodYoz(data){
   var ss=_hujOpen('prixod');
-  var sh=ss.getSheetByName('Приход') || ss.getSheets()[0];
+  var sh=_prixodVaraq(ss);   /* ⚠️ audit 2026-08-17 — pastdagi izohga qara */
   var lastC=Math.max(sh.getLastColumn(), 8);
   var row=new Array(lastC).fill('');
   row[0] = sh.getLastRow(); // tartib raqam
@@ -611,8 +642,13 @@ function apiRashodYozMass(data){
    * BIRLIK ustunidan o'qilardi. Natijada kirim qatori deyarli hech
    * qachon topilmasdi; topilganda esa qoldiq hisobi ma'nosiz chiqardi.
    *
-   * ENDI: o'qish funksiyasi bilan AYNAN bir xil varaq va ustunlar. */
-  var sh=ss.getSheetByName('Приход') || ss.getSheets()[0];
+   * ENDI: o'qish funksiyasi bilan AYNAN bir xil varaq va ustunlar.
+   *
+   * ⚠️ 2026-08-17 (audit): `|| ss.getSheets()[0]` fallback'i ham olib
+   * tashlandi — u aynan yuqorida tasvirlangan xavfning qolgan yarmi edi
+   * («Приход» yo'q bo'lsa yana birinchi varaqqa yozardi). Endi
+   * `_prixodVaraq` tushunarli xato bilan to'xtatadi. */
+  var sh=_prixodVaraq(ss);
   var IDX_NOM = 3, IDX_HAJM = 5;   // apiPrixodOl bilan bir xil
 
   var taqsimot = data.taqsimot || [];

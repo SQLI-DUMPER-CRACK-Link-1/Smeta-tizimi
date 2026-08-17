@@ -4819,13 +4819,57 @@ function _f2LogTozala() { try { CacheService.getUserCache().remove('f2_qolla_log
  * Holat: {status:'navbat'|'ishlayapti'|'tugadi'|'xato', obyekt, oyNom, done, total,
  *         boshlandi, yangilandi, xabar, resume:{dopStart,mappedYoz,dopsYoz}} */
 var _F2_JOB_KEY = 'F2_FON_JOB';
+
+/* ⚠️ 2026-08-17 (audit): `_f2JobSet` avval `catch(e){}` — MUTLAQO JIM edi.
+ *
+ * NIMA UCHUN XATARLI: bu funksiya F2 fon-yozuvining YAGONA holat manbai va
+ * HAR BO'LAKDA chaqiriladi. Agar yozuv yiqilsa (ScriptProperties qulfi band,
+ * kvota, bir vaqtda ikki trigger) — hech kim bilmaydi:
+ *   • oxirgi «tugadi» yozuvi yo'qolsa → monitoring ABADIY «ишлаяпти» da qoladi
+ *     (foydalanuvchi ko'rgan «1 соатдан бери қотиб турибди» alomatining bir sababi)
+ *   • «xato» yozuvi yo'qolsa → nosozlik butunlay ko'rinmaydi
+ *   • resume ko'rsatkichi yo'qolsa → bo'lak qaytadan boshlanadi
+ *
+ * ENDI:
+ *   1) xato JIM YUTILMAYDI — Logger ga yoziladi (nosozlikni keyin topish uchun);
+ *   2) holat KESHGA HAM dublikat yoziladi — Properties yiqilsa monitoring
+ *      keshdan o'qib, ish holatini baribir ko'rsatadi;
+ *   3) `xabar` uzunligi cheklanadi — uzun stack-trace bilan qiymat limitiga
+ *      urilib, butun holatni yo'qotib qo'ymaslik uchun.
+ * `_f2JobGet` esa: avval Properties, u bo'sh bo'lsa kesh. */
+var _F2_JOB_KESH = 'f2fon_job_kesh';
+
 function _f2JobSet(j){
-  try { j.yangilandi = Date.now();
-    PropertiesService.getScriptProperties().setProperty(_F2_JOB_KEY, JSON.stringify(j)); } catch(e){}
+  if(!j) return;
+  j.yangilandi = Date.now();
+  if(j.xabar) j.xabar = String(j.xabar).slice(0, 500);
+  var xom;
+  try { xom = JSON.stringify(j); }
+  catch(eS){ Logger.log('_f2JobSet: holatni JSON qilib bo\'lmadi — ' + eS); return; }
+
+  var propOk = false;
+  try { PropertiesService.getScriptProperties().setProperty(_F2_JOB_KEY, xom); propOk = true; }
+  catch(e){ Logger.log('⚠️ _f2JobSet: ScriptProperties yozilmadi (' + (e && e.message ? e.message : e) +
+                       ') — status=' + j.status + ', done=' + j.done + '/' + j.total); }
+
+  /* Zaxira nusxa — Properties yiqilsa ham monitoring ko'rsatadi.
+     ⚠️ `cachePut` xatoni O'ZI tutadi va `false` qaytaradi (throw QILMAYDI),
+     shuning uchun try/catch emas — qaytish qiymatini tekshiramiz. */
+  var keshOk = false;
+  try { keshOk = cachePut(_F2_JOB_KESH, j, 21600) !== false; } catch(e2){ keshOk = false; }
+  if(!propOk && !keshOk){
+    Logger.log('🔴 _f2JobSet: HOLAT YO\'QOLDI — Properties ham, kesh ham yozilmadi. ' +
+               'status=' + j.status + ', done=' + j.done + '/' + j.total);
+  }
 }
+
 function _f2JobGet(){
-  try { var s=PropertiesService.getScriptProperties().getProperty(_F2_JOB_KEY);
-    return s?JSON.parse(s):null; } catch(e){ return null; }
+  try {
+    var s = PropertiesService.getScriptProperties().getProperty(_F2_JOB_KEY);
+    if(s) return JSON.parse(s);
+  } catch(e){ Logger.log('_f2JobGet: Properties o\'qilmadi — keshga o\'tamiz: ' + e); }
+  /* Properties bo'sh yoki nosoz — zaxiradan */
+  try { return cacheGet(_F2_JOB_KESH) || null; } catch(e2){ return null; }
 }
 /* Panel monitoring reconnect — modal qayta ochilganda/panel yuklanganda chaqiriladi.
  * Fon jarayon bor bo'lsa (yoki yaqinda tugagan bo'lsa) holatni qaytaradi. */
