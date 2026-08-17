@@ -37,10 +37,19 @@ export default function ErpKadrlar() {
     );
   }
 
+  /* ⚡⚡⚡ 2026-08-16 (audit H13 — TASDIQLANDI): «Kelganlar / Kelmaganlar /
+   * Bemor» tugmalari `filtir` holatini o'zgartirardi, LEKIN filtrlashda
+   * u UMUMAN ISHLATILMASDI — tugma bosilardi, ro'yxat o'zgarmasdi.
+   * Endi BUGUNGI kun davomati bo'yicha filtrlanadi. */
+  const bugungiKun = new Date().getDate();   /* oy ichidagi kun raqami */
   const filtrlanganIshchilar = data.ishchilar.filter((ishchi: any) => {
     const mosKeladi = String(ishchi.ism ?? '').toLowerCase().includes(qidiruv.toLowerCase()) || 
                       String(ishchi.kasb ?? '').toLowerCase().includes(qidiruv.toLowerCase());
-    return mosKeladi;
+    if (!mosKeladi) return false;
+    if (filtir === 'barchasi') return true;
+    const tb = (data.tabellar ?? []).find((t: any) => t.ishchiId === ishchi.id);
+    const holat = tb?.kunlar?.find((k: any) => k.sana === bugungiKun)?.holat ?? null;
+    return holat === filtir;
   });
 
   return (

@@ -33,8 +33,10 @@ export function Buxgalteriya() {
   };
 
   const filtrlanganXarajatlar = xarajatRoyxati.filter(x => 
-    x.izoh.toLowerCase().includes(qidiruv.toLowerCase()) || 
-    x.toifa.toLowerCase().includes(qidiruv.toLowerCase())
+    /* ⚡ 2026-08-16 (audit H8): izoh/toifa bo'sh bo'lsa
+       `undefined.toLowerCase()` sahifani BUTUNLAY qulatardi (oq ekran). */
+    String(x.izoh ?? '').toLowerCase().includes(qidiruv.toLowerCase()) || 
+    String(x.toifa ?? '').toLowerCase().includes(qidiruv.toLowerCase())
   );
 
   return (

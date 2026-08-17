@@ -36,7 +36,12 @@ export function ErpQoshModal({ isOpen, title, fields, onClose, onSubmit, isSavin
 
   const yuborish = async () => {
     for (const f of fields) {
-      if (f.required && !qiymatlar[f.key]) return;
+      /* ⚡ 2026-08-16 (audit H14): `!qiymatlar[key]` da `!0 === true` —
+         majburiy RAQAM maydoniga 0 kiritilsa forma yuborilmasdi va
+         hech qanday sabab ham ko'rsatilmasdi (tugma jim turardi).
+         Endi faqat HAQIQATAN bo'sh qiymat rad etiladi. */
+      const v = qiymatlar[f.key];
+      if (f.required && (v === undefined || v === null || v === '')) return;
     }
     await onSubmit(qiymatlar);
     setQiymatlar(initial || {});
