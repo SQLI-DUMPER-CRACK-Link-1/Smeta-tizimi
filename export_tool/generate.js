@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const ExcelJS = require('exceljs');
 const docx = require('docx');
-const { Document, Table, TableRow, TableCell, Paragraph, TextRun, ImageRun, WidthType, AlignmentType, HeadingLevel, Packer, BorderStyle } = docx;
+const { Document, Table, TableRow, TableCell, Paragraph, TextRun, ImageRun, WidthType, AlignmentType, HeadingLevel, Packer } = docx;
 
 // Data definitions
 const imageDir = `C:\\Users\\PC\\.gemini\\antigravity\\brain\\e798c476-f670-4605-ab2a-a12a3a4ed136`;
@@ -14,7 +14,7 @@ const items = [
     qty: 4,
     object: "Амфитеатр",
     price: 2200892.85,
-    filename: "bathroom_kit_1786889963244.jpg"
+    filename: "bathroom_kit_1786893745765.jpg"
   },
   {
     name: "КНОПКА ВЫЗОВА ПОМОЩИ СЕНСОРНАЯ+ПРЁМНИК/СЕРТИФИЦИРОВАННЫЙ ПРОИЗВОДИТЕЛЬ/",
@@ -22,7 +22,7 @@ const items = [
     qty: 4,
     object: "Амфитеатр",
     price: 1096785.71,
-    filename: "call_button_1786889994623.jpg"
+    filename: "call_button_1786893355175.jpg"
   },
   {
     name: "КРЮЧОК ДЛЯ КОСТЫЛЕЙ/СЕРТИФИЦИРОВАННЫЙ ПРОИЗВОДИТЕЛЬ/",
@@ -54,7 +54,7 @@ const items = [
     qty: 4,
     object: "Амфитеатр",
     price: 97422.00,
-    filename: "pictogram_200_1786890133186.jpg"
+    filename: "pictogram_200_1786893626496.jpg"
   },
   {
     name: "ПРОФИЛЬ АЛЮМИНИЕВЫЙ С ПРОТИВОСКОЛЬЗЯЩЕЙ ВСТАВКОЙ,1300х100ММ/СЕРТИФИЦИРОВАННЫЙ ПРОИЗВОДИТЕЛЬ/",
@@ -97,10 +97,8 @@ async function generateExcel() {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Смета с изображениями');
 
-  // Setup sheet options
   worksheet.views = [{ showGridLines: true }];
 
-  // Define columns
   worksheet.columns = [
     { header: 'Фото', key: 'photo', width: 28 },
     { header: 'Наименование', key: 'name', width: 55 },
@@ -111,7 +109,6 @@ async function generateExcel() {
     { header: 'Общая сумма (UZS)', key: 'total', width: 22 }
   ];
 
-  // Header style
   const headerRow = worksheet.getRow(1);
   headerRow.height = 30;
   headerRow.eachCell(cell => {
@@ -119,7 +116,7 @@ async function generateExcel() {
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF1F4E78' } // Dark blue
+      fgColor: { argb: 'FF1F4E78' }
     };
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     cell.border = {
@@ -130,22 +127,18 @@ async function generateExcel() {
     };
   });
 
-  // Populate data
   items.forEach((item, index) => {
     const rowIndex = index + 2;
     const row = worksheet.getRow(rowIndex);
-    row.height = 100; // Large height to fit image nicely
+    row.height = 100;
 
     row.getCell('name').value = item.name;
     row.getCell('unit').value = item.unit;
     row.getCell('qty').value = item.qty;
     row.getCell('object').value = item.object;
     row.getCell('price').value = item.price;
-    
-    // Formula for total
     row.getCell('total').value = { formula: `D${rowIndex}*F${rowIndex}` };
 
-    // Format styles
     row.getCell('name').alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
     row.getCell('unit').alignment = { vertical: 'middle', horizontal: 'center' };
     row.getCell('qty').alignment = { vertical: 'middle', horizontal: 'center' };
@@ -156,7 +149,6 @@ async function generateExcel() {
     row.getCell('price').numFmt = '#,##0.00';
     row.getCell('total').numFmt = '#,##0.00';
 
-    // Borders
     row.eachCell({ includeEmpty: true }, cell => {
       cell.font = { name: 'Arial', size: 10 };
       cell.border = {
@@ -167,22 +159,19 @@ async function generateExcel() {
       };
     });
 
-    // Embed Image
     if (fs.existsSync(item.imagePath)) {
       const imageId = workbook.addImage({
         filename: item.imagePath,
         extension: 'jpeg',
       });
       
-      // We position the image centered in column A (col index 0)
       worksheet.addImage(imageId, {
         tl: { col: 0, row: rowIndex - 1, xOffset: 12, yOffset: 12 },
-        ext: { width: 140, height: 105 } // 4:3 ratio centered
+        ext: { width: 140, height: 105 }
       });
     }
   });
 
-  // Add Grand Total Row
   const totalRowIndex = items.length + 2;
   const totalRow = worksheet.getRow(totalRowIndex);
   totalRow.height = 25;
@@ -195,7 +184,6 @@ async function generateExcel() {
   totalRow.getCell('total').numFmt = '#,##0.00';
   totalRow.getCell('total').alignment = { vertical: 'middle', horizontal: 'right' };
 
-  // Set borders for total row
   totalRow.eachCell({ includeEmpty: true }, cell => {
     cell.border = {
       top: { style: 'double', color: { argb: 'FF000000' } },
@@ -203,8 +191,7 @@ async function generateExcel() {
     };
   });
 
-  // Save Excel file
-  const outPath = path.join(__dirname, '..', 'Jihozlar_Smetasi.xlsx');
+  const outPath = path.join(__dirname, '..', 'Jihozlar_Smetasi_Yangi.xlsx');
   await workbook.xlsx.writeFile(outPath);
   console.log(`Excel file created successfully at: ${outPath}`);
 }
@@ -215,7 +202,6 @@ async function generateExcel() {
 async function generateWord() {
   const tableRows = [];
 
-  // 1. Table Header Row
   tableRows.push(
     new TableRow({
       tableHeader: true,
@@ -249,7 +235,6 @@ async function generateWord() {
     })
   );
 
-  // 2. Table Data Rows
   items.forEach(item => {
     const imgBuffer = fs.existsSync(item.imagePath) ? fs.readFileSync(item.imagePath) : null;
     const cellChildren = [];
@@ -280,7 +265,7 @@ async function generateWord() {
           new TableCell({
             children: [
               new Paragraph({
-                children: [new TextRun({ text: item.name, size: 20 })], // Size 10 pt
+                children: [new TextRun({ text: item.name, size: 20 })],
               }),
               new Paragraph({
                 children: [new TextRun({ text: `Объект: ${item.object}`, size: 16, italics: true, color: "555555" })],
@@ -314,7 +299,6 @@ async function generateWord() {
     );
   });
 
-  // 3. Table Grand Total Row
   tableRows.push(
     new TableRow({
       children: [
@@ -332,7 +316,6 @@ async function generateWord() {
     })
   );
 
-  // Define Document
   const doc = new Document({
     sections: [
       {
@@ -373,8 +356,7 @@ async function generateWord() {
     ],
   });
 
-  // Save Word file
-  const outPath = path.join(__dirname, '..', 'Jihozlar_Katalogi.docx');
+  const outPath = path.join(__dirname, '..', 'Jihozlar_Katalogi_Yangi.docx');
   const buffer = await Packer.toBuffer(doc);
   fs.writeFileSync(outPath, buffer);
   console.log(`Word document created successfully at: ${outPath}`);

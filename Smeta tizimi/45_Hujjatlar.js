@@ -597,8 +597,24 @@ function apiRashodYoz(data){
  * data = {nom, birlik, sana, obyekt, izoh, taqsimot: [{ish, hajm}], kirimRow: <optional>} */
 function apiRashodYozMass(data){
   var ss=_hujOpen('prixod');
-  var sh=ss.getSheets()[0];
-  
+  /* ⚡⚡⚡ 2026-08-16 NOTO'G'RI VARAQ VA USTUNLAR (audit C12 — TASDIQLANDI).
+   *
+   * Bu funksiya `ss.getSheets()[0]` — ya'ni faylning BIRINCHI varag'ini
+   * olardi, nomiga qaramasdan. `apiPrixodOl` (o'qish) esa
+   * `getSheetByName('Приход')` ishlatadi. Fayl ichida boshqa varaq
+   * birinchi bo'lsa — chiqim BUTUNLAY BOSHQA varaqqa yozilardi.
+   *
+   * Ustunlar ham nomuvofiq edi:
+   *     o'qish (ishlaydi):  index 3 = НОМ,   index 5 = ҲАЖМ
+   *     yozish (bu yer):    index 1 = nom,   index 4 = hajm   ← XATO
+   * Ya'ni material nomi RAZDEL ustuni bilan solishtirilardi va miqdor
+   * BIRLIK ustunidan o'qilardi. Natijada kirim qatori deyarli hech
+   * qachon topilmasdi; topilganda esa qoldiq hisobi ma'nosiz chiqardi.
+   *
+   * ENDI: o'qish funksiyasi bilan AYNAN bir xil varaq va ustunlar. */
+  var sh=ss.getSheetByName('Приход') || ss.getSheets()[0];
+  var IDX_NOM = 3, IDX_HAJM = 5;   // apiPrixodOl bilan bir xil
+
   var taqsimot = data.taqsimot || [];
   if (!taqsimot.length) return {ok:false, xabar:'Тақсимот йўқ'};
 
@@ -614,9 +630,9 @@ function apiRashodYozMass(data){
     kirimRows.push({ row: r, qoldiq: 999999999 }); // Specific row bypasses strict FIFO limits for UI simplicity, but we can calculate actual qoldiq
   } else {
     for (var i = 1; i < lastR; i++) {
-      var nom = String(vP[i][1]||'').trim().toUpperCase();
+      var nom = String(vP[i][IDX_NOM]||'').trim().toUpperCase();
       if (nom === targetNom) {
-        var hajm = _toNum(vP[i][4]);
+        var hajm = _toNum(vP[i][IDX_HAJM]);
         var sumR = 0;
         for (var c = 14; c < lastC; c += 4) { // vP index 14 is column 15
           sumR += _toNum(vP[i][c]);
