@@ -67,6 +67,23 @@ function _uniKey(prov){
 function _aiGwKey(){ return _uniKey('GEMINI'); }
 function _groqGwKey(){ return _uniKey('GROQ'); }
 
+/* ⚠️ 2026-08-17 (audit): `_aiKey()` TIZIMDA HECH QAYERDA E'LON QILINMAGAN edi,
+   lekin 6 joyda CHAQIRILARDI — 66_AI_Data.js:57, 67_AI_Akt.js:36 va :73,
+   68_AI_Tahlil.js:25, :82, :145.
+
+   Natijasi: bu funksiyalar `ReferenceError: _aiKey is not defined` bilan
+   YIQILARDI. Ya'ni «kalit yo'q» degan xushmuomala xabar chiqishi kerak
+   bo'lgan joyda AI akt tahlili / anomaliya tahlili butunlay ishlamasdi,
+   foydalanuvchi esa umumiy «xato» dan boshqa hech nima ko'rmasdi.
+
+   Sabab: kalit o'qish Gateway ga ko'chirilganda (`_aiGwKey`) eski nom
+   o'chirilgan, ammo uni chaqiruvchi 6 joy qolib ketgan. Ba'zi joylarda
+   `typeof _aiKey==='function'` qalqoni bor edi — o'shalar jim o'tib
+   ketgani uchun muammo ancha vaqt sezilmagan.
+
+   Yechim: eski nomni Gateway ga taqaymiz (bitta haqiqat manbai). */
+function _aiKey(){ return _aiGwKey(); }
+
 function apiAiKalitSaqlaBase(prov, key){
   key = String(key||'').trim();
   if(key.length < 15) throw new Error("Noto'g'ri kalit (kamida 15 belgi)");

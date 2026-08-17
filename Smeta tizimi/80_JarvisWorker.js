@@ -18,8 +18,19 @@ function jarvisAutoWorker() {
     
     if(ts - lastScan > 60 * 60 * 1000) { // Har 1 soatda to'liq skan qilib chiqish
        Logger.log("Jarvis: Obyektlar skan qilinmoqda...");
-       try { _obyektlarSkan(true); } catch(e) { Logger.log("Scan error: " + e); }
-       p.setProperty('JARVIS_LAST_SCAN', String(ts));
+       /* ⚠️ 2026-08-17 (audit): avval `_obyektlarSkan(true)` chaqirilardi —
+          bunday funksiya TIZIMDA YO'Q. Haqiqiy nomi `papkaSkan()`
+          (05_Papka.js:14). Chaqiruv try/catch ichida bo'lgani uchun xato
+          jim yutilardi va faqat «Scan error» loggа yozilardi — natijada
+          Jarvis ning soatlik avtomat skani BIR MARTA HAM ishlamagan,
+          ammo pastda `JARVIS_LAST_SCAN` yangilanib, «bajarildi» ko'rinishi
+          saqlanib qolgan.
+          Endi haqiqiy skan chaqiriladi va xato bo'lsa vaqt belgisi
+          yangilanMAYDI — keyingi tsiklda qayta urinadi. */
+       var skanOk = false;
+       try { papkaSkan(); skanOk = true; }
+       catch(e) { Logger.log("Jarvis skan xatosi: " + (e && e.message ? e.message : e)); }
+       if(skanOk) p.setProperty('JARVIS_LAST_SCAN', String(ts));
     }
     
     // 2. Tizim holatini tekshirish

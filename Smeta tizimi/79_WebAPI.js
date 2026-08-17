@@ -23,6 +23,33 @@
 var WAPI_TOKEN_KEY = 'WEB_API_TOKEN';
 var WAPI_LOG_KEY   = 'WEB_API_LOG';
 
+/* ==================================================================
+ * KOD VERSIYA MARKERI — «DEPLOY HAQIQATAN TUSHDIMI?» SAVOLIGA JAVOB
+ * ==================================================================
+ * MUAMMO: bu proyektda 21 ta aktiv deployment bor. `clasp push`
+ * muvaffaqiyatli chiqsa ham, deployment lar YANGI VERSIYAGA
+ * ko'chirilmasa sayt ESKI KODNI ishlatib turadi. Buni tashqaridan
+ * bilishning yo'li YO'Q edi — natijada tuzatilgan xato «tuzalmadi»
+ * ko'rinardi va bir necha bor xato joyda qidirilgan.
+ *
+ * Endi: har deploy dan keyin shu marker so'raladi. Agar qaytgan raqam
+ * kutilganidan kichik bo'lsa — deployment eski, kodni qidirish
+ * KERAK EMAS, qayta deploy qilish kerak.
+ *
+ * ⚠️ QO'LDA YANGILANADI: har `clasp version` dan keyin shu raqam
+ * o'sha versiya raqamiga tenglashtiriladi.
+ * ================================================================== */
+var KOD_VERSIYA = 327;
+
+/** Yengil probe: hech qanday jadval o'qimaydi, darhol javob beradi. */
+function apiKodVersiya(){
+  return {
+    versiya: KOD_VERSIYA,
+    vaqt: Utilities.formatDate(new Date(), 'Asia/Tashkent', 'yyyy-MM-dd HH:mm:ss'),
+    deployment: (function(){ try{ return ScriptApp.getScriptId().slice(-8); }catch(e){ return ''; } })()
+  };
+}
+
 /* ============ 1. TOKEN BOSHQARUVI ============ */
 
 /** Yangi token yaratadi va Loglarga chiqaradi. Menyudan bir marta ishga tushiriladi. */
