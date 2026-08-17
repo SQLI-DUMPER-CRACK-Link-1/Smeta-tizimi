@@ -1,3 +1,40 @@
+
+/* ══════════════════════════════════════════════════════════════════
+ * _jarvisSmetaVaraq(ss) — SMETA VARAG'INI TOPADI
+ *
+ * ⚡⚡⚡ 2026-08-16 YARATILDI (audit C14 — TASDIQLANDI).
+ *
+ * MUAMMO: ikki joyda `ss.getSheetByName('Смета')` yozilgandi, lekin
+ * tizimda BUNDAY NOMLI VARAQ YO'Q. LRV_PLUS fayllarida varaqlar
+ * `LRV` prefiksi bilan yoki obyekt nomi bilan ataladi (masalan
+ * «Amfiteatr - 110081_ALL_01-02_АРХИТЕКТУРНАЯ ЧАСТЬ»).
+ * Natijada `apiJarvisFaktDraft` va `apiJarvisFaktSaqla` DOIM
+ * «Smeta varag'i topilmadi» xatosi qaytarardi — AI ning fakt
+ * kiritish qismi 100% ishlamasdi.
+ *
+ * ENDI: tizimning boshqa joylaridagi bilan bir xil qoida —
+ * avval `LRV` prefiksli varaq, topilmasa xizmat varag'i
+ * bo'lmagan birinchisi.
+ * ══════════════════════════════════════════════════════════════════ */
+function _jarvisSmetaVaraq(ss){
+  if(!ss) return null;
+  try{
+    var pref = (typeof CFG!=='undefined' && CFG.LRV_SHEET) ? CFG.LRV_SHEET : 'LRV';
+    var shlar = ss.getSheets();
+    /* 1) LRV prefiksli */
+    for(var i=0;i<shlar.length;i++){
+      if(String(shlar[i].getName()||'').indexOf(pref) === 0) return shlar[i];
+    }
+    /* 2) eski nom (agar kimdir shunday atagan bo'lsa) */
+    var eski = ss.getSheetByName('Смета');
+    if(eski) return eski;
+    /* 3) xizmat varag'i bo'lmagan birinchisi */
+    for(var j=0;j<shlar.length;j++){
+      if(String(shlar[j].getName()||'').charAt(0) !== '_') return shlar[j];
+    }
+  }catch(e){}
+  return null;
+}
 /*******************************************************
  * 65_TitanAI.js — JARVIS AI (to'liq tizim integratsiya)
  *
@@ -452,7 +489,7 @@ function apiJarvisFaktDraft(req) {
        var fid = park[obyekt];
        if(fid) {
          ss = SpreadsheetApp.openById(fid);
-         var sh = ss.getSheetByName('Смета');
+         var sh = _jarvisSmetaVaraq(ss);   /* audit C14 */
          if(sh) {
             var v = sh.getDataRange().getValues();
             var h = v[3]||v[2]||[];
@@ -546,7 +583,7 @@ function apiJarvisFaktSaqla(req) {
      var fid = park[obyekt];
      if(!fid) return {error: "Obyekt fayli topilmadi."};
      ss = SpreadsheetApp.openById(fid);
-     var sh = ss.getSheetByName('Смета');
+     var sh = _jarvisSmetaVaraq(ss);   /* audit C14 */
      if(!sh) return {error: "Smeta varag'i topilmadi."};
 
      var v = sh.getDataRange().getValues();
