@@ -704,6 +704,23 @@ function apiShaxsiySmetaYarat(config, ishlar){
     try{ DriveApp.getRootFolder().removeFile(file); }catch(e){}
   }catch(e){ Logger.log('Папкага кўчириш: '+e); }
 
+  /* ⚡⚡⚡ 2026-08-16 (audit H32 — TASDIQLANDI): quyida `umumiyJami`
+   * ishlatilardi, lekin u HECH QAYERDA E'LON QILINMAGAN edi →
+   * `ReferenceError` va funksiya OXIRIDA yiqilardi. Ya'ni smeta fayli
+   * YARATILARDI, lekin foydalanuvchiga XATO qaytardi va u nima
+   * bo'lganini bilmasdi (fayl bor, xabar esa «yaratilmadi»).
+   * Jadval ichidagi jami FORMULA bilan hisoblanadi (ИТОГО qatorlari),
+   * JS tomonda esa yo'q edi — endi kiruvchi ma'lumotdan sanaymiz. */
+  var umumiyJami = 0;
+  try{
+    for(var _i=0;_i<items.length;_i++){
+      var _it = items[_i] || {};
+      var _h = Number(_it.hajm)||0, _n = Number(_it.narx)||0;
+      umumiyJami += (Number(_it.summa) || (_h * _n));
+    }
+    umumiyJami = Math.round(umumiyJami*100)/100;
+  }catch(e){ umumiyJami = 0; }
+
   return { ok:true, url:ss.getUrl(), nom:config.nom, ishlar:items.length, jami:umumiyJami,
     xabar:'✅ Смета яратилди: '+config.nom+' ('+items.length+' та иш)' };
 }

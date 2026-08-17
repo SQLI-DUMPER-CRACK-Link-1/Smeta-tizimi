@@ -403,7 +403,13 @@ function supabasePrixodPush(){
 
   // Rashod push
   var ss=_hujOpen('prixod');
-  var shR=ss.getSheetByName('Rashod');
+  /* ⚡⚡⚡ 2026-08-16 (audit H31 — TASDIQLANDI): bu yerda LOTIN «Rashod»
+   * yozilgandi, haqiqiy varaq esa KIRIL «Расход» deb ataladi
+   * (86_Sklad.js shu nom bilan yozadi). Natijada chiqim varag'i HECH
+   * QACHON topilmasdi va sklad chiqimlari Supabase'ga UMUMAN
+   * sinxronlanmasdi — jim yo'qolish.
+   * Endi ikkala yozuv ham tekshiriladi. */
+  var shR=ss.getSheetByName('Расход') || ss.getSheetByName('Rashod');
   if(shR && shR.getLastRow()>=2){
     var vR = shR.getRange(2,1,shR.getLastRow()-1,Math.max(shR.getLastColumn(),8)).getValues();
     var rRows = vR.map(function(r, i){
