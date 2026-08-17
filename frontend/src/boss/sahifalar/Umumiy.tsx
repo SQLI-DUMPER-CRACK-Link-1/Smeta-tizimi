@@ -5,16 +5,36 @@ import { MalumotYoshi, Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, TrendingUp, Wallet, CheckCircle, Clock, ChevronRight, ChevronDown, FileText, ArrowDownToLine, ArrowUpFromLine, HardHat, Truck, Wrench, Info, Layers, PieChart, Activity, X, AlertTriangle, Cpu, Server, Component, Zap, Users, ExternalLink } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import Sahna3D from '../../kirish/Sahna3D';
+/* `Sahna3D` importi OLIB TASHLANDI — pastdagi AuroraBackground izohiga qara
+   (takroriy WebGL canvas «alpha» yiqilishiga sabab bo'lgan). Fon endi faqat
+   qobiqda (AdminShell / BossShell) chiziladi. */
 
 // --- 3D INTERACTIVE BACKGROUND ---
 export function AuroraBackground({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-full h-full min-h-screen overflow-hidden text-white font-sans selection:bg-accent/30">
-      {/* 3D Interactive Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-         <Sahna3D />
-      </div>
+      {/* ⚠️⚠️⚠️ 2026-08-17 — «Cannot read properties of null (reading 'alpha')»
+          ILDIZI SHU YERDA EDI.
+
+          Bu yerda `<Sahna3D />` — ya'ni IKKINCHI WebGL canvas ochilardi:
+          birinchisini AdminShell (qobiq foni) allaqachon ochib turgan, va
+          har bir admin sahifasi shu qobiq ICHIDA joylashgan. Ya'ni har
+          sahifada 2 ta og'ir WebGL sahna yashardi.
+
+          Brauzerda bir vaqtda yashovchi WebGL kontekstlari soni cheklangan
+          (Chrome ~16). Sahifalar orasida yurganda kontekstlar to'planib,
+          brauzer eng eskilarini majburan yo'q qiladi; three.js keyingi
+          mount'da yo'qolgan kontekstdan `getContextAttributes().alpha` ni
+          o'qiydi — `getContextAttributes()` esa yo'qolgan kontekstda
+          spetsifikatsiya bo'yicha `null` qaytaradi → butun sahifa yiqiladi.
+          Xato bir necha sahifa aylangandan keyin «deyarli hammasida»
+          chiqishi ham shundan.
+
+          YECHIM: takroriy sahna OLIB TASHLANDI. Fon qobiqda bitta marta
+          chiziladi va u yerda `Sahna3DXavfsiz` bilan himoyalangan (WebGL
+          yiqilsa oddiy gradientga o'tadi, ish sahifasi buzilmaydi).
+
+          ⚠️ Bu yerga qayta `<Sahna3D />` QO'SHMANG. */}
 
       {/* Static Grid Overlay for texture */}
       <div 

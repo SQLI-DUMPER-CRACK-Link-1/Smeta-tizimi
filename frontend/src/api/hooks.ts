@@ -1336,7 +1336,20 @@ export function useSessiya() {
       return r.json() as Promise<{ ok: boolean; rol: string; email: string; yozaOladi: boolean; tugaydi: number }>;
     },
     staleTime: 5 * 60 * 1000,
-    retry: false,
+    /* ⚠️ 2026-08-17: avval `retry: false` edi — BITTA tarmoq uzilishi yetardi.
+     *
+     * MUAMMO: `/api/sessiya` bir marta yiqilsa (Cloudflare band, 502/524,
+     * Wi-Fi bir sekund uzildi, GAS navbati) TanStack darhol `isError` beradi
+     * va qobiq foydalanuvchini KIRISH sahifasiga otib yuboradi — sessiya
+     * mutlaqo BUTUN bo'lsa ham. Aynan «шартномалар табига кирсам кириш
+     * менюсига чиқариб ташлаяпди» alomati shundan.
+     *
+     * ENDI: vaqtinchalik xatoda 3 marta qayta urinamiz (0.5s → 1s → 2s).
+     * 401/403 — ya'ni HAQIQATAN sessiya yo'q — qayta urinilMAYDI, u darhol
+     * kirish sahifasiga olib boradi (bekorga kutish yo'q). */
+    retry: (urinish, xato: Error) =>
+      xato?.message !== "Sessiya yo'q" && urinish < 3,
+    retryDelay: (urinish) => Math.min(500 * 2 ** urinish, 2000),
   });
 }
 

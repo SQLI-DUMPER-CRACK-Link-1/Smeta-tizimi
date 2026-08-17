@@ -10,6 +10,27 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
       {
+        /* ⚠️ 2026-08-17 — FAQAT DEV. Produksiyada sessiyani Cloudflare
+         * Pages Function (`functions/api/sessiya.ts`) beradi, bu kod
+         * bundle'ga TUSHMAYDI (`configureServer` faqat `vite dev` da ishlaydi).
+         *
+         * NIMA UCHUN KERAK: `/api/sessiya` dev'da stub qilinmagani uchun
+         * admin sahifalari LOKAL ochilmasdi — qobiq darhol kirish sahifasiga
+         * otib yuborardi. Natijada UI xatolarini faqat produksiyada, qo'lda
+         * topish mumkin edi. Endi `npm run dev` da butun admin panel ochiladi
+         * va yiqilishlar shu yerda ko'rinadi. */
+        name: 'dev-sessiya-stub',
+        configureServer(server) {
+          server.middlewares.use('/api/sessiya', (_req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+              ok: true, rol: 'admin', email: 'dev@localhost',
+              yozaOladi: true, tugaydi: Date.now() + 8 * 3600 * 1000,
+            }));
+          });
+        },
+      },
+      {
         name: 'gas-proxy',
         configureServer(server) {
           server.middlewares.use('/api/gas', (req, res) => {

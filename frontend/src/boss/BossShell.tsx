@@ -5,6 +5,7 @@ import { gas } from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert, Bot, X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Sahna3D from '../kirish/Sahna3DXavfsiz';
 
 /* ⚠️ 2026-08-17 (audit): bu darcha AVVAL SOXTA MAKET edi — ichida qo'lda
    yozilgan «Toshkent City - Lot 4», «Sement M400: 45 000 000 so'm» kabi
@@ -75,8 +76,17 @@ export default function BossShell() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#09090b] text-slate-200 relative">
-      {/* Background will be managed inside components or globally, but base dark is needed here */}
-      
+      {/* ⚠️ 2026-08-17: fon avval sahifa ichida (`AuroraBackground`) chizilardi
+          va admin qobig'idagi bilan birga IKKI WebGL canvas yashardi — bu
+          «Cannot read properties of null (reading 'alpha')» yiqilishining
+          ildizi edi (batafsil: `Umumiy.tsx` dagi AuroraBackground izohi).
+          Endi fon FAQAT qobiqda, bitta marta va `Sahna3DXavfsiz` orqali:
+          WebGL yiqilsa oddiy gradientga o'tadi, sahifa buzilmaydi. */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <Sahna3D />
+      </div>
+      <div className="absolute inset-0 z-0 bg-black/40 pointer-events-none" />
+
       {/* LEFT SIDEBAR */}
       <aside className="w-[260px] flex-shrink-0 flex flex-col bg-[#0c0c0f]/95 border-r border-white/10 backdrop-blur-3xl z-40 relative">
         {/* Brand */}

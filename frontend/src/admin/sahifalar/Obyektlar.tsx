@@ -107,7 +107,20 @@ export function Obyektlar() {
     return Array.from(groups.entries()).map(([baseName, { items, stats }]) => ({
       baseName,
       items,
-      stats
+      stats,
+      /* ⚠️ 2026-08-17: OCHISH UCHUN HAQIQIY OBYEKT NOMI.
+       *
+       * `baseName` — bu `obj.obyekt.split(' - ')[0]`, ya'ni KO'RSATISH uchun
+       * qisqartirilgan nom. Uni ochish havolasida ishlatish XATO edi:
+       * «Game club - 110081_…» kartasini bosganda `/admin/holat/Game club`
+       * ga o'tilardi, GAS da esa bunday nomli obyekt YO'Q — natijada
+       * BUTUNLAY BOSHQA obyekt («10 kv visokiy liniya») ochilib qolardi.
+       * Xato obyektni tahrirlash xavfi bor edi.
+       *
+       * QOIDA: guruhda bitta element bo'lsa — uning TO'LIQ haqiqiy nomi
+       * bilan ochamiz. Ko'p bo'lsa — `baseName` haqiqiy ota-papka nomi
+       * (ko'p smetali obyekt), u holda o'zi to'g'ri. */
+      ochishNomi: items.length === 1 ? items[0].obyekt : baseName,
     }));
   }, [data, bossData]);
 
@@ -272,11 +285,15 @@ export function Obyektlar() {
               const hasMultiple = group.items.length > 1;
               const stats = group.stats; // BossData dan olingan stats
               
+              /* ⚠️ 2026-08-17: `key` avval `{i}` — indeks bo'yicha edi.
+                 Tartib o'zgarsa (yangi obyekt, filtr, qayta yuklash) React
+                 BOSHQA guruhning DOM tugunini qayta ishlatadi — yoyilgan holat
+                 boshqa kartaga o'tib ketadi. Endi nom bo'yicha: barqaror. */
               return (
-                <motion.div variants={itemVariants} key={i} className={isExpanded && hasMultiple ? 'row-span-2' : ''}>
+                <motion.div variants={itemVariants} key={group.baseName} className={isExpanded && hasMultiple ? 'row-span-2' : ''}>
                   <GlassCard 
                     className={`h-full flex flex-col group/card cursor-pointer transition-all duration-300 ${isExpanded ? 'border-accent/50 shadow-[0_0_30px_rgba(14,165,233,0.15)]' : 'border-white/10 hover:border-white/30 hover:shadow-xl'}`}
-                    onClick={() => navigate(`/admin/holat/${encodeURIComponent(group.baseName)}`)}
+                    onClick={() => navigate(`/admin/holat/${encodeURIComponent(group.ochishNomi)}`)}
                   >
                     <div className="p-6 flex-1 flex flex-col relative z-10">
                       

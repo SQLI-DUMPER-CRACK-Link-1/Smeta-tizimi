@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database } from 'lucide-react';
-import Sahna3D from '../kirish/Sahna3D';
+import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 
 const MENYU = [
@@ -70,7 +70,19 @@ export default function AdminShell() {
       </div>
     );
   }
-  if (sess.isError) {
+  /* ⚠️ 2026-08-17: avval BITTA shart — `if (sess.isError)` — barcha xatoni
+   * «Kirish talab qilinadi» deb ko'rsatardi. Ya'ni tarmoq bir zum uzilsa yoki
+   * Cloudflare 524 bersa, foydalanuvchi SESSIYASI BUTUN bo'lgani holda
+   * «sessiya tugagan» ekranini ko'rib, boshidan kirishga majbur bo'lardi
+   * («шартномалар табига кирсам кириш менюсига чиқариб ташлаяпди»).
+   *
+   * ENDI ikkiga bo'lindi:
+   *   1) HAQIQATAN sessiya yo'q (401/403) → kirish sahifasiga
+   *   2) vaqtinchalik nosozlik        → «Qayta urinish» (cookie TEGILMAYDI,
+   *      chunki sessiya butun; sahifani qayta yuklash shart emas) */
+  const sessiyaYoq = sess.isError && (sess.error as Error)?.message === "Sessiya yo'q";
+
+  if (sessiyaYoq) {
     return (
       <div className="h-screen bg-[#020617] flex items-center justify-center">
         <div className="text-center max-w-sm px-6">
@@ -83,6 +95,28 @@ export default function AdminShell() {
             className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium
                        hover:bg-accent/90 transition-colors">
             Kirish sahifasiga
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (sess.isError) {
+    return (
+      <div className="h-screen bg-[#020617] flex items-center justify-center">
+        <div className="text-center max-w-sm px-6">
+          <AlertTriangle size={28} className="text-warn mx-auto mb-3" />
+          <p className="text-text font-medium mb-1">Server bilan aloqa yo'q</p>
+          <p className="text-text-dim text-sm mb-1">
+            Sessiyangiz joyida — bu vaqtinchalik nosozlik.
+          </p>
+          <p className="text-text-mute text-[12px] mb-4 font-mono">
+            {(sess.error as Error)?.message || 'noma\'lum xato'}
+          </p>
+          <button onClick={() => sess.refetch()}
+            disabled={sess.isFetching}
+            className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium
+                       hover:bg-accent/90 transition-colors disabled:opacity-50">
+            {sess.isFetching ? 'Tekshirilmoqda…' : 'Qayta urinish'}
           </button>
         </div>
       </div>
