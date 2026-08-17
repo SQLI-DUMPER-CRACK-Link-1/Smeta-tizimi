@@ -96,7 +96,7 @@ export default function ShaxsiySmeta() {
                 placeholder="masalan: бетон, кирпич…"
                 className="flex-1 bg-[var(--surface-2)] border border-border rounded
                            px-2 py-1.5 text-[12px] text-text outline-none focus:border-accent/50" />
-              <button onClick={qidirish} disabled={qidir.isPending}
+              <button onClick={qidirish} disabled={qidir.isPending} aria-label="Qidirish" title="Qidirish"
                 className="px-2.5 rounded bg-accent/15 text-accent hover:bg-accent/25
                            transition-colors disabled:opacity-50">
                 <Search size={14} />

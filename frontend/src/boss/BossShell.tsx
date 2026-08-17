@@ -192,7 +192,7 @@ export default function BossShell() {
                   placeholder="AI ga savol bering..." 
                   className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-blue-500/50"
                 />
-                <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-lg flex items-center justify-center text-white transition-colors">
+                <button aria-label="Yuborish" title="Yuborish" className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-lg flex items-center justify-center text-white transition-colors">
                   <Send size={14} />
                 </button>
               </div>

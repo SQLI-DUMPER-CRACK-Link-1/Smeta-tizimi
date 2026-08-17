@@ -243,6 +243,8 @@ export function AiHelper() {
               />
               <button
                 onClick={handleSend}
+                aria-label="Yuborish"
+                title="Yuborish"
                 disabled={!input.trim() || isLoading}
                 className="absolute right-2 bottom-2 w-8 h-8 bg-accent text-white rounded-lg flex items-center justify-center hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
