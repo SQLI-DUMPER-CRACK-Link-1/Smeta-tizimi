@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useObyektlar, useBossData, useNavbatHolat, useObyektIshla, useBarchaIshla, useNavbatToxtat } from '../../api/hooks';
+import { useObyektlar, useBossData, useNavbatHolat, useObyektIshla, useBarchaIshla, useNavbatToxtat,
+         useObyektTekshir, type ObyektTekshirNatija } from '../../api/hooks';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { Folder, ChevronDown, FileSpreadsheet, TrendingUp, Clock, Building2, Wallet, PlayCircle, Zap, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Folder, ChevronDown, FileSpreadsheet, TrendingUp, Clock, Building2, Wallet, PlayCircle, Zap, Loader2, CheckCircle, AlertTriangle, Stethoscope, X } from 'lucide-react';
 import type { PapkaObyekt } from '../../api/types';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
@@ -22,6 +23,23 @@ export function Obyektlar() {
   const { data: navbat } = useNavbatHolat(kuzat);
   const navbatFaol = !!navbat?.running;
   const obyektIshla = useObyektIshla();
+  const tekshir = useObyektTekshir();
+  const [tashxisObyekt, setTashxisObyekt] = useState('');
+  const [tashxis, setTashxis] = useState<ObyektTekshirNatija | null>(null);
+
+  /** Papkadagi fayllar qanday tanilganini sabablari bilan ko'rsatadi */
+  async function tashxisOch(obyekt: string) {
+    setTashxisObyekt(obyekt);
+    setTashxis(null);
+    try {
+      const r = await tekshir.mutateAsync({ obyekt });
+      setTashxis(r);
+      if (!r.ok) toast(r.xabar || 'Tekshirib bo\'lmadi', 'warn', undefined, 9000);
+    } catch (e: any) {
+      setTashxisObyekt('');
+      toast('Tashxis xatosi: ' + e.message, 'danger', undefined, 9000);
+    }
+  }
   const barchaIshla = useBarchaIshla();
   const navbatToxtat = useNavbatToxtat();
 
@@ -387,6 +405,26 @@ export function Obyektlar() {
                         >
                           <PlayCircle size={13} /> Ishla
                         </button>
+                        {/* ⚡⚡⚡ 2026-08-17 (audit): TASHXIS — `apiObyektFayllarniTekshir`
+                            GAS da (05_Papka.js:70) bor va hook'i ham yozilgan edi, lekin
+                            HECH QAYERDA chaqirilmasdi. Bu funksiya papkadagi HAR FAYL
+                            qaysi rolni (СВОДКА / ЛОКАЛКА / ТИЗИМ / e'tiborsiz) olganini
+                            va NEGA shundayligini aytadi. Ya'ni «obyektim nega ishlamayapti»
+                            degan eng ko'p uchraydigan savolga to'g'ridan-to'g'ri javob —
+                            u saytda yo'q bo'lgani uchun har marta taxmin qilinardi. */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); tashxisOch(group.items[0].obyekt); }}
+                          disabled={tekshir.isPending}
+                          title="Papkadagi fayllar qanday tanilgan — sabablari bilan"
+                          aria-label="Obyekt fayllarini tekshirish"
+                          className="flex items-center justify-center gap-1.5 text-xs bg-white/5 hover:bg-amber-500/20
+                                     text-slate-300 hover:text-amber-300 px-3 py-2 rounded-lg border border-white/10
+                                     transition-colors disabled:opacity-40"
+                        >
+                          {tekshir.isPending && tashxisObyekt === group.items[0].obyekt
+                            ? <Loader2 size={13} className="animate-spin" />
+                            : <Stethoscope size={13} />}
+                        </button>
                       </div>
                     </div>
 
@@ -419,6 +457,133 @@ export function Obyektlar() {
           </motion.div>
         )}
       </div>
+
+      {/* ⚡⚡⚡ 2026-08-17 (audit): TASHXIS NATIJASI.
+          Har fayl qaysi rolni olgani va NEGA — «obyekt nega ishlamayapti»
+          savoliga javob. Eng qimmatli qatori: «ЛОКАЛКА (номзод)» —
+          zaxira qoida uni SVODKA qilib qo'yishi mumkinligi haqidagi
+          ogohlantirish, bu eng ko'p uchraydigan sabab. */}
+      <AnimatePresence>
+        {tashxisObyekt && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => { setTashxisObyekt(''); setTashxis(null); }}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col
+                         bg-[#0B0E14] border border-white/15 rounded-2xl shadow-2xl"
+            >
+              <div className="px-5 py-4 border-b border-white/10 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h3 className="text-[15px] font-bold text-white flex items-center gap-2">
+                    <Stethoscope size={17} className="text-amber-400" />
+                    Fayl tashxisi
+                  </h3>
+                  <p className="text-[12px] text-slate-400 mt-0.5 truncate">{tashxisObyekt}</p>
+                </div>
+                <button onClick={() => { setTashxisObyekt(''); setTashxis(null); }}
+                  aria-label="Yopish" title="Yopish"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto scrollbar-thin p-5 space-y-4">
+                {tekshir.isPending && <div className="skel h-24 rounded" />}
+
+                {!tekshir.isPending && tashxis && !tashxis.ok && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/25">
+                    <AlertTriangle size={16} className="text-rose-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-[13px] text-rose-200">{tashxis.xabar || 'Tekshirib bo\'lmadi'}</p>
+                  </div>
+                )}
+
+                {!tekshir.isPending && tashxis?.ok && (
+                  <>
+                    {/* Yakuniy xulosa — eng muhim ikki qator */}
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/10">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+                          Tanlangan SVODKA
+                        </div>
+                        <div className="text-[13px] text-white break-words">
+                          {tashxis.yakuniySvod || '(aniqlanmadi)'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/10">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+                          Aniqlangan sub-obyektlar ({(tashxis.yakuniyObyektlar ?? []).length})
+                        </div>
+                        <div className="text-[12px] text-slate-300 space-y-0.5">
+                          {(tashxis.yakuniyObyektlar ?? []).length === 0
+                            ? <span className="text-rose-400">Hech biri — obyekt ishlamaydi</span>
+                            : (tashxis.yakuniyObyektlar ?? []).map((o) => (
+                                <div key={o} className="break-words">· {o}</div>
+                              ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Qo'lda bog'lash — agar bor bo'lsa, sabab shu bo'lishi mumkin */}
+                    {tashxis.override && (
+                      <div className="p-3 rounded-lg bg-blue-500/[0.07] border border-blue-500/20 text-[12px] space-y-1">
+                        <div className="text-[10px] uppercase tracking-widest text-blue-300 mb-1.5">
+                          Qo'lda bog'langan (Sozlamalar → Bog'lash)
+                        </div>
+                        <div className="text-slate-300">LOKALKA: <span className="text-white">{tashxis.override.lokNom}</span></div>
+                        <div className="text-slate-300">SVODKA: <span className="text-white">{tashxis.override.svodNom}</span></div>
+                        {tashxis.override.format && (
+                          <div className="text-slate-300">Format: <span className="text-white">{tashxis.override.format}</span></div>
+                        )}
+                        {tashxis.override.narxTayyor && (
+                          <div className="text-emerald-400">Narx tayyor — svodka talab qilinmaydi</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Fayl-fayl tafsilot */}
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">
+                        Papkadagi fayllar ({(tashxis.fayllar ?? []).length})
+                      </div>
+                      <div className="space-y-1.5">
+                        {(tashxis.fayllar ?? []).map((f) => {
+                          const h = f.holat.toUpperCase();
+                          const rang = h.startsWith('СВОДКА') ? 'text-emerald-400 border-emerald-500/25 bg-emerald-500/[0.07]'
+                            : h.startsWith('ЛОКАЛКА (НОМЗОД') ? 'text-amber-400 border-amber-500/25 bg-amber-500/[0.07]'
+                            : h.startsWith('ЛОКАЛКА')        ? 'text-blue-400 border-blue-500/25 bg-blue-500/[0.07]'
+                            : 'text-slate-400 border-white/10 bg-white/[0.02]';
+                          return (
+                            <div key={f.id} className={`p-2.5 rounded-lg border ${rang}`}>
+                              <div className="flex items-start justify-between gap-3">
+                                <span className="text-[12px] text-white break-words min-w-0">{f.nom}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider flex-shrink-0">
+                                  {f.holat}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-1 leading-snug">{f.sabab}</p>
+                            </div>
+                          );
+                        })}
+                        {(tashxis.fayllar ?? []).length === 0 && (
+                          <p className="text-[12px] text-slate-500 italic">Papkada fayl yo'q.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {tashxis.xabar && (
+                      <p className="text-[11px] text-slate-500 border-t border-white/10 pt-3">{tashxis.xabar}</p>
+                    )}
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AuroraBackground>
   );
 }

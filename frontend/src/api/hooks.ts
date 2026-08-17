@@ -1435,11 +1435,31 @@ export function useSvodUstunSaqla() {
   });
 }
 
-/** Obyekt fayllarini tekshirish — nima yetishmayotganini aytadi */
+/** Obyekt fayllarini tekshirish — nima yetishmayotganini aytadi.
+ *
+ * ⚠️ 2026-08-17 (audit): TIP NOTO'G'RI edi. `{ok, xabar?, muammolar?}` deb
+ * yozilgan, lekin GAS (`05_Papka.js:70`) BUTUNLAY boshqa shakl qaytaradi:
+ * `{ok, papka, fayllar[], yakuniySvod, yakuniyObyektlar[], override, xabar}`.
+ * `muammolar` degan maydon GAS da UMUMAN YO'Q — ya'ni bu tipga ishonib
+ * yozilgan kod hech qachon ma'lumot ko'rsatmasdi. Endi haqiqiy shakl. */
+export type ObyektTekshirFayl = { nom: string; id: string; holat: string; sabab: string };
+export type ObyektTekshirNatija = {
+  ok: boolean;
+  xabar?: string;
+  papka?: string;
+  fayllar?: ObyektTekshirFayl[];
+  yakuniySvod?: string;
+  yakuniyObyektlar?: string[];
+  override?: {
+    lokId: string; lokNom: string; svodId: string; svodNom: string;
+    format: string; narxTayyor: boolean;
+  } | null;
+};
+
 export function useObyektTekshir() {
   return useMutation({
     mutationFn: ({ obyekt }: { obyekt: string }) =>
-      gas<{ ok: boolean; xabar?: string; muammolar?: string[] }>('apiObyektFayllarniTekshir', obyekt),
+      gas<ObyektTekshirNatija>('apiObyektFayllarniTekshir', obyekt),
   });
 }
 
