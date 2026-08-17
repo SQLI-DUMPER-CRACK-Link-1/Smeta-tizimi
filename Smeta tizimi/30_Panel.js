@@ -1,3 +1,25 @@
+/* ══════════════════════════════════════════════════════════════════
+ * _varaqTozalaYokiYarat(ss, nom) — varaqni TOZALAYDI, o'chirmaydi
+ *
+ * ⚡⚡⚡ 2026-08-16 (audit H26/H27 — TASDIQLANDI).
+ *
+ * MUAMMO: sozlama varaqlari `ss.deleteSheet(sh); ss.insertSheet(nom)`
+ * bilan qayta yaratilardi. Ikki xavf bor edi:
+ *   1) O'CHIRILGAN varaqqa havola qilgan HAR QANDAY formula abadiy
+ *      `#REF!` bo'lib qoladi — qayta yaratilgan varaq boshqa obyekt
+ *      hisoblanadi va havola tiklanmaydi.
+ *   2) Faylda YAGONA varaq qolgan bo'lsa `deleteSheet` XATO tashlaydi
+ *      («Cannot remove the last sheet»).
+ *
+ * ENDI: varaq JOYIDA qoladi, faqat mazmuni tozalanadi. Havolalar
+ * saqlanadi, xato ham chiqmaydi.
+ * ══════════════════════════════════════════════════════════════════ */
+function _varaqTozalaYokiYarat(ss, nom){
+  var sh = ss.getSheetByName(nom);
+  if(sh){ try{ sh.clear(); }catch(e){ try{ sh.clearContents(); }catch(e2){} } return sh; }
+  return ss.insertSheet(nom);
+}
+
 /********************************************************************
  * 30_Panel.gs — BOSHQARUV PANELI (server API)
  * ==================================================================
@@ -377,7 +399,8 @@ function apiKategoriyaOl(){
 function apiKategoriyaSaqla(o){
   _sozTaInit();
   var ss=SpreadsheetApp.getActive(), sh=ss.getSheetByName(CFG.SOZ_KAT);
-  ss.deleteSheet(sh); sh=ss.insertSheet(CFG.SOZ_KAT);
+  /* ⚡ 2026-08-16 (audit H27): o'chirib-yaratish o'rniga TOZALASH */
+  sh=_varaqTozalaYokiYarat(ss, CFG.SOZ_KAT);
   var rows=[['ТУР','ҚИЙМАТ / КАЛИТ СЎЗ','НАРХ','КАТ'],
     ['BLOK_CHEL',o.blokChel||'ЗАТРАТЫ ТРУДА','',''],
     ['BLOK_MASH',o.blokMash||'СТРОИТЕЛЬНЫЕ МАШИНЫ','',''],
@@ -496,9 +519,10 @@ function apiBoglashSaqla(pairs){
     else throw new TypeError('pairs array bo\'lishi kerak');
   }
   // pairs = [{obyekt, lokId, lokName, svodId, svodName, format}]
-  var ss=SpreadsheetApp.getActive(), sh=ss.getSheetByName(CFG.SOZ_BOG);
-  if(sh) ss.deleteSheet(sh);
-  sh=ss.insertSheet(CFG.SOZ_BOG);
+  var ss=SpreadsheetApp.getActive();
+  /* ⚡ 2026-08-16 (audit H26): o'chirib-yaratish o'rniga TOZALASH —
+   * bu varaqqa havola qilgan formulalar `#REF!` bo'lib qolmasin. */
+  var sh=_varaqTozalaYokiYarat(ss, CFG.SOZ_BOG);
   var rows=[['ОБЪЕКТ','ЛОК_ID','ЛОК_НОМ','СВОД_ID','СВОД_НОМ','ФОРМАТ','ЛОК_SHEETS','СВОД_SHEETS',
              'СВОД_НОМ_УСТ','СВОД_БИР_УСТ','СВОД_НАРХ_УСТ','СВОД_БЛОК_УСТ','СВОД_QTY_УСТ','СВОД_СУММА_УСТ',
              'НАРХ_ТАЙЁР']];
