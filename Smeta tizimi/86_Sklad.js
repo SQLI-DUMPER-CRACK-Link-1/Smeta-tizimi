@@ -8,7 +8,20 @@
  * Sklad File ID: 10IWmAQTD384T7gRwSmipoEVtAqfa3J80z3B718U-lBw
  ********************************************************************/
 
-var SKLAD_FILE_ID = '10IWmAQTD384T7gRwSmipoEVtAqfa3J80z3B718U-lBw';
+/* ⚡ 2026-08-16 (audit M): fayl ID QOTIRIB yozilgandi — sklad fayli
+ * almashtirilsa yoki nusxa ko'chirilsa kod O'ZGARTIRILISHI kerak edi
+ * (sozlamadan boshqarib bo'lmasdi). Endi avval ScriptProperties dan
+ * o'qiladi, bo'lmasa shu qiymat zaxira sifatida ishlatiladi —
+ * ya'ni hozirgi ish buzilmaydi, lekin sozlash imkoni paydo bo'ladi. */
+var SKLAD_FILE_ID_ZAXIRA = '10IWmAQTD384T7gRwSmipoEVtAqfa3J80z3B718U-lBw';
+function _skladFileId(){
+  try{
+    var v = PropertiesService.getScriptProperties().getProperty('SKLAD_FILE_ID');
+    if(v && String(v).trim()) return String(v).trim();
+  }catch(e){}
+  return SKLAD_FILE_ID_ZAXIRA;
+}
+var SKLAD_FILE_ID = SKLAD_FILE_ID_ZAXIRA;   /* eski kod uchun mos qoladi */
 
 /* ══════════════════════════════════════════════════════════════════
  * MATERIAL DROPDOWN — mavjud (belgilangan) nomlardan mos variant
@@ -324,7 +337,30 @@ function apiSkladTelegramQabul(msg, chatId) {
       return;
     }
 
-    var parsed = JSON.parse(resText);
+    /* ⚡⚡⚡ 2026-08-16 (audit M): LLM javobni ko'pincha markdown blokda
+     * qaytaradi:  ```json  [...]  ```
+     * Bunda `JSON.parse` XATO tashlardi va Telegram orqali kelgan
+     * sklad xabari JIM YO'QOLARDI — ombor yozuvi tushmasdi, foydalanuvchi
+     * esa yuborganini o'ylab yurardi.
+     * Endi fence va atrofdagi matn tozalanadi. */
+    var _tozaJson = String(resText || '').trim()
+      .replace(/^s*```(?:json)?s*/i, '')
+      .replace(/s*```s*$/, '')
+      .trim();
+    /* javob ichida tushuntirish matni bo'lsa — birinchi [ yoki { dan boshlaymiz */
+    var _b1 = _tozaJson.indexOf('['), _b2 = _tozaJson.indexOf('{');
+    var _bosh = (_b1 >= 0 && (_b2 < 0 || _b1 < _b2)) ? _b1 : _b2;
+    if(_bosh > 0) _tozaJson = _tozaJson.slice(_bosh);
+    var _oxir = Math.max(_tozaJson.lastIndexOf(']'), _tozaJson.lastIndexOf('}'));
+    if(_oxir >= 0) _tozaJson = _tozaJson.slice(0, _oxir + 1);
+
+    var parsed;
+    try{ parsed = JSON.parse(_tozaJson); }
+    catch(eJ){
+      yubor("❌ AI javobini o’qib bo’lmadi. Xabarni soddaroq yozib ko’ring.");
+      Logger.log('Sklad JSON parse: ' + eJ + ' | javob: ' + String(resText).slice(0, 300));
+      return;
+    }
     if (!Array.isArray(parsed)) parsed = [parsed];
 
     if(parsed.length === 0) {
