@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, HardHat, CalendarCheck, HandCoins, Search, Filter, Plus } from 'lucide-react';
+import { Users, HardHat, CalendarCheck, HandCoins, Search, Filter, Plus, Pencil, Trash2 } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
-import { useKadrlarData, useIshchiQosh, useTabelBelgila } from '../../api/hooks';
+import {
+  useKadrlarData, useIshchiQosh, useTabelBelgila,
+  /* ⚡⚡⚡ 2026-08-17 (audit): bu ikki hook YOZILGAN va GAS API si ham BOR edi
+     (`apiIshchiTahrir`, `apiIshchiOchir`) — lekin sahifa ularni CHAQIRMASDI.
+     Ya'ni xodim bir marta kiritilsa, uning stavkasini/kasbini saytdan
+     O'ZGARTIRIB BO'LMASDI va ishdan bo'shaganini ham olib tashlab
+     bo'lmasdi. Stavka xato kiritilgan bo'lsa — tabel bo'yicha hisoblangan
+     OYLIK ham doim xato chiqardi va tuzatishning yagona yo'li Google
+     Sheets ni qo'lda ochish edi. */
+  useIshchiTahrir, useIshchiOchir,
+} from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
-import { ErpQoshModal } from '../ErpQoshModal';
+import { ErpQoshModal, type ErpField } from '../ErpQoshModal';
 import { toast } from '../../umumiy/ui/Toast';
 import type { TabelKuni } from '../../api/types';
 
@@ -16,8 +26,23 @@ export default function ErpKadrlar() {
   const [qidiruv, setQidiruv] = useState('');
   const [filtir, setFiltir] = useState('barchasi');
   const [qoshOchiq, setQoshOchiq] = useState(false);
+  const [tahrirIshchi, setTahrirIshchi] = useState<any | null>(null);
   const ishchiQosh = useIshchiQosh();
+  const ishchiTahrir = useIshchiTahrir();
+  const ishchiOchir = useIshchiOchir();
   const tabelBelgila = useTabelBelgila();
+
+  async function ishchiOchirish(ishchi: any) {
+    /* Tabel/oylik bilan bog'liq bo'lgani uchun ATAYLAB tasdiqlanadi va
+       nima o'chirilayotgani aniq ko'rsatiladi. */
+    if (!window.confirm(`«${ishchi.ism}» ishchi ro'yxatdan o'chirilsinmi?\n`
+      + `${ishchi.kasb || ''}${ishchi.brigada ? ' · ' + ishchi.brigada : ''}\n\n`
+      + `Diqqat: bu ishchining oldingi tabel yozuvlari saqlanib qolishi mumkin.`)) return;
+    try {
+      await ishchiOchir.mutateAsync(ishchi.id);
+      toast(`${ishchi.ism} o'chirildi`, 'ok');
+    } catch (e: any) { toast('Xato: ' + e.message, 'danger', undefined, 9000); }
+  }
 
   const bugun = new Date().toISOString().split('T')[0];
   const kunBos = (ishchiId: string, kun: number) => {
@@ -176,8 +201,33 @@ export default function ErpKadrlar() {
                       className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group"
                     >
                       <td className="py-3 px-6 sticky left-0 bg-[#121620] group-hover:bg-[#181d2a] z-10 shadow-[4px_0_12px_rgba(0,0,0,0.5)] transition-colors">
-                        <div className="font-semibold text-white/90 text-sm">{ishchi.ism}</div>
-                        <div className="text-xs text-blue-400 mt-0.5">{ishchi.kasb}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-white/90 text-sm truncate">{ishchi.ism}</div>
+                            <div className="text-xs text-blue-400 mt-0.5 truncate">
+                              {ishchi.kasb}
+                              {/* Stavka ko'rinib turishi kerak — «oylik nega bunchalik?»
+                                  degan savol jadvalning o'zida javob topsin */}
+                              {ishchi.stavka ? <span className="text-slate-500"> · <FmtN val={ishchi.stavka} />/kun</span> : null}
+                            </div>
+                          </div>
+                          {/* ⚡ 2026-08-17 (audit): tahrir/o'chirish — avval saytda YO'Q edi */}
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100
+                                          focus-within:opacity-100 transition-opacity flex-shrink-0">
+                            <button onClick={() => setTahrirIshchi(ishchi)}
+                              aria-label="Ishchini tahrirlash" title="Tahrirlash"
+                              className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors">
+                              <Pencil size={13} />
+                            </button>
+                            <button onClick={() => ishchiOchirish(ishchi)}
+                              disabled={ishchiOchir.isPending}
+                              aria-label="Ishchini o'chirish" title="O'chirish"
+                              className="p-1.5 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10
+                                         transition-colors disabled:opacity-40">
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
                       </td>
                       <td className="py-3 px-6 text-center font-bold text-slate-300">
                         {tabel.ishlaganKunlar} <span className="text-[10px] text-slate-500 font-normal">kun</span>
@@ -230,14 +280,7 @@ export default function ErpKadrlar() {
         title="Yangi ishchi qo'shish"
         isSaving={ishchiQosh.isPending}
         onClose={() => setQoshOchiq(false)}
-        fields={[
-          { key: 'ism', label: 'F.I.O', type: 'text', required: true, placeholder: 'Azizov Bahrom' },
-          { key: 'kasb', label: 'Kasbi', type: 'text', placeholder: 'Prorab' },
-          { key: 'stavka', label: 'Kunlik stavka (so\'m)', type: 'number', placeholder: '250000' },
-          { key: 'brigada', label: 'Brigada', type: 'text', placeholder: 'Brigada-1' },
-          { key: 'obyekt', label: 'Obyekt', type: 'text' },
-          { key: 'telefon', label: 'Telefon', type: 'text', placeholder: '+998 90 123 45 67' },
-        ]}
+        fields={ISHCHI_MAYDONLAR}
         onSubmit={async (v) => {
           try {
             await ishchiQosh.mutateAsync(v as any);
@@ -248,6 +291,38 @@ export default function ErpKadrlar() {
           }
         }}
       />
+
+      {/* ⚡ 2026-08-17 (audit): TAHRIR modali. Maydonlar ro'yxati qo'shish
+          bilan AYNI BIR manbadan (`ISHCHI_MAYDONLAR`) olinadi — ikki joyda
+          alohida yozilsa, biri yangilanib ikkinchisi eskirib qolardi. */}
+      <ErpQoshModal
+        isOpen={!!tahrirIshchi}
+        title={`Tahrirlash: ${tahrirIshchi?.ism ?? ''}`}
+        isSaving={ishchiTahrir.isPending}
+        onClose={() => setTahrirIshchi(null)}
+        fields={ISHCHI_MAYDONLAR}
+        initial={tahrirIshchi ?? undefined}
+        onSubmit={async (v) => {
+          if (!tahrirIshchi) return;
+          try {
+            await ishchiTahrir.mutateAsync({ ...(v as any), id: tahrirIshchi.id });
+            toast('Saqlandi', 'ok');
+            setTahrirIshchi(null);
+          } catch (e: any) {
+            toast('Xato: ' + e.message, 'danger', undefined, 9000);
+          }
+        }}
+      />
     </AuroraBackground>
   );
 }
+
+/* Qo'shish va tahrirlash uchun YAGONA maydonlar ro'yxati */
+const ISHCHI_MAYDONLAR: ErpField[] = [
+  { key: 'ism', label: 'F.I.O', type: 'text', required: true, placeholder: 'Azizov Bahrom' },
+  { key: 'kasb', label: 'Kasbi', type: 'text', placeholder: 'Prorab' },
+  { key: 'stavka', label: 'Kunlik stavka (so\'m)', type: 'number', placeholder: '250000' },
+  { key: 'brigada', label: 'Brigada', type: 'text', placeholder: 'Brigada-1' },
+  { key: 'obyekt', label: 'Obyekt', type: 'text' },
+  { key: 'telefon', label: 'Telefon', type: 'text', placeholder: '+998 90 123 45 67' },
+];

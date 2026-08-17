@@ -2936,11 +2936,17 @@ function apiRazdelShYasatBarcha(){
  * natija beradi — eski marker saqlanib qolgan obyektlarda eski nomlar qaytadi. */
 function apiRazdellarTolaQaytaQur(){
   var ss=SpreadsheetApp.getActive();
-  var dsh=ss.getSheetByName(CFG.RAZDEL_SH);
   // ⚡ 2026-07-13: varaq BUTUNLAY o'chirib qayta yaratiladi — eski 7-ustunli
   // format/sarlavha qoldiqlari ham ketadi, yangi 8-ustunli (ОБЪЕКТ|СМЕТА|RZ|Д1-5)
   // toza holda quriladi.
-  if(dsh){ try{ ss.deleteSheet(dsh); }catch(e){} }
+  //
+  // ⚠️ 2026-08-17 (audit): avval `try{ ss.deleteSheet(dsh); }catch(e){}` — JIM edi.
+  // O'chirish yiqilsa (faylda yagona varaq, ruxsat, havola) eski 7-ustunli varaq
+  // JOYIDA qolar, `apiRazdelShYasatBarcha()` esa uning USTIGA yozar edi: yangi
+  // 8 ustun eskisi bilan qorishib, reestr «tozalandi» xabari bilan aslida
+  // ARALASH holatda qolardi. Endi `_varaqTozalaYokiYarat` ishlatiladi — varaq
+  // joyida qoladi (formulalar #REF! bo'lmaydi), lekin mazmuni ANIQ tozalanadi.
+  if(ss.getSheetByName(CFG.RAZDEL_SH)) _varaqTozalaYokiYarat(ss, CFG.RAZDEL_SH);
   var r=apiRazdelShYasatBarcha();
   r.xabar='Реестр тозаланди ва қайта қурилди: '+r.jami+' объект, '+r.jamiYangi+' RZ';
   return r;

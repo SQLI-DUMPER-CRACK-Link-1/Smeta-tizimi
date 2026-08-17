@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, TrendingUp, HandCoins, Building2, CreditCard, PieChart, Activity, Briefcase, FileSignature, Receipt, Truck, HardHat, ShoppingCart, Info, Search } from 'lucide-react';
+import { Wallet, TrendingUp, HandCoins, Building2, CreditCard, PieChart, Activity, Briefcase, FileSignature, Receipt, Truck, HardHat, ShoppingCart, Info, Search, Trash2 } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
-import { useBuxDashboard, useXarajatlar } from '../../api/hooks';
+import { useBuxDashboard, useXarajatlar, useXarajatYoz, useXarajatOchir } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
+import { toast } from '../../umumiy/ui/Toast';
 
 export function Buxgalteriya() {
   const dash = useBuxDashboard();
   const xarajatlar = useXarajatlar();
+  /* ⚡⚡⚡ 2026-08-17 (audit): `apiXarajatYoz` va `apiXarajatOchir` GAS da BOR,
+     hook'lari ham YOZILGAN — lekin hech bir sahifa ularni chaqirmasdi. Ya'ni
+     ХАРАЖАТЛАР varag'ini FAQAT Google Sheets ni qo'lda ochib to'ldirish
+     mumkin edi. Endi saytdan kiritiladi va o'chiriladi. */
+  const xarajatYoz = useXarajatYoz();
+  const xarajatOchir = useXarajatOchir();
   const [qidiruv, setQidiruv] = useState('');
   const [tab, setTab] = useState<'kassa' | 'xarajat' | 'shartnoma'>('kassa');
+  const [yangi, setYangi] = useState({ sana: '', toifa: '', summa: '', izoh: '' });
 
   if (dash.isLoading || xarajatlar.isLoading || !dash.data) {
     return (
@@ -23,14 +31,45 @@ export function Buxgalteriya() {
   const d = dash.data;
   const xarajatRoyxati = xarajatlar.data || [];
 
-  const xarajatManbaIkona = (manba: string | undefined) => {
-    switch (manba) {
-      case 'Kadrlar': return <HardHat size={14} className="text-blue-400" />;
-      case 'Taminot': return <ShoppingCart size={14} className="text-yellow-400" />;
-      case 'Texnika': return <Truck size={14} className="text-purple-400" />;
-      default: return <Receipt size={14} className="text-slate-400" />;
-    }
+  /* ⚠️ 2026-08-17 (audit): avval bu funksiya `x.manba` bo'yicha ikonka
+     tanlardi va jadvalda «Manba va Toifa» ustuni bor edi. Lekin ХАРАЖАТЛАР
+     varag'ida MANBA USTUNI YO'Q — `apiXarajatOl` faqat
+     {row, sana, toifa, summa, izoh} qaytaradi. Ya'ni `x.manba` HAR DOIM
+     undefined bo'lib, hamma qatorda bir xil «Boshqa» yozuvi chiqardi:
+     foydalanuvchi ma'lumot bor deb o'ylaydigan, aslida bo'sh ustun.
+     Endi ikonka TOIFA bo'yicha tanlanadi — bu maydon haqiqatan mavjud. */
+  const xarajatToifaIkona = (toifa: string | undefined) => {
+    const t = String(toifa || '').toLowerCase();
+    if (/кадр|kadr|ish haqi|иш ҳақи|oylik/.test(t)) return <HardHat size={14} className="text-blue-400" />;
+    if (/таъмин|taminot|материал|material|xarid/.test(t)) return <ShoppingCart size={14} className="text-yellow-400" />;
+    if (/техник|texnika|транспорт|yoqilg|ёқилғ/.test(t)) return <Truck size={14} className="text-purple-400" />;
+    return <Receipt size={14} className="text-slate-400" />;
   };
+
+  async function xarajatQosh() {
+    const summa = Number(String(yangi.summa).replace(/[^\d.-]/g, ''));
+    if (!summa) { toast('Summa kiriting', 'warn'); return; }
+    if (!yangi.toifa.trim()) { toast('Toifa kiriting', 'warn'); return; }
+    try {
+      await xarajatYoz.mutateAsync({
+        sana: yangi.sana || undefined,
+        toifa: yangi.toifa.trim(),
+        summa,
+        izoh: yangi.izoh,
+      });
+      setYangi({ sana: '', toifa: '', summa: '', izoh: '' });
+      toast('Xarajat qo\'shildi', 'ok');
+    } catch (e: any) { toast(`Qo'shilmadi: ${e.message}`, 'danger', undefined, 9000); }
+  }
+
+  async function xarajatOchirish(x: { row: number; sana?: string; toifa?: string; summa?: number }) {
+    if (!window.confirm(`Xarajat o'chirilsinmi?\n${x.sana || ''} · ${x.toifa || ''}\n`
+      + `${(x.summa || 0).toLocaleString('ru-RU')} so'm`)) return;
+    try {
+      await xarajatOchir.mutateAsync(x.row);
+      toast('Xarajat o\'chirildi', 'ok');
+    } catch (e: any) { toast(`O'chirilmadi: ${e.message}`, 'danger', undefined, 9000); }
+  }
 
   const filtrlanganXarajatlar = xarajatRoyxati.filter(x => 
     /* ⚡ 2026-08-16 (audit H8): izoh/toifa bo'sh bo'lsa
@@ -88,7 +127,12 @@ export function Buxgalteriya() {
               <PieChart size={24} />
             </div>
             <div>
-              <div className="text-xs text-slate-400 uppercase tracking-widest mb-1">Jami Xarajat (Modullardan)</div>
+              {/* ⚠️ 2026-08-17 (audit): yorliq «Jami Xarajat (Modullardan)» edi,
+                  lekin `jamiXarajat` — `apiXarajatOl()` yig'indisi, ya'ni
+                  ХАРАЖАТЛАР varag'i. Modullar buxgalteriya daftariga hali
+                  ULANMAGAN (pastdagi blok shuni rostini aytadi), demak yorliq
+                  mavjud bo'lmagan manbani ko'rsatib turgan edi. */}
+              <div className="text-xs text-slate-400 uppercase tracking-widest mb-1">Jami Xarajat (qo'lda kiritilgan)</div>
               <div className="text-2xl font-bold font-mono text-white"><FmtN val={d.jamiXarajat} qisqa /></div>
             </div>
           </GlassCard>
@@ -108,7 +152,7 @@ export function Buxgalteriya() {
                  onClick={() => setTab('xarajat')}
                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${tab === 'xarajat' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-black/40 text-slate-400 hover:text-white border border-white/10'}`}
                >
-                 <Receipt size={16} /> Modul Xarajatlari Tarixi
+                 <Receipt size={16} /> Xarajatlar tarixi
                </button>
                <button 
                  onClick={() => setTab('shartnoma')}
@@ -213,46 +257,107 @@ export function Buxgalteriya() {
             )}
 
             {tab === 'xarajat' && (
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-black/60 sticky top-0 z-20 backdrop-blur-md">
-                  <tr>
-                    <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider w-24">Sana</th>
-                    <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider w-40">Manba va Toifa</th>
-                    <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider">Izoh / Tranzaksiya detali</th>
-                    <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-right w-48">Summa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtrlanganXarajatlar.map((x: any, idx: number) => (
-                    <motion.tr 
-                      key={x.row}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group"
-                    >
-                      <td className="py-4 px-6 text-sm text-slate-400 font-mono">{x.sana}</td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-2 text-sm font-bold text-slate-200">
-                          {xarajatManbaIkona(x.manba)} {x.manba || 'Boshqa'}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">{x.toifa}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="text-sm text-slate-300">{x.izoh}</div>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="text-base font-bold font-mono text-rose-400 bg-rose-500/10 px-3 py-1 rounded inline-block border border-rose-500/20">
-                          - <FmtN val={x.summa} /> 
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                  {filtrlanganXarajatlar.length === 0 && (
-                    <tr><td colSpan={4} className="py-12 text-center text-slate-500">Hech qanday tranzaksiya topilmadi</td></tr>
-                  )}
-                </tbody>
-              </table>
+              <div>
+                {/* ⚡ 2026-08-17 (audit): kiritish formasi. Avval bu bo'lim faqat
+                    o'qish edi va ХАРАЖАТЛАР varag'ini to'ldirishning saytdagi
+                    yo'li YO'Q edi (API bor, UI yo'q). */}
+                <div className="px-6 py-4 border-b border-white/10 bg-black/20">
+                  <p className="text-[11px] uppercase tracking-widest text-slate-400 mb-3">Yangi xarajat</p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-500 uppercase">Sana</span>
+                      <input type="date" value={yangi.sana}
+                        onChange={(e) => setYangi({ ...yangi, sana: e.target.value })}
+                        className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white
+                                   focus:outline-none focus:border-emerald-500/50 w-[150px]" />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-500 uppercase">Toifa *</span>
+                      <input value={yangi.toifa}
+                        onChange={(e) => setYangi({ ...yangi, toifa: e.target.value })}
+                        placeholder="masalan: Ёқилғи"
+                        className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white
+                                   focus:outline-none focus:border-emerald-500/50 w-[170px]" />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-500 uppercase">Summa *</span>
+                      <input type="number" value={yangi.summa}
+                        onChange={(e) => setYangi({ ...yangi, summa: e.target.value })}
+                        className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white
+                                   text-right focus:outline-none focus:border-emerald-500/50 w-[160px]" />
+                    </label>
+                    <label className="flex flex-col gap-1 flex-1 min-w-[180px]">
+                      <span className="text-[10px] text-slate-500 uppercase">Izoh</span>
+                      <input value={yangi.izoh}
+                        onChange={(e) => setYangi({ ...yangi, izoh: e.target.value })}
+                        placeholder="ixtiyoriy"
+                        className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white
+                                   focus:outline-none focus:border-emerald-500/50 w-full" />
+                    </label>
+                    <button onClick={xarajatQosh} disabled={xarajatYoz.isPending}
+                      className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white
+                                 text-sm font-bold transition-colors disabled:opacity-40">
+                      {xarajatYoz.isPending ? 'Saqlanmoqda…' : '+ Qo\'shish'}
+                    </button>
+                  </div>
+                </div>
+
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-black/60 sticky top-0 z-20 backdrop-blur-md">
+                    <tr>
+                      <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider w-24">Sana</th>
+                      {/* «Manba va Toifa» → «Toifa»: manba ustuni jadvalda YO'Q edi,
+                          har qatorda bir xil «Boshqa» chiqardi */}
+                      <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider w-48">Toifa</th>
+                      <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider">Izoh / Tranzaksiya detali</th>
+                      <th className="py-4 px-6 text-xs text-slate-400 font-bold uppercase tracking-wider text-right w-48">Summa</th>
+                      <th className="py-4 px-4 w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtrlanganXarajatlar.map((x: any, idx: number) => (
+                      <motion.tr
+                        key={x.row}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group"
+                      >
+                        <td className="py-4 px-6 text-sm text-slate-400 font-mono">{x.sana}</td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2 text-sm font-bold text-slate-200">
+                            {xarajatToifaIkona(x.toifa)} {x.toifa || '—'}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-sm text-slate-300">{x.izoh}</div>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <div className="text-base font-bold font-mono text-rose-400 bg-rose-500/10 px-3 py-1 rounded inline-block border border-rose-500/20">
+                            - <FmtN val={x.summa} />
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <button onClick={() => xarajatOchirish(x)}
+                            disabled={xarajatOchir.isPending}
+                            aria-label="Xarajatni o'chirish"
+                            title="Xarajatni o'chirish"
+                            className="p-1.5 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10
+                                       opacity-0 group-hover:opacity-100 focus-visible:opacity-100
+                                       transition-all disabled:opacity-40">
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      </motion.tr>
+                    ))}
+                    {filtrlanganXarajatlar.length === 0 && (
+                      <tr><td colSpan={5} className="py-12 text-center text-slate-500">
+                        {qidiruv ? `«${qidiruv}» bo'yicha topilmadi` : 'Hali xarajat kiritilmagan — yuqoridagi formadan qo\'shing'}
+                      </td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             )}
 
             {tab === 'shartnoma' && (

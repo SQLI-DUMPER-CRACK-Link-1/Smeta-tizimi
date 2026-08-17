@@ -1,12 +1,20 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useShartnomalar, useTolovlar, useShartnomaBog, useShartnomaSaqla, useTolovSaqla } from '../../api/hooks';
+import {
+  useShartnomalar, useTolovlar, useShartnomaBog, useShartnomaSaqla, useTolovSaqla,
+  /* ⚡⚡⚡ 2026-08-17 (audit): bu ikki hook YOZILGAN, GAS API si ham BOR edi,
+     lekin sahifa ularni CHAQIRMASDI — ya'ni saytdan shartnomani ham,
+     to'lovni ham O'CHIRIB BO'LMASDI. Xato kiritilgan to'lov «To'langan»
+     summani abadiy shishirib turardi va qoldiq noto'g'ri chiqardi;
+     tuzatishning yagona yo'li Google Sheets ni qo'lda ochish edi. */
+  useShartnomaOchir, useTolovOchir,
+} from '../../api/hooks';
 import {
   Sahifa, Holatlar, Jadval, Nishon, KpiKarta, Qidiruv, Yon, Juft,
   Maydon, Kiritma, Tanlov, Tugma, type Ustun,
 } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
-import { Plus, Save, Building2 } from 'lucide-react';
+import { Plus, Save, Building2, Trash2 } from 'lucide-react';
 import type { Shartnoma as ShTur, Tolov } from '../../api/types';
 
 const HOLATLAR = ['Фаол', 'Якунланган', 'Тўхтатилган'];
@@ -17,6 +25,8 @@ export function Shartnoma() {
   const bog = useShartnomaBog();
   const saqla = useShartnomaSaqla();
   const tolovYoz = useTolovSaqla();
+  const shOchir = useShartnomaOchir();
+  const tolovOchir = useTolovOchir();
 
   const [q, setQ] = useState('');
   const [tanlangan, setTanlangan] = useState<ShTur | null>(null);
@@ -92,6 +102,40 @@ export function Shartnoma() {
     } catch (e: any) { toast(`Qo'shilmadi: ${e.message}`); }
   }
 
+  /* ⚡⚡⚡ 2026-08-17 (audit) — O'CHIRISH AMALLARI
+     Bular PUL hujjatiga tegadi, shuning uchun:
+       • har biri ATAYLAB tasdiqlanadi (tasodifiy bosishdan himoya);
+       • tasdiq matnida ANIQ nima o'chirilayotgani va summasi ko'rsatiladi —
+         foydalanuvchi «nimani o'chiryapman?» deb taxmin qilmasin;
+       • shartnomani o'chirishda unga bog'langan to'lovlar borligi
+         ogohlantiriladi (jim yo'qotish bo'lmasin). */
+  async function shartnomaOchirish() {
+    if (!tanlangan) return;
+    const tolovSoni = shTolovlari.length;
+    const tolangan = tolanganMap[tanlangan.no] || 0;
+    const ogoh = tolovSoni
+      ? `\n\nDIQQAT: bu shartnomada ${tolovSoni} ta to'lov qayd etilgan `
+        + `(jami ${tolangan.toLocaleString('ru-RU')} so'm). Ular avtomat o'chmaydi — `
+        + `kerak bo'lsa avval to'lovlarni o'chiring.`
+      : '';
+    if (!window.confirm(`«${tanlangan.no}» shartnomasi o'chirilsinmi?\n`
+      + `${tanlangan.nomi || ''}\nSummasi: ${(tanlangan.jami || 0).toLocaleString('ru-RU')} so'm${ogoh}`)) return;
+    try {
+      await shOchir.mutateAsync(tanlangan.no);
+      toast(`${tanlangan.no} o'chirildi`, 'ok');
+      setTanlangan(null);
+    } catch (e: any) { toast(`O'chirilmadi: ${e.message}`, 'danger', undefined, 9000); }
+  }
+
+  async function tolovOchirish(t: Tolov) {
+    if (!window.confirm(`To'lov o'chirilsinmi?\n${t.sana || ''} — `
+      + `${(t.summa || 0).toLocaleString('ru-RU')} so'm${t.izoh ? '\n' + t.izoh : ''}`)) return;
+    try {
+      await tolovOchir.mutateAsync(t.row);
+      toast("To'lov o'chirildi", 'ok');
+    } catch (e: any) { toast(`O'chirilmadi: ${e.message}`, 'danger', undefined, 9000); }
+  }
+
   const ustunlar: Ustun<ShTur>[] = [
     { kalit: 'no', nom: '№', en: '110px', chiz: (r) => <span className="font-medium text-text">{r.no}</span> },
     {
@@ -162,11 +206,24 @@ export function Shartnoma() {
         sarlavha={tanlangan?.no ?? ''}
         tavsif={tanlangan?.nomi}
         past={
-          <div className="flex gap-3 justify-end">
-            <Tugma onBos={() => setTanlangan(null)}>Yopish</Tugma>
-            <Tugma tur="primary" onBos={shartnomaSaqla} band={saqla.isPending} ikonka={<Save size={16} />}>
-              Saqlash
-            </Tugma>
+          <div className="flex gap-3 justify-between items-center">
+            {/* O'chirish CHAP tomonda — «Saqlash» yonida turib tasodifan
+                bosilmasligi uchun ataylab ajratilgan */}
+            <button
+              onClick={shartnomaOchirish}
+              disabled={shOchir.isPending}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px]
+                         text-danger hover:bg-danger/10 border border-danger/30
+                         transition-colors disabled:opacity-40">
+              <Trash2 size={15} />
+              {shOchir.isPending ? "O'chirilmoqda…" : "Shartnomani o'chirish"}
+            </button>
+            <div className="flex gap-3">
+              <Tugma onBos={() => setTanlangan(null)}>Yopish</Tugma>
+              <Tugma tur="primary" onBos={shartnomaSaqla} band={saqla.isPending} ikonka={<Save size={16} />}>
+                Saqlash
+              </Tugma>
+            </div>
           </div>
         }
       >
@@ -228,12 +285,26 @@ export function Shartnoma() {
               ) : (
                 <div className="karta divide-y divide-border mb-3">
                   {shTolovlari.map((t) => (
-                    <div key={t.row} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                    <div key={t.row} className="px-3 py-2 flex items-center justify-between gap-3 text-sm group">
                       <div className="min-w-0">
                         <div className="text-text tabular-nums">{t.sana}</div>
                         {t.izoh && <div className="text-[11px] text-text-mute truncate">{t.izoh}</div>}
                       </div>
-                      <span className="text-ok tabular-nums flex-shrink-0"><FmtN val={t.summa} /></span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-ok tabular-nums"><FmtN val={t.summa} /></span>
+                        {/* Har to'lovni alohida o'chirish — xato summa «To'langan»
+                            ni shishirib turmasin */}
+                        <button
+                          onClick={() => tolovOchirish(t)}
+                          disabled={tolovOchir.isPending}
+                          aria-label="To'lovni o'chirish"
+                          title="To'lovni o'chirish"
+                          className="p-1 rounded text-text-mute hover:text-danger hover:bg-danger/10
+                                     opacity-0 group-hover:opacity-100 focus-visible:opacity-100
+                                     transition-all disabled:opacity-40">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

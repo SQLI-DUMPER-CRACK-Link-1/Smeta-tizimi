@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Truck, Search, Filter, Wrench, Fuel, MapPin, CheckCircle, Clock, Plus } from 'lucide-react';
+import { Truck, Search, Filter, Wrench, Fuel, MapPin, CheckCircle, Clock, Plus, Pencil } from 'lucide-react';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
-import { useTexnikaData, useTexnikaQosh, useTexnikaTarixQosh } from '../../api/hooks';
+import { useTexnikaData, useTexnikaQosh, useTexnikaTarixQosh, useTexnikaTahrir } from '../../api/hooks';
 import { Skelet } from '../../umumiy/ui/Sahifa';
-import { ErpQoshModal } from '../ErpQoshModal';
+import { ErpQoshModal, type ErpField } from '../ErpQoshModal';
 import { toast } from '../../umumiy/ui/Toast';
 
 export default function ErpTexnika() {
@@ -15,7 +15,9 @@ export default function ErpTexnika() {
   const [qoshOchiq, setQoshOchiq] = useState(false);
   const [tarixOchiq, setTarixOchiq] = useState(false);
   const [tanlanganTexnika, setTanlanganTexnika] = useState('');
+  const [tahrirTexnika, setTahrirTexnika] = useState<any | null>(null);
   const texnikaQosh = useTexnikaQosh();
+  const texnikaTahrir = useTexnikaTahrir();
   const tarixQosh = useTexnikaTarixQosh();
 
   if (isLoading || !data) {
@@ -223,6 +225,17 @@ export default function ErpTexnika() {
                       >
                         Motochas
                       </button>
+                      {/* ⚡ 2026-08-17 (audit): tahrirlash — holatni «Remontda» ga
+                          o'tkazish yoki yoqilg'i normasini tuzatish uchun.
+                          Avval saytda YO'Q edi (faqat Google Sheets orqali). */}
+                      <button
+                        onClick={() => setTahrirTexnika(t)}
+                        aria-label="Texnikani tahrirlash"
+                        title="Tahrirlash (holat, norma, haydovchi…)"
+                        className="text-xs bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 text-slate-300 px-2 py-1.5 rounded border border-white/10 transition-colors"
+                      >
+                        <Pencil size={13} />
+                      </button>
                     </td>
                   </motion.tr>
                 ))}
@@ -248,22 +261,36 @@ export default function ErpTexnika() {
         title="Yangi texnika qo'shish"
         isSaving={texnikaQosh.isPending}
         onClose={() => setQoshOchiq(false)}
-        fields={[
-          { key: 'nom', label: 'Nomi', type: 'text', required: true, placeholder: 'Hyundai Ekskavator' },
-          { key: 'davlatRaqami', label: 'Davlat raqami', type: 'text', placeholder: '01 A 123 AA' },
-          { key: 'turi', label: 'Turi', type: 'select', options: ['Ekskavator', 'Kran', 'Samosval', 'Buldozer', 'Boshqa'] },
-          { key: 'holat', label: 'Holati', type: 'select', options: ['Ishlayapti', 'Remontda', 'Kutishda', 'Ijara'] },
-          { key: 'obyekt', label: 'Obyekt', type: 'text' },
-          { key: 'haydovchi', label: 'Haydovchi', type: 'text' },
-          { key: 'soatlikNorma', label: 'Motochasiga yoqilg\'i normasi (litr)', type: 'number', placeholder: '15' },
-          { key: 'oldingiQoldiq', label: 'Boshlang\'ich yoqilg\'i qoldig\'i (litr)', type: 'number', placeholder: '0' },
-        ]}
+        fields={TEXNIKA_MAYDONLAR}
         onSubmit={async (v) => {
           try {
             await texnikaQosh.mutateAsync(v as any);
             toast('Texnika qo\'shildi', 'ok');
             setQoshOchiq(false);
           } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
+        }}
+      />
+
+      {/* ⚡⚡⚡ 2026-08-17 (audit): TAHRIR modali. `apiTexnikaTahrir` GAS da BOR,
+          hook'i YOZILGAN edi — lekin sahifa chaqirmasdi. Ya'ni texnika bir
+          marta kiritilsa, uning HOLATINI («Ishlayapti» → «Remontda») ham,
+          yoqilg'i NORMASINI ham saytdan o'zgartirib bo'lmasdi; norma xato
+          bo'lsa yoqilg'i hisobi doim xato chiqardi.
+          Maydonlar ro'yxati qo'shish bilan AYNI BIR manbadan olinadi. */}
+      <ErpQoshModal
+        isOpen={!!tahrirTexnika}
+        title={`Tahrirlash: ${tahrirTexnika?.nom ?? ''}`}
+        isSaving={texnikaTahrir.isPending}
+        onClose={() => setTahrirTexnika(null)}
+        fields={TEXNIKA_MAYDONLAR}
+        initial={tahrirTexnika ?? undefined}
+        onSubmit={async (v) => {
+          if (!tahrirTexnika) return;
+          try {
+            await texnikaTahrir.mutateAsync({ ...(v as any), id: tahrirTexnika.id });
+            toast('Saqlandi', 'ok');
+            setTahrirTexnika(null);
+          } catch (e: any) { toast('Xato: ' + e.message, 'danger', undefined, 9000); }
         }}
       />
 
@@ -293,3 +320,16 @@ export default function ErpTexnika() {
     </AuroraBackground>
   );
 }
+
+/* Qo'shish va tahrirlash uchun YAGONA maydonlar ro'yxati — ikki joyda
+   alohida yozilsa, biri yangilanib ikkinchisi eskirib qolardi. */
+const TEXNIKA_MAYDONLAR: ErpField[] = [
+  { key: 'nom', label: 'Nomi', type: 'text', required: true, placeholder: 'Hyundai Ekskavator' },
+  { key: 'davlatRaqami', label: 'Davlat raqami', type: 'text', placeholder: '01 A 123 AA' },
+  { key: 'turi', label: 'Turi', type: 'select', options: ['Ekskavator', 'Kran', 'Samosval', 'Buldozer', 'Boshqa'] },
+  { key: 'holat', label: 'Holati', type: 'select', options: ['Ishlayapti', 'Remontda', 'Kutishda', 'Ijara'] },
+  { key: 'obyekt', label: 'Obyekt', type: 'text' },
+  { key: 'haydovchi', label: 'Haydovchi', type: 'text' },
+  { key: 'soatlikNorma', label: "Motochasiga yoqilg'i normasi (litr)", type: 'number', placeholder: '15' },
+  { key: 'oldingiQoldiq', label: "Boshlang'ich yoqilg'i qoldig'i (litr)", type: 'number', placeholder: '0' },
+];
