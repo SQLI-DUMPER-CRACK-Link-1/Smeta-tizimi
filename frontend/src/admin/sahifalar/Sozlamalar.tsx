@@ -65,7 +65,18 @@ function TizimBolimi() {
   const saqla = useTizimSozlamaSaqla();
   const [form, setForm] = useState<TizimSozlama | null>(null);
 
-  useEffect(() => { if (data && !form) setForm(data); }, [data, form]);
+  /* ⚡ 2026-08-16 (audit M): shart `!form` edi — forma bir marta
+   * to'ldirilgach server ma'lumoti YANGILANSA HAM ekranda ESKI qiymat
+   * qolardi. Boshqa admin sozlamani o'zgartirsa yoki «Qayta o'qish»
+   * bosilsa — foydalanuvchi eskisini ko'rib, uni saqlab, yangi
+   * o'zgarishni BOSIB KETARDI.
+   * Endi server ma'lumoti o'zgarganda forma ham yangilanadi (lekin
+   * foydalanuvchi tahrirlayotgan bo'lsa tegilmaydi). */
+  const [tegildi, setTegildi] = useState(false);
+  useEffect(() => {
+    if (data && (!form || !tegildi)) setForm(data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   if (isLoading || !form) return <Skelet qatorlar={4} />;
 
@@ -142,7 +153,7 @@ function TizimBolimi() {
               <input
                 type="text"
                 value={String(form[m.key] ?? '')}
-                onChange={e => setForm({ ...form, [m.key]: e.target.value })}
+                onChange={e => { setTegildi(true); setForm({ ...form, [m.key]: e.target.value }); }}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-accent/50"
               />
               <p className="text-xs text-slate-500 mt-1.5">{m.izoh}</p>

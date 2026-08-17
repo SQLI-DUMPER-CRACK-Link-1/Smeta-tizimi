@@ -209,6 +209,22 @@ export default function ErpSifat() {
                           </button>
                         </>
                       )}
+                      {/* ⚡⚡⚡ 2026-08-16 (audit M — WORKFLOW TUZOG'I).
+                          «Tuzatildi» belgilangach BARCHA tugmalar yo'qolardi
+                          va nuqsonni QAYTA OCHISHNING iloji yo'q edi.
+                          Xato bosilsa yoki tuzatish tekshiruvdan o'tmasa —
+                          yozuv abadiy «tuzatilgan» bo'lib qolardi va
+                          nazoratdan chiqib ketardi. */}
+                      {n.status === 'Tuzatildi' && (
+                        <button
+                          onClick={() => holatOzgartir(n.id, 'Jarayonda')}
+                          disabled={holatYangila.isPending}
+                          title="Tuzatish tekshiruvdan o'tmadi — qayta ishga qaytarish"
+                          className="text-xs bg-white/5 hover:bg-amber-500/20 text-slate-400 hover:text-amber-400 px-3 py-1.5 rounded border border-white/10 hover:border-amber-500/30 transition-colors disabled:opacity-50"
+                        >
+                          ↺ Qayta ochish
+                        </button>
+                      )}
                     </td>
                   </motion.tr>
                 ))}
