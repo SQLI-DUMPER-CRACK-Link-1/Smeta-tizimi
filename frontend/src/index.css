@@ -23,6 +23,12 @@
   --bg: #0B0E14;
   --surface: #131722;
   --surface-2: #1B2130;
+  /* ⚡ 2026-08-16 (audit M): `--surface-3` KO'P JOYDA ishlatilardi
+     (skeleton shimmer, kiritma fonlari — 5 ta faylda), lekin HECH
+     QAYERDA e'lon qilinmagandi. Brauzer uni «yaroqsiz» deb tashlab
+     yuborardi: shimmer animatsiyasi ko'rinmasdi, kiritmalar esa
+     shaffof bo'lib matn bilan qo'shilib ketardi. */
+  --surface-3: #232A3B;
   --border: #232A3B;
   --text: #E6EAF2;
   --text-dim: #8B93A7;

@@ -80,7 +80,15 @@ export function IlgorJadval<T extends Record<string, any>>({
       const row = ustunlar.map(u => {
         let val: any = s[u.kalit];
         if (val === null || val === undefined) val = '';
-        return `"${String(val).replace(/"/g, '""')}"`;
+        /* ⚡ 2026-08-16 (audit M — CSV FORMULA INJECTION).
+           Qiymat `=`, `+`, `-` yoki `@` bilan boshlansa Excel uni
+           FORMULA deb bajaradi. Resurs nomi «-БЕТОН» bo'lsa bu bezarar,
+           lekin ma'lumot tashqaridan (faktura OCR, Telegram) kelsa
+           zararli formula ham tushishi mumkin. Qo'shtirnoq bundan
+           HIMOYA QILMAYDI — apostrof kerak. */
+        const xom = String(val);
+        const xavfli = /^[=+@-]/.test(xom);
+        return `"${(xavfli ? "'" + xom : xom).replace(/"/g, '""')}"`;
       });
       csvRows.push(row.join(','));
     }
