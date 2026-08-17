@@ -1544,11 +1544,35 @@ export function useShaxsiySmetalar() {
   });
 }
 
+/* ⚠️ 2026-08-17: TIP GAS BILAN MOS KELMASDI — sahifa butunlay ishlamasdi.
+ *
+ * `apiIshTurQidir` (15_IshTurlar.js:153) qaytaradigan HAQIQIY shakl:
+ *     { key, blKod, blNom, blBirlik, fmt, manba, rs[], score }
+ * Bu yerda esa `{ kod, nom, birlik, narx }` deb e'lon qilingan edi — bu
+ * maydonlar javobda YO'Q. Natijada qidiruv natijalari EKRANDA BO'SH
+ * QATOR bo'lib chiqardi (nom yo'q, kod yo'q, birlik yo'q), qo'shilganda
+ * esa `kod === undefined` bo'lgani uchun dedup faqat BITTA ish qo'shishga
+ * ruxsat berardi. Foydalanuvchi: «шахсий смета бўлими умуман ишламайди».
+ *
+ * Muhim: `rs` (resurs normalari) — smetaning PULINI shu ro'yxat yasaydi.
+ * `apiShaxsiySmetaYarat` har ish uchun `ishlar[i].rs` ni kutadi; u
+ * yuborilmasa summa NOL chiqadi. Shuning uchun `rs` ni oxirigacha
+ * olib boramiz. */
+export type IshTuriTopilma = {
+  key: string;
+  blKod: string;
+  blNom: string;
+  blBirlik: string;
+  fmt?: string;
+  manba?: string;
+  rs?: Array<{ nom: string; birlik: string; norm: number; narx?: number; kod?: string; cat?: string }>;
+  score?: number;
+};
+
 export function useIshTurQidir() {
   return useMutation({
     mutationFn: ({ soz, limit }: { soz: string; limit?: number }) =>
-      gas<Array<{ kod: string; nom: string; birlik: string; narx?: number }>>(
-        'apiIshTurQidir', soz, limit ?? 40),
+      gas<IshTuriTopilma[]>('apiIshTurQidir', soz, limit ?? 40),
   });
 }
 

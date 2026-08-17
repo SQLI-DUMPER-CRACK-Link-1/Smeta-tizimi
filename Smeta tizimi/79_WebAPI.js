@@ -39,7 +39,7 @@ var WAPI_LOG_KEY   = 'WEB_API_LOG';
  * ⚠️ QO'LDA YANGILANADI: har `clasp version` dan keyin shu raqam
  * o'sha versiya raqamiga tenglashtiriladi.
  * ================================================================== */
-var KOD_VERSIYA = 331;
+var KOD_VERSIYA = 333;
 
 /** Yengil probe: hech qanday jadval o'qimaydi, darhol javob beradi. */
 function apiKodVersiya(){

@@ -252,12 +252,7 @@ export function Monitoring() {
           </button>
         </div>
 
-        {tashxis.data != null && (
-          <pre className="text-[11px] text-text-dim bg-[var(--surface-2)]/50 rounded p-3
-                          overflow-auto max-h-64 leading-relaxed mt-2">
-{JSON.stringify(tashxis.data, null, 2)}
-          </pre>
-        )}
+        {tashxis.data != null && <TashxisKorinish malumot={tashxis.data} />}
 
         {/* ⚡⚡⚡ 2026-08-17 (audit): OBYEKT TASHXISI — yuqoridagi tugma butun
             TIZIMNI tekshiradi (sozlama/papka/kesh/trigger). Bitta obyekt
@@ -294,12 +289,7 @@ export function Monitoring() {
               {obDiag.isPending ? 'Tekshirilmoqda…' : 'Tekshirish'}
             </button>
           </div>
-          {obDiag.data != null && (
-            <pre className="text-[11px] text-text-dim bg-[var(--surface-2)]/50 rounded p-3
-                            overflow-auto max-h-64 leading-relaxed mt-2">
-{JSON.stringify(obDiag.data, null, 2)}
-            </pre>
-          )}
+          {obDiag.data != null && <TashxisKorinish malumot={obDiag.data} />}
         </div>
 
         {/* Kesh va triggerlar — doim ko'rinadi, tugma bosish shart emas */}
@@ -308,11 +298,13 @@ export function Monitoring() {
             <p className="text-[11px] uppercase tracking-wide text-text-dim mb-1.5">Kesh holati</p>
             {kesh.isLoading && <div className="skel h-10 rounded" />}
             {kesh.isError && <p className="text-[11px] text-danger">O‘qilmadi</p>}
-            {kesh.data != null && (
-              <pre className="text-[10px] text-text-dim overflow-auto max-h-28 leading-relaxed">
-{JSON.stringify(kesh.data, null, 1)}
-              </pre>
-            )}
+            {/* ⚠️ 2026-08-17: avval xom `JSON.stringify` chiqarilardi — ekranda
+                `{"skan":{"ts":"2026-08-17T11:41:25.294Z","ageSek":542,…}}` turardi.
+                Bu ma'lumot emas, chiqindi: foydalanuvchiga ISO sana ham,
+                sekundlar ham, `manba` degan ichki maydon ham kerak emas.
+                Kerak bo'lgani: qaysi kesh, qancha vaqt oldin, yangimi.
+                Xom JSON faqat «batafsil» ochilganda ko'rinadi. */}
+            {kesh.data != null && <KeshJadval malumot={kesh.data} />}
           </div>
 
           <div className="rounded-lg border border-border bg-[var(--surface-2)]/30 p-2.5">
@@ -366,6 +358,199 @@ export function Monitoring() {
         {() => <Jadval ustunlar={ustunlar} satrlar={yozuvlar} kalit={(y, i) => `${y.t}|${i}`} />}
       </Holatlar>
     </Sahifa>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * KeshJadval — kesh holatini ODAM O'QIY OLADIGAN ko'rinishda
+ *
+ * ⚠️ 2026-08-17: bu blokda avval xom JSON turardi. Foydalanuvchi:
+ * «мониторингда кеш ҳолати деган жойида json чиқиб кетаяпди шекилли».
+ * To'g'ri — ekranda ichki maydon nomlari (`ts`, `ageSek`, `manba`) va
+ * ISO sanalar ko'rinardi. Ular ishlab chiquvchi uchun, foydalanuvchi
+ * uchun emas.
+ *
+ * Endi har kesh kaliti bitta qator: NOMI · qancha vaqt oldin · holat.
+ * Xom JSON «batafsil» ostida qoladi — kerak bo'lganda ochiladi.
+ * ══════════════════════════════════════════════════════════════════ */
+function _yoshMatn(sek: number): string {
+  if (!Number.isFinite(sek) || sek < 0) return '—';
+  if (sek < 60) return `${Math.round(sek)} sek oldin`;
+  const daq = Math.floor(sek / 60);
+  if (daq < 60) return `${daq} daqiqa oldin`;
+  const soat = Math.floor(daq / 60);
+  if (soat < 24) return `${soat} soat ${daq % 60} daq oldin`;
+  return `${Math.floor(soat / 24)} kun oldin`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * TashxisKorinish — tashxis natijasini o'qiladigan qilib chizadi
+ *
+ * ⚠️ 2026-08-17: tashxis natijalari ham xom `JSON.stringify` bilan
+ * chiqarilardi — ya'ni tugmani bosgan foydalanuvchi javob o'rniga
+ * qavslar va maydon nomlarini ko'rardi.
+ *
+ * Bu chizuvchi SHAKLGA BOG'LIQ EMAS (GAS javobi o'zgarsa ham ishlaydi):
+ * ichma-ich obyektlarni bo'limlarga ajratadi, `true/false` ni belgi
+ * (badge) ga, ro'yxatlarni sanoqqa aylantiradi. Xom ma'lumot pastda
+ * «batafsil» ostida qoladi — tekshirish uchun kerak bo'lganda.
+ * ══════════════════════════════════════════════════════════════════ */
+function _sarlavhaMatn(kalit: string): string {
+  /* `narxTayyor` → «Narx tayyor», `kesh_holati` → «Kesh holati» */
+  const s = kalit.replace(/[_-]+/g, ' ').replace(/([a-z\d])([A-Z])/g, '$1 $2');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function TashxisQator({ kalit, qiymat }: { kalit: string; qiymat: unknown }) {
+  const nom = _sarlavhaMatn(kalit);
+
+  if (typeof qiymat === 'boolean') {
+    return (
+      <div className="flex items-center justify-between gap-2 text-[11px] py-0.5">
+        <span className="text-text-dim truncate">{nom}</span>
+        <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium flex-shrink-0 ${
+          qiymat ? 'bg-ok/15 text-ok' : 'bg-danger/15 text-danger'
+        }`}>
+          {qiymat ? 'ha' : 'yo‘q'}
+        </span>
+      </div>
+    );
+  }
+
+  if (qiymat == null || qiymat === '') {
+    return (
+      <div className="flex items-center justify-between gap-2 text-[11px] py-0.5">
+        <span className="text-text-dim truncate">{nom}</span>
+        <span className="text-text-mute italic flex-shrink-0">yo‘q</span>
+      </div>
+    );
+  }
+
+  if (Array.isArray(qiymat)) {
+    if (!qiymat.length) {
+      return (
+        <div className="flex items-center justify-between gap-2 text-[11px] py-0.5">
+          <span className="text-text-dim truncate">{nom}</span>
+          <span className="text-text-mute italic flex-shrink-0">bo‘sh</span>
+        </div>
+      );
+    }
+    return (
+      <div className="py-0.5">
+        <p className="text-[11px] text-text-dim mb-0.5">{nom} ({qiymat.length})</p>
+        <div className="pl-3 space-y-0.5 max-h-32 overflow-auto">
+          {qiymat.slice(0, 40).map((x, i) => (
+            <div key={i} className="text-[10px] text-text-mute font-mono truncate">
+              {typeof x === 'object' ? JSON.stringify(x) : String(x)}
+            </div>
+          ))}
+          {qiymat.length > 40 && (
+            <div className="text-[10px] text-text-mute italic">
+              … va yana {qiymat.length - 40} ta
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (typeof qiymat === 'object') {
+    return (
+      <div className="py-1">
+        <p className="text-[11px] font-medium text-text mb-0.5">{nom}</p>
+        <div className="pl-3 border-l border-border">
+          {Object.entries(qiymat as Record<string, unknown>).map(([k, v]) => (
+            <TashxisQator key={k} kalit={k} qiymat={v} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2 text-[11px] py-0.5">
+      <span className="text-text-dim truncate">{nom}</span>
+      <span className="text-text font-mono flex-shrink-0 truncate max-w-[55%]">{String(qiymat)}</span>
+    </div>
+  );
+}
+
+function TashxisKorinish({ malumot }: { malumot: unknown }) {
+  if (malumot == null || typeof malumot !== 'object') {
+    return (
+      <p className="text-[11px] text-text-dim mt-2">
+        {malumot == null ? 'Natija bo‘sh' : String(malumot)}
+      </p>
+    );
+  }
+  return (
+    <div className="bg-[var(--surface-2)]/50 rounded p-3 mt-2 max-h-64 overflow-auto">
+      {Object.entries(malumot as Record<string, unknown>).map(([k, v]) => (
+        <TashxisQator key={k} kalit={k} qiymat={v} />
+      ))}
+      <details className="mt-2 pt-2 border-t border-border">
+        <summary className="text-[10px] text-text-mute cursor-pointer hover:text-text-dim">
+          batafsil (xom ma'lumot)
+        </summary>
+        <pre className="text-[9px] text-text-mute overflow-auto max-h-40 leading-relaxed mt-1">
+{JSON.stringify(malumot, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
+function KeshJadval({ malumot }: { malumot: unknown }) {
+  if (!malumot || typeof malumot !== 'object') {
+    return <p className="text-[11px] text-text-mute italic">Ma'lumot yo'q</p>;
+  }
+  const kirishlar = Object.entries(malumot as Record<string, any>);
+  if (!kirishlar.length) {
+    return <p className="text-[11px] text-text-mute italic">Kesh bo'sh</p>;
+  }
+
+  return (
+    <div className="space-y-1">
+      {kirishlar.map(([nom, q]) => {
+        /* Qiymat obyekt bo'lmasa — oddiy ko'rsatamiz (kelajakda shakl
+           o'zgarsa ham hech narsa yiqilmasin). */
+        if (!q || typeof q !== 'object') {
+          return (
+            <div key={nom} className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-text font-medium truncate">{nom}</span>
+              <span className="text-text-dim font-mono">{String(q)}</span>
+            </div>
+          );
+        }
+        const eskirgan = q.eskirgan === true;
+        const bor = q.ts != null || q.ageSek != null;
+        return (
+          <div key={nom} className="flex items-center justify-between gap-2 text-[11px]">
+            <span className="text-text font-medium truncate">{nom}</span>
+            <span className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-text-dim">
+                {bor ? _yoshMatn(Number(q.ageSek)) : 'yozilmagan'}
+              </span>
+              {bor && (
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                  eskirgan ? 'bg-warn/15 text-warn' : 'bg-ok/15 text-ok'
+                }`}>
+                  {eskirgan ? 'eskirgan' : 'yangi'}
+                </span>
+              )}
+            </span>
+          </div>
+        );
+      })}
+      <details className="mt-1.5">
+        <summary className="text-[10px] text-text-mute cursor-pointer hover:text-text-dim">
+          batafsil (xom ma'lumot)
+        </summary>
+        <pre className="text-[9px] text-text-mute overflow-auto max-h-24 leading-relaxed mt-1">
+{JSON.stringify(malumot, null, 1)}
+        </pre>
+      </details>
+    </div>
   );
 }
 

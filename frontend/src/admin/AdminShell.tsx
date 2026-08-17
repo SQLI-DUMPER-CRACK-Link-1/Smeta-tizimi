@@ -5,12 +5,20 @@ import { AlertTriangle } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
+import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 
 const MENYU = [
   { yol: '/admin/obyektlar',  nom: 'Obyektlar',   Ikonka: Building2 },
   { yol: '/admin/f2',         nom: 'Ф2 импорт',    Ikonka: FileInput },
   { yol: '/admin/buxgalteriya', nom: 'Buxgalteriya', Ikonka: Calculator },
-  { yol: '/admin/shartnoma',  nom: 'Shartnomalar', Ikonka: FileSignature },
+  /* ⚠️ 2026-08-17: bu yerda `/admin/shartnoma` (birlikda) yozilgan edi,
+     App.tsx dagi marshrut esa `shartnomalar` (ko'plikda). Hech qanday
+     marshrut mos kelmagani uchun so'rov `<Route path="*">` ga tushardi,
+     u esa `/` ga — YA'NI KIRISH SAHIFASIGA yo'naltiradi.
+     Foydalanuvchi: «шартномалар табига кирсам кириш менюсига чиқариб
+     ташлаяпди». Sababi sessiya EMAS, oddiy nom xatosi edi.
+     Pastdagi `_MENYU_TEKSHIR` shu turdagi xatoni endi darhol ushlaydi. */
+  { yol: '/admin/shartnomalar', nom: 'Shartnomalar', Ikonka: FileSignature },
   { yol: '/admin/fakturalar', nom: 'Fakturalar (PDF)', Ikonka: FileText },
   { yol: '/admin/f2-tayyorlash', nom: 'Ф2 тайёрлаш', Ikonka: FileOutput },
   { yol: '/admin/narxlar',    nom: 'Narxlar',      Ikonka: Tags },
@@ -32,6 +40,13 @@ export default function AdminShell() {
   const navigate = useNavigate();
   const sess = useSessiya();
   const joy = useLocation();
+
+  /* ⚠️ 2026-08-17: menyu havolalari marshrutlar bilan mos kelishini DEV da
+     tekshiramiz. `/admin/shartnoma` ↔ `shartnomalar` nom xatosi
+     foydalanuvchini kirish sahifasiga otib yuborardi va bu turdagi xatoni
+     na TypeScript, na lint ko'radi (ikkisi ham oddiy matn).
+     Produksiyada bu chaqiruv hech narsa qilmaydi. */
+  menyuTekshirDev(MENYU.map((m) => m.yol));
 
   /* ⚡ Og'ir ish sahifalari — bu yerda 3D bezak fon o'chiriladi (pastga qara) */
   const OGIR = ['/admin/f2', '/admin/holat', '/admin/ierarxiya', '/admin/narxlar', '/admin/f2-tayyorlash'];

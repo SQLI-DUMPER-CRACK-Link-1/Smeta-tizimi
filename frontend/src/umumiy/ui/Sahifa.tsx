@@ -71,7 +71,16 @@ export function Sahifa<T = unknown>({
 
 /** «Ma'lumot 4 daqiqa oldingi» — eskirganda sariq bo'ladi (14 §3.2). */
 export function MalumotYoshi({ vaqt }: { vaqt: number }) {
+  /* ⚠️ 2026-08-17: TanStack `dataUpdatedAt` ma'lumot HALI KELMAGANDA 0
+     bo'ladi. Avval bu tekshirilmasdi va `Date.now() - 0` — ya'ni
+     1970-yildan hisob — ekranga «496381 soat oldin» deb chiqardi.
+     Foydalanuvchi buni har xato/yuklanish holatida ko'rardi va bu butun
+     sahifaga ishonchni yo'qotadi (bir joyda bo'lmagan raqam chiqsa,
+     qolganiga ham ishonmaydi).
+     Endi: yaroqsiz vaqt belgisi bo'lsa hech nima ko'rsatilmaydi. */
+  if (!vaqt || !Number.isFinite(vaqt) || vaqt <= 0) return null;
   const daq = Math.floor((Date.now() - vaqt) / 60000);
+  if (daq < 0) return null;                       // kelajakdagi vaqt — soat noto'g'ri
   const matn = daq < 1 ? 'hozirgina' : daq < 60 ? `${daq} daqiqa oldin` : `${Math.floor(daq / 60)} soat oldin`;
   const rang = daq > 15 ? 'text-warn' : daq >= 1 ? 'text-text-dim' : 'text-text-mute';
   return <span className={`text-xs ${rang}`} title="Ma'lumot yangilangan vaqti">{matn}</span>;
