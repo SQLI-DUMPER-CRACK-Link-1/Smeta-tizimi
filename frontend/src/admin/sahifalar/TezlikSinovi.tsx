@@ -28,7 +28,8 @@ import { sbHolatOl, sbDaraxtQur, type SbHolatQator } from '../../api/supabase';
 
 type Jamlanma = { qatorlar: number; smeta: number; fakt: number; f2: number };
 type Yon = { ms: number; jam: Jamlanma | null; xato?: string; sozlanmagan?: boolean;
-             toliq?: boolean; jamiServerda?: number | null; soro?: number };
+             toliq?: boolean; jamiServerda?: number | null; soro?: number;
+             msBirinchi?: number; msQolgan?: number };
 
 /** GAS daraxtidan jamlanma — barcha tugunlarni aylanib chiqadi. */
 function gasJamla(tree: any[]): Jamlanma {
@@ -100,7 +101,8 @@ export default function TezlikSinovi() {
     } else {
       const q = r.qatorlar || [];
       setSupa({ ms: r.ms || 0, jam: sbJamla(q),
-                toliq: r.toliq, jamiServerda: r.jamiServerda, soro: r.soro });
+                toliq: r.toliq, jamiServerda: r.jamiServerda, soro: r.soro,
+                msBirinchi: r.msBirinchi, msQolgan: r.msQolgan });
       /* Daraxt qurilishini ham sinaymiz — tez, lekin ishlashi kerak */
       try { sbDaraxtQur(q); } catch { /* quruvchi yiqilsa jamlanma baribir ko'rinadi */ }
     }
@@ -258,6 +260,15 @@ function Yonlama({ nom, Ikonka, yon }:
               )}
               {yon.soro != null && yon.soro > 1 && (
                 <span className="text-text-mute"> · {yon.soro} so’rov</span>
+              )}
+              {/* Vaqt QAYERGA ketgani — optimallashtirishni taxmin emas,
+                  o’lchov bilan qilish uchun. 1-so’rov katta bo’lsa muammo
+                  tarmoq masofasida; qolgani katta bo’lsa — hajmda. */}
+              {yon.msBirinchi != null && (
+                <div className="text-text-mute">
+                  1-so’rov {yon.msBirinchi} ms
+                  {yon.msQolgan ? " · qolgani (parallel) " + yon.msQolgan + " ms" : ""}
+                </div>
               )}
             </div>
               <div>Smeta: <FmtN val={yon.jam.smeta} /></div>

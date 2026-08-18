@@ -38,6 +38,8 @@ export type SbJavob<T> = {
   jamiServerda?: number | null;
   toliq?: boolean;
   soro?: number;
+  msBirinchi?: number;
+  msQolgan?: number;
 };
 
 export type SbSoro = {

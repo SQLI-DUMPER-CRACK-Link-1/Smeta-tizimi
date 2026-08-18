@@ -151,7 +151,13 @@ export const onRequestPost: PagesFunction<{
     let jamiServerda: number | null = null;
     let soro = 0;
 
+    /* Bosqichma-bosqich vaqt — sekinlik QAYERDA ekanini bilish uchun.
+       Taxmin qilmaymiz: birinchi so'rov (aloqa o'rnatish + tarmoq yo'li)
+       va qolgan sahifalar (parallel) alohida o'lchanadi. */
+    const tBir = Date.now();
     const birinchi = await sahifaOl(0, Math.min(SAHIFA, kerak));
+    const msBirinchi = Date.now() - tBir;
+    let msQolgan = 0;
     soro++;
     if ('xato' in birinchi && birinchi.xato) {
       return Response.json({ ok: false, error: birinchi.xato });
@@ -170,7 +176,9 @@ export const onRequestPost: PagesFunction<{
       }
       soro += vazifalar.length;
 
+      const tQol = Date.now();
       const natijalar = await Promise.all(vazifalar);
+      msQolgan = Date.now() - tQol;
       for (const nat of natijalar) {
         if (nat.xato) return Response.json({ ok: false, error: nat.xato });
         if (nat.bolak?.length) qatorlar = qatorlar.concat(nat.bolak);
@@ -191,6 +199,11 @@ export const onRequestPost: PagesFunction<{
       jamiServerda,
       toliq,
       soro,
+      /* Vaqt taqsimoti — optimallashtirishni taxmin bilan emas, o'lchov
+         bilan qilish uchun. msBirinchi katta bo'lsa muammo TARMOQ
+         MASOFASIDA (Supabase regioni), msQolgan katta bo'lsa — HAJMDA. */
+      msBirinchi,
+      msQolgan,
       ms: Date.now() - t0,
     });
   } catch (err: any) {
