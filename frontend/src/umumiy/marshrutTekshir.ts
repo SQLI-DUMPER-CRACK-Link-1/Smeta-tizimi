@@ -25,7 +25,7 @@ export const ADMIN_MARSHRUTLARI = [
   'obyektlar', 'holat/:id', 'f2', 'f2-tayyorlash', 'buxgalteriya',
   'shartnomalar', 'fakturalar', 'sklad', 'narxlar', 'ierarxiya',
   'monitoring', 'sozlamalar', 'fayl-boglash', 'hujjatlar',
-  'shaxsiy-smeta', 'supabase', 'tezlik', 'kadrlar', 'texnika', 'taminot', 'sifat',
+  'shaxsiy-smeta', 'supabase', 'tezlik', 'test', 'test/obyektlar', 'test/daraxt', 'kadrlar', 'texnika', 'taminot', 'sifat',
 ] as const;
 
 /**

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
-import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge } from 'lucide-react';
+import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
@@ -34,6 +34,7 @@ const MENYU = [
   { yol: '/admin/shaxsiy-smeta', nom: 'Shaxsiy smeta', Ikonka: NotebookPen },
   { yol: '/admin/supabase', nom: 'Supabase', Ikonka: Database },
   { yol: '/admin/tezlik', nom: 'Tezlik sinovi', Ikonka: Gauge },
+  { yol: '/admin/test', nom: '🧪 Test Supabase', Ikonka: FlaskConical },
   { yol: '/admin/sozlamalar', nom: 'Sozlamalar',   Ikonka: Settings },
 ];
 

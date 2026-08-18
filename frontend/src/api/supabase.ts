@@ -161,3 +161,79 @@ export function sbDaraxtQur(qatorlar: SbHolatQator[]): SbTugun[] {
   }
   return [...razdellar.values()];
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * SUPABASE QATORLARI → MAVJUD `TreeNode` SHAKLI
+ *
+ * Nima uchun: saytda daraxtni chizadigan tayyor komponent bor
+ * (`umumiy/daraxt/SmetaTree`) — virtual ro'yxat, qidiruv, ranglar,
+ * yoyish/yig'ish hammasi ishlaydi. Uni qaytadan yozish xato bo'lardi:
+ * ikkita daraxt ikki xil ko'rinadi va ikki xil buziladi.
+ *
+ * Shuning uchun Supabase javobini o'sha komponent kutgan shaklga
+ * o'giramiz — chizish mantig'i BITTA joyda qoladi.
+ *
+ * ⚠️ Ota-bola bog'lanishi jadvalda YO'Q (yuqoridagi izohga qara):
+ * daraxt varaq/qator TARTIBI bo'yicha tiklanadi.
+ * ══════════════════════════════════════════════════════════════════ */
+import type { TreeNode } from './types';
+
+export function sbTreeQur(qatorlar: SbHolatQator[]): TreeNode[] {
+  const son = (v: unknown) => Number(v) || 0;
+
+  const yasa = (r: SbHolatQator): TreeNode => ({
+    type: (r.tur as TreeNode['type']) || 'rs',
+    nom: r.nom || '',
+    varaq: r.varaq || '',
+    row: son(r.qator),
+    kat: r.kategoriya || '',
+    kod: r.kod || '',
+    birlik: r.birlik || '',
+    smetaHajm: son(r.smeta_hajm),
+    smeta: son(r.smeta_pul),
+    narx: son(r.narx),
+    fakt: son(r.fakt),
+    qoldiq: son(r.qoldiq),
+    f2ol: son(r.f2ol),
+    /* ⚠️ `f2mum` (F2 mumkin = fakt − f2ol) jadvalda SAQLANMAYDI.
+       O'zimiz to'qib chiqarmaymiz — mavjud ikki ustundan hisoblaymiz,
+       bu GAS dagi ta'rif bilan bir xil. */
+    f2mum: Math.max(0, son(r.fakt) - son(r.f2ol)),
+    stFakt: son(r.st_fakt),
+    stF2: son(r.st_f2),
+    children: [],
+  });
+
+  const razdellar = new Map<string, TreeNode>();
+  const tartib: TreeNode[] = [];
+  let joriyIsh: TreeNode | null = null;
+
+  for (const r of qatorlar) {
+    const rzNom = r.razdel || '(razdelsiz)';
+    let rz = razdellar.get(rzNom);
+    if (!rz) {
+      rz = { type: 'rz', nom: rzNom, varaq: r.varaq || '', row: 0,
+             smetaHajm: 0, smeta: 0, narx: 0, fakt: 0, qoldiq: 0,
+             f2ol: 0, f2mum: 0, children: [] };
+      razdellar.set(rzNom, rz);
+      tartib.push(rz);
+      joriyIsh = null;
+    }
+    const t = yasa(r);
+    if (r.tur === 'bl') { rz.children!.push(t); joriyIsh = t; }
+    else if (joriyIsh)  { joriyIsh.children!.push(t); }
+    else                { rz.children!.push(t); }
+  }
+
+  /* Razdel jamlanmasi — ishlar yig'indisi. Jadvalda razdel qatori yo'q,
+     shuning uchun bu yerda hisoblanadi (soxta emas: bolalardan). */
+  for (const rz of tartib) {
+    for (const bl of rz.children || []) {
+      rz.smeta += bl.smeta; rz.fakt += bl.fakt;
+      rz.f2ol += bl.f2ol; rz.qoldiq += bl.qoldiq;
+      rz.stFakt = (rz.stFakt || 0) + (bl.stFakt || 0);
+      rz.stF2 = (rz.stF2 || 0) + (bl.stF2 || 0);
+    }
+  }
+  return tartib;
+}
