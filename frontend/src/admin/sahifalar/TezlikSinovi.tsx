@@ -27,7 +27,8 @@ import { gas } from '../../api/client';
 import { sbHolatOl, sbDaraxtQur, type SbHolatQator } from '../../api/supabase';
 
 type Jamlanma = { qatorlar: number; smeta: number; fakt: number; f2: number };
-type Yon = { ms: number; jam: Jamlanma | null; xato?: string; sozlanmagan?: boolean };
+type Yon = { ms: number; jam: Jamlanma | null; xato?: string; sozlanmagan?: boolean;
+             toliq?: boolean; jamiServerda?: number | null; soro?: number };
 
 /** GAS daraxtidan jamlanma — barcha tugunlarni aylanib chiqadi. */
 function gasJamla(tree: any[]): Jamlanma {
@@ -98,7 +99,8 @@ export default function TezlikSinovi() {
       setSupa({ ms: r.ms || 0, jam: null, xato: r.error, sozlanmagan: r.sozlanmagan });
     } else {
       const q = r.qatorlar || [];
-      setSupa({ ms: r.ms || 0, jam: sbJamla(q) });
+      setSupa({ ms: r.ms || 0, jam: sbJamla(q),
+                toliq: r.toliq, jamiServerda: r.jamiServerda, soro: r.soro });
       /* Daraxt qurilishini ham sinaymiz — tez, lekin ishlashi kerak */
       try { sbDaraxtQur(q); } catch { /* quruvchi yiqilsa jamlanma baribir ko'rinadi */ }
     }
@@ -117,6 +119,13 @@ export default function TezlikSinovi() {
   const mosKeladi = farqlar
     ? farqlar.qatorlar === 0 && farqlar.smeta < 0.5 && farqlar.fakt < 0.5 && farqlar.f2 < 0.5
     : false;
+
+  /* ⚠️ 2026-08-17: «to'liq emas» va «eskirgan» — IKKI BOSHQA narsa, lekin
+     ikkalasi ham qizil xulosa berardi va foydalanuvchi noto'g'ri joyni
+     tuzatishga urinardi (aslida sabab o'qish kodida edi: Supabase REST
+     server tomonda 1000 qator bilan kesib tashlagan).
+     Endi ular AJRATILADI. */
+  const toliqEmas = supa?.jam != null && supa.toliq === false;
 
   return (
     <Sahifa
@@ -201,10 +210,18 @@ export default function TezlikSinovi() {
                 <Farq nom="Fakt" a={sheets!.jam!.fakt} b={supa!.jam!.fakt} />
                 <Farq nom="Ф2" a={sheets!.jam!.f2} b={supa!.jam!.f2} />
               </div>
-              {!mosKeladi && (
+              {!mosKeladi && toliqEmas && (
+                <p className="text-[11px] text-warn mt-2">
+                  ⚠️ Ma'lumot TO‘LIQ O‘QILMADI: Supabase {supa!.jamiServerda ?? '?'} qator
+                  borligini aytdi, {supa!.jam!.qatorlar} tasi olindi. Sabab — ko‘zgu emas,
+                  o‘qish chegarasi. Summalarni bu holatda solishtirish MA'NOSIZ.
+                </p>
+              )}
+              {!mosKeladi && !toliqEmas && (
                 <p className="text-[11px] text-text-dim mt-2">
-                  Sabab odatda: bu obyekt oxirgi sinxronizatsiyadan keyin o‘zgargan.
-                  Supabase sahifasidan to‘liq sinxronni ishga tushirib qayta sinang.
+                  Ma'lumot to‘liq o‘qildi, demak sabab ko‘zguda: bu obyekt oxirgi
+                  sinxronizatsiyadan keyin o‘zgargan. Supabase sahifasidan to‘liq
+                  sinxronni ishga tushirib qayta sinang.
                 </p>
               )}
             </div>
@@ -234,7 +251,15 @@ function Yonlama({ nom, Ikonka, yon }:
             </p>
           ) : yon.jam && (
             <div className="space-y-0.5 text-[11px] text-text-dim">
-              <div>{yon.jam.qatorlar} qator</div>
+              <div>
+              {yon.jam.qatorlar} qator
+              {yon.toliq === false && (
+                <span className="text-warn"> — to’liq emas ({yon.jamiServerda ?? '?'} dan)</span>
+              )}
+              {yon.soro != null && yon.soro > 1 && (
+                <span className="text-text-mute"> · {yon.soro} so’rov</span>
+              )}
+            </div>
               <div>Smeta: <FmtN val={yon.jam.smeta} /></div>
               <div>Fakt: <FmtN val={yon.jam.fakt} /></div>
               <div>Ф2: <FmtN val={yon.jam.f2} /></div>

@@ -29,6 +29,15 @@ export type SbJavob<T> = {
   ms?: number;
   error?: string;
   sozlanmagan?: boolean;
+  /* ⚠️ 2026-08-17: Supabase REST da SERVER TOMONDA 1000 qator chegarasi
+     bor («Max rows»). Darcha endi sahifalab o'qiydi, lekin natija baribir
+     to'liq bo'lmasligi mumkin (juda katta jadval, xavfsizlik chegarasi).
+     `toliq:false` bo'lsa ustiga HISOB-KITOB QILMASLIK kerak — yarim
+     ma'lumot ustidagi summa yolg'on bo'ladi va uni haqiqat deb
+     ko'rsatish bu tizimdagi eng qimmat xato turi. */
+  jamiServerda?: number | null;
+  toliq?: boolean;
+  soro?: number;
 };
 
 export type SbSoro = {

@@ -76,41 +76,90 @@ export const onRequestPost: PagesFunction<{
       return Response.json({ ok: false, error: 'Filtr shakli qabul qilinmadi' });
     }
 
-    const p = new URLSearchParams();
-    p.set('select', so.ustunlar || '*');
-    if (so.tartib) p.set('order', so.tartib);
-    p.set('limit', String(Math.min(Math.max(1, so.limit || 50000), 100000)));
+    /* ══════════════════════════════════════════════════════════════
+     * ⚠️ 2026-08-17 — SAHIFALAB O'QISH (1000 QATOR CHEGARASI)
+     *
+     * Avval bitta so'rov yuborilardi va `limit=100000` deb yozilgandi.
+     * LEKIN Supabase'ning REST qatlamida SERVER TOMONDA «Max rows»
+     * chegarasi bor (standart 1000) — u so'ralgan limitdan qat'i nazar
+     * javobni KESIB TASHLAYDI.
+     *
+     * Natijasi xatarli edi: 2765 qatorlik obyekt uchun 1000 qator
+     * qaytardi va summa 50% kam chiqdi. Ya'ni javob TO'LIQ EMAS, lekin
+     * xato ham chiqmaydi — jim yarim ma'lumot. Tezlik sinovi buni
+     * «ko'zgu eskirgan» deb ko'rsatdi va foydalanuvchi 1000 raqamini
+     * o'zi payqadi.
+     *
+     * ENDI: sahifalab o'qiymiz (offset bilan), to'liq yig'ilguncha.
+     * Bu chegara qanday sozlanganidan QAT'I NAZAR ishlaydi — serverdagi
+     * sozlamaga tayanmaymiz.
+     *
+     * `Content-Range` dan HAQIQIY jamini olamiz va agar biror sababga
+     * ko'ra hammasini ololmasak — `toliq:false` deb OCHIQ aytamiz.
+     * ══════════════════════════════════════════════════════════════ */
+    const kerak = Math.min(Math.max(1, so.limit || 50000), 200000);
+    const SAHIFA = 1000;          // server chegarasi bilan bir xil
+    const MAX_SORO = 60;          // xavfsizlik: cheksiz sikl bo'lmasin
 
-    const url = ctx.env.SUPABASE_URL.replace(/\/+$/, '') +
-                '/rest/v1/' + jadval + '?' + p.toString() +
-                (so.filtr ? '&' + so.filtr : '');
-
-    const r = await fetch(url, {
-      headers: {
-        apikey: ctx.env.SUPABASE_KEY,
-        Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY,
-        /* aniq sanoq — «nechta qator bor» ni bilish uchun */
-        Prefer: 'count=exact',
-      },
-    });
-
-    const matn = await r.text();
-    if (!r.ok) {
-      return Response.json({
-        ok: false,
-        error: 'Supabase ' + r.status + ': ' + matn.slice(0, 300),
-      });
-    }
+    const baza = ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/' + jadval;
+    const boshHeaders = {
+      apikey: ctx.env.SUPABASE_KEY,
+      Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY,
+      Prefer: 'count=exact',
+    };
 
     let qatorlar: unknown[] = [];
-    try { qatorlar = JSON.parse(matn); } catch {
-      return Response.json({ ok: false, error: 'Supabase JSON qaytarmadi: ' + matn.slice(0, 200) });
+    let jamiServerda: number | null = null;
+    let soro = 0;
+
+    while (qatorlar.length < kerak && soro < MAX_SORO) {
+      const p = new URLSearchParams();
+      p.set('select', so.ustunlar || '*');
+      if (so.tartib) p.set('order', so.tartib);
+      p.set('limit', String(Math.min(SAHIFA, kerak - qatorlar.length)));
+      p.set('offset', String(qatorlar.length));
+
+      const url = baza + '?' + p.toString() + (so.filtr ? '&' + so.filtr : '');
+      const r = await fetch(url, { headers: boshHeaders });
+      soro++;
+
+      const matn = await r.text();
+      if (!r.ok) {
+        return Response.json({
+          ok: false,
+          error: 'Supabase ' + r.status + ': ' + matn.slice(0, 300),
+        });
+      }
+
+      /* `Content-Range: 0-999/2765` — oxirgi raqam HAQIQIY jami */
+      const cr = r.headers.get('content-range') || '';
+      const jm = cr.split('/')[1];
+      if (jm && jm !== '*' && jamiServerda === null) jamiServerda = Number(jm) || null;
+
+      let bolak: unknown[];
+      try { bolak = JSON.parse(matn); } catch {
+        return Response.json({ ok: false, error: 'Supabase JSON qaytarmadi: ' + matn.slice(0, 200) });
+      }
+      if (!Array.isArray(bolak) || !bolak.length) break;   // tugadi
+
+      qatorlar = qatorlar.concat(bolak);
+      if (bolak.length < SAHIFA) break;                    // oxirgi sahifa
     }
+
+    /* HALOL BAYROQ: hammasini oldikmi? Ko'zgu to'liq bo'lmasa
+       chaqiruvchi buni bilishi SHART — yarim ma'lumot ustida
+       hisob-kitob qilinmasin. */
+    const toliq = jamiServerda === null
+      ? soro < MAX_SORO
+      : qatorlar.length >= jamiServerda;
 
     return Response.json({
       ok: true,
       qatorlar,
-      soni: Array.isArray(qatorlar) ? qatorlar.length : 0,
+      soni: qatorlar.length,
+      jamiServerda,
+      toliq,
+      soro,
       ms: Date.now() - t0,
     });
   } catch (err: any) {
