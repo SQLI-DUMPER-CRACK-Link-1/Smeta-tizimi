@@ -279,9 +279,36 @@ function apiSupabaseSinxReset() {
   return {ok:true};
 }
 
+/* ══════════════════════════════════════════════════════════════════
+ * ⚠️⚠️⚠️ 2026-08-17 — XAVFSIZLIK TESHIGI YOPILDI
+ *
+ * Bu funksiya avval `service_role` KALITINI TO'LIQ QAYTARARDI:
+ *     return {url: ..., key: c.key};
+ *
+ * NIMA UCHUN BU XATARLI: `service_role` kaliti Supabase'ning barcha
+ * himoya qatlamlarini (RLS) CHETLAB O'TADI — u bilan butun bazani
+ * o'qish, o'zgartirish va O'CHIRISH mumkin.
+ *
+ * Bu funksiya `api` bilan boshlangani uchun saytdan `/api/gas` orqali
+ * chaqirilardi va u YOZUVCHI ro'yxatida emas — ya'ni RAHBAR roli ham
+ * chaqira olardi. Natijada saytga kira olgan HAR KIM brauzerning
+ * tarmoq oynasida bazaning bosh kalitini ko'ra olardi.
+ *
+ * ENDI: kalit HECH QACHON qaytarilmaydi. Sozlama sahifasiga faqat
+ * «sozlanganmi» va oxirgi 4 belgisi (tanib olish uchun) beriladi.
+ * Kalitni O'ZGARTIRISH avvalgidek `supabaseSozlash` orqali — yozish
+ * mumkin, o'qish mumkin emas.
+ * ══════════════════════════════════════════════════════════════════ */
 function apiSupabaseSozlamaOl() {
   var c = _sbCfg();
-  return {url: c ? c.url : '', key: c ? c.key : ''};
+  var k = c ? String(c.key || '') : '';
+  return {
+    url: c ? c.url : '',
+    ulangan: !!(c && c.url && k),
+    /* kalitning O'ZI emas — faqat tanib olish uchun quyruq */
+    keyMask: k ? ('••••••••' + k.slice(-4)) : '',
+    keyUzunlik: k.length
+  };
 }
 
 function apiSupabaseSozlamaSaqla(url, key) {

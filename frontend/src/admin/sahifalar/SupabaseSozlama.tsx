@@ -35,11 +35,14 @@ export default function SupabaseSozlama() {
   useEffect(() => {
     if (tegildi || !soz.data) return;
     setUrl(soz.data.url || '');
-    setKey(soz.data.key || '');
+    /* WARN 2026-08-17: kalit serverdan ENDI KELMAYDI (xavfsizlik).
+       Maydon bo’sh turadi — kalitni almashtirmoqchi bo’lsangizgina
+       yozasiz. Bo’sh qoldirsangiz eskisi saqlanib qoladi. */
   }, [soz.data, tegildi]);
 
   const saqlash = () => {
     if (!url.trim()) { toast('URL kiriting', 'warn'); return; }
+    if (!key.trim() && !ulangan) { toast('service_role kalitini kiriting', 'warn'); return; }
     saqla.mutate({ url: url.trim(), key: key.trim() }, {
       onSuccess: (r) => {
         toast(r.xabar || 'Saqlandi', r.ok ? 'ok' : 'danger', undefined, 8000);
@@ -49,7 +52,7 @@ export default function SupabaseSozlama() {
     });
   };
 
-  const ulangan = !!soz.data?.ulangan || (!!soz.data?.url && !!soz.data?.key);
+  const ulangan = !!soz.data?.ulangan;
 
   return (
     <Sahifa

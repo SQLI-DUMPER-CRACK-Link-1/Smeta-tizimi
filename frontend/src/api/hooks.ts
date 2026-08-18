@@ -1596,7 +1596,12 @@ export function useShaxsiySmetaYarat() {
 export function useSupabaseSozlama() {
   return useQuery({
     queryKey: ['supaSozlama'],
-    queryFn: () => gas<{ url?: string; key?: string; ulangan?: boolean }>('apiSupabaseSozlamaOl'),
+    /* WARN 2026-08-17: `key` maydoni OLIB TASHLANDI. GAS avval
+       service_role kalitini to’liq qaytarardi — u butun bazaga
+       cheklovsiz kirish beradi va saytga kirgan har kim brauzer tarmoq
+       oynasida ko’ra olardi. Endi faqat `ulangan` va `keyMask` keladi. */
+    queryFn: () => gas<{ url?: string; ulangan?: boolean; keyMask?: string;
+                         keyUzunlik?: number }>('apiSupabaseSozlamaOl'),
     staleTime: 60_000,
   });
 }
