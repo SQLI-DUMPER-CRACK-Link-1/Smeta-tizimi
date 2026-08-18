@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from './umumiy/ui/Toast';
+import SahifaTopilmadi from './umumiy/ui/SahifaTopilmadi';
 import KirishSahifa from './kirish/KirishSahifa';
 
 const AdminShell = lazy(() => import('./admin/AdminShell'));
@@ -72,6 +73,24 @@ export default function App() {
           <Route path="texnika" element={<ErpTexnika />} />
           <Route path="taminot" element={<ErpTaminot />} />
           <Route path="sifat" element={<ErpSifat />} />
+
+          {/* WARN 2026-08-17 — ESKI MANZILLAR UCHUN KO’PRIK.
+              Menyudagi `shartnoma` → `shartnomalar` xatosi tuzatilgach ham
+              muammo qaytdi, chunki eski manzil FOYDALANUVCHIDA qolgan
+              bo’lishi mumkin: xatcho’p, brauzer tarixi, avtoto’ldirish,
+              yorliq, boshqaga yuborilgan havola. Ular hammasi eski yo’lga
+              boradi. Bitta havolani tuzatish YETMAYDI — eski manzil ham
+              ishlashi kerak. */}
+          <Route path="shartnoma" element={<Navigate to="/admin/shartnomalar" replace />} />
+          <Route path="kalkulyator" element={<Navigate to="/admin/shaxsiy-smeta" replace />} />
+
+          {/* WARN 2026-08-17 — ENG MUHIMI: noma’lum `/admin/...` manzil endi
+              QOBIQ ICHIDA ochiladi. Avval u pastdagi `path="*"` ga tushib,
+              foydalanuvchini KIRISH SAHIFASIGA otib yuborardi — aynan
+              "шартномалар табига кирсам кириш панелига қайтариб юборайапди"
+              shikoyatining ildizi shu. Adashgan manzil chiqarib yuborish
+              uchun sabab EMAS. */}
+          <Route path="*" element={<SahifaTopilmadi />} />
         </Route>
 
         {/* Boss shell and routes */}

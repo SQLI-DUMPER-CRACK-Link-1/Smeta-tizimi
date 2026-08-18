@@ -763,10 +763,31 @@ function apiShaxsiySmetalar(){
     var files=sfIt.next().getFiles();
     while(files.hasNext()){
       var f=files.next();
-      list.push({ id:f.getId(), nom:f.getName(), url:f.getUrl(),
-        sana:Utilities.formatDate(f.getLastUpdated(),'Asia/Tashkent','dd.MM.yyyy HH:mm') });
+      var nom = f.getName();
+
+      /* ⚠️ 2026-08-17: DVIGATEL AXLATI RO'YXATGA TUSHMASIN.
+         Bu papkadagi smetalar ham obyekt sifatida skanlanadi, shuning uchun
+         dvigatel ular uchun ishchi fayl (LRV_PLUS) va konvert nusxalari
+         (_NAT_) yaratib qo'ygan. Ular ro'yxatda «yaratilgan smeta» bo'lib
+         ko'rinardi — foydalanuvchi skrinshotida ro'yxatning yarmi shu edi.
+         Ochilsa ichida xizmat jadvali chiqadi va chalg'itadi.
+         Ular FOYDALANUVCHI yaratgan hujjat emas. Fayllarning O'ZI
+         O'CHIRILMAYDI — faqat bu ro'yxatda ko'rsatilmaydi. */
+      if(/_LRV_PLUS|_NAT_/.test(nom)) continue;
+
+      var vaqt = f.getLastUpdated();
+      list.push({ id:f.getId(), nom:nom, url:f.getUrl(),
+        ts: vaqt.getTime(),          /* saralash uchun — pastdagi izohga qara */
+        sana:Utilities.formatDate(vaqt,'Asia/Tashkent','dd.MM.yyyy HH:mm') });
     }
-  }catch(e){}
-  list.sort(function(a,b){ return b.sana.localeCompare(a.sana); });
+  }catch(e){
+    Logger.log('apiShaxsiySmetalar xatosi: ' + (e && e.message ? e.message : e));
+  }
+  /* ⚠️ 2026-08-17: avval sana MATNI bo'yicha saralanardi
+     (b.sana.localeCompare(a.sana)). Format 'dd.MM.yyyy' — kun birinchi
+     kelgani uchun matn taqqoslash NOTO'G'RI tartib berardi: «31.01» «01.12»
+     dan katta hisoblanib, eng yangi smeta ro'yxat o'rtasida qolib ketardi.
+     Endi haqiqiy vaqt belgisi bo'yicha. */
+  list.sort(function(x,y){ return (y.ts||0) - (x.ts||0); });
   return list;
 }

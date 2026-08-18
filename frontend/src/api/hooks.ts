@@ -1540,7 +1540,7 @@ export function useM29Yarat() {
 }
 
 /* ── Шахсий смета ──────────────────────────────────────────────── */
-export type ShaxsiySmeta = { id: string; nom: string; url: string; sana: string };
+export type ShaxsiySmeta = { id: string; nom: string; url: string; sana: string; ts?: number };
 
 export function useShaxsiySmetalar() {
   return useQuery({
