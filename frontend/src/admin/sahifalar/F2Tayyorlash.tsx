@@ -215,6 +215,8 @@ export function F2Tayyorlash() {
                />
                <button 
                  onClick={handleAiSmartF2}
+                 aria-label="AI bilan avtomatik tanlash"
+                 title="AI bilan avtomatik tanlash"
                  disabled={smartF2.isPending || !obyekt}
                  className="bg-accent hover:bg-sky-400 text-black p-3 rounded-xl shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all disabled:opacity-50 flex items-center justify-center"
                >

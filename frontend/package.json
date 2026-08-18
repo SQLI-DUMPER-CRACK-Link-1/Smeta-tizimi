@@ -8,7 +8,8 @@
     "build": "tsc -b && npx cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "tekshir": "node testlar/hammasi.cjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

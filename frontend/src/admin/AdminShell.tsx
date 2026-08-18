@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database } from 'lucide-react';
@@ -37,7 +37,6 @@ const MENYU = [
 ];
 
 export default function AdminShell() {
-  const navigate = useNavigate();
   const sess = useSessiya();
   const joy = useLocation();
 
@@ -52,12 +51,27 @@ export default function AdminShell() {
   const OGIR = ['/admin/f2', '/admin/holat', '/admin/ierarxiya', '/admin/narxlar', '/admin/f2-tayyorlash'];
   const ogirSahifa = OGIR.some(y => joy.pathname.startsWith(y));
 
+  /* WARN 2026-08-17: bu yerda avval JIM OTIB YUBORISH bor edi — cookie
+     O’CHIRILAR va foydalanuvchi hech qanday tushuntirishsiz kirish sahifasiga
+     tashlanardi. Foydalanuvchi: "shartnomalar tabiga kirsam kirish paneliga
+     qaytarib yuborayapdi" — nima uchunligini bilishning YO’LI YO’Q edi va
+     men ham uzoq vaqt sababni topa olmadim.
+     
+     Ikki zarari bor edi:
+       1) cookie o’chirilgach, holat qaytarib bo’lmas: agar 401 vaqtinchalik
+          bo’lsa ham foydalanuvchi HAQIQATAN chiqib qoladi;
+       2) sabab ko’rinmaydi — shikoyat "o’zi chiqarib tashlayapdi" bo’lib
+          qoladi, tekshirish uchun hech narsa qolmaydi.
+     
+     ENDI: avtomatik yo’naltirish YO’Q. Pastdagi ekran sababni ko’rsatadi va
+     kirish sahifasiga o’tishni FOYDALANUVCHI hal qiladi. Cookie faqat o’sha
+     tugma bosilganda yoki "Чиқиш" da o’chiriladi. */
   useEffect(() => {
     if (sess.isError && sess.error?.message === "Sessiya yo'q") {
-      document.cookie = 'sess=; Max-Age=0; path=/';
-      navigate('/');
+      console.warn("[AdminShell] sessiya tekshiruvi 401 qaytardi — avtomatik " +
+                   "chiqarilmadi, foydalanuvchiga sabab ko’rsatildi.");
     }
-  }, [sess.isError, sess.error, navigate]);
+  }, [sess.isError, sess.error]);
 
   const handleLogout = () => {
     document.cookie = 'sess=; Max-Age=0; path=/';

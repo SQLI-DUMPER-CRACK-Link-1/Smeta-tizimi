@@ -120,7 +120,16 @@ export function Obyektlar() {
        * QOIDA: guruhda bitta element bo'lsa — uning TO'LIQ haqiqiy nomi
        * bilan ochamiz. Ko'p bo'lsa — `baseName` haqiqiy ota-papka nomi
        * (ko'p smetali obyekt), u holda o'zi to'g'ri. */
-      ochishNomi: items.length === 1 ? items[0].obyekt : baseName,
+      /* Ko’p elementli guruhda `baseName` ODATDA haqiqiy ota-papka nomi
+         (ko’p smetali obyekt). LEKIN ikki BOG’LIQ BO’LMAGAN obyekt tasodifan
+         bir xil prefiksga ega bo’lsa («X - bir», «X - ikki», lekin «X» degan
+         obyekt yo’q), o’sha eski xato qaytardi. Shuning uchun ota-nomni
+         faqat u RO’YXATDA HAQIQATAN BOR bo’lsa ishlatamiz; aks holda
+         birinchi haqiqiy obyektni ochamiz — mavjud bo’lmagan nomga
+         yo’naltirgandan ko’ra shu xavfsizroq. */
+      ochishNomi: items.length === 1
+        ? items[0].obyekt
+        : (data.some((o) => o.obyekt === baseName) ? baseName : items[0].obyekt),
     }));
   }, [data, bossData]);
 

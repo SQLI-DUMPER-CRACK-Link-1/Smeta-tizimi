@@ -43,6 +43,28 @@ import { toast } from '../../umumiy/ui/Toast';
 import { useShaxsiySmetalar, useIshTurQidir, useShaxsiySmetaYarat,
          type IshTuriTopilma } from '../../api/hooks';
 
+/* WARN 2026-08-17 (2-tuzatish): natijani IKKALA SHAKLGA ham chidamli o’qiymiz.
+ *
+ * Foydalanuvchi: "bu yerda birortayam ishni tanlashni imkoni yo’q" — ekranda
+ * BO’SH QUTILAR turardi. Sabab: GAS javobi `blNom/blKod/blBirlik` bilan
+ * keladi, sahifa esa `nom/kod/birlik` o’qirdi.
+ *
+ * Endi ikkalasi ham qabul qilinadi. Bu "hamma narsani yutish" emas: agar
+ * NOM UMUMAN topilmasa, qator BO’SH CHIZILMAYDI — kod yoki aniq
+ * "nomsiz yozuv" ogohlantirishi ko’rsatiladi. Jim bo’shliq eng yomon
+ * holat: foydalanuvchi nima bo’layotganini bilmaydi. */
+type XomTopilma = IshTuriTopilma & {
+  nom?: string; kod?: string; birlik?: string;
+};
+
+function moslash(x: XomTopilma) {
+  const nom    = (x.blNom    || x.nom    || "").trim();
+  const kod    = (x.blKod    || x.kod    || "").trim();
+  const birlik = (x.blBirlik || x.birlik || "").trim();
+  const key    = (x.key || kod || nom || "").trim();
+  return { key, nom, kod, birlik, rs: x.rs || [], manba: x.manba || "" };
+}
+
 /** Tanlangan ish — GAS `apiShaxsiySmetaYarat` kutgan shaklga yaqin saqlanadi. */
 type Tanlangan = {
   key: string;
@@ -80,20 +102,16 @@ export default function ShaxsiySmeta() {
     });
   };
 
-  const qoshish = (x: IshTuriTopilma) => {
+  const qoshish = (x: XomTopilma) => {
+    const m = moslash(x);
+    if (!m.key) { toast('Bu yozuvni tanib bo’lmadi (kalit yo’q)', 'danger'); return; }
     /* Dedup KEY bo'yicha — kutubxonadagi yagona identifikator.
        (Avval `kod` bo'yicha edi va u `undefined` bo'lib hammani bloklardi.) */
-    const kalit = x.key || x.blKod || x.blNom;
-    if (ishlar.some((i) => i.key === kalit)) {
-      toast('Bu ish allaqachon qo\'shilgan', 'warn'); return;
+    if (ishlar.some((i) => i.key === m.key)) {
+      toast("Bu ish allaqachon qo'shilgan", 'warn'); return;
     }
     setIshlar((p) => [...p, {
-      key: kalit,
-      kod: x.blKod || '',
-      nom: x.blNom || '',
-      birlik: x.blBirlik || '',
-      hajm: 1,
-      rs: x.rs || [],
+      key: m.key, kod: m.kod, nom: m.nom, birlik: m.birlik, hajm: 1, rs: m.rs,
     }]);
   };
 
@@ -169,28 +187,37 @@ export default function ShaxsiySmeta() {
 
           <div className="flex-1 overflow-y-auto scrollbar-thin space-y-1 min-h-0">
             {qidir.isPending && <div className="skel h-12 rounded" />}
-            {topilgan.map((x) => {
-              const kalit = x.key || x.blKod || x.blNom;
-              const qoshilgan = ishlar.some((i) => i.key === kalit);
+            {topilgan.map((x, idx) => {
+              const m = moslash(x);
+              const qoshilgan = ishlar.some((i) => i.key === m.key);
+              /* Nom ham, kod ham bo’lmasa BO’SH QUTI chizmaymiz — aniq
+                 ogohlantirish ko’rsatamiz. Jim bo’shliq eng yomon holat:
+                 foydalanuvchi nima bo’layotganini bilmaydi. */
+              const korinadiganNom = m.nom || m.kod;
               return (
-                <button key={kalit} onClick={() => qoshish(x)} disabled={qoshilgan}
+                <button key={m.key || idx} onClick={() => qoshish(x)}
+                  disabled={qoshilgan || !m.key}
                   className={`w-full text-left p-2 rounded-lg border transition-colors group
                     ${qoshilgan
                       ? 'border-ok/30 bg-ok/5 cursor-default'
-                      : 'border-border bg-[var(--surface-2)]/40 hover:bg-white/5 hover:border-accent/40'}`}>
+                      : !korinadiganNom
+                        ? 'border-warn/40 bg-warn/5'
+                        : 'border-border bg-[var(--surface-2)]/40 hover:bg-white/5 hover:border-accent/40'}`}>
                   <div className="flex items-start gap-2">
-                    <span className="flex-1 text-[12px] text-text leading-tight">{x.blNom}</span>
+                    <span className={`flex-1 text-[12px] leading-tight ${korinadiganNom ? 'text-text' : 'text-warn italic'}`}>
+                      {korinadiganNom || 'Nomsiz yozuv — kutubxonada nom yo’q'}
+                    </span>
                     {qoshilgan
-                      ? <span className="text-[9px] text-ok flex-shrink-0 mt-0.5">qo'shilgan</span>
+                      ? <span className="text-[9px] text-ok flex-shrink-0 mt-0.5">qo’shilgan</span>
                       : <Plus size={13} className="text-accent flex-shrink-0 opacity-0
                                                    group-hover:opacity-100 transition-opacity mt-0.5" />}
                   </div>
                   <div className="flex items-center gap-2 mt-1 text-[10px] text-text-mute">
-                    {x.blKod && <span className="font-mono">{x.blKod}</span>}
-                    {x.blBirlik && <span>· {x.blBirlik}</span>}
-                    {/* Resurs soni — narx O'RNIGA emas, narx bu yerda MA'LUM EMAS */}
-                    <span>· {x.rs?.length || 0} resurs</span>
-                    {x.manba && <span className="truncate">· {x.manba}</span>}
+                    {m.kod && <span className="font-mono">{m.kod}</span>}
+                    {m.birlik && <span>· {m.birlik}</span>}
+                    {/* Resurs soni — narx O’RNIGA emas, narx bu yerda MA’LUM EMAS */}
+                    <span>· {m.rs.length} resurs</span>
+                    {m.manba && <span className="truncate">· {m.manba}</span>}
                   </div>
                 </button>
               );
@@ -300,8 +327,12 @@ export default function ShaxsiySmeta() {
                              bg-[var(--surface-2)]/40 hover:bg-white/5 transition-colors">
                   <FileSpreadsheet size={14} className="text-accent flex-shrink-0" />
                   <span className="flex-1 text-[12px] text-text truncate">{s.nom}</span>
-                  <span className="text-[10px] text-text-mute">
-                    {s.sana ? new Date(s.sana).toLocaleDateString('ru-RU') : ''}
+                  {/* WARN 2026-08-17: avval `new Date(s.sana)` edi va ekranda
+                      "Invalid Date" turardi. GAS `sana` ni ALLAQACHON
+                      formatlab beradi: 'dd.MM.yyyy HH:mm' (Asia/Tashkent).
+                      Uni qayta parse qilish shart emas va mumkin ham emas. */}
+                  <span className="text-[10px] text-text-mute whitespace-nowrap">
+                    {s.sana || ''}
                   </span>
                   <ExternalLink size={12} className="text-text-mute flex-shrink-0" />
                 </a>
