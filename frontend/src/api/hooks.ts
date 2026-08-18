@@ -233,7 +233,10 @@ export function useF2LokalkaTaklif() {
 export function useLockStatus(obyekt: string) {
   return useQuery({
     queryKey: ['lock', obyekt],
-    queryFn: () => gas<{ status: string, user?: string }>('apiLockOl', obyekt),
+    /* WARN 2026-08-17: avval {status, user} deb e'lon qilingan edi - GAS bunday
+       maydon QAYTARMAYDI. Haqiqiy shakl: {locked, sana, izoh}. Hozircha bu hook
+       hech qayerda ishlatilmaydi, lekin ulangan kunda jim ishlamay qo'ymasin. */
+    queryFn: () => gas<{ locked: boolean; sana?: string; izoh?: string }>('apiLockOl', obyekt),
     enabled: !!obyekt,
   });
 }
@@ -1187,7 +1190,10 @@ export function useIshchiTahrir() {
 export function useIshchiOchir() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => gas<{ ok: boolean }>('apiIshchiOchir', id),
+    /* WARN 2026-08-17: {ok} emas - GAS apiIshchiTahrir natijasini qaytaradi:
+       {id, status} (soft-delete: yozuv o'chmaydi, "bo'shatilgan" deb
+       belgilanadi). Sahifa natijani o'qimagani uchun xato ko'rinmasdi. */
+    mutationFn: (id: string) => gas<{ id: string; status: string }>('apiIshchiOchir', id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kadrlar'] }),
   });
 }
@@ -1714,10 +1720,29 @@ export function useKeshHolat() {
   });
 }
 
+/* WARN 2026-08-17: TIP GAS BILAN MOS EMASDI - Monitoring dagi "TRIGGERLAR"
+ * oynasi DOIM BO'SH turardi (foydalanuvchi skrinshotida ko'rinadi).
+ *
+ * apiTriggerlarRoyxat (GAS) HAQIQATDA {ok:true, triggerlar:[...]} qaytaradi -
+ * massiv EMAS, o'ram obyekt. Bu yerda esa massiv deb e'lon qilingan, sahifada
+ * esa Array.isArray(trig.data) tekshiriladi -> doim false -> hech narsa
+ * chizilmaydi. Xato ham chiqmaydi: oyna shunchaki bo'sh qoladi va tizimda
+ * trigger yo'qdek ko'rinadi.
+ *
+ * ENDI: hook o'ramni ochib TOZA MASSIV qaytaradi. Element 'nom (tur)'
+ * ko'rinishidagi satr yoki obyekt bo'lishi mumkin - ikkalasi ham
+ * qo'llab-quvvatlanadi (GAS ikki xil manbadan yig'adi). */
+export type TriggerYozuv = string | { fn?: string; handler?: string; tur?: string };
+
 export function useTriggerlar() {
   return useQuery({
     queryKey: ['triggerlar'],
-    queryFn: () => gas<Array<{ fn?: string; tur?: string; [k: string]: unknown }>>('apiTriggerlarRoyxat'),
+    queryFn: async () => {
+      const j = await gas<unknown>('apiTriggerlarRoyxat');
+      if (Array.isArray(j)) return j as TriggerYozuv[];              // eski shakl
+      const t = (j as { triggerlar?: unknown })?.triggerlar;
+      return Array.isArray(t) ? (t as TriggerYozuv[]) : [];
+    },
     staleTime: 60_000,
   });
 }

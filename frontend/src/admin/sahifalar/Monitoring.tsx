@@ -316,9 +316,16 @@ export function Monitoring() {
             {Array.isArray(trig.data) && (
               trig.data.length
                 ? <div className="space-y-0.5 max-h-28 overflow-auto">
+                    {/* WARN 2026-08-17: element SATR ham bo'lishi mumkin
+                        ("nom (tur)") - GAS ikki manbadan yig'adi. Avval faqat
+                        obyekt deb hisoblanardi va satr kelganda `t.fn`
+                        undefined bo'lib, ekranga JSON.stringify bilan
+                        qo'shtirnoqli chiqindi tushardi. */}
                     {trig.data.map((t, i) => (
                       <div key={i} className="text-[10px] text-text-dim font-mono truncate">
-                        {String(t.fn || t.handler || JSON.stringify(t))}
+                        {typeof t === 'string'
+                          ? t
+                          : (t?.fn || t?.handler || JSON.stringify(t))}
                       </div>
                     ))}
                   </div>
