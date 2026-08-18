@@ -40,39 +40,51 @@ function apiT2OqishOlchov(obyekt){
   try{
     if(!obyekt) return {ok:false, xabar:'Obyekt nomi kerak'};
 
-    /* 1) Papkani topamiz — mavjud skan mantig'idan foydalanamiz */
+    /* 1) Obyektni topamiz.
+     *
+     * ⚠️ 2026-08-17 TUZATISH: avval papka nomini obyekt nomiga TENGLASHTIRIB
+     * qidirgandim va «Papka topilmadi» xatosi chiqdi. Sabab — ko'p smetali
+     * obyektlar: «Amfiteatr - 109983_ALL_01-02_АРХИТЕКТУРНАЯ ЧАСТЬ» bu
+     * PAPKA EMAS, u «Amfiteatr» papkasi ichidagi bitta smeta fayli.
+     * Papka nomi — faqat « - » gacha bo'lgan qism (`_cfgKalit`).
+     *
+     * Buni o'zim qayta yozish xato bo'lardi: tizimda buning uchun
+     * `skanBitta()` bor va u kesh, zaxira to'liq skan, bog'lash
+     * sozlamalarini ham hisobga oladi. O'shani ishlatamiz. */
     var tPapka = Date.now();
-    var a = sozAsosiy();
-    var root = DriveApp.getFolderById(a.rootId);
-    var papka = null;
-    var it = root.getFolders();
-    while(it.hasNext()){
-      var f = it.next();
-      if(f.getName().trim() === String(obyekt).trim()){ papka = f; break; }
-    }
-    if(!papka) return {ok:false, xabar:'Papka topilmadi: '+obyekt};
+    var ob = skanBitta(obyekt);
+    if(!ob) return {ok:false, xabar:'Obyekt topilmadi: '+obyekt+
+                    '  (papka nomi «'+_cfgKalit(obyekt)+'» bo\'lishi kerak edi)'};
     var msPapka = Date.now() - tPapka;
 
-    /* 2) Fayllarni ro'yxatlaymiz (LRV_PLUS va xizmat fayllarisiz —
-          ular NATIJA, biz esa MANBAni o'qiymiz) */
+    /* 2) Manba fayllar ro'yxati.
+     *    `skanBitta` allaqachon LOKALKA/СВОДКА ni ajratib bergan —
+     *    biz NATIJANI (LRV_PLUS) emas, MANBAni o'qiymiz. */
     var tRoyxat = Date.now();
-    var fayllar = [];
-    var fit = papka.getFiles();
-    while(fit.hasNext()){
-      var fi = fit.next(), nom = fi.getName();
-      if(nom.toUpperCase().indexOf('_LRV_PLUS') >= 0) continue;
-      if(nom.indexOf('_TMP_') === 0 || nom.indexOf('_NAT_') === 0) continue;
-      var mt = fi.getMimeType();
-      /* Faqat jadval fayllari */
-      if(mt !== MimeType.GOOGLE_SHEETS &&
-         String(mt).indexOf('spreadsheet') < 0 &&
-         String(mt).indexOf('ms-excel') < 0) continue;
-      fayllar.push(fi);
+    /* `skanBitta` FAYL OBYEKTLARINI qaytaradi (`lokFile`, `svodFile`),
+       ID emas — shuning uchun ularni to'g'ridan-to'g'ri olamiz.
+       `lokFiles` — ko'p lokalkali obyektda hammasi. */
+    var fayllar = [], korilgan = {};
+    function faylQosh(f){
+      if(!f) return;
+      try{
+        var id = f.getId();
+        if(korilgan[id]) return;
+        korilgan[id] = 1;
+        fayllar.push(f);
+      }catch(e){}
     }
+    if(ob.lokFiles && ob.lokFiles.length){
+      for(var li=0; li<ob.lokFiles.length; li++) faylQosh(ob.lokFiles[li]);
+    }
+    faylQosh(ob.lokFile);
+    faylQosh(ob.svodFile);          // svodka — narxlash uchun manba
     var msRoyxat = Date.now() - tRoyxat;
 
     if(!fayllar.length){
-      return {ok:false, xabar:'Manba fayl topilmadi (papkada faqat LRV_PLUS bormi?)'};
+      return {ok:false,
+        xabar:'Manba fayl topilmadi. Skan yozuvidagi kalitlar: '
+            + Object.keys(ob).join(', ')};
     }
 
     /* 3) Har faylni OCHIB, qatorlarni O'QIYMIZ — yozish YO'Q */
