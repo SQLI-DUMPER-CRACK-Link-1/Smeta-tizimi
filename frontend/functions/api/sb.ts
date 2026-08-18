@@ -98,7 +98,25 @@ export const onRequestPost: PagesFunction<{
      * ko'ra hammasini ololmasak — `toliq:false` deb OCHIQ aytamiz.
      * ══════════════════════════════════════════════════════════════ */
     const kerak = Math.min(Math.max(1, so.limit || 50000), 200000);
-    const SAHIFA = 1000;          // server chegarasi bilan bir xil
+
+    /* ⚠️⚠️ 2026-08-17 (3-tuzatish) — SAHIFA HAJMI ENDI MOSLASHUVCHAN.
+     *
+     * O'lchov shuni ko'rsatdi: vaqt ma'lumot HAJMIGA emas, BORIB-KELISH
+     * soniga ketadi. 1673 qator ham, 4937 qator ham bitta so'rovda
+     * ~1000 ms. Ya'ni 5 so'rov = ~5 barobar kutish.
+     *
+     * Avval `SAHIFA = 1000` qattiq yozilgandi — Supabase'ning standart
+     * «Max rows» sozlamasi shuncha. Lekin u sozlama O'ZGARTIRILISHI
+     * mumkin. Agar u 10 000 ga ko'tarilsa, bizning kod baribir 1000
+     * talab so'rayverardi va tezlik yaxshilanmasdi.
+     *
+     * ENDI: birinchi so'rovda KATTA limit so'raymiz. Server nechta
+     * qaytarsa — haqiqiy chegara o'sha. Keyingi sahifalar ham o'sha
+     * hajmda so'raladi. Ya'ni foydalanuvchi Supabase'da «Max rows» ni
+     * ko'tarsa, KOD O'ZGARTIRMASDAN tezlashadi; ko'tarmasa avvalgidek
+     * ishlaydi. Sozlamaga bog'liqlik yo'q — moslashuv bor. */
+    const SORALADI = Math.min(kerak, 10000);
+    let SAHIFA = SORALADI;        // birinchi javobdan keyin aniqlanadi
     /* ⚠️ Cloudflare Worker BITTA so'rov ichida chekli sonda tashqi so'rov
        qila oladi (bepul rejada 50 ta). Shuning uchun 20 bilan cheklaymiz —
        ya'ni bir marta 20 000 qatorgacha. Undan kattasi kerak bo'lsa
@@ -155,7 +173,7 @@ export const onRequestPost: PagesFunction<{
        Taxmin qilmaymiz: birinchi so'rov (aloqa o'rnatish + tarmoq yo'li)
        va qolgan sahifalar (parallel) alohida o'lchanadi. */
     const tBir = Date.now();
-    const birinchi = await sahifaOl(0, Math.min(SAHIFA, kerak));
+    const birinchi = await sahifaOl(0, SORALADI);
     const msBirinchi = Date.now() - tBir;
     let msQolgan = 0;
     soro++;
@@ -164,6 +182,10 @@ export const onRequestPost: PagesFunction<{
     }
     qatorlar = birinchi.bolak || [];
     jamiServerda = birinchi.jami ?? null;
+
+    /* HAQIQIY sahifa hajmi — serverning o'zi nechta berganidan bilinadi.
+       Kam bergan bo'lsa: yo hammasi shu (tugadi), yo server chegarasi shu. */
+    if (qatorlar.length > 0 && qatorlar.length < SORALADI) SAHIFA = qatorlar.length;
 
     const olinishiKerak = jamiServerda != null ? Math.min(jamiServerda, kerak) : kerak;
 
