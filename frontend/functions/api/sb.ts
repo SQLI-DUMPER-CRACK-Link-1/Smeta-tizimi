@@ -99,7 +99,12 @@ export const onRequestPost: PagesFunction<{
      * ══════════════════════════════════════════════════════════════ */
     const kerak = Math.min(Math.max(1, so.limit || 50000), 200000);
     const SAHIFA = 1000;          // server chegarasi bilan bir xil
-    const MAX_SORO = 60;          // xavfsizlik: cheksiz sikl bo'lmasin
+    /* ⚠️ Cloudflare Worker BITTA so'rov ichida chekli sonda tashqi so'rov
+       qila oladi (bepul rejada 50 ta). Shuning uchun 20 bilan cheklaymiz —
+       ya'ni bir marta 20 000 qatorgacha. Undan kattasi kerak bo'lsa
+       `toliq:false` qaytadi va chaqiruvchi buni KO'RADI (jim kesilmaydi).
+       Eng katta obyekt hozir ~5000 qator, ya'ni zaxira 4 barobar. */
+    const MAX_SORO = 20;
 
     const baza = ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/' + jadval;
     const boshHeaders = {
@@ -108,42 +113,68 @@ export const onRequestPost: PagesFunction<{
       Prefer: 'count=exact',
     };
 
+    /** Bitta sahifani o'qiydi. Xato bo'lsa `xato` maydonida qaytadi. */
+    async function sahifaOl(offset: number, limit: number) {
+      const p = new URLSearchParams();
+      p.set('select', so.ustunlar || '*');
+      if (so.tartib) p.set('order', so.tartib);
+      p.set('limit', String(limit));
+      p.set('offset', String(offset));
+      const url = baza + '?' + p.toString() + (so.filtr ? '&' + so.filtr : '');
+      const r = await fetch(url, { headers: boshHeaders });
+      const matn = await r.text();
+      if (!r.ok) return { xato: 'Supabase ' + r.status + ': ' + matn.slice(0, 300) };
+      let bolak: unknown[];
+      try { bolak = JSON.parse(matn); }
+      catch { return { xato: 'Supabase JSON qaytarmadi: ' + matn.slice(0, 200) }; }
+      const cr = r.headers.get('content-range') || '';
+      const jm = cr.split('/')[1];
+      return { bolak: Array.isArray(bolak) ? bolak : [],
+               jami: (jm && jm !== '*') ? (Number(jm) || null) : null };
+    }
+
+    /* ⚠️ 2026-08-17 (2-tuzatish) — SAHIFALAR PARALLEL O'QILADI.
+     *
+     * Avval sahifalar BIRIN-KETIN so'ralardi. 4937 qatorlik obyektda bu
+     * 5 marta borib-kelish demakdi va Supabase tomoni 7.8 soniya chiqdi.
+     * Foydalanuvchi haqli savol berdi: «bu aldamayaptimi?».
+     *
+     * Aldov emas edi — o'lchov halol (Sheets birinchi, ketma-ket, bir xil
+     * shart) — LEKIN raqam Postgres tezligini emas, MENING KODIMNING
+     * sekinligini ko'rsatardi. Bu ham yomon: noto'g'ri xulosa chiqarish
+     * mumkin («Supabase kutganchalik tez emas ekan»).
+     *
+     * ENDI: birinchi sahifadan `Content-Range` orqali HAQIQIY jamini
+     * bilamiz, keyin qolgan sahifalarni BARAVARIGA so'raymiz. Ya'ni
+     * kutish vaqti = eng sekin bitta so'rov, yig'indi emas. */
     let qatorlar: unknown[] = [];
     let jamiServerda: number | null = null;
     let soro = 0;
 
-    while (qatorlar.length < kerak && soro < MAX_SORO) {
-      const p = new URLSearchParams();
-      p.set('select', so.ustunlar || '*');
-      if (so.tartib) p.set('order', so.tartib);
-      p.set('limit', String(Math.min(SAHIFA, kerak - qatorlar.length)));
-      p.set('offset', String(qatorlar.length));
+    const birinchi = await sahifaOl(0, Math.min(SAHIFA, kerak));
+    soro++;
+    if ('xato' in birinchi && birinchi.xato) {
+      return Response.json({ ok: false, error: birinchi.xato });
+    }
+    qatorlar = birinchi.bolak || [];
+    jamiServerda = birinchi.jami ?? null;
 
-      const url = baza + '?' + p.toString() + (so.filtr ? '&' + so.filtr : '');
-      const r = await fetch(url, { headers: boshHeaders });
-      soro++;
+    const olinishiKerak = jamiServerda != null ? Math.min(jamiServerda, kerak) : kerak;
 
-      const matn = await r.text();
-      if (!r.ok) {
-        return Response.json({
-          ok: false,
-          error: 'Supabase ' + r.status + ': ' + matn.slice(0, 300),
-        });
+    if (qatorlar.length >= SAHIFA && qatorlar.length < olinishiKerak) {
+      /* Qolgan sahifalar ro'yxati — hammasi BIR VAQTDA */
+      const vazifalar: Promise<{ bolak?: unknown[]; jami?: number | null; xato?: string }>[] = [];
+      for (let off = qatorlar.length; off < olinishiKerak && vazifalar.length < MAX_SORO - 1;
+           off += SAHIFA) {
+        vazifalar.push(sahifaOl(off, Math.min(SAHIFA, olinishiKerak - off)));
       }
+      soro += vazifalar.length;
 
-      /* `Content-Range: 0-999/2765` — oxirgi raqam HAQIQIY jami */
-      const cr = r.headers.get('content-range') || '';
-      const jm = cr.split('/')[1];
-      if (jm && jm !== '*' && jamiServerda === null) jamiServerda = Number(jm) || null;
-
-      let bolak: unknown[];
-      try { bolak = JSON.parse(matn); } catch {
-        return Response.json({ ok: false, error: 'Supabase JSON qaytarmadi: ' + matn.slice(0, 200) });
+      const natijalar = await Promise.all(vazifalar);
+      for (const nat of natijalar) {
+        if (nat.xato) return Response.json({ ok: false, error: nat.xato });
+        if (nat.bolak?.length) qatorlar = qatorlar.concat(nat.bolak);
       }
-      if (!Array.isArray(bolak) || !bolak.length) break;   // tugadi
-
-      qatorlar = qatorlar.concat(bolak);
-      if (bolak.length < SAHIFA) break;                    // oxirgi sahifa
     }
 
     /* HALOL BAYROQ: hammasini oldikmi? Ko'zgu to'liq bo'lmasa
