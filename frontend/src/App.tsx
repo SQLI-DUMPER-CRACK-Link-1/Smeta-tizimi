@@ -23,6 +23,7 @@ import TezlikSinovi from './admin/sahifalar/TezlikSinovi';
 const TestShell     = lazy(() => import('./test02/TestShell'));
 const TestObyektlar = lazy(() => import('./test02/TestObyektlar'));
 const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
+const TestOqishOlchov = lazy(() => import('./test02/TestOqishOlchov'));
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
 import { Narxlar } from './admin/sahifalar/Narxlar';
@@ -82,6 +83,7 @@ export default function App() {
             <Route index element={<Navigate to="/admin/test/obyektlar" replace />} />
             <Route path="obyektlar" element={<TestObyektlar />} />
             <Route path="daraxt" element={<TestDaraxt />} />
+            <Route path="oqish" element={<TestOqishOlchov />} />
           </Route>
           {/* ERP routes for Admin */}
           <Route path="kadrlar" element={<ErpKadrlar />} />
