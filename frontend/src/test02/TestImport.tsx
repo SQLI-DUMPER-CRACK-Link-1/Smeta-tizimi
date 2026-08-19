@@ -20,7 +20,8 @@
  * Na LRV_PLUS yaratiladi, na varaq o'zgartiriladi.
  */
 import { useState } from 'react';
-import { Upload, CheckCircle, AlertTriangle, Clock, ArrowRight } from 'lucide-react';
+import { Upload, CheckCircle, AlertTriangle, Clock, ArrowRight,
+         FileSpreadsheet, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { toast } from '../umumiy/ui/Toast';
@@ -56,6 +57,31 @@ export default function TestImport() {
   const [obyekt, setObyekt] = useState('');
   const [ketyapti, setKetyapti] = useState(false);
   const [natija, setNatija] = useState<ImportNatija | null>(null);
+
+  /* Sheets ko'zgusi — Drive'dagi «Tizim_02» papkasiga chiziladi.
+     Foydalanuvchi: «hujjatlar uchun drive da hali joy yo'q».
+     Papka GAS tomonda AVTOMAT yaratiladi (`_t2KozguPapka`) — bu yerda
+     faqat tugma yetishmayotgan edi. */
+  const [kozgu, setKozgu] = useState<{
+    ok: boolean; url?: string; xabar?: string; qator?: number; ms?: number;
+  } | null>(null);
+  const [kozguKetyapti, setKozguKetyapti] = useState(false);
+
+  const kozguYarat = async () => {
+    if (!obyekt) return;
+    setKozguKetyapti(true); setKozgu(null);
+    try {
+      const r = await gas<any>('apiT2KozguYarat', obyekt);
+      setKozgu(r);
+      toast(r.ok ? 'Sheets ko\'zgusi chizildi' : (r.xabar || 'Chizilmadi'),
+            r.ok ? 'ok' : 'danger', undefined, 9000);
+    } catch (e: any) {
+      setKozgu({ ok: false, xabar: e?.message || String(e) });
+      toast(e?.message || 'Xato', 'danger', undefined, 9000);
+    } finally {
+      setKozguKetyapti(false);
+    }
+  };
 
   const boshla = async () => {
     if (!obyekt) return;
@@ -162,6 +188,41 @@ export default function TestImport() {
                              hover:bg-accent/25 transition-colors">
                   Daraxtni ochish <ArrowRight size={13} />
                 </button>
+              )}
+
+              {/* ── Sheets ko'zgusi (Drive'dagi «Tizim_02» papkasi) ── */}
+              {natija.ok && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-[11px] text-text-dim mb-2">
+                    Odam o‘qiydigan hujjat kerakmi? Drive‘dagi <b>Tizim_02</b> papkasiga
+                    Sheets ko‘zgusi chiziladi — papka birinchi safar avtomat yaratiladi.
+                  </p>
+                  <button onClick={kozguYarat} disabled={kozguKetyapti}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                               border border-border text-text text-[12px]
+                               hover:bg-white/5 transition-colors disabled:opacity-40">
+                    <FileSpreadsheet size={13} />
+                    {kozguKetyapti ? 'Chizilmoqda…' : 'Sheets ko‘zgusini yaratish'}
+                  </button>
+
+                  {kozgu && (
+                    <div className={'mt-2 text-[11px] ' + (kozgu.ok ? 'text-ok' : 'text-danger')}>
+                      {kozgu.ok ? (
+                        <span className="inline-flex items-center gap-2 flex-wrap">
+                          Chizildi
+                          {kozgu.qator ? ' · ' + kozgu.qator + ' qator' : ''}
+                          {kozgu.ms ? ' · ' + kozgu.ms + ' ms' : ''}
+                          {kozgu.url && (
+                            <a href={kozgu.url} target="_blank" rel="noreferrer"
+                               className="text-accent hover:underline inline-flex items-center gap-1">
+                              ochish <ExternalLink size={11} />
+                            </a>
+                          )}
+                        </span>
+                      ) : (kozgu.xabar || 'Chizilmadi')}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
