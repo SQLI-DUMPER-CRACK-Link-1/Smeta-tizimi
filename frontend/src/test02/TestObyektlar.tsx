@@ -19,7 +19,8 @@ import { FmtN } from '../lib/format';
    «tizim_02 ni supabase ni yangi shu tizim uchun ochilgan jadvallargagina
    bog’lash». Ikkisi aralashsa qaysi raqam qaysi tizimdan kelgani
    bilinmay qoladi. */
-import { sbT2ObyektlarOl, type T2Obyekt } from '../api/supabase';
+import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../api/supabase';
+import { useKompaniya } from './KompaniyaTanlov';
 
 type Qator = T2Obyekt;
 
@@ -38,21 +39,26 @@ function yosh(iso: string | null | undefined): { matn: string; eski: boolean } {
 
 export default function TestObyektlar() {
   const navigate = useNavigate();
+  /* ⚠️ Ro’yxat FAQAT tanlangan kompaniyaniki. Kompaniyalar aralashsa
+     foydalanuvchi boshqa mijozning raqamini o’ziniki deb o’qiydi. */
+  const { joriy, yuklanmoqda: kompYuklanmoqda } = useKompaniya();
   const [qatorlar, setQatorlar] = useState<Qator[] | null>(null);
   const [xato, setXato] = useState('');
   const [ms, setMs] = useState(0);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
 
   const yukla = async () => {
+    if (kompYuklanmoqda) return;          // kompaniya hali aniqlanmagan
     setYuklanmoqda(true); setXato('');
-    const r = await sbT2ObyektlarOl();
+    const r = await sbT2ObyektlarOlKomp(joriy?.id);
     setMs(r.ms || 0);
     if (!r.ok) { setXato(r.error || 'O\'qilmadi'); setQatorlar(null); }
     else setQatorlar((r.qatorlar as Qator[]) || []);
     setYuklanmoqda(false);
   };
 
-  useEffect(() => { yukla(); /* eslint-disable-next-line */ }, []);
+  /* Kompaniya almashsa ro’yxat qayta o’qiladi */
+  useEffect(() => { yukla(); /* eslint-disable-next-line */ }, [joriy?.id, kompYuklanmoqda]);
 
   const jami = useMemo(() => {
     const q = qatorlar || [];

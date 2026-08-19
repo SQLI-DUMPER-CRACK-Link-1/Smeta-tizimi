@@ -22,6 +22,7 @@
  *      haqiqat deb qabul qilinadi.
  */
 import { Outlet, NavLink } from 'react-router-dom';
+import { KompaniyaProvider, KompaniyaTanlagich } from './KompaniyaTanlov';
 import { FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer } from 'lucide-react';
 
 const TEST_MENYU = [
@@ -33,6 +34,7 @@ const TEST_MENYU = [
 
 export default function TestShell() {
   return (
+    <KompaniyaProvider>
     <div className="flex flex-col h-full min-h-0">
       {/* ⚠️ SINOV BELGISI — doim ko'rinadi, chalkashmasin */}
       <div className="flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2.5
@@ -45,6 +47,7 @@ export default function TestShell() {
           Ma'lumot <b>Supabase</b> dan o'qiladi. Ishlab turgan tizim (Tizim_01)
           o'zgarmagan — chapdagi menyudan istagan vaqt qaytishingiz mumkin.
         </span>
+        <KompaniyaTanlagich />
         <NavLink to="/admin/obyektlar"
           className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-amber-200
                      hover:text-white transition-colors">
@@ -71,5 +74,6 @@ export default function TestShell() {
         <Outlet />
       </div>
     </div>
+    </KompaniyaProvider>
   );
 }

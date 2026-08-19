@@ -338,3 +338,71 @@ export function sbT2TreeQur(qatorlar: T2Qator[]): TreeNode[] {
   }
   return ildiz;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * TIZIM_02 — KOMPANIYA VA YOZISH
+ *
+ * `kompaniya_id` 2026-08-19 da qo'shildi. Sabab: keyin qo'shish butun
+ * ma'lumotni ko'chirish va har so'rovni qayta yozish demak edi; o'shanda
+ * `t2_` jadvallarda atigi 13 qator bor edi — ya'ni deyarli tekin.
+ * ══════════════════════════════════════════════════════════════════ */
+
+export type T2Kompaniya = {
+  id: number; nom: string; kod: string; faol: boolean; izoh: string | null;
+};
+
+export function sbT2KompaniyalarOl() {
+  return sbOqi<T2Kompaniya>({
+    jadval: 't2_kompaniya', filtr: 'faol=is.true', tartib: 'nom.asc', limit: 200,
+  });
+}
+
+/** Obyektlar — kompaniya berilsa faqat o'shaniki. */
+export function sbT2ObyektlarOlKomp(kompaniyaId?: number | null) {
+  return sbOqi<T2Obyekt>({
+    jadval: 't2_obyekt_jami',
+    filtr: kompaniyaId ? 'kompaniya_id=eq.' + kompaniyaId : undefined,
+    tartib: 'nom.asc', limit: 5000,
+  });
+}
+
+/* ── YOZISH ─────────────────────────────────────────────────────── */
+
+export type T2TahrirNatija = {
+  ok: boolean;
+  qator_id?: number; maydon?: string; versiya?: number;
+  /** `ziddiyat` — boshqa klient shu qatorni allaqachon o'zgartirgan */
+  sabab?: 'ziddiyat' | 'topilmadi' | 'maydon_ruxsat_yoq' | string;
+  xabar?: string;
+  sizning_versiya?: number; bazadagi_versiya?: number;
+  joriy?: { nom?: string; hajm?: number; narx?: number; birlik?: string; kat?: string };
+  error?: string; ms?: number;
+};
+
+/**
+ * Bitta maydonni tahrirlaydi.
+ *
+ * ⚠️ `kutilganVersiya` MAJBURIY — bu ziddiyat nazoratining o'zagi.
+ * Klient o'zi KO'RGAN versiyani yuboradi; baza versiyasi undan farq
+ * qilsa yozuv RAD ETILADI va `sabab:'ziddiyat'` qaytadi.
+ * Bu «xato» emas — normal holat, foydalanuvchiga tushuntiriladi.
+ */
+export async function sbT2QatorTahrir(
+  qatorId: number, maydon: 'nom' | 'hajm' | 'narx' | 'birlik' | 'kat',
+  qiymat: string, kutilganVersiya: number,
+): Promise<T2TahrirNatija> {
+  const t0 = performance.now();
+  try {
+    const r = await fetch('/api/sb-yoz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ qator_id: qatorId, maydon, qiymat,
+                             kutilgan_versiya: kutilganVersiya }),
+    });
+    const j = (await r.json()) as T2TahrirNatija;
+    return { ...j, ms: Math.round(performance.now() - t0) };
+  } catch (e: any) {
+    return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)),
+             ms: Math.round(performance.now() - t0) };
+  }
+}

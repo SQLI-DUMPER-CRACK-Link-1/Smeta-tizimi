@@ -18,6 +18,7 @@ const TESTLAR = [
   ['Menyu havolasi ↔ marshrut',        'marshrut.test.mjs'],
   ['Obyekt kartasi qaysi nomni ochadi', 'obyekt_guruh.test.cjs'],
   ['Frontend tipi ↔ GAS javobi',        'shartnoma.tekshir.cjs'],
+  ['TIZIM_02 kompaniya + versiya',      't2_kompaniya.test.cjs'],
 ];
 
 let yiqildi = 0;

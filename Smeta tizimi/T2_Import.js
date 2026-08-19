@@ -126,11 +126,76 @@ function apiT2ObyektTayyorla(nom){
   if(/^Shartnoma\s*№/i.test(nom) || nom === 'Taqsimlanmagan') tur = 'shartnoma_jamlanma';
   else if(/^_ШАХСИЙ/i.test(nom)) tur = 'shaxsiy';
 
-  var bor = _t2Get('t2_obyekt?nom=eq.' + encodeURIComponent(nom) + '&select=id,tur');
-  if(bor.length) return {id: bor[0].id, nom: nom, tur: bor[0].tur, yangi: false};
+  /* ⚠️ 2026-08-19 — KOMPANIYA (multi-tenant).
+   *
+   * Obyekt nomi endi GLOBAL unikal EMAS, `(kompaniya_id, nom)` unikal.
+   * Ya'ni ikki kompaniyada bir xil nomli obyekt bo'lishi MUMKIN va
+   * normal. Shuning uchun qidirishda ham kompaniya hisobga olinishi
+   * shart — aks holda boshqa kompaniyaning obyektiga yozib qo'yamiz.
+   *
+   * Kompaniya `t2_sozlama` dan yoki bittagina faol kompaniyadan olinadi.
+   * Bir nechta kompaniya bo'lsa va tanlanmagan bo'lsa — TAXMIN
+   * QILMAYMIZ, aniq xato beramiz. Noto'g'ri tenantga yozish jim
+   * buzilish demak va uni keyin topish juda qiyin. */
+  var komp = _t2KompaniyaId();
 
-  var yaratildi = _t2Post('t2_obyekt', [{nom: nom, tur: tur}], true);
-  return {id: yaratildi[0].id, nom: nom, tur: tur, yangi: true};
+  var bor = _t2Get('t2_obyekt?nom=eq.' + encodeURIComponent(nom) +
+                   '&kompaniya_id=eq.' + komp + '&select=id,tur');
+  if(bor.length) return {id: bor[0].id, nom: nom, tur: bor[0].tur,
+                         kompaniya_id: komp, yangi: false};
+
+  var yaratildi = _t2Post('t2_obyekt',
+    [{nom: nom, tur: tur, kompaniya_id: komp}], true);
+  return {id: yaratildi[0].id, nom: nom, tur: tur,
+          kompaniya_id: komp, yangi: true};
+}
+
+/**
+ * Joriy kompaniya IDsi.
+ *
+ * Tartib: ScriptProperties (`T2_KOMPANIYA_ID`) → bittagina faol
+ * kompaniya → xato. Oxirgi holat ataylab xato: kompaniya bir nechta
+ * bo'lsa va tanlanmagan bo'lsa, «birinchisini olaman» degan taxmin
+ * ma'lumotni boshqa mijozga yozib qo'yishi mumkin.
+ */
+function _t2KompaniyaId(){
+  var p = PropertiesService.getScriptProperties();
+  var saqlangan = p.getProperty('T2_KOMPANIYA_ID');
+  if(saqlangan && /^\d+$/.test(saqlangan)) return Number(saqlangan);
+
+  var faol = _t2Get('t2_kompaniya?faol=is.true&select=id,nom,kod&order=id.asc');
+  if(!faol.length) throw 'Faol kompaniya yo\'q. Avval t2_kompaniya ga yozuv qo\'shing.';
+  if(faol.length > 1){
+    throw 'Bir nechta kompaniya bor (' +
+          faol.map(function(k){ return k.kod; }).join(', ') +
+          '). Qaysi biriga import qilish kerakligini belgilang: ' +
+          'apiT2KompaniyaTanla(<id>).';
+  }
+  p.setProperty('T2_KOMPANIYA_ID', String(faol[0].id));
+  return faol[0].id;
+}
+
+/** Import qaysi kompaniyaga ketishini belgilaydi (bir marta). */
+function apiT2KompaniyaTanla(id){
+  var faol = _t2Get('t2_kompaniya?id=eq.' + Number(id) + '&select=id,nom,kod,faol');
+  if(!faol.length) return {ok:false, xabar:'Bunday kompaniya yo\'q: ' + id};
+  if(!faol[0].faol)  return {ok:false, xabar:'Bu kompaniya faol emas: ' + faol[0].kod};
+  PropertiesService.getScriptProperties()
+    .setProperty('T2_KOMPANIYA_ID', String(faol[0].id));
+  return {ok:true, kompaniya: faol[0],
+          xabar:'Import endi «' + faol[0].nom + '» ga ketadi'};
+}
+
+/** Joriy tanlovni ko'rsatadi — «qaysi kompaniyaga yozayapman?» */
+function apiT2KompaniyaHolat(){
+  var p = PropertiesService.getScriptProperties();
+  var id = p.getProperty('T2_KOMPANIYA_ID');
+  var royxat = _t2Get('t2_kompaniya?select=id,nom,kod,faol&order=id.asc');
+  var joriy = null;
+  for(var i=0;i<royxat.length;i++) if(String(royxat[i].id) === String(id)) joriy = royxat[i];
+  return {ok:true, tanlangan: joriy, kompaniyalar: royxat,
+          xabar: joriy ? ('Import «' + joriy.nom + '» ga ketadi')
+                       : 'Kompaniya tanlanmagan'};
 }
 
 
