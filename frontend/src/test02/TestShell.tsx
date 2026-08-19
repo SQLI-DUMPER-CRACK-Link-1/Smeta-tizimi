@@ -23,10 +23,12 @@
  */
 import { Outlet, NavLink } from 'react-router-dom';
 import { KompaniyaProvider, KompaniyaTanlagich } from './KompaniyaTanlov';
-import { FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer } from 'lucide-react';
+import { FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer, Upload, Tags } from 'lucide-react';
 
 const TEST_MENYU = [
+  { yol: '/admin/test/import',    nom: 'Smeta yuklash', Ikonka: Upload },
   { yol: '/admin/test/obyektlar', nom: 'Obyektlar',    Ikonka: Building2 },
+  { yol: '/admin/test/narxlar',   nom: 'Narxlar',      Ikonka: Tags },
   { yol: '/admin/test/daraxt',    nom: 'Smeta daraxti', Ikonka: Network },
   { yol: '/admin/test/oqish',     nom: 'GAS o’qish tezligi', Ikonka: Timer },
   { yol: '/admin/tezlik',         nom: 'Tezlik sinovi', Ikonka: Gauge },
