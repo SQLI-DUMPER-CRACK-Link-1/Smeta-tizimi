@@ -237,3 +237,104 @@ export function sbTreeQur(qatorlar: SbHolatQator[]): TreeNode[] {
   }
   return tartib;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+ * TIZIM_02 (t2_) — BAZA HAQIQAT MANBAI
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * Yuqoridagi funksiyalar Tizim_01 ning KO'ZGUSINI o'qiydi (`obyektlar`,
+ * `holat`). Bu yerdagilar esa BOSHQA tizim — Tizim_02 — jadvallarini
+ * o'qiydi (`t2_*`), u yerda baza ko'zgu emas, HAQIQAT MANBAI.
+ *
+ * ⚠️ IKKISI ARALASHTIRILMAYDI. Tizim_02 sahifalari faqat `t2_` ni
+ * o'qiydi. Aks holda qaysi raqam qaysi tizimdan kelgani bilinmay
+ * qoladi va bu tizimda eng qimmat xato turi aynan shu.
+ *
+ * MUHIM FARQ: `t2_daraxt` da HAQIQIY ota-bola bog'lanishi bor
+ * (`ota_id`, `daraja`, `tartib`). Eski `holat` da u yo'q edi va daraxt
+ * varaq tartibi bo'yicha TAXMIN bilan tiklanardi. Bu yerda taxmin
+ * kerak emas.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/** `t2_obyekt_jami` — obyekt + jamlanma raqamlar (view). */
+export type T2Obyekt = {
+  id: number; nom: string; tur: string | null;
+  qator_soni: number | null; razdel: number | null;
+  ish: number | null; resurs: number | null;
+  jami: number | null;
+  /** ⚠️ Narx TOPILMAGAN qatorlar soni. >0 bo'lsa `jami` TO'LIQ EMAS. */
+  narxsiz: number | null;
+  chel: number | null; mash: number | null; mat: number | null; ob: number | null;
+  yangilandi: string | null;
+};
+
+export function sbT2ObyektlarOl() {
+  return sbOqi<T2Obyekt>({ jadval: 't2_obyekt_jami', tartib: 'nom.asc', limit: 5000 });
+}
+
+/** `t2_daraxt` — hisoblangan daraxt qatorlari (view). */
+export type T2Qator = {
+  id: number; obyekt_id: number; obyekt: string | null;
+  ota_id: number | null; daraja: number | null; tartib: number | null;
+  tur: string | null; kod: string | null; nom: string | null;
+  birlik: string | null;
+  hajm: number | null; narx: number | null; summa: number | null;
+  kat: string | null; narx_usul: string | null;
+  qoshimcha: boolean | null; zamena: boolean | null;
+  d1: string | null; d2: string | null; d3: string | null;
+  xom_qator: number | null; yangilandi: string | null;
+};
+
+export function sbT2DaraxtOl(obyektId: number) {
+  return sbOqi<T2Qator>({
+    jadval: 't2_daraxt',
+    filtr: 'obyekt_id=eq.' + obyektId,
+    tartib: 'tartib.asc',
+    limit: 200000,
+  });
+}
+
+/**
+ * `ota_id` bo'yicha HAQIQIY daraxt quradi va mavjud `TreeNode` shakliga
+ * o'giradi (chizish komponenti bir xil qolsin).
+ *
+ * Bu yerda TAXMIN YO'Q: bog'lanish bazadan keladi.
+ */
+export function sbT2TreeQur(qatorlar: T2Qator[]): TreeNode[] {
+  const son = (v: unknown) => Number(v) || 0;
+  const xarita = new Map<number, TreeNode>();
+  const ildiz: TreeNode[] = [];
+
+  /* 1-o'tish: har qator uchun tugun */
+  for (const r of qatorlar) {
+    xarita.set(r.id, {
+      type: (r.tur as TreeNode['type']) || 'rs',
+      nom: r.nom || '',
+      varaq: r.obyekt || '',
+      row: son(r.xom_qator),
+      kat: r.kat || '',
+      kod: r.kod || '',
+      birlik: r.birlik || '',
+      smetaHajm: son(r.hajm),
+      smeta: son(r.summa),
+      narx: son(r.narx),
+      /* Tizim_02 da fakt/F2 hali yo'q — SOXTA raqam qo'ymaymiz, 0 qoladi
+         va bu ochiq holat: «hali kiritilmagan» degani. */
+      fakt: 0, qoldiq: 0, f2ol: 0, f2mum: 0,
+      stFakt: 0, stF2: 0,
+      isQosh: !!r.qoshimcha,
+      isZamena: !!r.zamena,
+      d1: r.d1 || undefined, d2: r.d2 || undefined, d3: r.d3 || undefined,
+      children: [],
+    });
+  }
+
+  /* 2-o'tish: ota-bola bog'lash */
+  for (const r of qatorlar) {
+    const tugun = xarita.get(r.id)!;
+    const ota = r.ota_id != null ? xarita.get(r.ota_id) : null;
+    if (ota) ota.children!.push(tugun);
+    else ildiz.push(tugun);
+  }
+  return ildiz;
+}

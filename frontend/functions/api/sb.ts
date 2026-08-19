@@ -30,9 +30,19 @@ import { tekshir } from '../_shared/auth';
 /* Faqat shu jadvallar o'qiladi. Yangi jadval kerak bo'lsa SHU YERGA
    qo'shiladi — «hamma jadval ochiq» holatiga hech qachon o'tmaymiz. */
 const RUXSAT_JADVALLAR = new Set([
+  /* ── TIZIM_01 ko’zgusi (eski) ── */
   'obyektlar', 'holat', 'oylik_f2', 'narxlar', 'material_kerak',
   'shartnoma', 'tolovlar', 'prixod', 'rashod', 'topilmaganlar',
   'akt', 'akt_ish', 'tarix', 'anomaliya',
+
+  /* ── TIZIM_02 (t2_) — BU YERDA BAZA HAQIQAT MANBAI ──
+     Tizim_02 sahifalari FAQAT shu jadvallarni o’qiydi. Eski ko’zgu
+     jadvallariga (yuqoridagilar) ular MUROJAAT QILMAYDI — aks holda
+     ikki tizim ma’lumoti aralashib, qaysi raqam qayerdan kelgani
+     bilinmay qoladi. */
+  't2_obyekt', 't2_obyekt_jami', 't2_daraxt', 't2_qator',
+  't2_narx', 't2_manba', 't2_xom', 't2_lrv',
+  't2_kozgu', 't2_ozgarish', 't2_kopruk_navbat', 't2_sozlama',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

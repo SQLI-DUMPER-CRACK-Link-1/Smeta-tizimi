@@ -14,12 +14,14 @@ import { useNavigate } from 'react-router-dom';
 import { Database, RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
-import { sbObyektlarOl } from '../api/supabase';
+/* WARN 2026-08-19: endi TIZIM_02 ning O’Z jadvallari o’qiladi (t2_*),
+   eski ko’zgu jadvallari (obyektlar/holat) EMAS. Foydalanuvchi talabi:
+   «tizim_02 ni supabase ni yangi shu tizim uchun ochilgan jadvallargagina
+   bog’lash». Ikkisi aralashsa qaysi raqam qaysi tizimdan kelgani
+   bilinmay qoladi. */
+import { sbT2ObyektlarOl, type T2Obyekt } from '../api/supabase';
 
-type Qator = {
-  nom: string; smeta: number; fakt: number; f2: number; qoldiq: number;
-  progress: number; f2pct: number; sana: string; updated_at: string;
-};
+type Qator = T2Obyekt;
 
 /** «5 daqiqa oldin» ko'rinishi — eskirganini ko'rish uchun. */
 function yosh(iso: string | null | undefined): { matn: string; eski: boolean } {
@@ -43,7 +45,7 @@ export default function TestObyektlar() {
 
   const yukla = async () => {
     setYuklanmoqda(true); setXato('');
-    const r = await sbObyektlarOl();
+    const r = await sbT2ObyektlarOl();
     setMs(r.ms || 0);
     if (!r.ok) { setXato(r.error || 'O\'qilmadi'); setQatorlar(null); }
     else setQatorlar((r.qatorlar as Qator[]) || []);
@@ -56,16 +58,18 @@ export default function TestObyektlar() {
     const q = qatorlar || [];
     return {
       soni: q.length,
-      smeta: q.reduce((a, x) => a + (Number(x.smeta) || 0), 0),
-      fakt: q.reduce((a, x) => a + (Number(x.fakt) || 0), 0),
-      f2: q.reduce((a, x) => a + (Number(x.f2) || 0), 0),
+      jami: q.reduce((a, x) => a + (Number(x.jami) || 0), 0),
+      qator: q.reduce((a, x) => a + (Number(x.qator_soni) || 0), 0),
+      /* ⚠️ Narx TOPILMAGAN qatorlar. >0 bo’lsa jami TO’LIQ EMAS — buni
+         yashirish mumkin emas ([[narx-oz-idan-toqilmaydi]] qoidasi). */
+      narxsiz: q.reduce((a, x) => a + (Number(x.narxsiz) || 0), 0),
     };
   }, [qatorlar]);
 
   return (
     <Sahifa
       sarlavha="Obyektlar (Tizim_02)"
-      tavsif="Ro'yxat Supabase ko'zgusidan o'qildi"
+      tavsif="Ma'lumot t2_ jadvallaridan — bu yerda BAZA haqiqat manbai"
       amallar={
         <button onClick={yukla} disabled={yuklanmoqda}
           className="h-9 px-3 inline-flex items-center gap-2 rounded-[10px] karta text-sm
@@ -82,9 +86,14 @@ export default function TestObyektlar() {
             <Database size={14} className="text-accent" />
             <b>{jami.soni}</b> obyekt · <b>{ms}</b> ms
           </span>
-          <span className="text-text-dim">Smeta: <FmtN val={jami.smeta} /></span>
-          <span className="text-text-dim">Fakt: <FmtN val={jami.fakt} /></span>
-          <span className="text-text-dim">Ф2: <FmtN val={jami.f2} /></span>
+          <span className="text-text-dim">Jami: <FmtN val={jami.jami} /></span>
+          <span className="text-text-dim">{jami.qator} qator</span>
+          {jami.narxsiz > 0 && (
+            <span className="text-warn inline-flex items-center gap-1.5">
+              <AlertTriangle size={13} />
+              {jami.narxsiz} qator NARXLANMAGAN — jami to'liq emas
+            </span>
+          )}
         </div>
 
         {xato && (
@@ -100,10 +109,10 @@ export default function TestObyektlar() {
         {qatorlar && !qatorlar.length && !xato && (
           <div className="karta p-6 text-center">
             <p className="text-[13px] text-text-dim">
-              Ko'zgu bo'sh — sinxronizatsiya hali ishlamagan.
+              Tizim_02 hali BO’SH — bu kutilgan holat.
             </p>
             <p className="text-[12px] text-text-mute mt-1">
-              Tizim_01 → Supabase bo'limidan to'liq sinxronni ishga tushiring.
+              Obyekt qo’shish uchun smeta faylini import qiling (GAS: apiT2ObyektImport).
             </p>
           </div>
         )}
@@ -115,31 +124,35 @@ export default function TestObyektlar() {
                 <thead>
                   <tr className="border-b border-border text-text-dim">
                     <th className="text-left px-3 py-2 font-medium">Obyekt</th>
-                    <th className="text-right px-3 py-2 font-medium">Smeta</th>
-                    <th className="text-right px-3 py-2 font-medium">Fakt</th>
-                    <th className="text-right px-3 py-2 font-medium">Ф2</th>
-                    <th className="text-right px-3 py-2 font-medium">Bajarildi</th>
-                    <th className="text-left px-3 py-2 font-medium">Ko'zgu yoshi</th>
+                    <th className="text-right px-3 py-2 font-medium">Jami</th>
+                    <th className="text-right px-3 py-2 font-medium">Razdel</th>
+                    <th className="text-right px-3 py-2 font-medium">Ish</th>
+                    <th className="text-right px-3 py-2 font-medium">Resurs</th>
+                    <th className="text-right px-3 py-2 font-medium">Narxsiz</th>
+                    <th className="text-left px-3 py-2 font-medium">Hisoblandi</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
                 <tbody>
                   {qatorlar.map((o) => {
-                    const y = yosh(o.updated_at);
+                    const y = yosh(o.yangilandi);
                     return (
                       <tr key={o.nom}
                         onClick={() => navigate('/admin/test/daraxt?obyekt=' + encodeURIComponent(o.nom))}
                         className="border-b border-border last:border-0 cursor-pointer
                                    hover:bg-[var(--surface-2)]/60 transition-colors">
                         <td className="px-3 py-2 text-text">{o.nom}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-text">
+                          <FmtN val={Number(o.jami) || 0} /></td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-dim">
-                          <FmtN val={o.smeta} /></td>
+                          {o.razdel ?? 0}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-dim">
-                          <FmtN val={o.fakt} /></td>
+                          {o.ish ?? 0}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-dim">
-                          <FmtN val={o.f2} /></td>
-                        <td className="px-3 py-2 text-right tabular-nums text-text-dim">
-                          {Math.round(Number(o.progress) || 0)}%</td>
+                          {o.resurs ?? 0}</td>
+                        <td className={'px-3 py-2 text-right tabular-nums ' +
+                          ((o.narxsiz ?? 0) > 0 ? 'text-warn font-medium' : 'text-text-mute')}>
+                          {o.narxsiz ?? 0}</td>
                         <td className={`px-3 py-2 ${y.eski ? 'text-warn' : 'text-text-mute'}`}>
                           {y.matn}
                         </td>

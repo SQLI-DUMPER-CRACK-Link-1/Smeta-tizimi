@@ -17,13 +17,15 @@ import { Database, Play, AlertTriangle, Layers } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { SmetaTree } from '../umumiy/daraxt/SmetaTree';
 import { FmtN } from '../lib/format';
-import { useObyektlar } from '../api/hooks';
-import { sbHolatOl, sbTreeQur } from '../api/supabase';
+/* WARN 2026-08-19: TIZIM_02 endi O’Z jadvallarini o’qiydi (t2_daraxt),
+   eski ko’zgu `holat` ni EMAS. Obyektlar ro’yxati ham t2_obyekt_jami dan —
+   GAS/Sheets ga umuman murojaat qilinmaydi. */
+import { sbT2ObyektlarOl, sbT2DaraxtOl, sbT2TreeQur, type T2Obyekt } from '../api/supabase';
 import type { TreeNode } from '../api/types';
 
 export default function TestDaraxt() {
   const [params, setParams] = useSearchParams();
-  const obyektlar = useObyektlar();
+  const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [obyekt, setObyekt] = useState(params.get('obyekt') || '');
   const [tree, setTree] = useState<TreeNode[] | null>(null);
   const [xato, setXato] = useState('');
@@ -33,11 +35,28 @@ export default function TestDaraxt() {
     jamiServerda?: number | null; qurishMs: number;
   } | null>(null);
 
-  const ochish = useCallback(async (nom: string) => {
+  /* Obyektlar ro'yxati — t2 dan. Nom → id kerak, chunki `t2_daraxt`
+     `obyekt_id` bo'yicha filtrlaydi (matn emas, son — indeksli va aniq). */
+  useEffect(() => {
+    sbT2ObyektlarOl().then((r) => {
+      if (r.ok) setObyektlar((r.qatorlar as T2Obyekt[]) || []);
+    });
+  }, []);
+
+  const ochish = useCallback(async (nom: string, royxat: T2Obyekt[]) => {
     if (!nom) return;
     setYuklanmoqda(true); setXato(''); setTree(null); setOlcham(null);
 
-    const r = await sbHolatOl(nom);
+    const ob = royxat.find((x) => x.nom === nom);
+    if (!ob) {
+      /* Nomni topa olmasak SOXTA natija ko'rsatmaymiz — ochiq aytamiz. */
+      setXato('Bu nom Tizim_02 da yo\'q: «' + nom + '». '
+            + 'Avval smetani import qiling yoki ro\'yxatdan tanlang.');
+      setYuklanmoqda(false);
+      return;
+    }
+
+    const r = await sbT2DaraxtOl(ob.id);
     if (!r.ok) {
       setXato(r.error || 'O\'qilmadi');
       setYuklanmoqda(false);
@@ -48,7 +67,7 @@ export default function TestDaraxt() {
        yoki brauzerdagi ishlovdanmi — buni bilmasdan optimallashtirish
        taxminga aylanadi. */
     const t0 = performance.now();
-    const t = sbTreeQur(q);
+    const t = sbT2TreeQur(q);
     const qurishMs = Math.round(performance.now() - t0);
 
     setTree(t);
@@ -57,20 +76,21 @@ export default function TestDaraxt() {
     setYuklanmoqda(false);
   }, []);
 
-  /* Obyektlar sahifasidan havola bilan kelinsa — darhol ochamiz */
+  /* Obyektlar sahifasidan havola bilan kelinsa — ro'yxat kelgach ochamiz */
   useEffect(() => {
     const q = params.get('obyekt');
-    if (q && q !== obyekt) { setObyekt(q); ochish(q); }
-    else if (q && !tree && !yuklanmoqda) ochish(q);
+    if (!q || !obyektlar.length) return;
+    setObyekt(q);
+    ochish(q, obyektlar);
     /* eslint-disable-next-line */
-  }, [params]);
+  }, [params, obyektlar]);
 
   const toliqEmas = olcham?.toliq === false;
 
   return (
     <Sahifa
       sarlavha="Smeta daraxti (Tizim_02)"
-      tavsif="Og'ir daraxtni Supabase'dan ochish sinovi — faqat o'qish"
+      tavsif="t2_daraxt dan — ota-bola bog'lanishi bazada saqlangan, taxmin yo'q"
     >
       <div className="flex flex-col h-full min-h-0 gap-3">
         <div className="karta p-3 flex-shrink-0">
@@ -81,17 +101,17 @@ export default function TestDaraxt() {
               </label>
               <input list="test-obyektlar" value={obyekt}
                 onChange={(e) => setObyekt(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { setParams({ obyekt }); ochish(obyekt); } }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { setParams({ obyekt }); ochish(obyekt, obyektlar); } }}
                 placeholder="obyekt nomini tanlang yoki yozing"
                 className="w-full bg-[var(--surface-2)] border border-border rounded-lg
                            px-3 py-2 text-[13px] text-text outline-none focus:border-accent/50" />
               <datalist id="test-obyektlar">
-                {(obyektlar.data ?? []).map((o: any) => (
-                  <option key={o.obyekt} value={o.obyekt} />
+                {obyektlar.map((o) => (
+                  <option key={o.id} value={o.nom} />
                 ))}
               </datalist>
             </div>
-            <button onClick={() => { setParams({ obyekt }); ochish(obyekt); }}
+            <button onClick={() => { setParams({ obyekt }); ochish(obyekt, obyektlar); }}
               disabled={!obyekt || yuklanmoqda}
               className="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium
                          hover:bg-accent/90 transition-colors disabled:opacity-40
@@ -138,10 +158,10 @@ export default function TestDaraxt() {
         {tree && !tree.length && !yuklanmoqda && (
           <div className="karta p-6 text-center flex-shrink-0">
             <p className="text-[13px] text-text-dim">
-              Bu obyekt uchun ko'zguda ma'lumot yo'q.
+              Bu obyektda hali qator yo’q.
             </p>
             <p className="text-[12px] text-text-mute mt-1">
-              Tizim_01 → Supabase bo'limidan sinxronizatsiyani ishga tushiring.
+              Smeta import qilinganmi va hisoblash ishga tushganmi — tekshiring.
             </p>
           </div>
         )}
@@ -156,10 +176,7 @@ export default function TestDaraxt() {
                 Smeta: <b className="text-text"><FmtN val={tree.reduce((a, r) => a + (r.smeta || 0), 0)} /></b>
               </span>
               <span className="text-text-dim">
-                Fakt: <b className="text-text"><FmtN val={tree.reduce((a, r) => a + (r.stFakt || 0), 0)} /></b>
-              </span>
-              <span className="text-text-dim">
-                Ф2: <b className="text-text"><FmtN val={tree.reduce((a, r) => a + (r.stF2 || 0), 0)} /></b>
+                Qator: <b className="text-text">{olcham?.qatorlar ?? 0}</b>
               </span>
             </div>
             <div className="flex-1 min-h-0">
