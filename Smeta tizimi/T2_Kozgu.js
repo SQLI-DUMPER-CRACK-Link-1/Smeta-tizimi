@@ -266,6 +266,12 @@ function apiT2KozguYarat(obyekt){
     sh.getRange(1, 1, jadval.length, USTUNLAR.length).setValues(jadval);
 
     /* ── Bezash (ommaviy, qatorma-qator emas) ── */
+
+    /* ⚠️ `sh.clear()` birlashmalarni OLIB TASHLAMAYDI. Ustun soni
+       o'zgarganda (13 → 15) eski birlashma qolib, yangisi bilan
+       to'qnashardi. Shuning uchun sarlavha zonasi avval ajratiladi. */
+    try{ sh.getRange(1, 1, 5, NU).breakApart(); }catch(e){}
+
     sh.getRange(1, 1, 1, NU).merge()
       .setBackground('#FFF3CD').setFontColor('#8A6D3B').setFontWeight('bold').setWrap(true);
     sh.getRange(2, 1, 1, NU).merge().setFontSize(13).setFontWeight('bold');
@@ -313,9 +319,12 @@ function apiT2KozguYarat(obyekt){
         .setNumberFormat('#,##0.00');
       sh.getRange(SARLAVHA_QATOR + 1, C_KAT1, qatorlar.length, 4)
         .setNumberFormat('#,##0.00');
-      /* Kategoriya ustunlari ko'z bilan ajralib tursin */
-      sh.getRange(SARLAVHA_QATOR, C_KAT1, qatorlar.length + 1, 4)
-        .setBorder(null, true, null, true, false, false);
+      /* Kategoriya ustunlari ko'z bilan ajralib tursin.
+         Chegara — sof bezak, hujjatni yiqitishga haqqi yo'q. */
+      try{
+        sh.getRange(SARLAVHA_QATOR, C_KAT1, qatorlar.length + 1, 4)
+          .setBorder(null, true, null, true, false, false);
+      }catch(e){}
     }
     sh.setColumnWidth(1, 55);  sh.setColumnWidth(2, 95);
     sh.setColumnWidth(3, 430); sh.setColumnWidth(4, 70);
@@ -323,8 +332,19 @@ function apiT2KozguYarat(obyekt){
     sh.setColumnWidth(7, 100); sh.setColumnWidth(8, 120);
     sh.setColumnWidth(9, 45);
     for(var kc = C_KAT1; kc < C_KAT1 + 4; kc++) sh.setColumnWidth(kc, 115);
-    sh.setFrozenRows(SARLAVHA_QATOR);
-    sh.setFrozenColumns(3);
+    /* ⚠️ BEZAK HUJJATNI TO'SMASIN.
+     *
+     * `setFrozenColumns(3)` yiqilgan edi: 1/2/4-qatorlar butun kenglikda
+     * birlashtirilgan va ustunni 3-dan muzlatish o'sha birlashmani
+     * o'rtasidan kesadi —
+     *   «you can't freeze columns which contain only part of a merged cell»
+     * Chaqiruv try/catch siz turgani uchun BUTUN ko'zgu yaratilmasdan
+     * qolardi. Ya'ni sof kosmetik narsa asosiy ishni o'ldirgan.
+     *
+     * Ustunlarni muzlatishdan voz kechdik (banner birlashmasi bilan
+     * birga ishlamaydi), qolgan bezaklar esa endi himoyalangan: ular
+     * yiqilsa ham hujjat baribir yaraladi. */
+    try{ sh.setFrozenRows(SARLAVHA_QATOR); }catch(e){}
     /* Xizmat ustunlari ko'zdan yashiriladi — lekin O'CHIRILMAYDI:
        ularsiz tahrirni bazaga qaytarib bo'lmaydi. */
     try{ sh.hideColumns(C_ID, 2); }catch(e){}

@@ -168,5 +168,21 @@ tek('«нарх йўқ» yozuvi son deb o\'qilmaydi',
 /* O'zgarish bo'lsa hisob eskiradi */
 tek('yozilgach qayta hisoblanadi', /if\(ozgardi\)\{[\s\S]{0,200}apiT2Ishla/.test(KOZGU));
 
+console.log('\n── Bezak hujjatni yiqitmasin ──');
+
+/* setFrozenColumns(3) butun ko'zguni yaratilmasdan qoldirgan edi:
+   1/2/4-qatorlar butun kenglikda birlashtirilgan, ustunni 3-dan
+   muzlatish o'sha birlashmani o'rtasidan kesadi. */
+tek('setFrozenColumns CHAQIRILMAYDI', !/sh\.setFrozenColumns\(/.test(KOZGU),
+    'banner birlashmasi bilan birga ishlamaydi — ko\'zgu umuman yaralmasdi');
+tek('setFrozenRows himoyalangan', /try\{ sh\.setFrozenRows/.test(KOZGU));
+tek('hideColumns himoyalangan', /try\{ sh\.hideColumns/.test(KOZGU));
+tek('setBorder himoyalangan', /try\{[\s\S]{0,160}setBorder/.test(KOZGU));
+
+/* sh.clear() birlashmalarni olib tashlamaydi — ustun soni o'zgarsa
+   eski birlashma yangisi bilan to'qnashardi. */
+tek('sarlavha zonasi avval breakApart qilinadi',
+    /breakApart\(\)/.test(KOZGU));
+
 console.log('\n' + ok + ' o\'tdi, ' + xato + ' yiqildi');
 process.exit(xato ? 1 : 0);
