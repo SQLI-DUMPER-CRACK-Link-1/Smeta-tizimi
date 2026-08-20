@@ -10,7 +10,14 @@
       "Bash(mkdir -p /tmp/claspcheck)",
       "Bash(cp \"C:/Users/PC/Documents/GAS/Akt generator/.clasp.json\" /tmp/claspcheck/.clasp.json)",
       "Read(//tmp/**)",
-      "Bash(clasp pull *)"
+      "Bash(clasp pull *)",
+      "PowerShell(cd \"C:\\\\Users\\\\PC\\\\Documents\\\\GAS\\\\frontend\"; $env:NODE_OPTIONS = \"--max-old-space-size=3072\"; npx vite build 2>&1 | Select-Object -Last 12)",
+      "Bash(node testlar/t2_hujjat.test.cjs)",
+      "Bash(node testlar/marshrut.test.mjs)",
+      "Bash(node testlar/obyekt_guruh.test.cjs)",
+      "Bash(node testlar/shartnoma.tekshir.cjs)",
+      "Bash(node testlar/t2_kompaniya.test.cjs)",
+      "Bash(NODE_OPTIONS=--max-old-space-size=2048 npx tsc --noEmit -p tsconfig.app.json)"
     ]
   }
 }

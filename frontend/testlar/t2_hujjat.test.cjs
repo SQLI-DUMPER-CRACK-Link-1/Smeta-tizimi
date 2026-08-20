@@ -95,6 +95,13 @@ tek('hujjat o\'chgach qayta hisoblanadi',
 tek('konvert nusxa DriveApp bilan nomlanadi',
     /getFileById\(oqiladiganId\)\.setName\('\(GS\) '/.test(YUKLASH));
 
+/* «Sahifalarni nazorat qilish» = olib tashlash EMAS, qo'shish HAM.
+   t2_manba faqat import qilinganlarini biladi — to'liq ro'yxat Drive'dan. */
+tek('apiT2HujjatVaraqlar bor', /function\s+apiT2HujjatVaraqlar\s*\(/.test(YUKLASH));
+tek('openById oldidan MIME tekshiriladi (V8 qulashi)',
+    /apiT2HujjatVaraqlar[\s\S]{0,700}getMimeType\(\) !== MimeType\.GOOGLE_SHEETS[\s\S]{0,400}openById/
+      .test(YUKLASH));
+
 console.log('\n── Frontend: obyekt → qismlar ──');
 
 tek('obyekt yaratish bor', /apiT2ObyektYarat/.test(IMPORT_UI));
@@ -114,6 +121,18 @@ tek('bir xil nomli obyekt qayta yaratilmaydi',
     /obyektlar\.some\(\(o\) => o\.nom === nom\)/.test(IMPORT_UI));
 tek('fayl tanlagich qayta ishlatiladi (value tozalanadi)',
     /e\.currentTarget\.value = ''/.test(IMPORT_UI));
+
+/* Bazadagi hujjat yoyilganda Drive'dan TO'LIQ ro'yxat tortilishi kerak —
+   aks holda o'tgan safar belgilanmagan varaqni qo'shib bo'lmaydi. */
+tek('yoyilganda Drive varaqlari tortiladi', /apiT2HujjatVaraqlar/.test(IMPORT_UI));
+tek('bir marta tortiladi (`toliq` bayrog\'i)',
+    /\|\| h\.toliq\) return;/.test(IMPORT_UI) && /toliq: true/.test(IMPORT_UI));
+tek('import qilinmagan varaq belgisiz keladi',
+    /if \(!import1\.has\(v\.nom\)\) olinsin\[v\.nom\] = false/.test(IMPORT_UI));
+tek('Drive\'da yo\'q, bazada bor varaq yo\'qolmaydi',
+    /const driveda = new Set/.test(IMPORT_UI));
+tek('import qilinmagan varaq ekranda ajratiladi',
+    /import qilinmagan/.test(IMPORT_UI));
 
 console.log('\n── Frontend: yuboriladigan shakl ──');
 

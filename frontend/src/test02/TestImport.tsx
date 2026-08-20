@@ -47,6 +47,7 @@ type Hujjat = {
   olinsin: Record<string, boolean>;  // varaq nomi → olinadimi
   ochiq: boolean;
   bazada?: boolean;                  // allaqachon import qilingan
+  toliq?: boolean;                   // Drive'dan to'liq varaq ro'yxati tortilganmi
   jami_qator?: number;
 };
 
@@ -188,8 +189,41 @@ export default function TestImport() {
     setHujjatlar((p) => p.map((h) =>
       h.fayl_id === id ? { ...h, olinsin: { ...h.olinsin, [varaq]: qiymat } } : h));
 
-  const ochYop = (id: string) =>
-    setHujjatlar((p) => p.map((h) => (h.fayl_id === id ? { ...h, ochiq: !h.ochiq } : h)));
+  /**
+   * Hujjat yoyilganda BAZADAGI varaqlar yetarli emas.
+   *
+   * `apiT2ObyektHujjatlar` varaqlarni `t2_manba` dan oladi — ya'ni faqat
+   * avval import qilinganlarini. O'tgan safar belgilanmagan varaq
+   * ro'yxatda umuman yo'q va uni qo'shib bo'lmaydi. Shuning uchun birinchi
+   * yoyilishda Drive'dagi TO'LIQ ro'yxat tortiladi va ikkalasi
+   * birlashtiriladi: import qilinganlari belgilangan, qolganlari bo'sh.
+   */
+  const ochYop = async (id: string) => {
+    const h = hujjatlar.find((x) => x.fayl_id === id);
+    if (!h) return;
+    const yopilyapti = h.ochiq;
+    setHujjatlar((p) => p.map((x) => (x.fayl_id === id ? { ...x, ochiq: !x.ochiq } : x)));
+    if (yopilyapti || !h.bazada || h.toliq) return;
+
+    try {
+      const r = await gas<any>('apiT2HujjatVaraqlar', id);
+      if (!r.ok) { toast(r.xabar || 'Varaqlar o\'qilmadi', 'warn'); return; }
+      setHujjatlar((p) => p.map((x) => {
+        if (x.fayl_id !== id) return x;
+        const import1 = new Set(x.varaqlar.map((v) => v.nom));
+        const olinsin = { ...x.olinsin };
+        const varaqlar: Varaq[] = (r.varaqlar || []).map((v: any) => {
+          if (!import1.has(v.nom)) olinsin[v.nom] = false;   // import qilinmagan
+          return { nom: v.nom, qator: v.qator || 0, ustun: v.ustun || 0 };
+        });
+        /* Drive'da yo'q, lekin bazada bor varaq — fayl o'zgargan bo'lishi
+           mumkin. Yo'qotmaymiz, ro'yxat oxirida qoldiramiz. */
+        const driveda = new Set(varaqlar.map((v) => v.nom));
+        x.varaqlar.forEach((v) => { if (!driveda.has(v.nom)) varaqlar.push(v); });
+        return { ...x, varaqlar, olinsin, toliq: true };
+      }));
+    } catch (e: any) { toast(e?.message || 'Xato', 'warn'); }
+  };
 
   const rolKochir = (id: string, rol: Rol) =>
     setHujjatlar((p) => p.map((h) => (h.fayl_id === id ? { ...h, rol } : h)));
@@ -239,7 +273,9 @@ export default function TestImport() {
 
   const jamiXom = (natija?.import || []).reduce((a, x) => a + (x.xom_qator || 0), 0);
 
-  /* ── Bitta hujjat kartochkasi ── */
+  /* ── Bitta hujjat kartochkasi ──
+   * Ichida holat yo'q (hammasi `hujjatlar` massivida), shuning uchun
+   * har render'da qayta yaratilishi zararsiz. */
   const HujjatKarta = ({ h }: { h: Hujjat }) => {
     const olingan = h.varaqlar.filter((v) => h.olinsin[v.nom] !== false).length;
     return (
@@ -289,6 +325,10 @@ export default function TestImport() {
                   onChange={(e) => varaqOzgar(h.fayl_id, v.nom, e.target.checked)}
                   className="accent-[var(--accent)]" />
                 <span className="flex-1 text-text truncate">{v.nom}</span>
+                {/* Drive'da bor, lekin bu obyektga hali import qilinmagan varaq */}
+                {h.toliq && h.olinsin[v.nom] === false && (
+                  <span className="text-[10px] text-warn">import qilinmagan</span>
+                )}
                 <span className="text-text-mute">
                   {v.qator}{v.ustun ? ' × ' + v.ustun : ' qator'}
                 </span>

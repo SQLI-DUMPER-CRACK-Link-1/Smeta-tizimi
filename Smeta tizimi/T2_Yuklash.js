@@ -357,3 +357,41 @@ function apiT2HujjatOchir(obyektNom, faylId){
     return {ok:false, xabar: String((e && e.message) || e)};
   }
 }
+
+/**
+ * Drive'dagi hujjatning BARCHA varaqlari.
+ *
+ * NEGA KERAK: `apiT2ObyektHujjatlar` varaqlarni `t2_manba` dan oladi,
+ * ya'ni faqat AVVAL IMPORT QILINGANLARINI. Shu sababli obyektga
+ * qaytib kelgan foydalanuvchi o'tgan safar belgilamagan varaqni
+ * umuman ko'rmasdi — «sahifalarni nazorat qilish» esa faqat olib
+ * tashlash emas, QO'SHISH ham demak.
+ *
+ * Shu funksiya asl fayldan to'liq ro'yxatni beradi; UI ikkalasini
+ * birlashtiradi: import qilinganlari belgilangan, qolganlari bo'sh.
+ */
+function apiT2HujjatVaraqlar(faylId){
+  try{
+    if(!faylId) return {ok:false, xabar:'Fayl kerak'};
+
+    /* ⚠️ Google Sheets bo'lmagan faylni `openById` ga berish V8 ni
+       BUTUNLAY qulatadi — try/catch ham ushlamaydi (00_BOSH_QONUN 6.6).
+       Shuning uchun MIME avval tekshiriladi. */
+    var fayl = DriveApp.getFileById(faylId);
+    if(fayl.getMimeType() !== MimeType.GOOGLE_SHEETS){
+      return {ok:false, xabar:'Bu Google Sheets emas — varaqlari o\'qilmaydi'};
+    }
+
+    var ss = SpreadsheetApp.openById(faylId);
+    var shlar = ss.getSheets(), out = [];
+    for(var i=0;i<shlar.length;i++){
+      var sh = shlar[i], nomSh = sh.getName();
+      if(nomSh.charAt(0) === '_') continue;
+      out.push({nom: nomSh, qator: sh.getLastRow(), ustun: sh.getLastColumn()});
+    }
+    return {ok:true, fayl_nom: fayl.getName(), varaqlar: out};
+
+  }catch(e){
+    return {ok:false, xabar: String((e && e.message) || e)};
+  }
+}
