@@ -76,6 +76,18 @@ function apiT2FaylYukla(nom, b64, mime){
           fayl.getId());
         oqiladiganId = res.id;
         konvert = true;
+
+        /* ⚠️ 2026-08-19: nomni ALOHIDA qo'yamiz.
+         *
+         * Yuqoridagi `title` maydoni Drive API v2 niki. Loyihada v3
+         * yoqilgan bo'lsa u JIM e'tiborsiz qoldiriladi va konvert
+         * nusxasi asl nom bilan (kengaytmasi kesilgan holda) qoladi.
+         * Foydalanuvchi papkada «…_RES» va «…_RES.xlsx» ni yonma-yon
+         * ko'rib qaysi biri o'qilishini bilmaydi.
+         *
+         * DriveApp orqali nomlash Drive API versiyasiga bog'liq emas. */
+        try{ DriveApp.getFileById(oqiladiganId).setName('(GS) ' + saqlanadigan); }
+        catch(e3){}
       }catch(e){
         return {ok:false,
           xabar:'Faylni Google Sheets ga o\'girib bo\'lmadi: ' +
@@ -106,8 +118,19 @@ function apiT2FaylYukla(nom, b64, mime){
               fayl_id: oqiladiganId};
     }
 
+    /* ⚠️ HUJJAT ROLINI TAXMIN QILAMIZ — fayl NOMIGA qarab.
+     *
+     * RES/LRV alohida hujjat bo'lgani uchun rol asosan fayl nomidan
+     * bilinadi: «…RES…», «…СВОД…», «…РЕСУРС…» → svodka.
+     * Bu FAQAT taklif — oxirgi qarorni foydalanuvchi qiladi, chunki
+     * nom qoidasi har tashkilotda har xil bo'lishi mumkin. */
+    var nomU = String(nom).toUpperCase();
+    var rolTaklif = /(^|[^A-Z])RES([^A-Z]|$)|СВОД|РЕСУРС|SVOD|ВЕДОМОСТ/.test(nomU)
+      ? 'svodka' : 'lokalka';
+
     return {ok:true, fayl_id: oqiladiganId, asl_id: fayl.getId(),
-            nom: saqlanadigan, konvert: konvert, varaqlar: varaqlar,
+            nom: saqlanadigan, asl_nom: nom,
+            konvert: konvert, varaqlar: varaqlar, rol_taklif: rolTaklif,
             papka: papka.getName(), papka_url: papka.getUrl(),
             ms: Date.now() - t0};
 
@@ -118,39 +141,80 @@ function apiT2FaylYukla(nom, b64, mime){
 }
 
 /**
- * Yuklangan fayldan TIZIM_02 ga obyekt yaratadi va hisoblaydi.
+ * Yuklangan HUJJATLARDAN Tizim_02 ga obyekt yaratadi va hisoblaydi.
  *
- * Tizim_01 dan MUTLAQO mustaqil: obyekt nomini foydalanuvchi beradi,
- * qaysi varaq lokalka/svodka ekanini ham o'zi belgilaydi.
+ * ⚠️ 2026-08-19 QAYTA QURILDI — MODEL XATO EDI.
+ *
+ * Foydalanuvchi: «res va lrv alohida-alohida hujjat bo'ladiku, sani bu
+ * koding faqat hujjat ichidagi sahifani o'qiyapdi».
+ *
+ * To'g'ri e'tiroz. Avvalgi versiya BITTA fayl ichidagi varaqlar bilan
+ * ishlardi. Haqiqatda esa:
+ *     LRV (lokalka)  — alohida fayl
+ *     RES (svodka)   — alohida fayl
+ * va har birining ICHIDA bir nechta varaq bo'lishi mumkin (masalan
+ * lokalkada bir necha bo'lim, svodkada bir necha bo'lak).
+ *
+ * ENDI IKKI DARAJALI:
+ *   HUJJAT darajasi — har fayl o'z ROLI bilan (lokalka / svodka)
+ *   VARAQ darajasi  — har fayl ichida qaysi varaqlar olinishi
  *
  * @param {string} obyektNom  yangi obyekt nomi
- * @param {string} faylId     `apiT2FaylYukla` qaytargan id
- * @param {Array}  varaqlar   [{nom, rol}] — rol: 'lokalka' | 'svodka' | ''
+ * @param {Array}  hujjatlar  [{fayl_id, rol, varaqlar:[{nom, olinsin}]}]
  */
-function apiT2YuklanganImport(obyektNom, faylId, varaqlar){
+function apiT2YuklanganImport(obyektNom, hujjatlar){
   var t0 = Date.now();
   try{
     obyektNom = String(obyektNom || '').trim();
     if(!obyektNom) return {ok:false, xabar:'Obyekt nomi kerak'};
-    if(!faylId)    return {ok:false, xabar:'Fayl tanlanmagan'};
-    if(!varaqlar || !varaqlar.length)
-      return {ok:false, xabar:'Kamida bitta varaq belgilanishi kerak'};
+    if(!hujjatlar || !hujjatlar.length)
+      return {ok:false, xabar:'Hech bo\'lmasa bitta hujjat yuklang'};
 
-    var tanlangan = varaqlar.filter(function(v){
-      return v && v.rol && (v.rol === 'lokalka' || v.rol === 'svodka');
-    });
-    if(!tanlangan.length)
-      return {ok:false, xabar:'Hech bo\'lmasa bitta varaqni LOKALKA deb belgilang'};
+    /* Faqat roli belgilangan hujjatlar olinadi */
+    var faol = [];
+    for(var h=0; h<hujjatlar.length; h++){
+      var d = hujjatlar[h];
+      if(!d || !d.fayl_id) continue;
+      if(d.rol !== 'lokalka' && d.rol !== 'svodka') continue;
+      faol.push(d);
+    }
+    if(!faol.length)
+      return {ok:false, xabar:'Hech bo\'lmasa bitta hujjatni LOKALKA yoki SVODKA deb belgilang'};
 
-    var natijalar = [], xatolar = [];
-    for(var i=0;i<tanlangan.length;i++){
-      var v = tanlangan[i];
-      try{
-        var r = apiT2FaylImport(obyektNom, faylId, v.nom, v.rol);
-        natijalar.push(r);
-        if(!r.ok) xatolar.push('«' + v.nom + '» (' + v.rol + '): ' + r.xabar);
-      }catch(e){
-        xatolar.push('«' + v.nom + '»: ' + ((e && e.message) || e));
+    var lokalkaBor = faol.some(function(d){ return d.rol === 'lokalka'; });
+    if(!lokalkaBor)
+      return {ok:false, xabar:'LOKALKA hujjati belgilanmagan — ishlar ro\'yxati bo\'lmasa hisob yo\'q'};
+
+    var natijalar = [], xatolar = [], varaqSoni = 0;
+
+    for(var i=0; i<faol.length; i++){
+      var hj = faol[i];
+      /* Varaqlar ko'rsatilmagan bo'lsa — faylning HAMMA varag'i olinadi.
+         Ko'rsatilgan bo'lsa faqat `olinsin` belgilanganlari. */
+      var varaqlar = (hj.varaqlar && hj.varaqlar.length)
+        ? hj.varaqlar.filter(function(v){ return v && v.olinsin !== false; })
+        : [{nom: ''}];                       // bo'sh nom = birinchi mos varaq
+
+      if(!varaqlar.length){
+        xatolar.push('«' + (hj.nom || hj.fayl_id) + '»: bironta varaq belgilanmagan');
+        continue;
+      }
+
+      for(var v2=0; v2<varaqlar.length; v2++){
+        var vnom = varaqlar[v2].nom || '';
+        try{
+          var r = apiT2FaylImport(obyektNom, hj.fayl_id, vnom, hj.rol);
+          r.hujjat = hj.nom || '';
+          natijalar.push(r);
+          varaqSoni++;
+          if(!r.ok){
+            xatolar.push('«' + (hj.nom || 'hujjat') + '» / «' + (vnom || '(birinchi)') +
+                         '» (' + hj.rol + '): ' + r.xabar);
+          }
+        }catch(e){
+          xatolar.push('«' + (hj.nom || 'hujjat') + '» / «' + vnom + '»: ' +
+                       ((e && e.message) || e));
+        }
       }
     }
 
@@ -158,6 +222,7 @@ function apiT2YuklanganImport(obyektNom, faylId, varaqlar){
     if(natijalar.some(function(r){ return r.ok; })) hisob = apiT2Ishla(obyektNom);
 
     return {ok: !!(hisob && hisob.ok), obyekt: obyektNom,
+            hujjat_soni: faol.length, varaq_soni: varaqSoni,
             import: natijalar, hisob: hisob, xatolar: xatolar,
             ms: Date.now() - t0};
 
@@ -184,6 +249,110 @@ function apiT2ManbaFayllar(){
     }
     out.sort(function(a,b){ return b.ts - a.ts; });
     return {ok:true, papka_url: papka.getUrl(), fayllar: out};
+  }catch(e){
+    return {ok:false, xabar: String((e && e.message) || e)};
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * OBYEKT-MARKAZLI ISH TARTIBI
+ * ══════════════════════════════════════════════════════════════════
+ *
+ * Foydalanuvchi: «SHU BU OBYEKTNI RES QISMI, BU LRV QISMI DEB HAR BIR
+ * OBYEKTNI YARATIB ICHINI TO'LDIRISH IMKONI BERILISHI KERAK».
+ *
+ * Ya'ni tartib fayldan emas, OBYEKTDAN boshlanadi:
+ *      1) obyekt yaratiladi (bo'sh)
+ *      2) ichiga LRV qismi solinadi
+ *      3) ichiga RES qismi solinadi
+ *      4) hisoblanadi
+ *
+ * Avvalgi tartib teskari edi (fayl → obyekt) va shuning uchun bir
+ * obyektga ikkinchi hujjat qo'shish yo'li ko'rinmasdi.
+ * ══════════════════════════════════════════════════════════════════ */
+
+/** Bo'sh obyekt yaratadi (yoki bori qaytariladi). */
+function apiT2ObyektYarat(nom){
+  try{
+    var ob = apiT2ObyektTayyorla(nom);
+    return {ok:true, id: ob.id, nom: String(nom).trim(), tur: ob.tur};
+  }catch(e){
+    return {ok:false, xabar: String((e && e.message) || e)};
+  }
+}
+
+/**
+ * Obyekt ichidagi HUJJATLAR — `t2_manba` dan fayl bo'yicha guruhlangan.
+ *
+ * Bitta hujjatning bir necha varag'i alohida qator bo'lib yotadi;
+ * foydalanuvchi esa HUJJATNI ko'rishi kerak, varaqlar uning ichida.
+ */
+function apiT2ObyektHujjatlar(nom){
+  try{
+    nom = String(nom || '').trim();
+    if(!nom) return {ok:false, xabar:'Obyekt nomi kerak'};
+
+    var komp = _t2KompaniyaId();
+    var ob = _t2Get('t2_obyekt?nom=eq.' + encodeURIComponent(nom) +
+                    '&kompaniya_id=eq.' + komp + '&select=id');
+    if(!ob.length) return {ok:true, obyekt_id:null, hujjatlar:[]};
+
+    var qat = _t2Get('t2_manba?obyekt_id=eq.' + ob[0].id +
+                     '&select=id,rol,fayl_id,fayl_nom,varaq,format,qator_soni,' +
+                     'holat,xato,import_vaqt&order=import_vaqt.asc');
+
+    var xarita = {}, tartib = [];
+    for(var i=0;i<qat.length;i++){
+      var q = qat[i];
+      if(!xarita[q.fayl_id]){
+        xarita[q.fayl_id] = {
+          fayl_id: q.fayl_id, fayl_nom: q.fayl_nom, rol: q.rol,
+          import_vaqt: q.import_vaqt, varaqlar: [], jami_qator: 0
+        };
+        tartib.push(q.fayl_id);
+      }
+      var h = xarita[q.fayl_id];
+      h.varaqlar.push({nom: q.varaq, format: q.format,
+                       qator: q.qator_soni, holat: q.holat, xato: q.xato});
+      h.jami_qator += Number(q.qator_soni) || 0;
+      /* Bir hujjat ichida ikki xil rol bo'lsa — bu chalkashlik.
+         Belgilab qo'yamiz, jim yutmaymiz. */
+      if(h.rol !== q.rol) h.rol_ziddiyat = true;
+    }
+
+    var out = [];
+    for(var t=0;t<tartib.length;t++) out.push(xarita[tartib[t]]);
+    return {ok:true, obyekt_id: ob[0].id, hujjatlar: out};
+
+  }catch(e){
+    return {ok:false, xabar: String((e && e.message) || e)};
+  }
+}
+
+/**
+ * Obyektdan bitta HUJJATNI (barcha varaqlari bilan) olib tashlaydi.
+ *
+ * ⚠️ Faqat SHU obyektdagi yozuv o'chadi. Drive'dagi fayl JOYIDA QOLADI —
+ * asl hujjatni o'chirish import bekor qilish bilan bir narsa emas.
+ */
+function apiT2HujjatOchir(obyektNom, faylId){
+  try{
+    obyektNom = String(obyektNom || '').trim();
+    if(!obyektNom || !faylId) return {ok:false, xabar:'Obyekt va fayl kerak'};
+
+    var komp = _t2KompaniyaId();
+    var ob = _t2Get('t2_obyekt?nom=eq.' + encodeURIComponent(obyektNom) +
+                    '&kompaniya_id=eq.' + komp + '&select=id');
+    if(!ob.length) return {ok:false, xabar:'Obyekt topilmadi: ' + obyektNom};
+
+    _t2Ochir('t2_manba', 'obyekt_id=eq.' + ob[0].id +
+             '&fayl_id=eq.' + encodeURIComponent(faylId));
+
+    /* Hujjat ketgach hisob eskiradi — qayta hisoblanadi. */
+    var hisob = null;
+    try{ hisob = apiT2Ishla(obyektNom); }catch(e2){}
+    return {ok:true, hisob: hisob};
+
   }catch(e){
     return {ok:false, xabar: String((e && e.message) || e)};
   }
