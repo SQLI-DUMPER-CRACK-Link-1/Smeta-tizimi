@@ -1,4 +1,4 @@
-import { tekshir } from '../_shared/auth';
+import { tekshir, kalitBormi, KALIT_XABAR } from '../_shared/auth';
 
 /**
  * Joriy sessiya haqida ma'lumot — sayt kim bo'lib kirganini BILISHI uchun.
@@ -7,6 +7,10 @@ import { tekshir } from '../_shared/auth';
  */
 export const onRequestGet: PagesFunction<{ SESSIYA_KALIT: string }> = async (ctx) => {
   const secret = ctx.env.SESSIYA_KALIT;
+  if (!kalitBormi(secret)) {
+    return Response.json({ ok: false, xato: KALIT_XABAR, sozlanmagan: true },
+                         { status: 503 });
+  }
   const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
   if (!sess) return Response.json({ ok: false }, { status: 401 });
 

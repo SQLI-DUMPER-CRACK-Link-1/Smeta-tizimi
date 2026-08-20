@@ -25,7 +25,7 @@
  *   { ok: true, qatorlar: [...], soni: 1234, ms: 87 }
  *   { ok: false, error: "..." }
  */
-import { tekshir } from '../_shared/auth';
+import { tekshir, kalitBormi, KALIT_XABAR } from '../_shared/auth';
 
 /* Faqat shu jadvallar o'qiladi. Yangi jadval kerak bo'lsa SHU YERGA
    qo'shiladi — «hamma jadval ochiq» holatiga hech qachon o'tmaymiz. */
@@ -60,6 +60,10 @@ export const onRequestPost: PagesFunction<{
   const t0 = Date.now();
   try {
     const secret = ctx.env.SESSIYA_KALIT;
+  if (!kalitBormi(secret)) {
+    return Response.json({ ok: false, xato: KALIT_XABAR, sozlanmagan: true },
+                         { status: 503 });
+  }
     const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
     if (!sess) {
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });

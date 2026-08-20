@@ -41,14 +41,29 @@ async function hmacHex(body: string, secret: string) {
  * Kalitni Cloudflare Pages → Settings → Environment variables da
  * `SESSIYA_KALIT` nomi bilan o'rnatish kerak.
  */
+export const KALIT_XABAR =
+  'Server sozlanmagan: SESSIYA_KALIT yo\'q (yoki 16 belgidan qisqa). ' +
+  'Cloudflare Pages → Settings → Environment variables → SESSIYA_KALIT ' +
+  'ga 32+ belgili tasodifiy satr qo\'ying va qayta deploy qiling. ' +
+  'Zaxira kalit ataylab olib tashlangan: repozitoriy ochiq va u kalit ' +
+  'bilan har kim sessiya cookie\'sini soxtalashtira olardi.';
+
+/** Kalit yaroqlimi — TASHLAMAYDI, holat qaytaradi. */
+export function kalitBormi(secret: string | undefined | null): boolean {
+  return String(secret || '').trim().length >= 16;
+}
+
+/**
+ * ⚠️ Bu TASHLAYDI. Chaqiruvchi avval `kalitBormi()` bilan tekshirib,
+ * foydalanuvchiga TUSHUNARLI xabar qaytarishi kerak — aks holda
+ * brauzerda quruq «Server xatosi: 500» chiqadi va sababi bilinmaydi.
+ * Aynan shunday bo'ldi: kalit o'rnatilmagan edi va hech kim kira olmadi,
+ * lekin ekranda nima qilish kerakligi yozilmadi.
+ */
 export function kalitTekshir(secret: string | undefined | null): string {
   const k = String(secret || '').trim();
   if (k.length >= 16) return k;
-  throw new Error(
-    'SESSIYA_KALIT o\'rnatilmagan (yoki 16 belgidan qisqa). ' +
-    'Cloudflare Pages → Settings → Environment variables da o\'rnating. ' +
-    'Xavfsizlik uchun zaxira kalit ATAYLAB olib tashlangan — repozitoriy ochiq.'
-  );
+  throw new Error(KALIT_XABAR);
 }
 
 export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Promise<string> {

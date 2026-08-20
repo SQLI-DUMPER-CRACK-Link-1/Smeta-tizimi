@@ -1,4 +1,4 @@
-import { tekshir } from '../_shared/auth';
+import { tekshir, kalitBormi, KALIT_XABAR } from '../_shared/auth';
 
 export const onRequestPost: PagesFunction<{
   GAS_URL: string; GAS_TOKEN: string; SESSIYA_KALIT: string;
@@ -7,6 +7,10 @@ export const onRequestPost: PagesFunction<{
     const { fn, args } = await ctx.request.json<{ fn: string; args?: unknown[] }>();
 
     const secret = ctx.env.SESSIYA_KALIT;
+  if (!kalitBormi(secret)) {
+    return Response.json({ ok: false, xato: KALIT_XABAR, sozlanmagan: true },
+                         { status: 503 });
+  }
     const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
     if (!sess) {
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });
