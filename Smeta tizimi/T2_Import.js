@@ -320,10 +320,31 @@ function _t2MergeXarita(sh, boshlanish, soni){
  * @param {string} varaq   varaq nomi (bo'sh bo'lsa — birinchi mos varaq)
  * @param {string} rol     'lokalka' (smeta) yoki 'svodka' (narx manbai)
  */
-function apiT2FaylImport(obyekt, faylId, varaq, rol){
+function apiT2FaylImport(obyekt, faylId, varaq, rol, boshQator){
   var t0 = Date.now();
   try{
     rol = (rol === 'svodka') ? 'svodka' : 'lokalka';
+
+    /* ══ BO'LAKLI IMPORT ══
+     *
+     * Foydalanuvchi: «bu katta smetalarda ishlay olmasak GAS dan
+     * o'tganimizni tezlikdan boshqa foydasi yo'q ekanda».
+     *
+     * To'g'ri. Postgres 50 000 qatorni ~40 soniyada ishlaydi, lekin GAS
+     * bitta ijroga 6 daqiqa beradi va varaqni o'qib JSON ga aylantirish
+     * o'sha byudjetni yeydi. Yechim — hammasini bitta ijroda qilmaslik.
+     *
+     * `boshQator` berilsa import O'SHA QATORDAN davom etadi va vaqt
+     * byudjeti tugaganda `tugadi:false` bilan qaytadi. Chaqiruvchi
+     * (panel) `keyingi_qator` bilan qayta chaqiradi.
+     *
+     * Bir chaqiruvda ko'pi bilan `BOLAK` qator: 6 daqiqa emas, ~1 daqiqa
+     * ishlaydi va foydalanuvchi jarayonni ko'rib turadi. */
+    var BOLAK = 12000;
+    var CHEK  = 3.0 * 60 * 1000;          // bitta ijro uchun xavfsiz chegara
+    boshQator = Math.max(1, Number(boshQator) || 1);
+    var davomi = (boshQator > 1);
+
     var ob = apiT2ObyektTayyorla(obyekt);
 
     /* ⚠️ Google Sheets bo'lmagan faylni `openById` ga berish V8 dvigatelini
@@ -349,31 +370,59 @@ function apiT2FaylImport(obyekt, faylId, varaq, rol){
     var oxirgiQ = sh.getLastRow(), oxirgiU = Math.max(8, sh.getLastColumn());
     if(oxirgiQ < 2) return {ok:false, xabar:'Varaq bo\'sh: ' + varaq};
 
-    /* ── YENGIL QISM: bitta ommaviy o'qish ── */
+    /* ── BU BO'LAKNING ORALIG'I ── */
+    var oxirBolak = Math.min(oxirgiQ, boshQator + BOLAK - 1);
+    var soniBolak = oxirBolak - boshQator + 1;
+
+    var manba, tanish;
+
+    if(!davomi){
+      /* BIRINCHI BO'LAK: format aniqlanadi (u faqat yuqori qatorlarda
+         bo'ladi) va manba yozuvi yaratiladi. */
+      var tSarl = Date.now();
+      var sarlavha = sh.getRange(1, 1, Math.min(30, oxirgiQ), oxirgiU).getValues();
+      tanish = _t2FormatAniqla(sarlavha);
+      var msSarl = Date.now() - tSarl;
+
+      /* Eski import bo'lsa tozalanadi (qayta yuklash xavfsiz) */
+      var eski = _t2Get('t2_manba?obyekt_id=eq.' + ob.id +
+                        '&fayl_id=eq.' + encodeURIComponent(faylId) +
+                        '&varaq=eq.' + encodeURIComponent(varaq) + '&select=id');
+      if(eski.length) _t2Ochir('t2_manba', 'id=eq.' + eski[0].id);
+
+      manba = _t2Post('t2_manba', [{
+        obyekt_id: ob.id, rol: rol, fayl_id: faylId, fayl_nom: fayl.getName(),
+        varaq: varaq, format: tanish.format, data_qator: tanish.dataQator,
+        qator_soni: oxirgiQ, holat: (oxirgiQ > BOLAK ? 'yuklanmoqda' : 'xom')
+      }], true)[0];
+    }else{
+      /* DAVOMI: format allaqachon aniqlangan — qayta aniqlamaymiz.
+         Aks holda har bo'lakda boshqacha chiqib qolishi mumkin edi. */
+      var bor = _t2Get('t2_manba?obyekt_id=eq.' + ob.id +
+                       '&fayl_id=eq.' + encodeURIComponent(faylId) +
+                       '&varaq=eq.' + encodeURIComponent(varaq) +
+                       '&select=id,format,data_qator');
+      if(!bor.length) return {ok:false, xabar:'Davom ettirish uchun manba topilmadi — ' +
+                                              'importni boshidan boshlang'};
+      manba = bor[0];
+      tanish = {format: bor[0].format, dataQator: bor[0].data_qator};
+    }
+
+    /* ── FAQAT SHU BO'LAKNI O'QIYMIZ ──
+       Butun varaqni har bo'lakda qayta o'qish 50 000 qatorda vaqtning
+       katta qismini yeb qo'yardi. */
     var tOqish = Date.now();
-    var qiymatlar = sh.getRange(1, 1, oxirgiQ, oxirgiU).getValues();
+    var qiymatlar = sh.getRange(boshQator, 1, soniBolak, oxirgiU).getValues();
     var msOqish = Date.now() - tOqish;
 
-    var tanish = _t2FormatAniqla(qiymatlar);
     var tMerge = Date.now();
-    var mm = _t2MergeXarita(sh, 1, oxirgiQ);
+    var mm = _t2MergeXarita(sh, boshQator, soniBolak);
     var msMerge = Date.now() - tMerge;
-
-    /* ── Eski import bo'lsa tozalanadi (qayta yuklash xavfsiz) ── */
-    var eski = _t2Get('t2_manba?obyekt_id=eq.' + ob.id +
-                      '&fayl_id=eq.' + encodeURIComponent(faylId) +
-                      '&varaq=eq.' + encodeURIComponent(varaq) + '&select=id');
-    if(eski.length) _t2Ochir('t2_manba', 'id=eq.' + eski[0].id);
-
-    var manba = _t2Post('t2_manba', [{
-      obyekt_id: ob.id, rol: rol, fayl_id: faylId, fayl_nom: fayl.getName(),
-      varaq: varaq, format: tanish.format, data_qator: tanish.dataQator,
-      qator_soni: oxirgiQ
-    }], true)[0];
 
     /* ── Xom qatorlar ── */
     var qatorlar = [];
     for(var r = 0; r < qiymatlar.length; r++){
+      var haqiqiyQ = boshQator + r;
       var hujayra = qiymatlar[r].map(function(v){
         return (v === null || v === undefined) ? '' : String(v);
       });
@@ -383,22 +432,35 @@ function apiT2FaylImport(obyekt, faylId, varaq, rol){
       if(!bormi) continue;
 
       qatorlar.push({
-        manba_id: manba.id, qator: r + 1, hujayra: hujayra,
-        merge_full: !!mm.full[r+1], merge_ef: !!mm.ef[r+1]
+        manba_id: manba.id, qator: haqiqiyQ, hujayra: hujayra,
+        merge_full: !!mm.full[haqiqiyQ], merge_ef: !!mm.ef[haqiqiyQ]
       });
     }
 
-    /* ── Bo'laklab PARALLEL yuborish ──
-       Ketma-ket yuborilsa har bo'lak ~1 soniya kutadi va katta smetada
-       6-daqiqa limitiga urilamiz. `fetchAll` hammasini birga yuboradi. */
     var tYuk = Date.now();
     _t2XomYubor(qatorlar, t0);
     var msYuklash = Date.now() - tYuk;
+
+    /* ── Tugadimi? ── */
+    var tugadi = (oxirBolak >= oxirgiQ);
+    /* Vaqt byudjetidan oshib ketgan bo'lsak ham to'xtaymiz: keyingi
+       bo'lak yangi ijroda, toza byudjet bilan boshlanadi. */
+    if(!tugadi && (Date.now() - t0) > CHEK){ /* shunchaki to'xtaymiz */ }
+
+    if(tugadi){
+      try{ _t2Post('t2_manba', [{id: manba.id, holat: 'xom'}], false, 'id'); }catch(e2){}
+    }
 
     return {
       ok: true, obyekt: obyekt, obyekt_id: ob.id, manba_id: manba.id,
       rol: rol, varaq: varaq, format: tanish.format, data_qator: tanish.dataQator,
       xom_qator: qatorlar.length,
+      /* ⚡ Bo'lakli import holati — chaqiruvchi shularga qarab davom etadi */
+      tugadi: tugadi,
+      keyingi_qator: tugadi ? null : (oxirBolak + 1),
+      jami_qator: oxirgiQ,
+      ishlangan: oxirBolak,
+      foiz: Math.round(100 * oxirBolak / oxirgiQ),
       vaqt: {oqish: msOqish, merge: msMerge, yuklash: msYuklash, jami: Date.now() - t0},
       izoh: 'GAS faqat o\'qidi va yubordi — hech narsa hisoblanmadi va yozilmadi.'
     };

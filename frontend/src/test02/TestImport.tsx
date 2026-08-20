@@ -30,9 +30,10 @@ import {
   Plus, Database, FolderPlus, FolderOpen,
 } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
+import { FmtN } from '../lib/format';
 import { toast } from '../umumiy/ui/Toast';
 import { gas } from '../api/client';
-import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../api/supabase';
+import { sbOqi, sbT2ObyektlarOlKomp, type T2Obyekt } from '../api/supabase';
 import { useKompaniya } from './KompaniyaTanlov';
 
 type Rol = 'lokalka' | 'svodka';
@@ -60,12 +61,26 @@ type Hujjat = {
 type ImportNatija = {
   ok: boolean; obyekt?: string; xabar?: string; xatolar?: string[];
   ms?: number; hujjat_soni?: number; varaq_soni?: number;
+  tugadi?: boolean; davom?: DavomHolat;
   import?: Array<{ ok: boolean; hujjat?: string; varaq?: string; rol?: string;
                    format?: string; xom_qator?: number; xabar?: string }>;
   hisob?: { ok: boolean; xabar?: string;
             jami?: { ok?: boolean; jami?: number; toliq?: boolean;
                      narxsiz_qator?: number; izoh?: string };
             bosqichlar?: Array<{ bosqich: string; varaq?: string; ms?: number; natija?: any }> };
+};
+
+/** Katta hujjat bo'lakli import qilinganda — qayerda turibmiz. */
+type DavomHolat = {
+  fayl_id: string; nom: string; rol: string; varaq: string;
+  keyingi_qator: number; jami_qator: number; foiz: number; urinish?: number;
+};
+
+/** Obyektning bazadagi HOZIRGI holati (import natijasi emas). */
+type ObyektHolat = {
+  id: number; jami: number | null; narxsiz: number | null; qator_soni: number | null;
+  chel: number | null; mash: number | null; mat: number | null; ob: number | null;
+  varaq_url?: string;
 };
 
 /** Sheets → baza qaytarish natijasi. */
@@ -150,9 +165,50 @@ export default function TestImport() {
     } catch (e: any) { toast(e?.message || 'Xato', 'danger'); }
   }, []);
 
+  /* ── OBYEKT HOLATI — BAZADAN, JONLI ──
+   *
+   * Foydalanuvchi: «MAN O'ZGARTIRDIM MASALAN KATTA SUMMAGA 4MLRD GA
+   * LEKIN PANELGA KO'RSATMAYAPDIKU».
+   *
+   * To'g'ri: panel faqat oxirgi IMPORT natijasini ko'rsatardi. Sheets'da
+   * qilingan tahrir bazaga tushsa ham ekranda eski raqam qolardi.
+   * Endi obyekt tanlanishi bilan haqiqiy holat bazadan o'qiladi. */
+  const [holat, setHolat] = useState<ObyektHolat | null>(null);
+  const [holatYuk, setHolatYuk] = useState(false);
+
+  const holatYukla = useCallback(async (nom: string) => {
+    if (!nom) { setHolat(null); return; }
+    setHolatYuk(true);
+    try {
+      const j = await sbOqi<any>({
+        jadval: 't2_obyekt_jami',
+        filtr: 'nom=eq.' + encodeURIComponent(nom),
+        ustunlar: 'id,jami,narxsiz,qator_soni,chel,mash,mat,ob',
+        limit: 1,
+      });
+      const q = (j.ok && j.qatorlar?.[0]) || null;
+      if (!q) { setHolat(null); return; }
+
+      /* Varaq havolasi — «Sheets'da ochish» tugmasi uchun */
+      let url = '';
+      try {
+        const k = await sbOqi<any>({
+          jadval: 't2_kozgu', filtr: 'obyekt_id=eq.' + q.id,
+          ustunlar: 'fayl_id,oxirgi_yozish', limit: 1,
+        });
+        const fid = k.ok && k.qatorlar?.[0]?.fayl_id;
+        if (fid) url = 'https://docs.google.com/spreadsheets/d/' + fid + '/edit';
+      } catch { /* varaq hali yo'q — normal */ }
+
+      setHolat({ ...q, varaq_url: url });
+    } catch { setHolat(null); }
+    finally { setHolatYuk(false); }
+  }, []);
+
   const obyektTanla = (nom: string) => {
     setObyekt(nom); setNatija(null); setVaraq(null);
     hujjatlarYukla(nom);
+    holatYukla(nom);
   };
 
   const obyektYarat = async () => {
@@ -310,12 +366,28 @@ export default function TestImport() {
   };
 
   /* ── Import va hisob ── */
-  const boshla = async () => {
+  /* ⚡ KATTA HUJJAT — BO'LAKLI IMPORT.
+   *
+   * Foydalanuvchi: «bu katta smetalarda ishlay olmasak GAS dan
+   * o'tganimizni tezlikdan boshqa foydasi yo'q ekanda».
+   *
+   * GAS bitta ijroga 6 daqiqa beradi. 50 000 qatorli hujjat bunga
+   * sig'maydi, shuning uchun server tugamasa `davom` holatini
+   * qaytaradi va biz shu yerdan qaytadan chaqiramiz. Foydalanuvchi
+   * foizni ko'rib turadi.
+   *
+   * Avtomatik davom etamiz, lekin CHEKSIZ emas — 30 martadan keyin
+   * to'xtab, tugmani ko'rsatamiz. Cheksiz halqa yomon xatoni
+   * yashirib yuborardi. */
+  const [davom, setDavom] = useState<DavomHolat | null>(null);
+
+  const boshla = async (davomdan?: DavomHolat) => {
     if (!obyekt) { toast('Avval obyekt tanlang', 'warn'); return; }
     if (!hujjatlar.some((h) => h.rol === 'lokalka')) {
       toast('LRV qismi bo\'sh — ishlar ro\'yxatisiz hisob yo\'q', 'warn'); return;
     }
-    setKetyapti(true); setNatija(null); setVaraq(null);
+    if (!davomdan) { setNatija(null); setVaraq(null); setDavom(null); }
+    setKetyapti(true);
     try {
       const yuk = hujjatlar.map((h) => ({
         fayl_id: h.fayl_id, rol: h.rol, nom: h.nom,
@@ -323,11 +395,29 @@ export default function TestImport() {
           .filter((v) => h.olinsin[v.nom] !== false)
           .map((v) => ({ nom: v.nom, olinsin: true })),
       }));
-      const r = await gas<ImportNatija>('apiT2YuklanganImport', obyekt, yuk);
-      setNatija(r);
+      /* Har chaqiruv qolgan joydan davom etadi — server `davom` holatida
+         qaysi qatordan boshlashni o'zi biladi (t2_manba da saqlangan). */
+      let r: ImportNatija | null = null;
+      let urinish = (davomdan?.urinish ?? 0);
+
+      for (;;) {
+        r = await gas<ImportNatija>('apiT2YuklanganImport', obyekt, yuk);
+        if (r.tugadi !== false || !r.davom) break;
+
+        urinish++;
+        setDavom({ ...r.davom, urinish });
+        setNatija(r);
+        if (urinish >= 30) {
+          toast('Import ' + r.davom.foiz + '% da to\'xtadi — «Davom ettirish» ni bosing',
+                'warn', undefined, 9000);
+          return;
+        }
+      }
+
+      setNatija(r); setDavom(null);
       toast(r.ok ? 'Import va hisob tugadi' : (r.xabar || 'Tugallanmadi'),
             r.ok ? 'ok' : 'danger', undefined, 9000);
-      if (r.ok) { obyektlarYukla(); hujjatlarYukla(obyekt); }
+      if (r.ok) { obyektlarYukla(); hujjatlarYukla(obyekt); holatYukla(obyekt); }
     } catch (e: any) {
       setNatija({ ok: false, xabar: e?.message || String(e) });
       toast(e?.message || 'Xato', 'danger', undefined, 9000);
@@ -354,7 +444,7 @@ export default function TestImport() {
                               : 'O\'zgarish topilmadi')
                  : (r.xabar || 'Qaytarilmadi'),
             r.ok ? 'ok' : 'danger', undefined, 9000);
-      if (r.ok && r.ozgardi) hujjatlarYukla(obyekt);
+      if (r.ok && r.ozgardi) { hujjatlarYukla(obyekt); holatYukla(obyekt); }
     } catch (e: any) {
       setQaytar({ ok: false, xabar: e?.message || String(e) });
       toast(e?.message || 'Xato', 'danger', undefined, 9000);
@@ -477,6 +567,60 @@ export default function TestImport() {
             Fayllar Drive'dagi <b>Tizim_02 / _MANBA</b> papkasiga tushadi
           </p>
         </div>
+
+        {/* ── OBYEKT HOLATI (bazadan, jonli) ── */}
+        {obyekt && holat && (
+          <div className="karta p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span className="text-[12px] font-medium text-text">
+                Hozirgi holat — bazadan
+              </span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => holatYukla(obyekt)} disabled={holatYuk}
+                  className="text-[11px] text-text-mute hover:text-text
+                             inline-flex items-center gap-1 disabled:opacity-40">
+                  <RefreshCw size={11} className={holatYuk ? 'animate-spin' : ''} /> Yangilash
+                </button>
+                {/* Foydalanuvchi: «KERAKLI JOYIDA PANELDAN SHEETSGA
+                    O'TA OLADIGAN TUGMA BO'LISHI KERAK» */}
+                {holat.varaq_url && (
+                  <a href={holat.varaq_url} target="_blank" rel="noreferrer"
+                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg
+                                bg-ok/15 text-ok text-[12px] font-medium
+                                hover:bg-ok/25 transition-colors">
+                    <FileSpreadsheet size={13} /> Sheets'da ochish
+                    <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+              <span className="text-[11px] text-text-dim">ЖАМИ</span>
+              <span className="text-[16px] font-medium text-text tabular-nums">
+                <FmtN val={Number(holat.jami) || 0} />
+              </span>
+              <span className={'text-[11px] ' + (holat.narxsiz ? 'text-warn' : 'text-ok')}>
+                Narxsiz: <b>{holat.narxsiz ?? 0}</b>
+              </span>
+              <span className="text-[11px] text-text-mute">{holat.qator_soni ?? 0} qator</span>
+            </div>
+
+            {/* Накрутка har kategoriya bo'yicha alohida hisoblanadi */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+              {([['ЧЕЛ', holat.chel], ['МАШ', holat.mash],
+                 ['МАТ', holat.mat], ['ОБ', holat.ob]] as const).map(([nm, v]) => (
+                <div key={nm} className="rounded-lg bg-[var(--surface-2)]/50 px-2.5 py-1.5">
+                  <div className="text-[10px] text-text-mute">{nm}</div>
+                  <div className={'text-[12px] tabular-nums ' +
+                    (Number(v) ? 'text-text' : 'text-text-mute')}>
+                    <FmtN val={Number(v) || 0} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── 2. QISMLAR ── */}
         {!obyekt ? (
@@ -626,7 +770,7 @@ export default function TestImport() {
                 {hujjatlar.filter((h) => h.rol === 'lokalka').length} LRV ·{' '}
                 {hujjatlar.filter((h) => h.rol === 'svodka').length} RES
               </span>
-              <button onClick={boshla}
+              <button onClick={() => boshla()}
                 disabled={ketyapti || !hujjatlar.some((h) => h.rol === 'lokalka')}
                 className="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium
                            hover:bg-accent/90 transition-colors disabled:opacity-40
@@ -637,6 +781,36 @@ export default function TestImport() {
               </button>
             </div>
           </>
+        )}
+
+        {/* ── KATTA HUJJAT: BO'LAKLI IMPORT JARAYONI ── */}
+        {davom && (
+          <div className="karta p-3 border-warn/40 bg-warn/5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[12px] text-text">
+                Katta hujjat bo'laklab yuklanmoqda — <b>{davom.foiz}%</b>
+                <span className="text-text-mute">
+                  {' '}({davom.keyingi_qator.toLocaleString('ru-RU')} /{' '}
+                  {davom.jami_qator.toLocaleString('ru-RU')} qator)
+                </span>
+              </span>
+              {!ketyapti && (
+                <button onClick={() => boshla(davom)}
+                  className="px-3 py-1.5 rounded-lg bg-warn/20 text-warn text-[12px]
+                             font-medium hover:bg-warn/30 transition-colors">
+                  Davom ettirish
+                </button>
+              )}
+            </div>
+            <div className="mt-2 h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
+              <div className="h-full bg-warn transition-all"
+                   style={{ width: davom.foiz + '%' }} />
+            </div>
+            <p className="text-[11px] text-text-mute mt-1.5">
+              GAS bitta ishga 6 daqiqa beradi — shuning uchun hujjat bo'lak-bo'lak
+              o'qiladi. Yarim yuklangan ma'lumot hisoblanmaydi.
+            </p>
+          </div>
         )}
 
         {ketyapti && <div className="skel h-24 rounded-xl" />}

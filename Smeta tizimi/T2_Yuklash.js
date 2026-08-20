@@ -186,6 +186,10 @@ function apiT2YuklanganImport(obyektNom, hujjatlar){
       return {ok:false, xabar:'LOKALKA hujjati belgilanmagan — ishlar ro\'yxati bo\'lmasa hisob yo\'q'};
 
     var natijalar = [], xatolar = [], varaqSoni = 0;
+    /* Vaqt byudjeti: GAS bitta ijroga 6 daqiqa beradi. Hisobga ham
+       vaqt qolishi kerak, shuning uchun importga 4 daqiqa. */
+    var IMPORT_CHEK = 4 * 60 * 1000;
+    var davom = null;
 
     for(var i=0; i<faol.length; i++){
       var hj = faol[i];
@@ -203,7 +207,25 @@ function apiT2YuklanganImport(obyektNom, hujjatlar){
       for(var v2=0; v2<varaqlar.length; v2++){
         var vnom = varaqlar[v2].nom || '';
         try{
-          var r = apiT2FaylImport(obyektNom, hj.fayl_id, vnom, hj.rol);
+          /* ⚡ BO'LAKLI IMPORT.
+           * `apiT2FaylImport` katta varaqni bo'lak-bo'lak o'qiydi. Shu
+           * yerda bo'laklarni aylanib chiqamiz, lekin O'Z vaqt
+           * byudjetimizni ham kuzatamiz: tugamasa `davom` holatini
+           * qaytaramiz va panel «Davom ettirish» ni ko'rsatadi.
+           * Aks holda 50 000 qatorli hujjat 6-daqiqa limitida JIM
+           * o'lardi va yarim ma'lumot qolardi. */
+          var r = null, bosh = 1, aylanish = 0;
+          while(aylanish++ < 50){
+            r = apiT2FaylImport(obyektNom, hj.fayl_id, vnom, hj.rol, bosh);
+            if(!r.ok || r.tugadi) break;
+            bosh = r.keyingi_qator;
+            if(Date.now() - t0 > IMPORT_CHEK){
+              davom = {fayl_id: hj.fayl_id, nom: hj.nom || '', rol: hj.rol,
+                       varaq: r.varaq, keyingi_qator: bosh,
+                       jami_qator: r.jami_qator, foiz: r.foiz};
+              break;
+            }
+          }
           r.hujjat = hj.nom || '';
           natijalar.push(r);
           varaqSoni++;
@@ -211,11 +233,25 @@ function apiT2YuklanganImport(obyektNom, hujjatlar){
             xatolar.push('«' + (hj.nom || 'hujjat') + '» / «' + (vnom || '(birinchi)') +
                          '» (' + hj.rol + '): ' + r.xabar);
           }
+          if(davom) break;                       // vaqt tugadi — hisobga o'tmaymiz
         }catch(e){
           xatolar.push('«' + (hj.nom || 'hujjat') + '» / «' + vnom + '»: ' +
                        ((e && e.message) || e));
         }
       }
+      if(davom) break;
+    }
+
+    /* ⚠️ TUGAMAGAN IMPORTNI HISOBLAMAYMIZ.
+     * Yarim yuklangan ma'lumotdan chiqqan JAMI xato bo'ladi va uni
+     * to'g'ri deb o'ylash mumkin — hisobni keyingi chaqiruvga
+     * qoldiramiz. */
+    if(davom){
+      return {ok:false, tugadi:false, davom: davom, obyekt: obyektNom,
+              xabar: 'Hujjat katta — ' + davom.foiz + '% yuklandi. ' +
+                     '«Davom ettirish» ni bosing.',
+              hujjat_soni: faol.length, varaq_soni: varaqSoni,
+              import: natijalar, xatolar: xatolar, ms: Date.now() - t0};
     }
 
     var hisob = null;
