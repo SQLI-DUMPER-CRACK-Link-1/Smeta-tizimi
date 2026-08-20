@@ -83,10 +83,10 @@ tek('«нарх йўқ» matni formulani buzmaydi (ISNUMBER)',
     /ISNUMBER\(\$G/.test(KOZGU));
 tek('blok СУММА = resurslari yig\'indisi', /'=SUM\(\$H' \+ bb\.ilk/.test(KOZGU));
 tek('razdel СУММА faqat 1-daraja turlarini qo\'shadi (SUMIFS)',
-    /SUMIFS\(' \+ oraliqH[\s\S]{0,300}"bl"/.test(KOZGU) &&
-    /"mat"/.test(KOZGU) && /"ob"/.test(KOZGU),
+    /sumifs\('bl'\) \+ '\+' \+ sumifs\('mat'\) \+ '\+' \+ sumifs\('ob'\)/.test(KOZGU),
     'hammasini qo\'shsa blok ham, resurslari ham sanalib ikki baravar bo\'lardi');
-tek('kategoriya ustuni ham FORMULA', /'=IF\(\$H' \+ qn \+ '="","",\$H/.test(KOZGU));
+tek('kategoriya ustuni ham FORMULA',
+    /qator\[kUst - 1\] = '=IF\(\$H' \+ qn \+ '=""' \+ AJR/.test(KOZGU));
 tek('sarlavhadagi JAMI va kategoriyalar FORMULA',
     /q3\[C_SUMMA - 1\] = '=SUM\(\$J\$3:\$M\$3\)'/.test(KOZGU) &&
     /q3\[C_KAT1 - 1\] = '=SUM\(J'/.test(KOZGU));
@@ -118,6 +118,46 @@ tek('tirgak limiti tekshiriladi va OCHIQ aytiladi',
 tek('panel avto-sinxron yo\'qligini ko\'rsatadi',
     /avto-sinxron yo'q/.test(fs.readFileSync(
       path.join(ILDIZ, 'frontend', 'src', 'test02', 'TestImport.tsx'), 'utf8')));
+
+console.log('\n── Formula hujjat TILIDA to\'g\'ri bo\'lsin ──');
+
+/* Foydalanuvchining hujjati polyak tilida (`zł`): u yerda o'nlik kasr
+   vergul, shuning uchun argument ajratgichi NUQTALI VERGUL. Vergulli
+   formula «Formula parse error» berib butun jadvalni #ERROR! qildi. */
+tek('ajratgich SINAB aniqlanadi, taxmin qilinmaydi',
+    /function _t2Ajratgich\(sh\)/.test(KOZGU) && /=SUM\(1,2\)/.test(KOZGU) &&
+    /=SUM\(1;2\)/.test(KOZGU));
+tek('formulalarda AJR ishlatiladi, qattiq vergul emas',
+    !/\+ qn \+ '\),\$F/.test(KOZGU) && /AJR \+/.test(KOZGU));
+tek('aniqlanmasa xavfsiz odatiy qiymat', /return ',';\s*\/\/ ma'lum bo/.test(KOZGU) ||
+    /return ',';\s+\/\* ma'lum/.test(KOZGU) || /return ',';/.test(KOZGU));
+
+/* Formulalar ikkala ajratgichda ham to'g'ri yig'ilishi kerak */
+for (const AJR of [',', ';']) {
+  const qn = 13, ota = 12, oH = '$H14:$H20', oI = '$I14:$I20';
+  const sumifs = (t) => 'SUMIFS(' + oH + AJR + oI + AJR + '"' + t + '")';
+  const lar = [
+    '=IF(N($F' + ota + ')*N($E' + qn + ')=0' + AJR + '""' + AJR + '$F' + ota + '*$E' + qn + ')',
+    '=IF(ISNUMBER($F' + qn + ')*ISNUMBER($G' + qn + ')' + AJR + '$F' + qn + '*$G' + qn + AJR + '"")',
+    '=' + sumifs('bl') + '+' + sumifs('mat') + '+' + sumifs('ob'),
+  ];
+  const teskari = AJR === ',' ? ';' : ',';
+  const yomon = lar.filter((f) => {
+    let d = 0;
+    for (const c of f) { if (c === '(') d++; else if (c === ')') d--; if (d < 0) return true; }
+    return d !== 0 || f.includes(teskari);
+  });
+  tek('«' + AJR + '» ajratgichda formulalar butun', !yomon.length, yomon.join(' | '));
+}
+
+console.log('\n── Tahrir KEYINGI hisobda yo\'qolmasin ──');
+
+/* apiT2Ishla zanjirida t2_markirovka bor, u t2_qator ni O'CHIRIB xom
+   ma'lumotdan qayta quradi — endigina saqlangan tahrir yo'q bo'lardi. */
+tek('qaytishdan keyin apiT2Ishla CHAQIRILMAYDI',
+    !/apiT2VaraqQaytar[\s\S]*?hisob = apiT2Ishla/.test(KOZGU),
+    't2_markirovka t2_qator ni o\'chirib qayta quradi — tahrir yo\'qolardi');
+tek('yangi JAMI faqat O\'QILADI', /t2_obyekt_jami\?id=eq/.test(KOZGU));
 
 console.log('\n── Atama: «ko\'zgu» emas ──');
 
@@ -232,8 +272,10 @@ tek('bo\'sh katak 0 deb YOZILMAYDI',
 tek('«нарх йўқ» yozuvi son deb o\'qilmaydi',
     /indexOf\('нарх'\) >= 0\) continue/.test(KOZGU));
 
-/* O'zgarish bo'lsa hisob eskiradi */
-tek('yozilgach qayta hisoblanadi', /if\(ozgardi\)\{[\s\S]{0,200}apiT2Ishla/.test(KOZGU));
+/* ⚠️ Bu yerda avval «yozilgach apiT2Ishla chaqiriladi» tekshiruvi bor edi.
+   U XATO edi: apiT2Ishla zanjiridagi t2_markirovka `t2_qator` ni o'chirib
+   xom ma'lumotdan qayta quradi va endigina saqlangan tahrirni yo'q qilardi.
+   Endi teskarisi tekshiriladi — «Tahrir KEYINGI hisobda yo'qolmasin». */
 
 console.log('\n── Bezak hujjatni yiqitmasin ──');
 

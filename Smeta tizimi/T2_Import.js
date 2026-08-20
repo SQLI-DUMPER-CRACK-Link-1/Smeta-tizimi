@@ -392,7 +392,7 @@ function apiT2FaylImport(obyekt, faylId, varaq, rol){
        Ketma-ket yuborilsa har bo'lak ~1 soniya kutadi va katta smetada
        6-daqiqa limitiga urilamiz. `fetchAll` hammasini birga yuboradi. */
     var tYuk = Date.now();
-    _t2XomYubor(qatorlar);
+    _t2XomYubor(qatorlar, t0);
     var msYuklash = Date.now() - tYuk;
 
     return {
@@ -409,9 +409,22 @@ function apiT2FaylImport(obyekt, faylId, varaq, rol){
 }
 
 /** Xom qatorlarni bo'laklab, parallel yuboradi. */
-function _t2XomYubor(qatorlar){
+function _t2XomYubor(qatorlar, t0){
   if(!qatorlar.length) return;
-  var c = _t2Cfg(), BOLAK = 500, sorovlar = [];
+  var c = _t2Cfg(), BOLAK = 500, TOLQIN = 20;    // 20 × 500 = 10 000 qator
+  var CHEK = 4.5 * 60 * 1000;                     // GAS limiti 6 daq.
+  t0 = t0 || Date.now();
+
+  /* ⚠️ HAMMASINI BIRDAN YUBORMAYMIZ.
+   *
+   * 50 000 qatorli smeta 100 ta so'rov demak; ularni bitta `fetchAll`
+   * ga solsak butun JSON bir vaqtda xotirada turadi (~20 MB) va GAS
+   * xotira/so'rov chegarasiga urilib, sababi tushunarsiz xato beradi.
+   * To'lqinlab yuborish xotirani chegarada ushlab turadi.
+   *
+   * O'lchangan: 1958 xom qator ≈ 11 s (shundan Postgres atigi 1.2 s).
+   * Ya'ni cheklov Postgres emas, GAS tomoni. */
+  var sorovlar = [];
   for(var i = 0; i < qatorlar.length; i += BOLAK){
     sorovlar.push({
       url: c.url + '/rest/v1/t2_xom',
@@ -421,11 +434,25 @@ function _t2XomYubor(qatorlar){
       muteHttpExceptions: true
     });
   }
-  var javoblar = UrlFetchApp.fetchAll(sorovlar);
-  for(var j = 0; j < javoblar.length; j++){
-    var kod = javoblar[j].getResponseCode();
-    if(kod >= 300) throw 't2_xom yuklash xatosi (' + kod + '): ' +
-                         javoblar[j].getContentText().slice(0,300);
+
+  for(var t = 0; t < sorovlar.length; t += TOLQIN){
+    /* ⚠️ VAQT QO'RIQCHISI.
+     * Limitga urilsak GAS ijroni JIM to'xtatadi: yarim yuklangan
+     * ma'lumot qoladi va sabab hech qayerda ko'rinmaydi. Undan ko'ra
+     * o'zimiz to'xtab, NIMA QILISH kerakligini aytamiz. */
+    if(Date.now() - t0 > CHEK){
+      throw 'Hujjat juda katta: ' + qatorlar.length + ' qatordan ' +
+            (t * BOLAK) + ' tasi yuklandi va vaqt chegarasiga yaqinlashdik ' +
+            '(GAS bitta ishga 6 daqiqa beradi). Hujjatni varaqlarga bo\'lib ' +
+            'yuklang — har varaq alohida import qilinadi va bir obyektga ' +
+            'qo\'shiladi.';
+    }
+    var javoblar = UrlFetchApp.fetchAll(sorovlar.slice(t, t + TOLQIN));
+    for(var j = 0; j < javoblar.length; j++){
+      var kod = javoblar[j].getResponseCode();
+      if(kod >= 300) throw 't2_xom yuklash xatosi (' + kod + '): ' +
+                           javoblar[j].getContentText().slice(0,300);
+    }
   }
 }
 

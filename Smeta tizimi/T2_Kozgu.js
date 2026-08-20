@@ -148,6 +148,19 @@ function apiT2VaraqYarat(obyekt){
     try{ sh.clearConditionalFormatRules(); }catch(e){}
     sh.setName('СМЕТА');
 
+    /* ⚠️ FORMULA ARGUMENT AJRATGICHI HUJJAT TILIGA BOG'LIQ.
+     *
+     * Ba'zi tillarda (polyak, rus, nemis…) o'nlik kasr VERGUL bilan
+     * yoziladi, shuning uchun funksiya argumentlari NUQTALI VERGUL
+     * bilan ajratiladi. `setValues` formulani hujjat tilida talqin
+     * qiladi — vergulli formula o'sha yerda «Formula parse error»
+     * beradi va BUTUN jadval #ERROR! bo'lib qoladi (aynan shunday
+     * bo'ldi: hujjat polyak tilida, `zł` valyutasi bilan).
+     *
+     * Tilni nom bo'yicha taxmin qilmaymiz — SINAB ko'ramiz. Bu har
+     * qanday tilda to'g'ri ishlaydi va kelajakda ham buzilmaydi. */
+    var AJR = _t2Ajratgich(sh);
+
     /* ══ USTUN JOYLASHUVI — LRV_PLUS BILAN BIR XIL ══
      *
      * Foydalanuvchi: «lrv plus fayllarni o'qib chiq va hozirgi oyna
@@ -292,8 +305,8 @@ function apiT2VaraqYarat(obyekt){
       var otaSatr = (r.ota_id != null) ? satr[r.ota_id] : null;
       var otaTur  = (r.ota_id != null && xarita[r.ota_id]) ? xarita[r.ota_id].tur : null;
       if(r.tur === 'rs' && r.norma != null && otaSatr && otaTur === 'bl'){
-        qator[C_HAJM - 1] = '=IF(N($F' + otaSatr + ')*N($E' + qn + ')=0,"",' +
-                            '$F' + otaSatr + '*$E' + qn + ')';
+        qator[C_HAJM - 1] = '=IF(N($F' + otaSatr + ')*N($E' + qn + ')=0' + AJR +
+                            '""' + AJR + '$F' + otaSatr + '*$E' + qn + ')';
       }else{
         qator[C_HAJM - 1] = (r.hajm == null) ? '' : Number(r.hajm);
       }
@@ -311,8 +324,8 @@ function apiT2VaraqYarat(obyekt){
                   blok ham, uning resurslari ham sanalib IKKI BARAVAR
                   bo'lardi. */
       if(resursmi){
-        qator[C_SUMMA - 1] = '=IF(ISNUMBER($F' + qn + ')*ISNUMBER($G' + qn + '),' +
-                             '$F' + qn + '*$G' + qn + ',"")';
+        qator[C_SUMMA - 1] = '=IF(ISNUMBER($F' + qn + ')*ISNUMBER($G' + qn + ')' + AJR +
+                             '$F' + qn + '*$G' + qn + AJR + '"")';
       }else if(r.tur === 'bl'){
         var bb = bola[r.id];
         qator[C_SUMMA - 1] = bb ? ('=SUM($H' + bb.ilk + ':$H' + bb.oxir + ')') : '';
@@ -321,10 +334,10 @@ function apiT2VaraqYarat(obyekt){
         if(rzE && rzE > qn){
           var oraliqH = '$H' + (qn + 1) + ':$H' + rzE;
           var oraliqI = '$I' + (qn + 1) + ':$I' + rzE;
-          qator[C_SUMMA - 1] =
-            '=SUMIFS(' + oraliqH + ',' + oraliqI + ',"bl")' +
-            '+SUMIFS(' + oraliqH + ',' + oraliqI + ',"mat")' +
-            '+SUMIFS(' + oraliqH + ',' + oraliqI + ',"ob")';
+          var sumifs = function(tur){
+            return 'SUMIFS(' + oraliqH + AJR + oraliqI + AJR + '"' + tur + '")';
+          };
+          qator[C_SUMMA - 1] = '=' + sumifs('bl') + '+' + sumifs('mat') + '+' + sumifs('ob');
         }else{
           qator[C_SUMMA - 1] = '';
         }
@@ -342,7 +355,7 @@ function apiT2VaraqYarat(obyekt){
                  : (r.kat === 'МАШ') ? C_KAT1 + 1
                  : (r.kat === 'ОБ')  ? C_KAT1 + 3
                  : C_KAT1 + 2;                    // МАТ — qolgani
-        qator[kUst - 1] = '=IF($H' + qn + '="","",$H' + qn + ')';
+        qator[kUst - 1] = '=IF($H' + qn + '=""' + AJR + '""' + AJR + '$H' + qn + ')';
       }
 
       qator[C_ID - 1]  = r.id;
@@ -359,6 +372,8 @@ function apiT2VaraqYarat(obyekt){
      * holda sarlavhadagi raqam jadvaldagi bilan zid bo'lib qolardi. */
     var OXIR_QATOR = BOSH_QATOR + qatorlar.length - 1;
     if(qatorlar.length){
+      /* SUM bitta oraliq oladi — ajratgich kerak emas, shuning uchun
+         bu formulalar har qanday tilda bir xil ishlaydi. */
       q3[C_KAT1 - 1] = '=SUM(J' + BOSH_QATOR + ':J' + OXIR_QATOR + ')';
       q3[C_KAT1]     = '=SUM(K' + BOSH_QATOR + ':K' + OXIR_QATOR + ')';
       q3[C_KAT1 + 1] = '=SUM(L' + BOSH_QATOR + ':L' + OXIR_QATOR + ')';
@@ -677,11 +692,32 @@ function apiT2VaraqQaytar(obyekt){
       }
     }
 
-    /* O'zgarish bo'lsa hisob eskiradi */
+    /* ⚠️ BU YERDA `apiT2Ishla` CHAQIRILMAYDI — U TAHRIRNI O'CHIRARDI.
+     *
+     * `apiT2Ishla` zanjirida `t2_markirovka` bor, u esa
+     *     delete from t2_qator where manba_id = …
+     * qilib xom ma'lumotdan qayta quradi. Ya'ni endigina saqlangan
+     * НОМ/БИРЛИК/ХАЖМ tahriri darhol yo'q bo'lardi. Zanjirdagi
+     * `t2_narxla` ham narxni svodkadan qayta yozardi.
+     *
+     * Bu «ishim saqlandi» deb o'ylab turib yo'qotish — aynan shu
+     * funksiya oldini olishi kerak bo'lgan narsa.
+     *
+     * Hisob baribir yangi: `t2_qator_tahrir` har tahrirdan keyin
+     * `t2_rollup` ni o'zi chaqiradi. Bu yerda faqat YANGI JAMI ni
+     * o'qiymiz. */
     var hisob = null;
     if(ozgardi){
-      try{ hisob = apiT2Ishla(obyekt); }catch(e3){
-        xatolar.push('Qayta hisob yiqildi: ' + ((e3 && e3.message) || e3));
+      try{
+        var jam = _t2Get('t2_obyekt_jami?id=eq.' + ob.id + '&select=jami,narxsiz');
+        if(jam.length){
+          var nsz = Number(jam[0].narxsiz) || 0;
+          hisob = {ok:true, jami: {jami: jam[0].jami, narxsiz_qator: nsz,
+                                   /* `toliq` ko'rinishda yo'q — narxsizdan chiqadi */
+                                   toliq: nsz === 0}};
+        }
+      }catch(e3){
+        xatolar.push('Yangi jamini o\'qib bo\'lmadi: ' + ((e3 && e3.message) || e3));
       }
     }
 
@@ -808,4 +844,33 @@ function _t2VaraqTirgakOrnat(ssId){
   }catch(e){
     return {ok:false, holat:'xato', xabar: String((e && e.message) || e)};
   }
+}
+
+/**
+ * Formula argument ajratgichini SINAB aniqlaydi (',' yoki ';').
+ *
+ * Hujjat tili o'nlik kasrni vergul bilan yozsa, funksiya argumentlari
+ * nuqtali vergul bilan ajratiladi. Buni til nomidan taxmin qilish
+ * ishonchsiz (bir necha o'nlab til varianti bor), shuning uchun
+ * uzoqdagi bo'sh katakka sinov formulasi yozib, natijasiga qaraymiz.
+ *
+ * Xarajat — bitta `flush()`. Xato ajratgich esa BUTUN jadvalni
+ * #ERROR! ga aylantiradi, ya'ni bu tekshiruv arziydi.
+ */
+function _t2Ajratgich(sh){
+  var yac = null;
+  try{
+    yac = sh.getRange(1, 40);                    // ma'lumot zonasidan uzoq
+    yac.setFormula('=SUM(1,2)');
+    SpreadsheetApp.flush();
+    if(Number(yac.getValue()) === 3){ yac.clearContent(); return ','; }
+
+    yac.setFormula('=SUM(1;2)');
+    SpreadsheetApp.flush();
+    if(Number(yac.getValue()) === 3){ yac.clearContent(); return ';'; }
+  }catch(e){
+    Logger.log('_t2Ajratgich: ' + e);
+  }
+  try{ if(yac) yac.clearContent(); }catch(e2){}
+  return ',';                                     // ma'lum bo'lmasa — odatiy
 }
