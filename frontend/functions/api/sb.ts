@@ -25,7 +25,7 @@
  *   { ok: true, qatorlar: [...], soni: 1234, ms: 87 }
  *   { ok: false, error: "..." }
  */
-import { tekshir, kalitBormi, KALIT_XABAR } from '../_shared/auth';
+import { tekshir, kalitBormi, KALIT_XABAR, kalitTashxis } from '../_shared/auth';
 
 /* Faqat shu jadvallar o'qiladi. Yangi jadval kerak bo'lsa SHU YERGA
    qo'shiladi — «hamma jadval ochiq» holatiga hech qachon o'tmaymiz. */
@@ -61,8 +61,13 @@ export const onRequestPost: PagesFunction<{
   try {
     const secret = ctx.env.SESSIYA_KALIT;
   if (!kalitBormi(secret)) {
-    return Response.json({ ok: false, xato: KALIT_XABAR, sozlanmagan: true },
-                         { status: 503 });
+    const tx = kalitTashxis(ctx.env as unknown as Record<string, unknown>);
+    return Response.json({
+      ok: false, sozlanmagan: true,
+      xato: KALIT_XABAR + '  [server ko'radi: uzunlik=' + tx.uzunlik +
+            (tx.oq_joy ? ', chetida bo'shliq bor' : '') + ']',
+      tashxis: tx,
+    }, { status: 503 });
   }
     const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
     if (!sess) {

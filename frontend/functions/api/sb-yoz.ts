@@ -21,7 +21,7 @@
  * Ikkisini bir faylda saqlash — kelajakda tasodifan yozishga ruxsat
  * berib qo'yishning eng qisqa yo'li.
  */
-import { tekshir, kalitBormi, KALIT_XABAR } from '../_shared/auth';
+import { tekshir, kalitBormi, KALIT_XABAR, kalitTashxis } from '../_shared/auth';
 
 export const onRequestPost: PagesFunction<{
   SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string;
@@ -30,8 +30,13 @@ export const onRequestPost: PagesFunction<{
   try {
     const secret = ctx.env.SESSIYA_KALIT;
   if (!kalitBormi(secret)) {
-    return Response.json({ ok: false, xato: KALIT_XABAR, sozlanmagan: true },
-                         { status: 503 });
+    const tx = kalitTashxis(ctx.env as unknown as Record<string, unknown>);
+    return Response.json({
+      ok: false, sozlanmagan: true,
+      xato: KALIT_XABAR + '  [server ko'radi: uzunlik=' + tx.uzunlik +
+            (tx.oq_joy ? ', chetida bo'shliq bor' : '') + ']',
+      tashxis: tx,
+    }, { status: 503 });
   }
     const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
     if (!sess) {

@@ -34,6 +34,11 @@ export async function gas<T>(fn: string, ...args: unknown[]): Promise<T> {
 
     if (!r.ok) {
       const msg =
+        /* ⚠️ `xato` ham qaralishi SHART. Server endpointlari o'zbekcha
+           `xato` maydonini qaytaradi; faqat `error` qaralgani uchun
+           haqiqiy sabab tushib qolib, ekranda quruq «Server xatosi: 503»
+           ko'rinardi — aynan shu sozlama muammosini topishni qiyinlashtirdi. */
+        j?.xato ||
         j?.error ||
         j?.message ||
         (typeof raw === 'string' && raw.trim() ? raw.trim().slice(0, 300) : '') ||

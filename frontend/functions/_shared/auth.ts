@@ -54,6 +54,34 @@ export function kalitBormi(secret: string | undefined | null): boolean {
 }
 
 /**
+ * Kalit nega qabul qilinmayotganini AYTADI — kalitning o'zini oshkor
+ * qilmasdan.
+ *
+ * Kerak bo'ldi, chunki «o'rnatdim, baribir ishlamadi» holatida taxmin
+ * qilishdan boshqa yo'l qolmadi. Sabablari bir nechta bo'lishi mumkin:
+ *   • Cloudflare Pages'da Production va Preview uchun o'zgaruvchilar
+ *     ALOHIDA — biriga qo'yilib, ikkinchisiga qo'yilmagan bo'lishi mumkin
+ *   • o'zgaruvchi qo'yilgach QAYTA DEPLOY qilinmagan
+ *   • nomida bo'shliq/xato yoki qiymati qisqa
+ * Bularni ajratish uchun o'lchov kerak, taxmin emas.
+ */
+export function kalitTashxis(env: Record<string, unknown>): {
+  bor: boolean; uzunlik: number; oq_joy: boolean; mavjud_nomlar: string[];
+} {
+  const xom = env?.SESSIYA_KALIT;
+  const s = typeof xom === 'string' ? xom : '';
+  return {
+    bor: kalitBormi(s),
+    uzunlik: s.length,                       // qiymat EMAS, faqat uzunlik
+    oq_joy: s !== s.trim(),
+    /* Qaysi o'zgaruvchilar umuman ko'rinayotgani — nom xatosini ochadi */
+    mavjud_nomlar: Object.keys(env || {}).filter((k) => !/KEY|KALIT|SECRET|TOKEN/i.test(k))
+      .concat(Object.keys(env || {}).filter((k) => /KEY|KALIT|SECRET|TOKEN/i.test(k))
+        .map((k) => k + '(qiymat yashirin)')),
+  };
+}
+
+/**
  * ⚠️ Bu TASHLAYDI. Chaqiruvchi avval `kalitBormi()` bilan tekshirib,
  * foydalanuvchiga TUSHUNARLI xabar qaytarishi kerak — aks holda
  * brauzerda quruq «Server xatosi: 500» chiqadi va sababi bilinmaydi.
