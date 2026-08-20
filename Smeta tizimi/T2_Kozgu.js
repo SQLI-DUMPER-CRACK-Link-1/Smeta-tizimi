@@ -129,60 +129,128 @@ function apiT2KozguYarat(obyekt){
     try{ sh.clearConditionalFormatRules(); }catch(e){}
     sh.setName('СМЕТА');
 
-    /* ── Sarlavha ── */
-    var USTUNLAR = ['№', 'Код', 'Наименование', 'Ед.изм.', 'Кол-во', 'Цена', 'Сумма', 'Кат.'];
-    var jadval = [];
+    /* ══ USTUN JOYLASHUVI — LRV_PLUS BILAN BIR XIL ══
+     *
+     * Foydalanuvchi: «lrv plus fayllarni o'qib chiq va hozirgi oyna
+     * jadvalimiz ham shunaqa bo'lishini … taminlashing kerakda.
+     * Resurslarni turiga qarab alohida ustunlarga ham ajratishi kerak,
+     * chunki shundan nakrutka hisoblanadi».
+     *
+     * 00_Config.js dagi LRV_PLUS xaritasi (CFG.C):
+     *     A=№ B=КОД C=НОМ D=БИРЛИК E F  G=НАРХ H=СМЕТА I=МАРКЕР
+     *     J=ЧЕЛ K=МАШ L=МАТ M=ОБ
+     *
+     * Avvalgi ko'zguda YETISHMAGAN narsalar:
+     *   • НОРМА (E) — faqat bitta «Кол-во» ustuni bor edi
+     *   • ТИП (I)   — rz/bl/rs/mat/ob markeri umuman yo'q edi
+     *   • ЧЕЛ/МАШ/МАТ/ОБ — kategoriya faqat matn sifatida turardi,
+     *     summa kategoriya ustunlariga ajratilmasdi (накрутка uchun shart)
+     *   • № — oddiy qator sanog'i edi, smetaning asl raqami emas
+     */
+    var USTUNLAR = ['№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.',
+                    'ХАЖМ (ед)', 'ХАЖМ (жами)', 'НАРХ (1 ед)', 'СУММА', 'ТИП',
+                    'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ'];
+    var NU = USTUNLAR.length;
+    var C_NORMA = 5, C_HAJM = 6, C_NARX = 7, C_SUMMA = 8, C_KAT1 = 10;
+    var bosh = function(){ return new Array(NU).join('.').split('.'); };
 
-    jadval.push(['⚠️ БУ ФАЙЛ — КЎЗГУ. Уни таҳрирламанг: кейинги чизишда ' +
-                 'ўзгаришлар ЙЎҚОЛАДИ. Ҳақиқат манбаи — маълумотлар базаси.',
-                 '', '', '', '', '', '', '']);
-    jadval.push([obyekt, '', '', '', '', '', '', '']);
-    jadval.push(['Чизилди: ' + Utilities.formatDate(new Date(), 'Asia/Tashkent', 'yyyy-MM-dd HH:mm'),
-                 '', '', '', '', 'ЖАМИ:', jami, '']);
-    jadval.push(toliq
-      ? ['Барча қатор нархланган — жами ишончли.', '', '', '', '', '', '', '']
-      : ['⚠️ ' + narxsiz + ' қаторда нарх топилмади — ЖАМИ ТЎЛИҚ ЭМАС. ' +
-         'Бу рақам устида молиявий қарор қабул қилманг.', '', '', '', '', '', '', '']);
-    jadval.push(['', '', '', '', '', '', '', '']);
+    /* Kategoriya bo'yicha jamlanma — sarlavhada ko'rsatiladi */
+    var katJami = {'ЧЕЛ':0, 'МАШ':0, 'МАТ':0, 'ОБ':0};
+    for(i = 0; i < qatorlar.length; i++){
+      var qk = qatorlar[i];
+      if(qk.tur !== 'rs' && qk.tur !== 'mat' && qk.tur !== 'ob') continue;
+      if(katJami[qk.kat] === undefined) continue;
+      katJami[qk.kat] += Number(qk.summa) || 0;
+    }
+
+    var jadval = [];
+    var q1 = bosh();
+    q1[0] = '⚠️ БУ ФАЙЛ — КЎЗГУ. Уни таҳрирламанг: кейинги чизишда ' +
+            'ўзгаришлар ЙЎҚОЛАДИ. Ҳақиқат манбаи — маълумотлар базаси.';
+    jadval.push(q1);
+
+    var q2 = bosh(); q2[0] = obyekt; jadval.push(q2);
+
+    var q3 = bosh();
+    q3[0] = 'Чизилди: ' + Utilities.formatDate(new Date(), 'Asia/Tashkent', 'yyyy-MM-dd HH:mm');
+    q3[C_NARX - 1] = 'ЖАМИ:';
+    q3[C_SUMMA - 1] = jami;
+    q3[C_KAT1 - 1] = katJami['ЧЕЛ'];
+    q3[C_KAT1]     = katJami['МАШ'];
+    q3[C_KAT1 + 1] = katJami['МАТ'];
+    q3[C_KAT1 + 2] = katJami['ОБ'];
+    jadval.push(q3);
+
+    var q4 = bosh();
+    q4[0] = toliq
+      ? 'Барча қатор нархланган — жами ишончли.'
+      : '⚠️ ' + narxsiz + ' қаторда нарх топилмади — ЖАМИ ТЎЛИҚ ЭМАС. ' +
+        'Бу рақам устида молиявий қарор қабул қилманг.';
+    jadval.push(q4);
+
+    jadval.push(bosh());
     jadval.push(USTUNLAR);
 
     var SARLAVHA_QATOR = jadval.length;          // ma'lumot shundan keyin
 
     /* ── Ma'lumot qatorlari ── */
-    var uslub = [];                              // {qator, tur, chuqur}
+    var uslub = [];                              // {qator, tur, narxsiz}
     for(i = 0; i < qatorlar.length; i++){
       var r = qatorlar[i];
       var d = chuqurlik(r);
       var nom = new Array(d + 1).join('    ') + (r.nom || '');
+      var resursmi = (r.tur === 'rs' || r.tur === 'mat' || r.tur === 'ob');
+      var summa = (r.summa === null || r.summa === undefined) ? null : Number(r.summa);
 
-      jadval.push([
-        (r.tur === 'rs' || r.tur === 'bl' || r.tur === 'mat' || r.tur === 'ob')
-          ? (r.xom_qator || '') : '',
-        r.kod || '',
-        nom,
-        r.birlik || '',
-        r.hajm === null ? '' : Number(r.hajm),
-        /* ⚠️ Narx topilmagan bo'lsa 0 YOZILMAYDI — «нарх йўқ» deb yoziladi.
-           0 yozilsa hujjat «bepul» deb ko'rsatardi va bu yolg'on bo'lardi. */
-        r.narx === null ? (r.tur === 'rz' || r.tur === 'bl' ? '' : 'нарх йўқ') : Number(r.narx),
-        r.summa === null ? '' : Number(r.summa),
-        r.kat || ''
-      ]);
-      uslub.push({qator: jadval.length, tur: r.tur, narxsiz: (r.narx === null)});
+      var qator = bosh();
+      /* № — smetaning ASL raqami (1, 1.1, 1.2, 2 …). Bu odam izlaydigan
+         belgi; oddiy sanoq uning o'rnini bosa olmaydi. */
+      qator[0] = r.raqam || '';
+      qator[1] = r.kod || '';
+      qator[2] = nom;
+      qator[3] = r.birlik || '';
+      /* НОРМА faqat resursda bo'ladi: blokda 5-ustun uning o'z hajmi */
+      qator[C_NORMA - 1] = (r.norma === null || r.norma === undefined) ? '' : Number(r.norma);
+      qator[C_HAJM - 1]  = (r.hajm  === null || r.hajm  === undefined) ? '' : Number(r.hajm);
+      /* ⚠️ Narx topilmagan bo'lsa 0 YOZILMAYDI — «нарх йўқ» deb yoziladi.
+         0 yozilsa hujjat «bepul» deb ko'rsatardi va bu yolg'on bo'lardi. */
+      qator[C_NARX - 1] = (r.narx === null || r.narx === undefined)
+        ? ((r.tur === 'rz' || r.tur === 'bl') ? '' : 'нарх йўқ') : Number(r.narx);
+      qator[C_SUMMA - 1] = summa === null ? '' : summa;
+      qator[8] = r.tur || '';
+
+      /* ── KATEGORIYA USTUNLARI ──
+         Накрутка har kategoriya bo'yicha alohida hisoblanadi, shuning
+         uchun summa o'z ustuniga ham tushadi. Faqat RESURS qatorlari:
+         blok/razdel summasi bolalarining yig'indisi — uni ham qo'shsak
+         ikki marta sanalardi. */
+      if(resursmi && summa !== null){
+        if(r.kat === 'ЧЕЛ')      qator[C_KAT1 - 1] = summa;
+        else if(r.kat === 'МАШ') qator[C_KAT1]     = summa;
+        else if(r.kat === 'ОБ')  qator[C_KAT1 + 2] = summa;
+        else                     qator[C_KAT1 + 1] = summa;   // МАТ — qolgani
+      }
+
+      jadval.push(qator);
+      uslub.push({qator: jadval.length, tur: r.tur, narxsiz: (r.narx === null && resursmi)});
     }
 
     /* ── BITTA yozish ── */
     sh.getRange(1, 1, jadval.length, USTUNLAR.length).setValues(jadval);
 
     /* ── Bezash (ommaviy, qatorma-qator emas) ── */
-    sh.getRange(1, 1, 1, USTUNLAR.length).merge()
+    sh.getRange(1, 1, 1, NU).merge()
       .setBackground('#FFF3CD').setFontColor('#8A6D3B').setFontWeight('bold').setWrap(true);
-    sh.getRange(2, 1, 1, USTUNLAR.length).merge().setFontSize(13).setFontWeight('bold');
-    sh.getRange(4, 1, 1, USTUNLAR.length).merge()
+    sh.getRange(2, 1, 1, NU).merge().setFontSize(13).setFontWeight('bold');
+    sh.getRange(4, 1, 1, NU).merge()
       .setFontColor(toliq ? '#2E7D32' : '#C62828').setWrap(true);
-    sh.getRange(3, 6, 1, 2).setFontWeight('bold');
-    sh.getRange(SARLAVHA_QATOR, 1, 1, USTUNLAR.length)
-      .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold');
+    /* 3-qator: ЖАМИ va kategoriya jamlanmalari */
+    sh.getRange(3, C_NARX, 1, NU - C_NARX + 1).setFontWeight('bold');
+    sh.getRange(3, C_SUMMA, 1, 1).setNumberFormat('#,##0.00');
+    sh.getRange(3, C_KAT1, 1, 4).setNumberFormat('#,##0.00').setBackground('#ECEFF1');
+    sh.getRange(SARLAVHA_QATOR, 1, 1, NU)
+      .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold')
+      .setWrap(true).setVerticalAlignment('middle');
 
     /* Turlar bo'yicha ranglash — har turni BITTA guruhda */
     var guruh = {rz: [], bl: [], mat: [], ob: [], narxsiz: []};
@@ -210,15 +278,26 @@ function apiT2KozguYarat(obyekt){
 
     /* Raqam formati va kengliklar */
     if(qatorlar.length){
-      sh.getRange(SARLAVHA_QATOR + 1, 5, qatorlar.length, 1).setNumberFormat('#,##0.###');
-      sh.getRange(SARLAVHA_QATOR + 1, 6, qatorlar.length, 2).setNumberFormat('#,##0.00');
+      /* Hajm/norma — 6 kasrgacha: norma 0.0761 kabi kichik bo'ladi va
+         2 kasrga yaxlitlansa nolga aylanib ko'rinardi. */
+      sh.getRange(SARLAVHA_QATOR + 1, C_NORMA, qatorlar.length, 2)
+        .setNumberFormat('#,##0.######');
+      sh.getRange(SARLAVHA_QATOR + 1, C_NARX, qatorlar.length, 2)
+        .setNumberFormat('#,##0.00');
+      sh.getRange(SARLAVHA_QATOR + 1, C_KAT1, qatorlar.length, 4)
+        .setNumberFormat('#,##0.00');
+      /* Kategoriya ustunlari ko'z bilan ajralib tursin */
+      sh.getRange(SARLAVHA_QATOR, C_KAT1, qatorlar.length + 1, 4)
+        .setBorder(null, true, null, true, false, false);
     }
-    sh.getRange(3, 7).setNumberFormat('#,##0.00');
-    sh.setColumnWidth(1, 55);  sh.setColumnWidth(2, 90);
-    sh.setColumnWidth(3, 460); sh.setColumnWidth(4, 70);
-    sh.setColumnWidth(5, 85);  sh.setColumnWidth(6, 105);
-    sh.setColumnWidth(7, 125); sh.setColumnWidth(8, 60);
+    sh.setColumnWidth(1, 55);  sh.setColumnWidth(2, 95);
+    sh.setColumnWidth(3, 430); sh.setColumnWidth(4, 70);
+    sh.setColumnWidth(5, 85);  sh.setColumnWidth(6, 95);
+    sh.setColumnWidth(7, 100); sh.setColumnWidth(8, 120);
+    sh.setColumnWidth(9, 45);
+    for(var kc = C_KAT1; kc < C_KAT1 + 4; kc++) sh.setColumnWidth(kc, 115);
     sh.setFrozenRows(SARLAVHA_QATOR);
+    sh.setFrozenColumns(3);
 
     /* ⚠️ Himoya: ko'zgu tasodifan tahrirlanmasin. Ogohlantirish yetarli
        emas — odam baribir yozadi va keyin ishi yo'qolganini ko'radi. */
