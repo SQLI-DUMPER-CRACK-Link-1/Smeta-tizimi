@@ -27,7 +27,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Upload, CheckCircle, AlertTriangle, Clock, ArrowRight, FileSpreadsheet,
   ExternalLink, RefreshCw, Trash2, ChevronDown, ChevronRight, FileText,
-  Plus, Database, FolderPlus,
+  Plus, Database, FolderPlus, FolderOpen,
 } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { toast } from '../umumiy/ui/Toast';
@@ -37,6 +37,12 @@ import { useKompaniya } from './KompaniyaTanlov';
 
 type Rol = 'lokalka' | 'svodka';
 type Varaq = { nom: string; qator: number; ustun: number };
+
+/** Drive'da allaqachon turgan manba hujjat (bir yuklash = bir qator). */
+type ManbaFayl = {
+  fayl_id: string; asl_id: string; nom: string; sana: string;
+  oqiladi: boolean; rol_taklif: Rol;
+};
 
 /** Obyekt ichidagi bitta HUJJAT. */
 type Hujjat = {
@@ -86,6 +92,24 @@ export default function TestImport() {
   const [kozgu, setKozgu] = useState<{ ok: boolean; url?: string;
                                        xabar?: string; qator?: number } | null>(null);
   const [kozguKetyapti, setKozguKetyapti] = useState(false);
+
+  /* ── Avval yuklangan hujjatlar (Drive: Tizim_02/_MANBA) ──
+   * Foydalanuvchi: «ikkita hujjat yuklanadi YOKI shu paytgacha
+   * yuklanganlar tanlanadi». Ya'ni yuklash yagona yo'l emas — bir marta
+   * yuklangan hujjat keyingi obyektlarda qayta ishlatilishi kerak. */
+  const [manba, setManba] = useState<ManbaFayl[]>([]);
+  const [manbaOchiq, setManbaOchiq] = useState<Rol | null>(null);
+  const [manbaYuk, setManbaYuk] = useState(false);
+  const [manbaUrl, setManbaUrl] = useState('');
+
+  const manbaYukla = useCallback(() => {
+    setManbaYuk(true);
+    gas<any>('apiT2ManbaFayllar')
+      .then((r) => { if (r.ok) { setManba(r.fayllar || []); setManbaUrl(r.papka_url || ''); } })
+      .catch(() => {})
+      .finally(() => setManbaYuk(false));
+  }, []);
+  useEffect(() => { manbaYukla(); }, [manbaYukla]);
 
   const obyektlarYukla = useCallback(() => {
     sbT2ObyektlarOlKomp(joriy?.id).then((r) => {
@@ -182,7 +206,41 @@ export default function TestImport() {
     }
 
     setYuklanayotgan(null);
-    if (qoshildi) toast(qoshildi + ' hujjat qo\'shildi', 'ok');
+    if (qoshildi) { toast(qoshildi + ' hujjat qo\'shildi', 'ok'); manbaYukla(); }
+  };
+
+  /* ── Avval yuklangan hujjatni qismga biriktirish ── */
+  const manbadanQosh = async (m: ManbaFayl, rol: Rol) => {
+    if (hujjatlar.some((h) => h.fayl_id === m.fayl_id)) {
+      toast('Bu hujjat allaqachon qo\'shilgan', 'warn'); return;
+    }
+    if (!m.oqiladi) {
+      toast('«' + m.nom + '» Google Sheets ga o\'girilmagan — o\'qib bo\'lmaydi. ' +
+            'Uni qaytadan yuklang.', 'danger', undefined, 9000);
+      return;
+    }
+    setYuklanayotgan(rol);
+    try {
+      const r = await gas<any>('apiT2HujjatVaraqlar', m.fayl_id);
+      if (!r.ok) { toast(r.xabar || 'Varaqlar o\'qilmadi', 'danger', undefined, 9000); return; }
+
+      const olinsin: Record<string, boolean> = {};
+      (r.varaqlar || []).forEach((v: Varaq) => { olinsin[v.nom] = true; });
+
+      if (m.rol_taklif !== rol) {
+        toast('«' + m.nom + '» nomi ' + (m.rol_taklif === 'svodka' ? 'RES' : 'LRV') +
+              ' ga o\'xshaydi — tekshiring', 'warn', undefined, 8000);
+      }
+      setHujjatlar((p) => [...p, {
+        fayl_id: m.fayl_id, nom: m.nom, rol,
+        varaqlar: r.varaqlar || [], olinsin,
+        ochiq: (r.varaqlar || []).length > 1, toliq: true,
+      }]);
+      setManbaOchiq(null);
+      toast('«' + m.nom + '» qo\'shildi', 'ok');
+    } catch (e: any) {
+      toast(e?.message || 'Xato', 'danger', undefined, 9000);
+    } finally { setYuklanayotgan(null); }
   };
 
   const varaqOzgar = (id: string, varaq: string, qiymat: boolean) =>
@@ -411,23 +469,97 @@ export default function TestImport() {
                       {royxat.map((h) => <HujjatKarta key={h.fayl_id} h={h} />)}
                     </div>
 
-                    <label className="flex flex-col items-center justify-center gap-1 py-4
-                                      border-2 border-dashed border-border rounded-lg cursor-pointer
-                                      hover:border-accent/50 hover:bg-white/[0.02] transition-colors">
-                      <Upload size={18} className="text-accent" />
-                      <span className="text-[12px] text-text">
-                        {yuklanayotgan === q.rol ? 'Yuklanmoqda…'
-                          : (bosh ? 'Hujjat qo\'shing' : 'Yana qo\'shish')}
-                      </span>
-                      <span className="text-[10px] text-text-mute">
-                        .xlsx · .xls · bir nechtasi mumkin
-                      </span>
-                      <input type="file" multiple className="hidden"
-                        disabled={yuklanayotgan !== null}
-                        accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                        onChange={(e) => { fayllarTanlandi(e.target.files, q.rol);
-                                           e.currentTarget.value = ''; }} />
-                    </label>
+                    {/* Hujjatni qismga solishning IKKI yo'li — teng huquqli */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex flex-col items-center justify-center gap-1 py-3
+                                        border-2 border-dashed border-border rounded-lg cursor-pointer
+                                        hover:border-accent/50 hover:bg-white/[0.02] transition-colors">
+                        <Upload size={16} className="text-accent" />
+                        <span className="text-[11px] text-text text-center leading-tight">
+                          {yuklanayotgan === q.rol ? 'Ishlanmoqda…' : 'Kompyuterdan yuklash'}
+                        </span>
+                        <input type="file" multiple className="hidden"
+                          disabled={yuklanayotgan !== null}
+                          accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                          onChange={(e) => { fayllarTanlandi(e.target.files, q.rol);
+                                             e.currentTarget.value = ''; }} />
+                      </label>
+
+                      <button type="button" disabled={yuklanayotgan !== null}
+                        onClick={() => setManbaOchiq(manbaOchiq === q.rol ? null : q.rol)}
+                        className={'flex flex-col items-center justify-center gap-1 py-3 rounded-lg ' +
+                          'border-2 border-dashed transition-colors disabled:opacity-40 ' +
+                          (manbaOchiq === q.rol
+                            ? 'border-accent/60 bg-accent/5'
+                            : 'border-border hover:border-accent/50 hover:bg-white/[0.02]')}>
+                        <FolderOpen size={16} className="text-accent" />
+                        <span className="text-[11px] text-text text-center leading-tight">
+                          Yuklanganlardan tanlash
+                        </span>
+                        <span className="text-[10px] text-text-mute">{manba.length} hujjat</span>
+                      </button>
+                    </div>
+
+                    {/* ── Manba ro'yxati ── */}
+                    {manbaOchiq === q.rol && (
+                      <div className="mt-2 rounded-lg border border-border bg-[var(--surface-2)]/50 p-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[11px] text-text-dim">
+                            Drive: Tizim_02 / _MANBA
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {manbaUrl && (
+                              <a href={manbaUrl} target="_blank" rel="noreferrer"
+                                 className="text-[10px] text-accent hover:underline
+                                            inline-flex items-center gap-1">
+                                papka <ExternalLink size={10} />
+                              </a>
+                            )}
+                            <button onClick={manbaYukla} disabled={manbaYuk}
+                              className="text-text-mute hover:text-text disabled:opacity-40"
+                              aria-label="Ro'yxatni yangilash" title="Ro'yxatni yangilash">
+                              <RefreshCw size={12} className={manbaYuk ? 'animate-spin' : ''} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {!manba.length ? (
+                          <p className="text-[11px] text-text-mute italic py-1">
+                            {manbaYuk ? 'O\'qilmoqda…'
+                              : 'Hali hujjat yuklanmagan — chapdagi tugmadan yuklang.'}
+                          </p>
+                        ) : (
+                          <div className="max-h-52 overflow-auto space-y-0.5">
+                            {manba.map((m) => {
+                              const band = hujjatlar.some((h) => h.fayl_id === m.fayl_id);
+                              return (
+                                <button key={m.fayl_id} type="button" disabled={band || !!yuklanayotgan}
+                                  onClick={() => manbadanQosh(m, q.rol)}
+                                  className={'w-full flex items-center gap-2 text-left px-1.5 py-1 rounded ' +
+                                    (band ? 'opacity-40 cursor-default'
+                                          : 'hover:bg-white/[0.05] cursor-pointer')}>
+                                  <FileText size={12} className="text-accent flex-shrink-0" />
+                                  <span className="flex-1 text-[11px] text-text truncate" title={m.nom}>
+                                    {m.nom}
+                                  </span>
+                                  {m.rol_taklif !== q.rol && !band && (
+                                    <span className="text-[9px] text-warn">
+                                      {m.rol_taklif === 'svodka' ? 'RES?' : 'LRV?'}
+                                    </span>
+                                  )}
+                                  {!m.oqiladi && (
+                                    <span className="text-[9px] text-danger">o‘qilmaydi</span>
+                                  )}
+                                  <span className="text-[10px] text-text-mute">{m.sana}</span>
+                                  {band ? <span className="text-[10px] text-ok">qo‘shilgan</span>
+                                        : <Plus size={12} className="text-text-mute" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {bosh && q.rol === 'lokalka' && (
                       <p className="text-[11px] text-warn mt-1.5">

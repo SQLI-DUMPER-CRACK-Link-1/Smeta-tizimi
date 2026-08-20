@@ -235,19 +235,59 @@ function apiT2YuklanganImport(obyektNom, hujjatlar){
 /** Tizim_02 ga yuklangan manba fayllar ro'yxati. */
 function apiT2ManbaFayllar(){
   try{
-    var papka = _t2ManbaPapka(), out = [];
-    var it = papka.getFiles();
+    var papka = _t2ManbaPapka();
+
+    /* ⚠️ HAR YUKLASH IKKITA FAYL QOLDIRADI:
+     *      20260819_160939__RES.xlsx          — asl (o'qib bo'lmaydi)
+     *      (GS) 20260819_160939__RES.xlsx     — konvert (o'qiladi)
+     *
+     * Foydalanuvchiga ikkalasini ko'rsatish — chalkashlik: qaysi birini
+     * tanlashini bilmaydi va .xlsx ni tanlasa import yiqiladi. Shuning
+     * uchun BITTA HUJJAT = BITTA QATOR, `fayl_id` esa doim o'qiladigan
+     * (Sheets) nusxaniki.
+     *
+     * Kalit: «(GS) » prefiksi va kengaytma olib tashlangan nom. */
+    var xarita = {}, it = papka.getFiles();
     while(it.hasNext()){
       var f = it.next();
-      /* Konvert nusxalari «(GS) » bilan boshlanadi — ro'yxatda ular
-         ko'rsatiladi, chunki aynan ulardan o'qiladi. */
-      out.push({id: f.getId(), nom: f.getName(),
-                sana: Utilities.formatDate(f.getLastUpdated(),
-                        'Asia/Tashkent', 'dd.MM.yyyy HH:mm'),
-                ts: f.getLastUpdated().getTime(),
-                sheets: f.getMimeType() === MimeType.GOOGLE_SHEETS});
+      var nom = f.getName();
+      var sheetsmi = f.getMimeType() === MimeType.GOOGLE_SHEETS;
+
+      var kalit = nom.replace(/^\(GS\)\s*/, '').replace(/\.(xlsx|xlsm|xls)$/i, '');
+
+      /* Ko'rsatiladigan nom — vaqt belgisisiz, chunki u xizmat ma'lumoti */
+      var korinish = kalit.replace(/^\d{8}_\d{6}__/, '');
+      var vaqtBelgi = (kalit.match(/^(\d{8}_\d{6})__/) || [])[1] || '';
+
+      var bor = xarita[kalit];
+      if(!bor){
+        bor = xarita[kalit] = {
+          nom: korinish, belgi: vaqtBelgi,
+          fayl_id: '', asl_id: '', oqiladi: false,
+          sana: Utilities.formatDate(f.getLastUpdated(), 'Asia/Tashkent', 'dd.MM.yyyy HH:mm'),
+          ts: f.getLastUpdated().getTime()
+        };
+      }
+      if(sheetsmi){ bor.fayl_id = f.getId(); bor.oqiladi = true; }
+      else        { bor.asl_id  = f.getId(); }
+      if(f.getLastUpdated().getTime() > bor.ts) bor.ts = f.getLastUpdated().getTime();
+    }
+
+    var out = [];
+    for(var k in xarita){
+      var h = xarita[k];
+      /* Sheets nusxasi yo'q bo'lsa (eski yuklash yoki konvert yiqilgan)
+         o'qish uchun aslining id si beriladi va ROSTINI aytamiz —
+         import urinsa aniq xato chiqadi, jim yiqilmaydi. */
+      if(!h.fayl_id) h.fayl_id = h.asl_id;
+
+      var nomU = String(h.nom).toUpperCase();
+      h.rol_taklif = /(^|[^A-Z])RES([^A-Z]|$)|СВОД|РЕСУРС|SVOD|ВЕДОМОСТ/.test(nomU)
+        ? 'svodka' : 'lokalka';
+      out.push(h);
     }
     out.sort(function(a,b){ return b.ts - a.ts; });
+
     return {ok:true, papka_url: papka.getUrl(), fayllar: out};
   }catch(e){
     return {ok:false, xabar: String((e && e.message) || e)};

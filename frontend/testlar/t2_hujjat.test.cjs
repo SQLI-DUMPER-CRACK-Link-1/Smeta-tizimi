@@ -134,6 +134,51 @@ tek('Drive\'da yo\'q, bazada bor varaq yo\'qolmaydi',
 tek('import qilinmagan varaq ekranda ajratiladi',
     /import qilinmagan/.test(IMPORT_UI));
 
+console.log('\n── Hujjatni solishning IKKI yo\'li ──');
+
+/* Foydalanuvchi: «ikkita hujjat yuklanadi YOKI shu paytgacha
+   yuklanganlar tanlanadi — biri lrv biri res».
+   Ya'ni yuklash yagona yo'l EMAS; tanlash ham teng huquqli yo'l. */
+tek('har qismda «Kompyuterdan yuklash» bor',
+    /Kompyuterdan yuklash/.test(IMPORT_UI));
+tek('har qismda «Yuklanganlardan tanlash» bor',
+    /Yuklanganlardan tanlash/.test(IMPORT_UI));
+tek('tanlash ro\'yxati qismga bog\'langan (har qism o\'ziga ochadi)',
+    /manbaOchiq === q\.rol/.test(IMPORT_UI));
+tek('tanlangan hujjat shu qism roli bilan qo\'shiladi',
+    /manbadanQosh\(m, q\.rol\)/.test(IMPORT_UI));
+tek('tanlanganda varaqlar Drive\'dan o\'qiladi',
+    /manbadanQosh[\s\S]{0,900}apiT2HujjatVaraqlar/.test(IMPORT_UI));
+tek('bir hujjat ikki marta qo\'shilmaydi',
+    /hujjatlar\.some\(\(h\) => h\.fayl_id === m\.fayl_id\)/.test(IMPORT_UI));
+tek('o\'qilmaydigan (konvert bo\'lmagan) fayl bloklanadi',
+    /if \(!m\.oqiladi\)/.test(IMPORT_UI));
+tek('yangi yuklashdan keyin ro\'yxat yangilanadi',
+    /qoshildi \+ ' hujjat qo\\'shildi', 'ok'\); manbaYukla\(\)/.test(IMPORT_UI));
+
+console.log('\n── GAS: manba ro\'yxati bitta hujjat = bitta qator ──');
+
+/* Har yuklash Drive'da IKKI fayl qoldiradi (asl .xlsx + konvert Sheets).
+   Ikkalasini ko'rsatish chalkashlik: .xlsx tanlansa import yiqiladi. */
+tek('«(GS) » prefiksi va kengaytma bo\'yicha guruhlanadi',
+    /replace\(\/\^\\\(GS\\\)\\s\*\/, ''\)\.replace\(\/\\\.\(xlsx\|xlsm\|xls\)\$\/i, ''\)/.test(YUKLASH));
+tek('fayl_id doim O\'QILADIGAN (Sheets) nusxaniki',
+    /if\(sheetsmi\)\{ bor\.fayl_id = f\.getId\(\); bor\.oqiladi = true; \}/.test(YUKLASH));
+tek('vaqt belgisi ko\'rsatiladigan nomdan olib tashlanadi',
+    /replace\(\/\^\\d\{8\}_\\d\{6\}__\/, ''\)/.test(YUKLASH));
+tek('ro\'yxatda ham rol taklifi bor', /h\.rol_taklif =/.test(YUKLASH));
+tek('Sheets nusxasi yo\'q hujjat `oqiladi:false` bilan keladi',
+    /if\(!h\.fayl_id\) h\.fayl_id = h\.asl_id;/.test(YUKLASH));
+
+/* Dedup mantiqi haqiqiy _MANBA holatida ishlashi kerak */
+const kalitla = (nom) => nom.replace(/^\(GS\)\s*/, '').replace(/\.(xlsx|xlsm|xls)$/i, '');
+const papka = ['20260819_160939__RES', '20260819_160939__RES.xlsx',
+               '20260819_160748__LRV', '20260819_160748__LRV.xlsx',
+               '(GS) 20260820_090000__Amfiteatr_LRV.xlsx',
+               '20260820_090000__Amfiteatr_LRV.xlsx'];
+const guruh = new Set(papka.map(kalitla));
+tek('6 fayl → 3 hujjat (rasmdagi holat)', guruh.size === 3, 'topildi: ' + guruh.size);
+
 console.log('\n── Frontend: yuboriladigan shakl ──');
 
 tek('gas() ga 2 argument yuboriladi',

@@ -17,7 +17,8 @@
       "Bash(node testlar/obyekt_guruh.test.cjs)",
       "Bash(node testlar/shartnoma.tekshir.cjs)",
       "Bash(node testlar/t2_kompaniya.test.cjs)",
-      "Bash(NODE_OPTIONS=--max-old-space-size=2048 npx tsc --noEmit -p tsconfig.app.json)"
+      "Bash(NODE_OPTIONS=--max-old-space-size=2048 npx tsc --noEmit -p tsconfig.app.json)",
+      "Bash(NODE_OPTIONS=--max-old-space-size=3072 npx vite build)"
     ]
   }
 }
