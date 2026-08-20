@@ -6,7 +6,7 @@ import { tekshir } from '../_shared/auth';
  * xatosini oladi va sababini tushunmaydi.
  */
 export const onRequestGet: PagesFunction<{ SESSIYA_KALIT: string }> = async (ctx) => {
-  const secret = ctx.env.SESSIYA_KALIT || 'Boshlangich_Maxfiy_Kalit_123';
+  const secret = ctx.env.SESSIYA_KALIT;
   const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
   if (!sess) return Response.json({ ok: false }, { status: 401 });
 

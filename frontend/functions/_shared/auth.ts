@@ -26,8 +26,33 @@ async function hmacHex(body: string, secret: string) {
     .join('');
 }
 
+/**
+ * ⚠️ XAVFSIZLIK: ZAXIRA KALIT OLIB TASHLANDI.
+ *
+ * Avval kalit yo'q bo'lsa kodda yozilgan `Boshlangich_Maxfiy_Kalit_123`
+ * ishlatilardi. Repozitoriy OCHIQ — ya'ni bu kalit hammaga ma'lum va
+ * uni bilgan har kim sessiya cookie'sini o'zi imzolab, admin bo'lib
+ * kirishi mumkin edi.
+ *
+ * «Kalit yo'q → jim ishlayveradi» eng yomon variant: teshik ochiq
+ * turadi va hech kim sezmaydi. Endi kalit bo'lmasa tizim ISHLAMAYDI
+ * va sababini aniq aytadi.
+ *
+ * Kalitni Cloudflare Pages → Settings → Environment variables da
+ * `SESSIYA_KALIT` nomi bilan o'rnatish kerak.
+ */
+export function kalitTekshir(secret: string | undefined | null): string {
+  const k = String(secret || '').trim();
+  if (k.length >= 16) return k;
+  throw new Error(
+    'SESSIYA_KALIT o\'rnatilmagan (yoki 16 belgidan qisqa). ' +
+    'Cloudflare Pages → Settings → Environment variables da o\'rnating. ' +
+    'Xavfsizlik uchun zaxira kalit ATAYLAB olib tashlangan — repozitoriy ochiq.'
+  );
+}
+
 export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Promise<string> {
-  if (!secret) secret = 'Boshlangich_Maxfiy_Kalit_123';
+  secret = kalitTekshir(secret);
   const payload: Sess = {
     ...s,
     exp: Date.now() + 12 * 3600_000, // 12 soat
@@ -39,7 +64,9 @@ export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Prom
 }
 
 export async function tekshir(cookie: string | null, secret: string): Promise<Sess | null> {
-  if (!secret) secret = 'Boshlangich_Maxfiy_Kalit_123';
+  /* Kalit yo'q bo'lsa HECH KIM kira olmaydi — zaxira kalit bilan
+     «ishlab turgandek» ko'rinishdan ko'ra to'xtagani xavfsizroq. */
+  secret = kalitTekshir(secret);
   const t = cookie?.match(/sess=([^;]+)/)?.[1];
   if (!t) return null;
   const parts = t.split('.');

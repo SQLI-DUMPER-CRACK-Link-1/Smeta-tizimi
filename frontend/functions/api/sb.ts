@@ -42,6 +42,8 @@ const RUXSAT_JADVALLAR = new Set([
   't2_kompaniya', 't2_obyekt', 't2_obyekt_jami', 't2_daraxt', 't2_qator',
   't2_narx', 't2_manba', 't2_xom', 't2_lrv',
   't2_kozgu', 't2_ozgarish', 't2_kopruk_navbat', 't2_sozlama',
+  /* F2 / FAKT (E bosqichi) */
+  't2_akt', 't2_akt_qator', 't2_akt_reestr', 't2_qator_holat',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */
@@ -57,7 +59,7 @@ export const onRequestPost: PagesFunction<{
 }> = async (ctx) => {
   const t0 = Date.now();
   try {
-    const secret = ctx.env.SESSIYA_KALIT || 'Boshlangich_Maxfiy_Kalit_123';
+    const secret = ctx.env.SESSIYA_KALIT;
     const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
     if (!sess) {
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });

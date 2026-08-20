@@ -385,6 +385,29 @@ function apiT2VaraqYarat(obyekt){
     }
 
     /* ── BITTA yozish ── */
+    /* ⚠️ TIZIM YOZUVI BELGILANADI — SINX HALQASI TAHLILI.
+     *
+     * `setValues` o'rnatilgan onEdit tirgagini uyg'otadi. Savol: bu
+     * Supabase → Sheets → Supabase → Sheets halqasiga aylanadimi?
+     *
+     * YO'Q. `apiT2VaraqQaytar` varaqqa BITTA HAM katak yozmaydi — u
+     * faqat o'qiydi va bazaga yozadi. Zanjir shu yerda uziladi.
+     * Ustiga-ustak u faqat FARQ topilgan qatorni yozadi; tizim endigina
+     * chizgan varaqda farq bo'lmaydi.
+     *
+     * Lekin BEHUDA ISH bor: har chizishdan keyin 10 000 qatorli
+     * bekorchi solishtiruv ishga tushardi. Shuning uchun tizim o'z
+     * yozuvini belgilaydi va onEdit uni o'tkazib yuboradi.
+     *
+     * Oyna QISQA (60 s): agar odam shu vaqt ichida biror narsa yozsa,
+     * uning tahriri KEYINGI tahrirda baribir bazaga tushadi — solishtiruv
+     * butun varaqni tekshiradi, faqat o'zgargan katakni emas. Ya'ni
+     * belgi ish yo'qotmaydi, faqat bekorchilikni kamaytiradi. */
+    try{
+      PropertiesService.getScriptProperties()
+        .setProperty(T2_TIZIM_YOZDI, ss.getId() + '|' + Date.now());
+    }catch(e){}
+
     sh.getRange(1, 1, jadval.length, USTUNLAR.length).setValues(jadval);
 
     /* ── Bezash (ommaviy, qatorma-qator emas) ── */
@@ -757,6 +780,9 @@ function apiT2VaraqQaytar(obyekt){
 
 var T2_SINX_KUTMOQDA = 'T2_SINX_KUTMOQDA';
 var T2_SINX_KECHIKISH = 45 * 1000;
+/* Tizimning o'z yozuvi — undan kelib chiqqan onEdit e'tiborsiz qoladi */
+var T2_TIZIM_YOZDI = 'T2_TIZIM_YOZDI';
+var T2_TIZIM_OYNA  = 60 * 1000;
 
 /** Varaq tahrirlanganda ishlaydi (o'rnatiladigan tirgak). */
 function t2VaraqOnEdit(e){
@@ -770,8 +796,17 @@ function t2VaraqOnEdit(e){
     var u1 = e.range.getColumn(), u2 = u1 + e.range.getNumColumns() - 1;
     if(u2 < 3 || u1 > 7) return;
 
-    PropertiesService.getScriptProperties()
-      .setProperty(T2_SINX_KUTMOQDA, sh.getParent().getId());
+    var ssId = sh.getParent().getId();
+    var p = PropertiesService.getScriptProperties();
+
+    /* Tizimning O'Z yozuvidan kelgan hodisani o'tkazib yuboramiz —
+       aks holda har chizishdan keyin bekorchi to'liq solishtiruv
+       ishga tushardi (10 000 qator o'qish, natija: nol o'zgarish). */
+    var belgi = p.getProperty(T2_TIZIM_YOZDI) || '';
+    var bolak = belgi.split('|');
+    if(bolak[0] === ssId && (Date.now() - Number(bolak[1] || 0)) < T2_TIZIM_OYNA) return;
+
+    p.setProperty(T2_SINX_KUTMOQDA, ssId);
     _t2SinxRejalashtir();
   }catch(err){ Logger.log('t2VaraqOnEdit: ' + err); }
 }

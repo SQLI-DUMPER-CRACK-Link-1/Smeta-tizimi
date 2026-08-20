@@ -28,7 +28,7 @@ export const onRequestPost: PagesFunction<{
 }> = async (ctx) => {
   const t0 = Date.now();
   try {
-    const secret = ctx.env.SESSIYA_KALIT || 'Boshlangich_Maxfiy_Kalit_123';
+    const secret = ctx.env.SESSIYA_KALIT;
     const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
     if (!sess) {
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });

@@ -6,7 +6,7 @@ export const onRequestPost: PagesFunction<{
   try {
     const { fn, args } = await ctx.request.json<{ fn: string; args?: unknown[] }>();
 
-    const secret = ctx.env.SESSIYA_KALIT || 'Boshlangich_Maxfiy_Kalit_123';
+    const secret = ctx.env.SESSIYA_KALIT;
     const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
     if (!sess) {
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });

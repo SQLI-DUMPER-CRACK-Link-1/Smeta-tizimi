@@ -49,7 +49,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return Response.json({ ok: false, xato: 'Логин ёки парол нотўғри' }, { status: 401 });
   }
 
-  const secret = ctx.env.SESSIYA_KALIT || 'Boshlangich_Maxfiy_Kalit_123';
+  const secret = ctx.env.SESSIYA_KALIT;
   const token = await imzola({ rol, email: login }, secret);
   return new Response(JSON.stringify({ ok: true, rol }), {
     headers: {
