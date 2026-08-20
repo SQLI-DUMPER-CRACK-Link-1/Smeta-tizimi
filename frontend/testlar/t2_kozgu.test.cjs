@@ -62,6 +62,73 @@ if (cm && ustunlar.length >= 13) {
       'ko\'zgu: ' + kozguTartib.join(',') + '  LRV_PLUS: ' + [chel, mash, mat, obq].join(','));
 }
 
+console.log('\n── NOM toza bo\'lsin ──');
+
+/* Foydalanuvchi: «"        ГИЛЬЗЫ СОЕДИНИТЕЛЬНЫЕ" nima uchun oldidan joy
+   tashlab ketayapdi». Daraja bo'shliq bilan ko'rsatilardi va u nomni
+   ifloslantirardi — qidiruv, saralash, nusxa olish, bazaga qaytarish. */
+tek('nom oldiga bo\'shliq QO\'YILMAYDI',
+    !/join\('    '\)/.test(KOZGU) && /qator\[2\] = r\.nom \|\| ''/.test(KOZGU),
+    'daraja rang, ТИП va № (1/1.1/1.2) orqali ko\'rinadi');
+
+console.log('\n── Sheets formulalari ──');
+
+/* Foydalanuvchi: «man buni exell qilib olsam obyomlarni o'zgartirsam
+   formulalar avtomat ishlar edida». */
+tek('ХАЖМ (жами) resursda FORMULA: blok hajmi × norma',
+    /'=IF\(N\(\$F' \+ otaSatr/.test(KOZGU));
+tek('СУММА resursda FORMULA: hajm × narx',
+    /=IF\(ISNUMBER\(\$F' \+ qn \+ '\)\*ISNUMBER\(\$G/.test(KOZGU));
+tek('«нарх йўқ» matni formulani buzmaydi (ISNUMBER)',
+    /ISNUMBER\(\$G/.test(KOZGU));
+tek('blok СУММА = resurslari yig\'indisi', /'=SUM\(\$H' \+ bb\.ilk/.test(KOZGU));
+tek('razdel СУММА faqat 1-daraja turlarini qo\'shadi (SUMIFS)',
+    /SUMIFS\(' \+ oraliqH[\s\S]{0,300}"bl"/.test(KOZGU) &&
+    /"mat"/.test(KOZGU) && /"ob"/.test(KOZGU),
+    'hammasini qo\'shsa blok ham, resurslari ham sanalib ikki baravar bo\'lardi');
+tek('kategoriya ustuni ham FORMULA', /'=IF\(\$H' \+ qn \+ '="","",\$H/.test(KOZGU));
+tek('sarlavhadagi JAMI va kategoriyalar FORMULA',
+    /q3\[C_SUMMA - 1\] = '=SUM\(\$J\$3:\$M\$3\)'/.test(KOZGU) &&
+    /q3\[C_KAT1 - 1\] = '=SUM\(J'/.test(KOZGU));
+
+/* Formula ustunlari ustiga yozilsa formula o'chib jadval jim buziladi */
+tek('hisob ustunlari qulflanadi (СУММА, ТИП, kategoriya)',
+    /СУММА — формула/.test(KOZGU) && /ТИП ва ЧЕЛ\/МАШ\/МАТ\/ОБ — формула/.test(KOZGU));
+tek('butun varaq QULFLANMAYDI (tahrir endi saqlanadi)',
+    !/sh\.protect\(\)/.test(KOZGU));
+
+console.log('\n── Avtomatik sinxron (tugmasiz) ──');
+
+/* Foydalanuvchi: «man sanga aytgandimku bu sheetsda o'zgartirsa avtomat
+   database da o'zgarishi kerak». */
+tek('onEdit tirgagi bor', /function t2VaraqOnEdit\(e\)/.test(KOZGU));
+tek('tirgak varaq yaratilganda o\'rnatiladi',
+    /_t2VaraqTirgakOrnat\(ss\.getId\(\)\)/.test(KOZGU));
+tek('faqat odam kiritadigan ustunlar sinxronni uyg\'otadi',
+    /if\(u2 < 3 \|\| u1 > 7\) return;/.test(KOZGU));
+/* Har tahrirda yozish o'nlab ortiqcha so'rov bo'lardi */
+tek('bir seriya tahrir — BITTA yozish (kechiktirish)',
+    /T2_SINX_KECHIKISH/.test(KOZGU) && /_t2SinxRejalashtir/.test(KOZGU));
+tek('navbatda turgani bo\'lsa yangi tirgak yasalmaydi',
+    /=== 't2VaraqSinxFon'\) return;/.test(KOZGU),
+    'aks holda 20 ta tirgak limiti tez to\'lardi');
+tek('fon tirgagi O\'ZINI o\'chiradi', /deleteTrigger\(trg\[i\]\)/.test(KOZGU));
+tek('tirgak limiti tekshiriladi va OCHIQ aytiladi',
+    /trg\.length >= 18/.test(KOZGU) && /holat:'limit'/.test(KOZGU));
+tek('panel avto-sinxron yo\'qligini ko\'rsatadi',
+    /avto-sinxron yo'q/.test(fs.readFileSync(
+      path.join(ILDIZ, 'frontend', 'src', 'test02', 'TestImport.tsx'), 'utf8')));
+
+console.log('\n── Atama: «ko\'zgu» emas ──');
+
+/* Foydalanuvchi: «tayyor mahsulot nomi ustida nima uchun ko'zgu deysan,
+   bir ilmiyroq nom topsangchi». */
+tek('hujjat nomi «ИШЧИ СМЕТА»', /faylNomi = obyekt \+ ' — ИШЧИ СМЕТА'/.test(KOZGU));
+tek('API nomi apiT2VaraqYarat', /function apiT2VaraqYarat\(/.test(KOZGU));
+const UI = fs.readFileSync(path.join(ILDIZ, 'frontend', 'src', 'test02', 'TestImport.tsx'), 'utf8');
+tek('panelda «ko\'zgu» so\'zi yo\'q', !/ko‘zgu|ko'zgu/i.test(UI));
+tek('panelda «Ishchi smeta» deyiladi', /Ishchi smeta varag/.test(UI));
+
 console.log('\n── № va NORMA manbai ──');
 
 tek('№ smetaning ASL raqamidan (r.raqam)', /qator\[0\] = r\.raqam \|\| ''/.test(KOZGU),
@@ -74,7 +141,7 @@ tek('t2_daraxt dan norma/raqam so\'raladi (view yangilangan)',
 console.log('\n── Kategoriya ustunlari: IKKI MARTA sanalmasin ──');
 
 tek('kategoriya summasi FAQAT resurs qatorida yoziladi',
-    /if\(resursmi && summa !== null\)\{/.test(KOZGU),
+    /if\(resursmi\)\{\s*\n\s*var kUst/.test(KOZGU),
     'blok/razdel summasi bolalarining yig\'indisi — qo\'shilsa ikki marta sanaladi');
 tek('ЧЕЛ/МАШ/ОБ aniq, qolgani МАТ',
     /r\.kat === 'ЧЕЛ'/.test(KOZGU) && /r\.kat === 'МАШ'/.test(KOZGU) &&
@@ -128,7 +195,7 @@ console.log('\n── Sheets → baza qaytish yo\'li ──');
 
 /* Foydalanuvchi: «bu sheets oynasida ishlangan ishlar supabase ga ham
    o'ta olishi kerak edi». Ko'zgu endi bir tomonlama emas. */
-tek('apiT2KozguQaytar bor', /function apiT2KozguQaytar\(/.test(KOZGU));
+tek('apiT2VaraqQaytar bor', /function apiT2VaraqQaytar\(/.test(KOZGU));
 
 /* Qatorni ANIQLASH — qator raqami bilan emas, o'zgarmas id bilan.
    Qator qo'shilsa/o'chsa raqam suriladi va tahrir boshqa resursga tushardi. */

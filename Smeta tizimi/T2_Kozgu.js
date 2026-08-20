@@ -1,16 +1,20 @@
 /**
- * T2_Kozgu.js — TIZIM_02: BAZA → GOOGLE SHEETS KO'ZGUSI
+ * T2_Kozgu.js — TIZIM_02: «ИШЧИ СМЕТА» VARAG'I
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Foydalanuvchi so'zi bilan: «sheets esa ko'zgu bo'ladi — yani shu supabase
- * dagi ma'lumotdan kelib chiqib yasaladi, bu oddiy foydalanuvchi uchun
- * tushunarli hujjatga ega bo'lishi uchun yordam berishi kerak».
+ * ⚠️ ATAMA: bu hujjat avval «ko'zgu» deb atalgan. Endi ATALMAYDI —
+ * foydalanuvchi: «tayyor mahsulot nomi ustida nima uchun ko'zgu deysan,
+ * bir ilmiyroq nom topsangchi». Nom ham noto'g'ri edi: hujjat bir
+ * tomonlama aks emas, u TAHRIRLANADI va o'zgarishlar bazaga qaytadi.
+ * Foydalanuvchi ko'radigan nom — «ИШЧИ СМЕТА» (Tizim_01 dagi LRV_PLUS
+ * ning o'rnini bosadi). Fayl nomi va `t2_kozgu` jadval nomi ichki
+ * atamalar bo'lib qoldi — ularni o'zgartirish faqat churn beradi.
  *
- * YO'NALISH — IKKI TOMONLAMA (2026-08-20 dan):
+ * YO'NALISH — IKKI TOMONLAMA VA AVTOMATIK:
  *
- *   apiT2KozguYarat  — baza → Sheets. Bazadagi ma'lumotdan LRV_PLUS
+ *   apiT2VaraqYarat  — baza → Sheets. Bazadagi ma'lumotdan LRV_PLUS
  *                      shaklidagi hujjat chizadi.
- *   apiT2KozguQaytar — Sheets → baza. Odam tahrirlagan NОМ/БИРЛИК/
+ *   apiT2VaraqQaytar — Sheets → baza. Odam tahrirlagan NОМ/БИРЛИК/
  *                      ХАЖМ/НАРХ ni bazaga qaytaradi.
  *
  * Foydalanuvchi: «bu sheets oynasida ishlangan ishlar supabase ga ham
@@ -83,7 +87,7 @@ function _t2KozguPapka(){
  * @param {string} obyekt obyekt nomi
  * @return {Object} {ok, fayl_id, url, qator, jami, toliq}
  */
-function apiT2KozguYarat(obyekt){
+function apiT2VaraqYarat(obyekt){
   var t0 = Date.now();
   try{
     var ob = _t2ObyektOl(obyekt);
@@ -118,7 +122,14 @@ function apiT2KozguYarat(obyekt){
 
     /* ── Fayl ── */
     var papka = _t2KozguPapka();
-    var faylNomi = obyekt + ' — TIZIM_02 ko\'zgu';
+    /* ⚠️ NOM: «ko'zgu» emas.
+     * Foydalanuvchi: «tayyor mahsulot nomi ustida nima uchun ko'zgu
+     * deysan, bir ilmiyroq nom topsangchi».
+     * To'g'ri — «ko'zgu» ichki atama edi va endi noto'g'ri ham: hujjat
+     * bir tomonlama aks emas, u TAHRIRLANADI va bazaga qaytadi.
+     * Sohaning o'z atamasi — ИШЧИ СМЕТА (Tizim_01 dagi LRV_PLUS ning
+     * o'rnini bosadi). */
+    var faylNomi = obyekt + ' — ИШЧИ СМЕТА';
     var kozgu = _t2Get('t2_kozgu?obyekt_id=eq.' + ob.id + '&select=fayl_id');
     var ss = null;
 
@@ -188,9 +199,10 @@ function apiT2KozguYarat(obyekt){
 
     var jadval = [];
     var q1 = bosh();
-    q1[0] = '✏️ ТАҲРИР ҚИЛСА БЎЛАДИ: НОМ, БИРЛИК, ХАЖМ (жами), НАРХ. ' +
-            'Ўзгартиргач панелдаги «Ўзгаришларни базага қайтариш» тугмасини босинг — ' +
-            'акс ҳолда кейинги чизишда йўқолади. Бошқа устунлар ҳисобдан келади.';
+    q1[0] = '✏️ ИШЧИ СМЕТА. Таҳрирланг: НОМ, БИРЛИК, ХАЖМ, НАРХ — ' +
+            'ўзгаришлар базага ЎЗИ ЁЗИЛАДИ (~1 дақиқа ичида). ' +
+            'СУММА, ЖАМИ ва ЧЕЛ/МАШ/МАТ/ОБ — формула, улар ўзи ҳисобланади. ' +
+            'Блок ҳажмини ўзгартирсангиз ичидаги ресурслар ҳам қайта ҳисобланади.';
     jadval.push(q1);
 
     var q2 = bosh(); q2[0] = obyekt; jadval.push(q2);
@@ -217,42 +229,120 @@ function apiT2KozguYarat(obyekt){
 
     var SARLAVHA_QATOR = jadval.length;          // ma'lumot shundan keyin
 
+    /* ══ QATOR RAQAMLARI OLDINDAN ══
+     *
+     * Foydalanuvchi: «shu sheetsda sheets formulalarini ham qo'ya
+     * olmaysanmi? Yani man buni exell qilib olsam obyomlarni
+     * o'zgartirsam formulalar avtomat ishlar edida».
+     *
+     * Formulalar bir-biriga havola qiladi (resurs → o'z blokiga, blok →
+     * o'z resurslariga, razdel → o'z bloklariga), shuning uchun jadval
+     * qurishdan OLDIN har qatorning varaqdagi o'rni ma'lum bo'lishi
+     * kerak. Shu sababli ikki bosqich. */
+    var BOSH_QATOR = jadval.length + 1;
+    var satr = {};                               // id → varaqdagi qator
+    for(i = 0; i < qatorlar.length; i++) satr[qatorlar[i].id] = BOSH_QATOR + i;
+
+    /* Blokning bolalari qaysi qatorlar oralig'ida — СУММА yig'indisi uchun */
+    var bola = {};
+    for(i = 0; i < qatorlar.length; i++){
+      var rb = qatorlar[i];
+      if(rb.ota_id == null) continue;
+      var sb = satr[rb.id], bb0 = bola[rb.ota_id];
+      if(!bb0) bola[rb.ota_id] = {ilk: sb, oxir: sb};
+      else { if(sb < bb0.ilk) bb0.ilk = sb; if(sb > bb0.oxir) bb0.oxir = sb; }
+    }
+
+    /* Razdel qamrovi — SUMIFS oralig'i uchun. Razdellar tekis (ichma-ich
+       emas), shuning uchun har biri keyingisigacha davom etadi. */
+    var rzOxir = {}, oxirgiRz = null;
+    for(i = 0; i < qatorlar.length; i++){
+      if(qatorlar[i].tur !== 'rz') continue;
+      if(oxirgiRz != null) rzOxir[oxirgiRz] = BOSH_QATOR + i - 1;
+      oxirgiRz = qatorlar[i].id;
+    }
+    if(oxirgiRz != null) rzOxir[oxirgiRz] = BOSH_QATOR + qatorlar.length - 1;
+
     /* ── Ma'lumot qatorlari ── */
     var uslub = [];                              // {qator, tur, narxsiz}
     for(i = 0; i < qatorlar.length; i++){
       var r = qatorlar[i];
-      var d = chuqurlik(r);
-      var nom = new Array(d + 1).join('    ') + (r.nom || '');
+      var qn = BOSH_QATOR + i;
       var resursmi = (r.tur === 'rs' || r.tur === 'mat' || r.tur === 'ob');
-      var summa = (r.summa === null || r.summa === undefined) ? null : Number(r.summa);
 
       var qator = bosh();
       /* № — smetaning ASL raqami (1, 1.1, 1.2, 2 …). Bu odam izlaydigan
          belgi; oddiy sanoq uning o'rnini bosa olmaydi. */
       qator[0] = r.raqam || '';
       qator[1] = r.kod || '';
-      qator[2] = nom;
+      /* ⚠️ NOM OLDIDA BO'SHLIQ YO'Q.
+         Avval daraja bo'shliq bilan ko'rsatilardi («    ГИЛЬЗЫ…») va bu
+         nomni IFLOSLANTIRARDI: qidiruv, saralash, nusxa olish va bazaga
+         qaytarishda o'sha bo'shliqlar birga ketardi. Daraja endi RANG,
+         ТИП ustuni va № (1 / 1.1 / 1.2) orqali ko'rinadi. */
+      qator[2] = r.nom || '';
       qator[3] = r.birlik || '';
       /* НОРМА faqat resursda bo'ladi: blokda 5-ustun uning o'z hajmi */
-      qator[C_NORMA - 1] = (r.norma === null || r.norma === undefined) ? '' : Number(r.norma);
-      qator[C_HAJM - 1]  = (r.hajm  === null || r.hajm  === undefined) ? '' : Number(r.hajm);
+      qator[C_NORMA - 1] = (r.norma == null) ? '' : Number(r.norma);
+
+      /* ── ХАЖМ (жами) ──
+         Resursda FORMULA: blok hajmi × norma. Blok hajmini o'zgartirsa
+         uning barcha resurslari o'z-o'zidan qayta hisoblanadi — bu
+         Tizim_01 dagi `F = bl.obyom × E` qoidasining aynan o'zi. */
+      var otaSatr = (r.ota_id != null) ? satr[r.ota_id] : null;
+      var otaTur  = (r.ota_id != null && xarita[r.ota_id]) ? xarita[r.ota_id].tur : null;
+      if(r.tur === 'rs' && r.norma != null && otaSatr && otaTur === 'bl'){
+        qator[C_HAJM - 1] = '=IF(N($F' + otaSatr + ')*N($E' + qn + ')=0,"",' +
+                            '$F' + otaSatr + '*$E' + qn + ')';
+      }else{
+        qator[C_HAJM - 1] = (r.hajm == null) ? '' : Number(r.hajm);
+      }
+
       /* ⚠️ Narx topilmagan bo'lsa 0 YOZILMAYDI — «нарх йўқ» deb yoziladi.
          0 yozilsa hujjat «bepul» deb ko'rsatardi va bu yolg'on bo'lardi. */
-      qator[C_NARX - 1] = (r.narx === null || r.narx === undefined)
+      qator[C_NARX - 1] = (r.narx == null)
         ? ((r.tur === 'rz' || r.tur === 'bl') ? '' : 'нарх йўқ') : Number(r.narx);
-      qator[C_SUMMA - 1] = summa === null ? '' : summa;
+
+      /* ── СУММА — HAMMA JOYDA FORMULA ──
+         Resurs:  hajm × narx  (ISNUMBER «нарх йўқ» matnini to'sadi)
+         Blok:    o'z resurslarining yig'indisi
+         Razdel:  o'z bloklari/materiallarining yig'indisi. Faqat
+                  1-daraja turlari qo'shiladi — hammasini qo'shsak
+                  blok ham, uning resurslari ham sanalib IKKI BARAVAR
+                  bo'lardi. */
+      if(resursmi){
+        qator[C_SUMMA - 1] = '=IF(ISNUMBER($F' + qn + ')*ISNUMBER($G' + qn + '),' +
+                             '$F' + qn + '*$G' + qn + ',"")';
+      }else if(r.tur === 'bl'){
+        var bb = bola[r.id];
+        qator[C_SUMMA - 1] = bb ? ('=SUM($H' + bb.ilk + ':$H' + bb.oxir + ')') : '';
+      }else{
+        var rzE = rzOxir[r.id];
+        if(rzE && rzE > qn){
+          var oraliqH = '$H' + (qn + 1) + ':$H' + rzE;
+          var oraliqI = '$I' + (qn + 1) + ':$I' + rzE;
+          qator[C_SUMMA - 1] =
+            '=SUMIFS(' + oraliqH + ',' + oraliqI + ',"bl")' +
+            '+SUMIFS(' + oraliqH + ',' + oraliqI + ',"mat")' +
+            '+SUMIFS(' + oraliqH + ',' + oraliqI + ',"ob")';
+        }else{
+          qator[C_SUMMA - 1] = '';
+        }
+      }
+
       qator[8] = r.tur || '';
 
       /* ── KATEGORIYA USTUNLARI ──
-         Накрутка har kategoriya bo'yicha alohida hisoblanadi, shuning
-         uchun summa o'z ustuniga ham tushadi. Faqat RESURS qatorlari:
-         blok/razdel summasi bolalarining yig'indisi — uni ham qo'shsak
-         ikki marta sanalardi. */
-      if(resursmi && summa !== null){
-        if(r.kat === 'ЧЕЛ')      qator[C_KAT1 - 1] = summa;
-        else if(r.kat === 'МАШ') qator[C_KAT1]     = summa;
-        else if(r.kat === 'ОБ')  qator[C_KAT1 + 2] = summa;
-        else                     qator[C_KAT1 + 1] = summa;   // МАТ — qolgani
+         Накрутка har kategoriya bo'yicha alohida hisoblanadi. Bu ham
+         FORMULA — summa o'zgarsa kategoriya ham o'zgaradi.
+         Faqat RESURS qatorlari: blok/razdel summasi bolalarining
+         yig'indisi, uni ham qo'shsak ikki marta sanalardi. */
+      if(resursmi){
+        var kUst = (r.kat === 'ЧЕЛ') ? C_KAT1
+                 : (r.kat === 'МАШ') ? C_KAT1 + 1
+                 : (r.kat === 'ОБ')  ? C_KAT1 + 3
+                 : C_KAT1 + 2;                    // МАТ — qolgani
+        qator[kUst - 1] = '=IF($H' + qn + '="","",$H' + qn + ')';
       }
 
       qator[C_ID - 1]  = r.id;
@@ -260,6 +350,23 @@ function apiT2KozguYarat(obyekt){
 
       jadval.push(qator);
       uslub.push({qator: jadval.length, tur: r.tur, narxsiz: (r.narx === null && resursmi)});
+    }
+
+    /* ── 3-QATOR JAMLANMASI HAM FORMULA ──
+     * `q3` massiv havolasi bo'lgani uchun uni shu yerda to'ldirsak ham
+     * bo'ladi — `setValues` hali chaqirilmagan. Formulaga o'tkazishning
+     * sababi bitta: odam hajmni o'zgartirsa JAMI ham o'zgarsin, aks
+     * holda sarlavhadagi raqam jadvaldagi bilan zid bo'lib qolardi. */
+    var OXIR_QATOR = BOSH_QATOR + qatorlar.length - 1;
+    if(qatorlar.length){
+      q3[C_KAT1 - 1] = '=SUM(J' + BOSH_QATOR + ':J' + OXIR_QATOR + ')';
+      q3[C_KAT1]     = '=SUM(K' + BOSH_QATOR + ':K' + OXIR_QATOR + ')';
+      q3[C_KAT1 + 1] = '=SUM(L' + BOSH_QATOR + ':L' + OXIR_QATOR + ')';
+      q3[C_KAT1 + 2] = '=SUM(M' + BOSH_QATOR + ':M' + OXIR_QATOR + ')';
+      /* JAMI = kategoriyalar yig'indisi. Razdellar yig'indisi bilan bir
+         xil chiqadi, lekin bu ko'rinish o'z-o'zini tekshiradi: agar
+         kategoriya taqsimoti buzilsa JAMI ham darrov farq qiladi. */
+      q3[C_SUMMA - 1] = '=SUM($J$3:$M$3)';
     }
 
     /* ── BITTA yozish ── */
@@ -349,13 +456,32 @@ function apiT2KozguYarat(obyekt){
        ularsiz tahrirni bazaga qaytarib bo'lmaydi. */
     try{ sh.hideColumns(C_ID, 2); }catch(e){}
 
-    /* ⚠️ Himoya: ko'zgu tasodifan tahrirlanmasin. Ogohlantirish yetarli
-       emas — odam baribir yozadi va keyin ishi yo'qolganini ko'radi. */
+    /* ⚠️ HIMOYA OLIB TASHLANDI.
+     *
+     * Avval butun varaq ogohlantirish bilan qulflangan edi — chunki
+     * tahrir yo'qolardi. Endi tahrir SAQLANADI, shuning uchun qulf
+     * faqat xalaqit berardi.
+     *
+     * Buning o'rniga HISOB USTUNLARI qulflanadi: СУММА, ТИП va
+     * ЧЕЛ/МАШ/МАТ/ОБ — ular formula, ustiga yozilsa formula o'chib
+     * ketadi va jadval jim buziladi. */
     try{
-      var himoya = sh.protect().setDescription(
-        'TIZIM_02 ko\'zgusi — bazadan chiziladi, qo\'lda tahrir yo\'qoladi');
-      himoya.removeEditors(himoya.getEditors());
-      himoya.setWarningOnly(true);
+      var eski = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+      for(var pi = 0; pi < eski.length; pi++) eski[pi].remove();
+      var eskiR = sh.getProtections(SpreadsheetApp.ProtectionType.RANGE);
+      for(var pj = 0; pj < eskiR.length; pj++) eskiR[pj].remove();
+
+      if(qatorlar.length){
+        var hisobOraliq = sh.getRange(BOSH_QATOR, C_SUMMA, qatorlar.length, 1);
+        var qulf1 = hisobOraliq.protect().setDescription(
+          'СУММА — формула, ҳисобдан келади');
+        qulf1.setWarningOnly(true);
+
+        var katOraliq = sh.getRange(BOSH_QATOR, 9, qatorlar.length, 5);  // ТИП + 4 kategoriya
+        var qulf2 = katOraliq.protect().setDescription(
+          'ТИП ва ЧЕЛ/МАШ/МАТ/ОБ — формула, ҳисобдан келади');
+        qulf2.setWarningOnly(true);
+      }
     }catch(e){}
 
     /* ── Bazaga qayd ── */
@@ -367,13 +493,18 @@ function apiT2KozguYarat(obyekt){
       holat: 'sinxron', xato: null
     }], false, 'obyekt_id');
 
-    /* Ko'prik navbati yopiladi — bu o'zgarishlar endi ko'zguda bor */
+    /* Ko'prik navbati yopiladi — bu o'zgarishlar endi varaqda bor */
     _t2KopriknavbatYop(ob.id);
+
+    /* AVTOMATIK SINXRON: varaq tahrirlanganda o'zi bazaga yozsin.
+       Natija ochiq qaytariladi — o'rnatilmagan bo'lsa panel buni
+       aytadi va odam tugmadan foydalanishini biladi. */
+    var tirgak = _t2VaraqTirgakOrnat(ss.getId());
 
     return {
       ok: true, obyekt: obyekt, fayl_id: ss.getId(), url: ss.getUrl(),
       qator: qatorlar.length, jami: jami, toliq: toliq, narxsiz: narxsiz,
-      ms: Date.now() - t0
+      avto_sinx: tirgak, ms: Date.now() - t0
     };
 
   }catch(e){
@@ -411,7 +542,7 @@ function apiT2ToliqZanjir(obyekt){
       natija.ms = Date.now() - t0;
       return natija;
     }
-    natija.bosqichlar.kozgu = apiT2KozguYarat(obyekt);
+    natija.bosqichlar.kozgu = apiT2VaraqYarat(obyekt);
     natija.ok = !!(natija.bosqichlar.kozgu && natija.bosqichlar.kozgu.ok);
     if(!natija.ok) natija.xabar = natija.bosqichlar.kozgu.xabar;
     natija.ms = Date.now() - t0;
@@ -453,7 +584,7 @@ function apiT2ToliqZanjir(obyekt){
  * ⚠️ Bu yerda narx O'ZIDAN TO'QILMAYDI: bo'sh katak «narx yo'q» degani,
  * uni 0 deb yozib qo'ymaymiz — 0 «bepul» degan ma'noni beradi.
  */
-function apiT2KozguQaytar(obyekt){
+function apiT2VaraqQaytar(obyekt){
   var t0 = Date.now();
   try{
     var ob = _t2ObyektOl(obyekt);
@@ -559,7 +690,122 @@ function apiT2KozguQaytar(obyekt){
             ms: Date.now() - t0};
 
   }catch(e){
-    return {ok:false, xabar:'apiT2KozguQaytar: ' + ((e && e.message) || e),
+    return {ok:false, xabar:'apiT2VaraqQaytar: ' + ((e && e.message) || e),
             ms: Date.now() - t0};
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * AVTOMATIK SINXRONIZATSIYA (Sheets → baza, tugmasiz)
+ * ══════════════════════════════════════════════════════════════════
+ *
+ * Foydalanuvchi: «man sanga aytgandimku bu sheetsda o'zgartirsa avtomat
+ * database da o'zgarishi kerak».
+ *
+ * To'g'ri — tugma bosishni talab qilish yarim yechim edi: odam unutadi
+ * va ishi yo'qoladi.
+ *
+ * QANDAY ISHLAYDI:
+ *   1) Varaqqa O'RNATILADIGAN onEdit tirgagi qo'yiladi. (Oddiy `onEdit`
+ *      emas — u tashqi so'rov yubora olmaydi; o'rnatiladigani esa
+ *      foydalanuvchi ruxsati bilan ishlaydi va UrlFetchApp ga kira oladi.)
+ *   2) Har tahrirda darhol yozmaymiz: bir katakni o'zgartirish o'nlab
+ *      formulani qayta hisoblaydi va odam ketma-ket bir necha katakni
+ *      tuzatadi. Shuning uchun bayroq qo'yiladi va ~45 soniyalik
+ *      BITTA kechiktirilgan tirgak rejalashtiriladi.
+ *   3) O'sha tirgak to'liq solishtirishni bajaradi va o'zini o'chiradi.
+ *
+ * Ya'ni bir seriya tahrir — bitta yozish. Panelda tugma ham qoladi:
+ * «hoziroq» kerak bo'lganda.
+ */
+
+var T2_SINX_KUTMOQDA = 'T2_SINX_KUTMOQDA';
+var T2_SINX_KECHIKISH = 45 * 1000;
+
+/** Varaq tahrirlanganda ishlaydi (o'rnatiladigan tirgak). */
+function t2VaraqOnEdit(e){
+  try{
+    if(!e || !e.range) return;
+    var sh = e.range.getSheet();
+    if(sh.getName() !== 'СМЕТА') return;
+
+    /* Faqat odam kiritadigan ustunlar: C ном, D бирлик, E норма, F ҳажм, G нарх.
+       Hisob ustunlari (СУММА, kategoriya) formula — ular o'zi yangilanadi. */
+    var u1 = e.range.getColumn(), u2 = u1 + e.range.getNumColumns() - 1;
+    if(u2 < 3 || u1 > 7) return;
+
+    PropertiesService.getScriptProperties()
+      .setProperty(T2_SINX_KUTMOQDA, sh.getParent().getId());
+    _t2SinxRejalashtir();
+  }catch(err){ Logger.log('t2VaraqOnEdit: ' + err); }
+}
+
+/** Kechiktirilgan sinxronni rejalashtiradi — BITTASIDAN ORTIQ EMAS. */
+function _t2SinxRejalashtir(){
+  try{
+    var trg = ScriptApp.getProjectTriggers();
+    for(var i = 0; i < trg.length; i++){
+      /* Navbatda turgani bo'lsa yangisini yasamaymiz: har tugma bosishda
+         tirgak yaratish limitni (20 ta) tez to'ldirib qo'yardi. */
+      if(trg[i].getHandlerFunction() === 't2VaraqSinxFon') return;
+    }
+    ScriptApp.newTrigger('t2VaraqSinxFon').timeBased().after(T2_SINX_KECHIKISH).create();
+  }catch(e){ Logger.log('_t2SinxRejalashtir: ' + e); }
+}
+
+/** Kechiktirilgan sinxron — o'zini o'chiradi. */
+function t2VaraqSinxFon(){
+  var p = PropertiesService.getScriptProperties();
+  var ssId = p.getProperty(T2_SINX_KUTMOQDA);
+
+  /* AVVAL o'zini tozalaydi: quyida xato chiqsa ham tirgak osilib
+     qolmasin va keyingi tahrir yangisini yasay olsin. */
+  try{
+    var trg = ScriptApp.getProjectTriggers();
+    for(var i = 0; i < trg.length; i++){
+      if(trg[i].getHandlerFunction() === 't2VaraqSinxFon') ScriptApp.deleteTrigger(trg[i]);
+    }
+  }catch(e){}
+
+  if(!ssId) return;
+  p.deleteProperty(T2_SINX_KUTMOQDA);
+
+  try{
+    var qay = _t2Get('t2_kozgu?fayl_id=eq.' + encodeURIComponent(ssId) + '&select=obyekt_id');
+    if(!qay.length){ Logger.log('t2VaraqSinxFon: varaq bazada qayd etilmagan'); return; }
+    var ob = _t2Get('t2_obyekt?id=eq.' + qay[0].obyekt_id + '&select=nom');
+    if(!ob.length){ Logger.log('t2VaraqSinxFon: obyekt topilmadi'); return; }
+
+    var n = apiT2VaraqQaytar(ob[0].nom);
+    Logger.log('T2 avto-sinx «' + ob[0].nom + '»: yozildi=' + (n && n.ozgardi) +
+               ' ziddiyat=' + (n && n.ziddiyat ? n.ziddiyat.length : 0));
+  }catch(e){ Logger.log('t2VaraqSinxFon: ' + e); }
+}
+
+/**
+ * Varaqqa onEdit tirgagini o'rnatadi (bori bo'lsa tegmaydi).
+ *
+ * ⚠️ Apps Script da bitta skriptga 20 tadan ortiq tirgak qo'yib
+ * bo'lmaydi. Chegaraga yaqinlashsak YANGISINI YASAMAYMIZ va buni
+ * ochiq aytamiz — jim to'xtab qolgandan ko'ra, odam tugmani qo'lda
+ * bosishini bilgani yaxshi.
+ */
+function _t2VaraqTirgakOrnat(ssId){
+  try{
+    var trg = ScriptApp.getProjectTriggers(), soni = 0;
+    for(var i = 0; i < trg.length; i++){
+      if(trg[i].getHandlerFunction() !== 't2VaraqOnEdit') continue;
+      soni++;
+      try{ if(trg[i].getTriggerSourceId() === ssId) return {ok:true, holat:'bor'}; }catch(e2){}
+    }
+    if(trg.length >= 18){
+      return {ok:false, holat:'limit',
+              xabar:'Tirgaklar chegarasi (' + trg.length + '/20). Avtomatik sinxron ' +
+                    'o\'rnatilmadi — «Bazaga qaytarish» tugmasidan foydalaning.'};
+    }
+    ScriptApp.newTrigger('t2VaraqOnEdit').forSpreadsheet(ssId).onEdit().create();
+    return {ok:true, holat:'ornatildi'};
+  }catch(e){
+    return {ok:false, holat:'xato', xabar: String((e && e.message) || e)};
   }
 }

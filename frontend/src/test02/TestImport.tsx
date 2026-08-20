@@ -99,9 +99,11 @@ export default function TestImport() {
   const [ketyapti, setKetyapti] = useState(false);
   const [natija, setNatija] = useState<ImportNatija | null>(null);
 
-  const [kozgu, setKozgu] = useState<{ ok: boolean; url?: string;
-                                       xabar?: string; qator?: number } | null>(null);
-  const [kozguKetyapti, setKozguKetyapti] = useState(false);
+  const [varaq, setVaraq] = useState<{
+    ok: boolean; url?: string; xabar?: string; qator?: number;
+    avto_sinx?: { ok: boolean; holat: string; xabar?: string };
+  } | null>(null);
+  const [varaqKetyapti, setVaraqKetyapti] = useState(false);
 
   /* ── Avval yuklangan hujjatlar (Drive: Tizim_02/_MANBA) ──
    * Foydalanuvchi: «ikkita hujjat yuklanadi YOKI shu paytgacha
@@ -149,7 +151,7 @@ export default function TestImport() {
   }, []);
 
   const obyektTanla = (nom: string) => {
-    setObyekt(nom); setNatija(null); setKozgu(null);
+    setObyekt(nom); setNatija(null); setVaraq(null);
     hujjatlarYukla(nom);
   };
 
@@ -313,7 +315,7 @@ export default function TestImport() {
     if (!hujjatlar.some((h) => h.rol === 'lokalka')) {
       toast('LRV qismi bo\'sh — ishlar ro\'yxatisiz hisob yo\'q', 'warn'); return;
     }
-    setKetyapti(true); setNatija(null); setKozgu(null);
+    setKetyapti(true); setNatija(null); setVaraq(null);
     try {
       const yuk = hujjatlar.map((h) => ({
         fayl_id: h.fayl_id, rol: h.rol, nom: h.nom,
@@ -332,21 +334,21 @@ export default function TestImport() {
     } finally { setKetyapti(false); }
   };
 
-  const kozguYarat = async () => {
-    setKozguKetyapti(true); setKozgu(null);
-    try { setKozgu(await gas<any>('apiT2KozguYarat', obyekt)); }
-    catch (e: any) { setKozgu({ ok: false, xabar: e?.message || String(e) }); }
-    finally { setKozguKetyapti(false); }
+  const varaqYarat = async () => {
+    setVaraqKetyapti(true); setVaraq(null);
+    try { setVaraq(await gas<any>('apiT2VaraqYarat', obyekt)); }
+    catch (e: any) { setVaraq({ ok: false, xabar: e?.message || String(e) }); }
+    finally { setVaraqKetyapti(false); }
   };
 
-  /* Sheets → baza. Ko'zgu endi bir tomonlama emas: odam Sheets'da
+  /* Sheets → baza. Ishchi smeta varag'i bir tomonlama emas: odam Sheets'da
      tahrirlagan NОМ/БИРЛИК/ХАЖМ/НАРХ shu tugma orqali bazaga qaytadi. */
   const [qaytar, setQaytar] = useState<QaytarNatija | null>(null);
   const [qaytarKetyapti, setQaytarKetyapti] = useState(false);
-  const kozguQaytar = async () => {
+  const varaqQaytar = async () => {
     setQaytarKetyapti(true); setQaytar(null);
     try {
-      const r = await gas<QaytarNatija>('apiT2KozguQaytar', obyekt);
+      const r = await gas<QaytarNatija>('apiT2VaraqQaytar', obyekt);
       setQaytar(r);
       toast(r.ok ? (r.ozgardi ? r.ozgardi + ' o\'zgarish bazaga yozildi'
                               : 'O\'zgarish topilmadi')
@@ -703,34 +705,46 @@ export default function TestImport() {
                     Daraxtni ochish <ArrowRight size={13} />
                   </button>
                   <div className="mt-3 pt-3 border-t border-border">
-                    <button onClick={kozguYarat} disabled={kozguKetyapti}
+                    <button onClick={varaqYarat} disabled={varaqKetyapti}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
                                  border border-border text-text text-[12px]
                                  hover:bg-white/5 transition-colors disabled:opacity-40">
                       <FileSpreadsheet size={13} />
-                      {kozguKetyapti ? 'Chizilmoqda…' : 'Sheets ko‘zgusini yaratish'}
+                      {varaqKetyapti ? 'Chizilmoqda…' : 'Ishchi smeta varag\'ini yaratish'}
                     </button>
-                    <button onClick={kozguQaytar} disabled={qaytarKetyapti}
+                    {/* Sinxron avtomatik, lekin «hoziroq» kerak bo'lishi mumkin */}
+                    <button onClick={varaqQaytar} disabled={qaytarKetyapti}
+                      title="Avtomatik sinxronni kutmasdan hoziroq yozish"
                       className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                                 border border-border text-text text-[12px]
+                                 border border-border text-text-dim text-[12px]
                                  hover:bg-white/5 transition-colors disabled:opacity-40">
                       <ArrowRight size={13} className="rotate-180" />
-                      {qaytarKetyapti ? 'Qaytarilmoqda…' : 'O\'zgarishlarni bazaga qaytarish'}
+                      {qaytarKetyapti ? 'Yozilmoqda…' : 'Hoziroq sinxronlash'}
                     </button>
 
-                    {kozgu && (
-                      <div className={'mt-2 text-[11px] ' + (kozgu.ok ? 'text-ok' : 'text-danger')}>
-                        {kozgu.ok ? (
+                    {varaq && (
+                      <div className={'mt-2 text-[11px] ' + (varaq.ok ? 'text-ok' : 'text-danger')}>
+                        {varaq.ok ? (
                           <span className="inline-flex items-center gap-2 flex-wrap">
-                            Chizildi{kozgu.qator ? ' · ' + kozgu.qator + ' qator' : ''}
-                            {kozgu.url && (
-                              <a href={kozgu.url} target="_blank" rel="noreferrer"
+                            Chizildi{varaq.qator ? ' · ' + varaq.qator + ' qator' : ''}
+                            {varaq.url && (
+                              <a href={varaq.url} target="_blank" rel="noreferrer"
                                  className="text-accent hover:underline inline-flex items-center gap-1">
                                 ochish <ExternalLink size={11} />
                               </a>
                             )}
+                            {/* ⚠️ Avtomatik sinxron o'rnatilmagan bo'lsa buni
+                                AYTISH shart — odam «o'zi yoziladi» deb o'ylab
+                                tahririni yo'qotmasin. */}
+                            {varaq.avto_sinx && !varaq.avto_sinx.ok ? (
+                              <span className="text-warn">
+                                ⚠ avto-sinxron yo'q: {varaq.avto_sinx.xabar || varaq.avto_sinx.holat}
+                              </span>
+                            ) : (
+                              <span className="text-text-mute">· tahrir o'zi yoziladi (~1 daq.)</span>
+                            )}
                           </span>
-                        ) : (kozgu.xabar || 'Chizilmadi')}
+                        ) : (varaq.xabar || 'Chizilmadi')}
                       </div>
                     )}
 
@@ -761,7 +775,7 @@ export default function TestImport() {
                               <div className="mt-1.5 space-y-0.5">
                                 <p className="text-[11px] text-warn">
                                   {qaytar.ziddiyat.length} qator YOZILMADI — bazada
-                                  keyinroq o'zgartirilgan. Ko'zguni qayta chizing.
+                                  keyinroq o'zgartirilgan. Varaqni qayta chizing.
                                 </p>
                                 {qaytar.ziddiyat.slice(0, 8).map((z, i) => (
                                   <p key={i} className="text-[10px] text-text-mute">
