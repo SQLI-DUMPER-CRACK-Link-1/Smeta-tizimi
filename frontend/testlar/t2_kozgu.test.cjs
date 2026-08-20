@@ -36,10 +36,15 @@ if (um) {
   const KUTILGAN = ['№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.',
                     'ХАЖМ (ед)', 'ХАЖМ (жами)', 'НАРХ (1 ед)', 'СУММА', 'ТИП',
                     'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ'];
-  tek('13 ta ustun', ustunlar.length === 13, 'topildi: ' + ustunlar.length);
-  tek('tartib LRV_PLUS bilan bir xil',
-      JSON.stringify(ustunlar) === JSON.stringify(KUTILGAN),
-      JSON.stringify(ustunlar));
+  /* 13 ta KO'RINADIGAN ustun + 2 ta yashirin xizmat ustuni (_id, _v).
+     Xizmat ustunlari oxirida — o'rtaga qo'yilsa LRV_PLUS tartibi buzilardi. */
+  tek('15 ta ustun (13 ko\'rinadigan + 2 yashirin)',
+      ustunlar.length === 15, 'topildi: ' + ustunlar.length);
+  tek('birinchi 13 tasi LRV_PLUS tartibida',
+      JSON.stringify(ustunlar.slice(0, 13)) === JSON.stringify(KUTILGAN),
+      JSON.stringify(ustunlar.slice(0, 13)));
+  tek('xizmat ustunlari OXIRIDA',
+      ustunlar[13] === '_id' && ustunlar[14] === '_v');
   tek('NORMA ustuni bor (avval yo\'q edi)', ustunlar.includes('ХАЖМ (ед)'));
   tek('ТИП ustuni bor — rz/bl/rs/mat/ob', ustunlar.includes('ТИП'));
   tek('kategoriya ustunlari bor', ['ЧЕЛ','МАШ','МАТ','ОБ'].every((k) => ustunlar.includes(k)));
@@ -48,7 +53,7 @@ if (um) {
 /* LRV_PLUS ning o'z xaritasi 00_Config.js da. Ko'zgu undan chetlashmasin. */
 const cm = CFG.match(/CHEL:(\d+), *MASH:(\d+), *MAT:(\d+), *OB:(\d+)/);
 tek('00_Config.js dagi CHEL/МАШ/МАТ/ОБ tartibi o\'qildi', !!cm);
-if (cm && ustunlar.length === 13) {
+if (cm && ustunlar.length >= 13) {
   const [, chel, mash, mat, obq] = cm.map(Number);
   /* LRV_PLUS: J=10 ЧЕЛ, K=11 МАШ, L=12 МАТ, M=13 ОБ */
   const kozguTartib = ['ЧЕЛ','МАШ','МАТ','ОБ'].map((k) => ustunlar.indexOf(k) + 1);
@@ -118,6 +123,50 @@ tek('narx yo\'q bo\'lsa 0 EMAS, «нарх йўқ»', /'нарх йўқ'/.test(K
 tek('to\'liq bo\'lmagan JAMI ogohlantirish bilan',
     /ЖАМИ ТЎЛИҚ ЭМАС/.test(KOZGU));
 tek('kategoriya jamlanmasi sarlavhada ko\'rsatiladi', /katJami/.test(KOZGU));
+
+console.log('\n── Sheets → baza qaytish yo\'li ──');
+
+/* Foydalanuvchi: «bu sheets oynasida ishlangan ishlar supabase ga ham
+   o'ta olishi kerak edi». Ko'zgu endi bir tomonlama emas. */
+tek('apiT2KozguQaytar bor', /function apiT2KozguQaytar\(/.test(KOZGU));
+
+/* Qatorni ANIQLASH — qator raqami bilan emas, o'zgarmas id bilan.
+   Qator qo'shilsa/o'chsa raqam suriladi va tahrir boshqa resursga tushardi. */
+tek('yashirin `_id` va `_v` ustunlari yoziladi',
+    /'_id', '_v'/.test(KOZGU) && /qator\[C_ID - 1\]\s*= r\.id/.test(KOZGU));
+tek('ular ko\'zdan yashiriladi, lekin o\'chirilmaydi',
+    /hideColumns\(C_ID, 2\)/.test(KOZGU));
+tek('qaytishda qator `_id` orqali topiladi', /var id = Number\(qiy\[i\]\[13\]\)/.test(KOZGU));
+
+/* Ziddiyat — «oxirgi yozgan yutadi» BO'LMASLIGI kerak */
+tek('kutilgan versiya yuboriladi', /p_kutilgan_versiya: kutilganV/.test(KOZGU));
+tek('ziddiyat ro\'yxatga yig\'iladi, jim o\'tkazilmaydi',
+    /ziddiyat\.push\(\{/.test(KOZGU));
+tek('panel ziddiyatni ochiq aytadi',
+    /qator YOZILMADI/.test(fs.readFileSync(
+      path.join(ILDIZ, 'frontend', 'src', 'test02', 'TestImport.tsx'), 'utf8')));
+
+/* FAQAT odam kiritadigan maydonlar qaytadi */
+const mm = KOZGU.match(/var MAYDON = \[([\s\S]*?)\];/);
+tek('qaytariladigan maydonlar ro\'yxati bor', !!mm);
+if (mm) {
+  const maydonlar = (mm[1].match(/nom: '(\w+)'/g) || []).map((s) => s.split("'")[1]);
+  tek('faqat nom/birlik/hajm/narx',
+      JSON.stringify(maydonlar) === JSON.stringify(['nom', 'birlik', 'hajm', 'narx']),
+      JSON.stringify(maydonlar));
+  tek('СУММА va kategoriya QAYTARILMAYDI (hisobdan keladi)',
+      !maydonlar.includes('summa') && !maydonlar.includes('kat'));
+}
+
+/* Narx o'zidan to'qilmasin */
+tek('bo\'sh katak 0 deb YOZILMAYDI',
+    /if\(xom === '' \|\| xom == null\) continue;/.test(KOZGU),
+    '0 «bepul» degan ma\'noni beradi — bu yolg\'on hujjat');
+tek('«нарх йўқ» yozuvi son deb o\'qilmaydi',
+    /indexOf\('нарх'\) >= 0\) continue/.test(KOZGU));
+
+/* O'zgarish bo'lsa hisob eskiradi */
+tek('yozilgach qayta hisoblanadi', /if\(ozgardi\)\{[\s\S]{0,200}apiT2Ishla/.test(KOZGU));
 
 console.log('\n' + ok + ' o\'tdi, ' + xato + ' yiqildi');
 process.exit(xato ? 1 : 0);

@@ -6,15 +6,23 @@
  * dagi ma'lumotdan kelib chiqib yasaladi, bu oddiy foydalanuvchi uchun
  * tushunarli hujjatga ega bo'lishi uchun yordam berishi kerak».
  *
- * YO'NALISH — DIQQAT: bu modul Sheets'dan O'QIMAYDI. U bazadagi ma'lumotdan
- * YANGI hujjat CHIZADI. Ya'ni Sheets endi haqiqat manbai emas, u — bazaning
- * inson o'qiy oladigan ko'rinishi.
+ * YO'NALISH — IKKI TOMONLAMA (2026-08-20 dan):
  *
- * ⚠️ SHUNING UCHUN KO'ZGU FAYLI TAHRIR UCHUN EMAS. Unda qilingan o'zgarish
- * keyingi chizishda YO'QOLADI. Buni yashirish mumkin emas — shuning uchun
- * varaqning birinchi qatorida qizil ogohlantirish yoziladi va varaq
- * himoyalanadi. Teskari ko'prik (Sheets → baza) tayyor bo'lgach bu qoida
- * o'zgaradi; hozircha halol aytiladi.
+ *   apiT2KozguYarat  — baza → Sheets. Bazadagi ma'lumotdan LRV_PLUS
+ *                      shaklidagi hujjat chizadi.
+ *   apiT2KozguQaytar — Sheets → baza. Odam tahrirlagan NОМ/БИРЛИК/
+ *                      ХАЖМ/НАРХ ni bazaga qaytaradi.
+ *
+ * Foydalanuvchi: «bu sheets oynasida ishlangan ishlar supabase ga ham
+ * o'ta olishi kerak edi, lekin u oynaga o'zgartirish kiritma keyingi
+ * yangilanishda o'chib ketadi deyapdiku».
+ *
+ * Haqiqat manbai baribir BAZA. Sheets — teng huquqli mijoz, lekin
+ * yagona hakam emas: qaytarish `versiya` bilan tekshiriladi va bazada
+ * kimdir o'zgartirgan qator JIM YOZILMAYDI, ziddiyat deb qaytariladi.
+ *
+ * ⚠️ HISOB USTUNLARI (СУММА, ЧЕЛ/МАШ/МАТ/ОБ, ТИП) qaytarilmaydi — ular
+ * hisobdan keladi. Ularni Sheets'dan olish hisobni buzardi.
  *
  * ⚠️ TEZLIK: butun jadval BITTA `setValues` bilan yoziladi. Qatorma-qator
  * yozish aynan Tizim_01 ni sekinlashtirgan narsa (51 ta formula yozish,
@@ -147,11 +155,26 @@ function apiT2KozguYarat(obyekt){
      *     summa kategoriya ustunlariga ajratilmasdi (накрутка uchun shart)
      *   • № — oddiy qator sanog'i edi, smetaning asl raqami emas
      */
+    /* ⚠️ OXIRGI IKKI USTUN YASHIRIN — QAYTISH YO'LI UCHUN.
+     *
+     * Foydalanuvchi: «bu sheets oynasida ishlangan ishlar supabase ga
+     * ham o'ta olishi kerak edi, lekin u oynaga o'zgartirish kiritma
+     * keyingi yangilanishda o'chib ketadi deyapdiku».
+     *
+     * Tahrirni bazaga qaytarish uchun HAR QATORNI ANIQLASH kerak.
+     * Qator raqami yaramaydi: qator qo'shilsa/o'chsa hammasi suriladi
+     * va tahrir BOSHQA resursga tushib ketadi. Shuning uchun `id`
+     * (o'zgarmas kalit) va `versiya` (ziddiyatni aniqlash uchun)
+     * yashirin ustunlarda yuriydi. Ular odamga ko'rinmaydi.
+     */
     var USTUNLAR = ['№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.',
                     'ХАЖМ (ед)', 'ХАЖМ (жами)', 'НАРХ (1 ед)', 'СУММА', 'ТИП',
-                    'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ'];
+                    'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ',
+                    '_id', '_v'];
     var NU = USTUNLAR.length;
+    var KO_RINADI = 13;                      // 14–15 yashirin
     var C_NORMA = 5, C_HAJM = 6, C_NARX = 7, C_SUMMA = 8, C_KAT1 = 10;
+    var C_ID = 14, C_VER = 15;
     var bosh = function(){ return new Array(NU).join('.').split('.'); };
 
     /* Kategoriya bo'yicha jamlanma — sarlavhada ko'rsatiladi */
@@ -165,8 +188,9 @@ function apiT2KozguYarat(obyekt){
 
     var jadval = [];
     var q1 = bosh();
-    q1[0] = '⚠️ БУ ФАЙЛ — КЎЗГУ. Уни таҳрирламанг: кейинги чизишда ' +
-            'ўзгаришлар ЙЎҚОЛАДИ. Ҳақиқат манбаи — маълумотлар базаси.';
+    q1[0] = '✏️ ТАҲРИР ҚИЛСА БЎЛАДИ: НОМ, БИРЛИК, ХАЖМ (жами), НАРХ. ' +
+            'Ўзгартиргач панелдаги «Ўзгаришларни базага қайтариш» тугмасини босинг — ' +
+            'акс ҳолда кейинги чизишда йўқолади. Бошқа устунлар ҳисобдан келади.';
     jadval.push(q1);
 
     var q2 = bosh(); q2[0] = obyekt; jadval.push(q2);
@@ -230,6 +254,9 @@ function apiT2KozguYarat(obyekt){
         else if(r.kat === 'ОБ')  qator[C_KAT1 + 2] = summa;
         else                     qator[C_KAT1 + 1] = summa;   // МАТ — qolgani
       }
+
+      qator[C_ID - 1]  = r.id;
+      qator[C_VER - 1] = (r.versiya == null) ? '' : r.versiya;
 
       jadval.push(qator);
       uslub.push({qator: jadval.length, tur: r.tur, narxsiz: (r.narx === null && resursmi)});
@@ -298,6 +325,9 @@ function apiT2KozguYarat(obyekt){
     for(var kc = C_KAT1; kc < C_KAT1 + 4; kc++) sh.setColumnWidth(kc, 115);
     sh.setFrozenRows(SARLAVHA_QATOR);
     sh.setFrozenColumns(3);
+    /* Xizmat ustunlari ko'zdan yashiriladi — lekin O'CHIRILMAYDI:
+       ularsiz tahrirni bazaga qaytarib bo'lmaydi. */
+    try{ sh.hideColumns(C_ID, 2); }catch(e){}
 
     /* ⚠️ Himoya: ko'zgu tasodifan tahrirlanmasin. Ogohlantirish yetarli
        emas — odam baribir yozadi va keyin ishi yo'qolganini ko'radi. */
@@ -370,5 +400,146 @@ function apiT2ToliqZanjir(obyekt){
     natija.xabar = String((e && e.message) || e);
     natija.ms = Date.now() - t0;
     return natija;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * KO'ZGUDAN BAZAGA QAYTISH
+ * ══════════════════════════════════════════════════════════════════
+ *
+ * Foydalanuvchi: «bu sheets oynasida ishlangan ishlar supabase ga ham
+ * o'ta olishi kerak edi, lekin u oynaga o'zgartirish kiritma keyingi
+ * yangilanishda o'chib ketadi deyapdiku».
+ *
+ * Endi ko'zgu bir tomonlama emas. Sheets'da tahrir qilinadi, keyin shu
+ * funksiya o'zgarganini bazaga qaytaradi.
+ *
+ * QANDAY QILIB XAVFSIZ:
+ *
+ *  1) QATOR ANIQLASH — yashirin `_id` ustuni orqali. Qator raqami
+ *     yaramaydi: odam qator qo'shsa yoki o'chirsa hammasi suriladi va
+ *     tahrir BOSHQA resursga tushardi.
+ *
+ *  2) ZIDDIYAT — yashirin `_v` (versiya). Ko'zgu chizilgandan keyin
+ *     bazada kimdir o'zgartirgan bo'lsa versiya farq qiladi va bu qator
+ *     YOZILMAYDI, ro'yxatda qaytariladi. «Oxirgi yozgan yutadi» qoidasi
+ *     bu yerda birovning ishini jim o'chirib yuborardi.
+ *
+ *  3) FAQAT ODAM KIRITADIGAN MAYDONLAR: nom, birlik, hajm, narx.
+ *     СУММА va kategoriya ustunlari HISOBDAN keladi — ularni qaytarish
+ *     hisobni buzardi. ТИП/№/КОД — smetaning tuzilishi, ko'zgudan
+ *     o'zgartirilmaydi.
+ *
+ * ⚠️ Bu yerda narx O'ZIDAN TO'QILMAYDI: bo'sh katak «narx yo'q» degani,
+ * uni 0 deb yozib qo'ymaymiz — 0 «bepul» degan ma'noni beradi.
+ */
+function apiT2KozguQaytar(obyekt){
+  var t0 = Date.now();
+  try{
+    var ob = _t2ObyektOl(obyekt);
+    if(!ob) return {ok:false, xabar:'Obyekt bazada topilmadi: ' + obyekt};
+
+    var kozgu = _t2Get('t2_kozgu?obyekt_id=eq.' + ob.id + '&select=fayl_id');
+    if(!kozgu.length || !kozgu[0].fayl_id)
+      return {ok:false, xabar:'Bu obyekt uchun ko\'zgu yaratilmagan'};
+
+    var ss;
+    try{ ss = SpreadsheetApp.openById(kozgu[0].fayl_id); }
+    catch(e){ return {ok:false, xabar:'Ko\'zgu fayli ochilmadi (o\'chirilganmi?)'}; }
+
+    var sh = ss.getSheetByName('СМЕТА');
+    if(!sh) return {ok:false, xabar:'«СМЕТА» varag\'i topilmadi'};
+
+    var oxirgi = sh.getLastRow();
+    if(oxirgi < 8) return {ok:false, xabar:'Ko\'zgu bo\'sh'};
+
+    /* Sarlavha qatorini topamiz — u «№» bilan boshlanadi */
+    var bosh = sh.getRange(1, 1, Math.min(12, oxirgi), 1).getValues();
+    var sarlavha = 0;
+    for(var b = 0; b < bosh.length; b++){
+      if(String(bosh[b][0]).trim() === '№'){ sarlavha = b + 1; break; }
+    }
+    if(!sarlavha) return {ok:false, xabar:'Sarlavha qatori topilmadi — ko\'zgu qayta chizilsinmi?'};
+    if(oxirgi <= sarlavha) return {ok:true, tekshirildi:0, ozgardi:0, ziddiyat:[], xatolar:[]};
+
+    var soni = oxirgi - sarlavha;
+    var qiy = sh.getRange(sarlavha + 1, 1, soni, 15).getValues();
+
+    /* Bazadagi holat — bitta o'qish, qatorma-qator so'rov EMAS */
+    var bazadagi = {}, hammasi = _t2QatorlarOl(ob.id);
+    for(var h = 0; h < hammasi.length; h++) bazadagi[hammasi[h].id] = hammasi[h];
+
+    var MAYDON = [
+      {ust: 3,  nom: 'nom',    matn: true},
+      {ust: 4,  nom: 'birlik', matn: true},
+      {ust: 6,  nom: 'hajm',   matn: false},
+      {ust: 7,  nom: 'narx',   matn: false}
+    ];
+
+    var ozgardi = 0, ziddiyat = [], xatolar = [], tekshirildi = 0;
+
+    for(var i = 0; i < qiy.length; i++){
+      var id = Number(qiy[i][13]);                 // 14-ustun: _id
+      if(!id) continue;                             // xizmat/bo'sh qator
+      var baza = bazadagi[id];
+      if(!baza) continue;                           // bazadan o'chgan
+      tekshirildi++;
+
+      var kutilganV = qiy[i][14];                   // 15-ustun: _v
+      kutilganV = (kutilganV === '' || kutilganV == null) ? null : Number(kutilganV);
+
+      for(var m = 0; m < MAYDON.length; m++){
+        var f = MAYDON[m], xom = qiy[i][f.ust - 1];
+        var yangi, eski = baza[f.nom];
+
+        if(f.matn){
+          /* Nom ustunida daraja bo'shliqlari bor — ular bezak, mazmun emas */
+          yangi = String(xom == null ? '' : xom).replace(/^\s+/, '').trim();
+          if(yangi === '') continue;                // bo'sh nom — tahrir emas
+          if(yangi === String(eski == null ? '' : eski).trim()) continue;
+        }else{
+          /* ⚠️ Bo'sh katak «narx yo'q» degani. Uni 0 deb yozsak hujjat
+             resursni «bepul» deb ko'rsatardi — bu yolg'on bo'ladi. */
+          if(xom === '' || xom == null) continue;
+          if(String(xom).indexOf('нарх') >= 0) continue;   // «нарх йўқ» yozuvi
+          yangi = Number(xom);
+          if(!isFinite(yangi)) continue;
+          if(eski != null && Math.abs(Number(eski) - yangi) < 0.0000001) continue;
+        }
+
+        try{
+          var r = _t2Rpc('t2_qator_tahrir', {
+            p_qator_id: id, p_maydon: f.nom, p_qiymat: String(yangi),
+            p_kutilgan_versiya: kutilganV, p_manba: 'sheets'
+          });
+          if(r && r.ok){
+            ozgardi++;
+            kutilganV = (r.versiya != null) ? Number(r.versiya) : kutilganV;
+          }else{
+            ziddiyat.push({qator: sarlavha + 1 + i, nom: baza.nom,
+                           maydon: f.nom, sabab: (r && r.xabar) || 'ziddiyat'});
+          }
+        }catch(e2){
+          xatolar.push('«' + (baza.nom || id) + '» / ' + f.nom + ': ' +
+                       ((e2 && e2.message) || e2));
+        }
+      }
+    }
+
+    /* O'zgarish bo'lsa hisob eskiradi */
+    var hisob = null;
+    if(ozgardi){
+      try{ hisob = apiT2Ishla(obyekt); }catch(e3){
+        xatolar.push('Qayta hisob yiqildi: ' + ((e3 && e3.message) || e3));
+      }
+    }
+
+    return {ok:true, obyekt: obyekt, tekshirildi: tekshirildi, ozgardi: ozgardi,
+            ziddiyat: ziddiyat, xatolar: xatolar, hisob: hisob,
+            ms: Date.now() - t0};
+
+  }catch(e){
+    return {ok:false, xabar:'apiT2KozguQaytar: ' + ((e && e.message) || e),
+            ms: Date.now() - t0};
   }
 }

@@ -68,6 +68,14 @@ type ImportNatija = {
             bosqichlar?: Array<{ bosqich: string; varaq?: string; ms?: number; natija?: any }> };
 };
 
+/** Sheets → baza qaytarish natijasi. */
+type QaytarNatija = {
+  ok: boolean; xabar?: string; tekshirildi?: number; ozgardi?: number;
+  ziddiyat?: Array<{ qator: number; nom: string; maydon: string; sabab: string }>;
+  xatolar?: string[];
+  hisob?: { ok: boolean; jami?: { jami?: number; toliq?: boolean; narxsiz_qator?: number } };
+};
+
 const QISMLAR: Array<{ rol: Rol; sarlavha: string; izoh: string }> = [
   { rol: 'lokalka', sarlavha: 'LRV qismi — lokal smeta',
     izoh: 'Ishlar va resurslar ro\'yxati. Bularsiz hisob yo\'q.' },
@@ -329,6 +337,26 @@ export default function TestImport() {
     try { setKozgu(await gas<any>('apiT2KozguYarat', obyekt)); }
     catch (e: any) { setKozgu({ ok: false, xabar: e?.message || String(e) }); }
     finally { setKozguKetyapti(false); }
+  };
+
+  /* Sheets → baza. Ko'zgu endi bir tomonlama emas: odam Sheets'da
+     tahrirlagan NОМ/БИРЛИК/ХАЖМ/НАРХ shu tugma orqali bazaga qaytadi. */
+  const [qaytar, setQaytar] = useState<QaytarNatija | null>(null);
+  const [qaytarKetyapti, setQaytarKetyapti] = useState(false);
+  const kozguQaytar = async () => {
+    setQaytarKetyapti(true); setQaytar(null);
+    try {
+      const r = await gas<QaytarNatija>('apiT2KozguQaytar', obyekt);
+      setQaytar(r);
+      toast(r.ok ? (r.ozgardi ? r.ozgardi + ' o\'zgarish bazaga yozildi'
+                              : 'O\'zgarish topilmadi')
+                 : (r.xabar || 'Qaytarilmadi'),
+            r.ok ? 'ok' : 'danger', undefined, 9000);
+      if (r.ok && r.ozgardi) hujjatlarYukla(obyekt);
+    } catch (e: any) {
+      setQaytar({ ok: false, xabar: e?.message || String(e) });
+      toast(e?.message || 'Xato', 'danger', undefined, 9000);
+    } finally { setQaytarKetyapti(false); }
   };
 
   const jamiXom = (natija?.import || []).reduce((a, x) => a + (x.xom_qator || 0), 0);
@@ -682,6 +710,14 @@ export default function TestImport() {
                       <FileSpreadsheet size={13} />
                       {kozguKetyapti ? 'Chizilmoqda…' : 'Sheets ko‘zgusini yaratish'}
                     </button>
+                    <button onClick={kozguQaytar} disabled={qaytarKetyapti}
+                      className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                                 border border-border text-text text-[12px]
+                                 hover:bg-white/5 transition-colors disabled:opacity-40">
+                      <ArrowRight size={13} className="rotate-180" />
+                      {qaytarKetyapti ? 'Qaytarilmoqda…' : 'O\'zgarishlarni bazaga qaytarish'}
+                    </button>
+
                     {kozgu && (
                       <div className={'mt-2 text-[11px] ' + (kozgu.ok ? 'text-ok' : 'text-danger')}>
                         {kozgu.ok ? (
@@ -695,6 +731,54 @@ export default function TestImport() {
                             )}
                           </span>
                         ) : (kozgu.xabar || 'Chizilmadi')}
+                      </div>
+                    )}
+
+                    {/* ── Sheets → baza natijasi ── */}
+                    {qaytar && (
+                      <div className={'mt-2 rounded border p-2 ' + (qaytar.ok
+                        ? (qaytar.ziddiyat?.length ? 'border-warn/40 bg-warn/5'
+                                                   : 'border-ok/30 bg-ok/5')
+                        : 'border-danger/40 bg-danger/5')}>
+                        {!qaytar.ok ? (
+                          <p className="text-[11px] text-danger">{qaytar.xabar || 'Qaytarilmadi'}</p>
+                        ) : (
+                          <>
+                            <p className="text-[11px] text-text-dim">
+                              Tekshirildi: <b className="text-text">{qaytar.tekshirildi ?? 0}</b>
+                              {' · '}Yozildi: <b className={qaytar.ozgardi ? 'text-ok' : 'text-text'}>
+                                {qaytar.ozgardi ?? 0}</b>
+                              {qaytar.hisob?.jami?.jami != null && (
+                                <> {' · '}Yangi JAMI: <b className="text-text">
+                                  {Number(qaytar.hisob.jami.jami).toLocaleString('ru-RU',
+                                    { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></>
+                              )}
+                            </p>
+                            {/* ⚠️ Ziddiyat JIM o'tkazilmaydi: bazada boshqa kimdir
+                                o'zgartirgan qator YOZILMAGAN — buni aytish shart,
+                                aks holda odam ishim saqlandi deb o'ylaydi. */}
+                            {!!qaytar.ziddiyat?.length && (
+                              <div className="mt-1.5 space-y-0.5">
+                                <p className="text-[11px] text-warn">
+                                  {qaytar.ziddiyat.length} qator YOZILMADI — bazada
+                                  keyinroq o'zgartirilgan. Ko'zguni qayta chizing.
+                                </p>
+                                {qaytar.ziddiyat.slice(0, 8).map((z, i) => (
+                                  <p key={i} className="text-[10px] text-text-mute">
+                                    {z.qator}-qator · {z.nom} · {z.maydon}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {!!qaytar.xatolar?.length && (
+                              <div className="mt-1.5 space-y-0.5">
+                                {qaytar.xatolar.slice(0, 6).map((x, i) => (
+                                  <p key={i} className="text-[10px] text-danger">{x}</p>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
