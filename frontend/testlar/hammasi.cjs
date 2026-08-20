@@ -20,6 +20,7 @@ const TESTLAR = [
   ['Frontend tipi ↔ GAS javobi',        'shartnoma.tekshir.cjs'],
   ['TIZIM_02 kompaniya + versiya',      't2_kompaniya.test.cjs'],
   ['TIZIM_02 hujjat darajasi',          't2_hujjat.test.cjs'],
+  ['TIZIM_02 smeta sarlavhasi',         't2_format.test.cjs'],
 ];
 
 let yiqildi = 0;

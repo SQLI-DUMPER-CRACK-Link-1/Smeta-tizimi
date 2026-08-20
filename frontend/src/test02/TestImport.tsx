@@ -62,7 +62,9 @@ type ImportNatija = {
   ms?: number; hujjat_soni?: number; varaq_soni?: number;
   import?: Array<{ ok: boolean; hujjat?: string; varaq?: string; rol?: string;
                    format?: string; xom_qator?: number; xabar?: string }>;
-  hisob?: { ok: boolean;
+  hisob?: { ok: boolean; xabar?: string;
+            jami?: { ok?: boolean; jami?: number; toliq?: boolean;
+                     narxsiz_qator?: number; izoh?: string };
             bosqichlar?: Array<{ bosqich: string; varaq?: string; ms?: number; natija?: any }> };
 };
 
@@ -531,12 +533,20 @@ export default function TestImport() {
                         ) : (
                           <div className="max-h-52 overflow-auto space-y-0.5">
                             {manba.map((m) => {
-                              const band = hujjatlar.some((h) => h.fayl_id === m.fayl_id);
+                              /* ⚠️ «Band» BUTUN OBYEKT bo'yicha tekshiriladi, faqat
+                                 shu qism bo'yicha emas — bir hujjat ikkala qismda
+                                 tura olmaydi. Lekin QAYSI qismda turgani aytilishi
+                                 shart: aks holda RES qismiga qo'shilgan hujjat LRV
+                                 ro'yxatida quruq «qo'shilgan» bo'lib ko'rinadi va
+                                 u LRV ga tushgandek tuyuladi. */
+                              const qayerda = hujjatlar.find((h) => h.fayl_id === m.fayl_id);
+                              const band = !!qayerda;
+                              const shuQismda = qayerda?.rol === q.rol;
                               return (
                                 <button key={m.fayl_id} type="button" disabled={band || !!yuklanayotgan}
                                   onClick={() => manbadanQosh(m, q.rol)}
                                   className={'w-full flex items-center gap-2 text-left px-1.5 py-1 rounded ' +
-                                    (band ? 'opacity-40 cursor-default'
+                                    (band ? 'opacity-50 cursor-default'
                                           : 'hover:bg-white/[0.05] cursor-pointer')}>
                                   <FileText size={12} className="text-accent flex-shrink-0" />
                                   <span className="flex-1 text-[11px] text-text truncate" title={m.nom}>
@@ -551,8 +561,12 @@ export default function TestImport() {
                                     <span className="text-[9px] text-danger">o‘qilmaydi</span>
                                   )}
                                   <span className="text-[10px] text-text-mute">{m.sana}</span>
-                                  {band ? <span className="text-[10px] text-ok">qo‘shilgan</span>
-                                        : <Plus size={12} className="text-text-mute" />}
+                                  {band
+                                    ? <span className={'text-[10px] ' + (shuQismda ? 'text-ok' : 'text-text-mute')}>
+                                        {shuQismda ? 'shu yerda'
+                                          : (qayerda!.rol === 'svodka' ? 'RES da' : 'LRV da')}
+                                      </span>
+                                    : <Plus size={12} className="text-text-mute" />}
                                 </button>
                               );
                             })}
@@ -620,6 +634,34 @@ export default function TestImport() {
                 <div className="mt-2 rounded border border-danger/30 bg-danger/5 p-2 space-y-0.5">
                   {natija.xatolar.map((x, i) => (
                     <p key={i} className="text-[11px] text-danger">{x}</p>))}
+                </div>
+              )}
+
+              {/* ── JAMI VA NARXSIZLAR — eng muhim raqam ──
+                * `toliq:false` bo'lsa jami TO'LIQ EMAS. Uni oddiy raqam
+                * qilib ko'rsatish xavfli: odam uni haqiqiy smeta summasi
+                * deb o'qiydi. Shuning uchun ogohlantirish raqam bilan
+                * BIR JOYDA turadi. */}
+              {natija.hisob?.jami && (
+                <div className={'mt-2 rounded border p-2 ' + (natija.hisob.jami.toliq
+                  ? 'border-ok/30 bg-ok/5' : 'border-warn/40 bg-warn/5')}>
+                  <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                    <span className="text-[11px] text-text-dim">JAMI</span>
+                    <span className="text-[15px] font-medium text-text tabular-nums">
+                      {Number(natija.hisob.jami.jami || 0).toLocaleString('ru-RU',
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className={'text-[11px] ' + (natija.hisob.jami.narxsiz_qator
+                      ? 'text-warn' : 'text-ok')}>
+                      Narxsiz: <b>{natija.hisob.jami.narxsiz_qator ?? 0}</b>
+                    </span>
+                  </div>
+                  {natija.hisob.jami.izoh && (
+                    <p className={'text-[11px] mt-1 ' + (natija.hisob.jami.toliq
+                      ? 'text-ok' : 'text-warn')}>
+                      {natija.hisob.jami.izoh}
+                    </p>
+                  )}
                 </div>
               )}
 

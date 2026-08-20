@@ -179,6 +179,28 @@ const papka = ['20260819_160939__RES', '20260819_160939__RES.xlsx',
 const guruh = new Set(papka.map(kalitla));
 tek('6 fayl → 3 hujjat (rasmdagi holat)', guruh.size === 3, 'topildi: ' + guruh.size);
 
+console.log('\n── Xato JIM yutilmasin ──');
+
+/* «Tugallanmadi» deb quruq yozish — eng qimmat bug turi. Fast food
+   holatida ikkala varaq ✓ o'qilgan, sabab esa `hisob.xabar` ichida
+   qolib ketgan va bazani qo'lda kovlashga to'g'ri kelgan. */
+tek('hisob yiqilsa sabab yuqoriga chiqariladi',
+    /Hisob yiqildi: ' \+ \(hisob\.xabar/.test(YUKLASH));
+tek('sabab `xatolar` ro\'yxatiga ham qo\'shiladi',
+    /if\(xabar\) xatolar\.push\(xabar\);/.test(YUKLASH));
+tek('hech varaq o\'qilmasa ham sabab bor',
+    /Hech bir varaq o\\'qilmadi/.test(YUKLASH));
+
+/* JAMI ekranda ko'rinishi kerak — foydalanuvchi shu raqamni so'raydi */
+tek('JAMI va narxsiz soni ko\'rsatiladi',
+    /natija\.hisob\?\.jami/.test(IMPORT_UI) && /Narxsiz:/.test(IMPORT_UI));
+tek('to\'liq bo\'lmagan jami OGOHLANTIRISH bilan chiqadi',
+    /jami\.toliq[\s\S]{0,120}border-warn/.test(IMPORT_UI));
+
+/* Tanlash ro'yxatida hujjat QAYSI qismda turgani aytilsin */
+tek('band hujjat qaysi qismda ekani ko\'rsatiladi',
+    /shuQismda \? 'shu yerda'/.test(IMPORT_UI) && /'RES da' : 'LRV da'/.test(IMPORT_UI));
+
 console.log('\n── Frontend: yuboriladigan shakl ──');
 
 tek('gas() ga 2 argument yuboriladi',

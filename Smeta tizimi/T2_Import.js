@@ -208,24 +208,63 @@ function apiT2KompaniyaHolat(){
  * Yana ma'lumot boshlanadigan qatorni ham qaytaradi.
  */
 function _t2FormatAniqla(qiymatlar){
-  var format = 'TN', dataQator = 1;
-  var chek = Math.min(20, qiymatlar.length);
+  var chek = Math.min(25, qiymatlar.length);
+
+  /* ══ 1) FORMAT — SHART ATAYLAB TOR QOLDIRILDI ══
+   *
+   * Vasvasa: shartni kengaytirib «Единица измерения» ni ham tanitish.
+   * QILINMAYDI. Sabab: format 'ABC4' bo'lsa `t2_tasnif` BUTUNLAY boshqa
+   * — ancha qo'pol — tasnif shoxiga o'tadi. 'TN' shoxi esa uzoq sozlangan
+   * (Fast food faylida 1458 qatordan 1452 tasi to'g'ri ajratildi).
+   * Shartni kengaytirsak, «Шифр» so'zi bor har fayl JIM ABC4 ga
+   * o'tib ketardi va tasnif yomonlashardi. */
+  var format = 'TN';
   for(var i = 0; i < chek; i++){
     var s = qiymatlar[i].join(' ').toUpperCase();
-    if(s.indexOf('НАИМЕНОВАНИЕ') >= 0 && (s.indexOf('ЕД.ИЗМ') >= 0 || s.indexOf('ЕД. ИЗМ') >= 0 || s.indexOf('ЕДИЗМ') >= 0)){
-      format = (s.indexOf('КОД') >= 0 || s.indexOf('ОБОСНОВАНИЕ') >= 0 || s.indexOf('ШИФР') >= 0) ? 'ABC4' : 'TN';
-      dataQator = i + 2;                       // sarlavhadan keyingi qator
-      /* Sarlavha ostida ko'pincha USTUN-RAQAMLASH qatori (1|2|3|4…) turadi.
-         Uni ham o'tkazib yuboramiz — aks holda «3» nomli soxta razdel
-         paydo bo'ladi (bu Tizim_01 da haqiqatan bo'lgan). */
-      if(i + 1 < qiymatlar.length){
-        var keyingi = qiymatlar[i+1].map(function(x){ return String(x == null ? '' : x).trim(); });
-        var sonlar = keyingi.filter(function(x){ return /^\d+$/.test(x); }).length;
-        if(sonlar >= 3) dataQator = i + 3;
-      }
+    if(s.indexOf('НАИМЕНОВАНИЕ') >= 0 &&
+       (s.indexOf('ЕД.ИЗМ') >= 0 || s.indexOf('ЕД. ИЗМ') >= 0 || s.indexOf('ЕДИЗМ') >= 0)){
+      format = (s.indexOf('КОД') >= 0 || s.indexOf('ОБОСНОВАНИЕ') >= 0 ||
+                s.indexOf('ШИФР') >= 0) ? 'ABC4' : 'TN';
       break;
     }
   }
+
+  /* ══ 2) DATA QATOR — ALOHIDA VA KENGROQ QIDIRUV ══
+   *
+   * Yuqoridagi tor shart «Единица измерения» deb yozilgan faylni
+   * TOPMAYDI. O'shanda dataQator=1 bo'lib qolardi va sarlavha qatorlari
+   * ma'lumot sifatida o'qilardi:
+   *   • «Наименование работ и затрат» degan soxta MATERIAL
+   *   • ustun-raqamlash qatoridan (1|2|3…) soxta NARX (nom='3', narx=6)
+   *
+   * Shuning uchun dataQator formatdan MUSTAQIL topiladi. */
+  var dataQator = 1;
+  for(var j = 0; j < chek; j++){
+    var h = qiymatlar[j].join(' ').toUpperCase().replace(/[^А-ЯЁA-Z]/g, '');
+    if(h.indexOf('НАИМЕНОВАН') < 0) continue;
+    if(h.indexOf('ЕДИНИЦ') < 0 && h.indexOf('ЕДИЗМ') < 0 && h.indexOf('УЛЧОВ') < 0) continue;
+
+    dataQator = j + 2;                          // sarlavhadan keyingi qator
+
+    /* Sarlavhadan keyin yana xizmat qatorlari bo'lishi mumkin: ostki
+       sarlavhalar («в базисном уровне», «на ед.изм.», «общая») va
+       USTUN-RAQAMLASH qatori. Eng oxirgisidan keyin boshlaymiz.
+       Ilgari faqat KEYINGI qator qaralardi — bu faylda raqamlash
+       qatori 3 qator pastda edi va o'tkazib yuborilgan. */
+    for(var k = j + 1; k < Math.min(j + 7, qiymatlar.length); k++){
+      var xat = qiymatlar[k].map(function(x){ return String(x == null ? '' : x).trim(); });
+      var toza = xat.filter(function(x){ return x !== ''; });
+      /* ⚠️ «3 ta son bor» YETARLI EMAS: hajm/narx/summa ham son bo'ladi
+         va haqiqiy ma'lumot qatori o'tkazib yuborilardi. Ustun-raqamlash
+         qatorining belgisi — hamma katak KETMA-KET butun son. */
+      var raqamlash = toza.length >= 3 && toza.every(function(x, idx){
+        return /^\d{1,2}$/.test(x) && Number(x) === Number(toza[0]) + idx;
+      });
+      if(raqamlash) dataQator = k + 2;
+    }
+    break;
+  }
+
   return {format: format, dataQator: dataQator};
 }
 

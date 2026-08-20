@@ -221,7 +221,20 @@ function apiT2YuklanganImport(obyektNom, hujjatlar){
     var hisob = null;
     if(natijalar.some(function(r){ return r.ok; })) hisob = apiT2Ishla(obyektNom);
 
-    return {ok: !!(hisob && hisob.ok), obyekt: obyektNom,
+    /* ⚠️ SABABNI YO'QOTMAYMIZ.
+     *
+     * Avval bu yer faqat `ok:false` qaytarardi va sabab `hisob.xabar`
+     * ichida qolib ketardi — ekranda esa quruq «Tugallanmadi» chiqardi.
+     * Foydalanuvchi ikkala varaq ✓ o'qilganini ko'rib turib, nega
+     * yiqilganini bilolmasdi. Haqiqiy sabab Postgres xatosi edi:
+     *     42P10: no unique constraint matching the ON CONFLICT
+     * Uni topish uchun bazani qo'lda kovlashga to'g'ri keldi. */
+    var xabar = '';
+    if(!hisob)                 xabar = 'Hech bir varaq o\'qilmadi — hisob boshlanmadi';
+    else if(!hisob.ok)         xabar = 'Hisob yiqildi: ' + (hisob.xabar || 'sabab noma\'lum');
+    if(xabar) xatolar.push(xabar);
+
+    return {ok: !!(hisob && hisob.ok), obyekt: obyektNom, xabar: xabar,
             hujjat_soni: faol.length, varaq_soni: varaqSoni,
             import: natijalar, hisob: hisob, xatolar: xatolar,
             ms: Date.now() - t0};
