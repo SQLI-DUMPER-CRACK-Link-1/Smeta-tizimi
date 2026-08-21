@@ -406,3 +406,79 @@ export async function sbT2QatorTahrir(
              ms: Math.round(performance.now() - t0) };
   }
 }
+
+/* ═══════════════════ FAKT / F2 HUJJATLARI ═══════════════════════════
+ *
+ * Hammasi `/api/sb-yoz` ning NOMLANGAN amallari orqali. Ixtiyoriy RPC
+ * chaqirish yo'q — reja «generic write endpoint ochmaslik» deydi.
+ */
+
+export type AktBuzilish = {
+  qator_id: number; nom: string;
+  bor?: number; qoshilmoqda?: number; jami?: number; chegara: number;
+};
+
+export type AktNatija = {
+  ok: boolean; error?: string; sabab?: string; xabar?: string; izoh?: string;
+  akt_id?: number; takror?: boolean; holat?: string; tur?: string; oy?: string;
+  qator_soni?: number; narxsiz?: number; jami?: number | null; toliq?: boolean;
+  buzilish?: AktBuzilish[] | null; maslahat?: string;
+  sizning_versiya?: number; bazadagi_versiya?: number;
+  ms?: number;
+};
+
+async function yozAmali(yuk: Record<string, unknown>): Promise<AktNatija> {
+  const t0 = performance.now();
+  try {
+    const r = await fetch('/api/sb-yoz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(yuk),
+    });
+    const j = (await r.json()) as AktNatija;
+    return { ...j, ms: Math.round(performance.now() - t0) };
+  } catch (e: any) {
+    return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)),
+             ms: Math.round(performance.now() - t0) };
+  }
+}
+
+/**
+ * Fakt yoki F2 hujjatini yaratadi.
+ *
+ * ⚠️ `operation_id` HAR CHAQIRUVDA YANGI bo'lishi kerak, lekin QAYTA
+ * URINISHDA O'SHA-O'SHA qolishi kerak. Shuning uchun uni chaqiruvchi
+ * beradi — bu yerda generatsiya qilsak, qayta urinish yangi UUID bilan
+ * ketib IKKINCHI hujjat yaratardi va idempotentlik ma'nosini yo'qotardi.
+ */
+export function sbT2AktYarat(p: {
+  obyektId: number; tur: 'fakt' | 'f2'; oy: string;
+  qatorlar: Array<{ qator_id: number; hajm: number | string; narx?: number; izoh?: string }>;
+  operationId: string; raqam?: string; majburiy?: boolean;
+}): Promise<AktNatija> {
+  return yozAmali({
+    amal: 'akt_yarat', obyekt_id: p.obyektId, tur: p.tur, oy: p.oy,
+    qatorlar: p.qatorlar, operation_id: p.operationId,
+    raqam: p.raqam, majburiy: p.majburiy === true,
+  });
+}
+
+export function sbT2AktTasdiqlash(aktId: number, kutilganVersiya?: number): Promise<AktNatija> {
+  return yozAmali({ amal: 'akt_tasdiqlash', akt_id: aktId,
+                    kutilgan_versiya: kutilganVersiya });
+}
+
+export function sbT2AktBekor(aktId: number, sabab: string,
+                             kutilganVersiya?: number): Promise<AktNatija> {
+  return yozAmali({ amal: 'akt_bekor', akt_id: aktId, sabab,
+                    kutilgan_versiya: kutilganVersiya });
+}
+
+/** Brauzerda ishonchli UUID (eski brauzerlar uchun zaxira bilan). */
+export function yangiOperationId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}

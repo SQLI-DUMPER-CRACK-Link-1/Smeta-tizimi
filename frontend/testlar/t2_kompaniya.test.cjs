@@ -31,9 +31,26 @@ const T = (nom, shart, izoh) => {
 console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
 {
   const s = oqi('functions/api/sb-yoz.ts');
-  T('faqat t2_qator_tahrir RPC chaqiriladi',
-    (s.match(/rest\/v1\/rpc\/[a-z_]+/g) || []).length === 1 &&
-    s.indexOf('rest/v1/rpc/t2_qator_tahrir') >= 0);
+  /* ⚠️ 2026-08-21: eshik ATAYLAB kengaytirildi — F2/Fakt hujjatlari
+     uchun. Lekin u «tor» bo'lib qolishi SHART: RPC nomi foydalanuvchi
+     kiritmasidan qurilmaydi, faqat qat'iy ro'yxatdan olinadi.
+     Ya'ni yangi amal qo'shish = shu faylga ataylab kod yozish. */
+  {
+    const amallar = (s.match(/rpc:\s*'([a-z0-9_]+)'/g) || [])
+      .map((x) => x.split("'")[1]).sort();
+    const KUTILGAN = ['t2_akt_bekor', 't2_akt_tasdiqlash', 't2_akt_yarat',
+                      't2_qator_tahrir'].sort();
+    T('RPC ro\'yxati AYNAN belgilangan 4 ta domen amali',
+      JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
+      'topildi: ' + amallar.join(', '));
+    /* RPC nomi FAQAT ro'yxatdan — so'rovdan emas */
+    T('RPC nomi so\'rov tanasidan olinmaydi',
+      /rpc\/' \+ AMALLAR\[amal\]\.rpc/.test(s) &&
+      !/rpc\/' \+ so\./.test(s) && !/rpc\/\$\{so\./.test(s));
+    /* Manbada apostrof qochirilgan (`Noma\'lum`) — shuni hisobga olamiz */
+    T('noma\'lum amal RAD etiladi',
+      /Noma\\?'lum amal/.test(s));
+  }
   T('ixtiyoriy jadvalga yozish yo\'q',
     s.indexOf('/rest/v1/' + '${') < 0 && !/rest\/v1\/'\s*\+\s*[a-z]/.test(s));
   T('versiya MAJBURIY (usiz rad etiladi)',

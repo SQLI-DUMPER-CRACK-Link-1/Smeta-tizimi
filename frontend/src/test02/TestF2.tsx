@@ -25,10 +25,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle, CheckCircle, RefreshCw, FileText, TrendingUp, Search,
+  Plus, Ban, XCircle,
 } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
-import { sbOqi, sbT2ObyektlarOlKomp, type T2Obyekt } from '../api/supabase';
+import {
+  sbOqi, sbT2ObyektlarOlKomp, sbT2AktYarat, sbT2AktTasdiqlash, sbT2AktBekor,
+  yangiOperationId, type T2Obyekt, type AktNatija,
+} from '../api/supabase';
+import { toast } from '../umumiy/ui/Toast';
 import { useKompaniya } from './KompaniyaTanlov';
 
 type QatorHolat = {
@@ -36,12 +41,15 @@ type QatorHolat = {
   birlik: string | null; kat: string | null;
   smeta_summa: number | null; fakt_summa: number; f2_summa: number;
   qoldiq_summa: number | null; f2_mumkin_summa: number;
+  /* Yozish uchun: chegara SUMMA emas, HAJM bo'yicha tekshiriladi */
+  smeta_hajm: number | null; smeta_narx: number | null;
+  fakt_hajm: number; f2_hajm: number; f2_mumkin_hajm: number;
 };
 
 type Reestr = {
   id: number; tur: string; raqam: string | null; oy: string; holat: string;
   hujjat_jami: number | null; yozilgan_jami: number; farq: number | null;
-  reestr_holat: string; qator_soni: number | null;
+  reestr_holat: string; qator_soni: number | null; versiya: number;
   narxsiz_qator: number | null; manfiy_qator: number | null;
 };
 
@@ -67,6 +75,72 @@ export default function TestF2() {
   const [yuk, setYuk] = useState(false);
   const [xato, setXato] = useState('');
 
+  /* ── HUJJAT YARATISH ──
+   * Bu sahifa avval faqat o'qirdi. Endi yozadi ham — backend
+   * (t2_akt_yarat / tasdiqlash / bekor) tayyor va sinovdan o'tgan. */
+  const [ochiq, setOchiq] = useState(false);
+  const [tur, setTur] = useState<'fakt' | 'f2'>('fakt');
+  const [oy, setOy] = useState(() => new Date().toISOString().slice(0, 7));
+  const [raqam, setRaqam] = useState('');
+  const [kiritilgan, setKiritilgan] = useState<Record<number, string>>({});
+  const [yubor, setYubor] = useState(false);
+  const [natija, setNatija] = useState<AktNatija | null>(null);
+  /* ⚠️ Oqim boshlanganda BIR MARTA yaratiladi va qayta urinishda
+     O'ZGARMAYDI — aks holda takroriy so'rov ikkinchi hujjat yasardi. */
+  const [opId, setOpId] = useState('');
+
+  /** Shu qatorda hozir nechta olish mumkin (HAJM bo'yicha). */
+  const qolgan = (r: QatorHolat) =>
+    tur === 'fakt'
+      ? (Number(r.smeta_hajm) || 0) - (Number(r.fakt_hajm) || 0)
+      : Number(r.f2_mumkin_hajm) || 0;
+
+  const yangiBoshla = () => {
+    setOchiq(true); setNatija(null); setKiritilgan({});
+    setOpId(yangiOperationId());
+  };
+
+  const yubormoq = async () => {
+    if (!obyektId) return;
+    const qat = Object.entries(kiritilgan)
+      .map(([id, v]) => ({ qator_id: Number(id), hajm: v }))
+      /* Bo'sh va nol tashlanadi, MANFIY qoladi — ПЕРЕРАСЧЁТ haqiqiy hujjat */
+      .filter((x) => x.hajm !== '' && Number(x.hajm) !== 0 && Number.isFinite(Number(x.hajm)));
+    if (!qat.length) { toast('Bironta qator kiritilmagan', 'warn'); return; }
+
+    setYubor(true);
+    const r = await sbT2AktYarat({
+      obyektId, tur, oy: oy + '-01', qatorlar: qat,
+      operationId: opId, raqam: raqam.trim() || undefined,
+    });
+    setYubor(false); setNatija(r);
+    if (r.ok) {
+      toast(r.takror ? 'Bu hujjat allaqachon yaratilgan'
+                     : 'Hujjat yaratildi (qoralama)', 'ok');
+      setOchiq(false); yukla();
+    } else {
+      toast(r.xabar || r.error || 'Yaratilmadi', 'danger', undefined, 9000);
+    }
+  };
+
+  const tasdiqla = async (a: Reestr) => {
+    const r = await sbT2AktTasdiqlash(a.id, a.versiya);
+    setNatija(r);
+    toast(r.ok ? (r.takror ? 'Allaqachon tasdiqlangan' : 'Tasdiqlandi')
+               : (r.xabar || r.error || 'Tasdiqlanmadi'),
+          r.ok ? 'ok' : 'danger', undefined, 9000);
+    yukla();
+  };
+
+  const bekorQil = async (a: Reestr) => {
+    const sabab = window.prompt('Bekor qilish sababi:');
+    if (sabab == null) return;
+    const r = await sbT2AktBekor(a.id, sabab, a.versiya);
+    toast(r.ok ? 'Bekor qilindi' : (r.xabar || r.error || 'Bekor qilinmadi'),
+          r.ok ? 'ok' : 'danger', undefined, 9000);
+    yukla();
+  };
+
   useEffect(() => {
     if (kompYuk) return;
     sbT2ObyektlarOlKomp(joriy?.id).then((r) => {
@@ -88,7 +162,8 @@ export default function TestF2() {
            bolalarining yig'indisi va ikki marta sanalardi. */
         filtr: 'obyekt_id=eq.' + obyektId + '&tur=in.(rs,mat,ob)',
         ustunlar: 'id,tur,raqam,nom,birlik,kat,smeta_summa,fakt_summa,' +
-                  'f2_summa,qoldiq_summa,f2_mumkin_summa',
+                  'f2_summa,qoldiq_summa,f2_mumkin_summa,' +
+                  'smeta_hajm,smeta_narx,fakt_hajm,f2_hajm,f2_mumkin_hajm',
         tartib: 'tartib.asc', limit: 20000,
       }),
       sbOqi<Reestr>({
@@ -201,6 +276,12 @@ export default function TestF2() {
           <p className="text-[12px] font-medium text-text mb-2 flex items-center gap-2">
             <FileText size={14} className="text-accent" />
             Hujjatlar reestri ({reestr.length})
+            <button onClick={yangiBoshla} disabled={!obyektId}
+              className="ml-auto px-3 py-1 rounded-lg bg-accent text-white text-[12px]
+                         font-medium hover:bg-accent/90 disabled:opacity-40
+                         inline-flex items-center gap-1.5">
+              <Plus size={13} /> Yangi hujjat
+            </button>
           </p>
           <p className="text-[11px] text-text-mute mb-2">
             Har hujjat uchun: hujjatda yozilgan jami ↔ bazaga tushgan jami.
@@ -221,6 +302,7 @@ export default function TestF2() {
                     <th className="text-right py-1.5 font-medium">Bazada</th>
                     <th className="text-right py-1.5 font-medium">Farq</th>
                     <th className="text-left py-1.5 font-medium w-36">Holat</th>
+                    <th className="text-right py-1.5 font-medium w-32">Amal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -247,6 +329,22 @@ export default function TestF2() {
                         )}
                         {!!a.narxsiz_qator && (
                           <span className="text-warn"> · {a.narxsiz_qator} narxsiz</span>
+                        )}
+                        <div className="text-[10px] text-text-mute">{a.holat}</div>
+                      </td>
+                      <td className="py-1 text-right whitespace-nowrap">
+                        {a.holat === 'qoralama' && (
+                          <button onClick={() => tasdiqla(a)}
+                            className="text-[11px] text-ok hover:underline mr-2">
+                            Tasdiqlash
+                          </button>
+                        )}
+                        {a.holat !== 'bekor' && (
+                          <button onClick={() => bekorQil(a)}
+                            className="text-[11px] text-text-mute hover:text-danger
+                                       inline-flex items-center gap-1">
+                            <Ban size={11} /> Bekor
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -320,14 +418,152 @@ export default function TestF2() {
           )}
         </div>
 
+        {/* ── INVARIANT BUZILISHI ──
+          * Baza yozishni RAD ETSA sabab shu yerda ko'rinadi. Buni
+          * yashirib bo'lmaydi: odam nima uchun yozilmaganini bilmasa,
+          * nosozlik deb o'ylab qayta-qayta bosadi. */}
+        {natija && !natija.ok && !!natija.buzilish?.length && (
+          <div className="karta p-3 border-danger/40 bg-danger/5">
+            <p className="text-[12px] text-danger flex items-center gap-2 mb-1.5">
+              <XCircle size={14} /> {natija.xabar}
+            </p>
+            <div className="max-h-48 overflow-auto space-y-0.5">
+              {natija.buzilish.map((b, i) => (
+                <p key={i} className="text-[11px] text-text-dim">
+                  <span className="text-text">{b.nom}</span>{' — '}
+                  {b.jami != null
+                    ? <>jami <b>{b.jami}</b></>
+                    : <>bor {b.bor}, qo'shilmoqda <b>{b.qoshilmoqda}</b></>}
+                  {', chegara '}<b className="text-warn">{b.chegara}</b>
+                </p>
+              ))}
+            </div>
+            {natija.maslahat && (
+              <p className="text-[11px] text-text-mute mt-1.5">{natija.maslahat}</p>
+            )}
+          </div>
+        )}
+
+        {/* ── YANGI HUJJAT ── */}
+        {ochiq && (
+          <div className="karta p-3">
+            <p className="text-[12px] font-medium text-text mb-2">Yangi hujjat</p>
+
+            <div className="flex flex-wrap items-end gap-2 mb-2">
+              <div>
+                <label className="text-[11px] text-text-dim block mb-1">Turi</label>
+                <select value={tur}
+                  onChange={(e) => { setTur(e.target.value as 'fakt' | 'f2'); setKiritilgan({}); }}
+                  className="bg-[var(--surface-2)] border border-border rounded-lg px-2.5 py-1.5
+                             text-[12px] text-text outline-none">
+                  <option value="fakt">ФАКТ — bajarilgan ish</option>
+                  <option value="f2">Ф2 — topshiriladigan</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] text-text-dim block mb-1">Oy</label>
+                <input type="month" value={oy} onChange={(e) => setOy(e.target.value)}
+                  className="bg-[var(--surface-2)] border border-border rounded-lg px-2.5 py-1.5
+                             text-[12px] text-text outline-none" />
+              </div>
+              <div className="flex-1 min-w-[120px]">
+                <label className="text-[11px] text-text-dim block mb-1">Hujjat №</label>
+                <input value={raqam} onChange={(e) => setRaqam(e.target.value)}
+                  placeholder="ixtiyoriy"
+                  className="w-full bg-[var(--surface-2)] border border-border rounded-lg
+                             px-2.5 py-1.5 text-[12px] text-text outline-none" />
+              </div>
+            </div>
+
+            <div className="max-h-80 overflow-auto">
+              <table className="w-full text-[11px]">
+                <thead className="sticky top-0 bg-[var(--surface-1)]">
+                  <tr className="border-b border-border text-text-dim">
+                    <th className="text-left py-1.5 font-medium">Resurs</th>
+                    <th className="text-left py-1.5 font-medium w-16">Бирлик</th>
+                    <th className="text-right py-1.5 font-medium w-20">Смета</th>
+                    <th className="text-right py-1.5 font-medium w-20">
+                      {tur === 'fakt' ? 'Факт' : 'Ф2'}
+                    </th>
+                    <th className="text-right py-1.5 font-medium w-20">Қолган</th>
+                    <th className="text-right py-1.5 font-medium w-24">Ҳажм</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {suz.slice(0, 400).map((r) => {
+                    const q = qolgan(r);
+                    return (
+                      <tr key={r.id} className="border-b border-border last:border-0">
+                        <td className="py-1 text-text truncate max-w-[240px]" title={r.nom || ''}>
+                          {r.nom}
+                          {/* Narx o'zidan to'qilmaydi — narxsizligi ko'rinib tursin */}
+                          {r.smeta_narx == null && <span className="text-warn ml-1">нарх йўқ</span>}
+                        </td>
+                        <td className="py-1 text-text-mute">{r.birlik}</td>
+                        <td className="py-1 text-right tabular-nums text-text-dim">
+                          {r.smeta_hajm ?? ''}
+                        </td>
+                        <td className="py-1 text-right tabular-nums text-text-dim">
+                          {tur === 'fakt' ? r.fakt_hajm : r.f2_hajm}
+                        </td>
+                        <td className={'py-1 text-right tabular-nums ' +
+                          (Math.abs(q) > 0.000001 ? 'text-ok' : 'text-text-mute')}>
+                          {Math.round(q * 1e6) / 1e6}
+                        </td>
+                        <td className="py-1 text-right">
+                          {/* ⚠️ type=text — `number` maydoni ba'zi brauzerlarda
+                              manfiy va kasrni chetlab o'tadi, ПЕРЕРАСЧЁТ esa
+                              aynan manfiy bo'ladi. */}
+                          <input value={kiritilgan[r.id] ?? ''}
+                            onChange={(e) => setKiritilgan((oldin) =>
+                              ({ ...oldin, [r.id]: e.target.value }))}
+                            placeholder="0"
+                            className="w-20 text-right bg-[var(--surface-2)] border border-border
+                                       rounded px-1.5 py-0.5 text-[11px] text-text outline-none
+                                       focus:border-accent/50" />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {suz.length > 400 && (
+                <p className="text-[10px] text-text-mute pt-1">
+                  … va yana {suz.length - 400} ta — yuqoridagi qidiruvdan foydalaning
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2
+                            border-t border-border">
+              <span className="text-[11px] text-text-mute">
+                {Object.values(kiritilgan).filter((v) => v !== '' && Number(v) !== 0).length} qator
+                {' · '}manfiy hajm mumkin (ПЕРЕРАСЧЁТ)
+              </span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setOchiq(false)}
+                  className="px-3 py-1.5 rounded-lg border border-border text-[12px]
+                             text-text-dim hover:bg-white/5">
+                  Bekor
+                </button>
+                <button onClick={yubormoq} disabled={yubor}
+                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-[12px]
+                             font-medium hover:bg-accent/90 disabled:opacity-40">
+                  {yubor ? 'Yaratilmoqda…' : 'Hujjat yaratish'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="karta p-3 border-accent/30 bg-accent/5">
           <p className="text-[11px] text-text-dim flex items-start gap-2">
             <CheckCircle size={13} className="text-accent flex-shrink-0 mt-0.5" />
             <span>
-              Bu sahifa hozircha faqat <b>o'qiydi</b>. F2 hujjatini Excel'dan
-              import qilish yo'li — keyingi qadam. Baza tayyor: manfiy
-              korrektirovka qabul qilinadi, narx aktning o'zidan olinadi,
-              narxsiz qator 0 emas <b>bo'sh</b> qoladi.
+              Hujjat <b>qoralama</b> bo'lib yaraladi va tasdiqlangach o'zgarmas
+              bo'ladi. Nakopitelniy bazada hisoblanadi: <b>Ф2 ≤ ФАКТ ≤ СМЕТА</b>{' '}
+              buzilsa yozilmaydi va qaysi qator buzgani aytiladi. Manfiy
+              korrektirovka qabul qilinadi, narxsiz qator 0 emas <b>bo'sh</b> qoladi.
             </span>
           </p>
         </div>
