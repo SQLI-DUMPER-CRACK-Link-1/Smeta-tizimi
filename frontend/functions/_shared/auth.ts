@@ -27,19 +27,11 @@ async function hmacHex(body: string, secret: string) {
 }
 
 /**
- * ⚠️ XAVFSIZLIK: ZAXIRA KALIT OLIB TASHLANDI.
+ * Kalit o'rnatilmaganda ko'rsatiladigan xabar.
  *
- * Avval kalit yo'q bo'lsa kodda yozilgan `Boshlangich_Maxfiy_Kalit_123`
- * ishlatilardi. Repozitoriy OCHIQ — ya'ni bu kalit hammaga ma'lum va
- * uni bilgan har kim sessiya cookie'sini o'zi imzolab, admin bo'lib
- * kirishi mumkin edi.
- *
- * «Kalit yo'q → jim ishlayveradi» eng yomon variant: teshik ochiq
- * turadi va hech kim sezmaydi. Endi kalit bo'lmasa tizim ISHLAMAYDI
- * va sababini aniq aytadi.
- *
- * Kalitni Cloudflare Pages → Settings → Environment variables da
- * `SESSIYA_KALIT` nomi bilan o'rnatish kerak.
+ * ⚠️ HOZIR U KO'RSATILMAYDI: to'siq vaqtincha olib qo'yilgan (pastdagi
+ * `kalitTekshir` ga qarang). Xabar saqlanib turibdi, chunki to'siq
+ * qaytarilganda yana kerak bo'ladi.
  */
 export const KALIT_XABAR =
   'Server sozlanmagan: SESSIYA_KALIT yo\'q (yoki 16 belgidan qisqa). ' +
@@ -81,17 +73,31 @@ export function kalitTashxis(env: Record<string, unknown>): {
   };
 }
 
-/**
- * ⚠️ Bu TASHLAYDI. Chaqiruvchi avval `kalitBormi()` bilan tekshirib,
- * foydalanuvchiga TUSHUNARLI xabar qaytarishi kerak — aks holda
- * brauzerda quruq «Server xatosi: 500» chiqadi va sababi bilinmaydi.
- * Aynan shunday bo'ldi: kalit o'rnatilmagan edi va hech kim kira olmadi,
- * lekin ekranda nima qilish kerakligi yozilmadi.
+/* ⚠️⚠️ TEXNIK QARZ — ATAYLAB QOLDIRILGAN, YOPILISHI SHART ⚠️⚠️
+ *
+ * 2026-08-20: kalit majburiy qilinganda Cloudflare'da `SESSIYA_KALIT`
+ * ko'rinmadi va HECH KIM kira olmadi. Foydalanuvchi ishdan to'xtab
+ * qolgani uchun to'siq VAQTINCHA olib tashlandi — bu uning ongli
+ * qarori, men xavfni aytdim.
+ *
+ * XAVF O'Z KUCHIDA: repozitoriy OCHIQ, ya'ni quyidagi zaxira kalit
+ * hammaga ma'lum. Uni bilgan har kim sessiya cookie'sini o'zi imzolab
+ * admin bo'lib kira oladi. Bu «ehtimoliy» emas, aniq ochiq eshik.
+ *
+ * YOPISH TARTIBI (kirish tiklangach):
+ *   1. Cloudflare Pages → Settings → Environment variables
+ *      → SESSIYA_KALIT ni PRODUCTION va PREVIEW ga qo'yish
+ *   2. Deployments → Retry deployment (bindinglar har deployment'ga
+ *      suratga olinadi — qayta deploysiz eski qiymat qoladi)
+ *   3. `/api/sessiya` javobidagi `zaxira_kalit` false bo'lgach
+ *   4. Shu yerdagi `ZAXIRA` ni olib tashlab, `throw` ni qaytarish
  */
+const ZAXIRA = 'Boshlangich_Maxfiy_Kalit_123';
+
 export function kalitTekshir(secret: string | undefined | null): string {
   const k = String(secret || '').trim();
   if (k.length >= 16) return k;
-  throw new Error(KALIT_XABAR);
+  return ZAXIRA;
 }
 
 export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Promise<string> {

@@ -1,4 +1,4 @@
-import { tekshir, kalitBormi, KALIT_XABAR, kalitTashxis } from '../_shared/auth';
+import { tekshir, kalitBormi } from '../_shared/auth';
 
 /**
  * Joriy sessiya haqida ma'lumot — sayt kim bo'lib kirganini BILISHI uchun.
@@ -7,15 +7,6 @@ import { tekshir, kalitBormi, KALIT_XABAR, kalitTashxis } from '../_shared/auth'
  */
 export const onRequestGet: PagesFunction<{ SESSIYA_KALIT: string }> = async (ctx) => {
   const secret = ctx.env.SESSIYA_KALIT;
-  if (!kalitBormi(secret)) {
-    const tx = kalitTashxis(ctx.env as unknown as Record<string, unknown>);
-    return Response.json({
-      ok: false, sozlanmagan: true,
-      xato: KALIT_XABAR + '  [server ko'radi: uzunlik=' + tx.uzunlik +
-            (tx.oq_joy ? ', chetida bo'shliq bor' : '') + ']',
-      tashxis: tx,
-    }, { status: 503 });
-  }
   const sess = await tekshir(ctx.request.headers.get('Cookie'), secret);
   if (!sess) return Response.json({ ok: false }, { status: 401 });
 
@@ -29,5 +20,10 @@ export const onRequestGet: PagesFunction<{ SESSIYA_KALIT: string }> = async (ctx
     email: sess.email || '',
     yozaOladi,
     tugaydi: sess.exp,
+    /* ⚠️ Ochiq xavf ko'rsatkichi. `true` bo'lsa sessiyalar repozitoriyda
+       yozilgan zaxira kalit bilan imzolanyapti — uni bilgan har kim
+       admin bo'lib kira oladi. Bu ataylab qoldirilgan vaqtinchalik
+       holat; ko'zdan yo'qolmasligi uchun shu yerda ochiq turadi. */
+    zaxira_kalit: !kalitBormi(secret),
   });
 };
