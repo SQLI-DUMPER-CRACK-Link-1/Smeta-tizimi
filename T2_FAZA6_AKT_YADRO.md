@@ -169,7 +169,67 @@ summani yangilamaydi.
 
 ---
 
+---
+
+# QAYTA IMPORT MOLIYAVIY HUJJATNI YO'Q QILARDI
+
+**Topilgan:** 2026-08-21, TASK 10 (benchmark) tayyorgarligida.
+
+## Zanjir
+
+```
+t2_akt_qator.qator_id → t2_qator(id)  ON DELETE CASCADE
+t2_markirovka         → delete from t2_qator where manba_id = …
+```
+
+Ya'ni hujjatni **qayta import qilish** o'sha qatorlarga bog'langan
+barcha Fakt/F2 qatorlarini o'chirib yuborardi.
+
+## Sinovda tasdiqlandi
+
+Fast food uchun qoralama fakt yaratildi (2 125), keyin qayta import:
+
+| | Import oldidan | Import keyin |
+|---|---|---|
+| Hujjat | mavjud | **mavjud** |
+| `hujjat_jami` | 2 125 | **2 125** |
+| Qatorlari | 1 | **0** |
+
+Hujjat pulni ko'rsatib turibdi, uni tasdiqlaydigan qatorlar yo'q.
+**Hech qanday xato chiqmadi.** Reestrda «hujjatda 2 125, bazada 0» —
+sharpa hujjat.
+
+Tasdiqlangan hujjat `t2_akt_qator_qulf` trigeri tufayli tasodifan
+himoyalangan edi (u boshqa maqsadda yozilgan), lekin **qoralama
+himoyasiz** edi.
+
+## Yechim
+
+`t2_markirovka_himoya()` — markirovka `delete` dan OLDIN tekshiradi:
+tirik hujjat (`holat <> 'bekor'`) bog'liq bo'lsa **yozmaydi** va
+qaysi hujjatlar to'sayotganini nomi bilan aytadi:
+
+```
+Qayta import to'xtatildi: bu hujjatning qatorlariga 1 ta Fakt/F2
+hujjati bog'langan (HIMOYA-SINOV (fakt, 2026-09, qoralama)).
+… Avval o'sha hujjatlarni bekor qiling.
+```
+
+Qayta import qilish uchun odam avval hujjatni bekor qilishi kerak —
+bu **ataylab** qilinadigan ish, tasodifan emas.
+
+Tekshirildi: bekor qilingandan keyin import muammosiz o'tadi.
+
+## Yo'l-yo'lakay tasdiqlangan narsa
+
+Zanjir **xom ma'lumotdan to'liq qayta tiklanadi**: markirovka →
+narxlash → rollup dan keyin Fast food yana **744 054 071.73** berdi —
+avvalgi qiymatning aynan o'zi. Reja 5.6 bandi («narx yoki tasnif
+qoidasi o'zgarsa raw layerdan qayta hisoblash mumkin, Drive'ga qayta
+o'qish shart emas») amalda ishlaydi.
+
+---
+
 ## Keyingi bitta ish
 
-Panelda F2/Fakt oynasi — hujjat yaratish, tasdiqlash, bekor qilish
-va nakopitelniy ko'rinishi.
+TASK 10 — benchmark 1k / 5k / 20k / 50k.
