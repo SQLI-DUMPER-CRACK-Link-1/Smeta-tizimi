@@ -91,9 +91,30 @@ tek('hujjat o\'chirishda faqat t2_manba tozalanadi',
 tek('hujjat o\'chgach qayta hisoblanadi',
     /apiT2HujjatOchir[\s\S]{0,1200}apiT2Ishla/.test(YUKLASH));
 
-/* Konvert nusxa nomi Drive API versiyasiga bog'liq bo'lmasin */
-tek('konvert nusxa DriveApp bilan nomlanadi',
-    /getFileById\(oqiladiganId\)\.setName\('\(GS\) '/.test(YUKLASH));
+console.log('\n── Drive API v3 (v2 shakli emas) ──');
+
+/* Loyihada appsscript.json da Drive v3 yoqilgan. v2 shakli
+   (`title`, `parents:[{id}]`) berilsa Drive «Internal Error» qaytaradi
+   va fayl umuman yuklanmaydi — jonli sinovda aynan shunday bo'ldi. */
+const APPS = fs.readFileSync(path.join(ILDIZ, 'Smeta tizimi', 'appsscript.json'), 'utf8');
+const driveV3 = /"userSymbol":\s*"Drive"[\s\S]{0,120}?"version":\s*"v3"/.test(APPS);
+tek('appsscript.json da Drive v3', driveV3);
+
+tek('T2 kodida v2 shakli YO\'Q',
+    !/parents:\s*\[\{\s*id:/.test(YUKLASH) && !/\btitle:\s*'/.test(YUKLASH),
+    'v3 da maydonlar `name` va `parents:[id]`');
+tek('borini takrorlamay _excelToNative chaqiriladi',
+    /_excelToNative\(fayl\.getId\(\), papka\.getId\(\)/.test(YUKLASH),
+    '05_Papka.js dagi funksiyada zip-mime uchun zaxira yo\'li ham bor');
+tek('konvert yiqilsa fayl hajmi ham aytiladi',
+    /fayl\.getSize\(\)/.test(YUKLASH),
+    'hajm chegarasi sababmi yoki yo\'qmi — buni bilish kerak');
+
+/* Konvert nusxa «(GS) » prefiksi bilan nomlanishi shart — `apiT2ManbaFayllar`
+   asl .xlsx va konvert nusxasini AYNAN shu prefiks bo'yicha guruhlaydi.
+   Nom v3 ning `name` maydoni orqali beriladi (alohida setName kerak emas). */
+tek('konvert nusxaga «(GS) » nomi beriladi',
+    /_excelToNative\([\s\S]{0,120}'\(GS\) ' \+ saqlanadigan\)/.test(YUKLASH));
 
 /* «Sahifalarni nazorat qilish» = olib tashlash EMAS, qo'shish HAM.
    t2_manba faqat import qilinganlarini biladi — to'liq ro'yxat Drive'dan. */

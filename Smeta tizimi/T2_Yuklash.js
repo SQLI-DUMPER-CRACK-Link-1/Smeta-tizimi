@@ -69,30 +69,32 @@ function apiT2FaylYukla(nom, b64, mime){
     var konvert = false, oqiladiganId = fayl.getId(), varaqlar = [];
 
     if(fayl.getMimeType() !== MimeType.GOOGLE_SHEETS){
+      /* ⚠️ 2026-08-21: O'ZIMNING KONVERT KODIM BUZUQ EDI.
+       *
+       * U `Drive.Files.copy({title, parents:[{id}]})` deb chaqirardi —
+       * bu Drive API **v2** shakli. Loyihada esa `appsscript.json` da
+       * **v3** yoqilgan (`"version": "v3"`). v3 da maydonlar `name` va
+       * `parents:[id]` bo'ladi; v2 shaklini berganda Drive «Internal
+       * Error» qaytaradi va foydalanuvchi fayl yuklay olmaydi.
+       *
+       * Loyihada bu ALLAQACHON to'g'ri yechilgan: `_excelToNative`
+       * (05_Papka.js) v3 shaklini ishlatadi va zaxira yo'li ham bor —
+       * Telegram/API orqali kelgan .xlsx ba'zan Drive'da
+       * `application/zip` mime bilan yotadi va copy uni jadval deb
+       * bilmaydi; o'shanda baytlardan qayta yaratiladi.
+       *
+       * Borini takrorlash o'rniga o'shani chaqiramiz. */
       try{
-        var res = Drive.Files.copy(
-          {title: '(GS) ' + saqlanadigan, mimeType: MimeType.GOOGLE_SHEETS,
-           parents: [{id: papka.getId()}]},
-          fayl.getId());
-        oqiladiganId = res.id;
+        oqiladiganId = _excelToNative(fayl.getId(), papka.getId(),
+                                      '(GS) ' + saqlanadigan);
         konvert = true;
-
-        /* ⚠️ 2026-08-19: nomni ALOHIDA qo'yamiz.
-         *
-         * Yuqoridagi `title` maydoni Drive API v2 niki. Loyihada v3
-         * yoqilgan bo'lsa u JIM e'tiborsiz qoldiriladi va konvert
-         * nusxasi asl nom bilan (kengaytmasi kesilgan holda) qoladi.
-         * Foydalanuvchi papkada «…_RES» va «…_RES.xlsx» ni yonma-yon
-         * ko'rib qaysi biri o'qilishini bilmaydi.
-         *
-         * DriveApp orqali nomlash Drive API versiyasiga bog'liq emas. */
-        try{ DriveApp.getFileById(oqiladiganId).setName('(GS) ' + saqlanadigan); }
-        catch(e3){}
       }catch(e){
+        var olcham = 0;
+        try{ olcham = Math.round(fayl.getSize() / 1024 / 1024 * 10) / 10; }catch(e4){}
         return {ok:false,
           xabar:'Faylni Google Sheets ga o\'girib bo\'lmadi: ' +
                 ((e && e.message) || e) +
-                '  (Excel emasmi yoki Drive API yoqilmaganmi?)',
+                (olcham ? '  (fayl hajmi ' + olcham + ' MB)' : ''),
           fayl_id: fayl.getId()};
       }
     }
