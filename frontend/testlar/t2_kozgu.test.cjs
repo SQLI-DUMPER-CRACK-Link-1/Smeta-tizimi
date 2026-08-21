@@ -277,6 +277,30 @@ tek('«нарх йўқ» yozuvi son deb o\'qilmaydi',
    xom ma'lumotdan qayta quradi va endigina saqlangan tahrirni yo'q qilardi.
    Endi teskarisi tekshiriladi — «Tahrir KEYINGI hisobda yo'qolmasin». */
 
+console.log('\n── Sinx halqasi va varaqdagi ziddiyat ──');
+
+/* Reja 7.4: «Supabase → Sheets yozuvi user edit deb qayta qabul
+   qilinmasin». Qayta chizish minglab katakni yozadi va har biri
+   onEdit ni uyg'otadi — sinxron bekorga ishga tushardi. */
+tek('chizish bayrog\'i bor', /_t2ChizishBoshlandi/.test(KOZGU) &&
+    /_t2ChizishTugadi/.test(KOZGU));
+tek('onEdit chizish paytida chetlab o\'tadi',
+    /if\(_t2ChizilmoqdaMi\(\)\) return;/.test(KOZGU));
+tek('bayroq XATO holatida ham tozalanadi',
+    /_t2ChizishTugadi\(\);\s*\n\s*return \{ok:false/.test(KOZGU),
+    'aks holda sinxron umr tugagunicha jim o\'chib turardi');
+tek('bayroq umri cheklangan (osilib qolmasin)',
+    /T2_CHIZISH_UMRI/.test(KOZGU));
+
+/* Reja 7.8: «Sheetsda qator aniq status bilan ko'rsatiladi».
+   MAJBURIY, chunki sinxron FONDA ishlaydi — ziddiyatni faqat panelga
+   qaytarsak odam uni hech qachon ko'rmaydi va tahriri yo'qoladi. */
+tek('ziddiyat VARAQDA belgilanadi', /setBackground\('#FFCDD2'\)/.test(KOZGU));
+tek('katakka tushuntirish izohi ilinadi',
+    /setNote\('⚠️ BAZAGA YOZILMADI/.test(KOZGU));
+tek('eski belgilar tozalanadi', /setBackground\(null\)\.clearNote\(\)/.test(KOZGU),
+    'aks holda tuzatilgan qator qizil bo\'lib qolardi');
+
 console.log('\n── Bezak hujjatni yiqitmasin ──');
 
 /* setFrozenColumns(3) butun ko'zguni yaratilmasdan qoldirgan edi:

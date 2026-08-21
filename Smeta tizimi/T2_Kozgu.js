@@ -143,6 +143,10 @@ function apiT2VaraqYarat(obyekt){
       try{ DriveApp.getRootFolder().removeFile(f); }catch(e){}
     }
 
+    /* ⚡ Chizish boshlandi — endi `onEdit` bizning yozuvlarimizni
+       odam tahriri deb qabul qilmaydi (sinx halqasi himoyasi). */
+    _t2ChizishBoshlandi();
+
     var sh = ss.getSheets()[0];
     sh.clear();
     try{ sh.clearConditionalFormatRules(); }catch(e){}
@@ -539,6 +543,7 @@ function apiT2VaraqYarat(obyekt){
        aytadi va odam tugmadan foydalanishini biladi. */
     var tirgak = _t2VaraqTirgakOrnat(ss.getId());
 
+    _t2ChizishTugadi();
     return {
       ok: true, obyekt: obyekt, fayl_id: ss.getId(), url: ss.getUrl(),
       qator: qatorlar.length, jami: jami, toliq: toliq, narxsiz: narxsiz,
@@ -546,6 +551,9 @@ function apiT2VaraqYarat(obyekt){
     };
 
   }catch(e){
+    /* Bayroq xato holatida ham olinadi — aks holda sinxron
+       T2_CHIZISH_UMRI tugagunicha jim o'chib turardi. */
+    _t2ChizishTugadi();
     return {ok:false, xabar: String((e && e.message) || e), ms: Date.now() - t0};
   }
 }
@@ -744,6 +752,41 @@ function apiT2VaraqQaytar(obyekt){
       }
     }
 
+    /* ══ ZIDDIYAT VARAQNING O'ZIDA BELGILANADI ══
+     *
+     * Reja 7.8: «Sheetsda qator/kletka aniq status bilan ko'rsatiladi;
+     * avtomatik ustidan yozish yo'q».
+     *
+     * Bu MAJBURIY, chunki sinxron FONDA ishlaydi. Ziddiyatni faqat
+     * panelga qaytarsak, avto-sinxronda odam uni HECH QACHON
+     * ko'rmaydi: tahriri yozilmagan bo'ladi, lekin ekranda hech nima
+     * o'zgarmaydi va u ishim saqlandi deb o'ylaydi.
+     *
+     * Shuning uchun: ziddiyatli qator qizil bo'ladi va katakka izoh
+     * ilinadi. Muvaffaqiyatli sinxronlangan qatorlardan belgi
+     * olib tashlanadi. */
+    try{
+      var zidQ = {};
+      for(var zi = 0; zi < ziddiyat.length; zi++) zidQ[ziddiyat[zi].qator] = ziddiyat[zi];
+
+      /* Avvalgi belgilar tozalanadi — eskisi qolib ketmasin */
+      if(soni > 0){
+        sh.getRange(sarlavha + 1, 3, soni, 5).setBackground(null).clearNote();
+      }
+      for(var zq in zidQ){
+        var qn = Number(zq);
+        var yac = sh.getRange(qn, 3, 1, 5);
+        yac.setBackground('#FFCDD2');
+        yac.setNote('⚠️ BAZAGA YOZILMADI\n' +
+                    'Sabab: ' + (zidQ[zq].sabab || 'ziddiyat') + '\n\n' +
+                    'Bu qatorni siz tahrirlagunizcha bazada boshqa kimdir\n' +
+                    'o\'zgartirgan. Sizning qiymatingiz SAQLANMADI.\n' +
+                    'Varaqni qayta chizing va tahrirni takrorlang.');
+      }
+    }catch(e4){
+      xatolar.push('Ziddiyatni varaqda belgilab bo\'lmadi: ' + ((e4 && e4.message) || e4));
+    }
+
     return {ok:true, obyekt: obyekt, tekshirildi: tekshirildi, ozgardi: ozgardi,
             ziddiyat: ziddiyat, xatolar: xatolar, hisob: hisob,
             ms: Date.now() - t0};
@@ -780,6 +823,43 @@ function apiT2VaraqQaytar(obyekt){
 
 var T2_SINX_KUTMOQDA = 'T2_SINX_KUTMOQDA';
 var T2_SINX_KECHIKISH = 45 * 1000;
+
+/* ══ SINX HALQASI HIMOYASI ══
+ *
+ * Reja 7.4: «Supabase → Sheets yozuvi user edit deb qayta qabul
+ * qilinmasin».
+ *
+ * Muammo aniq: `apiT2VaraqYarat` varaqni qayta chizganda MINGLAB
+ * katakni yozadi. Har yozish `onEdit` ni uyg'otadi, u sinxron
+ * rejalashtiradi, sinxron esa varaqni o'qib bazaga solishtiradi —
+ * bekorga. Qiymatlar bir xil bo'lgani uchun zarar yo'q, lekin
+ * tirgak navbati va vaqt behuda ketadi.
+ *
+ * Yomonroq holat: chizish paytida qo'yilgan `_v` qiymatlari «yangi
+ * tahrir» deb qabul qilinishi mumkin edi.
+ *
+ * Yechim: chizish davomida bayroq qo'yiladi va `onEdit` uni ko'rsa
+ * chetlab o'tadi. Bayroq VAQT belgisi bilan — chizish yarim yo'lda
+ * yiqilsa ham sinxron abadiy o'chib qolmasin. */
+var T2_CHIZILMOQDA = 'T2_CHIZILMOQDA';
+var T2_CHIZISH_UMRI = 10 * 60 * 1000;      // 10 daqiqadan keyin e'tiborsiz
+
+function _t2ChizishBoshlandi(){
+  try{ PropertiesService.getScriptProperties()
+         .setProperty(T2_CHIZILMOQDA, String(Date.now())); }catch(e){}
+}
+function _t2ChizishTugadi(){
+  try{ PropertiesService.getScriptProperties().deleteProperty(T2_CHIZILMOQDA); }catch(e){}
+}
+function _t2ChizilmoqdaMi(){
+  try{
+    var v = PropertiesService.getScriptProperties().getProperty(T2_CHIZILMOQDA);
+    if(!v) return false;
+    /* Eskirgan bayroq — chizish yiqilgan, e'tiborsiz qoldiramiz */
+    if(Date.now() - Number(v) > T2_CHIZISH_UMRI){ _t2ChizishTugadi(); return false; }
+    return true;
+  }catch(e){ return false; }
+}
 /* Tizimning o'z yozuvi — undan kelib chiqqan onEdit e'tiborsiz qoladi */
 var T2_TIZIM_YOZDI = 'T2_TIZIM_YOZDI';
 var T2_TIZIM_OYNA  = 60 * 1000;
@@ -788,6 +868,10 @@ var T2_TIZIM_OYNA  = 60 * 1000;
 function t2VaraqOnEdit(e){
   try{
     if(!e || !e.range) return;
+    /* ⚡ Varaq HOZIR bazadan qayta chizilyapti — bu odam tahriri emas.
+       Busiz har chizish minglab `onEdit` uyg'otib, sinxronni bekorga
+       ishga tushirardi. */
+    if(_t2ChizilmoqdaMi()) return;
     var sh = e.range.getSheet();
     if(sh.getName() !== 'СМЕТА') return;
 
