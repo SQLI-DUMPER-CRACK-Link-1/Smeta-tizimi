@@ -60,6 +60,39 @@ function apiT2FaylYukla(nom, b64, mime){
     var saqlanadigan = belgi + '__' + nom;
 
     var baytlar = Utilities.base64Decode(b64);
+
+    /* ⚠️ FAYL HAQIQATAN .XLSX MI — YUBORISHDAN OLDIN TEKSHIRAMIZ.
+     *
+     * .xlsx aslida ZIP arxiv va u doim `PK\003\004` bilan boshlanadi.
+     * Brauzerdan base64 orqali kelgan fayl yo'lda buzilgan bo'lsa
+     * (yoki aslida .xls / boshqa format bo'lsa), Drive konvertida
+     * mazmunsiz «Internal Error» chiqadi va sabab noma'lum qoladi —
+     * aynan shunday bo'ldi: hajm 0.1 MB, ya'ni chegara emas, lekin
+     * ikkala konvert yo'li ham yiqildi.
+     *
+     * Bayt qiymatlari GAS da ISHORALI (-128..127), shuning uchun
+     * P=80, K=75, 3, 4 shu ko'rinishda solishtiriladi. */
+    var zipmi = baytlar.length > 4 &&
+                baytlar[0] === 80 && baytlar[1] === 75 &&
+                baytlar[2] === 3  && baytlar[3] === 4;
+    var eskiXls = baytlar.length >= 8 &&
+                  baytlar[0] === -48 && baytlar[1] === -49;   // D0 CF — eski .xls
+
+    if(!zipmi){
+      var boshBayt = [];
+      for(var bb = 0; bb < Math.min(8, baytlar.length); bb++){
+        boshBayt.push((baytlar[bb] < 0 ? baytlar[bb] + 256 : baytlar[bb]).toString(16));
+      }
+      return {ok:false, xabar:
+        eskiXls
+          ? 'Bu ESKI .xls formati (Excel 97-2003). Google uni to\'g\'ridan-to\'g\'ri ' +
+            'o\'gira olmaydi. Excel\'da oching va «Сохранить как → .xlsx» qilib qayta yuklang.'
+          : 'Fayl .xlsx ga o\'xshamaydi (' + Math.round(baytlar.length/1024) + ' KB, ' +
+            'birinchi baytlar: ' + boshBayt.join(' ') + '). ' +
+            'Haqiqiy .xlsx doim «50 4b 3 4» bilan boshlanadi. ' +
+            'Fayl buzilgan yoki boshqa formatda.'};
+    }
+
     var blob = Utilities.newBlob(baytlar, mime || 'application/octet-stream', saqlanadigan);
     var fayl = papka.createFile(blob);
 
@@ -89,13 +122,22 @@ function apiT2FaylYukla(nom, b64, mime){
                                       '(GS) ' + saqlanadigan);
         konvert = true;
       }catch(e){
+        /* ⚠️ TUPIKKA QOLDIRMAYMIZ.
+         *
+         * Konvert Google tomonda yiqilishi mumkin va buni biz tuzata
+         * olmaymiz. Lekin CHETLAB O'TISH yo'li bor va u ishlaydi:
+         * fayl allaqachon Drive'da, foydalanuvchi uni Google Sheets
+         * sifatida saqlab, «Yuklanganlardan tanlash» orqali oladi.
+         * Buni aytmasak odam ishini davom ettira olmaydi. */
         var olcham = 0;
-        try{ olcham = Math.round(fayl.getSize() / 1024 / 1024 * 10) / 10; }catch(e4){}
-        return {ok:false,
-          xabar:'Faylni Google Sheets ga o\'girib bo\'lmadi: ' +
+        try{ olcham = Math.round(fayl.getSize() / 1024 * 10) / 10; }catch(e4){}
+        return {ok:false, fayl_id: fayl.getId(), papka_url: papka.getUrl(),
+          xabar:'Google faylni Sheets ga o\'gira olmadi' +
+                (olcham ? ' (' + olcham + ' KB)' : '') + ': ' +
                 ((e && e.message) || e) +
-                (olcham ? '  (fayl hajmi ' + olcham + ' MB)' : ''),
-          fayl_id: fayl.getId()};
+                '  ▸ CHETLAB O\'TISH: fayl Drive\'dagi Tizim_02/_MANBA papkasiga ' +
+                'saqlandi. Uni oching → «Файл → Сохранить как таблицу Google» → ' +
+                'keyin shu yerda «Yuklanganlardan tanlash» tugmasidan oling.'};
       }
     }
 
