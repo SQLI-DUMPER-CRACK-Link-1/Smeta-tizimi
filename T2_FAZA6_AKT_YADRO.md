@@ -108,7 +108,68 @@ qoldiq kamayadi. Bu tizimning mavjud qarori — o'zgartirmadim, lekin
 
 ---
 
+---
+
+# HAYOTIY SIKL (ikkinchi qadam)
+
+```
+qoralama ──tasdiqlash──▶ tasdiqlangan
+    │                          │
+    └────────bekor─────────────┘
+```
+
+## `t2_akt_tasdiqlash(akt_id, kutilgan_versiya, kim, operation_id)`
+
+Reja 6-bo'limi «validate → **lock/recheck** → write» deydi. «Recheck»
+shu yerda hal qiluvchi: qoralama yaratilgandan keyin tasdiqlashgacha
+boshqa hujjatlar qoldiqni yeb qo'ygan yoki **smeta o'zgargan** bo'lishi
+mumkin. Faqat yaratishda tekshirish yetarli emas.
+
+- Qator `for update` bilan **qulflanadi** — parallel tasdiqlash ikki
+  marta o'tmaydi
+- Versiya mos kelmasa — ziddiyat, yozilmaydi
+- Allaqachon tasdiqlangan bo'lsa — `takror:true`, xato emas
+  (idempotent)
+
+## `t2_akt_bekor(akt_id, sabab, kutilgan_versiya, kim)`
+
+⚠️ Hujjat **O'CHIRILMAYDI**, faqat `bekor` deb belgilanadi. Moliyaviy
+hujjatni yo'q qilish tarixni yo'qotadi. Nakopitelniy `holat <> 'bekor'`
+bo'yicha yig'gani uchun natija bir xil, tarix esa saqlanadi.
+
+## Tasdiqlangan hujjat — o'zgarmas
+
+`t2_akt_qator_qulf` trigeri tasdiqlangan hujjat qatorlariga
+INSERT/UPDATE/DELETE ni to'sadi. Busiz tasdiqdan keyin summa
+jimgina o'zgarib ketishi mumkin edi.
+
+## Sinov natijalari (2-qism)
+
+| # | Holat | Natija |
+|---|---|---|
+| 7 | Tasdiqlash | ✅ `tasdiqlangan`, 85 217.40 |
+| 8 | Takror tasdiqlash | ✅ `takror:true`, xato emas |
+| 9 | Tasdiqlangan qatorni o'zgartirish | ✅ **to'sildi**, qiymat o'zgarmadi |
+| 10 | Qoralama → smeta 22.17 dan 15 ga tushdi → tasdiqlash | ✅ **to'sildi**: «jami 22, chegara 15» |
+| 11 | Bekor qilish | ✅ nakopitelniy 22 → 10, qatorlar saqlandi, sabab yozildi |
+
+10-sinov eng muhimi: hujjat yaratilganda **haqiqiy** edi, keyin
+sharoit o'zgardi va tasdiqlash uni ushladi.
+
+## Tozalash haqida
+
+Sinovda `t2_qator.summa` ni qo'lda tiklash **unutilgan edi** — hajm
+tiklandi, summa esa eski qiymatda (67 500) qolib ketdi. Sezilib
+tuzatildi: `summa` `t2_qator` da generated EMAS (faqat `t2_akt_qator`
+da generated), shuning uchun hajmni to'g'ridan-to'g'ri UPDATE qilish
+summani yangilamaydi.
+
+**Xulosa:** `t2_qator` ga to'g'ridan-to'g'ri UPDATE qilmaslik kerak —
+`t2_qator_tahrir` RPC ishlatilsin, u summani qayta hisoblaydi.
+
+---
+
 ## Keyingi bitta ish
 
-`t2_akt_tasdiqlash` va `t2_akt_bekor` — hujjat hayotiy sikli.
-Undan keyin panelda F2/Fakt oynasi.
+Panelda F2/Fakt oynasi — hujjat yaratish, tasdiqlash, bekor qilish
+va nakopitelniy ko'rinishi.
