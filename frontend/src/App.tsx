@@ -25,6 +25,7 @@ const TestObyektlar = lazy(() => import('./test02/TestObyektlar'));
 const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
 const TestImport    = lazy(() => import('./test02/TestImport'));
 const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
+const TestF2Import  = lazy(() => import('./test02/TestF2Import'));
 const TestF2        = lazy(() => import('./test02/TestF2'));
 const TestOqishOlchov = lazy(() => import('./test02/TestOqishOlchov'));
  import { F2Import } from './admin/sahifalar/F2Import';
@@ -89,6 +90,7 @@ export default function App() {
             <Route path="import" element={<TestImport />} />
             <Route path="narxlar" element={<TestNarxlar />} />
             <Route path="f2" element={<TestF2 />} />
+            <Route path="f2-import" element={<TestF2Import />} />
             <Route path="oqish" element={<TestOqishOlchov />} />
           </Route>
           {/* ERP routes for Admin */}
