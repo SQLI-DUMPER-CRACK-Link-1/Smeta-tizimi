@@ -32,11 +32,15 @@ console.log('\n── Borini qayta yozmaslik ──');
    bo'lmagan faylni openById ga berish V8 ni qulatadi), .xlsx ni faqat
    qiymat bilan ochish (#REF! himoyasi), 3 shablon uchun ustun
    avtoaniqlash, F-yoki-E hajm qoidasi. Uni takrorlash xato bo'lardi. */
-tek('Tizim_01 ning apiF2FaylOqi si chaqiriladi', /apiF2FaylOqi\(faylId, varaq, colConfig\)/.test(F2));
+tek('Tizim_01 ning apiF2FaylOqi si chaqiriladi', /apiF2FaylOqi\(faylId, varaq,/.test(F2));
 tek('apiF2FaylOqi haqiqatan mavjud', /function apiF2FaylOqi\(/.test(PANEL));
 tek('varaqlar ro\'yxati ham qayta ishlatiladi', /apiF2VaraklarOl\(faylId\)/.test(F2));
-tek('ustun aniqlash TAKRORLANMAGAN', !/НАИМЕНОВАНИЕ/.test(F2),
-    '_f2UstunAniqla 30_Panel.js da qoladi');
+
+/* Faylni OCHISH/O'QISH mantig'i takrorlanmasligi shart — MIME
+   xavfsizligi, #REF! himoyasi, konvert hammasi 30_Panel.js da qoladi.
+   (Ustun aniqlash uchun zaxira BOR va u ataylab — pastda.) */
+tek('faylni o\'qish mantig\'i TAKRORLANMAGAN',
+    !/getDataRange|SpreadsheetApp\.openById|Drive\.Files/.test(F2));
 
 console.log('\n── Ierarxik moslashtirish ──');
 
@@ -68,9 +72,81 @@ console.log('\n── Ko\'rish va import ajratilgan ──');
 /* Odam import qilishdan OLDIN nima bo'lishini ko'rishi kerak */
 tek('apiT2F2Korish — faqat o\'qiydi', /function apiT2F2Korish\(/.test(F2));
 tek('apiT2F2Import — yozadi', /function apiT2F2Import\(/.test(F2));
-tek('ustun sozlash rejimi qaytariladi', /oqish\.mode === 'config'/.test(F2));
-tek('importda ustun tasdiqlanmagan bo\'lsa TO\'XTAYDI',
-    /avval «Ko\\'rish» bilan/.test(F2));
+/* ⚠️ Ikkalasi AYNI o'qish yordamchisidan foydalanishi shart — aks
+   holda ekranda bir narsa ko'rinib, hujjatga boshqasi tushardi. */
+tek('ko\'rish va import bir xil o\'qish yo\'lidan',
+    (F2.match(/var oq = _t2F2Oqi\(/g) || []).length === 2);
+
+console.log('\n── mode:\'config\' XATO deb o\'qilmasin ──');
+
+/* ⚠️ `apiF2FaylOqi` colConfig berilmasa DOIM mode:'config' qaytaradi —
+   ustunlarni TOPGAN bo'lsa ham. Bu «aniqlanmadi» degani EMAS.
+   Men bir marta shu xatoni qildim: LRV_PLUS faylida ustunlar aslida
+   topilgan edi, lekin ekranda «ustunlar aniqlanmadi» chiqdi. */
+tek('aniqlangan ustunlar AVTOMATIK qabul qilinadi',
+    /var ikkinchi = apiF2FaylOqi\(faylId, varaq, c\)/.test(F2),
+    'birinchi chaqiruv taklif beradi, ikkinchisi daraxtni qaytaradi');
+tek('faqat nom/bir topilmasa sozlash so\'raladi',
+    /if\(!\(Number\(c\.nom\) >= 0\) \|\| !\(Number\(c\.bir\) >= 0\)\)/.test(F2));
+tek('ustunlar javobda qaytariladi (odam tuzatishi uchun)',
+    /cols: oq\.cols/.test(F2));
+
+console.log('\n── Kuchli zaxira aniqlagich ──');
+
+tek('_t2F2UstunKuchli mavjud', /function _t2F2UstunKuchli\(/.test(F2));
+tek('faqat sarlavha TOPILMAGANDA ishlaydi', /if\(!birinchi\.hdrQator\)/.test(F2),
+    'Tizim_01 nikini almashtirmaydi, to\'ldiradi');
+/* Produksiya funksiyasi o'z joyida va imzosi o'zgarmagan */
+tek('30_Panel.js dagi _f2UstunAniqla joyida',
+    /function _f2UstunAniqla\(data\)\{/.test(PANEL),
+    'zaxira aniqlagich uni ALMASHTIRMAYDI, faqat to\'ldiradi');
+
+const km = F2.match(/function _t2F2UstunKuchli[\s\S]*?\n\}\n/);
+tek('kuchli aniqlagich topildi', !!km);
+if (km) {
+  // eslint-disable-next-line no-eval
+  eval(km[0]);
+  const pv = (rows) => rows.map((cells, i) => ({ r: i + 1, cells }));
+
+  /* Uchta HAQIQIY sarlavha — fayllardan olingan */
+  const holatlar = [
+    ['Amfiteatr svodka (ЕД.\\nИЗМ. — qator uzilishi)', pv([
+      [' НАВОИЙ', '', '', '', '', ''],
+      ['N\nп/п', 'НАИМЕНОВАНИЕ', 'ЕД.\nИЗМ.', 'КОЛ-ВО', 'ЦЕНА\n ЗА ЕД.', 'СУММА \n(сум)'],
+      ['1', '2', '3', '4', '5', '6'],
+    ]), { nom: 1, bir: 2, obyom: 3, narx: 4, sum: 5 }],
+
+    ['Fast food LRV (norma/obyom ajralgan)', pv([
+      ['FAST FOOD', '', '', '', '', ''],
+      ['N п.п.', 'Шифр номера норм', 'Наименование работ и затрат',
+       'Единица измерения', 'Количество', ''],
+      ['', '', '', '', 'на. ед. измерения', 'по проектным данным'],
+    ]), { kod: 1, nom: 2, bir: 3, norma: 4, obyom: 5 }],
+
+    ['Fast food svodka (narx guruhi ostida «на.ед.»)', pv([
+      ['FAST FOOD', '', '', '', '', '', '', ''],
+      ['N п.п.', 'Шифр номера норм', 'Наименование работ и затрат',
+       'Единица измерения', 'Количество', 'Сметная стоимость', '', ''],
+      ['', '', '', '', '', 'в базисном уровне', '', ''],
+      ['', '', '', '', '', 'на.ед.изм.', 'общая', ''],
+    ]), { kod: 1, nom: 2, bir: 3, obyom: 4, narx: 5, sum: 6 }],
+  ];
+
+  for (const [nom, preview, kut] of holatlar) {
+    const d = _t2F2UstunKuchli(preview);
+    const mos = d && Object.keys(kut).every((k) => d[k] === kut[k]);
+    tek(nom, !!mos, d ? JSON.stringify(d) : 'topilmadi');
+  }
+
+  /* ⚠️ «на ед.» ikkala guruhda ham uchraydi — chalkashmasligi shart */
+  const svod = _t2F2UstunKuchli(pv([
+    ['N', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ', 'Количество', 'Сметная стоимость', ''],
+    ['', '', '', '', 'на.ед.изм.', 'общая'],
+  ]));
+  tek('narx guruhidagi «на.ед.» NORMA deb o\'qilmadi',
+      svod && svod.norma === -1 && svod.narx === 4,
+      JSON.stringify(svod));
+}
 
 console.log('\n── Yassilash mantig\'i (haqiqiy daraxtda) ──');
 

@@ -38,6 +38,155 @@
  * + topilmadi. Bu tenglik javobda tekshiriladi.
  */
 
+/**
+ * Faylni o'qiydi va DARAXT qaytaradi.
+ *
+ * ⚠️ NEGA BU O'RAM KERAK:
+ *
+ * `apiF2FaylOqi` `colConfig` berilmasa DOIM `mode:'config'` qaytaradi —
+ * u ustunlarni topgan bo'lsa ham. Bu Tizim_01 uchun to'g'ri: u yerda
+ * odam oynada ustunlarni ko'rib tasdiqlaydi.
+ *
+ * Lekin bu «ustunlar aniqlanmadi» degani EMAS. Aniqlangan ustunlar
+ * `cols` da qaytadi. Men avval buni xato deb o'qib, foydalanuvchiga
+ * «ustunlar sarlavhadan aniqlanmadi» degan noto'g'ri xabar
+ * ko'rsatgandim — LRV_PLUS faylida ustunlar aslida TOPILGAN edi.
+ *
+ * Endi: aniqlangani AVTOMATIK qabul qilinadi va ikkinchi chaqiruvda
+ * daraxt olinadi. Ustunlar javobda qaytadi — noto'g'ri bo'lsa odam
+ * tuzatib qayta yuboradi.
+ */
+/**
+ * KUCHLI ustun aniqlagich — `_f2UstunAniqla` topa olmagan holatlar uchun.
+ *
+ * ⚠️ NEGA ALOHIDA, TIZIM_01 NIKINI TUZATMASDAN:
+ * `_f2UstunAniqla` 30_Panel.js da, ya'ni ISHLAB TURGAN produksiyada.
+ * Uni o'zgartirish Tizim_01 ning F2 importiga ta'sir qiladi. Shuning
+ * uchun bu yerda ZAXIRA sifatida turadi: asosiysi topsa — o'shaniki,
+ * topmasa — bu ishlaydi.
+ *
+ * NIMANI QO'SHIMCHA HAL QILADI:
+ *
+ *  1. Sarlavhada QATOR UZILISHI: «ЕД.\nИЗМ.» — asosiy aniqlagich
+ *     `ЕД.ИЗМ` ni qidiradi va `\n` uni buzadi. Bu yerda barcha
+ *     bo'shliq va tinish belgilari olib tashlanadi.
+ *  2. «КОЛ-ВО» qisqartmasi (faqat «КОЛИЧЕСТВО» emas).
+ *  3. Ustun GURUHLARI: «на ед.» pastki sarlavhasi ham МИҚДОР, ham
+ *     НАРХ guruhida uchraydi. Qaysi guruhga tegishli ekani asosiy
+ *     sarlavhadagi ustun o'rniga qarab hal qilinadi — aks holda
+ *     norma va narx chalkashadi.
+ *
+ * @param {Array} preview  `apiF2FaylOqi` qaytargan {r, cells[]} ro'yxati
+ */
+function _t2F2UstunKuchli(preview){
+  if(!preview || !preview.length) return null;
+
+  function toza(s){
+    return String(s == null ? '' : s).toUpperCase()
+      .replace(/[\s.,\-_()№]/g, '');       // bo'shliq, nuqta, tire, qavs
+  }
+
+  var hdr = -1, nom = -1, bir = -1, kod = -1, miqGuruh = -1, narxGuruh = -1;
+
+  for(var i = 0; i < preview.length && hdr < 0; i++){
+    var c = preview[i].cells || [];
+    var n2 = -1, b2 = -1;
+    for(var j = 0; j < c.length; j++){
+      var t = toza(c[j]);
+      if(!t) continue;
+      if(n2 < 0 && t.indexOf('НАИМЕНОВАН') >= 0) n2 = j;
+      if(b2 < 0 && (t.indexOf('ЕДИЗМ') >= 0 || t.indexOf('ЕДИНИЦ') >= 0 ||
+                    t.indexOf('БИРЛИК') >= 0 || t.indexOf('ЎЛЧОВ') >= 0 ||
+                    t.indexOf('УЛЧОВ') >= 0)) b2 = j;
+    }
+    if(n2 < 0 || b2 < 0) continue;
+
+    hdr = i; nom = n2; bir = b2;
+    for(var k = 0; k < c.length; k++){
+      var t2 = toza(c[k]);
+      if(!t2) continue;
+      if(kod < 0 && k !== nom && (t2.indexOf('ШИФР') >= 0 ||
+          t2.indexOf('ОБОСНОВ') >= 0 || t2 === 'КОД')) kod = k;
+      if(miqGuruh < 0 && (t2.indexOf('КОЛИЧЕСТВ') >= 0 || t2.indexOf('КОЛВО') >= 0 ||
+          t2.indexOf('ҲАЖМ') >= 0 || t2.indexOf('ХАЖМ') >= 0)) miqGuruh = k;
+      if(narxGuruh < 0 && (t2.indexOf('ЦЕНА') >= 0 || t2.indexOf('СТОИМОСТ') >= 0 ||
+          t2.indexOf('СУММА') >= 0 || t2.indexOf('НАРХ') >= 0)) narxGuruh = k;
+    }
+    if(kod < 0 && nom >= 1) kod = nom - 1;
+  }
+  if(hdr < 0) return null;
+
+  /* ── Pastki sarlavhalar: qaysi GURUHGA tushgani ustun o'rni bilan
+     hal qilinadi. «на ед.» ikkala guruhda ham bo'lishi mumkin. ── */
+  var norma = -1, obyom = -1, narx = -1, sum = -1;
+  for(var r2 = hdr; r2 < Math.min(hdr + 3, preview.length); r2++){
+    var rc = preview[r2].cells || [];
+    for(var m = 0; m < rc.length; m++){
+      var t3 = toza(rc[m]);
+      if(!t3) continue;
+      var miqda  = (miqGuruh  >= 0 && m >= miqGuruh  && (narxGuruh < 0 || m < narxGuruh));
+      var narxda = (narxGuruh >= 0 && m >= narxGuruh);
+
+      if(miqda){
+        if(norma < 0 && (t3.indexOf('НАЕД') >= 0 || t3.indexOf('НАЕДИНИЦУ') >= 0)) norma = m;
+        if(obyom < 0 && (t3.indexOf('ПОПРОЕКТ') >= 0 || t3.indexOf('ЖАМИ') >= 0 ||
+                         t3.indexOf('ОБЩ') >= 0)) obyom = m;
+      }else if(narxda){
+        if(narx < 0 && (t3.indexOf('НАЕД') >= 0 || t3.indexOf('ЗАЕД') >= 0)) narx = m;
+        if(sum  < 0 && (t3.indexOf('ОБЩ') >= 0 || t3.indexOf('СУММА') >= 0)) sum = m;
+      }
+    }
+  }
+
+  /* Pastki sarlavha bo'lmasa — guruh ustunining o'zi */
+  if(obyom < 0 && miqGuruh  >= 0) obyom = (norma >= 0 ? norma + 1 : miqGuruh);
+  if(narx  < 0 && narxGuruh >= 0) narx  = narxGuruh;
+  if(sum   < 0 && narx      >= 0) sum   = narx + 1;
+  if(obyom < 0) obyom = bir + 1;
+  if(norma < 0) norma = -1;              // yagona miqdor ustuni — norma yo'q
+
+  return {kod: kod, nom: nom, bir: bir, norma: norma,
+          obyom: obyom, narx: narx, sum: sum, hdrRow: preview[hdr].r - 1};
+}
+
+function _t2F2Oqi(faylId, varaq, colConfig){
+  var birinchi = apiF2FaylOqi(faylId, varaq, colConfig || null);
+  if(!birinchi || !birinchi.ok){
+    return birinchi || {ok:false, xabar:'Fayl o\'qilmadi'};
+  }
+
+  /* Daraxt darhol kelgan bo'lsa (colConfig berilgan edi) */
+  if(birinchi.mode !== 'config'){
+    return {ok:true, tree: birinchi.tree || [], cols: colConfig || null,
+            avto: false};
+  }
+
+  var c = birinchi.cols || {};
+  var usul = 'tizim_01';
+
+  /* Asosiy aniqlagich sarlavhani TOPMAGAN bo'lsa (hdrQator=0) —
+     kuchli zaxira aniqlagich sinaladi. */
+  if(!birinchi.hdrQator){
+    var kuchli = _t2F2UstunKuchli(birinchi.preview);
+    if(kuchli){ c = kuchli; usul = 'kuchli'; }
+  }
+
+  /* Nom va birlik topilmasa — haqiqatan aniqlab bo'lmadi */
+  if(!(Number(c.nom) >= 0) || !(Number(c.bir) >= 0)){
+    return {ok:false, sozlash:true, cols:c, preview: birinchi.preview,
+            hdrQator: birinchi.hdrQator,
+            xabar:'Faylda «НАИМЕНОВАНИЕ» va «ЕД.ИЗМ» sarlavhalari topilmadi. ' +
+                  'Ustunlarni qo\'lda ko\'rsating.'};
+  }
+
+  var ikkinchi = apiF2FaylOqi(faylId, varaq, c);
+  if(!ikkinchi || !ikkinchi.ok){
+    return ikkinchi || {ok:false, xabar:'Fayl ikkinchi o\'qishda yiqildi'};
+  }
+  return {ok:true, tree: ikkinchi.tree || [], cols: c, avto: true, usul: usul,
+          hdrQator: birinchi.hdrQator, preview: birinchi.preview};
+}
+
 /** Daraxtni tekis ro'yxatga — ota blok belgilari bilan. */
 function _t2F2Tekisla(daraxt){
   var chiqish = [];
@@ -93,14 +242,10 @@ function apiT2F2Korish(obyektNom, faylId, varaq, colConfig){
     var ob = _t2ObyektOl(obyektNom);
     if(!ob) return {ok:false, xabar:'Obyekt bazada topilmadi: ' + obyektNom};
 
-    /* Tizim_01 ning tasdiqlangan o'qish mantig'i */
-    var oqish = apiF2FaylOqi(faylId, varaq, colConfig);
-    if(!oqish || !oqish.ok) return oqish || {ok:false, xabar:'Fayl o\'qilmadi'};
+    var oq = _t2F2Oqi(faylId, varaq, colConfig);
+    if(!oq.ok) return oq;
 
-    /* Ustun sozlash rejimi — foydalanuvchi tasdiqlashi kerak */
-    if(oqish.mode === 'config') return oqish;
-
-    var qatorlar = _t2F2Tekisla(oqish.tree || []);
+    var qatorlar = _t2F2Tekisla(oq.tree || []);
     if(!qatorlar.length){
       return {ok:false, xabar:'Faylda hajmi bor bironta qator topilmadi. ' +
                               'Ustunlar to\'g\'ri tanlanganmi?'};
@@ -112,6 +257,10 @@ function apiT2F2Korish(obyektNom, faylId, varaq, colConfig){
 
     return {ok:true, obyekt: obyektNom, obyekt_id: ob.id,
             fayl_qator: qatorlar.length, moslash: mos,
+            /* Ustunlar KO'RINIB tursin — noto'g'ri aniqlangan bo'lsa
+               odam tuzatib qayta yuborishi mumkin */
+            cols: oq.cols, avto: oq.avto, hdrQator: oq.hdrQator,
+            preview: oq.preview,
             ms: Date.now() - t0};
 
   }catch(e){
@@ -147,14 +296,10 @@ function apiT2F2Import(obyektNom, faylId, varaq, oy, tur, raqam, operationId, co
                               'ikkinchi hujjat yaratadi'};
     }
 
-    var oqish = apiF2FaylOqi(faylId, varaq, colConfig);
-    if(!oqish || !oqish.ok) return oqish || {ok:false, xabar:'Fayl o\'qilmadi'};
-    if(oqish.mode === 'config'){
-      return {ok:false, xabar:'Ustunlar aniqlanmadi — avval «Ko\'rish» bilan ' +
-                              'ustunlarni tasdiqlang', config: oqish};
-    }
+    var oq = _t2F2Oqi(faylId, varaq, colConfig);
+    if(!oq.ok) return oq;
 
-    var qatorlar = _t2F2Tekisla(oqish.tree || []);
+    var qatorlar = _t2F2Tekisla(oq.tree || []);
     if(!qatorlar.length){
       return {ok:false, xabar:'Faylda hajmi bor bironta qator topilmadi'};
     }

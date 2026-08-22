@@ -48,9 +48,25 @@ type Moslash = {
   topilmadi: number; kafolat: boolean; qatorlar: MosQator[];
 };
 
+type Ustunlar = Record<string, number>;
+
 type KorishNatija = {
   ok: boolean; xabar?: string; fayl_qator?: number; moslash?: Moslash;
-  mode?: string; cols?: Record<string, number>; ms?: number;
+  cols?: Ustunlar; avto?: boolean; usul?: string; hdrQator?: number;
+  sozlash?: boolean; ms?: number;
+};
+
+/** Ustun nomlari — ekranda shu tartibda ko'rsatiladi. */
+const USTUN_NOM: Array<[string, string]> = [
+  ['kod', 'КОД'], ['nom', 'НОМ'], ['bir', 'БИРЛИК'], ['norma', 'НОРМА'],
+  ['obyom', 'ҲАЖМ'], ['narx', 'НАРХ'], ['sum', 'СУММА'],
+];
+
+/** 0-based indeksni Excel harfiga (0→A, 25→Z, 26→AA). */
+const HARF = (i: number): string => {
+  let s = '', n = i;
+  do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0);
+  return s;
 };
 
 type ImportNatija = {
@@ -92,6 +108,9 @@ export default function TestF2Import() {
   /* ⚠️ Oqim boshlanganda BIR MARTA. Qayta urinishda o'zgarmasin —
      aks holda ikkinchi hujjat yaraladi. */
   const [opId, setOpId] = useState('');
+  const [ustunOchiq, setUstunOchiq] = useState(false);
+  /* Qo'lda tuzatilgan ustunlar — bo'sh bo'lsa avtoaniqlangani ishlatiladi */
+  const [qolUstun, setQolUstun] = useState<Ustunlar>({});
 
   useEffect(() => {
     sbT2ObyektlarOlKomp(joriy?.id).then((r) => {
@@ -143,15 +162,18 @@ export default function TestF2Import() {
     } finally { setYuklanmoqda(false); }
   };
 
-  const kor = async () => {
+  const kor = async (qoldan?: boolean) => {
     if (!obyekt || !faylId) { toast('Obyekt va fayl tanlang', 'warn'); return; }
     setKorilmoqda(true); setNatija(null);
     try {
-      const r = await gas<KorishNatija>('apiT2F2Korish', obyekt, faylId, varaq, null);
+      /* Qo'lda tuzatilgan bo'lsa o'shani yuboramiz, aks holda
+         server o'zi aniqlaydi. */
+      const cfg = qoldan && Object.keys(qolUstun).length
+        ? { ...(korish?.cols || {}), ...qolUstun } : null;
+      const r = await gas<KorishNatija>('apiT2F2Korish', obyekt, faylId, varaq, cfg);
       setKorish(r);
       setOpId(yangiOperationId());      // ⚠️ faqat shu yerda
       if (!r.ok) toast(r.xabar || 'O\'qilmadi', 'danger', undefined, 12000);
-      else if (r.mode === 'config') toast('Ustunlar avtomatik aniqlanmadi', 'warn', undefined, 9000);
     } catch (e: any) {
       setKorish({ ok: false, xabar: e?.message || String(e) });
     } finally { setKorilmoqda(false); }
@@ -162,7 +184,10 @@ export default function TestF2Import() {
     setImportda(true);
     try {
       const r = await gas<ImportNatija>('apiT2F2Import', obyekt, faylId, varaq,
-        oy + '-01', tur, raqam.trim() || null, opId, null);
+        oy + '-01', tur, raqam.trim() || null, opId,
+        /* ⚠️ Ko'rishda ishlatilgan AYNI ustunlar. Aks holda ekranda
+           bir narsa ko'rinib, hujjatga boshqasi tushishi mumkin. */
+        korish?.cols || null);
       setNatija(r);
       const a = r.natija?.akt;
       toast(r.ok ? 'Hujjat yaratildi (qoralama)'
@@ -233,7 +258,7 @@ export default function TestF2Import() {
             </div>
           )}
 
-          <button onClick={kor} disabled={korilmoqda || !obyekt || !faylId}
+          <button onClick={() => kor()} disabled={korilmoqda || !obyekt || !faylId}
             className="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium
                        hover:bg-accent/90 disabled:opacity-40 inline-flex items-center gap-2">
             {korilmoqda ? <RefreshCw size={15} className="animate-spin" /> : <FileInput size={15} />}
@@ -250,12 +275,68 @@ export default function TestF2Import() {
             </p>
           </div>
         )}
-        {korish?.mode === 'config' && (
+        {/* ── Aniqlangan ustunlar — ko'rinib tursin va tuzatsa bo'lsin ──
+          * Avval bu yerda «ustunlar aniqlanmadi» degan NOTO'G'RI xabar
+          * chiqardi: `apiF2FaylOqi` colConfig berilmasa ustunlarni
+          * topgan bo'lsa ham `mode:'config'` qaytaradi (Tizim_01 da
+          * odam tasdiqlashi uchun). Endi aniqlangani avtomatik
+          * qabul qilinadi va shu yerda ko'rsatiladi. */}
+        {korish?.ok && korish.cols && (
+          <div className="karta p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <p className="text-[12px] font-medium text-text">
+                Aniqlangan ustunlar
+                {korish.hdrQator ? ` · sarlavha ${korish.hdrQator}-qatorda` : ''}
+              </p>
+              <button onClick={() => setUstunOchiq((v) => !v)}
+                className="text-[11px] text-accent hover:underline">
+                {ustunOchiq ? 'yopish' : 'noto\'g\'ri bo\'lsa tuzatish'}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-text-dim">
+              {USTUN_NOM.map(([k, nm]) => (
+                <span key={k}>
+                  {nm}: <b className={korish.cols![k] >= 0 ? 'text-text' : 'text-text-mute'}>
+                    {korish.cols![k] >= 0 ? HARF(korish.cols![k]) : '—'}
+                  </b>
+                </span>
+              ))}
+            </div>
+
+            {ustunOchiq && (
+              <div className="mt-2 pt-2 border-t border-border">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {USTUN_NOM.map(([k, nm]) => (
+                    <div key={k}>
+                      <label className="text-[10px] text-text-mute block mb-0.5">{nm}</label>
+                      <select value={String(qolUstun[k] ?? korish.cols![k] ?? -1)}
+                        onChange={(e) => setQolUstun((p) =>
+                          ({ ...p, [k]: Number(e.target.value) }))}
+                        className="w-full bg-[var(--surface-2)] border border-border rounded
+                                   px-1.5 py-1 text-[11px] text-text outline-none">
+                        <option value="-1">— yo'q —</option>
+                        {Array.from({ length: 15 }, (_, i) => (
+                          <option key={i} value={i}>{HARF(i)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => kor(true)}
+                  className="mt-2 px-3 py-1.5 rounded-lg border border-border text-[12px]
+                             text-text hover:bg-white/5">
+                  Shu ustunlar bilan qayta o'qish
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {korish && !korish.ok && (korish as any).sozlash && (
           <div className="karta p-3 border-warn/40 bg-warn/5">
             <p className="text-[12px] text-warn">
-              Ustunlar sarlavhadan aniqlanmadi. Bu fayl odatiy shabloncha emas —
-              hozircha uni qo'lda sozlash Tizim_01 dagi «Ф2 Импорт» oynasida
-              qilinadi.
+              Sarlavha topilmadi — ustunlarni qo'lda ko'rsating.
             </p>
           </div>
         )}
