@@ -21,6 +21,7 @@ const TESTLAR = [
   ['TIZIM_02 kompaniya + versiya',      't2_kompaniya.test.cjs'],
   ['TIZIM_02 hujjat darajasi',          't2_hujjat.test.cjs'],
   ['TIZIM_02 ko‘zgu LRV_PLUS shakli',   't2_kozgu.test.cjs'],
+  ['TIZIM_02 F2 fayl importi',          't2_f2import.test.cjs'],
   ['TIZIM_02 smeta sarlavhasi',         't2_format.test.cjs'],
 ];
 
