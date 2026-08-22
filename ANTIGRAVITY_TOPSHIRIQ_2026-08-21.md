@@ -11,11 +11,11 @@ Bular taxmin emas, bugun o'lchangan.
 
 | Narsa | Qiymat |
 |---|---|
-| GAS versiyasi | **v360**, 20 deployment + @HEAD = **21/21** |
-| Oxirgi commit | `28167fa` |
+| GAS versiyasi | **v361**, 20 deployment + @HEAD = **21/21** |
+| Oxirgi commit | `73ac73d` |
 | Frontend | Cloudflare Pages, `smeta-tizimi.pages.dev` |
 | Supabase loyiha | `tuoyrzadkgoltpqkdiyx` |
-| Testlar | 7 to'plam, **194 tekshiruv**, hammasi o'tadi |
+| Testlar | 8 to'plam, **220 tekshiruv**, hammasi o'tadi |
 
 ## Ma'lumot holati
 
@@ -45,8 +45,34 @@ where q.tur in ('rs','mat','ob') group by o.nom;
 | 4 — Frontend klient | ✅ |
 | 5 — Sheets klient | ✅ ikki tomonlama, avto-sinx, halqa himoyasi |
 | 6 — F2 / Fakt / Nakopitelniy | ✅ backend + darvoza + ekran |
+| 6b — **F2 fayl importi** | ✅ **yangi** (quyida) |
 | 7 — Sklad / xarid | ⬜ **KEYINGI** |
 | 10 — Benchmark | ✅ o'lchandi |
+
+## F2 fayl importi — 2026-08-21 da qo'shildi
+
+Tashqi Excel F2/AKT faylini smetaga bog'laydi. `/admin/test/f2-import`
+
+| Qism | Joyi |
+|---|---|
+| Faylni o'qish | `apiF2FaylOqi` (30_Panel.js) — **Tizim_01 niki, qayta ishlatiladi** |
+| Ko'prik | `T2_F2Import.js` — daraxtni tekislaydi, ota blok belgilarini qo'shadi |
+| Moslashtirish | `t2_f2_moslash()` — faqat o'qiydi |
+| Import | `t2_f2_import()` — moslashtirish + hujjat |
+| Ekran | `TestF2Import.tsx` — uch qadam |
+
+⚠️ **MOSLASHTIRISH IERARXIK.** Fast food da 1 262 resurs qatori bor,
+lekin unikal (nom, birlik) juftligi atigi **404** — bir resurs
+o'rtacha 3 marta uchraydi. Jonli sinovda ota ma'lumotisiz bitta nom
+**106 nomzod** bergan. Shuning uchun avval ota blok, keyin resurs
+o'sha blok ichida qidiriladi.
+
+⚠️ **NOANIQLIK JIM HAL QILINMAYDI.** Bir nechta nomzod chiqsa qator
+«ikkilamchi» bo'ladi va hujjatga **kirmaydi**. Tavakkaliga birinchisini
+tanlash — pulni boshqa blokka yozish demak.
+
+⚠️ **REESTR KAFOLATI:** `kirgan = hujjatga kirdi + ikkilamchi +
+topilmadi`. Ekranda ko'rsatiladi; buzilsa import tugmasi bloklanadi.
 
 ---
 
@@ -243,6 +269,29 @@ Bajaring:
 Topilgan har bir kamchilikni tuzating. **Sinovdan keyin ma'lumotni
 tozalang** (`t2_akt` bo'sh qolsin) va Fast food jamisi
 `744 054 071.73` ekanini tasdiqlang.
+
+## TOPSHIRIQ A2 — F2 IMPORTNI HAQIQIY FAYLDA SINASH
+**Ustuvorlik: A bilan teng. Baza tomoni sinovdan o'tgan, HAQIQIY
+Excel fayli bilan sinalmagan.**
+
+Baza funksiyalari 6 holatda tekshirilgan (ota bilan / otasiz /
+topilmagan / aralash / f2>fakt / takroriy). Lekin **haqiqiy F2 Excel
+fayli** hali o'tkazilmagan.
+
+Bajaring:
+1. Foydalanuvchidan yoki `Ой` papkasidan **haqiqiy F2 faylini** oling
+2. `/admin/test/f2-import` da «Ko'rish» bosing
+3. Qarang: nechta moslandi, nechtasi ikkilamchi
+   - **Ikkilamchi ko'p bo'lsa** — bu kutilgan holat emas. Sabab:
+     F2 faylida blok qatorlari yo'q yoki `apiF2FaylOqi` ularni
+     `bl` deb tanimagan. `_t2F2Tekisla` ota belgilarini o'sha
+     `type:'bl'` tugunlaridan oladi.
+4. Import qiling, `t2_akt` da hujjat va qatorlar borligini tekshiring
+5. **Tozalang** va Fast food jamisi o'zgarmaganini tasdiqlang
+
+Agar ustunlar avtoaniqlanmasa `mode:'config'` qaytadi — hozircha bu
+holat ekranda faqat aytiladi, sozlash oynasi YO'Q. Kerak bo'lsa
+qo'shing (Tizim_01 dagi «Ф2 Импорт» oynasi namuna).
 
 ## TOPSHIRIQ B — Fayl yuklashdagi «Internal Error»
 
