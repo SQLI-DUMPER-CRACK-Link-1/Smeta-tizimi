@@ -1060,8 +1060,11 @@ export default function TestF2Import() {
     const total = aktBarglar.length;
     const mapped = aktBarglar.filter((n) => qolBog[n.uid] !== undefined).length;
     const pct = total > 0 ? Math.round((mapped / total) * 100) : 0;
-    return { total, mapped, pct };
-  }, [aktBarglar, qolBog]);
+    const unmapped = total - mapped;
+    const withTaklif = aktBarglar.filter((n) => !qolBog[n.uid] && takliflar[n.uid]?.length > 0).length;
+    const manfiy = aktBarglar.filter((n) => (n.hajm ?? 0) < 0).length;
+    return { total, mapped, pct, unmapped, withTaklif, manfiy };
+  }, [aktBarglar, qolBog, takliflar]);
 
   const farq = aktJami - boglanganJami;
   const constOk = Math.abs(farq) < 0.01;
@@ -1402,15 +1405,22 @@ export default function TestF2Import() {
                   <div className="flex items-center justify-between w-full">
                     <span className="font-bold text-xs">F2 AKT FAYLI</span>
                     <button onClick={onAvtoMoslash}
+                      title="Avtomatik moslash (Ctrl+Shift+M)"
                       className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-2.5 py-1 rounded text-[10px] transition-colors font-bold whitespace-nowrap cursor-pointer">
-                      🪄 + Barchasini Avto-Moslash
+                      🪄 Avto-Moslash <kbd className="ml-0.5 px-1 py-0.5 rounded text-[8px] bg-black/30 text-emerald-300 font-mono">⌃⇧M</kbd>
                     </button>
                   </div>
                   <div className="relative">
                     <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-mute" />
                     <input id="f2-search-input" value={f2Qidiruv} onChange={(e) => setF2Qidiruv(e.target.value)}
                       placeholder="nom yoki kod bo'yicha..."
-                      className="w-full bg-[var(--surface-2)] border border-border rounded-lg pl-7 pr-3 py-1 text-[11px] text-text outline-none" />
+                      className="w-full bg-[var(--surface-2)] border border-border rounded-lg pl-7 pr-7 py-1 text-[11px] text-text outline-none" />
+                    {f2Qidiruv && (
+                      <button onClick={() => setF2Qidiruv('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-text-mute hover:text-white transition-colors cursor-pointer">
+                        <X size={11} />
+                      </button>
+                    )}
                   </div>
                 </div>
               }
@@ -1420,6 +1430,20 @@ export default function TestF2Import() {
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-xs">SMETA DARAXYI (Supabase)</span>
                       {smetaLoading && <RefreshCw size={12} className="animate-spin text-accent" />}
+                      {!smetaLoading && korish?.obyekt_id && (
+                        <button
+                          onClick={async () => {
+                            setSmetaLoading(true);
+                            const r = await sbT2DaraxtOl(korish.obyekt_id as number);
+                            setSmetaLoading(false);
+                            if (r.ok && r.qatorlar) setSmetaTree(sbT2TreeQur(r.qatorlar));
+                            else toast('Smeta qayta yuklanmadi', 'danger');
+                          }}
+                          title="Smeta daraxtini qayta yuklash"
+                          className="p-1 rounded hover:bg-white/10 text-text-mute hover:text-white transition-colors cursor-pointer">
+                          <RefreshCw size={11} />
+                        </button>
+                      )}
                     </div>
                     {/* Varaq filter dropdown */}
                     {smetaVaraqlari.length > 0 && (
@@ -1462,24 +1486,45 @@ export default function TestF2Import() {
                     <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-mute" />
                     <input value={smetaQidiruv} onChange={(e) => setSmetaQidiruv(e.target.value)}
                       placeholder="nom yoki kod bo'yicha..."
-                      className="w-full bg-[var(--surface-2)] border border-border rounded-lg pl-7 pr-3 py-1 text-[11px] text-text outline-none" />
+                      className="w-full bg-[var(--surface-2)] border border-border rounded-lg pl-7 pr-7 py-1 text-[11px] text-text outline-none" />
+                    {smetaQidiruv && (
+                      <button onClick={() => setSmetaQidiruv('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-text-mute hover:text-white transition-colors cursor-pointer">
+                        <X size={11} />
+                      </button>
+                    )}
                   </div>
                 </div>
               }
               chapOng={
                 <div className="flex flex-col gap-1.5 w-full">
                   <div className="flex gap-1 bg-black/20 p-1 rounded-lg">
-                    {(['hammasi', 'boglanmagan', 'boglangan', 'manfiy', 'takliflar'] as const).map((f) => (
-                      <button key={f} onClick={() => setFiltr(f)}
-                        className={`flex-1 h-6 px-1 rounded-md text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap
-                          ${filtr === f ? 'bg-accent text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                        {f === 'hammasi' ? 'Barchasi'
-                          : f === 'boglangan' ? '✓ Bog‘langan'
-                          : f === 'manfiy' ? `− Qaytarim`
-                          : f === 'boglanmagan' ? '○ Bog‘lanmagan'
-                          : '🎯 Takliflar'}
-                      </button>
-                    ))}
+                    {(['hammasi', 'boglanmagan', 'boglangan', 'manfiy', 'takliflar'] as const).map((f) => {
+                      const count =
+                        f === 'hammasi' ? matchingStats.total
+                        : f === 'boglangan' ? matchingStats.mapped
+                        : f === 'boglanmagan' ? matchingStats.unmapped
+                        : f === 'manfiy' ? matchingStats.manfiy
+                        : matchingStats.withTaklif;
+                      return (
+                        <button key={f} onClick={() => setFiltr(f)}
+                          className={`flex-1 h-6 px-1 rounded-md text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1
+                            ${filtr === f ? 'bg-accent text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                          <span>
+                            {f === 'hammasi' ? 'Barchasi'
+                              : f === 'boglangan' ? "✓ Bog\u2019langan"
+                              : f === 'manfiy' ? '− Qaytarim'
+                              : f === 'boglanmagan' ? "○ Bog\u2019lanmagan"
+                              : '🎯 Takliflar'}
+                          </span>
+                          {count > 0 && (
+                            <span className={`px-1 rounded-full text-[9px] leading-tight ${filtr === f ? 'bg-white/25' : 'bg-white/10'}`}>
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setOchiqSignal(s => s > 0 ? s + 1 : 1)}
