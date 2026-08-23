@@ -148,6 +148,7 @@ export default function TestF2Import() {
   const [takliflar, setTakliflar] = useState<Record<string, any[]>>({});
   const [smetaScrollTo, setSmetaScrollTo] = useState<string | null>(null);
   const [tanlanganSmetaVaraqlar, setTanlanganSmetaVaraqlar] = useState<string[]>([]);
+  const [undoStack, setUndoStack] = useState<Array<Record<string, number>>>([]);
 
   // Obyektlarni yuklash
   useEffect(() => {
@@ -410,6 +411,7 @@ export default function TestF2Import() {
       }
     }
 
+    setUndoStack((prev) => [...prev.slice(-29), qolBog]);   // keep last 30
     setQolBog((prev) => ({ ...prev, ...newBog }));
     toast(`✓ Bog'landi: ${String(n.nom).slice(0, 40)}`);
   };
@@ -432,6 +434,7 @@ export default function TestF2Import() {
       collectUids(n);
     }
 
+    setUndoStack((prev) => [...prev.slice(-29), qolBog]);
     setQolBog((prev) => {
       const next = { ...prev };
       uidsToRemove.forEach((uid) => {
@@ -439,7 +442,7 @@ export default function TestF2Import() {
       });
       return next;
     });
-    toast('Bog\'lanish bekor qilindi');
+    toast("Bog'lanish bekor qilindi");
   };
 
   const smetaBogBekor = (smetaKalit: string) => {
@@ -456,7 +459,39 @@ export default function TestF2Import() {
     }
   };
 
-  // Client-side auto-matching logic (copied and optimized from Tizim_01)
+  // Reset mappings to empty — with confirmation
+  const resetBinds = () => {
+    if (!window.confirm(`Barcha ${Object.keys(qolBog).length} ta bog'lanish o'chiriladi. Davom etasizmi?`)) return;
+    setUndoStack((prev) => [...prev.slice(-29), qolBog]);
+    setQolBog({});
+    toast("Barcha bog'lanishlar tozalandi");
+  };
+
+  // Apply ALL top suggestions for unbound rows at once
+  const applyAllTakliflar = () => {
+    const bandJoy = new Set<number>(Object.values(qolBog));
+    const yangiBog: Record<string, number> = {};
+    let count = 0;
+
+    for (const [uid, cands] of Object.entries(takliflar)) {
+      if (qolBog[uid] !== undefined) continue;      // already bound
+      const best = cands.find((c) => !bandJoy.has(c.id));
+      if (best) {
+        yangiBog[uid] = best.id;
+        bandJoy.add(best.id);
+        count++;
+      }
+    }
+
+    if (count === 0) {
+      toast("Qo'llanishga tayyor yangi taklif qolmadi", "warn");
+      return;
+    }
+
+    setUndoStack((prev) => [...prev.slice(-29), qolBog]);
+    setQolBog((prev) => ({ ...prev, ...yangiBog }));
+    toast(`🎯 ${count} ta taklif qo'llandi!`, "ok");
+  };
   const onAvtoMoslash = () => {
     if (!korish?.tree || !smetaTree) return;
     let matchCount = 0;
@@ -518,6 +553,7 @@ export default function TestF2Import() {
     yur(korish.tree);
 
     if (matchCount > 0) {
+      setUndoStack((prev) => [...prev.slice(-29), qolBog]);
       setQolBog((prev) => ({ ...prev, ...yangiBog }));
       toast(`✓ Yuridik aniq mos tushgan ${matchCount} ta qator avtomatik bog'landi!`, "ok");
     } else {
@@ -541,12 +577,16 @@ export default function TestF2Import() {
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
-        const keys = Object.keys(qolBog);
-        if (keys.length > 0) {
-          const lastKey = keys[keys.length - 1];
-          bogBekor(lastKey);
-          toast("✓ Oxirgi bog'lanish bekor qilindi (Ctrl+Z)", "ok");
-        }
+        setUndoStack((prev) => {
+          if (prev.length === 0) {
+            toast("Qaytarish uchun tarix yo'q", "warn");
+            return prev;
+          }
+          const last = prev[prev.length - 1];
+          setQolBog(last);
+          toast("✓ Qaytarildi (Ctrl+Z)", "ok");
+          return prev.slice(0, -1);
+        });
         return;
       }
 
@@ -567,11 +607,6 @@ export default function TestF2Import() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [qolBog, onAvtoMoslash]);
 
-  // Reset mappings to empty
-  const resetBinds = () => {
-    setQolBog({});
-    toast('Barcha bog\'lanishlar tozalandi');
-  };
 
   // Barcha bog'lanmagan F2 qatorlari uchun takliflarni hisoblash (Fuzzy heuristic from Tizim_01)
   useEffect(() => {
@@ -1381,14 +1416,36 @@ export default function TestF2Import() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button onClick={() => { setQadam(0); setNatija(null); }}
                   className="px-3 py-1.5 rounded-lg border border-border text-[12px] text-text-dim hover:bg-white/5">
                   Orqaga
                 </button>
+                {undoStack.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setUndoStack((prev) => {
+                        if (prev.length === 0) return prev;
+                        const last = prev[prev.length - 1];
+                        setQolBog(last);
+                        toast("✓ Qaytarildi", "ok");
+                        return prev.slice(0, -1);
+                      });
+                    }}
+                    title={`${undoStack.length} ta qadam qaytarish mumkin`}
+                    className="px-3 py-1.5 rounded-lg border border-border text-[12px] text-text-dim hover:bg-white/5 inline-flex items-center gap-1">
+                    ↩ Qaytarish <span className="text-[10px] bg-white/10 px-1 rounded">{undoStack.length}</span>
+                  </button>
+                )}
+                {matchingStats.withTaklif > 0 && (
+                  <button onClick={applyAllTakliflar}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[12px] text-emerald-400 hover:bg-emerald-500/25 inline-flex items-center gap-1 font-bold transition-all">
+                    🎯 Takliflarni qo'llash ({matchingStats.withTaklif})
+                  </button>
+                )}
                 <button onClick={resetBinds}
                   className="px-3 py-1.5 rounded-lg border border-danger/30 text-[12px] text-danger hover:bg-danger/5 inline-flex items-center gap-1">
-                  <Trash2 size={13} /> Qayta tiklash
+                  <Trash2 size={13} /> Tozalash
                 </button>
                 <button onClick={yozish} disabled={yozilmoqda}
                   className="px-4 py-1.5 rounded-lg bg-accent text-white text-[12px] font-bold hover:bg-accent/90 disabled:opacity-40 inline-flex items-center gap-1.5">
