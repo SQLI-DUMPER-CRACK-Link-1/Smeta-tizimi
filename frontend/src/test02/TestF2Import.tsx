@@ -147,6 +147,7 @@ export default function TestF2Import() {
   // Takliflar va o'tish (scroll) holatlari
   const [takliflar, setTakliflar] = useState<Record<string, any[]>>({});
   const [smetaScrollTo, setSmetaScrollTo] = useState<string | null>(null);
+  const [tanlanganSmetaVaraqlar, setTanlanganSmetaVaraqlar] = useState<string[]>([]);
 
   // Obyektlarni yuklash
   useEffect(() => {
@@ -832,12 +833,51 @@ export default function TestF2Import() {
     return map;
   }, [qolBog, korish?.tree]);
 
+  // All unique sheet names in smetaTree
+  const smetaVaraqlari = useMemo(() => {
+    if (!smetaTree) return [];
+    const set = new Set<string>();
+    const collect = (nodes: TreeNode[]) => {
+      nodes.forEach(n => {
+        if (n.varaq) set.add(n.varaq);
+        if (n.children) collect(n.children);
+      });
+    };
+    collect(smetaTree);
+    return Array.from(set).sort();
+  }, [smetaTree]);
+
   const smetaDaraxtFiltrlangan = useMemo(() => {
     if (!smetaTree) return [];
-    const tree = mapSmetaToDaraxt(smetaTree);
+    let tree = mapSmetaToDaraxt(smetaTree);
+
+    if (tanlanganSmetaVaraqlar.length > 0) {
+      const matchVaraq = (node: DaraxtTugun): boolean => {
+        if (node.type !== 'rz') {
+          const v = String(node.kalit).split('#')[0];
+          return tanlanganSmetaVaraqlar.includes(v);
+        }
+        if (node.children) {
+          return node.children.some(c => matchVaraq(c));
+        }
+        return false;
+      };
+
+      const filterTree = (nodes: DaraxtTugun[]): DaraxtTugun[] => {
+        return nodes
+          .filter(n => matchVaraq(n))
+          .map(n => ({
+            ...n,
+            children: n.children ? filterTree(n.children) : undefined
+          }));
+      };
+
+      tree = filterTree(tree);
+    }
+
     return filterDaraxt(tree, smetaQidiruv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [smetaTree, smetaQidiruv, smetaBoglanganAktMap]);
+  }, [smetaTree, smetaQidiruv, smetaBoglanganAktMap, tanlanganSmetaVaraqlar]);
 
   // Tree mappers to DaraxtTugun format
   function mapAktToDaraxt(nodes: any[]): DaraxtTugun[] {
@@ -1352,9 +1392,47 @@ export default function TestF2Import() {
               }
               ongSarlavha={
                 <div className="flex flex-col gap-2 w-full">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-bold text-xs">SMETA DARAXYI (Supabase)</span>
-                    {smetaLoading && <RefreshCw size={12} className="animate-spin text-accent" />}
+                  <div className="flex items-center justify-between w-full flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs">SMETA DARAXYI (Supabase)</span>
+                      {smetaLoading && <RefreshCw size={12} className="animate-spin text-accent" />}
+                    </div>
+                    {/* Varaq filter dropdown */}
+                    {smetaVaraqlari.length > 0 && (
+                      <div className="relative group/sheet-sel">
+                        <button className="px-2 py-0.5 rounded bg-[var(--surface-2)] border border-border text-[10px] text-text hover:bg-white/5 cursor-pointer font-bold select-none">
+                          📂 {tanlanganSmetaVaraqlar.length === 0 ? 'Barcha varaqlar' : `${tanlanganSmetaVaraqlar.length} varaq`} ▼
+                        </button>
+                        <div className="absolute right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-xl p-2.5 z-50 hidden group-hover/sheet-sel:block w-52 max-h-60 overflow-y-auto text-left">
+                          <div className="flex justify-between items-center text-[10px] text-text-dim border-b border-border pb-1.5 mb-1.5 font-bold">
+                            <span>Smeta varaqlari</span>
+                            <button onClick={() => setTanlanganSmetaVaraqlar([])} className="text-accent font-bold hover:underline cursor-pointer">
+                              Tozalash
+                            </button>
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            {smetaVaraqlari.map((v) => {
+                              const isChecked = tanlanganSmetaVaraqlar.includes(v);
+                              return (
+                                <label key={v} className="flex items-center gap-2 text-[11px] hover:text-white cursor-pointer select-none font-medium text-text-dim">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      setTanlanganSmetaVaraqlar(prev => 
+                                        isChecked ? prev.filter(x => x !== v) : [...prev, v]
+                                      );
+                                    }}
+                                    className="rounded border-border text-accent focus:ring-accent w-3.5 h-3.5"
+                                  />
+                                  <span className="truncate">{v}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="relative">
                     <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-mute" />
