@@ -356,7 +356,58 @@ export default function TestF2Import() {
       return;
     }
 
-    setQolBog((prev) => ({ ...prev, [aktKalit]: smetaId }));
+    const newBog: Record<string, number> = { [aktKalit]: smetaId };
+
+    if (n.type === 'bl' && smetaTree) {
+      const smetaNode = findSmetaNode(smetaTree, smetaId);
+      if (smetaNode) {
+        const smetaChildren = smetaNode.children || [];
+        const f2Children = n.children || [];
+
+        const nNom = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+        const nKod = (s: string | undefined) => {
+          let x = String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+          return x.replace(/^0+/, '') || x;
+        };
+        const nBir = (s: string | undefined) => {
+          let b = String(s || '').toUpperCase().replace(/\s+/g, '').replace(/[^А-ЯЁA-Z]/g, '');
+          const m: any = { 'ШТ': 'ШТ', 'ДАНА': 'ШТ', 'ШТУК': 'ШТ', 'М3': 'М3', 'КУБ': 'М3', 'М2': 'М2', 'КВ': 'М2', 'Т': 'Т', 'ТОННА': 'Т', 'КГ': 'КГ', 'М': 'М', 'ПОГ': 'М', 'КОМПЛ': 'КОМПЛ', 'КМП': 'КОМПЛ' };
+          return m[b] || b;
+        };
+
+        f2Children.forEach((fc: any) => {
+          const fcKod = nKod(fc.kod);
+          const fcNom = nNom(fc.nom);
+          const fcBir = nBir(fc.bir || fc.birlik);
+
+          // Find a matching child in the Smeta block children
+          // 1st pass: match by normalized code
+          let match = smetaChildren.find((sc) => {
+            const scIdStr = String(sc.id);
+            if (smetaBogMi(scIdStr)) return false; // already bound
+            const scKod = nKod(sc.kod);
+            return fcKod && scKod && fcKod === scKod;
+          });
+
+          // 2nd pass: match by normalized name and unit
+          if (!match) {
+            match = smetaChildren.find((sc) => {
+              const scIdStr = String(sc.id);
+              if (smetaBogMi(scIdStr)) return false; // already bound
+              const scNom = nNom(sc.nom);
+              const scBir = nBir(sc.birlik);
+              return fcNom && scNom && fcNom === scNom && fcBir === scBir;
+            });
+          }
+
+          if (match && match.id) {
+            newBog[fc.uid] = match.id;
+          }
+        });
+      }
+    }
+
+    setQolBog((prev) => ({ ...prev, ...newBog }));
     toast(`✓ Bog'landi: ${String(n.nom).slice(0, 40)}`);
   };
 
@@ -366,9 +417,23 @@ export default function TestF2Import() {
 
   // Unlink functions
   const bogBekor = (aktKalit: string) => {
+    const n = findAktNode(korish?.tree || [], aktKalit);
+    const uidsToRemove = [aktKalit];
+    if (n && n.type === 'bl') {
+      const collectUids = (node: any) => {
+        (node.children || []).forEach((c: any) => {
+          uidsToRemove.push(c.uid);
+          if (c.children) collectUids(c);
+        });
+      };
+      collectUids(n);
+    }
+
     setQolBog((prev) => {
       const next = { ...prev };
-      delete next[aktKalit];
+      uidsToRemove.forEach((uid) => {
+        delete next[uid];
+      });
       return next;
     });
     toast('Bog\'lanish bekor qilindi');
@@ -493,21 +558,25 @@ export default function TestF2Import() {
     };
     collectSmeta(smetaTree);
 
+    // Pre-normalize all Smeta leaf nodes once
+    const normalizedSmeta = smetaQatorlar.map(sq => ({
+      sq,
+      sk: nKod(sq.kod),
+      sn: nNom(sq.nom),
+      sb: nBir(sq.birlik)
+    }));
+
     const tkl: Record<string, any[]> = {};
     const traverseF2 = (nodes: any[]) => {
       nodes.forEach(n => {
         const uid = n.uid;
-        if (uid && (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') && !bogMi(uid)) {
+        if (uid && (n.type === 'rs' || n.type === 'mat' || n.type === 'ob')) {
           const fk = nKod(n.kod);
           const fn = nNom(n.nom);
           const fb = nBir(n.bir || n.birlik);
 
           let candidates: any[] = [];
-          smetaQatorlar.forEach(sq => {
-            let sk = nKod(sq.kod);
-            let sn = nNom(sq.nom);
-            let sb = nBir(sq.birlik);
-
+          normalizedSmeta.forEach(({ sq, sk, sn, sb }) => {
             let ball = 0;
             if (fk && sk === fk) ball += 50;
             if (fn && sn === fn) ball += 30;
@@ -537,7 +606,7 @@ export default function TestF2Import() {
     };
     traverseF2(korish.tree);
     setTakliflar(tkl);
-  }, [korish?.tree, smetaTree, qolBog, bogMi]);
+  }, [korish?.tree, smetaTree]);
 
   const findSmetaNodeByVaraqRow = (nodes: TreeNode[], varaq: string, row: number): TreeNode | null => {
     for (const n of nodes) {
@@ -687,12 +756,21 @@ export default function TestF2Import() {
   };
 
   // JSX F2 Daraxti va Smeta Daraxti uchun ma'lumotlar
-  const aktDaraxtFiltrlangan = useMemo(() => {
+  const aktDaraxtMapped = useMemo(() => {
     if (!korish?.tree) return [];
-    let tree = mapAktToDaraxt(korish.tree);
-    tree = filterDaraxt(tree, f2Qidiruv);
-    return filterByStatus(tree);
-  }, [korish?.tree, f2Qidiruv, filtr, qolBog]);
+    return mapAktToDaraxt(korish.tree);
+  }, [korish?.tree]);
+
+  const aktDaraxtFiltrlangan = useMemo(() => {
+    let tree = aktDaraxtMapped;
+    if (f2Qidiruv) {
+      tree = filterDaraxt(tree, f2Qidiruv);
+    }
+    if (filtr !== 'hammasi') {
+      tree = filterByStatus(tree);
+    }
+    return tree;
+  }, [aktDaraxtMapped, f2Qidiruv, filtr, qolBog]);
 
   const smetaDaraxtFiltrlangan = useMemo(() => {
     if (!smetaTree) return [];
