@@ -282,17 +282,17 @@ export default function TestF2Import() {
   // Draft borligini tekshirish
   useEffect(() => {
     if (qadam === 1 && korish?.obyekt_id && faylId) {
-      const raw = localStorage.getItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}`);
+      const raw = localStorage.getItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}_${tur}_${oy}`);
       setDraftBor(!!raw);
     } else {
       setDraftBor(false);
     }
-  }, [qadam, korish?.obyekt_id, faylId]);
+  }, [qadam, korish?.obyekt_id, faylId, tur, oy]);
 
   // Draftni yuklash
   const draftTikla = () => {
     if (!korish?.obyekt_id || !faylId) return;
-    const raw = localStorage.getItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}`);
+    const raw = localStorage.getItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}_${tur}_${oy}`);
     if (!raw) return;
     try {
       const draft = JSON.parse(raw);
@@ -305,7 +305,7 @@ export default function TestF2Import() {
   // Draftni tozalash/o'chirish
   const draftOchir = () => {
     if (!korish?.obyekt_id || !faylId) return;
-    localStorage.removeItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}`);
+    localStorage.removeItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}_${tur}_${oy}`);
     setDraftBor(false);
     toast('Saqlangan qoralama o\'chirildi');
   };
@@ -317,8 +317,8 @@ export default function TestF2Import() {
       vaqt: Date.now(),
       qolBog
     };
-    localStorage.setItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}`, JSON.stringify(draft));
-  }, [qolBog, qadam, korish?.obyekt_id, faylId]);
+    localStorage.setItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}_${tur}_${oy}`, JSON.stringify(draft));
+  }, [qolBog, qadam, korish?.obyekt_id, faylId, tur, oy]);
 
   // F2 barg tugunlarini topish (DFS)
   const aktBarglar = useMemo(() => {
@@ -1095,7 +1095,7 @@ export default function TestF2Import() {
       if (r.ok) {
         toast(r.takror ? 'Hujjat allaqachon yaratilgan' : 'Hujjat muvaffaqiyatli yaratildi', 'ok');
         // Clear drafts on success
-        localStorage.removeItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}`);
+        localStorage.removeItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}_${tur}_${oy}`);
         setQadam(2);
       } else {
         toast(r.xabar || r.error || 'Xato yuz berdi', 'danger', undefined, 12000);
