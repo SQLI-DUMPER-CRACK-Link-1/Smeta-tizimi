@@ -117,9 +117,7 @@ export default function TestF2Import() {
   const [smetaTree, setSmetaTree] = useState<TreeNode[] | null>(null);
   const [smetaLoading, setSmetaLoading] = useState(false);
 
-  // Moslashtirish va bog'lanishlar holati
   const [qolBog, setQolBog] = useState<Record<string, number>>({});
-  const [qolBekor, setQolBekor] = useState<Set<string>>(new Set());
   const [f2Qidiruv, setF2Qidiruv] = useState('');
   const [smetaQidiruv, setSmetaQidiruv] = useState('');
   const [filtr, setFiltr] = useState<'hammasi' | 'boglanmagan' | 'boglangan' | 'manfiy'>('hammasi');
@@ -200,7 +198,6 @@ export default function TestF2Import() {
       if (r.ok) {
         setQadam(1);
         setQolBog({});
-        setQolBekor(new Set());
         toast('F2 o\'qildi va auto-moslashtirildi', 'ok');
       } else {
         toast(r.xabar || 'O\'qilmadi', 'danger', undefined, 12000);
@@ -246,7 +243,6 @@ export default function TestF2Import() {
     try {
       const draft = JSON.parse(raw);
       if (draft.qolBog) setQolBog(draft.qolBog);
-      if (draft.qolBekor) setQolBekor(new Set(draft.qolBekor));
       toast('Saqlangan qoralama tiklandi', 'ok');
       setDraftBor(false);
     } catch (e) {}
@@ -265,24 +261,10 @@ export default function TestF2Import() {
     if (qadam !== 1 || !korish?.obyekt_id || !faylId) return;
     const draft = {
       vaqt: Date.now(),
-      qolBog,
-      qolBekor: Array.from(qolBekor)
+      qolBog
     };
     localStorage.setItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}`, JSON.stringify(draft));
-  }, [qolBog, qolBekor, qadam, korish?.obyekt_id, faylId]);
-
-  // Auto-matching helper
-  const autoMoslashMap = useMemo(() => {
-    const map = new Map<string, number>();
-    if (korish?.moslash?.qatorlar) {
-      korish.moslash.qatorlar.forEach((q) => {
-        if (q.uid && q.qator_id && q.holat === 'moslandi') {
-          map.set(q.uid, q.qator_id);
-        }
-      });
-    }
-    return map;
-  }, [korish]);
+  }, [qolBog, qadam, korish?.obyekt_id, faylId]);
 
   // F2 barg tugunlarini topish (DFS)
   const aktBarglar = useMemo(() => {
@@ -323,27 +305,19 @@ export default function TestF2Import() {
   };
 
   // Matching check functions
-  const bogMi = useCallback((kalit: string) => {
-    if (qolBog[kalit] !== undefined) return true;
-    if (qolBekor.has(kalit)) return false;
-    return autoMoslashMap.has(kalit);
-  }, [qolBog, qolBekor, autoMoslashMap]);
+  const bogMi = useCallback((kalit: string | undefined) => {
+    return kalit !== undefined ? qolBog[kalit] !== undefined : false;
+  }, [qolBog]);
 
-  const getSmetaId = useCallback((kalit: string): number | undefined => {
-    if (qolBog[kalit] !== undefined) return qolBog[kalit];
-    if (qolBekor.has(kalit)) return undefined;
-    return autoMoslashMap.get(kalit);
-  }, [qolBog, qolBekor, autoMoslashMap]);
+  const getSmetaId = useCallback((kalit: string | undefined): number | undefined => {
+    return kalit !== undefined ? qolBog[kalit] : undefined;
+  }, [qolBog]);
 
   const smetaBogMi = useCallback((smetaKalit: string) => {
     const smetaId = Number(smetaKalit);
     if (!smetaId) return false;
-    if (Object.values(qolBog).includes(smetaId)) return true;
-    for (const [aKey, sId] of autoMoslashMap.entries()) {
-      if (sId === smetaId && !qolBekor.has(aKey)) return true;
-    }
-    return false;
-  }, [qolBog, qolBekor, autoMoslashMap]);
+    return Object.values(qolBog).includes(smetaId);
+  }, [qolBog]);
 
   // Drop linking function
   const qolBogla = (aktKalit: string, smetaKalit: string) => {
@@ -366,11 +340,6 @@ export default function TestF2Import() {
     }
 
     setQolBog((prev) => ({ ...prev, [aktKalit]: smetaId }));
-    setQolBekor((prev) => {
-      const next = new Set(prev);
-      next.delete(aktKalit);
-      return next;
-    });
     toast(`✓ Bog'landi: ${String(n.nom).slice(0, 40)}`);
   };
 
@@ -380,11 +349,6 @@ export default function TestF2Import() {
 
   // Unlink functions
   const bogBekor = (aktKalit: string) => {
-    setQolBekor((prev) => {
-      const next = new Set(prev);
-      next.add(aktKalit);
-      return next;
-    });
     setQolBog((prev) => {
       const next = { ...prev };
       delete next[aktKalit];
@@ -401,25 +365,85 @@ export default function TestF2Import() {
     for (const [aKey, sId] of Object.entries(qolBog)) {
       if (sId === smetaId) { foundAktKalit = aKey; break; }
     }
-    if (!foundAktKalit) {
-      for (const [aKey, sId] of autoMoslashMap.entries()) {
-        if (sId === smetaId && !qolBekor.has(aKey)) {
-          foundAktKalit = aKey;
-          break;
-        }
-      }
-    }
 
     if (foundAktKalit) {
       bogBekor(foundAktKalit);
     }
   };
 
-  // Reset mappings to initial auto-match
+  // Client-side auto-matching logic (copied and optimized from Tizim_01)
+  const onAvtoMoslash = () => {
+    if (!korish?.tree || !smetaTree) return;
+    let matchCount = 0;
+
+    // Normalizatsiya
+    const nNom = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+    const nKod = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '').replace(/^0+/, '');
+
+    // Collect all leaf nodes from smetaTree
+    const smetaQatorlar: TreeNode[] = [];
+    const collectSmeta = (nodes: TreeNode[]) => {
+      nodes.forEach(n => {
+        if (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') {
+          smetaQatorlar.push(n);
+        }
+        if (n.children) collectSmeta(n.children);
+      });
+    };
+    collectSmeta(smetaTree);
+
+    // Index smeta rows by normalized name
+    const nomIndeks = new Map<string, TreeNode[]>();
+    smetaQatorlar.forEach((sq) => {
+      const k = nNom(sq.nom);
+      if (!k) return;
+      const bor = nomIndeks.get(k);
+      if (bor) bor.push(sq); else nomIndeks.set(k, [sq]);
+    });
+
+    const bandJoy = new Set<number>();
+    Object.values(qolBog).forEach((id) => bandJoy.add(id));
+
+    const yangiBog: Record<string, number> = {};
+    const yur = (nodes: any[]) => {
+      nodes.forEach(n => {
+        const uid = n.uid;
+        if (uid && (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') && !bogMi(uid) && !yangiBog[uid]) {
+          const fKod = nKod(n.kod);
+          const fNom = nNom(n.nom);
+
+          const nomzodlar = fNom ? (nomIndeks.get(fNom) ?? []) : [];
+          const exact = nomzodlar.find((sq) => {
+            if (!sq.id) return false;
+            if (bandJoy.has(sq.id)) return false;
+            const sKod = nKod(sq.kod);
+            if (fKod && sKod) return fKod === sKod;
+            return true;
+          });
+
+          if (exact && exact.id) {
+            bandJoy.add(exact.id);
+            yangiBog[uid] = exact.id;
+            matchCount++;
+          }
+        }
+        if (n.children) yur(n.children);
+      });
+    };
+    yur(korish.tree);
+
+    if (matchCount > 0) {
+      setQolBog((prev) => ({ ...prev, ...yangiBog }));
+      toast(`✓ Yuridik aniq mos tushgan ${matchCount} ta qator avtomatik bog'landi!`, "ok");
+    } else {
+      toast("Smetada sizning aktga 100% (so'zma-so'z) mos keladigan bo'sh qatorlar topilmadi.", "danger");
+    }
+  };
+
+  // Reset mappings to empty
   const resetBinds = () => {
     setQolBog({});
-    setQolBekor(new Set());
-    toast('Barcha bog\'lanishlar boshlang\'ich holatga qaytarildi');
+    toast('Barcha bog\'lanishlar tozalandi');
   };
 
   // Daraxtlarni qidiruv bo'yicha filtrlash (DFS)
@@ -467,8 +491,7 @@ export default function TestF2Import() {
     let tree = mapAktToDaraxt(korish.tree);
     tree = filterDaraxt(tree, f2Qidiruv);
     return filterByStatus(tree);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [korish?.tree, f2Qidiruv, filtr, qolBog, qolBekor, autoMoslashMap]);
+  }, [korish?.tree, f2Qidiruv, filtr, qolBog]);
 
   const smetaDaraxtFiltrlangan = useMemo(() => {
     if (!smetaTree) return [];
@@ -539,9 +562,7 @@ export default function TestF2Import() {
     return sum;
   }, [korish, getSmetaId, smetaTree, aktBarglar]);
 
-  const boglanmaganSoni = useMemo(() => {
-    return aktBarglar.filter(n => !bogMi(n.uid)).length;
-  }, [aktBarglar, bogMi]);
+
 
   const manfiySoni = useMemo(() => {
     return aktBarglar.filter(n => (n.hajm || 0) < 0).length;
@@ -866,7 +887,10 @@ export default function TestF2Import() {
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex items-center justify-between w-full">
                     <span className="font-bold text-xs">F2 AKT FAYLI</span>
-                    <span className="text-[10px] text-text-mute">{boglanmaganSoni} bog'lanmagan</span>
+                    <button onClick={onAvtoMoslash}
+                      className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-2.5 py-1 rounded text-[10px] transition-colors font-bold whitespace-nowrap cursor-pointer">
+                      🪄 + Barchasini Avto-Moslash
+                    </button>
                   </div>
                   <div className="relative">
                     <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-mute" />
