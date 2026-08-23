@@ -121,7 +121,7 @@ export default function TestF2Import() {
   const [qolBog, setQolBog] = useState<Record<string, number>>({});
   const [f2Qidiruv, setF2Qidiruv] = useState('');
   const [smetaQidiruv, setSmetaQidiruv] = useState('');
-  const [filtr, setFiltr] = useState<'hammasi' | 'boglanmagan' | 'boglangan' | 'manfiy'>('hammasi');
+  const [filtr, setFiltr] = useState<'hammasi' | 'boglanmagan' | 'boglangan' | 'manfiy' | 'takliflar'>('hammasi');
   const [ochiqSignal, setOchiqSignal] = useState(0);
 
   // Saqlangan qoralama holati
@@ -789,6 +789,7 @@ export default function TestF2Import() {
           else if (filtr === 'boglangan') match = isBog;
           else if (filtr === 'boglanmagan') match = !isBog;
           else if (filtr === 'manfiy') match = (n.hajm ?? 0) < 0;
+          else if (filtr === 'takliflar') match = !isBog && takliflar[n.uid] !== undefined && takliflar[n.uid].length > 0;
         }
         let children = n.children ? dfs(n.children) : [];
         if (match || children.length > 0) {
@@ -1055,6 +1056,13 @@ export default function TestF2Import() {
     return sum;
   }, [aktBarglar, getSmetaId, smetaTree]);
 
+  const matchingStats = useMemo(() => {
+    const total = aktBarglar.length;
+    const mapped = aktBarglar.filter((n) => qolBog[n.uid] !== undefined).length;
+    const pct = total > 0 ? Math.round((mapped / total) * 100) : 0;
+    return { total, mapped, pct };
+  }, [aktBarglar, qolBog]);
+
   const farq = aktJami - boglanganJami;
   const constOk = Math.abs(farq) < 0.01;
 
@@ -1259,7 +1267,7 @@ export default function TestF2Import() {
             
             {/* Mini Kafolat Bar */}
             <div className="bg-[var(--surface-2)]/60 border border-border/80 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3 text-[12px]">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="font-semibold text-text-dim">F2 IMPORT SUMMARY:</span>
                 <span>Akt jami: <b className="text-white"><FmtN val={aktJami} /> so'm</b></span>
                 <span className="text-border">|</span>
@@ -1268,6 +1276,14 @@ export default function TestF2Import() {
                 <span>
                   Farq: <b className={constOk ? 'text-emerald-400' : 'text-rose-400'}><FmtN val={farq} /> so'm</b>
                 </span>
+                <span className="text-border">|</span>
+                <div className="flex items-center gap-1.5" title="Exceldagi resurs qatorlarining smeta bilan bog'lanish foizi">
+                  <span>Bog'lanish:</span>
+                  <div className="w-20 h-2 bg-black/40 rounded-full overflow-hidden border border-border/30 inline-block relative top-[0.5px]">
+                    <div className="bg-emerald-500 h-full transition-all duration-300" style={{ width: `${matchingStats.pct}%` }} />
+                  </div>
+                  <span className="font-bold text-emerald-400">{matchingStats.mapped}/{matchingStats.total} ({matchingStats.pct}%)</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {constOk ? (
@@ -1453,14 +1469,15 @@ export default function TestF2Import() {
               chapOng={
                 <div className="flex flex-col gap-1.5 w-full">
                   <div className="flex gap-1 bg-black/20 p-1 rounded-lg">
-                    {(['hammasi', 'boglanmagan', 'boglangan', 'manfiy'] as const).map((f) => (
+                    {(['hammasi', 'boglanmagan', 'boglangan', 'manfiy', 'takliflar'] as const).map((f) => (
                       <button key={f} onClick={() => setFiltr(f)}
                         className={`flex-1 h-6 px-1 rounded-md text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap
                           ${filtr === f ? 'bg-accent text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                         {f === 'hammasi' ? 'Barchasi'
                           : f === 'boglangan' ? '✓ Bog‘langan'
                           : f === 'manfiy' ? `− Qaytarim`
-                          : '○ Bog‘lanmagan'}
+                          : f === 'boglanmagan' ? '○ Bog‘lanmagan'
+                          : '🎯 Takliflar'}
                       </button>
                     ))}
                   </div>
@@ -1483,7 +1500,7 @@ export default function TestF2Import() {
                   onBogBekor={bogBekor}
                   sudraladi
                   bosh="F2 daraxti bo'sh"
-                  filtr={filtr}
+                  filtr={filtr === 'takliflar' ? 'boglanmagan' : filtr}
                   ochiqYopiqSignal={ochiqSignal}
                   onDopClick={onDopClick}
                   onOtishClick={aktOtishClick}
