@@ -1,4 +1,5 @@
 export type TreeNode = {
+  id?: number;
   type: 'rz' | 'bl' | 'rs' | 'mat' | 'ob';
   nom: string;
   varaq: string;

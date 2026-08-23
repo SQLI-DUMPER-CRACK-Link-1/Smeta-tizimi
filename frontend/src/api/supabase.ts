@@ -308,6 +308,7 @@ export function sbT2TreeQur(qatorlar: T2Qator[]): TreeNode[] {
   /* 1-o'tish: har qator uchun tugun */
   for (const r of qatorlar) {
     xarita.set(r.id, {
+      id: r.id,
       type: (r.tur as TreeNode['type']) || 'rs',
       nom: r.nom || '',
       varaq: r.obyekt || '',

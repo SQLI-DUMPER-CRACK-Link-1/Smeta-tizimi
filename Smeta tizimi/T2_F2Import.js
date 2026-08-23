@@ -201,6 +201,7 @@ function _t2F2Tekisla(daraxt){
       var h = Number(tugun.hajm);
       if(isFinite(h) && h !== 0){
         chiqish.push({
+          uid: tugun.uid || undefined,
           nom: tugun.nom || '',
           birlik: tugun.bir || '',
           hajm: h,
@@ -255,8 +256,19 @@ function apiT2F2Korish(obyektNom, faylId, varaq, colConfig){
       p_obyekt_id: ob.id, p_qatorlar: qatorlar
     });
 
+    if(mos && mos.qatorlar){
+      for(var k = 0; k < mos.qatorlar.length; k++){
+        var mq = mos.qatorlar[k];
+        var original = qatorlar[mq.n];
+        if(original){
+          mq.uid = original.uid;
+        }
+      }
+    }
+
     return {ok:true, obyekt: obyektNom, obyekt_id: ob.id,
             fayl_qator: qatorlar.length, moslash: mos,
+            tree: oq.tree,
             /* Ustunlar KO'RINIB tursin — noto'g'ri aniqlangan bo'lsa
                odam tuzatib qayta yuborishi mumkin */
             cols: oq.cols, avto: oq.avto, hdrQator: oq.hdrQator,
