@@ -75,9 +75,18 @@ type KorishNatija = {
   sozlash?: boolean;
   ms?: number;
   obyekt_id?: number;
+  maxCol?: number;
+};
+const HARF = (i: number): string => {
+  let s = '', n = i;
+  do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0);
+  return s;
 };
 
-
+const USTUN_NOM: Array<[string, string]> = [
+  ['kod', 'КОД'], ['nom', 'НОМ'], ['bir', 'БИРЛИК'], ['norma', 'НОРМА'],
+  ['obyom', 'ҲАЖМ'], ['narx', 'НАРХ'], ['sum', 'СУММА'],
+];
 
 export default function TestF2Import() {
   const { joriy } = useKompaniya();
@@ -90,6 +99,8 @@ export default function TestF2Import() {
   const [varaqlar, setVaraqlar] = useState<string[]>([]);
   const [varaq, setVaraq] = useState('');
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
+  const [qolUstun, setQolUstun] = useState<Ustunlar>({});
+  const [ustunOchiq, setUstunOchiq] = useState(false);
 
 
   // Hujjat sozlamalari
@@ -177,11 +188,13 @@ export default function TestF2Import() {
   };
 
   // F2 Excel faylini o'qib auto-moslashni boshlash (Baza moslash RPC orqali)
-  const kor = async () => {
+  const kor = async (qoldan?: boolean) => {
     if (!obyekt || !faylId) { toast('Obyekt va fayl tanlang', 'warn'); return; }
     setKorilmoqda(true); setNatija(null);
     try {
-      const r = await gas<KorishNatija>('apiT2F2Korish', obyekt, faylId, varaq, null);
+      const cfg = qoldan && Object.keys(qolUstun).length
+        ? { ...(korish?.cols || {}), ...qolUstun } : null;
+      const r = await gas<KorishNatija>('apiT2F2Korish', obyekt, faylId, varaq, cfg);
       setKorish(r);
       setOpId(yangiOperationId());
       if (r.ok) {
@@ -701,6 +714,48 @@ export default function TestF2Import() {
               {korilmoqda ? <RefreshCw size={15} className="animate-spin" /> : <FileInput size={15} />}
               {korilmoqda ? 'O\'qilmoqda…' : 'O\'qish va Moslashtirish'}
             </button>
+
+            {korish && (
+              <div className="border-t border-border/20 pt-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <button onClick={() => setUstunOchiq(p => !p)}
+                    className="text-[11px] text-text-dim hover:text-white flex items-center gap-1 cursor-pointer">
+                    ⚙️ Ustunlarni sozlash {ustunOchiq ? '▲' : '▼'}
+                  </button>
+                  {korish.cols && (
+                    <span className="text-[10px] text-text-mute">
+                      Aniqlangan: {Object.entries(korish.cols).map(([k, v]) => `${k.toUpperCase()}:${HARF(v)}`).join(' · ')}
+                    </span>
+                  )}
+                </div>
+
+                {ustunOchiq && (
+                  <div className="p-3 bg-black/20 rounded-lg space-y-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-text-dim">
+                      {USTUN_NOM.map(([k, label]) => (
+                        <label key={k} className="flex flex-col gap-1">
+                          <span>{label}</span>
+                          <select value={qolUstun[k] !== undefined ? qolUstun[k] : (korish.cols?.[k] !== undefined ? korish.cols[k] : -1)}
+                            onChange={(e) => setQolUstun(p => ({ ...p, [k]: Number(e.target.value) }))}
+                            className="bg-[var(--surface-2)] border border-border/30 rounded px-2 py-1 text-white outline-none">
+                            <option value="-1">— yo'q —</option>
+                            {Array.from({ length: korish.maxCol || 10 }).map((_, i) => (
+                              <option key={i} value={i}>{HARF(i)}</option>
+                            ))}
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex justify-end">
+                      <button onClick={() => kor(true)}
+                        className="bg-accent/20 text-accent hover:bg-accent/35 px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer">
+                        Qayta o'qish
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
