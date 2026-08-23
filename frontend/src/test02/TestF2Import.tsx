@@ -15,8 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FileInput, Upload, FolderOpen, RefreshCw, CheckCircle, AlertTriangle,
-  XCircle, Wand2, Send, Save, ArrowRight, ExternalLink, Trash2, Search,
-  ChevronDown, ChevronRight, CheckCircle2, AlertCircle
+  XCircle, Send, ExternalLink, Trash2, Search, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
@@ -32,9 +31,9 @@ import {
   sbT2AktYarat,
   yangiOperationId,
   type T2Obyekt,
-  type TreeNode,
   type AktNatija
 } from '../api/supabase';
+import type { TreeNode } from '../api/types';
 import { useKompaniya } from './KompaniyaTanlov';
 
 type ManbaFayl = { fayl_id: string; nom: string; sana: string; oqiladi: boolean };
@@ -78,16 +77,7 @@ type KorishNatija = {
   obyekt_id?: number;
 };
 
-const HARF = (i: number): string => {
-  let s = '', n = i;
-  do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0);
-  return s;
-};
 
-const USTUN_NOM: Array<[string, string]> = [
-  ['kod', 'КОД'], ['nom', 'НОМ'], ['bir', 'БИРЛИК'], ['norma', 'НОРМА'],
-  ['obyom', 'ҲАЖМ'], ['narx', 'НАРХ'], ['sum', 'СУММА'],
-];
 
 export default function TestF2Import() {
   const { joriy } = useKompaniya();
@@ -100,8 +90,7 @@ export default function TestF2Import() {
   const [varaqlar, setVaraqlar] = useState<string[]>([]);
   const [varaq, setVaraq] = useState('');
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
-  const [qolUstun, setQolUstun] = useState<Ustunlar>({});
-  const [ustunOchiq, setUstunOchiq] = useState(false);
+
 
   // Hujjat sozlamalari
   const [tur, setTur] = useState<'f2' | 'fakt'>('f2');
@@ -188,13 +177,11 @@ export default function TestF2Import() {
   };
 
   // F2 Excel faylini o'qib auto-moslashni boshlash (Baza moslash RPC orqali)
-  const kor = async (qoldan?: boolean) => {
+  const kor = async () => {
     if (!obyekt || !faylId) { toast('Obyekt va fayl tanlang', 'warn'); return; }
     setKorilmoqda(true); setNatija(null);
     try {
-      const cfg = qoldan && Object.keys(qolUstun).length
-        ? { ...(korish?.cols || {}), ...qolUstun } : null;
-      const r = await gas<KorishNatija>('apiT2F2Korish', obyekt, faylId, varaq, cfg);
+      const r = await gas<KorishNatija>('apiT2F2Korish', obyekt, faylId, varaq, null);
       setKorish(r);
       setOpId(yangiOperationId());
       if (r.ok) {
@@ -726,6 +713,9 @@ export default function TestF2Import() {
               <KATAK nom="AKT JAMI" val={aktJami} />
               <KATAK nom="BOG'LANGAN JAMI" val={boglanganJami} rang={constOk ? 'text-ok' : 'text-warn'} />
               <KATAK nom="FARQ (QOLDIQ)" val={farq} rang={constOk ? 'text-ok' : 'text-danger'} />
+              {manfiySoni > 0 && (
+                <KATAK nom={`QAYTARIM (PERERASCHET - ${manfiySoni} ta)`} val={manfiySumma} rang="text-rose-400" />
+              )}
               <div className="karta p-3 flex-1 min-w-[140px] flex flex-col justify-between">
                 <div className="text-[10px] text-text-dim">STATUS</div>
                 <div className="text-[12px] font-bold flex items-center gap-1.5 mt-1">
