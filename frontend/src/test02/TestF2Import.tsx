@@ -1688,7 +1688,18 @@ export default function TestF2Import() {
               <div className="max-h-48 overflow-auto space-y-1 border border-border/20 p-2 rounded bg-black/10">
                 {natija.buzilish.map((b, i) => (
                   <p key={i} className="text-[11px] text-text-mute">
-                    <span className="text-danger font-medium">⚠️ {b.nom}</span> —{' '}
+                    <button
+                      onClick={() => {
+                        if (b.qator_id) {
+                          setSmetaScrollTo(null);
+                          requestAnimationFrame(() => setSmetaScrollTo(String(b.qator_id)));
+                        }
+                      }}
+                      className="text-danger font-medium hover:underline text-left inline-flex items-center gap-1 cursor-pointer font-sans bg-transparent border-0 p-0"
+                      title="Smeta daraxtida ushbu qatorga sakrash"
+                    >
+                      ⚠️ {b.nom}
+                    </button> —{' '}
                     {b.jami != null
                       ? <>jami <b>{b.jami}</b></>
                       : <>bor {b.bor}, qo'shilmoqda <b>{b.qoshilmoqda}</b></>}
