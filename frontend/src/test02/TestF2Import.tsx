@@ -15,7 +15,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FileInput, Upload, FolderOpen, RefreshCw, CheckCircle, AlertTriangle,
-  XCircle, Send, ExternalLink, Trash2, Search, CheckCircle2, AlertCircle
+  XCircle, Send, ExternalLink, Trash2, Search, CheckCircle2, AlertCircle,
+  X, Save
 } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
@@ -130,6 +131,22 @@ export default function TestF2Import() {
   const [yozilmoqda, setYozilmoqda] = useState(false);
   const [natija, setNatija] = useState<AktNatija | null>(null);
   const [opId, setOpId] = useState('');
+
+  // Yangi qator (Dop/Zamena) modal holatlari
+  const [qatorQoshModal, setQatorQoshModal] = useState(false);
+  const [yangiSmeta, setYangiSmeta] = useState('');
+  const [yangiTur, setYangiTur] = useState('rz');
+  const [yangiQator, setYangiQator] = useState('');
+  const [yangiKod, setYangiKod] = useState('');
+  const [yangiNom, setYangiNom] = useState('');
+  const [yangiBirlik, setYangiBirlik] = useState('');
+  const [yangiHajm, setYangiHajm] = useState('');
+  const [yangiNarx, setYangiNarx] = useState('');
+  const [qatorLoading, setQatorLoading] = useState(false);
+
+  // Takliflar va o'tish (scroll) holatlari
+  const [takliflar, setTakliflar] = useState<Record<string, any[]>>({});
+  const [smetaScrollTo, setSmetaScrollTo] = useState<string | null>(null);
 
   // Obyektlarni yuklash
   useEffect(() => {
@@ -444,6 +461,190 @@ export default function TestF2Import() {
   const resetBinds = () => {
     setQolBog({});
     toast('Barcha bog\'lanishlar tozalandi');
+  };
+
+  // Barcha bog'lanmagan F2 qatorlari uchun takliflarni hisoblash (Fuzzy heuristic from Tizim_01)
+  useEffect(() => {
+    if (!korish?.tree || !smetaTree) {
+      setTakliflar({});
+      return;
+    }
+
+    const nNom = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+    const nKod = (s: string | undefined) => {
+      let x = String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+      return x.replace(/^0+/, '') || x;
+    };
+    const nBir = (s: string | undefined) => {
+      let b = String(s || '').toUpperCase().replace(/\s+/g, '').replace(/[^А-ЯЁA-Z]/g, '');
+      const m: any = { 'ШТ': 'ШТ', 'ДАНА': 'ШТ', 'ШТУК': 'ШТ', 'М3': 'М3', 'КУБ': 'М3', 'М2': 'М2', 'КВ': 'М2', 'Т': 'Т', 'ТОННА': 'Т', 'КГ': 'КГ', 'М': 'М', 'ПОГ': 'М', 'КОМПЛ': 'КОМПЛ', 'КМП': 'КОМПЛ' };
+      return m[b] || b;
+    };
+
+    // Collect all leaf nodes from smetaTree
+    const smetaQatorlar: TreeNode[] = [];
+    const collectSmeta = (nodes: TreeNode[]) => {
+      nodes.forEach(n => {
+        if (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') {
+          smetaQatorlar.push(n);
+        }
+        if (n.children) collectSmeta(n.children);
+      });
+    };
+    collectSmeta(smetaTree);
+
+    const tkl: Record<string, any[]> = {};
+    const traverseF2 = (nodes: any[]) => {
+      nodes.forEach(n => {
+        const uid = n.uid;
+        if (uid && (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') && !bogMi(uid)) {
+          const fk = nKod(n.kod);
+          const fn = nNom(n.nom);
+          const fb = nBir(n.bir || n.birlik);
+
+          let candidates: any[] = [];
+          smetaQatorlar.forEach(sq => {
+            let sk = nKod(sq.kod);
+            let sn = nNom(sq.nom);
+            let sb = nBir(sq.birlik);
+
+            let ball = 0;
+            if (fk && sk === fk) ball += 50;
+            if (fn && sn === fn) ball += 30;
+            if (fb && sb === fb) ball += 10;
+            if (fn && sn && (sn.indexOf(fn) >= 0 || fn.indexOf(sn) >= 0)) ball += 20;
+
+            if (ball > 0) {
+              candidates.push({
+                id: sq.id,
+                nom: sq.nom,
+                kod: sq.kod,
+                birlik: sq.birlik,
+                varaq: sq.varaq,
+                row: sq.row,
+                ball: ball
+              });
+            }
+          });
+
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => b.ball - a.ball);
+            tkl[uid] = candidates.slice(0, 5);
+          }
+        }
+        if (n.children) traverseF2(n.children);
+      });
+    };
+    traverseF2(korish.tree);
+    setTakliflar(tkl);
+  }, [korish?.tree, smetaTree, qolBog, bogMi]);
+
+  const findSmetaNodeByVaraqRow = (nodes: TreeNode[], varaq: string, row: number): TreeNode | null => {
+    for (const n of nodes) {
+      if (n.varaq === varaq && n.row === row) return n;
+      if (n.children) {
+        const found = findSmetaNodeByVaraqRow(n.children, varaq, row);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const onTaklifTanlandi = (aktUid: string, smetaVaraqRow: string) => {
+    const [vrq, rwStr] = smetaVaraqRow.split('#');
+    const rw = Number(rwStr);
+    if (!smetaTree) return;
+    const node = findSmetaNodeByVaraqRow(smetaTree, vrq, rw);
+    if (node && node.id) {
+      qolBogla(aktUid, String(node.id));
+    }
+  };
+
+  // Dop/Zamena qator qo'shish modalini ko'rsatish
+  const onDopClick = (aktKalit: string) => {
+    if (!korish?.tree) return;
+    const n = findAktNode(korish.tree, aktKalit);
+    if (!n) return;
+
+    setYangiNom(String(n.nom || ''));
+    setYangiKod(String(n.kod || ''));
+    setYangiBirlik(String(n.bir || n.birlik || ''));
+    setYangiHajm(String(n.hajm ?? ''));
+    setYangiNarx(String(n.narx ?? ''));
+    setYangiTur(n.type === 'bl' ? 'bl' : 'rs');
+
+    if (korish.obyekt_id) {
+      const firstSheet = smetaTree && smetaTree[0]?.varaq ? smetaTree[0].varaq : (varaqlar[0] || '');
+      setYangiSmeta(firstSheet);
+    }
+    setYangiQator('');
+    setQatorQoshModal(true);
+  };
+
+  const onQatorQosh = (smetaKalit: string) => {
+    if (!smetaTree) return;
+    const node = findSmetaNode(smetaTree, Number(smetaKalit));
+    if (!node) return;
+
+    setYangiSmeta(node.varaq);
+    setYangiQator(String(node.row));
+    setYangiNom('');
+    setYangiKod('');
+    setYangiBirlik('');
+    setYangiHajm('');
+    setYangiNarx('');
+    setQatorQoshModal(true);
+  };
+
+  const onQatorSaqlash = async () => {
+    if (!obyekt || !yangiSmeta || !yangiNom || !korish?.obyekt_id) {
+      toast("Obyekt, Smeta (varaq) va Nomni kiritish majburiy!", "danger");
+      return;
+    }
+    if (yangiTur !== 'rz' && (!yangiKod || !yangiBirlik || !yangiHajm)) {
+      toast("Ish yoki resurs uchun Kod, Birlik va Hajm kiritilishi shart (Yuridik aniqlik uchun)!", "danger");
+      return;
+    }
+
+    setQatorLoading(true);
+    try {
+      const res = await gas<{ ok: boolean; row?: number; xabar?: string }>('apiSmetaQatorQosh', obyekt, yangiSmeta, yangiTur, yangiQator, yangiKod, yangiNom, yangiBirlik, yangiHajm, yangiNarx);
+      if (res && res.ok) {
+        toast("Yangi qator Google Sheets'ga qo'shildi. Supabase sinxronizatsiya qilinmoqda...", "ok");
+        
+        // Sync to Supabase via apiT2ObyektImport
+        const impRes = await gas<any>('apiT2ObyektImport', obyekt);
+        if (impRes && impRes.ok) {
+          toast("✓ Baza muvaffaqiyatli yangilandi", "ok");
+          setQatorQoshModal(false);
+          setYangiNom(''); setYangiKod(''); setYangiBirlik(''); setYangiHajm(''); setYangiNarx(''); setYangiQator('');
+          
+          // Reload tree from Supabase
+          setSmetaLoading(true);
+          const r = await sbT2DaraxtOl(korish.obyekt_id as number);
+          setSmetaLoading(false);
+          if (r.ok && r.qatorlar) {
+            const tree = sbT2TreeQur(r.qatorlar);
+            setSmetaTree(tree);
+          }
+        } else {
+          toast(impRes?.xabar || "Supabase import xatosi", "danger");
+        }
+      } else {
+        toast(res?.xabar || "Xatolik", "danger");
+      }
+    } catch(e: any) {
+      toast(e.message || String(e), "danger");
+    }
+    setQatorLoading(false);
+  };
+
+  // Akt tarafidan bosilganda smeta tarafida mos qatorni ochib scroll qilish
+  const aktOtishClick = (aktUid: string) => {
+    const smetaId = getSmetaId(aktUid);
+    if (!smetaId) return;
+    setSmetaScrollTo(null);
+    requestAnimationFrame(() => setSmetaScrollTo(String(smetaId)));
   };
 
   // Daraxtlarni qidiruv bo'yicha filtrlash (DFS)
@@ -949,6 +1150,10 @@ export default function TestF2Import() {
                   bosh="F2 daraxti bo'sh"
                   filtr={filtr}
                   ochiqYopiqSignal={ochiqSignal}
+                  onDopClick={onDopClick}
+                  onOtishClick={aktOtishClick}
+                  takliflar={takliflar}
+                  onTaklifTanlandi={onTaklifTanlandi}
                 />
               }
               ong={
@@ -962,6 +1167,8 @@ export default function TestF2Import() {
                   bosh={smetaLoading ? "Smeta yuklanmoqda..." : "Smeta daraxti bo'sh"}
                   filtr={filtr === 'hammasi' ? 'hammasi' : 'hammasi'} // Keep smeta side fully visible
                   ochiqYopiqSignal={ochiqSignal}
+                  onQatorQosh={onQatorQosh}
+                  scrollToKey={smetaScrollTo}
                 />
               }
             />
@@ -969,6 +1176,104 @@ export default function TestF2Import() {
             <p className="text-[10px] text-text-mute text-center">
               💡 F2 aktidagi qatorni sudrab, o'ng tomondagi mos smeta qatoriga tashlang (drag & drop). Bog'lanishni bekor qilish uchun qatordagi belgini bosing.
             </p>
+
+            {qatorQoshModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                <div className="bg-[var(--surface-1)] border border-border w-full max-w-lg rounded-lg shadow-2xl p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto text-left">
+                  <div className="border-b border-border/20 pb-2 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-md font-bold text-accent">
+                        Smetaga Yangi Qator Qo'shish (DOP / ZAMENA)
+                      </h3>
+                      {yangiQator && yangiSmeta && (
+                        <p className="text-[11px] text-text-dim mt-1">
+                          «{yangiSmeta}» varag'ining <b className="text-text">{yangiQator}</b>-qatoridan KEYIN qo'shiladi.
+                        </p>
+                      )}
+                    </div>
+                    <button onClick={() => setQatorQoshModal(false)}
+                      className="text-text-mute hover:text-text p-1 rounded hover:bg-white/10">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <div className="flex flex-col gap-1 w-1/2">
+                      <label className="text-[12px] font-medium text-text-dim">Varaq (Smeta):</label>
+                      <select value={yangiSmeta} onChange={(e) => setYangiSmeta(e.target.value)}
+                        className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none">
+                        {varaqlar.map((v) => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1 w-1/2">
+                      <label className="text-[12px] font-medium text-text-dim">Qator turi:</label>
+                      <select value={yangiTur} onChange={(e) => setYangiTur(e.target.value)}
+                        className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none">
+                        <option value="rz">Razdel (Sarlavha)</option>
+                        <option value="bl">Ish turi (Blok)</option>
+                        <option value="rs">Resurs (Ish/Mat/Ob)</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-medium text-text-dim">Nomi:</label>
+                    <input value={yangiNom} onChange={(e) => setYangiNom(e.target.value)}
+                      placeholder="Masalan: Qo'shimcha devor qurish..."
+                      className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none w-full font-sans" />
+                  </div>
+
+                  {yangiTur !== 'rz' && (
+                    <div className="grid grid-cols-2 gap-3 bg-black/20 p-3 rounded-md border border-border/30 text-[12px] text-text-dim">
+                      <div className="flex flex-col gap-1">
+                        <label className="font-medium">Kodi (Asos):</label>
+                        <input value={yangiKod} onChange={(e) => setYangiKod(e.target.value)}
+                          placeholder="Masalan: E11-1-1"
+                          className="bg-[var(--surface-2)] border border-border rounded px-2.5 py-1 text-text outline-none w-full" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="font-medium">Birlik:</label>
+                        <input value={yangiBirlik} onChange={(e) => setYangiBirlik(e.target.value)}
+                          placeholder="m2, t, kg, sht"
+                          className="bg-[var(--surface-2)] border border-border rounded px-2.5 py-1 text-text outline-none w-full" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="font-medium">Hajm:</label>
+                        <input value={yangiHajm} onChange={(e) => setYangiHajm(e.target.value)}
+                          type="number" step="any" placeholder="0.00"
+                          className="bg-[var(--surface-2)] border border-border rounded px-2.5 py-1 text-text outline-none w-full" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="font-medium">Narx:</label>
+                        <input value={yangiNarx} onChange={(e) => setYangiNarx(e.target.value)}
+                          type="number" step="any" placeholder="Ixtiyoriy"
+                          className="bg-[var(--surface-2)] border border-border rounded px-2.5 py-1 text-text outline-none w-full" />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-medium text-text-dim">Qaysi qatordan keyin (ixtiyoriy):</label>
+                    <input value={yangiQator} onChange={(e) => setYangiQator(e.target.value)}
+                      placeholder="Bo'sh qoldirilsa oxiriga tushadi"
+                      type="number"
+                      className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none w-full" />
+                  </div>
+                  
+                  <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border/20">
+                    <button onClick={() => setQatorQoshModal(false)} disabled={qatorLoading}
+                      className="px-4 py-1.5 rounded-lg border border-border hover:bg-white/5 text-[12px] text-text-dim disabled:opacity-40 cursor-pointer">
+                      Bekor qilish
+                    </button>
+                    <button onClick={onQatorSaqlash} disabled={qatorLoading}
+                      className="px-4 py-1.5 rounded-lg bg-accent text-white hover:bg-accent/90 text-[12px] font-bold disabled:opacity-40 cursor-pointer inline-flex items-center gap-1.5">
+                      {qatorLoading ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+                      Yuridik Saqlash
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
