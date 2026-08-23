@@ -168,41 +168,7 @@ export default function TestF2Import() {
 
   useEffect(() => { manbaYukla(); }, [manbaYukla]);
 
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setQatorQoshModal(false);
-        return;
-      }
-      
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        toast("Qoralama avtomatik saqlangan", "ok");
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault();
-        const keys = Object.keys(qolBog);
-        if (keys.length > 0) {
-          const lastKey = keys[keys.length - 1];
-          bogBekor(lastKey);
-          toast("✓ Oxirgi bog'lanish bekor qilindi (Ctrl+Z)", "ok");
-        }
-        return;
-      }
-
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'SELECT') {
-        e.preventDefault();
-        const el = document.getElementById('f2-search-input');
-        if (el) el.focus();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [qolBog]);
+  // Keyboard Shortcuts moved below onAvtoMoslash definition
 
   // Fayl tanlanganda varaqlarini o'qish
   const faylTanla = async (id: string) => {
@@ -558,6 +524,48 @@ export default function TestF2Import() {
       toast("Smetada sizning aktga 100% (so'zma-so'z) mos keladigan bo'sh qatorlar topilmadi.", "danger");
     }
   };
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setQatorQoshModal(false);
+        return;
+      }
+      
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        toast("Qoralama avtomatik saqlangan", "ok");
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        const keys = Object.keys(qolBog);
+        if (keys.length > 0) {
+          const lastKey = keys[keys.length - 1];
+          bogBekor(lastKey);
+          toast("✓ Oxirgi bog'lanish bekor qilindi (Ctrl+Z)", "ok");
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        onAvtoMoslash();
+        return;
+      }
+
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'SELECT') {
+        e.preventDefault();
+        const el = document.getElementById('f2-search-input');
+        if (el) el.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [qolBog, onAvtoMoslash]);
 
   // Reset mappings to empty
   const resetBinds = () => {
