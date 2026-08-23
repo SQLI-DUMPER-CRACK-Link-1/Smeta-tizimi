@@ -167,6 +167,42 @@ export default function TestF2Import() {
 
   useEffect(() => { manbaYukla(); }, [manbaYukla]);
 
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setQatorQoshModal(false);
+        return;
+      }
+      
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        toast("Qoralama avtomatik saqlangan", "ok");
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        const keys = Object.keys(qolBog);
+        if (keys.length > 0) {
+          const lastKey = keys[keys.length - 1];
+          bogBekor(lastKey);
+          toast("✓ Oxirgi bog'lanish bekor qilindi (Ctrl+Z)", "ok");
+        }
+        return;
+      }
+
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'SELECT') {
+        e.preventDefault();
+        const el = document.getElementById('f2-search-input');
+        if (el) el.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [qolBog]);
+
   // Fayl tanlanganda varaqlarini o'qish
   const faylTanla = async (id: string) => {
     setFaylId(id); setVaraq(''); setVaraqlar([]);
@@ -772,40 +808,150 @@ export default function TestF2Import() {
     return tree;
   }, [aktDaraxtMapped, f2Qidiruv, filtr, qolBog]);
 
+  // Reverse index for bound nodes: Smeta ID -> F2 Node
+  const smetaBoglanganAktMap = useMemo(() => {
+    const map = new Map<number, any>();
+    if (!korish?.tree) return map;
+    
+    // Find all F2 nodes
+    const f2Leafs = new Map<string, any>();
+    const traverseF2 = (nodes: any[]) => {
+      nodes.forEach(n => {
+        if (n.uid) f2Leafs.set(n.uid, n);
+        if (n.children) traverseF2(n.children);
+      });
+    };
+    traverseF2(korish.tree);
+
+    Object.entries(qolBog).forEach(([f2Uid, smetaId]) => {
+      const f2Node = f2Leafs.get(f2Uid);
+      if (f2Node) {
+        map.set(smetaId, f2Node);
+      }
+    });
+    return map;
+  }, [qolBog, korish?.tree]);
+
   const smetaDaraxtFiltrlangan = useMemo(() => {
     if (!smetaTree) return [];
     const tree = mapSmetaToDaraxt(smetaTree);
     return filterDaraxt(tree, smetaQidiruv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [smetaTree, smetaQidiruv]);
+  }, [smetaTree, smetaQidiruv, smetaBoglanganAktMap]);
 
   // Tree mappers to DaraxtTugun format
   function mapAktToDaraxt(nodes: any[]): DaraxtTugun[] {
-    return nodes.map(n => ({
-      kalit: n.uid,
-      type: n.type,
-      nom: n.nom || '',
-      kod: n.kod,
-      bir: n.bir,
-      hajm: n.hajm,
-      summa: n.summa,
-      children: n.children ? mapAktToDaraxt(n.children) : undefined
-    }));
+    const formatVol = (v: any) => {
+      const num = Number(v ?? 0);
+      return Number.isInteger(num) ? String(num) : num.toFixed(3);
+    };
+
+    return nodes.map(n => {
+      const isRz = n.type === 'rz';
+      
+      const belgiElement = isRz ? undefined : (
+        <div className="flex gap-2 items-center text-[10px] text-text-dim whitespace-nowrap">
+          {n.hajm ? <span>Hajm: <span className="font-semibold text-emerald-400">{formatVol(n.hajm)}</span></span> : null}
+          <span>Summa: <FmtN val={n.summa} /> so'm</span>
+        </div>
+      );
+
+      return {
+        kalit: n.uid,
+        type: n.type,
+        nom: n.nom || '',
+        kod: n.kod,
+        bir: n.bir,
+        hajm: n.hajm,
+        summa: n.summa,
+        manfiy: (n.hajm ?? 0) < 0 || (n.summa ?? 0) < 0,
+        belgi: belgiElement,
+        children: n.children ? mapAktToDaraxt(n.children) : undefined
+      };
+    });
   }
 
   function mapSmetaToDaraxt(nodes: TreeNode[]): DaraxtTugun[] {
-    return nodes.map(n => ({
-      kalit: n.id ? String(n.id) : `rz:${n.nom}`,
-      type: n.type,
-      nom: n.nom || '',
-      kod: n.kod,
-      bir: n.birlik,
-      hajm: n.smetaHajm,
-      summa: n.smeta,
-      isQosh: n.isQosh,
-      isZamena: n.isZamena,
-      children: n.children ? mapSmetaToDaraxt(n.children) : undefined
-    }));
+    const formatVol = (v: any) => {
+      const num = Number(v ?? 0);
+      return Number.isInteger(num) ? String(num) : num.toFixed(3);
+    };
+
+    return nodes.map(n => {
+      const isRz = n.type === 'rz';
+      const smetaId = n.id;
+      
+      let boglanganAktText = null;
+      let joriyQoldiq = n.qoldiq ?? 0;
+
+      if (smetaId) {
+        const aktQator = smetaBoglanganAktMap.get(smetaId);
+        if (aktQator) {
+          const joriyF2Hajm = Number(aktQator.hajm ?? 0);
+          joriyQoldiq = (n.qoldiq ?? 0) - joriyF2Hajm;
+          
+          const farq = (n.qoldiq ?? 0) - joriyF2Hajm;
+
+          boglanganAktText = (
+            <div className="mt-1 p-1 px-2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex justify-between items-center text-[10px] min-w-[200px]">
+              <div className="flex items-center gap-2">
+                <span>+ {formatVol(aktQator.hajm)} (F2: {aktQator.kod || 'kodsiz'}) - <FmtN val={aktQator.summa}/> so'm</span>
+                {Math.abs(farq) > 0.001 && (
+                  <span className={farq < 0 ? 'text-red-400 font-bold ml-1' : 'text-orange-300 ml-1'}>
+                    Farq: {farq > 0 ? `+${formatVol(farq)}` : formatVol(farq)}
+                  </span>
+                )}
+              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); bogBekor(aktQator.uid); }} 
+                className="ml-4 hover:text-red-400 font-bold px-1.5 rounded bg-black/20 hover:bg-black/40 transition-colors text-slate-300 cursor-pointer" 
+                title="Bekor qilish"
+              >
+                ✕
+              </button>
+            </div>
+          );
+        }
+      }
+
+      let qoldiqColor = 'text-orange-400';
+      let qoldiqBelgi = '';
+      if (Math.abs(joriyQoldiq) < 0.001) {
+        qoldiqColor = 'text-emerald-400 font-bold';
+        qoldiqBelgi = ' ✓';
+      } else if (joriyQoldiq < 0) {
+        qoldiqColor = 'text-rose-400 font-bold';
+        qoldiqBelgi = ' ⚠';
+      }
+
+      const belgiElement = isRz ? undefined : (
+        <div className="flex flex-col items-end text-[10px] font-sans text-text-dim">
+          <div className="flex gap-1.5 items-center whitespace-nowrap opacity-80">
+            {n.smetaHajm != null && <span>Smeta: <span className="font-medium text-white">{formatVol(n.smetaHajm)}</span></span>}
+            {n.fakt != null && n.fakt > 0 && <span>| O'tgan F2: <span className="text-blue-400">{formatVol(n.fakt)}</span></span>}
+            <span>
+              | Qoldiq: <span className={qoldiqColor}>{formatVol(joriyQoldiq)}{qoldiqBelgi}</span>
+            </span>
+          </div>
+          {boglanganAktText}
+        </div>
+      );
+
+      return {
+        kalit: smetaId ? String(smetaId) : `rz:${n.nom}`,
+        type: n.type,
+        nom: n.nom || '',
+        kod: n.kod,
+        bir: n.birlik,
+        hajm: n.smetaHajm,
+        summa: n.smeta,
+        isQosh: n.isQosh,
+        isZamena: n.isZamena,
+        manfiy: (n.smetaHajm ?? 0) < 0 || joriyQoldiq < 0,
+        belgi: belgiElement,
+        children: n.children ? mapSmetaToDaraxt(n.children) : undefined
+      };
+    });
   }
 
   // Jami summalarni hisoblash
@@ -1063,6 +1209,31 @@ export default function TestF2Import() {
         {qadam === 1 && korish && (
           <div className="space-y-3">
             
+            {/* Mini Kafolat Bar */}
+            <div className="bg-[var(--surface-2)]/60 border border-border/80 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3 text-[12px]">
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-text-dim">F2 IMPORT SUMMARY:</span>
+                <span>Akt jami: <b className="text-white"><FmtN val={aktJami} /> so'm</b></span>
+                <span className="text-border">|</span>
+                <span>Bog'langan jami: <b className="text-emerald-400"><FmtN val={boglanganJami} /> so'm</b></span>
+                <span className="text-border">|</span>
+                <span>
+                  Farq: <b className={constOk ? 'text-emerald-400' : 'text-rose-400'}><FmtN val={farq} /> so'm</b>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {constOk ? (
+                  <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1.5">
+                    <CheckCircle size={14} /> JAMI BOG'LANISH TENG
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold flex items-center gap-1.5">
+                    <AlertTriangle size={14} /> NOMUVOFIQLIK (BOG'LANG)
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* KPI kartalari */}
             <div className="flex flex-wrap gap-2">
               <KATAK nom="AKT JAMI" val={aktJami} />
@@ -1173,7 +1344,7 @@ export default function TestF2Import() {
                   </div>
                   <div className="relative">
                     <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-mute" />
-                    <input value={f2Qidiruv} onChange={(e) => setF2Qidiruv(e.target.value)}
+                    <input id="f2-search-input" value={f2Qidiruv} onChange={(e) => setF2Qidiruv(e.target.value)}
                       placeholder="nom yoki kod bo'yicha..."
                       className="w-full bg-[var(--surface-2)] border border-border rounded-lg pl-7 pr-3 py-1 text-[11px] text-text outline-none" />
                   </div>
