@@ -106,6 +106,7 @@ export default function TestF2Import() {
 
   // Hujjat sozlamalari
   const [tur, setTur] = useState<'f2' | 'fakt'>('f2');
+  const [majburiy, setMajburiy] = useState(false);
   const [oy, setOy] = useState(() => new Date().toISOString().slice(0, 7));
   const [raqam, setRaqam] = useState('');
 
@@ -1122,15 +1123,19 @@ export default function TestF2Import() {
       const smetaId = n.id;
       
       let boglanganAktText = null;
-      let joriyQoldiq = n.qoldiq ?? 0;
+      
+      // sbT2TreeQur qoldiqni har doim 0 qilib beradi, chunki bu shunchaki daraxt.
+      // VIZUAL uchun qoldiqni smetaHajm bilan teng deb faraz qilamiz:
+      let bazaviyQoldiq = (n.qoldiq && n.qoldiq !== 0) ? n.qoldiq : (n.smetaHajm ?? 0);
+      let joriyQoldiq = bazaviyQoldiq;
 
       if (smetaId) {
         const aktQator = smetaBoglanganAktMap.get(smetaId);
         if (aktQator) {
           const joriyF2Hajm = Number(aktQator.hajm ?? 0);
-          joriyQoldiq = (n.qoldiq ?? 0) - joriyF2Hajm;
+          joriyQoldiq = bazaviyQoldiq - joriyF2Hajm;
           
-          const farq = (n.qoldiq ?? 0) - joriyF2Hajm;
+          const farq = bazaviyQoldiq - joriyF2Hajm;
 
           boglanganAktText = (
             <div className="mt-1 p-1 px-2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex justify-between items-center text-[10px] min-w-[200px]">
@@ -1311,7 +1316,8 @@ export default function TestF2Import() {
         oy: oy + '-01',
         qatorlar: rows,
         operationId: opId,
-        raqam: raqam.trim() || undefined
+        raqam: raqam.trim() || undefined,
+        majburiy: majburiy
       });
       setNatija(r);
       if (r.ok) {
@@ -1581,6 +1587,12 @@ export default function TestF2Import() {
                   <input value={raqam} onChange={(e) => setRaqam(e.target.value)} placeholder="ixtiyoriy"
                     className="bg-[var(--surface-2)] border border-border rounded-lg px-2.5 py-1 text-[12px]
                                text-text outline-none w-28" />
+                </div>
+                <div className="flex items-center gap-2 mt-4 ml-2">
+                  <input type="checkbox" id="majburiy" checked={majburiy} onChange={(e) => setMajburiy(e.target.checked)} className="cursor-pointer" />
+                  <label htmlFor="majburiy" className="text-[12px] text-rose-400 font-medium cursor-pointer" title="Agar belgilansa, fakt / smeta chegarasidan oshib ketishiga ruxsat beriladi (Faqat adminlar uchun)">
+                    Majburiy (limitdan oshish)
+                  </label>
                 </div>
               </div>
 
