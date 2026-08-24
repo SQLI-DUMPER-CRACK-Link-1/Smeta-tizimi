@@ -147,6 +147,7 @@ export default function TestF2Import() {
 
   // Tanlangan fayl nomini o'qish (scroll) holatlari
   const [takliflar, setTakliflar] = useState<Record<string, any[]>>({});
+  const [autoMoslashZarur, setAutoMoslashZarur] = useState(false);
   const [smetaScrollTo, setSmetaScrollTo] = useState<string | null>(null);
   const [tanlanganSmetaVaraqlar, setTanlanganSmetaVaraqlar] = useState<string[]>([]);
   const [undoStack, setUndoStack] = useState<Array<Record<string, number>>>([]);
@@ -220,18 +221,12 @@ export default function TestF2Import() {
       if (r.ok) {
         setQadam(1);
         
-        // ⚡ Backenddan kelgan avto-moslash natijalarini qolBog ga yuklash
-        const initialBog: Record<string, number> = {};
-        if (r.moslash?.qatorlar) {
-          r.moslash.qatorlar.forEach((mq: any) => {
-            if (mq.uid && mq.smeta_id) {
-              initialBog[mq.uid] = mq.smeta_id;
-            }
-          });
-        }
-        
-        setQolBog(initialBog);
-        toast('F2 o\'qildi va auto-moslashtirildi', 'ok');
+        // ⚡ Backenddan kelgan auto-moslashni O'CHIRDIM!
+        // Sababi: u global qidirib xato ish turlarining resurslarini bog'lab yuborayotgan edi.
+        // Endi biz faqat "Barchasini Avto-Moslash" (frontend iyerarxik) funksiyasiga ishonamiz.
+        setQolBog({});
+        setAutoMoslashZarur(true);
+        toast('F2 o\'qildi', 'ok');
       } else {
         toast(r.xabar || 'O\'qilmadi', 'danger', undefined, 12000);
       }
@@ -584,18 +579,85 @@ export default function TestF2Import() {
     const yangiBog: Record<string, number> = {};
     let count = 0;
 
-    for (const [uid, cands] of Object.entries(takliflar)) {
-      if (qolBog[uid] !== undefined) continue;      // already bound
-      const best = cands.find((c) => !bandJoy.has(c.id));
-      
-      // ⚡ Fiqatgina 'ball' yetarli darajada yuqori bo'lsagina avtomat bog'lash (xavfsizlik).
-      // Name match (30) + include (20) = 50. Code match = 50. Name + Unit = 40.
-      if (best && best.ball >= 40) {
-        yangiBog[uid] = best.id;
-        bandJoy.add(best.id);
-        count++;
-      }
-    }
+    const nNom = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+    const nKod = (s: string | undefined) => {
+      let x = String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+      return x.replace(/^0+/, '') || x;
+    };
+    const nBir = (s: string | undefined) => {
+      let b = String(s || '').toUpperCase().replace(/\s+/g, '').replace(/[^А-ЯЁA-Z]/g, '');
+      const m: any = { 'ШТ': 'ШТ', 'ДАНА': 'ШТ', 'ШТУК': 'ШТ', 'М3': 'М3', 'КУБ': 'М3', 'М2': 'М2', 'КВ': 'М2', 'Т': 'Т', 'ТОННА': 'Т', 'КГ': 'КГ', 'М': 'М', 'ПОГ': 'М', 'КОМПЛ': 'КОМПЛ', 'КМП': 'КОМПЛ' };
+      return m[b] || b;
+    };
+
+    const isAlreadyBound = (id: number) => bandJoy.has(id);
+
+    const walk = (nodes: any[], insideBl: boolean = false) => {
+      nodes.forEach((n) => {
+        let matchedSmetaId = qolBog[n.uid] ?? yangiBog[n.uid];
+
+        // 1. Agar bog'lanmagan bo'lsa, takliflar bo'yicha global izlash (faqat xavfsiz ball >= 40)
+        // ⚡ DIQQAT: Agar biz allaqachon `bl` (ish turi) ichida bo'lsak, resursni 
+        // global qidirish taqiqlanadi! Faqat o'z ish turi orqali bog'lanishi shart!
+        if (!insideBl && matchedSmetaId === undefined && n.type !== 'rz') {
+          const cands = takliflar[n.uid] || [];
+          const best = cands.find((c) => !isAlreadyBound(c.id));
+          if (best && best.ball >= 40) {
+            matchedSmetaId = best.id;
+            yangiBog[n.uid] = matchedSmetaId;
+            bandJoy.add(matchedSmetaId);
+            count++;
+          }
+        }
+
+        // 2. Agar tugun (ish turi) bog'langan bo'lsa, uning ichidagi resurslarni 
+        // FAQAT o'zining Smeta qatoridagi resurslarga bog'lashga majburlaymiz (iyerarxik bog'lash)
+        if (n.type === 'bl' && matchedSmetaId !== undefined && n.children && n.children.length > 0) {
+          const smetaNode = findSmetaNode(smetaTree, matchedSmetaId);
+          if (smetaNode && smetaNode.children) {
+            const smetaChildren = smetaNode.children;
+
+            n.children.forEach((fc: any) => {
+              if (qolBog[fc.uid] !== undefined || yangiBog[fc.uid] !== undefined) return;
+
+              const fcKod = nKod(fc.kod);
+              const fcNom = nNom(fc.nom);
+              const fcBir = nBir(fc.bir || fc.birlik);
+
+              // Birinchi: Kod bo'yicha qidiruv
+              let match = smetaChildren.find((sc) => {
+                if (!sc.id || isAlreadyBound(sc.id) || sc.type !== fc.type) return false;
+                const scKod = nKod(sc.kod);
+                return fcKod && scKod && fcKod === scKod;
+              });
+
+              // Ikkinchi: Nom + Birlik bo'yicha qidiruv
+              if (!match) {
+                match = smetaChildren.find((sc) => {
+                  if (!sc.id || isAlreadyBound(sc.id) || sc.type !== fc.type) return false;
+                  const scNom = nNom(sc.nom);
+                  const scBir = nBir(sc.birlik);
+                  return fcNom && scNom && fcNom === scNom && fcBir === scBir;
+                });
+              }
+
+              if (match && match.id) {
+                yangiBog[fc.uid] = match.id;
+                bandJoy.add(match.id);
+                count++;
+              }
+            });
+          }
+        }
+
+        // 3. Davom etish (agar yuqorida bolalar bog'langan bo'lsa, ular recursiyada o'tkazib yuboriladi)
+        if (n.children && n.children.length > 0) {
+          walk(n.children, insideBl || n.type === 'bl');
+        }
+      });
+    };
+
+    walk(korish.tree, false);
 
     if (count === 0) {
       toast("Aniq moslik topilmadi yoki barchasi bog'langan", "warn");
@@ -604,11 +666,19 @@ export default function TestF2Import() {
 
     setUndoStack((prev) => [...prev.slice(-29), qolBog]);
     setQolBog((prev) => ({ ...prev, ...yangiBog }));
-    toast(`🎯 ${count} ta qator (kengaytirilgan izlash orqali) avto-moslandi!`, "ok");
+    toast(`🎯 ${count} ta qator avto-moslandi!`, "ok");
   };
 
   const applyAllTakliflar = applyFuzzyMoslash;
   const onAvtoMoslash = applyFuzzyMoslash;
+
+  // Avtomatik moslashtirish (F2 o'qilgandan so'ng)
+  useEffect(() => {
+    if (autoMoslashZarur && Object.keys(takliflar).length > 0) {
+      applyFuzzyMoslash();
+      setAutoMoslashZarur(false);
+    }
+  }, [takliflar, autoMoslashZarur]);
 
   // Keyboard Shortcuts
   useEffect(() => {
