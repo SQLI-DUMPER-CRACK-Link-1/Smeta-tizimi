@@ -25,6 +25,7 @@ import { tekshir } from '../_shared/auth';
 /** Har amal → qaysi RPC va uni kim chaqira oladi. */
 const AMALLAR = {
   qator_tahrir:   { rpc: 't2_qator_tahrir' },
+  qator_qosh:     { rpc: 't2_qator_qosh' },
   akt_yarat:      { rpc: 't2_akt_yarat' },
   akt_tasdiqlash: { rpc: 't2_akt_tasdiqlash' },
   akt_bekor:      { rpc: 't2_akt_bekor' },
@@ -147,6 +148,64 @@ export const onRequestPost: PagesFunction<{
         p_manba: 'frontend',
         p_kim: sess.email || '',
         p_majburiy: majburiy,
+      };
+
+    /* ══════════ SMETAGA QATOR QO'SHISH ══════════ */
+    } else if (amal === 'qator_qosh') {
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      const TURLAR = ['rz', 'bl', 'rs', 'mat', 'ob'];
+      if (!TURLAR.includes(String(so.tur))) {
+        return Response.json({ ok: false, error: 'tur: rz|bl|rs|mat|ob' });
+      }
+      if (!String(so.nom || '').trim()) {
+        return Response.json({ ok: false, error: 'Nom bo\'sh' });
+      }
+      /* ⚠️ IDEMPOTENTLIK MAJBURIY — `akt_yarat` dagi bilan bir xil sabab:
+         tarmoq uzilib qayta yuborilsa smetaga IKKITA bir xil qator
+         tushardi va jami ogohlantirishsiz oshardi. */
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi qator yaratadi' });
+      }
+      /* ⚠️ NORMA: berilgan bo'lsa son bo'lishi shart, lekin MANFIY
+         bo'lishi MUMKIN. `> 0` deb tekshirish ПЕРЕРАСЧЁТ ni bloklardi —
+         bu tizimda bir necha marta shu xato qilingan. */
+      let norma: number | null = null;
+      if (so.norma != null && so.norma !== '') {
+        norma = Number(so.norma);
+        if (!Number.isFinite(norma)) {
+          return Response.json({ ok: false, error: 'norma son emas' });
+        }
+      }
+      /* ⚠️ Narx BERILMASA yuborilmaydi (null emas, umuman yo'q) —
+         shunda baza narxlar bazasidan qidiradi. 0 yuborish «bepul»
+         degani bo'lardi. */
+      let narx: number | null = null;
+      if (so.narx != null && so.narx !== '') {
+        narx = Number(so.narx);
+        if (!Number.isFinite(narx)) {
+          return Response.json({ ok: false, error: 'narx son emas' });
+        }
+      }
+      yuk = {
+        p_obyekt_id: obyektId,
+        p_tur: so.tur,
+        p_nom: String(so.nom).slice(0, 500),
+        p_ota_id: so.ota_id == null ? null : Number(so.ota_id),
+        p_kod: so.kod ? String(so.kod).slice(0, 100) : null,
+        p_birlik: so.birlik ? String(so.birlik).slice(0, 50) : null,
+        p_norma: norma,
+        p_narx: narx,
+        p_e_obyom: so.e_obyom == null ? null : so.e_obyom === true,
+        p_kat: so.kat ? String(so.kat).slice(0, 20) : null,
+        p_keyin_id: so.keyin_id == null ? null : Number(so.keyin_id),
+        p_operation_id: so.operation_id,
+        p_manba: 'frontend',
+        p_kim: sess.email || '',
       };
 
     /* ══════════ TASDIQLASH / BEKOR ══════════ */

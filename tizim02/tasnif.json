@@ -1,0 +1,216 @@
+{
+  "_izoh": [
+    "QO'LDA TO'LDIRILADIGAN TASNIF. `registr.gen.cjs` shuni koddan topilgan",
+    "funksiyalar bilan qo'shib REGISTR.json ni yasaydi.",
+    "Yangi funksiya paydo bo'lsa test yiqiladi va shu yerga qo'shish so'raladi —",
+    "shunda xarita hech qachon eskirmaydi."
+  ],
+  "qatlamlar": {
+    "SUPABASE": "Ma'lumot va pul mantig'i Postgresda. Frontend tipli RPC orqali chaqiradi. Yagona haqiqat manbai.",
+    "GAS": "Drive/Sheets/Excel ga bog'langani uchun GASda QOLADI. Ko'chirilmaydi — qayta yozish yo'qotish demak.",
+    "KOPRIK": "Ikki tizim orasidagi eshik. GASda qoladi, lekin Tizim_02 shakliga o'giradi.",
+    "YOQ": "Ko'chirilmaydi: Sheets keshi, diagnostika yoki Tizim_02 da keraksiz bo'lgan narsa."
+  },
+  "faylDomen": {
+    "00_AI_Gateway.js": "ai",
+    "05_Papka.js": "fayl",
+    "15_IshTurlar.js": "spravochnik",
+    "21_Xodimlar.js": "kirish",
+    "25_Kesh.js": "kesh",
+    "35_F2Moslash.js": "f2",
+    "36_XlsxQiymat.js": "fayl",
+    "37_F2TezYoz.js": "f2",
+    "38_F2Nazorat.js": "f2",
+    "39_F2Reestr.js": "f2",
+    "45_Hujjatlar.js": "hujjat",
+    "50_Navbat.js": "navbat",
+    "60_Maslahatchi.js": "ai",
+    "65_TitanAI.js": "ai",
+    "66_AI_Data.js": "ai",
+    "67_AI_Akt.js": "ai",
+    "68_AI_Tahlil.js": "ai",
+    "69_AI_Orchestrator.js": "ai",
+    "70_Supabase.js": "kopruk",
+    "71_AI_Savol.js": "ai",
+    "75_AI_SmartF2.js": "ai",
+    "76_Hujjatlar_M29.js": "hujjat",
+    "77_ReverseSync.js": "kopruk",
+    "78_AntigravityAPI.js": "kopruk",
+    "79_WebAPI.js": "kopruk",
+    "80_Shartnoma.js": "shartnoma",
+    "85_Buxgalteriya.js": "buxgalteriya",
+    "86_Sklad.js": "sklad",
+    "87_ErpModullar.js": "erp",
+    "89_FakturalarNew.js": "faktura",
+    "89c_FakturaSync.js": "faktura",
+    "89d_FakturaTashxis.js": "faktura",
+    "90_Grafik.js": "grafik",
+    "91_BossTahlil.js": "hisobot",
+    "92_Kuzatuv.js": "kuzatuv",
+    "99_Diagnostika.js": "tashxis",
+    "99_DiagnostikaOcr.js": "tashxis",
+    "30_Panel.js": "panel"
+  },
+  "domenQatlam": {
+    "ai": "GAS",
+    "fayl": "GAS",
+    "kesh": "YOQ",
+    "navbat": "GAS",
+    "tashxis": "YOQ",
+    "kopruk": "KOPRIK",
+    "f2": "SUPABASE",
+    "spravochnik": "SUPABASE",
+    "kirish": "SUPABASE",
+    "hujjat": "SUPABASE",
+    "shartnoma": "SUPABASE",
+    "buxgalteriya": "SUPABASE",
+    "sklad": "SUPABASE",
+    "erp": "SUPABASE",
+    "faktura": "SUPABASE",
+    "grafik": "SUPABASE",
+    "hisobot": "SUPABASE",
+    "kuzatuv": "SUPABASE",
+    "smeta": "SUPABASE",
+    "sozlama": "SUPABASE",
+    "dvigatel": "GAS",
+    "tizim": "SUPABASE",
+    "panel": "SUPABASE"
+  },
+  "_30PanelIzoh": "30_Panel.js — 78 funksiya, bitta domen emas. Nom bo'yicha ajratamiz.",
+  "nomQoida": [
+    [
+      "^apiBoss",
+      "hisobot"
+    ],
+    [
+      "^apiF2",
+      "f2"
+    ],
+    [
+      "^api(Sozlama|Kategoriya|Stavka|Oraliq|Svod|NarxKat|NarxBelgilangan|Daraja)",
+      "sozlama"
+    ],
+    [
+      "^api(PapkaSkan|HujjatLokalTuzat|NativeGaAylantir|SheetlarOl|ObyektFayllarniTekshir)",
+      "fayl"
+    ],
+    [
+      "^api(Holat|Razdel|Narx|BlQosh|RzQosh|RsQosh|SmetaQatorQosh|Topilmaganlar|Reestr)",
+      "smeta"
+    ],
+    [
+      "^api(ObyektIshla|ObyektTezkorIshla|BarchaIshla|ServerYig|MarkerQayta|Progress|KeshWarmUp|Trigger|Lock)",
+      "dvigatel"
+    ],
+    [
+      "^api(TizimHolat|PanelInit|Tashxis|OyQosh|Boglash)",
+      "tizim"
+    ]
+  ],
+  "holat": {
+    "_izoh": "Tizim_02 da ALLAQACHON qoplangan funksiyalar. `qopladi` — nima bilan.",
+    "apiHolatOl": {
+      "qopladi": "t2_daraxt + sbT2DaraxtOl",
+      "toliq": false,
+      "izoh": "daraxt o'qiladi; f2/fakt ustunlari hali yo'q"
+    },
+    "apiHolatOlLokalka": {
+      "qopladi": "t2_daraxt",
+      "toliq": false
+    },
+    "apiRazdelShYasat": {
+      "qopladi": "t2_markirovka + t2_rollup",
+      "toliq": true
+    },
+    "apiRazdelShYasatBarcha": {
+      "qopladi": "t2_markirovka",
+      "toliq": true
+    },
+    "apiNarxlarOl": {
+      "qopladi": "t2_narx",
+      "toliq": false
+    },
+    "apiF2FaylOqi": {
+      "qopladi": "apiT2F2Korish (o'zi chaqiradi)",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiF2VaraklarOl": {
+      "qopladi": "apiT2F2Varaqlar",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiF2AvtoMoslash": {
+      "qopladi": "T2_F2Import.js dvigatel",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiAktYoz": {
+      "qopladi": "t2_akt_yarat",
+      "toliq": true
+    },
+    "apiAktlarOl": {
+      "qopladi": "t2_akt_reestr",
+      "toliq": true
+    },
+    "apiF2ReestrOl": {
+      "qopladi": "t2_akt_reestr",
+      "toliq": false
+    },
+    "apiF2ReestrHujjatJami": {
+      "qopladi": "t2_akt.hujjat_jami",
+      "toliq": true
+    },
+    "apiKirishTekshir": {
+      "qopladi": "/api/sessiya",
+      "toliq": false,
+      "izoh": "SESSIYA_KALIT hali majburiy emas — ochiq qarz"
+    },
+    "apiXatoYoz": {
+      "qopladi": "t2_ozgarish",
+      "toliq": false
+    },
+    "apiRzQosh": {
+      "qopladi": "t2_qator_qosh",
+      "toliq": true
+    },
+    "apiBlQosh": {
+      "qopladi": "t2_qator_qosh",
+      "toliq": true
+    },
+    "apiRsQosh": {
+      "qopladi": "t2_qator_qosh",
+      "toliq": true
+    },
+    "apiSmetaQatorQosh": {
+      "qopladi": "t2_qator_qosh",
+      "toliq": true
+    },
+    "apiIshTurAfterRow": {
+      "qopladi": "t2_qator_qosh (p_keyin_id)",
+      "toliq": false,
+      "izoh": "joylashuv bor; ish turlari spravochnigi hali yo'q"
+    }
+  },
+  "keyingiNavbat": {
+    "_izoh": "Qiymat bo'yicha tartib. Agent shu ro'yxatning BIRINCHI tugallanmagan domenini oladi.",
+    "tartib": [
+      "smeta",
+      "f2",
+      "hujjat",
+      "shartnoma",
+      "buxgalteriya",
+      "sklad",
+      "faktura",
+      "spravochnik",
+      "erp",
+      "grafik",
+      "hisobot",
+      "kuzatuv",
+      "sozlama",
+      "kirish",
+      "tizim"
+    ],
+    "_panelIzoh": "«panel» navbatda YO'Q: u 30_Panel.js uchun zaxira domen. Unga funksiya tushsa generator TASNIFSIZ deb yiqiladi va nomQoida ga qoida so'raladi."
+  }
+}

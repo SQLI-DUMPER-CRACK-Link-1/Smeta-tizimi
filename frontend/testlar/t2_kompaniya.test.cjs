@@ -38,8 +38,12 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
   {
     const amallar = (s.match(/rpc:\s*'([a-z0-9_]+)'/g) || [])
       .map((x) => x.split("'")[1]).sort();
+    /* ⚠️ 2026-08-24: `t2_qator_qosh` qo'shildi — Tizim_01 dagi
+       apiRzQosh/apiBlQosh/apiRsQosh/apiSmetaQatorQosh o'rniga.
+       Ro'yxat ATAYLAB qat'iy: yangi amal qo'shish uchun shu testni ham
+       ochish kerak, ya'ni eshik JIMGINA kengayolmaydi. */
     const KUTILGAN = ['t2_akt_bekor', 't2_akt_tasdiqlash', 't2_akt_yarat',
-                      't2_qator_tahrir'].sort();
+                      't2_qator_qosh', 't2_qator_tahrir'].sort();
     T('RPC ro\'yxati AYNAN belgilangan 4 ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));
@@ -51,6 +55,14 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
     T('noma\'lum amal RAD etiladi',
       /Noma\\?'lum amal/.test(s));
   }
+  /* ⚠️ Qator qo'shishda ham idempotentlik MAJBURIY: tarmoq uzilib
+     qayta yuborilsa smetaga ikkita bir xil qator tushardi. */
+  T("qator qo'shishda operation_id majburiy",
+    s.indexOf('ikkinchi qator yaratadi') > 0);
+  /* ⚠️ MANFIY norma (ПЕРЕРАСЧЁТ) bloklanmasin — bu tizimda bir
+     necha marta `> 0` sharti bilan yo'qotilgan. */
+  T("norma tekshiruvi `> 0` EMAS (manfiy o'tadi)",
+    /norma = Number\(so\.norma\)/.test(s) && !/norma\s*<=?\s*0/.test(s));
   T('ixtiyoriy jadvalga yozish yo\'q',
     s.indexOf('/rest/v1/' + '${') < 0 && !/rest\/v1\/'\s*\+\s*[a-z]/.test(s));
   T('versiya MAJBURIY (usiz rad etiladi)',

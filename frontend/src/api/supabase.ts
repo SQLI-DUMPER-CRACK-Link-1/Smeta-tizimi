@@ -464,6 +464,45 @@ export function sbT2AktYarat(p: {
   });
 }
 
+/**
+ * Smetaga yangi qator qo'shadi (`t2_qator_qosh`).
+ *
+ * Tizim_01 dagi `apiRzQosh` / `apiBlQosh` / `apiRsQosh` ning o'rnini
+ * bosadi. ⚠️ Hisob-kitob shu yerda EMAS, bazada:
+ *
+ *  • `norma` ≠ `hajm`. `eObyom` berilmasa `rs` da hajm = ota.hajm × norma.
+ *    Frontendda ko'paytirsak ikki xil hisob paydo bo'lardi.
+ *  • `norma` MANFIY bo'lishi mumkin — ПЕРЕРАСЧЁТ haqiqiy hujjat.
+ *  • `kat` yubormang: ЧЕЛ/МАШ birlikdan aniqlanadi va tanlov uni
+ *    bosib o'tolmaydi. `kat` faqat МАТ/ОБ/М-К/КАБ ajratish uchun.
+ *  • `narx` yubormasangiz narxlar bazasidan qidiriladi; topilmasa
+ *    BO'SH qoladi. 0 yozilmaydi — 0 «bepul» degani.
+ */
+export function sbT2QatorQosh(p: {
+  obyektId: number;
+  tur: 'rz' | 'bl' | 'rs' | 'mat' | 'ob';
+  nom: string;
+  otaId?: number | null;
+  kod?: string;
+  birlik?: string;
+  norma?: number;
+  narx?: number;
+  /** true → hajm AYNAN norma (E ustuni butun hajm). Aks holda ko'paytiriladi. */
+  eObyom?: boolean;
+  kat?: string;
+  /** Shu qatordan KEYIN joylashadi; berilmasa oxiriga. */
+  keyinId?: number;
+  /** ⚠️ Qayta urinishda O'ZGARMASIN — aks holda ikkinchi qator yaraladi. */
+  operationId: string;
+}): Promise<AktNatija> {
+  return yozAmali({
+    amal: 'qator_qosh', obyekt_id: p.obyektId, tur: p.tur, nom: p.nom,
+    ota_id: p.otaId ?? null, kod: p.kod, birlik: p.birlik,
+    norma: p.norma, narx: p.narx, e_obyom: p.eObyom, kat: p.kat,
+    keyin_id: p.keyinId, operation_id: p.operationId,
+  });
+}
+
 export function sbT2AktTasdiqlash(aktId: number, kutilganVersiya?: number): Promise<AktNatija> {
   return yozAmali({ amal: 'akt_tasdiqlash', akt_id: aktId,
                     kutilgan_versiya: kutilganVersiya });
