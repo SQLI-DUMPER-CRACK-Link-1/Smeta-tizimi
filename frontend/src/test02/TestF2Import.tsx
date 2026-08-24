@@ -403,25 +403,28 @@ export default function TestF2Import() {
           return m[b] || b;
         };
 
+        const alreadyBound = (scId: number) =>
+          smetaBogMi(String(scId)) || Object.values(newBog).includes(scId);
+
         f2Children.forEach((fc: any) => {
           const fcKod = nKod(fc.kod);
           const fcNom = nNom(fc.nom);
           const fcBir = nBir(fc.bir || fc.birlik);
 
-          // Find a matching child in the Smeta block children
-          // 1st pass: match by normalized code
+          // Agar bu F2 bola allaqachon bog'langan bo'lsa, o'tkazib yuborish
+          if (qolBog[fc.uid] !== undefined || newBog[fc.uid] !== undefined) return;
+
+          // Birinchi: kod bo'yicha moslik
           let match = smetaChildren.find((sc) => {
-            const scIdStr = String(sc.id);
-            if (smetaBogMi(scIdStr)) return false; // already bound
+            if (!sc.id || alreadyBound(sc.id)) return false;
             const scKod = nKod(sc.kod);
             return fcKod && scKod && fcKod === scKod;
           });
 
-          // 2nd pass: match by normalized name and unit
+          // Ikkinchi: nom + birlik bo'yicha moslik
           if (!match) {
             match = smetaChildren.find((sc) => {
-              const scIdStr = String(sc.id);
-              if (smetaBogMi(scIdStr)) return false; // already bound
+              if (!sc.id || alreadyBound(sc.id)) return false;
               const scNom = nNom(sc.nom);
               const scBir = nBir(sc.birlik);
               return fcNom && scNom && fcNom === scNom && fcBir === scBir;
@@ -440,8 +443,28 @@ export default function TestF2Import() {
     toast(`✓ Bog'landi: ${String(n.nom).slice(0, 40)}`);
   };
 
-  const qolGapDop = () => {
-    toast('Tizim_02 da F2 ekranidan smetaga yangi qator qo\'shish taqiqlangan', 'warn');
+  const qolGapDop = (aktKalit?: string, smetaKalit?: string) => {
+    // Smeta panelidan "qo'shish" tugmasi bosilganda qatorQoshModal ochiladi
+    if (smetaKalit && !smetaKalit.startsWith('rz:') && smetaTree) {
+      const sn = findSmetaNode(smetaTree, Number(smetaKalit));
+      if (sn) {
+        setYangiSmeta(sn.varaq || '');
+        setYangiQator(String(sn.row || ''));
+      }
+    }
+    // F2 panelidan "qo'shish" bosilsa, F2 node ma'lumotlari bilan to'ldirish
+    if (aktKalit && korish?.tree) {
+      const n = findAktNode(korish.tree, aktKalit);
+      if (n) {
+        setYangiNom(String(n.nom || ''));
+        setYangiKod(String(n.kod || ''));
+        setYangiBirlik(String(n.bir || n.birlik || ''));
+        setYangiHajm(String(n.hajm ?? ''));
+        setYangiNarx(String(n.narx ?? ''));
+        setYangiTur(n.type === 'bl' ? 'bl' : n.type === 'mat' ? 'mat' : n.type === 'ob' ? 'ob' : 'rs');
+      }
+    }
+    setQatorQoshModal(true);
   };
 
   // Unlink functions
