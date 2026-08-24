@@ -446,25 +446,29 @@ export default function TestF2Import() {
           // Agar bu F2 bola allaqachon bog'langan bo'lsa, o'tkazib yuborish
           if (qolBog[fc.uid] !== undefined || newBog[fc.uid] !== undefined) return;
 
-          // Birinchi: kod bo'yicha moslik
-          let match = smetaChildren.find((sc) => {
-            if (!sc.id || alreadyBound(sc.id)) return false;
+          let bestChildMatch: any = null;
+          let bestBall = 0;
+
+          smetaChildren.forEach((sc: any) => {
+            if (!sc.id || alreadyBound(sc.id) || sc.type !== fc.type) return;
             const scKod = nKod(sc.kod);
-            return fcKod && scKod && fcKod === scKod;
+            const scNom = nNom(sc.nom);
+            const scBir = nBir(sc.birlik);
+
+            let ball = 0;
+            if (fcKod && scKod === fcKod) ball += 50;
+            if (fcNom && scNom === fcNom) ball += 30;
+            if (fcBir && scBir === fcBir) ball += 10;
+            if (fcNom && scNom && (scNom.includes(fcNom) || fcNom.includes(scNom))) ball += 20;
+
+            if (ball > bestBall) {
+              bestBall = ball;
+              bestChildMatch = sc;
+            }
           });
 
-          // Ikkinchi: nom + birlik bo'yicha moslik
-          if (!match) {
-            match = smetaChildren.find((sc) => {
-              if (!sc.id || alreadyBound(sc.id)) return false;
-              const scNom = nNom(sc.nom);
-              const scBir = nBir(sc.birlik);
-              return fcNom && scNom && fcNom === scNom && fcBir === scBir;
-            });
-          }
-
-          if (match && match.id) {
-            newBog[fc.uid] = match.id;
+          if (bestChildMatch && bestBall >= 40) {
+            newBog[fc.uid] = bestChildMatch.id;
           }
         });
       }
@@ -624,26 +628,30 @@ export default function TestF2Import() {
               const fcNom = nNom(fc.nom);
               const fcBir = nBir(fc.bir || fc.birlik);
 
-              // Birinchi: Kod bo'yicha qidiruv
-              let match = smetaChildren.find((sc) => {
-                if (!sc.id || isAlreadyBound(sc.id) || sc.type !== fc.type) return false;
+              let bestChildMatch: any = null;
+              let bestBall = 0;
+
+              smetaChildren.forEach((sc: any) => {
+                if (!sc.id || isAlreadyBound(sc.id) || sc.type !== fc.type) return;
                 const scKod = nKod(sc.kod);
-                return fcKod && scKod && fcKod === scKod;
+                const scNom = nNom(sc.nom);
+                const scBir = nBir(sc.birlik);
+
+                let ball = 0;
+                if (fcKod && scKod === fcKod) ball += 50;
+                if (fcNom && scNom === fcNom) ball += 30;
+                if (fcBir && scBir === fcBir) ball += 10;
+                if (fcNom && scNom && (scNom.includes(fcNom) || fcNom.includes(scNom))) ball += 20;
+
+                if (ball > bestBall) {
+                  bestBall = ball;
+                  bestChildMatch = sc;
+                }
               });
 
-              // Ikkinchi: Nom + Birlik bo'yicha qidiruv
-              if (!match) {
-                match = smetaChildren.find((sc) => {
-                  if (!sc.id || isAlreadyBound(sc.id) || sc.type !== fc.type) return false;
-                  const scNom = nNom(sc.nom);
-                  const scBir = nBir(sc.birlik);
-                  return fcNom && scNom && fcNom === scNom && fcBir === scBir;
-                });
-              }
-
-              if (match && match.id) {
-                yangiBog[fc.uid] = match.id;
-                bandJoy.add(match.id);
+              if (bestChildMatch && bestBall >= 40) {
+                yangiBog[fc.uid] = bestChildMatch.id;
+                bandJoy.add(bestChildMatch.id);
                 count++;
               }
             });
