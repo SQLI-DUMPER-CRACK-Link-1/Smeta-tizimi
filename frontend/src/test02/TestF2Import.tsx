@@ -143,8 +143,9 @@ export default function TestF2Import() {
   const [yangiHajm, setYangiHajm] = useState('');
   const [yangiNarx, setYangiNarx] = useState('');
   const [qatorLoading, setQatorLoading] = useState(false);
+  const [yangiAktBoglashUid, setYangiAktBoglashUid] = useState<string | null>(null);
 
-  // Takliflar va o'tish (scroll) holatlari
+  // Tanlangan fayl nomini o'qish (scroll) holatlari
   const [takliflar, setTakliflar] = useState<Record<string, any[]>>({});
   const [smetaScrollTo, setSmetaScrollTo] = useState<string | null>(null);
   const [tanlanganSmetaVaraqlar, setTanlanganSmetaVaraqlar] = useState<string[]>([]);
@@ -364,13 +365,12 @@ export default function TestF2Import() {
       return;
     }
 
-    // ⚠️ Tur mosligini tekshirish — RS → RS, MAT → MAT, OB → OB bo'lishi kerak
+    // ⚠️ Tur va Nom mosligini tekshirish (ZAMENA xavfi)
     if (smetaTree) {
       const sn = findSmetaNode(smetaTree, smetaId);
       if (sn && n.type && sn.type) {
-        // Qabul qilinadigan juftliklar (bl ← bl, rs ← rs, mat ← mat, ob ← ob)
-        const turMos = n.type === sn.type
-          || (n.type === 'bl' && sn.type === 'bl');
+        // 1. Tur mosligi
+        const turMos = n.type === sn.type;
         if (!turMos) {
           const tasd = window.confirm(
             `⚠️ Tur mos kelmaydi!\n` +
@@ -378,6 +378,30 @@ export default function TestF2Import() {
             `Smeta: "${sn.nom}" (${sn.type?.toUpperCase()})\n\n` +
             `Bu NOTO'G'RI bog'lanish bo'lishi mumkin (masalan, ish turi o'rniga material bog'lamoqchisiz).\n` +
             `Shunda ham bog'laymizmi? (OK = Ha, Bekor = Yo'q)`
+          );
+          if (!tasd) return;
+        }
+
+        // 2. Nom va kod mosligi (Zamena qilinishini sezish uchun)
+        const nNomF = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
+        const aKod = nNomF(n.kod); const sKod = nNomF(sn.kod);
+        const aNom = nNomF(n.nom); const sNom = nNomF(sn.nom);
+
+        let isExactMatch = false;
+        if (n.type === 'bl') {
+            const kodMos = (aKod && sKod && aKod === sKod) || (!aKod || !sKod);
+            if (kodMos && aNom === sNom) isExactMatch = true;
+        } else {
+            if (aNom && sNom && aNom === sNom) isExactMatch = true;
+        }
+
+        if (!isExactMatch) {
+          const tasd = window.confirm(
+            `⚠️ ZAMENA: F2 qatori smeta qatoridan farq qiladi!\n\n` +
+            `F2: [${n.kod}] ${String(n.nom).slice(0, 50)}\n` +
+            `Smeta: [${sn.kod}] ${String(sn.nom).slice(0, 50)}\n\n` +
+            `Agar bog'lasangiz, bu F2 dagi hajm faktga shu smeta qatori ostida yoziladi (fakt oshib ketishi xavfi bor).\n` +
+            `Davom etamizmi? (OK = Ha, Bekor = Yo'q)`
           );
           if (!tasd) return;
         }
@@ -449,7 +473,30 @@ export default function TestF2Import() {
       const sn = findSmetaNode(smetaTree, Number(smetaKalit));
       if (sn) {
         setYangiSmeta(sn.varaq || '');
-        setYangiQator(String(sn.row || ''));
+        let targetRow = sn.row || '';
+        // Agar resurs bo'lsa (rs/mat/ob), backendga ona BLOK qatori kerak
+        if (sn.type === 'rs' || sn.type === 'mat' || sn.type === 'ob') {
+          let parentBlRow: number | null = null;
+          const findParentBl = (nodes: any[]) => {
+            for (const rz of nodes) {
+              if (rz.children) {
+                for (const bl of rz.children) {
+                  if (bl.type === 'bl') {
+                    if (bl.id === sn.id) { parentBlRow = bl.row; return; }
+                    if (bl.children) {
+                      for (const child of bl.children) {
+                        if (child.id === sn.id) { parentBlRow = bl.row; return; }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          };
+          findParentBl(smetaTree);
+          if (parentBlRow) targetRow = parentBlRow;
+        }
+        setYangiQator(String(targetRow));
       }
     }
     // F2 panelidan "qo'shish" bosilsa, F2 node ma'lumotlari bilan to'ldirish
@@ -462,7 +509,10 @@ export default function TestF2Import() {
         setYangiHajm(String(n.hajm ?? ''));
         setYangiNarx(String(n.narx ?? ''));
         setYangiTur(n.type === 'bl' ? 'bl' : n.type === 'mat' ? 'mat' : n.type === 'ob' ? 'ob' : 'rs');
+        setYangiAktBoglashUid(aktKalit); // Zamena uchun eslab qolamiz
       }
+    } else {
+      setYangiAktBoglashUid(null);
     }
     setQatorQoshModal(true);
   };
@@ -800,6 +850,7 @@ export default function TestF2Import() {
     setYangiBirlik('');
     setYangiHajm('');
     setYangiNarx('');
+    setYangiAktBoglashUid(null);
     setQatorQoshModal(true);
   };
 
@@ -833,6 +884,27 @@ export default function TestF2Import() {
           if (r.ok && r.qatorlar) {
             const tree = sbT2TreeQur(r.qatorlar);
             setSmetaTree(tree);
+            
+            // Avto-bog'lash (agar F2 dan ochilgan bo'lsa)
+            if (yangiAktBoglashUid && res.row) {
+              const findNewNode = (nodes: any[]): number | null => {
+                for (const node of nodes) {
+                  if (node.varaq === yangiSmeta && node.row === res.row) return node.id;
+                  if (node.children) {
+                    const found = findNewNode(node.children);
+                    if (found) return found;
+                  }
+                }
+                return null;
+              };
+              const newId = findNewNode(tree);
+              if (newId) {
+                setUndoStack((prev) => [...prev.slice(-29), qolBog]);
+                setQolBog((prev) => ({ ...prev, [yangiAktBoglashUid]: newId }));
+                toast(`✓ Yangi qator yaratildi va avtomatik bog'landi!`, 'ok');
+              }
+            }
+            setYangiAktBoglashUid(null);
           }
         } else {
           toast(impRes?.xabar || "Supabase import xatosi", "danger");
