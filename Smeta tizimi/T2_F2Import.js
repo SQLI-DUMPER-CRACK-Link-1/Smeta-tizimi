@@ -17,26 +17,100 @@
  *                     (`_f2UstunAniqla`), F-yoki-E hajm qoidasi,
  *                     ИТОГО/ustun-raqamlash qatorlarini tashlash.
  *
- * Bu yerda faqat KO'PRIK: o'sha daraxtni tekis ro'yxatga aylantirib,
- * ota blok belgilari bilan birga bazaga uzatamiz.
+ * ── MOSLASHTIRISH HAM TIZIM_01 NIKI ──
  *
- * ── MOSLASHTIRISH BAZADA ──
+ *   `f2MoslashEngine` (35_F2Moslash.js) — 41 KB, har qoidasi HAQIQIY
+ *   moliyaviy xatodan keyin qo'shilgan:
+ *      • birlik qalqoni  → Т↔КГ = 1000 baravar xato
+ *      • grade-farq      → ПК↔ПБ boshqa mahsulot
+ *      • kod-kanon       → 105 ta ish topilmagan = 2.57 mlrd ko'rilmagan
+ *      • qat'iy rejim    → generic resurs (000001) 153 joyda aralashardi
+ *      • yetim qutqarish → ish topilmasa bolalari ham yo'qolardi
+ *      • razdel doirasi  → BL kod global 11/54 unikal, razdel ichida
+ *                          132/186 (71%)
  *
- * `t2_f2_moslash` / `t2_f2_import` (Postgres) qiladi. Sabab: Fast food
- * obyektida 1 262 resurs qatori bor, lekin unikal (nom, birlik)
- * juftligi atigi 404 ta — ya'ni bir resurs o'rtacha 3 marta uchraydi.
- * Faqat nom bo'yicha moslashtirish F2 hajmini BOSHQA blokka yozib
- * yuborishi mumkin. Shuning uchun moslashtirish IERARXIK: avval ota
- * blok, keyin resurs o'sha blok ichida.
+ * ⚠️ AVVAL BU YERDA MENING SODDA SQL MOSLASHTIRISHIM BOR EDI (nom +
+ * birlik + ota blok). U yuqoridagi HAMMA qoidani tashlab yuborardi va
+ * o'sha xatolarni qaytarardi. Olib tashlandi.
  *
- * ⚠️ NOANIQLIK JIM HAL QILINMAYDI. Bir nechta nomzod chiqsa qator
- * «ikkilamchi» deb qaytariladi va hujjatga KIRMAYDI. Sinovda ota
- * ma'lumotisiz bitta nom 106 ta nomzod bergan — tavakkaliga tanlash
- * pulni boshqa joyga yozish demak.
+ * Dvigatel SOF funksiya va `opts.lrvTree` orqali istalgan daraxtni
+ * oladi — shuning uchun unga TEGMASDAN ishlatiladi. Tizim_02
+ * qatorlari `_t2F2LrvDaraxt` bilan o'sha shaklga keltiriladi va
+ * `row` maydoniga `t2_qator.id` beriladi.
  *
- * ⚠️ REESTR KAFOLATI: nechta qator kirdi = hujjatga kirdi + ikkilamchi
- * + topilmadi. Bu tenglik javobda tekshiriladi.
+ * ⚠️ REESTR KAFOLATI: kirgan = hujjatga kirdi + topilmadi.
+ * Topilmagan qator TASHLANMAYDI — dvigatel bergan SABABI bilan
+ * qaytariladi.
  */
+
+/**
+ * Tizim_02 ma'lumotidan MOSLASHTIRISH DARAXTI quradi.
+ *
+ * ⚠️ NEGA AYNAN SHU SHAKL:
+ * `f2MoslashEngine` (35_F2Moslash.js) LRV daraxtini kutadi:
+ *     rz  → {type:'rz', nom, lokalka, children}
+ *     ish → {type, nom, kod, birlik, narx, varaq, row, children}
+ *
+ * `row` dvigatel uchun shunchaki IDENTIFIKATOR — Tizim_01 da u
+ * jadval qatori raqami. Bu yerda unga `t2_qator.id` beramiz, shunda
+ * moslik natijasi to'g'ridan-to'g'ri smeta qatorining id sini
+ * qaytaradi va dvigatelga TEGISH SHART EMAS.
+ *
+ * ⚠️ ASIMMETRIYA ATAYLAB: LRV tugunida `birlik`, akt tugunida `bir`
+ * (35_F2Moslash.js:127). Buni "tuzatish" moslashtirishni buzadi.
+ *
+ * ⚠️ ENG YUQORI DARAJA 'rz' BO'LISHI SHART. Dvigatel indekslarni
+ * `lrvTree.forEach(rz => { if(rz.type!=='rz') return; ...})` bilan
+ * quradi (35_F2Moslash.js:163 va :194) — ya'ni razdel ILDIZDA
+ * bo'lmasa ikkala indeks ham BO'SH qoladi va hech nima moslashmaydi.
+ * Xato chiqmaydi, shunchaki 0 ta moslik — eng xavfli xato turi.
+ * Shuning uchun razdellar QAYSI CHUQURLIKDA bo'lsa ham ildizga
+ * ko'tariladi, umuman bo'lmasa esa sun'iy razdel yasaladi.
+ *
+ * `lokalka` — Tizim_02 da obyekt bo'yicha YAGONA daraxt bor (ko'p
+ * fayl import paytida birlashtirilgan), shuning uchun bo'sh. Dvigatel
+ * uni faqat `opts.lokalka` berilganda ishlatadi, biz bermaymiz.
+ */
+function _t2F2LrvDaraxt(obyektId){
+  var qatorlar = _t2QatorlarOl(obyektId);
+  var tugun = {}, ildiz = [];
+
+  for(var i = 0; i < qatorlar.length; i++){
+    var q = qatorlar[i];
+    tugun[q.id] = {
+      type: q.tur,
+      nom: q.nom || '',
+      kod: q.kod || '',
+      birlik: q.birlik || '',          // ⚠️ LRV tomonda 'birlik'
+      narx: Number(q.narx) || 0,
+      varaq: 'T2',
+      row: q.id,                        // ⚠️ dvigatel shuni qaytaradi
+      lokalka: '',
+      children: []
+    };
+  }
+  for(var j = 0; j < qatorlar.length; j++){
+    var q2 = qatorlar[j], n2 = tugun[q2.id];
+    var ota = (q2.ota_id != null) ? tugun[q2.ota_id] : null;
+    if(ota) ota.children.push(n2); else ildiz.push(n2);
+  }
+
+  /* Razdellarni istalgan chuqurlikdan ildizga ko'taramiz */
+  var rzlar = [];
+  (function yig(nodes){
+    for(var k = 0; k < nodes.length; k++){
+      var n = nodes[k];
+      if(n.type === 'rz') rzlar.push(n);
+      if(n.children.length) yig(n.children);
+    }
+  })(ildiz);
+  if(rzlar.length) return rzlar;
+
+  /* Razdelsiz smeta — dvigatel baribir ishlashi kerak.
+     Sun'iy razdel = global doira (dvigatelning o'z zaxira yo'li). */
+  if(!ildiz.length) return [];
+  return [{type:'rz', nom:'', lokalka:'', children: ildiz}];
+}
 
 /**
  * Faylni o'qiydi va DARAXT qaytaradi.
@@ -187,6 +261,80 @@ function _t2F2Oqi(faylId, varaq, colConfig){
           hdrQator: birinchi.hdrQator, preview: birinchi.preview};
 }
 
+/**
+ * MOSLASHTIRISH — Tizim_01 ning dvigateli bilan.
+ *
+ * ⚠️ AVVAL BU YERDA O'ZIMNING SODDA SQL MOSLASHTIRISHIM BOR EDI.
+ * U nom+birlik bo'yicha ishlardi va `35_F2Moslash.js` dagi HAMMA
+ * qoidani tashlab yuborardi. Har qoida haqiqiy moliyaviy xatodan
+ * keyin qo'shilgan (o'sha fayl sarlavhasidan):
+ *
+ *   • birlik qalqoni  → Т↔КГ = 1000 baravar xato
+ *   • grade-farq      → ПК↔ПБ boshqa mahsulot
+ *   • kod-kanon       → 105 ta ish topilmagan = 2.57 mlrd ko'rilmagan
+ *   • qat'iy rejim    → generic resurs (000001) 153 joyda aralashardi
+ *   • yetim qutqarish → ish topilmasa bolalari ham yo'qolardi
+ *   • qoldiq-evristika→ 2.2 mlrd → 3.3 mlrd xato (shu sabab OLIB
+ *                       TASHLANGAN — qayta qo'shmang)
+ *
+ * Dvigatel SOF funksiya va `opts.lrvTree` orqali istalgan daraxtni
+ * qabul qiladi — shuning uchun unga TEGMASDAN ishlatamiz.
+ *
+ * Natijadagi `row` — biz bergan `t2_qator.id`.
+ */
+function _t2F2Moslashtir(obyektId, aktTree){
+  var lrvTree = _t2F2LrvDaraxt(obyektId);
+  if(!lrvTree.length){
+    return {ok:false, xabar:'Bu obyektda smeta qatorlari yo\'q — avval import qiling'};
+  }
+
+  /* Dvigatel nechta smeta tugunini KO'RGANINI sanaymiz.
+     0 ta moslik chiqsa, sabab shu raqamdan darrov ko'rinadi:
+     indeks bo'sh (daraxt shakli xato) mi yoki nomlar mos kelmadimi. */
+  var lrvTugun = 0;
+  (function sana(nodes){
+    for(var k = 0; k < nodes.length; k++){
+      if(nodes[k].type !== 'rz') lrvTugun++;
+      if(nodes[k].children && nodes[k].children.length) sana(nodes[k].children);
+    }
+  })(lrvTree);
+
+  var r = apiF2AvtoMoslash(aktTree, null, {lrvTree: lrvTree});
+  var st = (r && r.stat) || {};
+  var mosliklar = (r && r.mosliklar) || [];
+
+  /* Akt daraxtidagi HAMMA hajmli tugun — reestr kafolati uchun */
+  var hammasi = _t2F2Tekisla(aktTree);
+  var mosXarita = {};
+  for(var i = 0; i < mosliklar.length; i++) mosXarita[mosliklar[i].uid] = mosliklar[i];
+
+  var qatorlar = [], moslandi = 0, topilmadi = 0;
+  for(var j = 0; j < hammasi.length; j++){
+    var h = hammasi[j];
+    var m = mosXarita[h.uid];
+    if(m){
+      moslandi++;
+      qatorlar.push({holat:'moslandi', uid: h.uid, nom: h.nom, birlik: h.birlik,
+                     hajm: h.hajm, narx: h.narx, qator_id: m.row});
+    }else{
+      topilmadi++;
+      qatorlar.push({holat:'topilmadi', uid: h.uid, nom: h.nom, birlik: h.birlik,
+                     hajm: h.hajm, narx: h.narx, qator_id: null,
+                     /* Dvigatel NEGA topmaganini aytadi — jim qoldirmaymiz */
+                     sabab: (r.sabablar && r.sabablar[h.uid]) || ''});
+    }
+  }
+
+  return {ok:true, kirgan: hammasi.length, moslandi: moslandi,
+          topilmadi: topilmadi,
+          /* ⚠️ REESTR KAFOLATI: kirgan = moslandi + topilmadi */
+          kafolat: hammasi.length === moslandi + topilmadi,
+          qatorlar: qatorlar,
+          /* Dvigatel diagnostikasi — qaysi qoida ishlagani ko'rinsin */
+          stat: st, rzDiag: (r && r.rzDiag) || [],
+          lrv: {razdel: lrvTree.length, tugun: lrvTugun}};
+}
+
 /** Daraxtni tekis ro'yxatga — ota blok belgilari bilan. */
 function _t2F2Tekisla(daraxt){
   var chiqish = [];
@@ -206,8 +354,9 @@ function _t2F2Tekisla(daraxt){
           birlik: tugun.bir || '',
           hajm: h,
           /* ⚠️ NARX FAYLDAN OLINADI — hujjat nima desa shu.
-             Bo'lmasa qo'shilmaydi va baza smetadagi narxni ishlatadi.
-             Hech qayerda bo'lmasa summa BO'SH qoladi, 0 EMAS. */
+             Faylda bo'lmasa BO'SH qoladi va shu holicha hujjatga
+             tushadi (`narx_yoq`) — smetadan TO'LDIRILMAYDI.
+             0 ham yozilmaydi: 0 «bepul» degani, bo'sh esa «noma'lum». */
           narx: (Number(tugun.narx) > 0) ? Number(tugun.narx) : undefined,
           kod: tugun.kod || undefined,
           ota_kod: otaKod || undefined,
@@ -246,28 +395,13 @@ function apiT2F2Korish(obyektNom, faylId, varaq, colConfig){
     var oq = _t2F2Oqi(faylId, varaq, colConfig);
     if(!oq.ok) return oq;
 
-    var qatorlar = _t2F2Tekisla(oq.tree || []);
-    if(!qatorlar.length){
-      return {ok:false, xabar:'Faylda hajmi bor bironta qator topilmadi. ' +
-                              'Ustunlar to\'g\'ri tanlanganmi?'};
-    }
-
-    var mos = _t2Rpc('t2_f2_moslash', {
-      p_obyekt_id: ob.id, p_qatorlar: qatorlar
-    });
-
-    if(mos && mos.qatorlar){
-      for(var k = 0; k < mos.qatorlar.length; k++){
-        var mq = mos.qatorlar[k];
-        var original = qatorlar[mq.n];
-        if(original){
-          mq.uid = original.uid;
-        }
-      }
-    }
+    var mos = _t2F2Moslashtir(ob.id, oq.tree || []);
+    if(!mos.ok) return mos;
 
     return {ok:true, obyekt: obyektNom, obyekt_id: ob.id,
-            fayl_qator: qatorlar.length, moslash: mos,
+            fayl_qator: mos.kirgan, moslash: mos,
+            /* ⚠️ DARAXT SHART: chap panel shu daraxtdan chiziladi.
+               Buni tushirib qoldirsa ekran bo'm-bo'sh chiqadi. */
             tree: oq.tree,
             /* Ustunlar KO'RINIB tursin — noto'g'ri aniqlangan bo'lsa
                odam tuzatib qayta yuborishi mumkin */
@@ -311,24 +445,58 @@ function apiT2F2Import(obyektNom, faylId, varaq, oy, tur, raqam, operationId, co
     var oq = _t2F2Oqi(faylId, varaq, colConfig);
     if(!oq.ok) return oq;
 
-    var qatorlar = _t2F2Tekisla(oq.tree || []);
-    if(!qatorlar.length){
-      return {ok:false, xabar:'Faylda hajmi bor bironta qator topilmadi'};
+    /* ⚠️ AYNAN «Ko'rish» dagi moslashtirish — Tizim_01 dvigateli.
+       Ikki xil yo'l bo'lsa ekranda bir narsa ko'rinib, hujjatga
+       boshqasi tushardi. */
+    var mos = _t2F2Moslashtir(ob.id, oq.tree || []);
+    if(!mos.ok) return mos;
+    if(!mos.moslandi){
+      return {ok:false, xabar:'Bironta qator smetaga bog\'lanmadi — hujjat yaratilmadi',
+              moslash: mos};
     }
 
-    var natija = _t2Rpc('t2_f2_import', {
+    /* Faqat MOSLANGAN qatorlar hujjatga. Topilmaganlar tashlanmaydi —
+       javobda to'liq qaytadi va ekranda ko'rsatiladi. */
+    var yuk = [], narxsiz = 0;
+    for(var i = 0; i < mos.qatorlar.length; i++){
+      var q = mos.qatorlar[i];
+      if(q.holat !== 'moslandi') continue;
+      var qator = {qator_id: q.qator_id, hajm: q.hajm};
+      if(q.narx != null){
+        qator.narx = q.narx;
+      }else{
+        /* ⚠️ NARX O'ZIDAN TO'QILMAYDI.
+           `t2_akt_yarat` odatda narx berilmasa SMETA narxini oladi —
+           qo'lda akt yasashda to'g'ri. Lekin bu hujjat TASHQI: unda
+           narx yo'q bo'lsa, smetadan olish hujjatda YO'Q raqamni
+           yozish bo'lardi. `narx_yoq` shu fallbackni o'chiradi:
+           narx NULL, summa NULL, hujjat «JAMI TO'LIQ EMAS». */
+        qator.narx_yoq = true;
+        narxsiz++;
+      }
+      yuk.push(qator);
+    }
+
+    var akt = _t2Rpc('t2_akt_yarat', {
       p_obyekt_id: ob.id,
+      p_tur: (tur === 'fakt') ? 'fakt' : 'f2',
       p_oy: oy,
-      p_qatorlar: qatorlar,
+      p_qatorlar: yuk,
       p_raqam: raqam || null,
       p_operation_id: operationId,
-      p_tur: (tur === 'fakt') ? 'fakt' : 'f2',
       p_manba: 'import',
       p_kim: null
     });
 
-    return {ok: !!(natija && natija.ok), obyekt: obyektNom,
-            fayl_qator: qatorlar.length, natija: natija,
+    var hujjatga = (akt && akt.ok) ? (Number(akt.qator_soni) || 0) : 0;
+    return {ok: !!(akt && akt.ok), obyekt: obyektNom,
+            fayl_qator: mos.kirgan, akt: akt, moslash: mos,
+            /* ⚠️ REESTR: kirgan = hujjatga kirdi + topilmadi */
+            kafolat: {kirgan: mos.kirgan, hujjatga_kirdi: hujjatga,
+                      topilmadi: mos.topilmadi,
+                      togri: mos.kirgan === hujjatga + mos.topilmadi},
+            /* Faylda narxi bo'lmagan qatorlar — hujjat jami TO'LIQ EMAS */
+            narxsiz: narxsiz,
             ms: Date.now() - t0};
 
   }catch(e){

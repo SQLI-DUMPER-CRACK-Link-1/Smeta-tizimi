@@ -42,23 +42,44 @@ type ManbaFayl = { fayl_id: string; nom: string; sana: string; oqiladi: boolean 
 type MosQator = {
   n: number;
   uid?: string;
-  holat: 'moslandi' | 'ikkilamchi' | 'topilmadi';
+  /* ⚠️ «ikkilamchi» YO'Q. Tizim_01 dvigateli noaniqlikni o'zi hal
+     qiladi: aniq nomzod bo'lmasa qator TOPILMADI bo'ladi va SABABI
+     aytiladi. Taxmin qilinmaydi. */
+  holat: 'moslandi' | 'topilmadi';
   nom: string;
   birlik: string;
   hajm: number;
   narx: number | null;
   qator_id: number | null;
-  nomzod_soni: number;
+  /** Dvigatel nega topa olmagani — odamga ko'rsatiladi */
+  sabab?: string;
+  nomzod_soni?: number;
+};
+
+/** `f2MoslashEngine` (35_F2Moslash.js) statistikasi — qaysi qoida ishladi */
+type MosStat = {
+  moslashti?: number; otkazib?: number;
+  scopeHit?: number;   // razdel doirasida topildi
+  fuzzyHit?: number;   // nomi taxminan mos keldi
+  kanonHit?: number;   // kod kanonlashtirilib topildi
+  birlikBlok?: number; // ⚠️ birlik farqli — 1000x xato oldi olindi
+  zamenaShubha?: number;
+  yetimUrindi?: number; yetimMos?: number;
+  rzMos?: number; rzJami?: number;
+  ms?: number;
 };
 
 type Moslash = {
   ok: boolean;
+  xabar?: string;
   kirgan: number;
   moslandi: number;
-  ikkilamchi: number;
   topilmadi: number;
   kafolat: boolean;
   qatorlar: MosQator[];
+  stat?: MosStat;
+  rzDiag?: { nom: string; ok: boolean }[];
+  lrv?: { razdel: number; tugun: number };
 };
 
 type Ustunlar = Record<string, number>;
@@ -222,12 +243,23 @@ export default function TestF2Import() {
       if (r.ok) {
         setQadam(1);
         
-        // ⚡ Backenddan kelgan auto-moslashni O'CHIRDIM!
-        // Sababi: u global qidirib xato ish turlarining resurslarini bog'lab yuborayotgan edi.
-        // Endi biz faqat "Barchasini Avto-Moslash" (frontend iyerarxik) funksiyasiga ishonamiz.
+        /* ⚠️ Backend natijasi ENDI ISHONCHLI.
+           Avval bu yerda «backend auto-moslashni O'CHIRDIM» degan izoh
+           turardi — o'shanda TO'G'RI edi, chunki backendda mening sodda
+           SQL moslashtirishim ishlardi va u global qidirib xato ish
+           turining resursini bog'lab yuborardi.
+           Endi backendda Tizim_01 ning `f2MoslashEngine` i ishlaydi:
+           razdel doirasi · birlik darvozasi · kod-kanon · yetim
+           qutqarish. Uning natijasi urug' sifatida olinadi. */
         setQolBog({});
         setAutoMoslashZarur(true);
-        toast('F2 o\'qildi', 'ok');
+        toast(
+          r.moslash
+            ? `F2 o'qildi · ${r.moslash.moslandi}/${r.moslash.kirgan} bog'landi` +
+              (r.moslash.topilmadi ? ` · ${r.moslash.topilmadi} qo'lda kerak` : '')
+            : "F2 o'qildi",
+          'ok'
+        );
       } else {
         toast(r.xabar || 'O\'qilmadi', 'danger', undefined, 12000);
       }
@@ -456,6 +488,14 @@ export default function TestF2Import() {
             const scNom = nNom(sc.nom);
             const scBir = nBir(sc.birlik);
 
+            /* ⚠️ BIRLIK — DARVOZA, ball emas.
+               Avval birlik atigi +10 ball edi: «АРМАТУРА / Т» ↔
+               «АРМАТУРА / КГ» 30+20 = 50 ≥ 40 bo\'lib jimgina
+               bog\'lanardi — 1000 BARAVAR xato.
+               Dvigateldagi `_birMos` qoidasi: biri bo\'sh bo\'lsa hukm
+               qilmaymiz, ikkalasi ma\'lum va farqli bo\'lsa — BEKOR. */
+            if (fcBir && scBir && scBir !== fcBir) return;
+
             let ball = 0;
             if (fcKod && scKod === fcKod) ball += 50;
             if (fcNom && scNom === fcNom) ball += 30;
@@ -577,117 +617,73 @@ export default function TestF2Import() {
     toast("Barcha bog'lanishlar tozalandi");
   };
 
-  // Apply safe top suggestions for unbound rows at once (Fuzzy Auto-Moslash)
-  const applyFuzzyMoslash = () => {
-    if (!korish?.tree || !smetaTree) return;
-    const bandJoy = new Set<number>(Object.values(qolBog));
+  /**
+   * Dvigatel bergan mosliklarni qo'llaydi.
+   *
+   * ⚠️ BU YERDA AVVAL FRONTEND O'ZINING BALL TIZIMI BOR EDI:
+   *     kod +50 · nom +30 · birlik +10 · nom ichida +20 · ball>=40 → bog'la
+   *
+   * Nega olib tashlandi: BIRLIK atigi 10 ball edi va DARVOZA emas edi.
+   * «АРМАТУРА / Т» (smeta) ↔ «АРМАТУРА / КГ» (akt) → 30+20 = 50 ≥ 40
+   * → jimgina bog'lanardi. Bu 1000 BARAVAR xato.
+   * Xuddi shunday ПК↔ПБ (boshqa mahsulot) ham «nom ichida» +20 bilan
+   * o'tib ketardi.
+   *
+   * `f2MoslashEngine` (35_F2Moslash.js) da bularning har biri DARVOZA:
+   * birlik mos kelmasa moslik BEKOR qilinadi va sabab yoziladi.
+   * Shuning uchun qaror GASda qabul qilinadi, bu yer faqat OYNA.
+   * (Xotira: «og'ir mantiq GAS da, frontend oyna».)
+   */
+  const dvigatelniQolla = (jim = false) => {
+    const mos = korish?.moslash;
+    if (!mos || !mos.qatorlar) {
+      if (!jim) toast('Moslashtirish natijasi yo\'q — faylni qayta o\'qing', 'warn');
+      return 0;
+    }
+    const band = new Set<number>(Object.values(qolBog));
     const yangiBog: Record<string, number> = {};
     let count = 0;
 
-    const nNom = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
-    const nKod = (s: string | undefined) => {
-      let x = String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
-      return x.replace(/^0+/, '') || x;
-    };
-    const nBir = (s: string | undefined) => {
-      let b = String(s || '').toUpperCase().replace(/\s+/g, '').replace(/[^А-ЯЁA-Z]/g, '');
-      const m: any = { 'ШТ': 'ШТ', 'ДАНА': 'ШТ', 'ШТУК': 'ШТ', 'М3': 'М3', 'КУБ': 'М3', 'М2': 'М2', 'КВ': 'М2', 'Т': 'Т', 'ТОННА': 'Т', 'КГ': 'КГ', 'М': 'М', 'ПОГ': 'М', 'КОМПЛ': 'КОМПЛ', 'КМП': 'КОМПЛ' };
-      return m[b] || b;
-    };
-
-    const isAlreadyBound = (id: number) => bandJoy.has(id);
-
-    const walk = (nodes: any[], insideBl: boolean = false) => {
-      nodes.forEach((n) => {
-        let matchedSmetaId = qolBog[n.uid] ?? yangiBog[n.uid];
-
-        // 1. Agar bog'lanmagan bo'lsa, takliflar bo'yicha global izlash (faqat xavfsiz ball >= 40)
-        // ⚡ DIQQAT: Agar biz allaqachon `bl` (ish turi) ichida bo'lsak, resursni 
-        // global qidirish taqiqlanadi! Faqat o'z ish turi orqali bog'lanishi shart!
-        if (!insideBl && matchedSmetaId === undefined && n.type !== 'rz') {
-          const cands = takliflar[n.uid] || [];
-          const best = cands.find((c) => !isAlreadyBound(c.id));
-          if (best && best.ball >= 40) {
-            matchedSmetaId = best.id;
-            yangiBog[n.uid] = matchedSmetaId;
-            bandJoy.add(matchedSmetaId);
-            count++;
-          }
-        }
-
-        // 2. Agar tugun (ish turi) bog'langan bo'lsa, uning ichidagi resurslarni 
-        // FAQAT o'zining Smeta qatoridagi resurslarga bog'lashga majburlaymiz (iyerarxik bog'lash)
-        if (n.type === 'bl' && matchedSmetaId !== undefined && n.children && n.children.length > 0) {
-          const smetaNode = findSmetaNode(smetaTree, matchedSmetaId);
-          if (smetaNode && smetaNode.children) {
-            const smetaChildren = smetaNode.children;
-
-            n.children.forEach((fc: any) => {
-              if (qolBog[fc.uid] !== undefined || yangiBog[fc.uid] !== undefined) return;
-
-              const fcKod = nKod(fc.kod);
-              const fcNom = nNom(fc.nom);
-              const fcBir = nBir(fc.bir || fc.birlik);
-
-              let bestChildMatch: any = null;
-              let bestBall = 0;
-
-              smetaChildren.forEach((sc: any) => {
-                if (!sc.id || isAlreadyBound(sc.id) || sc.type !== fc.type) return;
-                const scKod = nKod(sc.kod);
-                const scNom = nNom(sc.nom);
-                const scBir = nBir(sc.birlik);
-
-                let ball = 0;
-                if (fcKod && scKod === fcKod) ball += 50;
-                if (fcNom && scNom === fcNom) ball += 30;
-                if (fcBir && scBir === fcBir) ball += 10;
-                if (fcNom && scNom && (scNom.includes(fcNom) || fcNom.includes(scNom))) ball += 20;
-
-                if (ball > bestBall) {
-                  bestBall = ball;
-                  bestChildMatch = sc;
-                }
-              });
-
-              if (bestChildMatch && bestBall >= 40) {
-                yangiBog[fc.uid] = bestChildMatch.id;
-                bandJoy.add(bestChildMatch.id);
-                count++;
-              }
-            });
-          }
-        }
-
-        // 3. Davom etish (agar yuqorida bolalar bog'langan bo'lsa, ular recursiyada o'tkazib yuboriladi)
-        if (n.children && n.children.length > 0) {
-          walk(n.children, insideBl || n.type === 'bl');
-        }
-      });
-    };
-
-    walk(korish.tree, false);
-
-    if (count === 0) {
-      toast("Aniq moslik topilmadi yoki barchasi bog'langan", "warn");
-      return;
+    for (const q of mos.qatorlar) {
+      if (q.holat !== 'moslandi' || q.qator_id == null || !q.uid) continue;
+      if (qolBog[q.uid] !== undefined) continue;   // odam qo'lda bog'lagan — tegmaymiz
+      if (band.has(q.qator_id)) continue;          // smeta qatori allaqachon band
+      yangiBog[q.uid] = q.qator_id;
+      band.add(q.qator_id);
+      count++;
     }
 
+    if (!count) {
+      if (!jim) toast('Yangi moslik yo\'q — hammasi allaqachon bog\'langan', 'warn');
+      return 0;
+    }
     setUndoStack((prev) => [...prev.slice(-29), qolBog]);
     setQolBog((prev) => ({ ...prev, ...yangiBog }));
-    toast(`🎯 ${count} ta qator avto-moslandi!`, "ok");
+    if (!jim) {
+      const s = mos.stat || {};
+      toast(
+        `🎯 ${count} ta qator bog'landi` +
+        (s.birlikBlok ? ` · ⚖ ${s.birlikBlok} ta birlik farqi bloklandi` : ''),
+        'ok'
+      );
+    }
+    return count;
   };
 
-  const applyAllTakliflar = applyFuzzyMoslash;
-  const onAvtoMoslash = applyFuzzyMoslash;
 
-  // Avtomatik moslashtirish (F2 o'qilgandan so'ng)
+  const applyAllTakliflar = dvigatelniQolla;
+  const onAvtoMoslash = dvigatelniQolla;
+
+  /* Fayl o'qilgandan keyin dvigatel natijasi DARROV qo'llanadi.
+     ⚠️ Avval bu `takliflar` (frontend ball tizimi) tayyor
+     bo'lishini kutardi — ya'ni ekranga aynan o'sha xavfli
+     taxminlar tushardi. */
   useEffect(() => {
-    if (autoMoslashZarur && Object.keys(takliflar).length > 0) {
-      applyFuzzyMoslash();
+    if (autoMoslashZarur && korish?.moslash) {
+      dvigatelniQolla(true);
       setAutoMoslashZarur(false);
     }
-  }, [takliflar, autoMoslashZarur]);
+  }, [korish?.moslash, autoMoslashZarur]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -790,6 +786,11 @@ export default function TestF2Import() {
           normalizedSmeta.forEach(({ sq, sk, sn, sb }) => {
             // Faqat bir xil tur mos keladi (rs↔rs, mat↔mat, ob↔ob, bl↔bl)
             if (sq.type !== n.type) return;
+            /* ⚠️ Birlik farqli nomzod TAKLIF sifatida ham chiqmaydi.
+               Ro\'yxatda birinchi turgan nomzodni odam ishonch bilan
+               bosadi — Т↔КГ ni birinchi qilib qo\'yish tuzoq bo\'lardi.
+               Kerak bo\'lsa odam qo\'lda sudrab bog\'lay oladi. */
+            if (fb && sb && sb !== fb) return;
             let ball = 0;
             if (fk && sk === fk) ball += 50;
             if (fn && sn === fn) ball += 30;
@@ -1550,17 +1551,42 @@ export default function TestF2Import() {
             )}
 
             {/* Invariant Ogohlantirishlar */}
-            {korish.moslash && (korish.moslash.ikkilamchi > 0 || korish.moslash.topilmadi > 0) && (
+            {korish.moslash && korish.moslash.topilmadi > 0 && (
               <div className="rounded-lg border border-warn/30 bg-warn/[.05] p-3 text-[12px] text-text-dim space-y-1">
                 <p className="font-semibold text-warn flex items-center gap-1.5">
-                  <AlertCircle size={14} /> Diqqat! {korish.moslash.ikkilamchi + korish.moslash.topilmadi} ta qator auto-moslanmadi
+                  <AlertCircle size={14} /> Diqqat! {korish.moslash.topilmadi} ta qator smetaga bog'lanmadi
                 </p>
                 <p className="text-[11px] text-text-mute">
-                  • <b>Ikkilamchi ({korish.moslash.ikkilamchi} ta):</b> Smetada bir xil nomli bir nechta nomzod bor. Chap panelda ularni topib, o'ngdagi kerakli smeta qatoriga <b>sudrab bog'lang</b>.
+                  Bu qatorlar hujjatga <b>KIRMAYDI</b> — chap paneldan sudrab,
+                  o'ngdagi tegishli smeta qatoriga bog'lang. Tizim taxmin qilmaydi:
+                  noto'g'ri qatorga yozilgan hajm jim moliyaviy xato bo'lardi.
                 </p>
-                <p className="text-[11px] text-text-mute">
-                  • <b>Topilmagan ({korish.moslash.topilmadi} ta):</b> Nom yoki birlik farqi sababli avtomat topilmadi. Chap paneldan sudrab, o'ngdagi tegishli qatorga bog'lang.
-                </p>
+                {/* ⚠️ Har bir qator uchun dvigatel NEGA topmaganini aytadi.
+                    «topilmadi» deb qo'yib qo'yish odamni ko'r qiladi. */}
+                {(() => {
+                  const sab: Record<string, number> = {};
+                  for (const q of korish.moslash!.qatorlar) {
+                    if (q.holat !== 'topilmadi') continue;
+                    const k = (q.sabab || 'сабаб кўрсатилмаган').slice(0, 60);
+                    sab[k] = (sab[k] || 0) + 1;
+                  }
+                  return Object.entries(sab)
+                    .sort((a, b) => b[1] - a[1]).slice(0, 6)
+                    .map(([k, n]) => (
+                      <p key={k} className="text-[11px] text-text-mute pl-2">
+                        • <b>{n} ta</b> — {k}
+                      </p>
+                    ));
+                })()}
+                {korish.moslash.stat && (
+                  <p className="text-[10px] text-text-mute pt-1 border-t border-border/40">
+                    Дvigatel: razdel {korish.moslash.stat.rzMos ?? 0}/{korish.moslash.stat.rzJami ?? 0} ·
+                    doira ichida {korish.moslash.stat.scopeHit ?? 0} ·
+                    kod-kanon {korish.moslash.stat.kanonHit ?? 0} ·
+                    taxminiy nom {korish.moslash.stat.fuzzyHit ?? 0} ·
+                    <b className="text-warn"> birlik bloki {korish.moslash.stat.birlikBlok ?? 0}</b>
+                  </p>
+                )}
               </div>
             )}
 
