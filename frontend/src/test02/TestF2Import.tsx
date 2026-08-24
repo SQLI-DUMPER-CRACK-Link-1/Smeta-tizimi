@@ -219,7 +219,18 @@ export default function TestF2Import() {
       setOpId(yangiOperationId());
       if (r.ok) {
         setQadam(1);
-        setQolBog({});
+        
+        // ⚡ Backenddan kelgan avto-moslash natijalarini qolBog ga yuklash
+        const initialBog: Record<string, number> = {};
+        if (r.moslash?.qatorlar) {
+          r.moslash.qatorlar.forEach((mq: any) => {
+            if (mq.uid && mq.smeta_id) {
+              initialBog[mq.uid] = mq.smeta_id;
+            }
+          });
+        }
+        
+        setQolBog(initialBog);
         toast('F2 o\'qildi va auto-moslashtirildi', 'ok');
       } else {
         toast(r.xabar || 'O\'qilmadi', 'danger', undefined, 12000);
@@ -566,8 +577,9 @@ export default function TestF2Import() {
     toast("Barcha bog'lanishlar tozalandi");
   };
 
-  // Apply ALL top suggestions for unbound rows at once
-  const applyAllTakliflar = () => {
+  // Apply safe top suggestions for unbound rows at once (Fuzzy Auto-Moslash)
+  const applyFuzzyMoslash = () => {
+    if (!korish?.tree || !smetaTree) return;
     const bandJoy = new Set<number>(Object.values(qolBog));
     const yangiBog: Record<string, number> = {};
     let count = 0;
@@ -575,7 +587,10 @@ export default function TestF2Import() {
     for (const [uid, cands] of Object.entries(takliflar)) {
       if (qolBog[uid] !== undefined) continue;      // already bound
       const best = cands.find((c) => !bandJoy.has(c.id));
-      if (best) {
+      
+      // ⚡ Fiqatgina 'ball' yetarli darajada yuqori bo'lsagina avtomat bog'lash (xavfsizlik).
+      // Name match (30) + include (20) = 50. Code match = 50. Name + Unit = 40.
+      if (best && best.ball >= 40) {
         yangiBog[uid] = best.id;
         bandJoy.add(best.id);
         count++;
@@ -583,88 +598,17 @@ export default function TestF2Import() {
     }
 
     if (count === 0) {
-      toast("Qo'llanishga tayyor yangi taklif qolmadi", "warn");
+      toast("Aniq moslik topilmadi yoki barchasi bog'langan", "warn");
       return;
     }
 
     setUndoStack((prev) => [...prev.slice(-29), qolBog]);
     setQolBog((prev) => ({ ...prev, ...yangiBog }));
-    toast(`🎯 ${count} ta taklif qo'llandi!`, "ok");
+    toast(`🎯 ${count} ta qator (kengaytirilgan izlash orqali) avto-moslandi!`, "ok");
   };
-  const onAvtoMoslash = () => {
-    if (!korish?.tree || !smetaTree) return;
-    let matchCount = 0;
 
-    // Normalizatsiya
-    const nNom = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
-    const nKod = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '').replace(/^0+/, '');
-
-    // Smeta daraxtidan barcha kerakli tugunlarni yig'ish (rz dan tashqari)
-    const smetaQatorlar: TreeNode[] = [];
-    const collectSmeta = (nodes: TreeNode[]) => {
-      nodes.forEach(n => {
-        const bolalar = n.children ?? [];
-        if (n.type !== 'rz') {
-          smetaQatorlar.push(n);
-        }
-        if (bolalar.length) collectSmeta(bolalar);
-      });
-    };
-    collectSmeta(smetaTree);
-
-    // Nom+tur bo'yicha indeks (tur mosligi uchun groupby: 'rs_NOMKOD')
-    const nomIndeks = new Map<string, TreeNode[]>();
-    smetaQatorlar.forEach((sq) => {
-      const k = (sq.type || '') + '_' + nNom(sq.nom);
-      if (!k) return;
-      const bor = nomIndeks.get(k);
-      if (bor) bor.push(sq); else nomIndeks.set(k, [sq]);
-    });
-
-    const bandJoy = new Set<number>();
-    Object.values(qolBog).forEach((id) => bandJoy.add(id));
-
-    const yangiBog: Record<string, number> = {};
-    const yur = (nodes: any[]) => {
-      nodes.forEach(n => {
-        const uid = n.uid;
-        const bolalar = n.children ?? [];
-        // rz dan tashqari, bog'lanmagan barcha tugunlarni (ish turi va resurslarni) tekshirish
-        if (uid && n.type !== 'rz' && !bogMi(uid) && !yangiBog[uid]) {
-          const fKod = nKod(n.kod);
-          const fNom = nNom(n.nom);
-          const fTur = n.type || '';
-
-          // Tur + nom bo'yicha qidirish
-          const indeksKalit = fTur + '_' + fNom;
-          const nomzodlar = fNom ? (nomIndeks.get(indeksKalit) ?? []) : [];
-          const exact = nomzodlar.find((sq) => {
-            if (!sq.id) return false;
-            if (bandJoy.has(sq.id)) return false;
-            const sKod = nKod(sq.kod);
-            if (fKod && sKod) return fKod === sKod;
-            return true;
-          });
-
-          if (exact && exact.id) {
-            bandJoy.add(exact.id);
-            yangiBog[uid] = exact.id;
-            matchCount++;
-          }
-        }
-        if (bolalar.length) yur(bolalar);
-      });
-    };
-    yur(korish.tree);
-
-    if (matchCount > 0) {
-      setUndoStack((prev) => [...prev.slice(-29), qolBog]);
-      setQolBog((prev) => ({ ...prev, ...yangiBog }));
-      toast(`✓ Yuridik aniq mos tushgan ${matchCount} ta qator avtomatik bog'landi!`, "ok");
-    } else {
-      toast("Smetada sizning aktga 100% (so'zma-so'z) mos keladigan bo'sh qatorlar topilmadi.", "danger");
-    }
-  };
+  const applyAllTakliflar = applyFuzzyMoslash;
+  const onAvtoMoslash = applyFuzzyMoslash;
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -731,12 +675,12 @@ export default function TestF2Import() {
       return m[b] || b;
     };
 
-    // Smeta daraxtidan barcha barg tugunlarni yig'ish (rz dan tashqari, bolasiz)
+    // Smeta daraxtidan barcha kerakli tugunlarni yig'ish (rz dan tashqari)
     const smetaQatorlar: TreeNode[] = [];
     const collectSmeta = (nodes: TreeNode[]) => {
       nodes.forEach(n => {
         const bolalar = n.children ?? [];
-        if (n.type !== 'rz' && bolalar.length === 0) {
+        if (n.type !== 'rz') {
           smetaQatorlar.push(n);
         }
         if (bolalar.length) collectSmeta(bolalar);
@@ -757,8 +701,8 @@ export default function TestF2Import() {
       nodes.forEach(n => {
         const uid = n.uid;
         const bolalar = n.children ?? [];
-        // Xuddi aktBarglar logikasi: rz dan tashqari, bolasiz tugunlar
-        if (uid && n.type !== 'rz' && bolalar.length === 0) {
+        // rz dan tashqari hamma tugunlarga taklif izlash (ish turi va resurslar)
+        if (uid && n.type !== 'rz') {
           const fk = nKod(n.kod);
           const fn = nNom(n.nom);
           const fb = nBir(n.bir || n.birlik);
