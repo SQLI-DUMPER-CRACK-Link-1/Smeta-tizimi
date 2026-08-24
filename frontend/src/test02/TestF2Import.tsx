@@ -281,6 +281,8 @@ export default function TestF2Import() {
   // Auto-saved draft monitoring
   useEffect(() => {
     if (qadam !== 1 || !korish?.obyekt_id || !faylId) return;
+    // Don't overwrite an existing draft with an empty one immediately after loading
+    if (Object.keys(qolBog).length === 0) return;
     const draft = {
       vaqt: Date.now(),
       qolBog
@@ -597,12 +599,12 @@ export default function TestF2Import() {
     const nNom = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
     const nKod = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '').replace(/^0+/, '');
 
-    // Smeta daraxtidan barcha barg tugunlarni yig'ish (rz dan tashqari, bolasiz)
+    // Smeta daraxtidan barcha kerakli tugunlarni yig'ish (rz dan tashqari)
     const smetaQatorlar: TreeNode[] = [];
     const collectSmeta = (nodes: TreeNode[]) => {
       nodes.forEach(n => {
         const bolalar = n.children ?? [];
-        if (n.type !== 'rz' && bolalar.length === 0) {
+        if (n.type !== 'rz') {
           smetaQatorlar.push(n);
         }
         if (bolalar.length) collectSmeta(bolalar);
@@ -627,8 +629,8 @@ export default function TestF2Import() {
       nodes.forEach(n => {
         const uid = n.uid;
         const bolalar = n.children ?? [];
-        // Xuddi aktBarglar: rz dan tashqari, bolasiz tugunlar va bog'lanmagan
-        if (uid && n.type !== 'rz' && bolalar.length === 0 && !bogMi(uid) && !yangiBog[uid]) {
+        // rz dan tashqari, bog'lanmagan barcha tugunlarni (ish turi va resurslarni) tekshirish
+        if (uid && n.type !== 'rz' && !bogMi(uid) && !yangiBog[uid]) {
           const fKod = nKod(n.kod);
           const fNom = nNom(n.nom);
           const fTur = n.type || '';
@@ -1163,7 +1165,7 @@ export default function TestF2Import() {
         summa: n.smeta,
         isQosh: n.isQosh,
         isZamena: n.isZamena,
-        manfiy: (n.smetaHajm ?? 0) < 0 || joriyQoldiq < 0,
+        manfiy: (n.smetaHajm ?? 0) < 0,
         belgi: belgiElement,
         children: n.children ? mapSmetaToDaraxt(n.children) : undefined
       };
