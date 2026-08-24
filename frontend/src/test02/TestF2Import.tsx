@@ -287,15 +287,19 @@ export default function TestF2Import() {
     localStorage.setItem(`T2_F2_DRAFT_${korish.obyekt_id}_${faylId}_${tur}_${oy}`, JSON.stringify(draft));
   }, [qolBog, qadam, korish?.obyekt_id, faylId, tur, oy]);
 
-  // F2 barg tugunlarini topish (DFS)
+  // F2 barg tugunlarini topish (DFS) — Tizim_01 barglar() mantiqiga o'xshash:
+  // rz dan tashqari, BOLASIZ har qanday tugun barg hisoblanadi.
+  // bl bolasiz bo'lsa ham barg! (Tizim_01: «bl summasi bolalarining yig'indisi
+  // bo'lgani uchun uni QO'SHSAK ikki marta hisoblanadi» — bolali bl lar HISOBLANMAYDI)
   const aktBarglar = useMemo(() => {
     const out: any[] = [];
     const traverse = (nodes: any[]) => {
       nodes.forEach((n) => {
-        if (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') {
+        const bolalar = n.children ?? [];
+        if (n.type !== 'rz' && bolalar.length === 0) {
           out.push(n);
         }
-        if (n.children) traverse(n.children);
+        if (bolalar.length) traverse(bolalar);
       });
     };
     if (korish?.tree) traverse(korish.tree);
@@ -358,6 +362,26 @@ export default function TestF2Import() {
     if (!n) {
       toast('Akt qatori topilmadi', 'danger');
       return;
+    }
+
+    // ⚠️ Tur mosligini tekshirish — RS → RS, MAT → MAT, OB → OB bo'lishi kerak
+    if (smetaTree) {
+      const sn = findSmetaNode(smetaTree, smetaId);
+      if (sn && n.type && sn.type) {
+        // Qabul qilinadigan juftliklar (bl ← bl, rs ← rs, mat ← mat, ob ← ob)
+        const turMos = n.type === sn.type
+          || (n.type === 'bl' && sn.type === 'bl');
+        if (!turMos) {
+          const tasd = window.confirm(
+            `⚠️ Tur mos kelmaydi!\n` +
+            `F2: "${n.nom}" (${n.type?.toUpperCase()})\n` +
+            `Smeta: "${sn.nom}" (${sn.type?.toUpperCase()})\n\n` +
+            `Bu NOTO'G'RI bog'lanish bo'lishi mumkin (masalan, ish turi o'rniga material bog'lamoqchisiz).\n` +
+            `Shunda ham bog'laymizmi? (OK = Ha, Bekor = Yo'q)`
+          );
+          if (!tasd) return;
+        }
+      }
     }
 
     const newBog: Record<string, number> = { [aktKalit]: smetaId };
@@ -500,22 +524,23 @@ export default function TestF2Import() {
     const nNom = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '');
     const nKod = (s: string | undefined) => String(s || '').toUpperCase().replace(/[^А-ЯЁA-Z0-9]/g, '').replace(/^0+/, '');
 
-    // Collect all leaf nodes from smetaTree
+    // Smeta daraxtidan barcha barg tugunlarni yig'ish (rz dan tashqari, bolasiz)
     const smetaQatorlar: TreeNode[] = [];
     const collectSmeta = (nodes: TreeNode[]) => {
       nodes.forEach(n => {
-        if (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') {
+        const bolalar = n.children ?? [];
+        if (n.type !== 'rz' && bolalar.length === 0) {
           smetaQatorlar.push(n);
         }
-        if (n.children) collectSmeta(n.children);
+        if (bolalar.length) collectSmeta(bolalar);
       });
     };
     collectSmeta(smetaTree);
 
-    // Index smeta rows by normalized name
+    // Nom+tur bo'yicha indeks (tur mosligi uchun groupby: 'rs_NOMKOD')
     const nomIndeks = new Map<string, TreeNode[]>();
     smetaQatorlar.forEach((sq) => {
-      const k = nNom(sq.nom);
+      const k = (sq.type || '') + '_' + nNom(sq.nom);
       if (!k) return;
       const bor = nomIndeks.get(k);
       if (bor) bor.push(sq); else nomIndeks.set(k, [sq]);
@@ -528,11 +553,16 @@ export default function TestF2Import() {
     const yur = (nodes: any[]) => {
       nodes.forEach(n => {
         const uid = n.uid;
-        if (uid && (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') && !bogMi(uid) && !yangiBog[uid]) {
+        const bolalar = n.children ?? [];
+        // Xuddi aktBarglar: rz dan tashqari, bolasiz tugunlar va bog'lanmagan
+        if (uid && n.type !== 'rz' && bolalar.length === 0 && !bogMi(uid) && !yangiBog[uid]) {
           const fKod = nKod(n.kod);
           const fNom = nNom(n.nom);
+          const fTur = n.type || '';
 
-          const nomzodlar = fNom ? (nomIndeks.get(fNom) ?? []) : [];
+          // Tur + nom bo'yicha qidirish
+          const indeksKalit = fTur + '_' + fNom;
+          const nomzodlar = fNom ? (nomIndeks.get(indeksKalit) ?? []) : [];
           const exact = nomzodlar.find((sq) => {
             if (!sq.id) return false;
             if (bandJoy.has(sq.id)) return false;
@@ -547,7 +577,7 @@ export default function TestF2Import() {
             matchCount++;
           }
         }
-        if (n.children) yur(n.children);
+        if (bolalar.length) yur(bolalar);
       });
     };
     yur(korish.tree);
@@ -626,14 +656,15 @@ export default function TestF2Import() {
       return m[b] || b;
     };
 
-    // Collect all leaf nodes from smetaTree
+    // Smeta daraxtidan barcha barg tugunlarni yig'ish (rz dan tashqari, bolasiz)
     const smetaQatorlar: TreeNode[] = [];
     const collectSmeta = (nodes: TreeNode[]) => {
       nodes.forEach(n => {
-        if (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') {
+        const bolalar = n.children ?? [];
+        if (n.type !== 'rz' && bolalar.length === 0) {
           smetaQatorlar.push(n);
         }
-        if (n.children) collectSmeta(n.children);
+        if (bolalar.length) collectSmeta(bolalar);
       });
     };
     collectSmeta(smetaTree);
@@ -650,13 +681,17 @@ export default function TestF2Import() {
     const traverseF2 = (nodes: any[]) => {
       nodes.forEach(n => {
         const uid = n.uid;
-        if (uid && (n.type === 'rs' || n.type === 'mat' || n.type === 'ob')) {
+        const bolalar = n.children ?? [];
+        // Xuddi aktBarglar logikasi: rz dan tashqari, bolasiz tugunlar
+        if (uid && n.type !== 'rz' && bolalar.length === 0) {
           const fk = nKod(n.kod);
           const fn = nNom(n.nom);
           const fb = nBir(n.bir || n.birlik);
 
           let candidates: any[] = [];
           normalizedSmeta.forEach(({ sq, sk, sn, sb }) => {
+            // Faqat bir xil tur mos keladi (rs↔rs, mat↔mat, ob↔ob, bl↔bl)
+            if (sq.type !== n.type) return;
             let ball = 0;
             if (fk && sk === fk) ball += 50;
             if (fn && sn === fn) ball += 30;
@@ -681,7 +716,7 @@ export default function TestF2Import() {
             tkl[uid] = candidates.slice(0, 5);
           }
         }
-        if (n.children) traverseF2(n.children);
+        if (bolalar.length) traverseF2(bolalar);
       });
     };
     traverseF2(korish.tree);
@@ -818,12 +853,14 @@ export default function TestF2Import() {
       const res: any[] = [];
       ns.forEach(n => {
         let match = false;
-        if (n.type === 'rs' || n.type === 'mat' || n.type === 'ob') {
+        // aktBarglar bilan bir xil logika: rz dan tashqari, bolasiz tugunlar
+        const isBarg = n.type !== 'rz' && !(n.children?.length);
+        if (isBarg) {
           const isBog = bogMi(n.uid);
           if (filtr === 'hammasi') match = true;
           else if (filtr === 'boglangan') match = isBog;
           else if (filtr === 'boglanmagan') match = !isBog;
-          else if (filtr === 'manfiy') match = (n.hajm ?? 0) < 0;
+          else if (filtr === 'manfiy') match = (n.hajm ?? 0) < 0 || (n.summa ?? 0) < 0;
           else if (filtr === 'takliflar') match = !isBog && takliflar[n.uid] !== undefined && takliflar[n.uid].length > 0;
         }
         let children = n.children ? dfs(n.children) : [];
@@ -1039,37 +1076,39 @@ export default function TestF2Import() {
   }
 
   // Jami summalarni hisoblash
+  // MUHIM: Ikkala taraf ham F2 faylning O'Z summasini ishlatadi.
+  // Smeta narxiga murojaat yo'q — aks holda agar narxlar farqlansa
+  // hammasini bog'lasa ham farq chiqaveradi.
   const aktJami = useMemo(() => {
     let sum = 0;
     aktBarglar.forEach((n) => {
-      let price = n.narx || 0;
-      if (!price && smetaTree && korish?.moslash?.qatorlar) {
-        const mq = korish.moslash.qatorlar.find((q) => q.uid === n.uid);
-        if (mq && mq.qator_id) {
-          const sn = findSmetaNode(smetaTree, mq.qator_id);
-          if (sn) price = sn.narx || 0;
-        }
+      // F2 fayldan o'qilgan summa ustuvur, bo'lmasa hajm × narx
+      const s = Number(n.summa ?? 0);
+      if (s) {
+        sum += s;
+      } else {
+        sum += (Number(n.hajm) || 0) * (Number(n.narx) || 0);
       }
-      sum += (n.hajm || 0) * price;
     });
     return sum;
-  }, [korish, smetaTree, aktBarglar]);
+  }, [aktBarglar]);
 
   const boglanganJami = useMemo(() => {
     let sum = 0;
     aktBarglar.forEach((n) => {
       const smetaId = getSmetaId(n.uid);
       if (smetaId) {
-        let price = n.narx || 0;
-        if (!price && smetaTree) {
-          const sn = findSmetaNode(smetaTree, smetaId);
-          if (sn) price = sn.narx || 0;
+        // Bir xil manba — F2 faylning o'z summasi
+        const s = Number(n.summa ?? 0);
+        if (s) {
+          sum += s;
+        } else {
+          sum += (Number(n.hajm) || 0) * (Number(n.narx) || 0);
         }
-        sum += (n.hajm || 0) * price;
       }
     });
     return sum;
-  }, [korish, getSmetaId, smetaTree, aktBarglar]);
+  }, [aktBarglar, getSmetaId]);
 
 
 
@@ -1130,10 +1169,20 @@ export default function TestF2Import() {
     const rows = Array.from(map.values());
     if (!rows.length) { toast('Bironta bog\'langan qator mavjud emas', 'warn'); return; }
 
-    if (!constOk) {
-      const tasd = window.confirm(`Diqqat! Akt jami va Bog'langan jami o'rtasida farq bor: ${farq.toFixed(2)} so'm. Shunda ham saqlaymizmi?`);
+    // Bog'lanmagan qatorlar soni
+    const boglanmaganSoni = aktBarglar.filter((n) => !getSmetaId(n.uid)).length;
+
+    if (boglanmaganSoni > 0) {
+      // Ba'zi qatorlar bog'lanmagan — ogohlantirish bilan davom etish imkoniyati
+      const tasd = window.confirm(
+        `⚠️ ${boglanmaganSoni} ta F2 qatori hali smeta qatoriga bog'lanmagan!\n\n` +
+        `Bu qatorlar F2 hujjatiga kirmaydi. Ularni bog'lamasdan davom etasizmi?\n` +
+        `(OK = Ha, davom eting | Bekor = Orqaga qaytib bog'lang)`
+      );
       if (!tasd) return;
     }
+    // Agar hammasi bog'langan bo'lsa — narx bir xil manbadan (F2 summa)
+    // bo'lgani uchun farq 0 bo'ladi, constOk tekshiruvi shart emas.
 
     setYozilmoqda(true); setNatija(null);
     try {
