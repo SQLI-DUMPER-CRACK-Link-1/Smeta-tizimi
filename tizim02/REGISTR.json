@@ -2,13 +2,13 @@
   "versiya": 1,
   "manba": {
     "jami": 253,
-    "hisobga": 186,
-    "tayyor": 98,
-    "qisman": 3,
-    "joyida": 57,
+    "hisobga": 163,
+    "tayyor": 104,
+    "qisman": 2,
+    "joyida": 80,
     "kerakmas": 10
   },
-  "foiz": 53,
+  "foiz": 64,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -141,17 +141,17 @@
     "kirish": {
       "qatlam": "SUPABASE",
       "jami": 1,
-      "tayyor": 0,
-      "qisman": 1,
+      "tayyor": 1,
+      "qisman": 0,
       "kutilmoqda": 0,
       "kerakmas": 0,
       "joyida": 0,
       "funksiyalar": [
         "apiKirishTekshir"
       ],
-      "egasi": "kelishilsin",
-      "ish_holati": "kutilmoqda",
-      "foiz": 50,
+      "egasi": "antigravity",
+      "ish_holati": "tayyor",
+      "foiz": 100,
       "kochiriladi": true
     },
     "kesh": {
@@ -279,11 +279,11 @@
     "f2": {
       "qatlam": "SUPABASE",
       "jami": 39,
-      "tayyor": 1,
-      "qisman": 1,
-      "kutilmoqda": 34,
+      "tayyor": 5,
+      "qisman": 2,
+      "kutilmoqda": 6,
       "kerakmas": 0,
-      "joyida": 3,
+      "joyida": 26,
       "funksiyalar": [
         "apiF2AvtoMoslash",
         "apiF2BoglanishBekorQil",
@@ -326,8 +326,8 @@
         "apiF2YozishgaRuxsat"
       ],
       "egasi": "claude",
-      "ish_holati": "navbatda",
-      "foiz": 4,
+      "ish_holati": "ishlanmoqda",
+      "foiz": 46,
       "kochiriladi": true
     },
     "smeta": {
@@ -360,7 +360,7 @@
         "apiTopilmaganlar"
       ],
       "egasi": "claude",
-      "ish_holati": "ishlanmoqda",
+      "ish_holati": "tayyor",
       "foiz": 100,
       "kochiriladi": true
     },
@@ -603,17 +603,17 @@
     "kuzatuv": {
       "qatlam": "SUPABASE",
       "jami": 1,
-      "tayyor": 0,
-      "qisman": 1,
+      "tayyor": 1,
+      "qisman": 0,
       "kutilmoqda": 0,
       "kerakmas": 0,
       "joyida": 0,
       "funksiyalar": [
         "apiXatoYoz"
       ],
-      "egasi": "kelishilsin",
-      "ish_holati": "kutilmoqda",
-      "foiz": 50,
+      "egasi": "antigravity",
+      "ish_holati": "tayyor",
+      "foiz": 100,
       "kochiriladi": true
     },
     "tashxis": {
@@ -822,9 +822,9 @@
       "argSoni": 2,
       "domen": "kirish",
       "qatlam": "SUPABASE",
-      "holat": "qisman",
+      "holat": "tayyor",
       "qopladi": "/api/sessiya",
-      "izoh": "SESSIYA_KALIT hali majburiy emas — ochiq qarz"
+      "izoh": "Bajarildi"
     },
     "apiKeshOl": {
       "fayl": "25_Kesh.js",
@@ -1122,9 +1122,9 @@
       "argSoni": 1,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_manba (obyekt_id bo'yicha distinct so'rov)",
+      "izoh": "Drive papka skanlash shart emas - manba fayllar bazada"
     },
     "apiHolatOlLokalka": {
       "fayl": "30_Panel.js",
@@ -1451,10 +1451,10 @@
       "qator": 3102,
       "argSoni": 1,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Drive papka ro'yxati"
     },
     "apiHujjatLokalTuzat": {
       "fayl": "30_Panel.js",
@@ -1471,10 +1471,10 @@
       "qator": 3376,
       "argSoni": 5,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Drive fayl yuklash"
     },
     "apiF2VaraklarOl": {
       "fayl": "30_Panel.js",
@@ -1501,50 +1501,50 @@
       "qator": 3774,
       "argSoni": 3,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets oy ustunlarini skanlaydi"
     },
     "apiF2BoglanishBekorQil": {
       "fayl": "30_Panel.js",
       "qator": 3846,
       "argSoni": 3,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets katakka yozadi (ko'zgu)"
     },
     "apiF2OyOchirish": {
       "fayl": "30_Panel.js",
       "qator": 3892,
       "argSoni": 2,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets oy ustunini tozalaydi (ko'zgu)"
     },
     "apiF2Qolla": {
       "fayl": "30_Panel.js",
       "qator": 3990,
       "argSoni": 6,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets katakka F2 hajmini yozadi (ko'zgu)"
     },
     "apiF2TayyorHujjatYarat": {
       "fayl": "30_Panel.js",
       "qator": 4614,
       "argSoni": 3,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "KS-2 Google Sheet hujjatini yaratadi"
     },
     "apiReestrSaqla": {
       "fayl": "30_Panel.js",
@@ -1571,50 +1571,50 @@
       "qator": 4786,
       "argSoni": 0,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "CacheService progress - fon vazifasi monitoringi"
     },
     "apiF2QollaLog": {
       "fayl": "30_Panel.js",
       "qator": 4793,
       "argSoni": 0,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "CacheService jurnal - GAS fon vazifasi monitoringi"
     },
     "apiF2JobHolat": {
       "fayl": "30_Panel.js",
       "qator": 4882,
       "argSoni": 0,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "ScriptApp trigger + CacheService - faqat GASda mavjud"
     },
     "apiF2QollaNavbatga": {
       "fayl": "30_Panel.js",
       "qator": 4915,
       "argSoni": 5,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "GAS 6-daqiqa limitini aylanib o'tish uchun fon trigger"
     },
     "apiF2EskiFaylOqi": {
       "fayl": "30_Panel.js",
       "qator": 5067,
       "argSoni": 2,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Drive papka skanlash"
     },
     "apiSmetaQatorQosh": {
       "fayl": "30_Panel.js",
@@ -1641,20 +1641,20 @@
       "qator": 5360,
       "argSoni": 3,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Drive-bogliq taklif; T2_F2Import global doira ishlatadi, lokalka oldindan tanlash kerak emas"
     },
     "apiF2JobTozala": {
       "fayl": "30_Panel.js",
       "qator": 5431,
       "argSoni": 0,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "ScriptApp trigger boshqaruvi"
     },
     "apiF2AvtoMoslash": {
       "fayl": "35_F2Moslash.js",
@@ -1671,20 +1671,20 @@
       "qator": 719,
       "argSoni": 1,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Drive/Sheets fayl ochish (apiF2VaraklarOl bilan bir xil vazifa)"
     },
     "apiF2NolDiagnostika": {
       "fayl": "35_F2Moslash.js",
       "qator": 802,
       "argSoni": 1,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "barcha Sheets varaqlarini nol/xato uchun skanlaydi"
     },
     "apiXlsxQiymatBilanOch": {
       "fayl": "36_XlsxQiymat.js",
@@ -1721,60 +1721,60 @@
       "qator": 77,
       "argSoni": 5,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets tezkor yozish"
     },
     "apiF2TezSinov": {
       "fayl": "37_F2TezYoz.js",
       "qator": 240,
       "argSoni": 4,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets tezkor yozish sinovi"
     },
     "apiF2YozTola": {
       "fayl": "37_F2TezYoz.js",
       "qator": 266,
       "argSoni": 6,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets to'liq yozish"
     },
     "apiF2YozTez2": {
       "fayl": "37_F2TezYoz.js",
       "qator": 319,
       "argSoni": 6,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets tezkor yozish v2"
     },
     "apiF2YozTezSinov2": {
       "fayl": "37_F2TezYoz.js",
       "qator": 498,
       "argSoni": 5,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets tezkor yozish v2 sinovi"
     },
     "apiF2Nazorat": {
       "fayl": "38_F2Nazorat.js",
       "qator": 81,
       "argSoni": 1,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets marker/tuzilish tekshiruvi - baza emas, fayl konsistensiyasi"
     },
     "apiF2PriamoyZatrat": {
       "fayl": "38_F2Nazorat.js",
@@ -1782,8 +1782,8 @@
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_f2_kat_oy korinishi (oy filtri bilan)",
       "izoh": null
     },
     "apiF2QatlamTahlil": {
@@ -1792,8 +1792,8 @@
       "argSoni": 1,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_f2_kat_oy korinishi",
       "izoh": null
     },
     "apiF2OyTafsilot": {
@@ -1802,8 +1802,8 @@
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_f2_tafsilot korinishi",
       "izoh": null
     },
     "apiF2QatorTahrir": {
@@ -1811,10 +1811,10 @@
       "qator": 542,
       "argSoni": 3,
       "domen": "f2",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "Sheets oy ustuniga yozadi, muhr (seal) tekshiruvi bilan"
     },
     "apiF2Bosliqlar": {
       "fayl": "38_F2Nazorat.js",
@@ -1832,9 +1832,9 @@
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "qisman",
+      "qopladi": "t2_akt_yarat o'zining invariant tekshiruvi",
+      "izoh": "oldindan ko'rish emas - real chaqiruvda tekshiradi va buzilish qaytaradi; alohida 'ruxsat so'rash' RPC hali yo'q"
     },
     "apiF2ReestrYoz": {
       "fayl": "39_F2Reestr.js",
@@ -3132,7 +3132,7 @@
       "argSoni": 4,
       "domen": "kuzatuv",
       "qatlam": "SUPABASE",
-      "holat": "qisman",
+      "holat": "tayyor",
       "qopladi": "t2_ozgarish",
       "izoh": null
     },

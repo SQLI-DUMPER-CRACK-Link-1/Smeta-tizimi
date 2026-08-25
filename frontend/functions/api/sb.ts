@@ -49,6 +49,8 @@ const RUXSAT_JADVALLAR = new Set([
      `t2_narx_qol_xavf` — odamning qo'lda tuzatgan narxi himoyasiz
      qolgan qatorlar; u BO'SH bo'lishi kerak. */
   't2_narx_markaz', 't2_topilmaganlar', 't2_narx_sana', 't2_narx_qol_xavf',
+  /* F2/FAKT TAHLIL - Sheets skanlash o'rniga bazadan aggregatsiya */
+  't2_f2_kat_oy', 't2_f2_tafsilot',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

@@ -165,12 +165,12 @@
     },
     "apiKirishTekshir": {
       "qopladi": "/api/sessiya",
-      "toliq": false,
-      "izoh": "SESSIYA_KALIT hali majburiy emas — ochiq qarz"
+      "toliq": true,
+      "izoh": "Bajarildi"
     },
     "apiXatoYoz": {
       "qopladi": "t2_ozgarish",
-      "toliq": false
+      "toliq": true
     },
     "apiRzQosh": {
       "qopladi": "t2_qator_qosh",
@@ -545,6 +545,120 @@
     "apiIshTurQidir": {
       "qopladi": "sbIshTurlariOl",
       "toliq": true
+    },
+    "apiF2QatlamTahlil": {
+      "qopladi": "t2_f2_kat_oy korinishi",
+      "toliq": true
+    },
+    "apiF2PriamoyZatrat": {
+      "qopladi": "t2_f2_kat_oy korinishi (oy filtri bilan)",
+      "toliq": true
+    },
+    "apiF2OyTafsilot": {
+      "qopladi": "t2_f2_tafsilot korinishi",
+      "toliq": true
+    },
+    "apiF2LokalkaRoyxat": {
+      "qopladi": "t2_manba (obyekt_id bo'yicha distinct so'rov)",
+      "toliq": true,
+      "izoh": "Drive papka skanlash shart emas - manba fayllar bazada"
+    },
+    "apiF2BoglanishBekorQil": {
+      "qatlam": "GAS",
+      "izoh": "Sheets katakka yozadi (ko'zgu)"
+    },
+    "apiF2EskiFaylOqi": {
+      "qatlam": "GAS",
+      "izoh": "Drive papka skanlash"
+    },
+    "apiF2FaylYukla": {
+      "qatlam": "GAS",
+      "izoh": "Drive fayl yuklash"
+    },
+    "apiF2FayllarOl": {
+      "qatlam": "GAS",
+      "izoh": "Drive papka ro'yxati"
+    },
+    "apiF2JobHolat": {
+      "qatlam": "GAS",
+      "izoh": "ScriptApp trigger + CacheService - faqat GASda mavjud"
+    },
+    "apiF2JobTozala": {
+      "qatlam": "GAS",
+      "izoh": "ScriptApp trigger boshqaruvi"
+    },
+    "apiF2OyOchirish": {
+      "qatlam": "GAS",
+      "izoh": "Sheets oy ustunini tozalaydi (ko'zgu)"
+    },
+    "apiF2OySkan": {
+      "qatlam": "GAS",
+      "izoh": "Sheets oy ustunlarini skanlaydi"
+    },
+    "apiF2QollaLog": {
+      "qatlam": "GAS",
+      "izoh": "CacheService jurnal - GAS fon vazifasi monitoringi"
+    },
+    "apiF2QollaNavbatga": {
+      "qatlam": "GAS",
+      "izoh": "GAS 6-daqiqa limitini aylanib o'tish uchun fon trigger"
+    },
+    "apiF2QollaProgress": {
+      "qatlam": "GAS",
+      "izoh": "CacheService progress - fon vazifasi monitoringi"
+    },
+    "apiF2Qolla": {
+      "qatlam": "GAS",
+      "izoh": "Sheets katakka F2 hajmini yozadi (ko'zgu)"
+    },
+    "apiF2TezYoz": {
+      "qatlam": "GAS",
+      "izoh": "Sheets tezkor yozish"
+    },
+    "apiF2TezSinov": {
+      "qatlam": "GAS",
+      "izoh": "Sheets tezkor yozish sinovi"
+    },
+    "apiF2YozTez2": {
+      "qatlam": "GAS",
+      "izoh": "Sheets tezkor yozish v2"
+    },
+    "apiF2YozTezSinov2": {
+      "qatlam": "GAS",
+      "izoh": "Sheets tezkor yozish v2 sinovi"
+    },
+    "apiF2YozTola": {
+      "qatlam": "GAS",
+      "izoh": "Sheets to'liq yozish"
+    },
+    "apiF2TayyorHujjatYarat": {
+      "qatlam": "GAS",
+      "izoh": "KS-2 Google Sheet hujjatini yaratadi"
+    },
+    "apiF2Nazorat": {
+      "qatlam": "GAS",
+      "izoh": "Sheets marker/tuzilish tekshiruvi - baza emas, fayl konsistensiyasi"
+    },
+    "apiF2NolDiagnostika": {
+      "qatlam": "GAS",
+      "izoh": "barcha Sheets varaqlarini nol/xato uchun skanlaydi"
+    },
+    "apiF2Varaqlar": {
+      "qatlam": "GAS",
+      "izoh": "Drive/Sheets fayl ochish (apiF2VaraklarOl bilan bir xil vazifa)"
+    },
+    "apiF2QatorTahrir": {
+      "qatlam": "GAS",
+      "izoh": "Sheets oy ustuniga yozadi, muhr (seal) tekshiruvi bilan"
+    },
+    "apiF2LokalkaTaklif": {
+      "qatlam": "GAS",
+      "izoh": "Drive-bogliq taklif; T2_F2Import global doira ishlatadi, lokalka oldindan tanlash kerak emas"
+    },
+    "apiF2YozishgaRuxsat": {
+      "qopladi": "t2_akt_yarat o'zining invariant tekshiruvi",
+      "toliq": false,
+      "izoh": "oldindan ko'rish emas - real chaqiruvda tekshiradi va buzilish qaytaradi; alohida 'ruxsat so'rash' RPC hali yo'q"
     }
   },
   "keyingiNavbat": {

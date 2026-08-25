@@ -24,11 +24,11 @@
     "_qoida": "egasi = shu domenni KIM ko'chiradi. Boshqa agent unga TEGMAYDI.",
     "smeta": {
       "egasi": "claude",
-      "holat": "ishlanmoqda"
+      "holat": "tayyor"
     },
     "f2": {
       "egasi": "claude",
-      "holat": "navbatda"
+      "holat": "ishlanmoqda"
     },
     "hujjat": {
       "egasi": "claude",
@@ -81,13 +81,13 @@
       "izoh": "UI/Core initsializatsiya qismi, Antigravity ga topshirildi"
     },
     "kirish": {
-      "egasi": "kelishilsin",
-      "holat": "kutilmoqda",
+      "egasi": "antigravity",
+      "holat": "tayyor",
       "izoh": "SESSIYA_KALIT ochiq qarzi — xavfsizlik, odam qarori kerak"
     },
     "kuzatuv": {
-      "egasi": "kelishilsin",
-      "holat": "kutilmoqda"
+      "egasi": "antigravity",
+      "holat": "tayyor"
     }
   },
   "umumiy_fayllar": {

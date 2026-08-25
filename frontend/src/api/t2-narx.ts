@@ -195,3 +195,47 @@ export function sbT2NarxSanaQosh(p: {
     qatorlar: p.qatorlar, manba: p.manba,
   });
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ * F2 / FAKT TAHLIL — Tizim_01 dagi apiF2QatlamTahlil / apiF2PriamoyZatrat /
+ * apiF2OyTafsilot o'rniga (38_F2Nazorat.js).
+ *
+ * ⚠️ Sheets skanlash YO'Q. `t2_akt_qator` + `t2_qator` dan bazada
+ * hisoblangan ko'rinishlar — har chaqiruvda LRV_PLUS varag'ini
+ * qayta o'qish shart emas. Bekor qilingan aktlar chiqarib tashlangan.
+ * ══════════════════════════════════════════════════════════════════ */
+
+/** Kategoriya (ЧЕЛ/МАШ/МАТ/ОБ/М-К/КАБ) bo'yicha oylik jamlanma. */
+export type F2KatOy = {
+  obyekt_id: number; kompaniya_id: number;
+  tur: 'fakt' | 'f2'; oy: string; kat: string;
+  qator_soni: number; jami_hajm: number; jami_summa: number;
+};
+
+export function sbT2F2KatOyOl(p: { obyektId: number; tur?: 'fakt' | 'f2'; oy?: string }) {
+  const f = ['obyekt_id=eq.' + p.obyektId];
+  if (p.tur) f.push('tur=eq.' + p.tur);
+  if (p.oy) f.push('oy=eq.' + p.oy);
+  return sbOqi<F2KatOy>({ jadval: 't2_f2_kat_oy', filtr: f.join('&'), tartib: 'oy.asc,kat.asc' });
+}
+
+/** Qator darajasidagi tafsilot — bitta oy/obyekt uchun har resurs. */
+export type F2Tafsilot = {
+  akt_id: number; obyekt_id: number; kompaniya_id: number;
+  tur: 'fakt' | 'f2'; oy: string; akt_holat: string;
+  raqam: string | null; akt_kim: string | null; akt_sana: string;
+  akt_qator_id: number; qator_id: number;
+  kod: string | null; nom: string | null; birlik: string | null;
+  kat: string | null; qator_tur: string | null;
+  hajm: number; narx: number | null; summa: number | null; izoh: string | null;
+};
+
+export function sbT2F2TafsilotOl(p: { obyektId: number; oy?: string; tur?: 'fakt' | 'f2' }) {
+  const f = ['obyekt_id=eq.' + p.obyektId];
+  if (p.oy) f.push('oy=eq.' + p.oy);
+  if (p.tur) f.push('tur=eq.' + p.tur);
+  return sbOqi<F2Tafsilot>({
+    jadval: 't2_f2_tafsilot', filtr: f.join('&'),
+    tartib: 'oy.asc,nom.asc', limit: 20000,
+  });
+}
