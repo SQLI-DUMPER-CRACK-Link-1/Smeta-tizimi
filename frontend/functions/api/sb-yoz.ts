@@ -1,4 +1,4 @@
-﻿/**
+/**
  * sb-yoz.ts — TIZIM_02 GA YOZISH (ataylab ЖУДА tor eshik)
  * ═══════════════════════════════════════════════════════════════════
  *
@@ -32,6 +32,7 @@ const AMALLAR = {
   narx_belgila:   { rpc: 't2_narx_belgila' },
   narx_sana_qosh: { rpc: 't2_narx_sana_qosh' },
   skladga_yozish: { rpc: 't2_skladga_yozish' },
+  faktura_yoz:    { rpc: 't2_faktura_yoz' },
 } as const;
 
 type Amal = keyof typeof AMALLAR;

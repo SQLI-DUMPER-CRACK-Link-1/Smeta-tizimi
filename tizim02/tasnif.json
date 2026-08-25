@@ -127,8 +127,9 @@
       "toliq": true
     },
     "apiNarxlarOl": {
-      "qopladi": "t2_narx",
-      "toliq": false
+      "qopladi": "t2_narx_markaz korinishi + sbT2NarxMarkazOl",
+      "toliq": true,
+      "izoh": "natija=MAX(belgilangan,smeta,sana) bazada; xavf bayrogi ham shu yerda"
     },
     "apiF2FaylOqi": {
       "qopladi": "apiT2F2Korish (o'zi chaqiradi)",
@@ -190,6 +191,28 @@
       "qopladi": "t2_qator_qosh (p_keyin_id)",
       "toliq": false,
       "izoh": "joylashuv bor; ish turlari spravochnigi hali yo'q"
+    },
+    "apiNarxlarSaqla": {
+      "qopladi": "t2_narx_sana_qosh (sbT2NarxSanaQosh)",
+      "toliq": true
+    },
+    "apiNarxSanaQosh": {
+      "qopladi": "t2_narx_sana_qosh",
+      "toliq": true
+    },
+    "apiNarxBelgilanganSaqla": {
+      "qopladi": "t2_narx_belgila (sbT2NarxBelgila)",
+      "toliq": true,
+      "izoh": "optimistik qulf bilan; t2_narxla registrni endi TO'G'RI o'qiydi"
+    },
+    "apiTopilmaganlar": {
+      "qopladi": "t2_topilmaganlar korinishi + sbT2TopilmaganlarOl",
+      "toliq": true
+    },
+    "apiNarxlarYarat": {
+      "qopladi": "t2_narx_svodkadan (import paytida avtomatik)",
+      "toliq": true,
+      "izoh": "NARXLAR varag'ini qo'lda yasash o'rniga har obyekt import paytida o'zi narxlanadi"
     }
   },
   "keyingiNavbat": {
@@ -214,7 +237,6 @@
     "_panelIzoh": "«panel» navbatda YO'Q: u 30_Panel.js uchun zaxira domen. Unga funksiya tushsa generator TASNIFSIZ deb yiqiladi va nomQoida ga qoida so'raladi."
   }
 }
-
 
 
 

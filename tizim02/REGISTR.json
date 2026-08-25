@@ -3,12 +3,12 @@
   "manba": {
     "jami": 253,
     "hisobga": 188,
-    "tayyor": 10,
-    "qisman": 6,
+    "tayyor": 16,
+    "qisman": 5,
     "joyida": 57,
     "kerakmas": 8
   },
-  "foiz": 7,
+  "foiz": 10,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -198,9 +198,9 @@
     "sozlama": {
       "qatlam": "SUPABASE",
       "jami": 18,
-      "tayyor": 0,
+      "tayyor": 1,
       "qisman": 0,
-      "kutilmoqda": 18,
+      "kutilmoqda": 17,
       "kerakmas": 0,
       "joyida": 0,
       "funksiyalar": [
@@ -225,7 +225,7 @@
       ],
       "egasi": "antigravity",
       "ish_holati": "navbatda",
-      "foiz": 0,
+      "foiz": 6,
       "kochiriladi": true
     },
     "tizim": {
@@ -333,9 +333,9 @@
     "smeta": {
       "qatlam": "SUPABASE",
       "jami": 19,
-      "tayyor": 7,
-      "qisman": 2,
-      "kutilmoqda": 10,
+      "tayyor": 12,
+      "qisman": 1,
+      "kutilmoqda": 6,
       "kerakmas": 0,
       "joyida": 0,
       "funksiyalar": [
@@ -361,7 +361,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "ishlanmoqda",
-      "foiz": 42,
+      "foiz": 66,
       "kochiriladi": true
     },
     "hujjat": {
@@ -1152,9 +1152,9 @@
       "argSoni": 1,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "qisman",
-      "qopladi": "t2_narx",
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_narx_markaz korinishi + sbT2NarxMarkazOl",
+      "izoh": "natija=MAX(belgilangan,smeta,sana) bazada; xavf bayrogi ham shu yerda"
     },
     "apiNarxlarYarat": {
       "fayl": "30_Panel.js",
@@ -1162,9 +1162,9 @@
       "argSoni": 0,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_narx_svodkadan (import paytida avtomatik)",
+      "izoh": "NARXLAR varag'ini qo'lda yasash o'rniga har obyekt import paytida o'zi narxlanadi"
     },
     "apiOraliqlarSkan": {
       "fayl": "30_Panel.js",
@@ -1242,9 +1242,9 @@
       "argSoni": 3,
       "domen": "sozlama",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_narx_belgila (sbT2NarxBelgila)",
+      "izoh": "optimistik qulf bilan; t2_narxla registrni endi TO'G'RI o'qiydi"
     },
     "apiNarxSanaQosh": {
       "fayl": "30_Panel.js",
@@ -1252,8 +1252,8 @@
       "argSoni": 1,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_narx_sana_qosh",
       "izoh": null
     },
     "apiNarxlarSaqla": {
@@ -1262,8 +1262,8 @@
       "argSoni": 1,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_narx_sana_qosh (sbT2NarxSanaQosh)",
       "izoh": null
     },
     "apiHolatSaqla": {
@@ -1302,8 +1302,8 @@
       "argSoni": 1,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_topilmaganlar korinishi + sbT2TopilmaganlarOl",
       "izoh": null
     },
     "apiSvodOldindan": {

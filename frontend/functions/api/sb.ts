@@ -43,7 +43,7 @@ const RUXSAT_JADVALLAR = new Set([
   't2_narx', 't2_manba', 't2_xom', 't2_lrv',
   't2_kozgu', 't2_ozgarish', 't2_kopruk_navbat', 't2_sozlama',
   /* F2 / FAKT (E bosqichi) */
-  't2_akt', 't2_akt_qator', 't2_akt_reestr', 't2_qator_holat',
+  't2_akt', 't2_akt_qator', 't2_akt_reestr', 't2_qator_holat', 't2_faktura',
   /* NARXLAR MARKAZI — hammasi FAQAT O'QISH uchun ko'rinishlar.
      `t2_narx_qol_xavf` — odamning qo'lda tuzatgan narxi himoyasiz
      qolgan qatorlar; u BO'SH bo'lishi kerak. */

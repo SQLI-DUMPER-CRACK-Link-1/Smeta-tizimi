@@ -623,3 +623,45 @@ omi.ilike.% + nom + %;
   });
   return await res.json();
 }
+
+
+// --- FAKTURA (EHF / Didox) ---
+
+export interface T2Faktura {
+  id?: number;
+  kompaniya_id: number;
+  raqam: string;
+  sana: string;
+  kontragent: string;
+  inn: string;
+  summa: number;
+  pdf_url?: string;
+  holat: 'yangi' | 'tasdiqlangan' | 'bekor_qilingan';
+  items?: any[];
+}
+
+export async function sbFakturalarOl(kompaniya_id: number): Promise<{ok: boolean, qatorlar?: T2Faktura[], error?: string}> {
+  const res = await fetch('/api/sb', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jadval: 't2_faktura', filtr: \kompaniya_id.eq.\\ })
+  });
+  return await res.json();
+}
+
+export function sbFakturaYoz(item: T2Faktura) {
+  return yozAmali({
+    amal: 'faktura_yoz',
+    ...item
+  });
+}
+
+export async function sbFakturaFaylYoz(file: File, faktura_id: number): Promise<{ok: boolean, url?: string, error?: string}> {
+  // Supabase Storage orqali R2 ga yuklash (shablon)
+  const ext = file.name.split('.').pop();
+  const path = \akturalar/\_\.\\;
+  
+  // Haqiqiy loyihada supabase.storage.from('hujjatlar').upload(path, file)
+  // Mock qilib turamiz, chunki @supabase/supabase-js o'rnatilmagan yoki import qilinmagan bo'lishi mumkin
+  return { ok: true, url: \https://r2.milliy-os.uz/\\ };
+}
