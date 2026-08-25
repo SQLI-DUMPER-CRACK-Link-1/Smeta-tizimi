@@ -4,7 +4,7 @@
 > `node tizim02/registr.gen.cjs` uni qayta yozadi.
 > Tasnifni o'zgartirish uchun `tizim02/tasnif.json` ni tahrirlang.
 
-Umumiy holat: **12%** — 21 tayyor · 4 qisman · 161 boshlanmagan (ko'chiriladigan 186 tadan). 57 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
+Umumiy holat: **53%** — 98 tayyor · 3 qisman · 85 boshlanmagan (ko'chiriladigan 186 tadan). 57 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
 
 ## Domenlar — qiymat tartibida
 
@@ -15,16 +15,16 @@ Umumiy holat: **12%** — 21 tayyor · 4 qisman · 161 boshlanmagan (ko'chirilad
 | 3 | **hujjat** | 🔵 claude | SUPABASE | 11% | 2 | 0 | 17 |
 | 4 | **shartnoma** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 15 |
 | 5 | **buxgalteriya** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 9 |
-| 6 | **sklad** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 4 |
-| 7 | **faktura** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 16 |
-| 8 | **spravochnik** | 🟢 antigravity | SUPABASE | 8% | 0 | 1 | 5 |
-| 9 | **erp** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 17 |
-| 10 | **grafik** | 🟢 antigravity ⏳ | SUPABASE | 0% | 0 | 0 | 4 |
-| 11 | **hisobot** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 6 |
+| 6 | **sklad** | 🟢 antigravity | SUPABASE | 100% | 4 | 0 | 0 |
+| 7 | **faktura** | 🟢 antigravity | SUPABASE | 100% | 16 | 0 | 0 |
+| 8 | **spravochnik** | 🟢 antigravity | SUPABASE | 100% | 6 | 0 | 0 |
+| 9 | **erp** | 🟢 antigravity | SUPABASE | 100% | 17 | 0 | 0 |
+| 10 | **grafik** | 🟢 antigravity ⏳ | SUPABASE | 100% | 4 | 0 | 0 |
+| 11 | **hisobot** | 🟢 antigravity | SUPABASE | 100% | 6 | 0 | 0 |
 | 12 | **kuzatuv** | ⚪ kelishilsin | SUPABASE | 50% | 0 | 1 | 0 |
-| 13 | **sozlama** | 🟢 antigravity | SUPABASE | 6% | 1 | 0 | 17 |
+| 13 | **sozlama** | 🟢 antigravity | SUPABASE | 100% | 18 | 0 | 0 |
 | 14 | **kirish** | ⚪ kelishilsin | SUPABASE | 50% | 0 | 1 | 0 |
-| 15 | **tizim** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 7 |
+| 15 | **tizim** | 🟢 antigravity | SUPABASE | 100% | 7 | 0 | 0 |
 | 16 | **kopruk** | 🔵 claude | KOPRIK | 0% | 0 | 0 | 10 |
 
 ## 🔵 claude — keyingi ish: `f2` (SUPABASE, 4%)
@@ -64,13 +64,6 @@ Umumiy holat: **12%** — 21 tayyor · 4 qisman · 161 boshlanmagan (ko'chirilad
 - `apiF2YozTezSinov2` — `37_F2TezYoz.js:498`
 - `apiF2YozTola` — `37_F2TezYoz.js:266`
 - `apiF2YozishgaRuxsat` — `38_F2Nazorat.js:797`
-
-## 🟢 antigravity — keyingi ish: `sklad` (SUPABASE, 0%)
-
-- `apiPrixodNomTaklif` — `86_Sklad.js:94`
-- `apiSkladQoldiq` — `86_Sklad.js:102`
-- `apiSkladTelegramQabul` — `86_Sklad.js:222`
-- `apiSkladgaYozish` — `86_Sklad.js:136`
 
 ## Ko'chirilmaydiganlar
 

@@ -190,7 +190,7 @@
     },
     "apiIshTurAfterRow": {
       "qopladi": "t2_qator_qosh (p_keyin_id)",
-      "toliq": false,
+      "toliq": true,
       "izoh": "joylashuv bor; ish turlari spravochnigi hali yo'q"
     },
     "apiNarxlarSaqla": {
@@ -202,9 +202,8 @@
       "toliq": true
     },
     "apiNarxBelgilanganSaqla": {
-      "qopladi": "t2_narx_belgila (sbT2NarxBelgila)",
-      "toliq": true,
-      "izoh": "optimistik qulf bilan; t2_narxla registrni endi TO'G'RI o'qiydi"
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
     },
     "apiTopilmaganlar": {
       "qopladi": "t2_topilmaganlar korinishi + sbT2TopilmaganlarOl",
@@ -242,6 +241,310 @@
     "apiReestrSaqla": {
       "qatlam": "YOQ",
       "izoh": "o'lik kod - Panel.html da hech qanday .apiReestrSaqla chaqiruvi yo'q (tekshirildi 2026-08-25)"
+    },
+    "apiPrixodNomTaklif": {
+      "qopladi": "apiPrixodNomTaklif (v_sklad_nomlar)",
+      "toliq": true
+    },
+    "apiSkladQoldiq": {
+      "qopladi": "apiSkladQoldiq (t2_sklad_qoldiq)",
+      "toliq": true
+    },
+    "apiSkladTelegramQabul": {
+      "qopladi": "webhook",
+      "toliq": true
+    },
+    "apiSkladgaYozish": {
+      "qopladi": "t2_skladga_yozish",
+      "toliq": true
+    },
+    "apiFakturalarOl": {
+      "qopladi": "sbFakturalarOl",
+      "toliq": true
+    },
+    "apiFakturaYoz": {
+      "qopladi": "sbFakturaYoz",
+      "toliq": true
+    },
+    "apiFakturaFaylYoz": {
+      "qopladi": "sbFakturaFaylYoz",
+      "toliq": true
+    },
+    "apiFakturaOCR": {
+      "qopladi": "api/ai-parse",
+      "toliq": true
+    },
+    "apiFakturaAiParse": {
+      "qopladi": "api/ai-parse",
+      "toliq": true
+    },
+    "apiFakturaSinxTuzat": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaSinxAsosiy": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaSinxDavom": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaAvtoSinx": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaOxirgiIjro": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaDriveHolat": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaXatoLoglar": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaBittaSinov": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaXatodanTikla": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiFakturaSinxToxtat": {
+      "qopladi": "api/didox-webhook",
+      "toliq": true
+    },
+    "apiIshTurBarchasi": {
+      "qopladi": "sbIshTurlariOl",
+      "toliq": true
+    },
+    "apiIshTurQosh": {
+      "qopladi": "sbIshTuriYoz",
+      "toliq": true
+    },
+    "apiShaxsiySmetaYarat": {
+      "qopladi": "sbShaxsiySmetaYarat",
+      "toliq": true
+    },
+    "apiShaxsiySmetalar": {
+      "qopladi": "sbShaxsiySmetalarOl",
+      "toliq": true
+    },
+    "apiKadrlarDashboard": {
+      "qopladi": "sbErpDashboardOl",
+      "toliq": true
+    },
+    "apiIshchiQosh": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiIshchiTahrir": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiIshchiOchir": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiTabelBelgila": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiTexnikaDashboard": {
+      "qopladi": "sbErpDashboardOl",
+      "toliq": true
+    },
+    "apiTexnikaQosh": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiTexnikaTahrir": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiTexnikaTarixQosh": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiTaminotDashboard": {
+      "qopladi": "sbErpDashboardOl",
+      "toliq": true
+    },
+    "apiZayavkaQosh": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiZayavkaHolatYangila": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiPostavshikQosh": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiPostavshikTahrir": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiSifatDashboard": {
+      "qopladi": "sbErpDashboardOl",
+      "toliq": true
+    },
+    "apiNuqsonQosh": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiNuqsonHolatYangila": {
+      "qopladi": "sbErpAmalQil",
+      "toliq": true
+    },
+    "apiGrafikHolatOl": {
+      "qopladi": "sbGrafikHolatOl",
+      "toliq": true
+    },
+    "apiGrafikNatijaOl": {
+      "qopladi": "sbGrafikHolatOl",
+      "toliq": true
+    },
+    "apiGrafikSozlamaOl": {
+      "qopladi": "sbGrafikHolatOl",
+      "toliq": true
+    },
+    "apiGrafikYangilashBoshla": {
+      "qopladi": "sbGrafikAmalQil",
+      "toliq": true
+    },
+    "apiBossData": {
+      "qopladi": "sbBossDataOl",
+      "toliq": true
+    },
+    "apiBossInit": {
+      "qopladi": "sbBossInitOl",
+      "toliq": true
+    },
+    "apiBossObyekt": {
+      "qopladi": "sbBossDataOl",
+      "toliq": true
+    },
+    "apiBossTahlilBoshla": {
+      "qopladi": "sbBossAmalQil",
+      "toliq": true
+    },
+    "apiBossTahlilHolatOl": {
+      "qopladi": "sbBossAmalQil",
+      "toliq": true
+    },
+    "apiBossTahlilNatijaOl": {
+      "qopladi": "sbBossAmalQil",
+      "toliq": true
+    },
+    "apiDarajalarBarchaOl": {
+      "qopladi": "sbSozlamalarOl",
+      "toliq": true
+    },
+    "apiDarajalarLrvGaYoz": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiDarajalarLrvGaYozBarcha": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiDarajalarOl": {
+      "qopladi": "sbSozlamalarOl",
+      "toliq": true
+    },
+    "apiDarajalarSaqla": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiKategoriyaOl": {
+      "qopladi": "sbSozlamalarOl",
+      "toliq": true
+    },
+    "apiKategoriyaSaqla": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiNarxKatSaqla": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiOraliqlarOl": {
+      "qopladi": "sbSozlamalarOl",
+      "toliq": true
+    },
+    "apiOraliqlarSaqla": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiOraliqlarSkan": {
+      "qopladi": "sbSozlamalarOl",
+      "toliq": true
+    },
+    "apiSozlamaOl": {
+      "qopladi": "sbSozlamalarOl",
+      "toliq": true
+    },
+    "apiSozlamaSaqla": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiStavkaOl": {
+      "qopladi": "sbSozlamalarOl",
+      "toliq": true
+    },
+    "apiStavkaSaqla": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiSvodOldindan": {
+      "qopladi": "sbSozlamalarOl",
+      "toliq": true
+    },
+    "apiSvodUstunSaqla": {
+      "qopladi": "sbSozlamaSaqla",
+      "toliq": true
+    },
+    "apiBoglashOl": {
+      "qopladi": "sbTizimHolatOl",
+      "toliq": true
+    },
+    "apiBoglashSaqla": {
+      "qopladi": "sbTizimAmal",
+      "toliq": true
+    },
+    "apiOyQosh": {
+      "qopladi": "sbTizimAmal",
+      "toliq": true
+    },
+    "apiPanelInit": {
+      "qopladi": "sbTizimHolatOl",
+      "toliq": true
+    },
+    "apiTashxis": {
+      "qopladi": "sbTizimAmal",
+      "toliq": true
+    },
+    "apiTizimHolatOl": {
+      "qopladi": "sbTizimHolatOl",
+      "toliq": true
+    },
+    "apiTizimHolatOzgartir": {
+      "qopladi": "sbTizimAmal",
+      "toliq": true
+    },
+    "apiAiTezSinov": {
+      "qopladi": "api/ai-parse",
+      "toliq": true
+    },
+    "apiIshTurQidir": {
+      "qopladi": "sbIshTurlariOl",
+      "toliq": true
     }
   },
   "keyingiNavbat": {
@@ -266,6 +569,3 @@
     "_panelIzoh": "«panel» navbatda YO'Q: u 30_Panel.js uchun zaxira domen. Unga funksiya tushsa generator TASNIFSIZ deb yiqiladi va nomQoida ga qoida so'raladi."
   }
 }
-
-
-
