@@ -44,7 +44,7 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
        ochish kerak, ya'ni eshik JIMGINA kengayolmaydi. */
     /* ⚠️ 2026-08-25: narxlar markazi amallari qo‘shildi (Claude). */
     const KUTILGAN = ['t2_akt_bekor', 't2_akt_tasdiqlash', 't2_akt_yarat',
-                      't2_faktura_yoz', 't2_ish_turi_yoz', 't2_narx_belgila', 't2_narx_sana_qosh',
+                      't2_faktura_yoz', 't2_grafik_sozlama_saqla', 't2_grafik_yangilash', 't2_ish_turi_yoz', 't2_narx_belgila', 't2_narx_sana_qosh',
                       't2_qator_qosh', 't2_qator_tahrir', 't2_shaxsiy_smeta_yarat', 't2_skladga_yozish', 't2_erp_amal'].sort();
     T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),

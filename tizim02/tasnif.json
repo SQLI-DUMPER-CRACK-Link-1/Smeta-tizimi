@@ -115,8 +115,9 @@
       "izoh": "t2_qator_holat orqali fakt/qoldiq summalar qo'shildi"
     },
     "apiHolatOlLokalka": {
-      "qopladi": "t2_daraxt",
-      "toliq": false
+      "qopladi": "t2_daraxt manba_id filtri (sbT2DaraxtOl)",
+      "toliq": true,
+      "izoh": "daraxt allaqachon barcha manba fayllarni birlashtirib qaytaradi; lokalka filtri manba_id bilan"
     },
     "apiRazdelShYasat": {
       "qopladi": "t2_markirovka + t2_rollup",
@@ -213,6 +214,34 @@
       "qopladi": "t2_narx_svodkadan (import paytida avtomatik)",
       "toliq": true,
       "izoh": "NARXLAR varag'ini qo'lda yasash o'rniga har obyekt import paytida o'zi narxlanadi"
+    },
+    "apiHolatOlLokalkalar": {
+      "qopladi": "t2_daraxt manba_id filtri (sbT2DaraxtOl)",
+      "toliq": true,
+      "izoh": "bir nechta lokalka birlashtirish endi kerak emas - baza modeli tabiiy birlashtiradi"
+    },
+    "apiHolatSaqla": {
+      "qopladi": "t2_akt_yarat (fakt/F2 hujjat)",
+      "toliq": true,
+      "izoh": "oy/fakt hajmini yozish = akt yaratish; Sheets katak yozish GAS ko'zgu tomonida qoladi"
+    },
+    "apiRazdellarShYasaVaOch": {
+      "qopladi": "apiRazdelShYasat (t2_markirovka+rollup)",
+      "toliq": true,
+      "izoh": "varaqni ochish Sheets UI amali, web'da tegishli emas"
+    },
+    "apiRazdellarTolaQaytaQur": {
+      "qopladi": "apiRazdelShYasatBarcha (t2_markirovka)",
+      "toliq": true,
+      "izoh": "РАЗДЕЛЛАР varag'ini tozalash Sheets-side, ma'lumot allaqachon ko'chirilgan"
+    },
+    "apiReestrOl": {
+      "qatlam": "YOQ",
+      "izoh": "o'lik kod - Panel.html da hech qanday .apiReestrOl chaqiruvi yo'q (tekshirildi 2026-08-25)"
+    },
+    "apiReestrSaqla": {
+      "qatlam": "YOQ",
+      "izoh": "o'lik kod - Panel.html da hech qanday .apiReestrSaqla chaqiruvi yo'q (tekshirildi 2026-08-25)"
     }
   },
   "keyingiNavbat": {
@@ -237,8 +266,4 @@
     "_panelIzoh": "«panel» navbatda YO'Q: u 30_Panel.js uchun zaxira domen. Unga funksiya tushsa generator TASNIFSIZ deb yiqiladi va nomQoida ga qoida so'raladi."
   }
 }
-
-
-
-
 

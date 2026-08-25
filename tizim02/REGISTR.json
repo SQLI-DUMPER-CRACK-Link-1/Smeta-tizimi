@@ -2,13 +2,13 @@
   "versiya": 1,
   "manba": {
     "jami": 253,
-    "hisobga": 188,
-    "tayyor": 16,
-    "qisman": 5,
+    "hisobga": 186,
+    "tayyor": 21,
+    "qisman": 4,
     "joyida": 57,
-    "kerakmas": 8
+    "kerakmas": 10
   },
-  "foiz": 10,
+  "foiz": 12,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -134,7 +134,7 @@
         "apiShaxsiySmetalar"
       ],
       "egasi": "antigravity",
-      "ish_holati": "navbatda",
+      "ish_holati": "tugadi",
       "foiz": 8,
       "kochiriladi": true
     },
@@ -333,10 +333,10 @@
     "smeta": {
       "qatlam": "SUPABASE",
       "jami": 19,
-      "tayyor": 12,
-      "qisman": 1,
-      "kutilmoqda": 6,
-      "kerakmas": 0,
+      "tayyor": 17,
+      "qisman": 0,
+      "kutilmoqda": 0,
+      "kerakmas": 2,
       "joyida": 0,
       "funksiyalar": [
         "apiBlQosh",
@@ -361,7 +361,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "ishlanmoqda",
-      "foiz": 66,
+      "foiz": 100,
       "kochiriladi": true
     },
     "hujjat": {
@@ -514,7 +514,7 @@
         "apiSkladgaYozish"
       ],
       "egasi": "antigravity",
-      "ish_holati": "ishlanmoqda",
+      "ish_holati": "tugadi",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -546,7 +546,7 @@
         "apiZayavkaQosh"
       ],
       "egasi": "antigravity",
-      "ish_holati": "navbatda",
+      "ish_holati": "tugadi",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -577,7 +577,7 @@
         "apiFakturalarOl"
       ],
       "egasi": "antigravity",
-      "ish_holati": "navbatda",
+      "ish_holati": "tugadi",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -596,7 +596,7 @@
         "apiGrafikYangilashBoshla"
       ],
       "egasi": "antigravity",
-      "ish_holati": "navbatda",
+      "ish_holati": "ishlanmoqda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -1132,9 +1132,9 @@
       "argSoni": 3,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "qisman",
-      "qopladi": "t2_daraxt",
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_daraxt manba_id filtri (sbT2DaraxtOl)",
+      "izoh": "daraxt allaqachon barcha manba fayllarni birlashtirib qaytaradi; lokalka filtri manba_id bilan"
     },
     "apiHolatOl": {
       "fayl": "30_Panel.js",
@@ -1272,9 +1272,9 @@
       "argSoni": 2,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_akt_yarat (fakt/F2 hujjat)",
+      "izoh": "oy/fakt hajmini yozish = akt yaratish; Sheets katak yozish GAS ko'zgu tomonida qoladi"
     },
     "apiOyQosh": {
       "fayl": "30_Panel.js",
@@ -1352,9 +1352,9 @@
       "argSoni": 1,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "apiRazdelShYasat (t2_markirovka+rollup)",
+      "izoh": "varaqni ochish Sheets UI amali, web'da tegishli emas"
     },
     "apiDarajalarLrvGaYoz": {
       "fayl": "30_Panel.js",
@@ -1382,9 +1382,9 @@
       "argSoni": 0,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "apiRazdelShYasatBarcha (t2_markirovka)",
+      "izoh": "РАЗДЕЛЛАР varag'ini tozalash Sheets-side, ma'lumot allaqachon ko'chirilgan"
     },
     "apiDarajalarLrvGaYozBarcha": {
       "fayl": "30_Panel.js",
@@ -1551,20 +1551,20 @@
       "qator": 4775,
       "argSoni": 1,
       "domen": "smeta",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "YOQ",
+      "holat": "kerakmas",
       "qopladi": null,
-      "izoh": null
+      "izoh": "o'lik kod - Panel.html da hech qanday .apiReestrSaqla chaqiruvi yo'q (tekshirildi 2026-08-25)"
     },
     "apiReestrOl": {
       "fayl": "30_Panel.js",
       "qator": 4780,
       "argSoni": 0,
       "domen": "smeta",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "YOQ",
+      "holat": "kerakmas",
       "qopladi": null,
-      "izoh": null
+      "izoh": "o'lik kod - Panel.html da hech qanday .apiReestrOl chaqiruvi yo'q (tekshirildi 2026-08-25)"
     },
     "apiF2QollaProgress": {
       "fayl": "30_Panel.js",
@@ -1632,9 +1632,9 @@
       "argSoni": 3,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_daraxt manba_id filtri (sbT2DaraxtOl)",
+      "izoh": "bir nechta lokalka birlashtirish endi kerak emas - baza modeli tabiiy birlashtiradi"
     },
     "apiF2LokalkaTaklif": {
       "fayl": "30_Panel.js",
