@@ -3,12 +3,12 @@
   "manba": {
     "jami": 254,
     "hisobga": 156,
-    "tayyor": 107,
-    "qisman": 3,
+    "tayyor": 119,
+    "qisman": 6,
     "joyida": 88,
     "kerakmas": 10
   },
-  "foiz": 70,
+  "foiz": 78,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -449,9 +449,9 @@
     "shartnoma": {
       "qatlam": "SUPABASE",
       "jami": 15,
-      "tayyor": 0,
-      "qisman": 0,
-      "kutilmoqda": 15,
+      "tayyor": 12,
+      "qisman": 3,
+      "kutilmoqda": 0,
       "kerakmas": 0,
       "joyida": 0,
       "funksiyalar": [
@@ -473,7 +473,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "navbatda",
-      "foiz": 0,
+      "foiz": 90,
       "kochiriladi": true
     },
     "buxgalteriya": {
@@ -2463,8 +2463,8 @@
       "argSoni": 1,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_nakrutka (sbT2NakrutkaOl)",
       "izoh": null
     },
     "apiNakrutkaSaqla": {
@@ -2473,8 +2473,8 @@
       "argSoni": 2,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_nakrutka_saqla",
       "izoh": null
     },
     "apiResursNakrutka": {
@@ -2483,9 +2483,9 @@
       "argSoni": 3,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_nakrutka_koef + t2_nakrutka_hisob",
+      "izoh": "bitta resurs narxi uchun probe - dvigatel funksiyasi tayyor, frontend wrapper hali yozilmagan"
     },
     "apiNakrutkaKoef": {
       "fayl": "80_Shartnoma.js",
@@ -2493,8 +2493,8 @@
       "argSoni": 1,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_obyekt_nakrutka VIEW (kf_* ustunlar)",
       "izoh": null
     },
     "apiObyektNakrutka": {
@@ -2503,9 +2503,9 @@
       "argSoni": 1,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_obyekt_nakrutka VIEW (sbT2ObyektNakrutkaOl)",
+      "izoh": "Dashboard qatlamisiz - t2_qator dan jonli, formula qolda tekshirilgan"
     },
     "apiShartnomaOl": {
       "fayl": "80_Shartnoma.js",
@@ -2513,8 +2513,8 @@
       "argSoni": 0,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_shartnoma (sbT2ShartnomalarOl)",
       "izoh": null
     },
     "apiShartnomaSaqla": {
@@ -2523,8 +2523,8 @@
       "argSoni": 1,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_shartnoma_saqla",
       "izoh": null
     },
     "apiShartnomaOchir": {
@@ -2533,8 +2533,8 @@
       "argSoni": 1,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_shartnoma_ochir",
       "izoh": null
     },
     "apiShartnomaBogFullOl": {
@@ -2543,8 +2543,8 @@
       "argSoni": 0,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_shartnoma_bog + t2_shartnoma JOIN (frontend join)",
       "izoh": null
     },
     "apiShartnomaBogOl": {
@@ -2553,8 +2553,8 @@
       "argSoni": 0,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_shartnoma_bog (sbT2ShartnomaBogOl)",
       "izoh": null
     },
     "apiShartnomaBogSaqla": {
@@ -2563,8 +2563,8 @@
       "argSoni": 3,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_shartnoma_bog_saqla",
       "izoh": null
     },
     "apiQoshIshOl": {
@@ -2573,8 +2573,8 @@
       "argSoni": 0,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_qoshimcha_ish (sbT2QoshimchaIshlarOl)",
       "izoh": null
     },
     "apiQoshIshSaqla": {
@@ -2583,9 +2583,9 @@
       "argSoni": 1,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "qisman",
+      "qopladi": "t2_qoshimcha_ish jadvali - RPC hali yozilmagan",
+      "izoh": "jadval tayyor, alohida yozish RPC si (versiya bilan) hali qurilmagan"
     },
     "apiQoshIshOchir": {
       "fayl": "80_Shartnoma.js",
@@ -2593,8 +2593,8 @@
       "argSoni": 1,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "qisman",
+      "qopladi": "t2_qoshimcha_ish jadvali - RPC hali yozilmagan",
       "izoh": null
     },
     "apiShartnomaDashboard": {
@@ -2603,9 +2603,9 @@
       "argSoni": 0,
       "domen": "shartnoma",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "qisman",
+      "qopladi": "t2_obyekt_nakrutka + t2_shartnoma JOIN (frontend agregatsiya)",
+      "izoh": "asosiy hisob-kitob tayyor, dashboard agregatsiya sahifasi hali qurilmagan"
     },
     "apiTolovOl": {
       "fayl": "85_Buxgalteriya.js",

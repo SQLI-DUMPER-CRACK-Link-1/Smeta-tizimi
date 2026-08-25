@@ -716,6 +716,70 @@
       "qopladi": "t2_akt_bekor (butun hujjat) yoki tuzatuvchi akt (manfiy hajm)",
       "toliq": false,
       "izoh": "QISMAN: Tizim_01 BITTA resursni oy ichidan olib tashlay oladi. Tizim_02 da bunga aynan mos RPC yo'q - yechim: butun hujjatni bekor qilish yoki manfiy hajmli tuzatuvchi akt yaratish (ikkalasi ham ishlaydi, lekin bitta qatorni 'yo'q qilish' emas)"
+    },
+    "apiNakrutkaOl": {
+      "qopladi": "t2_nakrutka (sbT2NakrutkaOl)",
+      "toliq": true
+    },
+    "apiNakrutkaSaqla": {
+      "qopladi": "t2_nakrutka_saqla",
+      "toliq": true
+    },
+    "apiNakrutkaKoef": {
+      "qopladi": "t2_obyekt_nakrutka VIEW (kf_* ustunlar)",
+      "toliq": true
+    },
+    "apiResursNakrutka": {
+      "qopladi": "t2_nakrutka_koef + t2_nakrutka_hisob",
+      "toliq": true,
+      "izoh": "bitta resurs narxi uchun probe - dvigatel funksiyasi tayyor, frontend wrapper hali yozilmagan"
+    },
+    "apiObyektNakrutka": {
+      "qopladi": "t2_obyekt_nakrutka VIEW (sbT2ObyektNakrutkaOl)",
+      "toliq": true,
+      "izoh": "Dashboard qatlamisiz - t2_qator dan jonli, formula qolda tekshirilgan"
+    },
+    "apiShartnomaOl": {
+      "qopladi": "t2_shartnoma (sbT2ShartnomalarOl)",
+      "toliq": true
+    },
+    "apiShartnomaSaqla": {
+      "qopladi": "t2_shartnoma_saqla",
+      "toliq": true
+    },
+    "apiShartnomaOchir": {
+      "qopladi": "t2_shartnoma_ochir",
+      "toliq": true
+    },
+    "apiShartnomaBogOl": {
+      "qopladi": "t2_shartnoma_bog (sbT2ShartnomaBogOl)",
+      "toliq": true
+    },
+    "apiShartnomaBogFullOl": {
+      "qopladi": "t2_shartnoma_bog + t2_shartnoma JOIN (frontend join)",
+      "toliq": true
+    },
+    "apiShartnomaBogSaqla": {
+      "qopladi": "t2_shartnoma_bog_saqla",
+      "toliq": true
+    },
+    "apiQoshIshOl": {
+      "qopladi": "t2_qoshimcha_ish (sbT2QoshimchaIshlarOl)",
+      "toliq": true
+    },
+    "apiQoshIshSaqla": {
+      "qopladi": "t2_qoshimcha_ish jadvali - RPC hali yozilmagan",
+      "toliq": false,
+      "izoh": "jadval tayyor, alohida yozish RPC si (versiya bilan) hali qurilmagan"
+    },
+    "apiQoshIshOchir": {
+      "qopladi": "t2_qoshimcha_ish jadvali - RPC hali yozilmagan",
+      "toliq": false
+    },
+    "apiShartnomaDashboard": {
+      "qopladi": "t2_obyekt_nakrutka + t2_shartnoma JOIN (frontend agregatsiya)",
+      "toliq": false,
+      "izoh": "asosiy hisob-kitob tayyor, dashboard agregatsiya sahifasi hali qurilmagan"
     }
   },
   "keyingiNavbat": {

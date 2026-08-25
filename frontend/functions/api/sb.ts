@@ -55,6 +55,9 @@ const RUXSAT_JADVALLAR = new Set([
   /* VIBORKA — har obyektga xos material tanlash/xarid nazorati
      (2026-08-25: umumiy Sheets hujjatidan Tizim_02 ga ko'chirildi) */
   't2_viborka', 't2_viborka_qabul', 't2_viborka_holat',
+  /* ШАРТНОМА + НАКРУТКА */
+  't2_shartnoma', 't2_shartnoma_bog', 't2_nakrutka', 't2_qoshimcha_ish',
+  't2_obyekt_nakrutka',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

@@ -48,7 +48,11 @@ const AMALLAR = {
   birja_rfq_yarat: { rpc: 't2_birja_rfq_yarat' },
   birja_taklif_ber: { rpc: 't2_birja_taklif_ber' },
   viborka_smetadan_toldir: { rpc: 't2_viborka_smetadan_toldir' },
-  viborka_qabul_yoz: { rpc: 't2_viborka_qabul_yoz' }
+  viborka_qabul_yoz: { rpc: 't2_viborka_qabul_yoz' },
+  shartnoma_saqla: { rpc: 't2_shartnoma_saqla' },
+  shartnoma_ochir: { rpc: 't2_shartnoma_ochir' },
+  shartnoma_bog_saqla: { rpc: 't2_shartnoma_bog_saqla' },
+  nakrutka_saqla: { rpc: 't2_nakrutka_saqla' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -314,6 +318,67 @@ export const onRequestPost: PagesFunction<{
         p_manba: 'frontend',
         p_kim: sess.email || '',
       };
+
+    /* ══════════ ШАРТНОМА SAQLASH ══════════ */
+    } else if (amal === 'shartnoma_saqla') {
+      if (!String(so.raqam || '').trim()) {
+        return Response.json({ ok: false, error: 'Shartnoma raqami bo\'sh' });
+      }
+      yuk = {
+        p_raqam: String(so.raqam).slice(0, 100),
+        p_nom: so.nom ? String(so.nom).slice(0, 500) : null,
+        p_taraf: so.taraf ? String(so.taraf).slice(0, 300) : null,
+        p_summa_bez_nds: so.summa_bez_nds == null ? null : Number(so.summa_bez_nds),
+        p_nds: so.nds == null ? null : Number(so.nds),
+        p_jami_nds_bilan: so.jami_nds_bilan == null ? null : Number(so.jami_nds_bilan),
+        p_chel_stavka: so.chel_stavka == null ? null : Number(so.chel_stavka),
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 1000) : null,
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+        p_manba: 'frontend',
+        p_kim: sess.email || '',
+      };
+
+    /* ══════════ ШАРТНОМА BEKOR QILISH ══════════ */
+    } else if (amal === 'shartnoma_ochir') {
+      const shartnomaId = Number(so.shartnoma_id);
+      if (!Number.isFinite(shartnomaId) || shartnomaId <= 0) {
+        return Response.json({ ok: false, error: 'shartnoma_id noto\'g\'ri' });
+      }
+      yuk = {
+        p_shartnoma_id: shartnomaId,
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+      };
+
+    /* ══════════ OBYEKTNI ШАРТНОМАGA BOG'LASH ══════════ */
+    } else if (amal === 'shartnoma_bog_saqla') {
+      const obyektId = Number(so.obyekt_id);
+      const shartnomaId = Number(so.shartnoma_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      if (!Number.isFinite(shartnomaId) || shartnomaId <= 0) {
+        return Response.json({ ok: false, error: 'shartnoma_id noto\'g\'ri' });
+      }
+      yuk = { p_obyekt_id: obyektId, p_shartnoma_id: shartnomaId };
+
+    /* ══════════ НАКРУТКА KOEFFITSIENTLARINI SAQLASH ══════════
+       ⚠️ shartnoma_id berilmasa UMUMIY DEFAULT yangilanadi — bu BARCHA
+       shartnomalarga ta'sir qiladi. Faqat admin/superadmin qila oladi. */
+    } else if (amal === 'nakrutka_saqla') {
+      if (!Array.isArray(so.qatorlar) || so.qatorlar.length === 0) {
+        return Response.json({ ok: false, error: 'Bironta koeffitsient yo\'q' });
+      }
+      const shartnomaId = so.shartnoma_id == null ? null : Number(so.shartnoma_id);
+      if (shartnomaId === null && !(sess.rol === 'admin' || sess.rol === 'superadmin')) {
+        return Response.json({ ok: false, status: 403,
+          error: 'Umumiy default накрутка faqat admin huquqi bilan o\'zgartiriladi' }, { status: 403 });
+      }
+      const qatorlar = so.qatorlar.slice(0, 50).map((q: any) => ({
+        koef: String(q.koef ?? '').slice(0, 100),
+        qiymat: q.qiymat,
+        izoh: q.izoh ? String(q.izoh).slice(0, 300) : null,
+      }));
+      yuk = { p_qatorlar: qatorlar, p_shartnoma_id: shartnomaId };
 
     /* ══════════ TASDIQLASH / BEKOR ══════════ */
     } else if (amal === 'akt_tasdiqlash' || amal === 'akt_bekor') {

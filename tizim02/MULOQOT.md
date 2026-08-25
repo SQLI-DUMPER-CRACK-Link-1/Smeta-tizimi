@@ -650,3 +650,47 @@ FAKTIK SO'RAB, ishlashini tekshiring (`select * from ... limit 1`),
 keyin o'zgartiring.
 
 **O'lchandi:** 284 test, tsc — 0 xato.
+
+
+### [2026-08-25] Claude → hammaga · `shartnoma` domeni 90%, накрутка dvigateli ko'chirildi
+
+**Накрутка** — smeta "toza" narxini shartnoma/buxgalteriya uchun
+"устама bilan" narxga aylantiradigan CHIZIQLI formula zanjiri
+(ПРЯМЫЕ → транспорт/склад → ПРОЧИЕ 18% → ОБОРУД → СТРАХОВАНИЕ →
+РИСК → НДС → ВСЕГО). Bu — MASTER_TAHLIL hujjatidagi "ikki narx
+falsafasi" ning yuragi.
+
+**Qurildi:**
+- `t2_shartnoma` / `t2_shartnoma_bog` / `t2_nakrutka` / `t2_qoshimcha_ish`
+  — jadvallar (SOZLAMALAR_ШАРТНОМА va h.k. Sheets varaqlari o'rniga)
+- `t2_nakrutka_hisob(...)` — formula zanjirining o'zi, **qo'lda
+  tekshirildi**: chel=1000000, mash=500000, mat=2000000, standart
+  koeffitsientlar bilan har bitta oraliq qadam (tr_mat, skl_mat,
+  itogo1-4, strax, nds) qo'lda hisoblab SQL natijasiga solishtirildi —
+  **aynan mos**, birorta ham farq yo'q.
+- `t2_nakrutka_koef(...)` — har kategoriya (ЧЕЛ/МАШ/МАТ/ОБ/М-К/КАБ/
+  БЕЗСКЛАД) uchun ANIQ marjinal koeffitsient (probe texnikasi —
+  formula chiziqli bo'lgani uchun yaxlitlash emas, 100% aniq).
+  Chiziqlilik ham tekshirildi: kategoriya bo'yicha alohida hisoblangan
+  qiymatlar yig'indisi = umumiy vsego (Amfiteatr'da ham tasdiqlandi).
+- `t2_obyekt_nakrutka` — **VIEW** (RPC emas — ataylab, pastda sababi).
+  Endi `t2_qator` dan JONLI hisoblaydi, Dashboard qatlami shart emas.
+- Shartnoma CRUD: `t2_shartnoma_saqla/ochir/bog_saqla`,
+  `t2_nakrutka_saqla` (umumiy default o'zgartirish faqat admin).
+
+**⚠️ Arxitektura qarori:** накрутка hisob-kitobini RPC emas, VIEW
+qildim. Sabab: yozish/o'qish eshiklari (`sb.ts`/`sb-yoz.ts`) faqat
+TABLE/VIEW larni PostgREST orqali biladi; ixtiyoriy RPC chaqirish
+uchun YANGI endpoint kerak bo'lardi — yangi xavfsizlik yuzasi. VIEW
+esa mavjud oq ro'yxatdan oddiy `obyekt_id=eq.X` filtri bilan xavfsiz
+o'qiladi. Barcha 4 real obyekt uchun sinaldi — ishlaydi.
+
+**Ochiq qoldi:** `apiQoshIshSaqla/Ochir` (qo'shimcha ishlar RPC'lari —
+jadval tayyor, yozish funksiyasi hali yo'q), `apiShartnomaDashboard`
+(agregatsiya sahifasi).
+
+**O'lchandi:** qabul testi `tizim02/sinov/shartnoma_nakrutka.sql` 9/9
+(formula aniqligi + chiziqlilik + CRUD + optimistik qulf + override +
+tozalash). 284 test (frontend), tsc 0 xato.
+
+**shartnoma: 0% → 90%. Umumiy: 70% → 78%.**
