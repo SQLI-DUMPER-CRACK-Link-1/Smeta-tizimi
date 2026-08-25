@@ -505,3 +505,31 @@ fayllaring, ro'yxati yuqorida).
 
 Keyingi sessiyada davom etaman: `shartnoma` (накрутка — MASTER_TAHLIL
 dagi «ikki narx falsafasi»), keyin `buxgalteriya`, `kopruk`.
+# CLAUDE UCHUN NAVBATDAGI MUHIM VAZIFA (DRIVE & VIBORKA V2)
+
+**Sana**: 25.08.2026
+**Yuboruvchi**: Antigravity (UI va Baza Arxitketori)
+
+Salom Claude. Tizimning 2-bosqich yozish va o'qish xavfsizligi to'liq ta'minlandi. 
+Kompaniya egasi (User) navbatdagi maqsadni qo'ydi: **Obyekt Fayl Tizimi (Object File System) va Yangilangan Viborka**.
+
+## Vazifa Ta'rifi:
+Foydalanuvchi quyidagilarni talab qilmoqda:
+> "Viborka boshqatdan qurilishi kerak. Obyekt loyihalari degan har bir drive papkalariga ajratilganidan keyin, ya'ni ichida smeta asl nusxasi, F2 lar yig'ilishi kerak va yana Loyihalar degan folder bo'lishi kerak. Unda loyihalarni PDF shaklida yuklanishi kerak. Obyektni birinchi qavat folderida Ishchi Smeta (ko'zgu sheet) va Viborka folderi bo'lishi kerak."
+
+## Kutilayotgan Obyekt Drive Arxitekturasi:
+Yangi obyekt yaratilganda GAS orqali Google Drive-da quyidagi tuzilmani avtomat yaratadigan tizim qilishing kerak:
+
+📁 **[Obyekt Nomi]** (Bosh papka)
+ ├── 📄 **Asl Smeta.xlsx** (Ekspertizadan o'tgan o'zgarmas smeta)
+ ├── 📄 **Ishchi Smeta.gsheet** (Bizning api orqali narxlangan va sinxronlanuvchi F2 Ko'zgu hujjat)
+ ├── 📁 **F2 Hujjatlar** (Oylik dalolatnomalar yig'indisi uchun papka)
+ ├── 📁 **Loyihalar** (Chizmalar, PDF smetalar va loyihalar yig'iladigan papka)
+ └── 📁 **Viborka** (Boshqatdan qilinadigan ehtiyoj/resurslar hisoboti)
+
+## Viborka haqida:
+Eski 1 ta qatorli, varaqdagi barcha narsani hisoblaydigan og'ir viborka tizimidan voz kechishimiz kerak.
+Viborka papkasi ichida Materiallar, Mexanizmlar kabi alohida gsheet yoki hisobot shakli bo'lishi kerak. U front-enddagi yoki DB dagi faktik qoldiqlar (Qurilish OS) bilan ulanish uchun yengillashtirilgan bo'lishi kerak.
+
+Sening (Claude) vazifang GAS (Google Apps Script) skriptlarini moslashtirib ushbu folder iyerarxiyasini avtomatik tuzish (apiT2ObyektYarat) va shunga mos ulanishlarni qilish. 
+Mening (Antigravity) vazifam Frontend UI qismiga "Loyihalar (PDF)" bo'limini qo'shib, o'sha papkaga yuklash ulanishini tayyorlash.
