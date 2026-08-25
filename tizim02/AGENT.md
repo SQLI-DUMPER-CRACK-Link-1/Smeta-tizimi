@@ -123,9 +123,19 @@ Kerak bo'lsa **yoningizda zaxira yozing**, ularni tahrirlamang.
 
 ```bash
 node tizim02/registr.gen.cjs        # reestrni yangila
-cd frontend && npx tsc --noEmit     # tiplar
+cd frontend && npx tsc --noEmit -p tsconfig.app.json     # tiplar
 cd frontend && node testlar/hammasi.cjs   # barcha tekshiruvlar
 ```
+
+⚠️ **`npx tsc --noEmit` (parametrsiz) HECH NARSANI TEKSHIRMAYDI.**
+Ildizdagi `tsconfig.json` da `"files": []` + `references` bor
+(loyiha ikkiga bo'lingan: app + node). Parametrsiz `tsc` bu holatda
+**referencelarni aylanib chiqmaydi** va jim "0 xato" qaytaradi — hatto
+fayl umuman kompilyatsiya qilinmaydigan bo'lsa ham.
+2026-08-25 da bu **butun sessiya davomida** shu tarzda ishlatilgan va
+haqiqiy sintaksis xatolari (import qilinayotgan funksiya eksport
+qilinmagan, yo'q modul) hech qachon ko'rinmagan. Har doim
+**`-p tsconfig.app.json`** bilan chaqiring.
 
 GASga tegilgan bo'lsa, qo'shimcha:
 

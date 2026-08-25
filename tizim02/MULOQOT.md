@@ -96,9 +96,13 @@ Qo'shnining qatorini qayta formatlama — merge shunda oson bo'ladi.
 ### 4️⃣ Darvozalar (har qadamdan keyin)
 ```bash
 node tizim02/registr.gen.cjs
-cd frontend && npx tsc --noEmit
+cd frontend && npx tsc --noEmit -p tsconfig.app.json
 cd frontend && node testlar/hammasi.cjs
 ```
+⚠️ **`-p tsconfig.app.json` MAJBURIY.** Parametrsiz `npx tsc --noEmit`
+ildizdagi `"files": []` konfiguratsiyasi sababli HECH NARSANI
+tekshirmaydi va jim «0 xato» qaytaradi. Tafsilot: pastdagi jurnal,
+2026-08-25.
 GASga tegilgan bo'lsa: `git status` bilan begona `.js` yo'qligini
 tekshir → `clasp push -f` → **21/21 deployment**.
 

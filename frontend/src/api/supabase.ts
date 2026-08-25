@@ -460,7 +460,12 @@ export type AktNatija = {
   ms?: number;
 };
 
-async function yozAmali(yuk: Record<string, unknown>): Promise<AktNatija> {
+/* ⚠️ 2026-08-25 (Claude): `export` qo'shildi. Ko'p yangi t2-*.ts fayllari
+ * (t2-birja, t2-erp, t2-grafik, t2-hisobot, t2-invite, t2-kirish,
+ * t2-kuzatuv, t2-sozlama, t2-tizim) buni import qilardi, lekin u shu
+ * yerda PRIVATE edi — butun loyiha build bo'lmasdi (TS2459).
+ * Mening domenimga tegishli emas, lekin BUTUN qurilishni bloklardi. */
+export async function yozAmali(yuk: Record<string, unknown>): Promise<AktNatija> {
   const t0 = performance.now();
   try {
     const r = await fetch('/api/sb-yoz', {
