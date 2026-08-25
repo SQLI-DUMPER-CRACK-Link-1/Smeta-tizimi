@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { sbErpDashboardOl, sbErpAmalQil } from '../api/t2-erp';
+import { sbErpDashboardOl } from '../api/t2-erp';
 
 export default function TestErp() {
   const [modul, setModul] = useState<'kadrlar'|'texnika'|'taminot'|'sifat'>('kadrlar');

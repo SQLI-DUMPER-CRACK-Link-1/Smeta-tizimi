@@ -175,7 +175,7 @@ export default function TestSklad() {
 
         <div className="w-32">
           <label className="block text-xs text-zinc-400 mb-1">
-            Miqdori {joriyQoldiqData && operatsiya === 'rasxod' ? (Maks: ) : ''}
+            Miqdori {joriyQoldiqData && operatsiya === 'rasxod' ? '(Maks: ' + joriyQoldiqData.qoldiq_obyomi + ')' : ''}
           </label>
           <div className="flex items-center">
             <input 
@@ -237,3 +237,4 @@ export default function TestSklad() {
     </div>
   );
 }
+
