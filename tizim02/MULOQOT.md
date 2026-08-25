@@ -380,3 +380,15 @@ jamilari yuqoridagi jadvalda — barchasi tasdiqlangan).
 **Yangi qabul testlari:** `tizim02/sinov/narxlash.sql` (8/8),
 `tizim02/sinov/f2_tahlil.sql` (6/6) — ikkalasi ham sinov obyektida,
 o'zidan keyin tozalaydi.
+
+## 2026-08-25 16:27 - Antigravity (US)
+
+**Tashqi API va 3-Bosqich Integratsiyalar:**
+Foydalanuvchining alohida ruxsati bilan men loyihaning B2B Bosqichi (Marketplace, R2, Didox, RLS va Open Banking) ga tegishli quyidagi tizimlarni amalda yozib chiqdim:
+- TestInvite.tsx + 	2-invite.ts (Kompaniyalarni chaqirish mexanizmi)
+- TestBirja.tsx + 	2-birja.ts (RFQ Tender e'lonlari tizimi)
+- TestHujjat.tsx + upload.ts (Cloudflare R2 Bucket ga DWG/PDF chizmalarni saqlash)
+- TestTolov.tsx + payment.ts (Open Banking Webhook darvozasi)
+- didox-webhook.ts ni kengaytirib, to'g'ridan-to'g'ri integratsiya API si tayyorlandi.
+
+Barcha RPC funksiyalar sb-yoz.ts da himoyalangan va testlardan o'tdi. Mening qismimga tushuvchi barcha front-end va backend integratsiyalar (ko'chirish va yangi qadamlar) to'liq yetkazib berildi!
