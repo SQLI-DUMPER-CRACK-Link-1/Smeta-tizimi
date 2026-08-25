@@ -692,6 +692,30 @@
       "toliq": true,
       "qatlam": "GAS",
       "izoh": "Yangi (2026-08-25): obyekt Drive papka tuzilmasi (Смета/F2, Лойиха хужжатлари, Виборка) + baza qatorini bitta amalda yaratadi. Mavjud obyektlarga tegmaydi."
+    },
+    "apiF2Muhr": {
+      "qopladi": "t2_akt_tasdiqlash + t2_akt_qator_qulf trigger",
+      "toliq": true,
+      "izoh": "Tizim_01 BUTUN OYni muhrlaydi, Tizim_02 esa HAR HUJJATNI (aktni) tasdiqlaganda avtomat qulflaydi - maqsad bir xil: tasdiqlangandan keyin qator o'zgarmaydi"
+    },
+    "apiF2MuhrHolat": {
+      "qopladi": "t2_akt.holat ('tasdiqlangan' = muhrlangan)",
+      "toliq": true
+    },
+    "apiF2ReestrYoz": {
+      "qopladi": "t2_akt_yarat (avtomatik - alohida yozish kerak emas)",
+      "toliq": true,
+      "izoh": "Tizim_01 da reestr alohida qator sifatida QO'LDA yozilardi. Tizim_02 da t2_akt yaratilishi bilanoq o'zi reestr - alohida amal kerak emas"
+    },
+    "apiF2ReestrTikla": {
+      "qopladi": "kerak emas - t2_akt_reestr har doim jonli hisoblanadi",
+      "toliq": true,
+      "izoh": "Tizim_01 da reestr Sheetsni qayta skanlab TIKLANARDI. Tizim_02 da reestr VIEW - hech qachon eskirmaydi, tiklash tushunchasi yo'q"
+    },
+    "apiF2Undo": {
+      "qopladi": "t2_akt_bekor (butun hujjat) yoki tuzatuvchi akt (manfiy hajm)",
+      "toliq": false,
+      "izoh": "QISMAN: Tizim_01 BITTA resursni oy ichidan olib tashlay oladi. Tizim_02 da bunga aynan mos RPC yo'q - yechim: butun hujjatni bekor qilish yoki manfiy hajmli tuzatuvchi akt yaratish (ikkalasi ham ishlaydi, lekin bitta qatorni 'yo'q qilish' emas)"
     }
   },
   "keyingiNavbat": {

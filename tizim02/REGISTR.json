@@ -3,12 +3,12 @@
   "manba": {
     "jami": 254,
     "hisobga": 156,
-    "tayyor": 103,
-    "qisman": 2,
+    "tayyor": 107,
+    "qisman": 3,
     "joyida": 88,
     "kerakmas": 10
   },
-  "foiz": 67,
+  "foiz": 70,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -305,9 +305,9 @@
     "f2": {
       "qatlam": "SUPABASE",
       "jami": 39,
-      "tayyor": 5,
-      "qisman": 2,
-      "kutilmoqda": 6,
+      "tayyor": 9,
+      "qisman": 3,
+      "kutilmoqda": 1,
       "kerakmas": 0,
       "joyida": 26,
       "funksiyalar": [
@@ -353,7 +353,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "ishlanmoqda",
-      "foiz": 46,
+      "foiz": 81,
       "kochiriladi": true
     },
     "smeta": {
@@ -1853,9 +1853,9 @@
       "argSoni": 1,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_akt_yarat (avtomatik - alohida yozish kerak emas)",
+      "izoh": "Tizim_01 da reestr alohida qator sifatida QO'LDA yozilardi. Tizim_02 da t2_akt yaratilishi bilanoq o'zi reestr - alohida amal kerak emas"
     },
     "apiF2ReestrOl": {
       "fayl": "39_F2Reestr.js",
@@ -1883,9 +1883,9 @@
       "argSoni": 1,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "kerak emas - t2_akt_reestr har doim jonli hisoblanadi",
+      "izoh": "Tizim_01 da reestr Sheetsni qayta skanlab TIKLANARDI. Tizim_02 da reestr VIEW - hech qachon eskirmaydi, tiklash tushunchasi yo'q"
     },
     "apiF2Undo": {
       "fayl": "39_F2Reestr.js",
@@ -1893,9 +1893,9 @@
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "qisman",
+      "qopladi": "t2_akt_bekor (butun hujjat) yoki tuzatuvchi akt (manfiy hajm)",
+      "izoh": "QISMAN: Tizim_01 BITTA resursni oy ichidan olib tashlay oladi. Tizim_02 da bunga aynan mos RPC yo'q - yechim: butun hujjatni bekor qilish yoki manfiy hajmli tuzatuvchi akt yaratish (ikkalasi ham ishlaydi, lekin bitta qatorni 'yo'q qilish' emas)"
     },
     "apiF2Muhr": {
       "fayl": "39_F2Reestr.js",
@@ -1903,9 +1903,9 @@
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_akt_tasdiqlash + t2_akt_qator_qulf trigger",
+      "izoh": "Tizim_01 BUTUN OYni muhrlaydi, Tizim_02 esa HAR HUJJATNI (aktni) tasdiqlaganda avtomat qulflaydi - maqsad bir xil: tasdiqlangandan keyin qator o'zgarmaydi"
     },
     "apiF2MuhrHolat": {
       "fayl": "39_F2Reestr.js",
@@ -1913,8 +1913,8 @@
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_akt.holat ('tasdiqlangan' = muhrlangan)",
       "izoh": null
     },
     "apiHujjatlarRoyxat": {
