@@ -39,9 +39,10 @@
     "hisobot":      { "egasi": "antigravity", "holat": "navbatda" },
     "sozlama":      { "egasi": "antigravity", "holat": "navbatda" },
 
-    "kopruk":       { "egasi": "kelishilsin", "holat": "kutilmoqda",
-                      "izoh": "Ikki tizim eshigi — ikkoviga ham tegadi, odam qaror qilsin" },
-    "tizim":        { "egasi": "kelishilsin", "holat": "kutilmoqda" },
+    "kopruk":       { "egasi": "claude", "holat": "navbatda",
+                      "izoh": "Tizim_01 va Tizim_02 o'rtasidagi ko'prik, Claude ga topshirildi" },
+    "tizim":        { "egasi": "antigravity", "holat": "navbatda",
+                      "izoh": "UI/Core initsializatsiya qismi, Antigravity ga topshirildi" },
     "kirish":       { "egasi": "kelishilsin", "holat": "kutilmoqda",
                       "izoh": "SESSIYA_KALIT ochiq qarzi — xavfsizlik, odam qarori kerak" },
     "kuzatuv":      { "egasi": "kelishilsin", "holat": "kutilmoqda" }

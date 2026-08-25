@@ -12,6 +12,12 @@ export type TreeNode = {
   narx: number;
   fakt: number;
   qoldiq: number;
+  faktHajm?: number;
+  qoldiqHajm?: number;
+  qoldiqSumma?: number;
+  narx_usul?: string;
+  qoshimcha?: boolean;
+  zamena?: boolean;
   f2ol: number;
   f2mum: number;
   stFakt?: number; stF2?: number; stOst?: number;

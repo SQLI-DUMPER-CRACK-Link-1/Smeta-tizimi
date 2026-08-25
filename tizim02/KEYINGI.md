@@ -4,13 +4,13 @@
 > `node tizim02/registr.gen.cjs` uni qayta yozadi.
 > Tasnifni o'zgartirish uchun `tizim02/tasnif.json` ni tahrirlang.
 
-Umumiy holat: **7%** — 9 tayyor · 7 qisman · 172 boshlanmagan (ko'chiriladigan 188 tadan). 57 ta GASda qoladi, 8 ta umuman kerakmas — ular foizga KIRMAYDI.
+Umumiy holat: **7%** — 10 tayyor · 6 qisman · 172 boshlanmagan (ko'chiriladigan 188 tadan). 57 ta GASda qoladi, 8 ta umuman kerakmas — ular foizga KIRMAYDI.
 
 ## Domenlar — qiymat tartibida
 
 | # | Domen | Egasi | Qatlam | Holat | Tayyor | Qisman | Qoldi |
 |---|---|---|---|---|---|---|---|
-| 1 | **smeta** | 🔵 claude ⏳ | SUPABASE | 39% | 6 | 3 | 10 |
+| 1 | **smeta** | 🔵 claude ⏳ | SUPABASE | 42% | 7 | 2 | 10 |
 | 2 | **f2** | 🔵 claude | SUPABASE | 4% | 1 | 1 | 34 |
 | 3 | **hujjat** | 🔵 claude | SUPABASE | 11% | 2 | 0 | 17 |
 | 4 | **shartnoma** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 15 |
@@ -27,9 +27,8 @@ Umumiy holat: **7%** — 9 tayyor · 7 qisman · 172 boshlanmagan (ko'chiriladig
 | 15 | **tizim** | ⚪ kelishilsin | SUPABASE | 0% | 0 | 0 | 7 |
 | 16 | **kopruk** | ⚪ kelishilsin | KOPRIK | 0% | 0 | 0 | 10 |
 
-## 🔵 claude — keyingi ish: `smeta` (SUPABASE, 39%)
+## 🔵 claude — keyingi ish: `smeta` (SUPABASE, 42%)
 
-- `apiHolatOl` — `30_Panel.js:904` *(qisman: t2_daraxt + sbT2DaraxtOl)*
 - `apiHolatOlLokalka` — `30_Panel.js:893` *(qisman: t2_daraxt)*
 - `apiHolatOlLokalkalar` — `30_Panel.js:5307`
 - `apiHolatSaqla` — `30_Panel.js:2176`

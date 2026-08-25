@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TestF2Import.tsx — TIZIM_02: INTERAKTIV F2/AKT FAYLINI IMPORT QILISH
  * ═══════════════════════════════════════════════════════════════════
  *
@@ -27,7 +27,7 @@ import { F2Daraxt } from '../umumiy/ui/F2Daraxt';
 import type { DaraxtTugun } from '../umumiy/ui/F2Daraxt';
 import {
   sbT2ObyektlarOlKomp,
-  sbT2DaraxtOl,
+  sbT2DaraxtOl, sbT2QatorHolatOl,
   sbT2TreeQur,
   sbT2AktYarat,
   yangiOperationId,
@@ -128,6 +128,17 @@ export default function TestF2Import() {
   // Hujjat sozlamalari
   const [tur, setTur] = useState<'f2' | 'fakt'>('f2');
   const [majburiy, setMajburiy] = useState(false);
+  
+  const [xato, setXato] = useState('');
+  
+  // Debug DB holat
+  useEffect(() => {
+    import('../api/supabase').then(m => {
+      m.sbOqi({ jadval: 't2_qator_holat', limit: 1 }).then(r => {
+        console.log("t2_qator_holat columns:", Object.keys(r.qatorlar?.[0] || {}));
+      });
+    });
+  }, []);
   const [oy, setOy] = useState(() => new Date().toISOString().slice(0, 7));
   const [raqam, setRaqam] = useState('');
 
@@ -275,10 +286,10 @@ export default function TestF2Import() {
       return;
     }
     setSmetaLoading(true);
-    sbT2DaraxtOl(korish.obyekt_id).then((r) => {
+    Promise.all([sbT2DaraxtOl(korish.obyekt_id), sbT2QatorHolatOl(korish.obyekt_id)]).then(([r, h]) => {
       setSmetaLoading(false);
       if (r.ok && r.qatorlar) {
-        const tree = sbT2TreeQur(r.qatorlar);
+        const tree = sbT2TreeQur(r.qatorlar, h.qatorlar || []);
         setSmetaTree(tree);
       } else {
         toast('Smeta daraxtini yuklab bo\'lmadi: ' + (r.error || ''), 'danger');
@@ -508,12 +519,7 @@ export default function TestF2Import() {
             }
           });
 
-          if (bestChildMatch && bestBall >= 40) {
-            newBog[fc.uid] = bestChildMatch.id;
-          }
-        });
-      }
-    }
+          if (bestChildMatch && bestBall >= 40) { newBog[fc.uid] = bestChildMatch.id as number; } }); const unmatchedF2 = f2Children.filter((fc: any) => !newBog[fc.uid] && qolBog[fc.uid] === undefined); const unmatchedSmeta = smetaChildren.filter((sc: any) => !alreadyBound(sc.id) && sc.type !== 'rz'); unmatchedF2.forEach((fc: any, idx: number) => { if (idx < unmatchedSmeta.length) { newBog[fc.uid] = unmatchedSmeta[idx].id as number; } }); } }
 
     setUndoStack((prev) => [...prev.slice(-29), qolBog]);   // keep last 30
     setQolBog((prev) => ({ ...prev, ...newBog }));
@@ -634,6 +640,37 @@ export default function TestF2Import() {
    * Shuning uchun qaror GASda qabul qilinadi, bu yer faqat OYNA.
    * (Xotira: «og'ir mantiq GAS da, frontend oyna».)
    */
+  const forceMapBlChildren = (baseMap: Record<string, number>): Record<string, number> => {
+    if (!korish?.tree || !smetaTree) return baseMap;
+    const nextMap = { ...baseMap };
+    const allBoundSmeta = new Set<number>();
+    Object.values(nextMap).forEach(v => allBoundSmeta.add(v));
+    Object.values(qolBog).forEach(v => allBoundSmeta.add(v));
+
+    const processF2Node = (n: any) => {
+      if (n.type === 'bl' && (nextMap[n.uid] || qolBog[n.uid])) {
+        const smetaId = (nextMap[n.uid] || qolBog[n.uid]) as number;
+        const sn = findSmetaNode(smetaTree, smetaId);
+        if (sn && sn.type === 'bl' && n.children && sn.children) {
+          const unmatchedF2 = n.children.filter((fc: any) => !nextMap[fc.uid] && qolBog[fc.uid] === undefined);
+          const unmatchedSmeta = sn.children.filter((sc: any) => !allBoundSmeta.has(sc.id) && sc.type !== 'rz');
+          
+          unmatchedF2.forEach((fc: any, idx: number) => {
+            if (idx < unmatchedSmeta.length) {
+              const targetId = unmatchedSmeta[idx].id as number;
+              nextMap[fc.uid] = targetId;
+              allBoundSmeta.add(targetId);
+            }
+          });
+        }
+      }
+      if (n.children) n.children.forEach(processF2Node);
+    };
+
+    korish.tree.forEach(processF2Node);
+    return nextMap;
+  };
+
   const dvigatelniQolla = (jim = false) => {
     const mos = korish?.moslash;
     if (!mos || !mos.qatorlar) {
@@ -648,17 +685,17 @@ export default function TestF2Import() {
       if (q.holat !== 'moslandi' || q.qator_id == null || !q.uid) continue;
       if (qolBog[q.uid] !== undefined) continue;   // odam qo'lda bog'lagan — tegmaymiz
       if (band.has(q.qator_id)) continue;          // smeta qatori allaqachon band
-      yangiBog[q.uid] = q.qator_id;
-      band.add(q.qator_id);
+      yangiBog[q.uid] = q.qator_id as number;
+      band.add(q.qator_id as number);
       count++;
     }
 
-    if (!count) {
-      if (!jim) toast('Yangi moslik yo\'q — hammasi allaqachon bog\'langan', 'warn');
-      return 0;
+    if (!count && !jim) {
+      toast('Yangi moslik yo\'q — hammasi allaqachon bog\'langan', 'warn');
     }
+    const yakuniyBog = forceMapBlChildren(yangiBog);
     setUndoStack((prev) => [...prev.slice(-29), qolBog]);
-    setQolBog((prev) => ({ ...prev, ...yangiBog }));
+    setQolBog((prev) => ({ ...prev, ...yakuniyBog }));
     if (!jim) {
       const s = mos.stat || {};
       toast(
@@ -908,7 +945,7 @@ export default function TestF2Import() {
           const r = await sbT2DaraxtOl(korish.obyekt_id as number);
           setSmetaLoading(false);
           if (r.ok && r.qatorlar) {
-            const tree = sbT2TreeQur(r.qatorlar);
+            const tree = sbT2TreeQur(r.qatorlar, h.qatorlar || []);
             setSmetaTree(tree);
             
             // Avto-bog'lash (agar F2 dan ochilgan bo'lsa)
@@ -1644,7 +1681,7 @@ export default function TestF2Import() {
                   </button>
                 )}
                 {matchingStats.withTaklif > 0 && (
-                  <button onClick={applyAllTakliflar}
+                  <button onClick={() => applyAllTakliflar(false)}
                     className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[12px] text-emerald-400 hover:bg-emerald-500/25 inline-flex items-center gap-1 font-bold transition-all">
                     🎯 Takliflarni qo'llash ({matchingStats.withTaklif})
                   </button>
@@ -1667,7 +1704,7 @@ export default function TestF2Import() {
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex items-center justify-between w-full">
                     <span className="font-bold text-xs">F2 AKT FAYLI</span>
-                    <button onClick={onAvtoMoslash}
+                    <button onClick={() => onAvtoMoslash(false)}
                       title="Avtomatik moslash (Ctrl+Shift+M)"
                       className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-2.5 py-1 rounded text-[10px] transition-colors font-bold whitespace-nowrap cursor-pointer">
                       🪄 Avto-Moslash <kbd className="ml-0.5 px-1 py-0.5 rounded text-[8px] bg-black/30 text-emerald-300 font-mono">⌃⇧M</kbd>
@@ -2027,3 +2064,10 @@ export default function TestF2Import() {
     </Sahifa>
   );
 }
+
+
+
+
+
+
+

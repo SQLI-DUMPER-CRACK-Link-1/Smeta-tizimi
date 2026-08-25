@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TestDaraxt.tsx — TIZIM_02: og'ir smeta daraxti SUPABASE'dan
  *
  * Foydalanuvchining asosiy sinovi: «og'ir smeta daraxtlarini ochmoqchiman,
@@ -20,7 +20,7 @@ import { FmtN } from '../lib/format';
 /* WARN 2026-08-19: TIZIM_02 endi O’Z jadvallarini o’qiydi (t2_daraxt),
    eski ko’zgu `holat` ni EMAS. Obyektlar ro’yxati ham t2_obyekt_jami dan —
    GAS/Sheets ga umuman murojaat qilinmaydi. */
-import { sbT2ObyektlarOl, sbT2DaraxtOl, sbT2TreeQur, type T2Obyekt } from '../api/supabase';
+import { sbT2ObyektlarOl, sbT2DaraxtOl, sbT2QatorHolatOl, sbT2TreeQur, type T2Obyekt } from '../api/supabase';
 import type { TreeNode } from '../api/types';
 
 export default function TestDaraxt() {
@@ -56,7 +56,7 @@ export default function TestDaraxt() {
       return;
     }
 
-    const r = await sbT2DaraxtOl(ob.id);
+    const [r, h] = await Promise.all([sbT2DaraxtOl(ob.id), sbT2QatorHolatOl(ob.id)]);
     if (!r.ok) {
       setXato(r.error || 'O\'qilmadi');
       setYuklanmoqda(false);
@@ -188,3 +188,5 @@ export default function TestDaraxt() {
     </Sahifa>
   );
 }
+
+

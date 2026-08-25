@@ -3,8 +3,8 @@
   "manba": {
     "jami": 253,
     "hisobga": 188,
-    "tayyor": 9,
-    "qisman": 7,
+    "tayyor": 10,
+    "qisman": 6,
     "joyida": 57,
     "kerakmas": 8
   },
@@ -333,8 +333,8 @@
     "smeta": {
       "qatlam": "SUPABASE",
       "jami": 19,
-      "tayyor": 6,
-      "qisman": 3,
+      "tayyor": 7,
+      "qisman": 2,
       "kutilmoqda": 10,
       "kerakmas": 0,
       "joyida": 0,
@@ -361,7 +361,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "ishlanmoqda",
-      "foiz": 39,
+      "foiz": 42,
       "kochiriladi": true
     },
     "hujjat": {
@@ -1142,9 +1142,9 @@
       "argSoni": 2,
       "domen": "smeta",
       "qatlam": "SUPABASE",
-      "holat": "qisman",
-      "qopladi": "t2_daraxt + sbT2DaraxtOl",
-      "izoh": "daraxt o'qiladi; f2/fakt ustunlari hali yo'q"
+      "holat": "tayyor",
+      "qopladi": "t2_daraxt + sbT2DaraxtOl + sbT2QatorHolatOl",
+      "izoh": "t2_qator_holat orqali fakt/qoldiq summalar qo'shildi"
     },
     "apiNarxlarOl": {
       "fayl": "30_Panel.js",

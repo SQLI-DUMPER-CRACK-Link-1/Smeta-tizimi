@@ -273,6 +273,16 @@ export function sbT2ObyektlarOl() {
 }
 
 /** `t2_daraxt` — hisoblangan daraxt qatorlari (view). */
+export type T2QatorHolat = {
+  qator_id: number;
+  obyekt_id: number;
+  smeta_hajm: number;
+  smeta_summa: number;
+  fakt_hajm: number;
+  fakt_summa: number;
+  qoldiq_hajm: number;
+  qoldiq_summa: number;
+};
 export type T2Qator = {
   id: number; obyekt_id: number; obyekt: string | null;
   ota_id: number | null; daraja: number | null; tartib: number | null;
@@ -285,6 +295,13 @@ export type T2Qator = {
   xom_qator: number | null; yangilandi: string | null;
 };
 
+export function sbT2QatorHolatOl(obyektId: number) {
+  return sbOqi<T2QatorHolat>({
+    jadval: 't2_qator_holat',
+    filtr: 'obyekt_id=eq.' + obyektId,
+    limit: 200000,
+  });
+}
 export function sbT2DaraxtOl(obyektId: number) {
   return sbOqi<T2Qator>({
     jadval: 't2_daraxt',
@@ -300,13 +317,21 @@ export function sbT2DaraxtOl(obyektId: number) {
  *
  * Bu yerda TAXMIN YO'Q: bog'lanish bazadan keladi.
  */
-export function sbT2TreeQur(qatorlar: T2Qator[]): TreeNode[] {
+export function sbT2TreeQur(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): TreeNode[] {
   const son = (v: unknown) => Number(v) || 0;
   const xarita = new Map<number, TreeNode>();
   const ildiz: TreeNode[] = [];
+  
+  const hMap = new Map<number, T2QatorHolat>();
+  if (holatlar) {
+    for (const h of holatlar) {
+      hMap.set(h.qator_id, h);
+    }
+  }
 
   /* 1-o'tish: har qator uchun tugun */
   for (const r of qatorlar) {
+    const h = hMap.get(r.id);
     xarita.set(r.id, {
       id: r.id,
       type: (r.tur as TreeNode['type']) || 'rs',
@@ -319,13 +344,16 @@ export function sbT2TreeQur(qatorlar: T2Qator[]): TreeNode[] {
       smetaHajm: son(r.hajm),
       smeta: son(r.summa),
       narx: son(r.narx),
-      /* Tizim_02 da fakt/F2 hali yo'q — SOXTA raqam qo'ymaymiz, 0 qoladi
-         va bu ochiq holat: «hali kiritilmagan» degani. */
-      fakt: 0, qoldiq: 0, f2ol: 0, f2mum: 0,
-      stFakt: 0, stF2: 0,
-      isQosh: !!r.qoshimcha,
-      isZamena: !!r.zamena,
-      d1: r.d1 || undefined, d2: r.d2 || undefined, d3: r.d3 || undefined,
+      fakt: h ? h.fakt_summa : 0,
+      qoldiq: h ? h.qoldiq_summa : son(r.summa),
+      f2ol: 0,
+      f2mum: 0,
+      faktHajm: h ? h.fakt_hajm : 0,
+      qoldiqHajm: h ? h.qoldiq_hajm : son(r.hajm),
+      qoldiqSumma: h ? h.qoldiq_summa : son(r.summa),
+      narx_usul: r.narx_usul || '',
+      qoshimcha: Boolean(r.qoshimcha),
+      zamena: Boolean(r.zamena),
       children: [],
     });
   }
@@ -522,3 +550,6 @@ export function yangiOperationId(): string {
     return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
   });
 }
+
+
+

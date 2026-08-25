@@ -110,9 +110,9 @@
   "holat": {
     "_izoh": "Tizim_02 da ALLAQACHON qoplangan funksiyalar. `qopladi` — nima bilan.",
     "apiHolatOl": {
-      "qopladi": "t2_daraxt + sbT2DaraxtOl",
-      "toliq": false,
-      "izoh": "daraxt o'qiladi; f2/fakt ustunlari hali yo'q"
+      "qopladi": "t2_daraxt + sbT2DaraxtOl + sbT2QatorHolatOl",
+      "toliq": true,
+      "izoh": "t2_qator_holat orqali fakt/qoldiq summalar qo'shildi"
     },
     "apiHolatOlLokalka": {
       "qopladi": "t2_daraxt",
@@ -214,3 +214,4 @@
     "_panelIzoh": "«panel» navbatda YO'Q: u 30_Panel.js uchun zaxira domen. Unga funksiya tushsa generator TASNIFSIZ deb yiqiladi va nomQoida ga qoida so'raladi."
   }
 }
+
