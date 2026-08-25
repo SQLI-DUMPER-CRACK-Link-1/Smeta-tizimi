@@ -42,7 +42,11 @@ const AMALLAR = {
   sozlama_saqla: { rpc: 't2_sozlama_saqla' },
   tizim_amal: { rpc: 't2_tizim_amal' },
   xato_yoz: { rpc: 't2_xato_yoz' },
-  kirish_amal: { rpc: 't2_kirish_amal' }
+  kirish_amal: { rpc: 't2_kirish_amal' },
+  taklif_yubor: { rpc: 't2_taklif_yubor' },
+  taklif_qabul: { rpc: 't2_taklif_qabul' },
+  birja_rfq_yarat: { rpc: 't2_birja_rfq_yarat' },
+  birja_taklif_ber: { rpc: 't2_birja_taklif_ber' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;

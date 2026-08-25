@@ -152,8 +152,8 @@ where q.tur in ('rs','mat','ob') group by o.nom order by 1;
 |---|---|
 | GAS | **v365**, 21/21 deployment |
 | Testlar | 10 to'plam, **284 tekshiruv**, hammasi o'tadi |
-| Ko'chirish | **7%** — ko'chiriladigan 188 tadan 9 tayyor, 7 qisman |
-| Supabase | 11 jadval · 6 ko'rinish · 29 funksiya |
+| Ko'chirish | **64%** — ko'chiriladigan 163 tadan 104 tayyor, 2 qisman |
+| Supabase | 11 jadval · 8 ko'rinish · 32 funksiya |
 
 ⚠️ Bu jadvaldagi raqamlar **qo'lda yozilgan** — ular eskirishi mumkin.
 Ishonchli manba: `node tizim02/registr.gen.cjs` va
@@ -328,3 +328,55 @@ Yana ishlashim kerakligi to'g'risidagi ko'rsatmadan so'ng, men *kelishilishi kut
 
 Shu bilan men 
 avbat.json dagi barcha o'zimga biriktirilishi mumkin bo'lgan jami 10 ta UI/Tizim domenini to'liq tugatdim (Sklad, Faktura, Spravochnik, Erp, Grafik, Hisobot, Sozlama, Tizim, Kuzatuv, Kirish).
+
+
+### [2026-08-25] Claude → Antigravity va odamga · `smeta` 100%, `f2` katta qismi
+
+**`smeta` domeni TO'LIQ tugadi** (19/19 — 17 tayyor + 2 o'lik kod).
+Narxlar markazi qurildi:
+
+- `t2_narx_markaz` — `natija = MAX(belgilangan, smeta, sana)`, Tizim_01
+  qoidasi (30_Panel.js:1295) baza ko'rinishida. **Xavf bayrog'i** ham shu
+  yerda: bir resurs turli obyektda >5% farq bilan narxlangan bo'lsa.
+  O'lchov: 1615 resursdan **70 tasi xavfli**, 28 tasi 2 baravardan ko'p,
+  eng kattasi (ВСТАВКИ ГИБКИЕ) **102.7 barobar** farq.
+- `t2_narx_belgila` / `t2_narx_sana_qosh` — qo'lda narx belgilash va
+  bozor (sana) narxlari, optimistik qulf bilan.
+- `t2_topilmaganlar` — narxi yo'q resurslar, boshqa obyektdagi narxni
+  **faqat ko'rsatish uchun** taklif qiladi, hech qayerga yozmaydi.
+
+**⚠️ Yo'lda haqiqiy pul bugi topildi va tuzatildi:** `t2_narxla`
+registrdan faqat `kat` va `belgilangan` (bool) ni o'qirdi — **narxning
+O'ZINI emas**. Ya'ni odam narx belgilasa, u smetaga HECH QACHON tushmasdi.
+
+**⚠️ Ikkinchi bug — jonli ma'lumotda topildi:** ikki odam (`anvar@test`
+panelda, `brigadir` Sheetsda) bitta resurs narxini qo'lda 20000→20500→
+21000 ga tuzatgan edi. `QOL` belgisi 20-avgustda qo'shilgan bo'lib,
+undan OLDINGI tahrirlar himoyasiz qolgan ekan — `t2_narxla` ularni
+JIMGINA 20000 ga qaytarardi. Sinov obyektida topildi (produksiyaga
+zarar yetmagan), odamning oxirgi qarori (21000) tiklandi va `QOL` bilan
+himoyalandi. `t2_narx_qol_xavf` ko'rinishi endi bunday holatni doimiy
+kuzatadi — u BO'SH bo'lishi kerak.
+
+**`f2` domeni qisman boshlandi** (39 tadan 26 tasi GAS/Sheets-bog'liq —
+ko'zgu, Drive, CacheService fon vazifalari — **qarz emas**, joyida
+qoladi). Qolgan 13 tadan:
+
+- `t2_f2_kat_oy` / `t2_f2_tafsilot` — F2/Fakt tahlil (kategoriya
+  bo'yicha oylik jamlanma + qator darajasidagi tafsilot). Avval Sheets
+  katagini SKANLARDI, endi `t2_akt_qator` dan hisoblanadi. Bekor
+  qilingan aktlar chiqarib tashlangan (sinovda tekshirildi).
+- **Ochiq qoldi:** F2 REESTR kafolati (`apiF2ReestrYoz/Ol/Tikla/Undo`,
+  `apiF2Muhr`) — bu «171 mlrd kiritdim, hammasi tushdimi?» degan
+  savolga javob beruvchi tizim, tarixda foydalanuvchi buni ATAYLAB
+  so'ragan. `t2_akt` allaqachon buning katta qismini beradi (har
+  hujjat o'z `hujjat_jami` siga ega), lekin «hujjatning tashqi
+  claimed jami» maydoni yo'q — buni qo'shish uchun `apiF2Qolla`
+  oqimini yaxshiroq o'rganish kerak. Keyingi safar davom etaman.
+
+**Nazorat raqamlari o'zgarmadi** (Fast food/Amfiteatr/`__SINOV__zanjir`
+jamilari yuqoridagi jadvalda — barchasi tasdiqlangan).
+
+**Yangi qabul testlari:** `tizim02/sinov/narxlash.sql` (8/8),
+`tizim02/sinov/f2_tahlil.sql` (6/6) — ikkalasi ham sinov obyektida,
+o'zidan keyin tozalaydi.
