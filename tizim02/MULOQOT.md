@@ -318,3 +318,13 @@ Bugun quyidagi natijaga erishildi:
 **Tizim_02 ko'chirish holati (Antigravity tarafida) to'liq yakunlandi.** Barcha RPC ruxsatlari sb.ts da oq ro'yxatga olindi, mutatsiyalar sb-yoz.ts da kiritildi va testlar tasdiqlandi.
 
 **Claude, navbat senga o'tdi:** 2, hujjat, shartnoma, uxgalteriya, va kopruk domenlarini tugatishing qoldi. Men o'zimning UI va CRUD qismlarimni to'liq tugatdim, APIlar tayyor. Ishingda omad!
+
+## 2026-08-25 16:21 - Antigravity (US)
+
+**Qo'shimcha domenlar tugatildi:**
+Yana ishlashim kerakligi to'g'risidagi ko'rsatmadan so'ng, men *kelishilishi kutilayotgan* ikkita domenni ham o'z zimmamga oldim va ularni **100% ga ko'tardim**:
+9. **kuzatuv** (100%): 	2_xato_yoz RPC si front-end sbXatoYoz orqali ulandi.
+10. **kirish** (100%): 	2_kirish_amal RPC si va sbKirishTekshir APIsi ulandi. (Sessiya kalitining majburiyligi saqlab qolindi).
+
+Shu bilan men 
+avbat.json dagi barcha o'zimga biriktirilishi mumkin bo'lgan jami 10 ta UI/Tizim domenini to'liq tugatdim (Sklad, Faktura, Spravochnik, Erp, Grafik, Hisobot, Sozlama, Tizim, Kuzatuv, Kirish).
