@@ -29,6 +29,8 @@ const AMALLAR = {
   akt_yarat:      { rpc: 't2_akt_yarat' },
   akt_tasdiqlash: { rpc: 't2_akt_tasdiqlash' },
   akt_bekor:      { rpc: 't2_akt_bekor' },
+  narx_belgila:   { rpc: 't2_narx_belgila' },
+  narx_sana_qosh: { rpc: 't2_narx_sana_qosh' },
   skladga_yozish: { rpc: 't2_skladga_yozish' },
 } as const;
 
@@ -206,6 +208,56 @@ export const onRequestPost: PagesFunction<{
         p_keyin_id: so.keyin_id == null ? null : Number(so.keyin_id),
         p_operation_id: so.operation_id,
         p_manba: 'frontend',
+        p_kim: sess.email || '',
+      };
+
+    /* ══════════ NARX BELGILASH ══════════ */
+    } else if (amal === 'narx_belgila') {
+      if (!String(so.nom || '').trim()) {
+        return Response.json({ ok: false, error: 'Nom bo\'sh' });
+      }
+      /* ⚠️ NARX O'ZIDAN TO'QILMAYDI. «Belgilash» — bu ATAYLAB qo'yilgan
+         raqam. Noma'lum bo'lsa bu amal umuman chaqirilmaydi; bo'sh
+         yuborib «0» bo'lib qolishiga yo'l qo'ymaymiz. */
+      const narx = Number(so.narx);
+      if (so.narx == null || so.narx === '' || !Number.isFinite(narx) || narx < 0) {
+        return Response.json({ ok: false,
+          error: 'Belgilanadigan narx musbat son bo\'lishi kerak' });
+      }
+      yuk = {
+        p_nom: String(so.nom).slice(0, 500),
+        p_birlik: so.birlik ? String(so.birlik).slice(0, 50) : null,
+        p_narx: narx,
+        p_kat: so.kat ? String(so.kat).slice(0, 20) : null,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_kutilgan_versiya: so.kutilgan_versiya == null
+          ? null : Number(so.kutilgan_versiya),
+        p_manba: 'frontend',
+        p_kim: sess.email || '',
+      };
+
+    /* ══════════ SANA (BOZOR) NARXLARI ══════════ */
+    } else if (amal === 'narx_sana_qosh') {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(so.sana || ''))) {
+        return Response.json({ ok: false, error: 'sana YYYY-MM-DD bo\'lishi kerak' });
+      }
+      if (!Array.isArray(so.qatorlar) || so.qatorlar.length === 0) {
+        return Response.json({ ok: false, error: 'Bironta qator yo\'q' });
+      }
+      /* ⚠️ Yaroqsiz qatorlarni BU YERDA tashlamaymiz — baza ularni
+         sanab, `tashlangan_qatorlar` bo'lib qaytaradi. Bu yerda jim
+         filtrlab yuborsak «qancha kirdi = qancha yozildi» kafolati
+         yolg'on bo'lib qolardi. */
+      const qatorlar = so.qatorlar.slice(0, 5000).map((q: any) => ({
+        nom: String(q.nom ?? '').slice(0, 500),
+        birlik: q.birlik ? String(q.birlik).slice(0, 50) : null,
+        narx: q.narx,
+        izoh: q.izoh ? String(q.izoh).slice(0, 300) : null,
+      }));
+      yuk = {
+        p_sana: so.sana,
+        p_qatorlar: qatorlar,
+        p_manba: so.manba ? String(so.manba).slice(0, 100) : null,
         p_kim: sess.email || '',
       };
 

@@ -32,7 +32,7 @@ import { tekshir } from '../_shared/auth';
 const RUXSAT_JADVALLAR = new Set([
   /* ── TIZIM_01 ko’zgusi (eski) ── */
   'obyektlar', 'holat', 'oylik_f2', 'narxlar', 'material_kerak',
-  'shartnoma', 'tolovlar', 'prixod', 'rashod', 'topilmaganlar',
+  'shartnoma', 'v_sklad_nomlar', 'tolovlar', 'prixod', 'rashod', 'topilmaganlar',
   'akt', 'akt_ish', 'tarix', 'anomaliya',
   /* ── TIZIM_02 (t2_) — BU YERDA BAZA HAQIQAT MANBAI ──
      Tizim_02 sahifalari FAQAT shu jadvallarni o’qiydi. Eski ko’zgu
@@ -44,6 +44,10 @@ const RUXSAT_JADVALLAR = new Set([
   't2_kozgu', 't2_ozgarish', 't2_kopruk_navbat', 't2_sozlama',
   /* F2 / FAKT (E bosqichi) */
   't2_akt', 't2_akt_qator', 't2_akt_reestr', 't2_qator_holat',
+  /* NARXLAR MARKAZI — hammasi FAQAT O'QISH uchun ko'rinishlar.
+     `t2_narx_qol_xavf` — odamning qo'lda tuzatgan narxi himoyasiz
+     qolgan qatorlar; u BO'SH bo'lishi kerak. */
+  't2_narx_markaz', 't2_topilmaganlar', 't2_narx_sana', 't2_narx_qol_xavf',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

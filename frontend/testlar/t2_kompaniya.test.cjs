@@ -42,9 +42,11 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
        apiRzQosh/apiBlQosh/apiRsQosh/apiSmetaQatorQosh o'rniga.
        Ro'yxat ATAYLAB qat'iy: yangi amal qo'shish uchun shu testni ham
        ochish kerak, ya'ni eshik JIMGINA kengayolmaydi. */
+    /* ⚠️ 2026-08-25: narxlar markazi amallari qo‘shildi (Claude). */
     const KUTILGAN = ['t2_akt_bekor', 't2_akt_tasdiqlash', 't2_akt_yarat',
+                      't2_narx_belgila', 't2_narx_sana_qosh',
                       't2_qator_qosh', 't2_qator_tahrir', 't2_skladga_yozish'].sort();
-    T('RPC ro\'yxati AYNAN belgilangan 4 ta domen amali',
+    T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));
     /* RPC nomi FAQAT ro'yxatdan — so'rovdan emas */
