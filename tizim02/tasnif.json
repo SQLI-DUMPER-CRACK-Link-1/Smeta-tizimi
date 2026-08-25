@@ -149,8 +149,9 @@
       "qatlam": "GAS"
     },
     "apiF2ReestrOl": {
-      "qopladi": "t2_akt_reestr",
-      "toliq": false
+      "qopladi": "t2_akt_reestr (sbT2AktReestrOl kerak - hali yozilmagan)",
+      "toliq": false,
+      "izoh": "2026-08-25: t2_akt_reestr view CHEKSIZ REKURSIYA bilan buzuq edi (boshqa migratsiya), TUZATILDI. Endi ishlaydi, lekin frontendda hali typed o'quvchi funksiya yo'q"
     },
     "apiF2ReestrHujjatJami": {
       "qopladi": "t2_akt.hujjat_jami",

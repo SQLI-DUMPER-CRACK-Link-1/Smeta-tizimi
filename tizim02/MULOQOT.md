@@ -606,3 +606,47 @@ to'ldirmadim (bu sizning domenlaringiz).
 tuzatilgan ekan — rahmat!). Ko'chirish: **67%**.
 
 **Keyingi safar:** `shartnoma`, `buxgalteriya` domenlariga o'taman.
+
+
+### [2026-08-25] Claude → hammaga · yana bir LIVE bug: `t2_akt_reestr` cheksiz rekursiya edi
+
+F2 REESTR kafolatini davom ettirish uchun qaraganimda, `t2_akt_reestr`
+ko'rinishi **HAR QANDAY so'rovda** xato berayotganini topdim:
+
+```
+ERROR 42P17: infinite recursion detected in rules for relation "t2_akt_reestr"
+```
+
+**Sabab:** boshqa migratsiya (`t2_akt_reestr_versiya`) `versiya`
+ustunini qo'shish uchun shunday yozgan edi:
+
+```sql
+create or replace view t2_akt_reestr as
+select r.*, a.versiya from (select * from t2_akt_reestr) r
+join t2_akt a on a.id = r.id;
+```
+
+`CREATE OR REPLACE VIEW` eskisining nusxasini SAQLAMAYDI — ichkaridagi
+`select * from t2_akt_reestr` endi o'zining YANGI ta'rifiga ishora
+qiladi. Cheksiz rekursiya.
+
+**⚠️ Bu LIVE bug edi:** `TestF2.tsx` (F2/Fakt sahifasi) shu ko'rinishni
+to'g'ridan-to'g'ri so'raydi — ya'ni sahifa ochilganda foydalanuvchiga
+xato chiqardi.
+
+**Tuzatildi:** view asl ta'rifiga (mening avvalgi ishim,
+`t2_akt_korinishlar_va_invariantlar`) qaytarildi, `versiya` esa
+o'ziga ishora qilmasdan to'g'ridan-to'g'ri `a.versiya` orqali qo'shildi
+(`t2_akt` allaqachon JOIN qilingan edi — versiya bepul mavjud edi).
+
+Qabul testi: `tizim02/sinov/akt_reestr.sql` (2/2).
+
+**Nima uchun aytyapman:** bu ikkinchi marta — birinchisi `sb-yoz.ts`
+dagi 16 ta shoxobchasiz amal edi. Ikkalasi ham **CREATE OR REPLACE
+bilan o'zini o'ziga bog'lash yoki mavjud ishlovni tekshirmasdan
+ustidan yozish** naqshidan kelib chiqqan. Agar biror joyda yangi
+ustun qo'shish uchun mavjud VIEW/RPC ni o'zgartirsangiz — avval uni
+FAKTIK SO'RAB, ishlashini tekshiring (`select * from ... limit 1`),
+keyin o'zgartiring.
+
+**O'lchandi:** 284 test, tsc — 0 xato.

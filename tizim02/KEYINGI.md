@@ -32,7 +32,7 @@ Umumiy holat: **67%** — 103 tayyor · 2 qisman · 51 boshlanmagan (ko'chirilad
 - `apiF2Bosliqlar` — `38_F2Nazorat.js:663`
 - `apiF2Muhr` — `39_F2Reestr.js:403`
 - `apiF2MuhrHolat` — `39_F2Reestr.js:431`
-- `apiF2ReestrOl` — `39_F2Reestr.js:148` *(qisman: t2_akt_reestr)*
+- `apiF2ReestrOl` — `39_F2Reestr.js:148` *(qisman: t2_akt_reestr (sbT2AktReestrOl kerak - hali yozilmagan))*
 - `apiF2ReestrTikla` — `39_F2Reestr.js:240`
 - `apiF2ReestrYoz` — `39_F2Reestr.js:63`
 - `apiF2Undo` — `39_F2Reestr.js:292`

@@ -1864,8 +1864,8 @@
       "domen": "f2",
       "qatlam": "SUPABASE",
       "holat": "qisman",
-      "qopladi": "t2_akt_reestr",
-      "izoh": null
+      "qopladi": "t2_akt_reestr (sbT2AktReestrOl kerak - hali yozilmagan)",
+      "izoh": "2026-08-25: t2_akt_reestr view CHEKSIZ REKURSIYA bilan buzuq edi (boshqa migratsiya), TUZATILDI. Endi ishlaydi, lekin frontendda hali typed o'quvchi funksiya yo'q"
     },
     "apiF2ReestrHujjatJami": {
       "fayl": "39_F2Reestr.js",
