@@ -3,12 +3,12 @@
   "manba": {
     "jami": 254,
     "hisobga": 156,
-    "tayyor": 119,
+    "tayyor": 128,
     "qisman": 6,
     "joyida": 88,
     "kerakmas": 10
   },
-  "foiz": 78,
+  "foiz": 84,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -479,9 +479,9 @@
     "buxgalteriya": {
       "qatlam": "SUPABASE",
       "jami": 9,
-      "tayyor": 0,
+      "tayyor": 9,
       "qisman": 0,
-      "kutilmoqda": 9,
+      "kutilmoqda": 0,
       "kerakmas": 0,
       "joyida": 0,
       "funksiyalar": [
@@ -497,7 +497,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "navbatda",
-      "foiz": 0,
+      "foiz": 100,
       "kochiriladi": true
     },
     "sklad": {
@@ -2613,8 +2613,8 @@
       "argSoni": 0,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_tolov (sbT2TolovlarOl)",
       "izoh": null
     },
     "apiTolovYoz": {
@@ -2623,9 +2623,9 @@
       "argSoni": 1,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_tolov_yoz",
+      "izoh": "idempotent (operation_id majburiy) - moliyaviy yozuv"
     },
     "apiTolovOchir": {
       "fayl": "85_Buxgalteriya.js",
@@ -2633,9 +2633,9 @@
       "argSoni": 1,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_tolov_ochir",
+      "izoh": "soft-cancel (holat='bekor') - o'chirilmaydi, tarix saqlanadi"
     },
     "apiTolovTahrir": {
       "fayl": "85_Buxgalteriya.js",
@@ -2643,8 +2643,8 @@
       "argSoni": 1,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_tolov_tahrir",
       "izoh": null
     },
     "apiBuxDashboard": {
@@ -2653,9 +2653,9 @@
       "argSoni": 0,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_bux_dashboard VIEW (sbT2BuxDashboardOl)",
+      "izoh": "2026-08-25: bajarilgan TOZA F2 jamidan (t2_akt.hujjat_jami) hisoblanadi, накрутка-tuzatilmagan - Tizim_01dagi jamiF2Nakr aniqroq lekin qo'shimcha ish talab qiladi, halol-sodda baza ustunlik qilindi. Qabul testida NULL-poisoning bugi topilib tuzatildi (COALESCE ikki tomonlama sum() atrofida)."
     },
     "apiDebitorAging": {
       "fayl": "85_Buxgalteriya.js",
@@ -2663,8 +2663,8 @@
       "argSoni": 0,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_debitor_aging VIEW (sbT2DebitorAgingOl)",
       "izoh": null
     },
     "apiXarajatOl": {
@@ -2673,8 +2673,8 @@
       "argSoni": 0,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_xarajat (sbT2XarajatlarOl)",
       "izoh": null
     },
     "apiXarajatYoz": {
@@ -2683,9 +2683,9 @@
       "argSoni": 1,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "holat": "tayyor",
+      "qopladi": "t2_xarajat_yoz",
+      "izoh": "idempotent (operation_id majburiy)"
     },
     "apiXarajatOchir": {
       "fayl": "85_Buxgalteriya.js",
@@ -2693,8 +2693,8 @@
       "argSoni": 1,
       "domen": "buxgalteriya",
       "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "holat": "tayyor",
+      "qopladi": "t2_xarajat_ochir",
       "izoh": null
     },
     "apiPrixodNomTaklif": {

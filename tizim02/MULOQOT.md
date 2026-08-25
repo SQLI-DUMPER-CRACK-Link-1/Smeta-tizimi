@@ -694,3 +694,48 @@ jadval tayyor, yozish funksiyasi hali yo'q), `apiShartnomaDashboard`
 tozalash). 284 test (frontend), tsc 0 xato.
 
 **shartnoma: 0% → 90%. Umumiy: 70% → 78%.**
+
+
+### [2026-08-25] Claude → hammaga · `buxgalteriya` domeni 100%
+
+**Qurildi:** `Smeta tizimi/85_Buxgalteriya.js` dan to'liq ko'chirildi —
+`t2_tolov`/`t2_xarajat` jadvallari, `t2_tolov_yoz/tahrir/ochir` va
+`t2_xarajat_yoz/tahrir/ochir` RPC'lari (barchasi versiyalangan +
+to'lov/xarajat idempotent — `operation_id` majburiy), va uchta
+hisoblangan VIEW: `t2_bux_dashboard` (har shartnoma bo'yicha
+bajarilgan/to'langan/debitor/avans), `t2_debitor_aging`,
+`t2_bux_umumiy` (kompaniya darajasida jami).
+
+**⚠️ Topilgan va tuzatilgan bug (qabul testida ushlangan):**
+`t2_bux_dashboard.tolangan` — `sum(x) FILTER(avans/tolov) -
+sum(y) FILTER(qaytarim)` formulasida `qaytarim` qatori yo'q bo'lsa
+ikkinchi `sum()` NULL qaytaradi, NULL ayirish esa BUTUN natijani NULL
+qiladi (keyin tashqi `COALESCE` uni jimgina 0 ga yashiradi). Amalda:
+har qanday to'lov, agar hech qachon qaytarim bo'lmasa, dashboardda
+0 so'm ko'rinardi. Tuzatildi: ikkala `sum()` ham alohida
+`COALESCE(...,0)` bilan o'raldi. `tizim02/sinov/buxgalteriya.sql`
+6-bandi aynan shu holatni ushlab qoladi (regressiyaga qarshi).
+
+**⚠️ Ataylab soddalashtirish:** `bajarilgan` TOZA F2 jamidan
+(`t2_akt.hujjat_jami`) hisoblanadi, Tizim_01dagi накрутка bilan
+tuzatilgan `jamiF2Nakr` EMAS — har kategoriya bo'yicha aniq накрутка
+tuzatish qo'shimcha ish talab qiladi; noto'g'ri taxminiy tuzatishdan
+ko'ra halol-sodda baza afzal ko'rildi (VIEW SQL izohida ham yozilgan).
+
+**Frontend:** `frontend/src/api/t2-buxgalteriya.ts` (yangi),
+`sb.ts` oq ro'yxatiga 5 ta jadval/view, `sb-yoz.ts` ga 6 ta amal
+(`tolov_yoz/tahrir/ochir`, `xarajat_yoz/tahrir/ochir`) — har biri
+o'z validatsiyasi bilan, ilgari topilgan "jim catch-all" xatosiga
+tushib qolmasligi uchun aniq `else if` shoxobchalarda.
+
+**O'lchandi:** qabul testi `tizim02/sinov/buxgalteriya.sql` 9/9
+(CRUD + idempotentlik + dashboard aniqlik + soft-cancel + tozalash).
+292 test (frontend, barcha 8 ta .cjs skript alohida `node` bilan ham
+tekshirildi — vitest process.exit(0) tufayli soxta FAIL ko'rsatadi),
+tsc 0 xato, build toza.
+
+**buxgalteriya: 0% → 100%. Umumiy: 78% → 84%.**
+
+**Keyingi navbat:** `hujjat` (AOSR/akt generator — alohida
+arxitektura qarori kerak) yoki `kopruk` (Claude'ga tayinlangan,
+hali boshlanmagan).

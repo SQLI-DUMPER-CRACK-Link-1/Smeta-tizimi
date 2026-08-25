@@ -4,7 +4,7 @@
 > `node tizim02/registr.gen.cjs` uni qayta yozadi.
 > Tasnifni o'zgartirish uchun `tizim02/tasnif.json` ni tahrirlang.
 
-Umumiy holat: **78%** — 119 tayyor · 6 qisman · 31 boshlanmagan (ko'chiriladigan 156 tadan). 88 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
+Umumiy holat: **84%** — 128 tayyor · 6 qisman · 22 boshlanmagan (ko'chiriladigan 156 tadan). 88 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
 
 ## Domenlar — qiymat tartibida
 
@@ -14,7 +14,7 @@ Umumiy holat: **78%** — 119 tayyor · 6 qisman · 31 boshlanmagan (ko'chirilad
 | 2 | **f2** | 🔵 claude ⏳ | SUPABASE | 81% | 9 | 3 | 1 |
 | 3 | **hujjat** | 🔵 claude | GAS | 8% | 1 | 0 | 11 |
 | 4 | **shartnoma** | 🔵 claude | SUPABASE | 90% | 12 | 3 | 0 |
-| 5 | **buxgalteriya** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 9 |
+| 5 | **buxgalteriya** | 🔵 claude | SUPABASE | 100% | 9 | 0 | 0 |
 | 6 | **sklad** | 🟢 antigravity | SUPABASE | 100% | 4 | 0 | 0 |
 | 7 | **faktura** | 🟢 antigravity | SUPABASE | 100% | 16 | 0 | 0 |
 | 8 | **spravochnik** | 🟢 antigravity | SUPABASE | 100% | 6 | 0 | 0 |

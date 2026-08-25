@@ -58,6 +58,8 @@ const RUXSAT_JADVALLAR = new Set([
   /* ШАРТНОМА + НАКРУТКА */
   't2_shartnoma', 't2_shartnoma_bog', 't2_nakrutka', 't2_qoshimcha_ish',
   't2_obyekt_nakrutka',
+  /* БУХГАЛТЕРИЯ — to'lov/xarajat + hisoblangan ko'rishlar (2026-08-25) */
+  't2_tolov', 't2_xarajat', 't2_bux_dashboard', 't2_debitor_aging', 't2_bux_umumiy',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

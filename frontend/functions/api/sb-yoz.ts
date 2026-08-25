@@ -52,7 +52,13 @@ const AMALLAR = {
   shartnoma_saqla: { rpc: 't2_shartnoma_saqla' },
   shartnoma_ochir: { rpc: 't2_shartnoma_ochir' },
   shartnoma_bog_saqla: { rpc: 't2_shartnoma_bog_saqla' },
-  nakrutka_saqla: { rpc: 't2_nakrutka_saqla' }
+  nakrutka_saqla: { rpc: 't2_nakrutka_saqla' },
+  tolov_yoz: { rpc: 't2_tolov_yoz' },
+  tolov_tahrir: { rpc: 't2_tolov_tahrir' },
+  tolov_ochir: { rpc: 't2_tolov_ochir' },
+  xarajat_yoz: { rpc: 't2_xarajat_yoz' },
+  xarajat_tahrir: { rpc: 't2_xarajat_tahrir' },
+  xarajat_ochir: { rpc: 't2_xarajat_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -379,6 +385,104 @@ export const onRequestPost: PagesFunction<{
         izoh: q.izoh ? String(q.izoh).slice(0, 300) : null,
       }));
       yuk = { p_qatorlar: qatorlar, p_shartnoma_id: shartnomaId };
+
+    /* ══════════ TO'LOV YOZISH ══════════
+       ⚠️ IDEMPOTENTLIK MAJBURIY — moliyaviy yozuv, tarmoq uzilib qayta
+       yuborilsa ikkinchi to'lov paydo bo'lmasin. */
+    } else if (amal === 'tolov_yoz') {
+      const shartnomaId = Number(so.shartnoma_id);
+      const summa = Number(so.summa);
+      if (!Number.isFinite(shartnomaId) || shartnomaId <= 0) {
+        return Response.json({ ok: false, error: 'shartnoma_id noto\'g\'ri' });
+      }
+      if (!Number.isFinite(summa) || summa === 0) {
+        return Response.json({ ok: false, error: 'summa 0 yoki bo\'sh bo\'lishi mumkin emas' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi to\'lov yaratadi' });
+      }
+      yuk = {
+        p_shartnoma_id: shartnomaId,
+        p_summa: summa,
+        p_tur: so.tur ? String(so.tur).slice(0, 20) : 'tolov',
+        p_sana: so.sana || null,
+        p_obyekt_id: so.obyekt_id == null ? null : Number(so.obyekt_id),
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_operation_id: so.operation_id,
+        p_manba: 'frontend',
+        p_kim: sess.email || '',
+      };
+
+    /* ══════════ TO'LOV TAHRIRLASH ══════════ */
+    } else if (amal === 'tolov_tahrir') {
+      const tolovId = Number(so.tolov_id);
+      if (!Number.isFinite(tolovId) || tolovId <= 0) {
+        return Response.json({ ok: false, error: 'tolov_id noto\'g\'ri' });
+      }
+      yuk = {
+        p_tolov_id: tolovId,
+        p_summa: so.summa == null ? null : Number(so.summa),
+        p_sana: so.sana || null,
+        p_tur: so.tur ? String(so.tur).slice(0, 20) : null,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+      };
+
+    /* ══════════ TO'LOV BEKOR QILISH (soft-cancel, o'chirmaydi) ══════════ */
+    } else if (amal === 'tolov_ochir') {
+      const tolovId = Number(so.tolov_id);
+      if (!Number.isFinite(tolovId) || tolovId <= 0) {
+        return Response.json({ ok: false, error: 'tolov_id noto\'g\'ri' });
+      }
+      yuk = { p_tolov_id: tolovId,
+              p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya) };
+
+    /* ══════════ XARAJAT YOZISH ══════════ */
+    } else if (amal === 'xarajat_yoz') {
+      const summa = Number(so.summa);
+      if (!Number.isFinite(summa) || summa === 0) {
+        return Response.json({ ok: false, error: 'summa 0 yoki bo\'sh bo\'lishi mumkin emas' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi xarajat yaratadi' });
+      }
+      yuk = {
+        p_summa: summa,
+        p_toifa: so.toifa ? String(so.toifa).slice(0, 100) : null,
+        p_sana: so.sana || null,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_operation_id: so.operation_id,
+        p_manba: 'frontend',
+        p_kim: sess.email || '',
+      };
+
+    /* ══════════ XARAJAT TAHRIRLASH ══════════ */
+    } else if (amal === 'xarajat_tahrir') {
+      const xarajatId = Number(so.xarajat_id);
+      if (!Number.isFinite(xarajatId) || xarajatId <= 0) {
+        return Response.json({ ok: false, error: 'xarajat_id noto\'g\'ri' });
+      }
+      yuk = {
+        p_xarajat_id: xarajatId,
+        p_summa: so.summa == null ? null : Number(so.summa),
+        p_toifa: so.toifa ? String(so.toifa).slice(0, 100) : null,
+        p_sana: so.sana || null,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+      };
+
+    /* ══════════ XARAJAT BEKOR QILISH (soft-cancel, o'chirmaydi) ══════════ */
+    } else if (amal === 'xarajat_ochir') {
+      const xarajatId = Number(so.xarajat_id);
+      if (!Number.isFinite(xarajatId) || xarajatId <= 0) {
+        return Response.json({ ok: false, error: 'xarajat_id noto\'g\'ri' });
+      }
+      yuk = { p_xarajat_id: xarajatId,
+              p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya) };
 
     /* ══════════ TASDIQLASH / BEKOR ══════════ */
     } else if (amal === 'akt_tasdiqlash' || amal === 'akt_bekor') {
