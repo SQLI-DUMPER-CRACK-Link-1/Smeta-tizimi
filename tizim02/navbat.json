@@ -33,7 +33,7 @@
 
     "erp":          { "egasi": "antigravity", "holat": "navbatda" },
     "faktura":      { "egasi": "antigravity", "holat": "navbatda" },
-    "sklad":        { "egasi": "antigravity", "holat": "navbatda" },
+    "sklad":        { "egasi": "antigravity", "holat": "ishlanmoqda" },
     "spravochnik":  { "egasi": "antigravity", "holat": "navbatda" },
     "grafik":       { "egasi": "antigravity", "holat": "navbatda" },
     "hisobot":      { "egasi": "antigravity", "holat": "navbatda" },

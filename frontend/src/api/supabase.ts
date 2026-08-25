@@ -553,3 +553,53 @@ export function yangiOperationId(): string {
 
 
 
+
+// SKLAD DOMENI
+export type T2SkladHarakat = {
+  id?: number;
+  obyekt_id: number;
+  operatsiya: 'prixod' | 'rasxod';
+  turi: string;
+  sana: string;
+  nomi: string;
+  birligi: string;
+  obyomi: number;
+  postavshik?: string;
+  qabul_qiluvchi?: string;
+  qabul_turi?: string;
+  izoh?: string;
+};
+
+export type T2SkladQoldiq = {
+  nomi: string;
+  birligi: string;
+  prixod_obyomi: number;
+  rasxod_obyomi: number;
+  qoldiq_obyomi: number;
+};
+
+export function sbSkladQoldiqOl(obyektId: number) {
+  return sbOqi<T2SkladQoldiq>({
+    jadval: 't2_sklad_qoldiq',
+    filtr: 'obyekt_id=eq.' + obyektId
+  });
+}
+
+export function sbSkladgaYozish(kompaniya_id: number, operatsiya: 'prixod' | 'rasxod', item: T2SkladHarakat, versiya: number) {
+  return yozAmali({ 
+    amal: 'skladga_yozish',
+    kompaniya_id,
+    operatsiya,
+    obyekt_id: item.obyekt_id,
+    turi: item.turi,
+    sana: item.sana,
+    nomi: item.nomi,
+    birligi: item.birligi,
+    obyomi: item.obyomi,
+    postavshik: item.postavshik || null,
+    qabul_qiluvchi: item.qabul_qiluvchi || null,
+    qabul_turi: item.qabul_turi || null,
+    izoh: item.izoh || null,
+    versiya 
+  });
+}

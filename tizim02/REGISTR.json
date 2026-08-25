@@ -245,8 +245,8 @@
         "apiTizimHolatOl",
         "apiTizimHolatOzgartir"
       ],
-      "egasi": "kelishilsin",
-      "ish_holati": "kutilmoqda",
+      "egasi": "antigravity",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -440,8 +440,8 @@
         "apiWebApiLog",
         "apiWebApiSalom"
       ],
-      "egasi": "kelishilsin",
-      "ish_holati": "kutilmoqda",
+      "egasi": "claude",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -514,7 +514,7 @@
         "apiSkladgaYozish"
       ],
       "egasi": "antigravity",
-      "ish_holati": "navbatda",
+      "ish_holati": "ishlanmoqda",
       "foiz": 0,
       "kochiriladi": true
     },

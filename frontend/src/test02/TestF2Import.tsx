@@ -129,8 +129,7 @@ export default function TestF2Import() {
   const [tur, setTur] = useState<'f2' | 'fakt'>('f2');
   const [majburiy, setMajburiy] = useState(false);
   
-  const [xato, setXato] = useState('');
-  
+    
   // Debug DB holat
   useEffect(() => {
     import('../api/supabase').then(m => {
@@ -289,7 +288,7 @@ export default function TestF2Import() {
     Promise.all([sbT2DaraxtOl(korish.obyekt_id), sbT2QatorHolatOl(korish.obyekt_id)]).then(([r, h]) => {
       setSmetaLoading(false);
       if (r.ok && r.qatorlar) {
-        const tree = sbT2TreeQur(r.qatorlar, h.qatorlar || []);
+        const tree = sbT2TreeQur(r.qatorlar, h ? (h.qatorlar || []) : []);
         setSmetaTree(tree);
       } else {
         toast('Smeta daraxtini yuklab bo\'lmadi: ' + (r.error || ''), 'danger');
@@ -942,10 +941,10 @@ export default function TestF2Import() {
           
           // Reload tree from Supabase
           setSmetaLoading(true);
-          const r = await sbT2DaraxtOl(korish.obyekt_id as number);
+          const [r, h] = await Promise.all([sbT2DaraxtOl(korish.obyekt_id as number), sbT2QatorHolatOl(korish.obyekt_id as number)]);
           setSmetaLoading(false);
           if (r.ok && r.qatorlar) {
-            const tree = sbT2TreeQur(r.qatorlar, h.qatorlar || []);
+            const tree = sbT2TreeQur(r.qatorlar, h ? (h.qatorlar || []) : []);
             setSmetaTree(tree);
             
             // Avto-bog'lash (agar F2 dan ochilgan bo'lsa)
@@ -1734,9 +1733,9 @@ export default function TestF2Import() {
                         <button
                           onClick={async () => {
                             setSmetaLoading(true);
-                            const r = await sbT2DaraxtOl(korish.obyekt_id as number);
+                            const [r, h] = await Promise.all([sbT2DaraxtOl(korish.obyekt_id as number), sbT2QatorHolatOl(korish.obyekt_id as number)]);
                             setSmetaLoading(false);
-                            if (r.ok && r.qatorlar) setSmetaTree(sbT2TreeQur(r.qatorlar));
+                            if (r.ok && r.qatorlar) setSmetaTree(sbT2TreeQur(r.qatorlar, h ? (h.qatorlar || []) : []));
                             else toast('Smeta qayta yuklanmadi', 'danger');
                           }}
                           title="Smeta daraxtini qayta yuklash"
@@ -2064,6 +2063,8 @@ export default function TestF2Import() {
     </Sahifa>
   );
 }
+
+
 
 
 

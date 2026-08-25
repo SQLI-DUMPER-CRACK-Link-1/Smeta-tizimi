@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TestDaraxt.tsx — TIZIM_02: og'ir smeta daraxti SUPABASE'dan
  *
  * Foydalanuvchining asosiy sinovi: «og'ir smeta daraxtlarini ochmoqchiman,
@@ -67,7 +67,7 @@ export default function TestDaraxt() {
        yoki brauzerdagi ishlovdanmi — buni bilmasdan optimallashtirish
        taxminga aylanadi. */
     const t0 = performance.now();
-    const t = sbT2TreeQur(q);
+    const t = sbT2TreeQur(q, h.qatorlar || []);
     const qurishMs = Math.round(performance.now() - t0);
 
     setTree(t);
@@ -188,5 +188,7 @@ export default function TestDaraxt() {
     </Sahifa>
   );
 }
+
+
 
 

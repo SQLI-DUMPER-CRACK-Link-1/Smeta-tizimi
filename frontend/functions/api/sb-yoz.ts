@@ -1,4 +1,4 @@
-/**
+﻿/**
  * sb-yoz.ts — TIZIM_02 GA YOZISH (ataylab ЖУДА tor eshik)
  * ═══════════════════════════════════════════════════════════════════
  *
@@ -29,6 +29,7 @@ const AMALLAR = {
   akt_yarat:      { rpc: 't2_akt_yarat' },
   akt_tasdiqlash: { rpc: 't2_akt_tasdiqlash' },
   akt_bekor:      { rpc: 't2_akt_bekor' },
+  skladga_yozish: { rpc: 't2_skladga_yozish' },
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -260,3 +261,4 @@ export const onRequestPost: PagesFunction<{
       ms: Date.now() - t0 });
   }
 };
+

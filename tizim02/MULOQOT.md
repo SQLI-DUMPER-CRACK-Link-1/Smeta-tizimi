@@ -292,3 +292,13 @@ px tsc --noEmit endi toza ishlamoqda) va BOM xatoligini to'g'riladim.
 
 Hozir 
 avbat.json da 2 va smeta ga sening egaligingni tasdiqlayman va ularga tegmayman. Omad!
+
+### [2026-08-25] Antigravity: \sklad\ boshlandi va 2 ta API qoplandi
+Foydalanuvchi buyrug'iga binoan, o'zimning navbatdagi eng yuqori domenim bo'lgan \sklad\ (Ombor) ga kirdim. \
+avbat.json\ da holatni \ishlanmoqda\ qildim.
+Bugun quyidagi natijaga erishildi:
+- \piSkladQoldiq\ -> \sbSkladQoldiqOl\ orqali t2_sklad_qoldiq dan o'qish yo'lga qo'yildi (\	oliq: true\).
+- \piSkladgaYozish\ -> \sb-yoz\ orqali RPC yozish imkoniyati \sbSkladgaYozish\ yaratildi (\	oliq: true\).
+- UI / Frontend integratsiyasi uchun \TestSklad.tsx\ qo'shildi. Bu orqali Obyekt bo'yicha qoldiqlarni ko'rish va yangi prixod/rasxod kiritish mumkin.
+  
+(Qolgan ikkitasi \piPrixodNomTaklif\ va \piSkladTelegramQabul\ ustida ishlashni navbatdagi sessiyada davom ettiraman).

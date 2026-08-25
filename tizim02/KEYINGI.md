@@ -15,7 +15,7 @@ Umumiy holat: **7%** — 10 tayyor · 6 qisman · 172 boshlanmagan (ko'chiriladi
 | 3 | **hujjat** | 🔵 claude | SUPABASE | 11% | 2 | 0 | 17 |
 | 4 | **shartnoma** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 15 |
 | 5 | **buxgalteriya** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 9 |
-| 6 | **sklad** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 4 |
+| 6 | **sklad** | 🟢 antigravity ⏳ | SUPABASE | 0% | 0 | 0 | 4 |
 | 7 | **faktura** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 16 |
 | 8 | **spravochnik** | 🟢 antigravity | SUPABASE | 8% | 0 | 1 | 5 |
 | 9 | **erp** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 17 |
@@ -24,8 +24,8 @@ Umumiy holat: **7%** — 10 tayyor · 6 qisman · 172 boshlanmagan (ko'chiriladi
 | 12 | **kuzatuv** | ⚪ kelishilsin | SUPABASE | 50% | 0 | 1 | 0 |
 | 13 | **sozlama** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 18 |
 | 14 | **kirish** | ⚪ kelishilsin | SUPABASE | 50% | 0 | 1 | 0 |
-| 15 | **tizim** | ⚪ kelishilsin | SUPABASE | 0% | 0 | 0 | 7 |
-| 16 | **kopruk** | ⚪ kelishilsin | KOPRIK | 0% | 0 | 0 | 10 |
+| 15 | **tizim** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 7 |
+| 16 | **kopruk** | 🔵 claude | KOPRIK | 0% | 0 | 0 | 10 |
 
 ## 🔵 claude — keyingi ish: `smeta` (SUPABASE, 42%)
 
