@@ -33,6 +33,8 @@ const AMALLAR = {
   narx_sana_qosh: { rpc: 't2_narx_sana_qosh' },
   skladga_yozish: { rpc: 't2_skladga_yozish' },
   faktura_yoz:    { rpc: 't2_faktura_yoz' },
+  ish_turi_yoz:   { rpc: 't2_ish_turi_yoz' },
+  shaxsiy_smeta_yarat: { rpc: 't2_shaxsiy_smeta_yarat' },
 } as const;
 
 type Amal = keyof typeof AMALLAR;

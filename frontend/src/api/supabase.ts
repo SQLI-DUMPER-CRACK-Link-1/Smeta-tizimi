@@ -293,6 +293,10 @@ export type T2Qator = {
   qoshimcha: boolean | null; zamena: boolean | null;
   d1: string | null; d2: string | null; d3: string | null;
   xom_qator: number | null; yangilandi: string | null;
+  /** Ko'p fayldan yig'ilgan obyektda qaysi manba (lokalka) faylidan
+   *  kelgani.  ning o'rnini bosadi — daraxt
+   *  ALLAQACHON birlashgan, filtrlash shu maydon bilan bo'ladi. */
+  manba_id: number | null;
 };
 
 export function sbT2QatorHolatOl(obyektId: number) {
@@ -664,4 +668,53 @@ export async function sbFakturaFaylYoz(file: File, faktura_id: number): Promise<
   // Haqiqiy loyihada supabase.storage.from('hujjatlar').upload(path, file)
   // Mock qilib turamiz, chunki @supabase/supabase-js o'rnatilmagan yoki import qilinmagan bo'lishi mumkin
   return { ok: true, url: \https://r2.milliy-os.uz/\\ };
+}
+
+
+// --- SPRAVOCHNIK (Ish turlari va Shaxsiy smetalar) ---
+
+export interface T2IshTuri {
+  id?: number;
+  kompaniya_id: number;
+  kod: string;
+  nomi: string;
+  birligi: string;
+  norma: number;
+  narx: number;
+  kategoriya: string;
+}
+
+export async function sbIshTurlariOl(kompaniya_id: number): Promise<{ok: boolean, qatorlar?: T2IshTuri[], error?: string}> {
+  const res = await fetch('/api/sb', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jadval: 't2_ish_turi', filtr: \kompaniya_id.eq.\\ })
+  });
+  return await res.json();
+}
+
+export function sbIshTuriYoz(item: T2IshTuri) {
+  return yozAmali({
+    amal: 'ish_turi_yoz',
+    ...item
+  });
+}
+
+export async function sbShaxsiySmetalarOl(kompaniya_id: number) {
+  // Shaxsiy smetalar t2_ish_turi ning o'ziga xos to'plami yoki alohida jadval
+  const res = await fetch('/api/sb', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jadval: 't2_shaxsiy_smeta', filtr: \kompaniya_id.eq.\\ })
+  });
+  return await res.json();
+}
+
+export function sbShaxsiySmetaYarat(kompaniya_id: number, nom: string, qatorlar: any[]) {
+  return yozAmali({
+    amal: 'shaxsiy_smeta_yarat',
+    kompaniya_id,
+    nom,
+    qatorlar
+  });
 }
