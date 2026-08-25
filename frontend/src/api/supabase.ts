@@ -294,7 +294,7 @@ export type T2Qator = {
   d1: string | null; d2: string | null; d3: string | null;
   xom_qator: number | null; yangilandi: string | null;
   /** Ko'p fayldan yig'ilgan obyektda qaysi manba (lokalka) faylidan
-   *  kelgani.  ning o'rnini bosadi — daraxt
+   *  kelgani. `apiHolatOlLokalka` ning o'rnini bosadi — daraxt
    *  ALLAQACHON birlashgan, filtrlash shu maydon bilan bo'ladi. */
   manba_id: number | null;
 };
