@@ -4,7 +4,7 @@
 > `node tizim02/registr.gen.cjs` uni qayta yozadi.
 > Tasnifni o'zgartirish uchun `tizim02/tasnif.json` ni tahrirlang.
 
-Umumiy holat: **66%** — 102 tayyor · 2 qisman · 51 boshlanmagan (ko'chiriladigan 155 tadan). 88 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
+Umumiy holat: **67%** — 103 tayyor · 2 qisman · 51 boshlanmagan (ko'chiriladigan 156 tadan). 88 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
 
 ## Domenlar — qiymat tartibida
 
@@ -12,7 +12,7 @@ Umumiy holat: **66%** — 102 tayyor · 2 qisman · 51 boshlanmagan (ko'chirilad
 |---|---|---|---|---|---|---|---|
 | 1 | **smeta** | 🔵 claude | SUPABASE | 100% | 17 | 0 | 0 |
 | 2 | **f2** | 🔵 claude ⏳ | SUPABASE | 46% | 5 | 2 | 6 |
-| 3 | **hujjat** | 🔵 claude | GAS | 0% | 0 | 0 | 11 |
+| 3 | **hujjat** | 🔵 claude | GAS | 8% | 1 | 0 | 11 |
 | 4 | **shartnoma** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 15 |
 | 5 | **buxgalteriya** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 9 |
 | 6 | **sklad** | 🟢 antigravity | SUPABASE | 100% | 4 | 0 | 0 |
@@ -25,7 +25,7 @@ Umumiy holat: **66%** — 102 tayyor · 2 qisman · 51 boshlanmagan (ko'chirilad
 | 13 | **sozlama** | 🟢 antigravity | SUPABASE | 100% | 18 | 0 | 0 |
 | 14 | **kirish** | 🟢 antigravity | SUPABASE | 100% | 1 | 0 | 0 |
 | 15 | **tizim** | 🟢 antigravity | SUPABASE | 100% | 7 | 0 | 0 |
-| 16 | **kopruk** | 🔵 claude | KOPRIK | 0% | 0 | 0 | 10 |
+| 16 | **kopruk** | 🔵 claude | GAS | 0% | 0 | 0 | 10 |
 
 ## 🔵 claude — keyingi ish: `f2` (SUPABASE, 46%)
 

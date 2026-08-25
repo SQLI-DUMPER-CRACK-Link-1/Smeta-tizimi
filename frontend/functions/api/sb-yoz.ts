@@ -46,7 +46,9 @@ const AMALLAR = {
   taklif_yubor: { rpc: 't2_taklif_yubor' },
   taklif_qabul: { rpc: 't2_taklif_qabul' },
   birja_rfq_yarat: { rpc: 't2_birja_rfq_yarat' },
-  birja_taklif_ber: { rpc: 't2_birja_taklif_ber' }
+  birja_taklif_ber: { rpc: 't2_birja_taklif_ber' },
+  viborka_smetadan_toldir: { rpc: 't2_viborka_smetadan_toldir' },
+  viborka_qabul_yoz: { rpc: 't2_viborka_qabul_yoz' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -276,8 +278,45 @@ export const onRequestPost: PagesFunction<{
         p_kim: sess.email || '',
       };
 
+    /* ══════════ VIBORKA — SMETADAN REJA TO'LDIRISH ══════════ */
+    } else if (amal === 'viborka_smetadan_toldir') {
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      yuk = { p_obyekt_id: obyektId };
+
+    /* ══════════ VIBORKA — MATERIAL QABULI ══════════ */
+    } else if (amal === 'viborka_qabul_yoz') {
+      const viborkaId = Number(so.viborka_id);
+      if (!Number.isFinite(viborkaId) || viborkaId <= 0) {
+        return Response.json({ ok: false, error: 'viborka_id noto\'g\'ri' });
+      }
+      const hajm = Number(so.hajm);
+      if (!Number.isFinite(hajm) || hajm === 0) {
+        return Response.json({ ok: false, error: 'hajm 0 yoki bo\'sh bo\'lishi mumkin emas' });
+      }
+      /* ⚠️ IDEMPOTENTLIK MAJBURIY — boshqa moliyaviy yozuvlar bilan bir xil sabab. */
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi qabul yaratadi' });
+      }
+      yuk = {
+        p_viborka_id: viborkaId,
+        p_hajm: hajm,
+        p_narx: (so.narx == null || so.narx === '') ? null : Number(so.narx),
+        p_yetkazib_beruvchi: so.yetkazib_beruvchi ? String(so.yetkazib_beruvchi).slice(0, 200) : null,
+        p_sana: so.sana || null,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+        p_operation_id: so.operation_id,
+        p_manba: 'frontend',
+        p_kim: sess.email || '',
+      };
+
     /* ══════════ TASDIQLASH / BEKOR ══════════ */
-    } else {
+    } else if (amal === 'akt_tasdiqlash' || amal === 'akt_bekor') {
       const aktId = Number(so.akt_id);
       if (!Number.isFinite(aktId) || aktId <= 0) {
         return Response.json({ ok: false, error: 'akt_id noto\'g\'ri' });
@@ -295,6 +334,19 @@ export const onRequestPost: PagesFunction<{
         yuk = { p_akt_id: aktId, p_kutilgan_versiya: v, p_kim: sess.email || '',
                 p_sabab: so.sabab ? String(so.sabab).slice(0, 500) : null };
       }
+
+    /* ══════════ HALI KOD YOZILMAGAN AMALLAR ══════════
+       ⚠️ 2026-08-25 (Claude): `AMALLAR` da RO'YXATDAN O'TGAN, lekin bu
+       yerda o'z shoxobchasi bo'lmagan amallar avval JIM shu yerga —
+       aslida `akt_tasdiqlash`/`akt_bekor` uchun yozilgan yuqoridagi
+       blokka — tushib, ular kutmagan `p_akt_id` kabi parametrlar bilan
+       chaqirilardi. Bu amallarning ko'pi (sklad/faktura/erp/grafik/...)
+       RPC darajasida ham hali bazada YO'Q (tekshirildi). Aniq xato
+       xabari — soxta muvaffaqiyatdan yaxshiroq. Har amal o'z egasi
+       tomonidan tegishli parametrlar bilan to'ldirilishi kerak. */
+    } else {
+      return Response.json({ ok: false,
+        error: 'Amal "' + amal + '" ro\'yxatda bor, lekin hali parametr moslashtirilmagan (TODO)' });
     }
 
     const r = await fetch(

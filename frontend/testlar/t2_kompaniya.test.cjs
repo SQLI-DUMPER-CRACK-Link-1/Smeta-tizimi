@@ -45,7 +45,7 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
     /* ⚠️ 2026-08-25: narxlar markazi amallari qo‘shildi (Claude). */
     const KUTILGAN = ['t2_akt_bekor', 't2_akt_tasdiqlash', 't2_akt_yarat',
                       't2_faktura_yoz', 't2_grafik_sozlama_saqla', 't2_grafik_yangilash', 't2_ish_turi_yoz', 't2_narx_belgila', 't2_narx_sana_qosh',
-                      't2_qator_qosh', 't2_qator_tahrir', 't2_shaxsiy_smeta_yarat', 't2_skladga_yozish', 't2_erp_amal', 't2_boss_tahlil_boshla', 't2_sozlama_saqla', 't2_tizim_amal', 't2_xato_yoz', 't2_kirish_amal', 't2_taklif_yubor', 't2_taklif_qabul', 't2_birja_rfq_yarat', 't2_birja_taklif_ber'].sort();
+                      't2_qator_qosh', 't2_qator_tahrir', 't2_shaxsiy_smeta_yarat', 't2_skladga_yozish', 't2_erp_amal', 't2_boss_tahlil_boshla', 't2_sozlama_saqla', 't2_tizim_amal', 't2_xato_yoz', 't2_kirish_amal', 't2_taklif_yubor', 't2_taklif_qabul', 't2_birja_rfq_yarat', 't2_birja_taklif_ber', 't2_viborka_smetadan_toldir', 't2_viborka_qabul_yoz'].sort();
     T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));

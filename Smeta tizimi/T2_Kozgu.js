@@ -66,13 +66,33 @@ function _t2QatorlarOl(obyektId){
 /* ═══════════════════ KO'ZGU PAPKASI ═══════════════════════════════════ */
 
 /**
- * `Tizim_02` papkasini topadi yoki yaratadi (ildiz papka ostida).
- * Tizim_01 ning papkalariga TEGMAYDI — ko'zgu fayllari butunlay alohida
- * joyda turadi, aks holda dvigatel ularni smeta deb o'qib yuborishi mumkin.
+ * Ko'zgu fayli qayerga yozilishini aniqlaydi.
+ *
+ * ⚠️ 2026-08-25: YANGI tuzilmali obyektlarda (06_ObyektPapka.js bilan
+ * yaratilgan) ИШЧИ СМЕТА endi OBYEKTNING O'Z papkasida — foydalanuvchi
+ * «birinchi qavatda ishchi smeta bo'lishi kerak» deb ATAYLAB so'radi.
+ * ESKI obyektlarda (bu tuzilma yo'q) avvalgidek umumiy "Tizim_02"
+ * papkasida qoladi — hech qanday mavjud fayl ko'chirilmaydi.
+ *
+ * @param {string} [obyekt] Berilsa — obyekt papkasi tekshiriladi.
+ *                          Berilmasa — eski (umumiy) joy qaytadi.
  */
-function _t2KozguPapka(){
+function _t2KozguPapka(obyekt){
   var a = sozAsosiy();
   var ildiz = DriveApp.getFolderById(a.rootId);
+
+  if(obyekt){
+    var parentName = (typeof _cfgKalit === 'function') ? _cfgKalit(obyekt) : obyekt;
+    var obIt = ildiz.getFoldersByName(parentName);
+    if(obIt.hasNext()){
+      var obFolder = obIt.next();
+      if(typeof _t2ObyektYangiTuzilmaMi === 'function' && _t2ObyektYangiTuzilmaMi(obFolder)){
+        return obFolder;   // YANGI: obyektning o'z papkasi, birinchi qavat
+      }
+    }
+  }
+
+  /* ESKI (zaxira) yo'l — o'zgarishsiz */
   var it = ildiz.getFoldersByName('Tizim_02');
   if(it.hasNext()) return it.next();
   return ildiz.createFolder('Tizim_02');
@@ -121,7 +141,7 @@ function apiT2VaraqYarat(obyekt){
     var toliq = (narxsiz === 0);
 
     /* ── Fayl ── */
-    var papka = _t2KozguPapka();
+    var papka = _t2KozguPapka(obyekt);
     /* ⚠️ NOM: «ko'zgu» emas.
      * Foydalanuvchi: «tayyor mahsulot nomi ustida nima uchun ko'zgu
      * deysan, bir ilmiyroq nom topsangchi».

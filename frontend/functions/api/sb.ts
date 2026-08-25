@@ -52,6 +52,9 @@ const RUXSAT_JADVALLAR = new Set([
   't2_narx_markaz', 't2_topilmaganlar', 't2_narx_sana', 't2_narx_qol_xavf',
   /* F2/FAKT TAHLIL - Sheets skanlash o'rniga bazadan aggregatsiya */
   't2_f2_kat_oy', 't2_f2_tafsilot',
+  /* VIBORKA — har obyektga xos material tanlash/xarid nazorati
+     (2026-08-25: umumiy Sheets hujjatidan Tizim_02 ga ko'chirildi) */
+  't2_viborka', 't2_viborka_qabul', 't2_viborka_holat',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

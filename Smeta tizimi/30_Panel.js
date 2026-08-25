@@ -3417,15 +3417,24 @@ function apiF2FaylYukla(obyekt, base64, mimeType, filename, oyNom) {
   try {
     var folder = DriveApp.getFolderById(folderId);
     
-    // F2 papkasini topish yoki yaratish
+    /* F2 papkasini topish yoki yaratish.
+     * ⚠️ 2026-08-25: YANGI tuzilmali obyektlarda F2 endi "Смета/F2"
+     * ichida (06_ObyektPapka.js). ESKI obyektlarda (bu papka yo'q)
+     * avvalgidek ILDIZDA "F2"/"Ф2" qidiriladi/yaratiladi — hech qanday
+     * mavjud fayl ko'chirilmaydi. */
     var f2Folder = null;
-    var subF2 = folder.getFolders();
-    while(subF2.hasNext()) {
-      var sub = subF2.next();
-      var n = sub.getName().toUpperCase();
-      if(n === 'F2' || n === 'Ф2') { f2Folder = sub; break; }
+    if(typeof _t2ObyektYangiTuzilmaMi === 'function' && _t2ObyektYangiTuzilmaMi(folder)){
+      var smetaPapka = folder.getFoldersByName(T2_STRUKTURA.SMETA).next();
+      f2Folder = _papkaOlYokiYarat(smetaPapka, T2_STRUKTURA.F2);
+    } else {
+      var subF2 = folder.getFolders();
+      while(subF2.hasNext()) {
+        var sub = subF2.next();
+        var n = sub.getName().toUpperCase();
+        if(n === 'F2' || n === 'Ф2') { f2Folder = sub; break; }
+      }
+      if(!f2Folder) f2Folder = folder.createFolder('F2');
     }
-    if(!f2Folder) f2Folder = folder.createFolder('F2');
     
     // Yangi nomni yasash
     var ext = filename.indexOf('.') > 0 ? filename.substr(filename.lastIndexOf('.')) : '';

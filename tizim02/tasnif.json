@@ -49,7 +49,8 @@
     "92_Kuzatuv.js": "kuzatuv",
     "99_Diagnostika.js": "tashxis",
     "99_DiagnostikaOcr.js": "tashxis",
-    "30_Panel.js": "panel"
+    "30_Panel.js": "panel",
+    "06_ObyektPapka.js": "kopruk"
   },
   "domenQatlam": {
     "ai": "GAS",
@@ -677,12 +678,19 @@
       "izoh": "alohida 'prixod' hujjatidagi Остаток varag'idan o'qiydi"
     },
     "apiViborkaOl": {
-      "qatlam": "GAS",
-      "izoh": "alohida 'viborka' Sheets hujjatidan o'qiydi - Smeta bilan ATAYLAB ulanmagan (nomlar har xil, [[material-mustaqil-tizimlar]])"
+      "qopladi": "t2_viborka_holat (sbT2ViborkaOl) + t2_viborka_smetadan_toldir",
+      "toliq": true,
+      "izoh": "2026-08-25: butunlay qayta qurildi - avval UMUMIY Sheets hujjati edi, endi har obyekt o'z qatorlariga ega, reja smetadan avtomat"
     },
     "apiM29Yarat": {
       "qatlam": "GAS",
       "izoh": "yangi Google Sheets hujjatini generatsiya qiladi (M-29 hisoboti)"
+    },
+    "apiT2YangiObyektYarat": {
+      "qopladi": "06_ObyektPapka.js (GAS papka tuzilmasi) + apiT2ObyektTayyorla",
+      "toliq": true,
+      "qatlam": "GAS",
+      "izoh": "Yangi (2026-08-25): obyekt Drive papka tuzilmasi (Смета/F2, Лойиха хужжатлари, Виборка) + baza qatorini bitta amalda yaratadi. Mavjud obyektlarga tegmaydi."
     }
   },
   "keyingiNavbat": {

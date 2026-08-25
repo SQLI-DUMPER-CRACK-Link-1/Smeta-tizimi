@@ -1,14 +1,14 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 253,
-    "hisobga": 155,
-    "tayyor": 102,
+    "jami": 254,
+    "hisobga": 156,
+    "tayyor": 103,
     "qisman": 2,
     "joyida": 88,
     "kerakmas": 10
   },
-  "foiz": 66,
+  "foiz": 67,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -116,6 +116,32 @@
       "ish_holati": null,
       "foiz": null,
       "kochiriladi": false
+    },
+    "kopruk": {
+      "qatlam": "GAS",
+      "jami": 11,
+      "tayyor": 0,
+      "qisman": 0,
+      "kutilmoqda": 10,
+      "kerakmas": 0,
+      "joyida": 1,
+      "funksiyalar": [
+        "apiAntigravityExport",
+        "apiFaktSinxron",
+        "apiKodVersiya",
+        "apiSupabaseSinxKursor",
+        "apiSupabaseSinxReset",
+        "apiSupabaseSozlamaOl",
+        "apiSupabaseSozlamaSaqla",
+        "apiT2YangiObyektYarat",
+        "apiWebApiFunksiyalar",
+        "apiWebApiLog",
+        "apiWebApiSalom"
+      ],
+      "egasi": "claude",
+      "ish_holati": "navbatda",
+      "foiz": 0,
+      "kochiriladi": true
     },
     "spravochnik": {
       "qatlam": "SUPABASE",
@@ -367,11 +393,11 @@
     "hujjat": {
       "qatlam": "GAS",
       "jami": 19,
-      "tayyor": 0,
+      "tayyor": 1,
       "qisman": 0,
       "kutilmoqda": 11,
       "kerakmas": 0,
-      "joyida": 8,
+      "joyida": 7,
       "funksiyalar": [
         "apiAktBoglanmagan",
         "apiAktCoverage",
@@ -395,7 +421,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "navbatda",
-      "foiz": 0,
+      "foiz": 8,
       "kochiriladi": true
     },
     "navbat": {
@@ -419,31 +445,6 @@
       "ish_holati": null,
       "foiz": null,
       "kochiriladi": false
-    },
-    "kopruk": {
-      "qatlam": "KOPRIK",
-      "jami": 10,
-      "tayyor": 0,
-      "qisman": 0,
-      "kutilmoqda": 10,
-      "kerakmas": 0,
-      "joyida": 0,
-      "funksiyalar": [
-        "apiAntigravityExport",
-        "apiFaktSinxron",
-        "apiKodVersiya",
-        "apiSupabaseSinxKursor",
-        "apiSupabaseSinxReset",
-        "apiSupabaseSozlamaOl",
-        "apiSupabaseSozlamaSaqla",
-        "apiWebApiFunksiyalar",
-        "apiWebApiLog",
-        "apiWebApiSalom"
-      ],
-      "egasi": "claude",
-      "ish_holati": "navbatda",
-      "foiz": 0,
-      "kochiriladi": true
     },
     "shartnoma": {
       "qatlam": "SUPABASE",
@@ -755,6 +756,16 @@
       "holat": "joyida",
       "qopladi": null,
       "izoh": null
+    },
+    "apiT2YangiObyektYarat": {
+      "fayl": "06_ObyektPapka.js",
+      "qator": 83,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "06_ObyektPapka.js (GAS papka tuzilmasi) + apiT2ObyektTayyorla",
+      "izoh": "Yangi (2026-08-25): obyekt Drive papka tuzilmasi (Смета/F2, Лойиха хужжатлари, Виборка) + baza qatorini bitta amalda yaratadi. Mavjud obyektlarga tegmaydi."
     },
     "apiIshTurQidir": {
       "fayl": "15_IshTurlar.js",
@@ -1478,7 +1489,7 @@
     },
     "apiF2VaraklarOl": {
       "fayl": "30_Panel.js",
-      "qator": 3496,
+      "qator": 3505,
       "argSoni": 1,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1488,7 +1499,7 @@
     },
     "apiF2FaylOqi": {
       "fayl": "30_Panel.js",
-      "qator": 3553,
+      "qator": 3562,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1498,7 +1509,7 @@
     },
     "apiF2OySkan": {
       "fayl": "30_Panel.js",
-      "qator": 3774,
+      "qator": 3783,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1508,7 +1519,7 @@
     },
     "apiF2BoglanishBekorQil": {
       "fayl": "30_Panel.js",
-      "qator": 3846,
+      "qator": 3855,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1518,7 +1529,7 @@
     },
     "apiF2OyOchirish": {
       "fayl": "30_Panel.js",
-      "qator": 3892,
+      "qator": 3901,
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1528,7 +1539,7 @@
     },
     "apiF2Qolla": {
       "fayl": "30_Panel.js",
-      "qator": 3990,
+      "qator": 3999,
       "argSoni": 6,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1538,7 +1549,7 @@
     },
     "apiF2TayyorHujjatYarat": {
       "fayl": "30_Panel.js",
-      "qator": 4614,
+      "qator": 4623,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1548,7 +1559,7 @@
     },
     "apiReestrSaqla": {
       "fayl": "30_Panel.js",
-      "qator": 4775,
+      "qator": 4784,
       "argSoni": 1,
       "domen": "smeta",
       "qatlam": "YOQ",
@@ -1558,7 +1569,7 @@
     },
     "apiReestrOl": {
       "fayl": "30_Panel.js",
-      "qator": 4780,
+      "qator": 4789,
       "argSoni": 0,
       "domen": "smeta",
       "qatlam": "YOQ",
@@ -1568,7 +1579,7 @@
     },
     "apiF2QollaProgress": {
       "fayl": "30_Panel.js",
-      "qator": 4786,
+      "qator": 4795,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1578,7 +1589,7 @@
     },
     "apiF2QollaLog": {
       "fayl": "30_Panel.js",
-      "qator": 4793,
+      "qator": 4802,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1588,7 +1599,7 @@
     },
     "apiF2JobHolat": {
       "fayl": "30_Panel.js",
-      "qator": 4882,
+      "qator": 4891,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1598,7 +1609,7 @@
     },
     "apiF2QollaNavbatga": {
       "fayl": "30_Panel.js",
-      "qator": 4915,
+      "qator": 4924,
       "argSoni": 5,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1608,7 +1619,7 @@
     },
     "apiF2EskiFaylOqi": {
       "fayl": "30_Panel.js",
-      "qator": 5067,
+      "qator": 5076,
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1618,7 +1629,7 @@
     },
     "apiSmetaQatorQosh": {
       "fayl": "30_Panel.js",
-      "qator": 5229,
+      "qator": 5238,
       "argSoni": 9,
       "domen": "smeta",
       "qatlam": "SUPABASE",
@@ -1628,7 +1639,7 @@
     },
     "apiHolatOlLokalkalar": {
       "fayl": "30_Panel.js",
-      "qator": 5307,
+      "qator": 5316,
       "argSoni": 3,
       "domen": "smeta",
       "qatlam": "SUPABASE",
@@ -1638,7 +1649,7 @@
     },
     "apiF2LokalkaTaklif": {
       "fayl": "30_Panel.js",
-      "qator": 5360,
+      "qator": 5369,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1648,7 +1659,7 @@
     },
     "apiF2JobTozala": {
       "fayl": "30_Panel.js",
-      "qator": 5431,
+      "qator": 5440,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -2081,10 +2092,10 @@
       "qator": 793,
       "argSoni": 2,
       "domen": "hujjat",
-      "qatlam": "GAS",
-      "holat": "joyida",
-      "qopladi": null,
-      "izoh": "alohida 'viborka' Sheets hujjatidan o'qiydi - Smeta bilan ATAYLAB ulanmagan (nomlar har xil, [[material-mustaqil-tizimlar]])"
+      "qatlam": "SUPABASE",
+      "holat": "tayyor",
+      "qopladi": "t2_viborka_holat (sbT2ViborkaOl) + t2_viborka_smetadan_toldir",
+      "izoh": "2026-08-25: butunlay qayta qurildi - avval UMUMIY Sheets hujjati edi, endi har obyekt o'z qatorlariga ega, reja smetadan avtomat"
     },
     "apiNavbatHolat": {
       "fayl": "50_Navbat.js",
