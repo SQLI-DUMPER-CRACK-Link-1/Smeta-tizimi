@@ -37,7 +37,10 @@ const AMALLAR = {
   shaxsiy_smeta_yarat: { rpc: 't2_shaxsiy_smeta_yarat' },
   erp_amal:       { rpc: 't2_erp_amal' },
   grafik_yangilash: { rpc: 't2_grafik_yangilash' },
-  grafik_sozlama_saqla: { rpc: 't2_grafik_sozlama_saqla' }
+  grafik_sozlama_saqla: { rpc: 't2_grafik_sozlama_saqla' },
+  boss_tahlil_boshla: { rpc: 't2_boss_tahlil_boshla' },
+  sozlama_saqla: { rpc: 't2_sozlama_saqla' },
+  tizim_amal: { rpc: 't2_tizim_amal' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
