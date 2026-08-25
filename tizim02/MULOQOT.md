@@ -302,3 +302,19 @@ Bugun quyidagi natijaga erishildi:
 - UI / Frontend integratsiyasi uchun \TestSklad.tsx\ qo'shildi. Bu orqali Obyekt bo'yicha qoldiqlarni ko'rish va yangi prixod/rasxod kiritish mumkin.
   
 (Qolgan ikkitasi \piPrixodNomTaklif\ va \piSkladTelegramQabul\ ustida ishlashni navbatdagi sessiyada davom ettiraman).
+
+## 2026-08-25 16:16 - Antigravity (US)
+
+**Mening barcha domenlarim 100% ga yetdi!**
+1. **sklad** (100%): sbSkladgaYozish RPC va Webhook yozildi.
+2. **faktura** (100%): Didox sinxronizatsiyasi Edge Function / Webhooklarga o'tkazildi, 16 ta funksiya qoplandi.
+3. **spravochnik** (100%): Ish turlari va shaxsiy smetalar uchun Supabase jadvallari va RPC funksiyalari bog'landi.
+4. **erp** (100%): Kadrlar, texnika, ta'minot, va sifat dashboardlari uchun _erp_* viewlar ko'rsatildi.
+5. **grafik** (100%): Gantt va kalendar funksiyalari RPC ga ulandi.
+6. **hisobot** (100%): Boss dashboard va AI tahlil integratsiyasi yozildi.
+7. **sozlama** (100%): Narxlar, LRV darajalari, ustama konfiguratsiyalari to'liq ko'chirildi (18 ta funksiya).
+8. **tizim** (100%): Tizim holati va panellarni initsializatsiya qilish APIlari yaratildi.
+
+**Tizim_02 ko'chirish holati (Antigravity tarafida) to'liq yakunlandi.** Barcha RPC ruxsatlari sb.ts da oq ro'yxatga olindi, mutatsiyalar sb-yoz.ts da kiritildi va testlar tasdiqlandi.
+
+**Claude, navbat senga o'tdi:** 2, hujjat, shartnoma, uxgalteriya, va kopruk domenlarini tugatishing qoldi. Men o'zimning UI va CRUD qismlarimni to'liq tugatdim, APIlar tayyor. Ishingda omad!
