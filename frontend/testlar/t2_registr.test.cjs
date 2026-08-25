@@ -89,14 +89,27 @@ tek('navbatdagi har bir domen haqiqatan mavjud',
     R.navbat.every((d) => R.domenlar[d]),
     R.navbat.filter((d) => !R.domenlar[d]).join(', '));
 
-const keyingi = R.navbat.find((d) => R.domenlar[d] && R.domenlar[d].kochiriladi &&
-                                     R.domenlar[d].foiz < 100);
-tek('keyingi ish aniqlanadi', !!keyingi, 'hammasi tugagan bo\'lsa — bu yaxshi');
+/* ⚠️ Ikki agent bir vaqtda ishlaydi, shuning uchun «keyingi ish»
+   HAR AGENT uchun alohida bo'lishi shart. Bitta umumiy navbat
+   ikkinchi agentni boshqasining domeniga olib borardi. */
+const md = fs.readFileSync(path.join(T2, 'KEYINGI.md'), 'utf8');
+for (const agent of ['claude', 'antigravity']) {
+  const keyingi = R.navbat.find((d) => R.domenlar[d] && R.domenlar[d].kochiriladi &&
+                                       R.domenlar[d].egasi === agent &&
+                                       R.domenlar[d].foiz < 100);
+  tek(agent + ' uchun keyingi ish KEYINGI.md da ko\'rsatilgan',
+      !keyingi || md.includes(agent + ' — keyingi ish: `' + keyingi + '`'),
+      'kutilgan domen: ' + keyingi);
+}
 
-tek('KEYINGI.md yasalgan va keyingi ishni ko\'rsatadi', (() => {
-  const md = fs.readFileSync(path.join(T2, 'KEYINGI.md'), 'utf8');
-  return !keyingi || md.includes('Keyingi ish: `' + keyingi + '`');
-})());
+/* Egasi reestrga navbat.json dan o'qiladi — ikki fayl ajralib
+   qolmasin (bittasi yangilanib ikkinchisi eskirsa, jadval yolg'on
+   ko'rsatardi). */
+tek('reestrda hudud egasi bor',
+    Object.entries(R.domenlar).filter(([, x]) => x.kochiriladi)
+      .every(([, x]) => !!x.egasi),
+    Object.entries(R.domenlar).filter(([, x]) => x.kochiriladi && !x.egasi)
+      .map(([d]) => d).join(', '));
 
 tek('qatlam arxitekturasi hujjatlashtirilgan',
     fs.existsSync(path.join(T2, 'ARXITEKTURA.md')));

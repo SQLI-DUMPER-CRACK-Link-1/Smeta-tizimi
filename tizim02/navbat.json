@@ -1,0 +1,86 @@
+{
+  "_izoh": [
+    "KIM NIMANI OLGAN — mashina o'qiydigan holat.",
+    "Ikki agent (Claude va Antigravity) bir vaqtda ishlaydi. Bu fayl",
+    "ularning HUDUDINI belgilaydi: bir domenni ikkovi olsa, bir-birining",
+    "ishini bosib ketadi.",
+    "",
+    "Odam o'qiydigan reja va muloqot: tizim02/MULOQOT.md",
+    "Tekshiruv: frontend/testlar/t2_navbat.test.cjs"
+  ],
+
+  "agentlar": {
+    "claude": {
+      "nom": "Claude (Opus)",
+      "kuchi": "Tizim_01 kodidan qoida arxeologiyasi, moliyaviy invariantlar, migratsiya",
+      "cheklovi": "Haftalik limit — uzilib qolishi mumkin. Uzilsa ishi MULOQOT.md da yozilgan bo'ladi."
+    },
+    "antigravity": {
+      "nom": "Antigravity",
+      "kuchi": "Keng qamrov, UI, CRUD domenlari, uzluksiz ishlash",
+      "cheklovi": "Tizim_01 ning nozik moliyaviy qoidalariga tegmaydi (pastdagi TAQIQ ro'yxati)"
+    }
+  },
+
+  "hudud": {
+    "_qoida": "egasi = shu domenni KIM ko'chiradi. Boshqa agent unga TEGMAYDI.",
+
+    "smeta":        { "egasi": "claude",      "holat": "ishlanmoqda" },
+    "f2":           { "egasi": "claude",      "holat": "navbatda" },
+    "hujjat":       { "egasi": "claude",      "holat": "navbatda" },
+    "shartnoma":    { "egasi": "claude",      "holat": "navbatda" },
+    "buxgalteriya": { "egasi": "claude",      "holat": "navbatda" },
+
+    "erp":          { "egasi": "antigravity", "holat": "navbatda" },
+    "faktura":      { "egasi": "antigravity", "holat": "navbatda" },
+    "sklad":        { "egasi": "antigravity", "holat": "navbatda" },
+    "spravochnik":  { "egasi": "antigravity", "holat": "navbatda" },
+    "grafik":       { "egasi": "antigravity", "holat": "navbatda" },
+    "hisobot":      { "egasi": "antigravity", "holat": "navbatda" },
+    "sozlama":      { "egasi": "antigravity", "holat": "navbatda" },
+
+    "kopruk":       { "egasi": "kelishilsin", "holat": "kutilmoqda",
+                      "izoh": "Ikki tizim eshigi — ikkoviga ham tegadi, odam qaror qilsin" },
+    "tizim":        { "egasi": "kelishilsin", "holat": "kutilmoqda" },
+    "kirish":       { "egasi": "kelishilsin", "holat": "kutilmoqda",
+                      "izoh": "SESSIYA_KALIT ochiq qarzi — xavfsizlik, odam qarori kerak" },
+    "kuzatuv":      { "egasi": "kelishilsin", "holat": "kutilmoqda" }
+  },
+
+  "umumiy_fayllar": {
+    "_qoida": [
+      "Bu fayllarga IKKOVI ham yozadi — eng katta to'qnashuv xavfi shu yerda.",
+      "QOIDA: faqat O'Z QATORINGNI qo'sh, qo'shnini qayta formatlama,",
+      "ro'yxatlarni alifbo tartibida sakla. Shunda git merge oson bo'ladi."
+    ],
+    "royxat": [
+      { "fayl": "frontend/functions/api/sb-yoz.ts",
+        "nima": "AMALLAR ro'yxatiga yangi amal",
+        "ehtiyot": "Ro'yxat t2_kompaniya.test.cjs da AYNAN takrorlangan — ikkalasini birga yangilang" },
+      { "fayl": "frontend/src/api/supabase.ts",
+        "nima": "Tipli chaqiruv funksiyasi",
+        "ehtiyot": "Fayl oxiriga qo'shing, o'rtasiga emas" },
+      { "fayl": "frontend/testlar/t2_kompaniya.test.cjs",
+        "nima": "KUTILGAN RPC ro'yxati",
+        "ehtiyot": "Ataylab qat'iy — jimgina kengaymasin" },
+      { "fayl": "tizim02/tasnif.json",
+        "nima": "holat: qaysi api qoplandi",
+        "ehtiyot": "Faqat O'Z domeningdagi funksiyalarni yozing" },
+      { "fayl": "tizim02/MULOQOT.md",
+        "nima": "Xabarlar jurnali",
+        "ehtiyot": "Faqat OXIRIGA qo'shing, eskisini o'chirmang" }
+    ]
+  },
+
+  "taqiq": {
+    "_izoh": "Bu fayllar/funksiyalar KELISHUVSIZ o'zgartirilmaydi — ikkovi uchun ham.",
+    "fayllar": [
+      "Smeta tizimi/10_Engine.js",
+      "Smeta tizimi/30_Panel.js",
+      "Smeta tizimi/35_F2Moslash.js",
+      "Smeta tizimi/05_Papka.js",
+      "Smeta tizimi/70_Supabase.js"
+    ],
+    "sabab": "Ishlab turgan produksiya. Narxlash va F2 moslashtirish shularda. Kerak bo'lsa YONIDA zaxira yozing."
+  }
+}

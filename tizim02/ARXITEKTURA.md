@@ -135,6 +135,8 @@ ro'yxatli va faqat `t2_*` ko'rinishlarini beradi.
 | `tizim02/tasnif.json` | **Qo'lda** to'ldiriladigan tasnif |
 | `tizim02/registr.gen.cjs` | Generator (`--tekshir` bilan drift nazorati) |
 | `tizim02/AGENT.md` | AI agent shartnomasi |
+| `tizim02/MULOQOT.md` | Ikki agent orasidagi reja va xabarlar jurnali |
+| `tizim02/navbat.json` | Hudud: kim qaysi domenni olgan |
 | `tizim02/sinov/*.sql` | Bazadagi qoidalar uchun qabul testlari |
 
 ⚠️ `REGISTR.json` **koddan** yasaladi. `t2_registr.test.cjs` uni har

@@ -89,6 +89,8 @@
         "apiTitanData",
         "apiTitanSmart"
       ],
+      "egasi": null,
+      "ish_holati": null,
       "foiz": null,
       "kochiriladi": false
     },
@@ -110,6 +112,8 @@
         "apiSheetlarOl",
         "apiXlsxQiymatBilanOch"
       ],
+      "egasi": null,
+      "ish_holati": null,
       "foiz": null,
       "kochiriladi": false
     },
@@ -129,6 +133,8 @@
         "apiShaxsiySmetaYarat",
         "apiShaxsiySmetalar"
       ],
+      "egasi": "antigravity",
+      "ish_holati": "navbatda",
       "foiz": 8,
       "kochiriladi": true
     },
@@ -143,6 +149,8 @@
       "funksiyalar": [
         "apiKirishTekshir"
       ],
+      "egasi": "kelishilsin",
+      "ish_holati": "kutilmoqda",
       "foiz": 50,
       "kochiriladi": true
     },
@@ -161,6 +169,8 @@
         "apiKeshSkanYangilash",
         "apiKeshYangilash"
       ],
+      "egasi": null,
+      "ish_holati": null,
       "foiz": null,
       "kochiriladi": false
     },
@@ -180,6 +190,8 @@
         "apiBossTahlilHolatOl",
         "apiBossTahlilNatijaOl"
       ],
+      "egasi": "antigravity",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -211,6 +223,8 @@
         "apiSvodOldindan",
         "apiSvodUstunSaqla"
       ],
+      "egasi": "antigravity",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -231,6 +245,8 @@
         "apiTizimHolatOl",
         "apiTizimHolatOzgartir"
       ],
+      "egasi": "kelishilsin",
+      "ish_holati": "kutilmoqda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -255,6 +271,8 @@
         "apiServerYig",
         "apiTriggerlarRoyxat"
       ],
+      "egasi": null,
+      "ish_holati": null,
       "foiz": null,
       "kochiriladi": false
     },
@@ -307,6 +325,8 @@
         "apiF2YozTola",
         "apiF2YozishgaRuxsat"
       ],
+      "egasi": "claude",
+      "ish_holati": "navbatda",
       "foiz": 4,
       "kochiriladi": true
     },
@@ -339,6 +359,8 @@
         "apiSmetaQatorQosh",
         "apiTopilmaganlar"
       ],
+      "egasi": "claude",
+      "ish_holati": "ishlanmoqda",
       "foiz": 39,
       "kochiriladi": true
     },
@@ -371,6 +393,8 @@
         "apiSkladOl",
         "apiViborkaOl"
       ],
+      "egasi": "claude",
+      "ish_holati": "navbatda",
       "foiz": 11,
       "kochiriladi": true
     },
@@ -391,6 +415,8 @@
         "apiObyektFonIshla",
         "apiObyektTezkorFonIshla"
       ],
+      "egasi": null,
+      "ish_holati": null,
       "foiz": null,
       "kochiriladi": false
     },
@@ -414,6 +440,8 @@
         "apiWebApiLog",
         "apiWebApiSalom"
       ],
+      "egasi": "kelishilsin",
+      "ish_holati": "kutilmoqda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -442,6 +470,8 @@
         "apiShartnomaOl",
         "apiShartnomaSaqla"
       ],
+      "egasi": "claude",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -464,6 +494,8 @@
         "apiXarajatOl",
         "apiXarajatYoz"
       ],
+      "egasi": "claude",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -481,6 +513,8 @@
         "apiSkladTelegramQabul",
         "apiSkladgaYozish"
       ],
+      "egasi": "antigravity",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -511,6 +545,8 @@
         "apiZayavkaHolatYangila",
         "apiZayavkaQosh"
       ],
+      "egasi": "antigravity",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -540,6 +576,8 @@
         "apiFakturaYoz",
         "apiFakturalarOl"
       ],
+      "egasi": "antigravity",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -557,6 +595,8 @@
         "apiGrafikSozlamaOl",
         "apiGrafikYangilashBoshla"
       ],
+      "egasi": "antigravity",
+      "ish_holati": "navbatda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -571,6 +611,8 @@
       "funksiyalar": [
         "apiXatoYoz"
       ],
+      "egasi": "kelishilsin",
+      "ish_holati": "kutilmoqda",
       "foiz": 50,
       "kochiriladi": true
     },
@@ -587,6 +629,8 @@
         "apiObyektDiagnostika",
         "apiTolaDiagnostika"
       ],
+      "egasi": null,
+      "ish_holati": null,
       "foiz": null,
       "kochiriladi": false
     }

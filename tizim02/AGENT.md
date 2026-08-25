@@ -2,6 +2,11 @@
 
 > Bu faylni **har bir agent ish boshlashdan oldin to'liq o'qiydi.**
 > Claude, Antigravity yoki boshqasi — farqi yo'q. Qoidalar bir xil.
+>
+> ⚠️ **Ikki agent bir vaqtda ishlaydi.** Ish olishdan oldin
+> `tizim02/MULOQOT.md` (reja + jurnal) va `tizim02/navbat.json`
+> (kim qaysi domenni olgan) ni ko'ring. **O'z hududingizdan
+> tashqariga chiqmang.**
 
 ---
 
@@ -22,14 +27,20 @@ Holat: **`tizim02/KEYINGI.md`** (avtomat yasaladi, qo'lda tahrirlamang).
 node tizim02/registr.gen.cjs
 ```
 
-Keyin `tizim02/KEYINGI.md` dagi **«⏭ Keyingi ish»** bo'limini oching.
-U navbatdagi birinchi tugallanmagan domenni va uning funksiyalarini
-ko'rsatadi. Bitta domenni **oxirigacha** oling — yarim qoldirilgan
-domen keyingi agent uchun eng yomon meros.
+Keyin `tizim02/KEYINGI.md` da **O'Z NOMINGIZ ostidagi** bo'limni
+oching — masalan «🔵 claude — keyingi ish» yoki
+«🟢 antigravity — keyingi ish». U sizga tegishli birinchi tugallanmagan
+domenni va uning funksiyalarini ko'rsatadi.
 
-Boshqa domenni olmoqchi bo'lsangiz — odamdan so'rang. Navbat tartibi
-`tizim02/tasnif.json` → `keyingiNavbat.tartib` da, u qiymat bo'yicha
-tuzilgan.
+Bitta domenni **oxirigacha** oling — yarim qoldirilgan domen keyingi
+agent uchun eng yomon meros. Olganingizda `tizim02/navbat.json` da
+`holat` ni `ishlanmoqda` qiling va **darrov commit qiling**, shunda
+ikkinchi agent buni ko'radi.
+
+⚠️ **Boshqa agentning domenini olmang.** Kim nimani olgani
+`tizim02/navbat.json` → `hudud` da. Navbat tartibi
+`tizim02/tasnif.json` → `keyingiNavbat.tartib` da (qiymat bo'yicha).
+Taqsimotni o'zgartirish — odamning qarori.
 
 ---
 
@@ -169,6 +180,7 @@ teng bo'lsin — «tuzalmadi» deganda avval **versiyani** so'rang, kodni emas.
 
 | Nima | Qayerda |
 |---|---|
+| Ish taqsimoti va jurnal | `tizim02/MULOQOT.md`, `tizim02/navbat.json` |
 | Ko'chirish holati | `tizim02/KEYINGI.md`, `tizim02/REGISTR.json` |
 | Tasnif (qo'lda) | `tizim02/tasnif.json` |
 | Qatlam arxitekturasi | `tizim02/ARXITEKTURA.md` — **avval shuni o'qing** |

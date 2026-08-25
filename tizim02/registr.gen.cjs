@@ -114,6 +114,18 @@ function yasa() {
     });
     d.jami++; d[f.holat]++; d.funksiyalar.push(nom);
   }
+  /* Hudud egasi — ikki agent bir domenni olib qolmasin.
+     Manba: `tizim02/navbat.json` (qo'lda). Bu yerda faqat O'QILADI. */
+  let hudud = {};
+  try {
+    hudud = JSON.parse(
+      fs.readFileSync(path.join(__dirname, 'navbat.json'), 'utf8')).hudud || {};
+  } catch (e) { /* navbat.json hali yo'q — egasiz ishlayveramiz */ }
+  for (const [nom, d] of Object.entries(domenlar)) {
+    d.egasi = (hudud[nom] && hudud[nom].egasi) || null;
+    d.ish_holati = (hudud[nom] && hudud[nom].holat) || null;
+  }
+
   for (const d of Object.values(domenlar)) {
     const hisobga = d.jami - d.kerakmas - d.joyida;
     d.foiz = hisobga ? Math.round(((d.tayyor + d.qisman * 0.5) / hisobga) * 100) : null;
@@ -160,8 +172,8 @@ function keyingiMd(R, T) {
   s.push('');
   s.push('## Domenlar — qiymat tartibida');
   s.push('');
-  s.push('| # | Domen | Qatlam | Holat | Tayyor | Qisman | Qoldi |');
-  s.push('|---|---|---|---|---|---|---|');
+  s.push('| # | Domen | Egasi | Qatlam | Holat | Tayyor | Qisman | Qoldi |');
+  s.push('|---|---|---|---|---|---|---|---|');
   let n = 0;
   /* ⚠️ Faqat KO'CHIRILADIGAN domenlar. GASda qoladiganlarni shu
      jadvalga qo'shish «0%» deb ko'rsatib, aslida yo'q qarz yasardi. */
@@ -171,17 +183,27 @@ function keyingiMd(R, T) {
   for (const d of koch) {
     const x = R.domenlar[d];
     n++;
-    s.push('| ' + n + ' | **' + d + '** | ' + x.qatlam + ' | ' + x.foiz + '% | ' +
+    const belgi = { claude: '🔵', antigravity: '🟢' }[x.egasi] || '⚪';
+    s.push('| ' + n + ' | **' + d + '** | ' + belgi + ' ' + (x.egasi || 'kelishilsin') +
+           (x.ish_holati === 'ishlanmoqda' ? ' ⏳' : '') + ' | ' +
+           x.qatlam + ' | ' + x.foiz + '% | ' +
            x.tayyor + ' | ' + x.qisman + ' | ' + x.kutilmoqda + ' |');
   }
   s.push('');
 
-  /* Birinchi tugallanmagan domen — agentning KEYINGI ishi */
-  const keyingi = R.navbat.find((d) => R.domenlar[d] && R.domenlar[d].kochiriladi &&
-                                       R.domenlar[d].foiz < 100);
-  if (keyingi) {
+  /* ⚠️ Har AGENT uchun ALOHIDA keyingi ish. Ikkovi bir vaqtda ishlaydi,
+     shuning uchun bitta umumiy «keyingi» yetarli emas — ikkinchi agent
+     o'ziniki qaysiligini bilmay, birinchisining domenini ochib
+     yuborishi mumkin. */
+  for (const agent of ['claude', 'antigravity']) {
+    const keyingi = R.navbat.find((d) => R.domenlar[d] && R.domenlar[d].kochiriladi &&
+                                         R.domenlar[d].egasi === agent &&
+                                         R.domenlar[d].foiz < 100);
+    if (!keyingi) continue;
     const x = R.domenlar[keyingi];
-    s.push('## ⏭ Keyingi ish: `' + keyingi + '` (' + x.qatlam + ', ' + x.foiz + '%)');
+    const belgi = agent === 'claude' ? '🔵' : '🟢';
+    s.push('## ' + belgi + ' ' + agent + ' — keyingi ish: `' + keyingi +
+           '` (' + x.qatlam + ', ' + x.foiz + '%)');
     s.push('');
     for (const nom of x.funksiyalar) {
       const f = R.funksiyalar[nom];

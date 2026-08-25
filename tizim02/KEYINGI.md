@@ -8,26 +8,26 @@ Umumiy holat: **7%** — 9 tayyor · 7 qisman · 172 boshlanmagan (ko'chiriladig
 
 ## Domenlar — qiymat tartibida
 
-| # | Domen | Qatlam | Holat | Tayyor | Qisman | Qoldi |
-|---|---|---|---|---|---|---|
-| 1 | **smeta** | SUPABASE | 39% | 6 | 3 | 10 |
-| 2 | **f2** | SUPABASE | 4% | 1 | 1 | 34 |
-| 3 | **hujjat** | SUPABASE | 11% | 2 | 0 | 17 |
-| 4 | **shartnoma** | SUPABASE | 0% | 0 | 0 | 15 |
-| 5 | **buxgalteriya** | SUPABASE | 0% | 0 | 0 | 9 |
-| 6 | **sklad** | SUPABASE | 0% | 0 | 0 | 4 |
-| 7 | **faktura** | SUPABASE | 0% | 0 | 0 | 16 |
-| 8 | **spravochnik** | SUPABASE | 8% | 0 | 1 | 5 |
-| 9 | **erp** | SUPABASE | 0% | 0 | 0 | 17 |
-| 10 | **grafik** | SUPABASE | 0% | 0 | 0 | 4 |
-| 11 | **hisobot** | SUPABASE | 0% | 0 | 0 | 6 |
-| 12 | **kuzatuv** | SUPABASE | 50% | 0 | 1 | 0 |
-| 13 | **sozlama** | SUPABASE | 0% | 0 | 0 | 18 |
-| 14 | **kirish** | SUPABASE | 50% | 0 | 1 | 0 |
-| 15 | **tizim** | SUPABASE | 0% | 0 | 0 | 7 |
-| 16 | **kopruk** | KOPRIK | 0% | 0 | 0 | 10 |
+| # | Domen | Egasi | Qatlam | Holat | Tayyor | Qisman | Qoldi |
+|---|---|---|---|---|---|---|---|
+| 1 | **smeta** | 🔵 claude ⏳ | SUPABASE | 39% | 6 | 3 | 10 |
+| 2 | **f2** | 🔵 claude | SUPABASE | 4% | 1 | 1 | 34 |
+| 3 | **hujjat** | 🔵 claude | SUPABASE | 11% | 2 | 0 | 17 |
+| 4 | **shartnoma** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 15 |
+| 5 | **buxgalteriya** | 🔵 claude | SUPABASE | 0% | 0 | 0 | 9 |
+| 6 | **sklad** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 4 |
+| 7 | **faktura** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 16 |
+| 8 | **spravochnik** | 🟢 antigravity | SUPABASE | 8% | 0 | 1 | 5 |
+| 9 | **erp** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 17 |
+| 10 | **grafik** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 4 |
+| 11 | **hisobot** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 6 |
+| 12 | **kuzatuv** | ⚪ kelishilsin | SUPABASE | 50% | 0 | 1 | 0 |
+| 13 | **sozlama** | 🟢 antigravity | SUPABASE | 0% | 0 | 0 | 18 |
+| 14 | **kirish** | ⚪ kelishilsin | SUPABASE | 50% | 0 | 1 | 0 |
+| 15 | **tizim** | ⚪ kelishilsin | SUPABASE | 0% | 0 | 0 | 7 |
+| 16 | **kopruk** | ⚪ kelishilsin | KOPRIK | 0% | 0 | 0 | 10 |
 
-## ⏭ Keyingi ish: `smeta` (SUPABASE, 39%)
+## 🔵 claude — keyingi ish: `smeta` (SUPABASE, 39%)
 
 - `apiHolatOl` — `30_Panel.js:904` *(qisman: t2_daraxt + sbT2DaraxtOl)*
 - `apiHolatOlLokalka` — `30_Panel.js:893` *(qisman: t2_daraxt)*
@@ -42,6 +42,13 @@ Umumiy holat: **7%** — 9 tayyor · 7 qisman · 172 boshlanmagan (ko'chiriladig
 - `apiReestrOl` — `30_Panel.js:4780`
 - `apiReestrSaqla` — `30_Panel.js:4775`
 - `apiTopilmaganlar` — `30_Panel.js:2478`
+
+## 🟢 antigravity — keyingi ish: `sklad` (SUPABASE, 0%)
+
+- `apiPrixodNomTaklif` — `86_Sklad.js:94`
+- `apiSkladQoldiq` — `86_Sklad.js:102`
+- `apiSkladTelegramQabul` — `86_Sklad.js:222`
+- `apiSkladgaYozish` — `86_Sklad.js:136`
 
 ## Ko'chirilmaydiganlar
 

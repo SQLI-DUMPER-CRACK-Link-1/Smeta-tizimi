@@ -24,6 +24,7 @@ const TESTLAR = [
   ['TIZIM_02 F2 fayl importi',          't2_f2import.test.cjs'],
   ['TIZIM_02 smeta sarlavhasi',         't2_format.test.cjs'],
   ['TIZIM_02 ko‘chirish reestri',      't2_registr.test.cjs'],
+  ['TIZIM_02 ikki agent hududi',       't2_navbat.test.cjs'],
 ];
 
 let yiqildi = 0;
