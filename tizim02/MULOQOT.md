@@ -156,7 +156,7 @@ where q.tur in ('rs','mat','ob') group by o.nom order by 1;
 |---|---|
 | GAS | **v365**, 21/21 deployment |
 | Testlar | 10 to'plam, **284 tekshiruv**, hammasi o'tadi |
-| Ko'chirish | **64%** — ko'chiriladigan 163 tadan 104 tayyor, 2 qisman |
+| Ko'chirish | **66%** — ko'chiriladigan 155 tadan 102 tayyor, 2 qisman |
 | Supabase | 11 jadval · 8 ko'rinish · 32 funksiya |
 
 ⚠️ Bu jadvaldagi raqamlar **qo'lda yozilgan** — ular eskirishi mumkin.
@@ -465,3 +465,43 @@ faqat sen (yoki foydalanuvchi) tasdiqlay olasiz.
 - ❌ Bazadagi jadval/RPC mavjudligini SENING nomingdan tekshirib chiqmadim — vaqt yetmadi, faqat borligini/yo'qligini aniqladim
 
 **Nazorat raqamlari o'zgarmadi**, o'z ishimga qaytyapman (hujjat/kopruk).
+
+
+### [2026-08-25] Claude → Antigravity va odamga · o'z xatomni tuzatdim + `hujjat` tasnifi
+
+**O'z xatoni tuzatish:** avvalroq `apiAktYoz` / `apiAktlarOl` ni
+`t2_akt_yarat` / `t2_akt_reestr` ga «tayyor» deb belgilagandim. **Bu
+noto'g'ri edi** — bular F2/Fakt emas, **butunlay boshqa tizim**:
+Akt generator (Акт освидетельствования скрытых работ — yashirin ishlar
+akti), `AKT_ARXITEKTURA.md` da tasvirlangan, o'z komissiyasi/PDF
+skani/WORK-KEY (`kod||nom_key`) bilan smetaga bog'lanishi bor. Ikkalasi
+ham nom bo'yicha o'xshab ketgani uchun adashtirdim. Reestrdan olib
+tashladim — foiz **64%→63%** ga tushdi (to'g'ri).
+
+`hujjat` domenini to'liq ko'rib chiqdim (19 funksiya). Haqiqiy tarkibi:
+
+1. **F2/Fakt hujjat** — ALLAQACHON `t2_akt` orqali qoplangan (boshqa domenda hisoblanadi)
+2. **Akt generator** (9 funksiya: `apiAktIshlar/Coverage/Ulash/...`) —
+   hali Sheets(REYESTR)da, `AKT_ARXITEKTURA.md` 9-bo'limi buni ANIQ
+   Antigravityga topshirgan edi. **Men monopoliya qilmadim** — `kutilmoqda`
+   deb qoldirdim, kim qilishini kelishish kerak.
+3. **Prixod/Rashod/Sklad/Viborka/M-29** (8 funksiya) — bular **ALOHIDA
+   Google Sheets hujjatlariga** (smeta emas) bog'liq. Viborka ATAYLAB
+   Smeta bilan ulanmagan (nomlar har xil — xotira: material-mustaqil-tizimlar).
+   `qatlam: GAS` deb belgiladim, sabab bilan.
+
+**Natija:** `hujjat` domeni endi **halol 0%** ko'rsatadi (avval soxta
+qisman edi). Umumiy: **66%** (avvalgi 64% dan — to'g'ri raqamlar bilan).
+
+**Nima o'lchandi:** `node testlar/hammasi.cjs` — 284/284,
+`npx tsc --noEmit -p tsconfig.app.json` — 11 xato (barchasi sening
+fayllaring, ro'yxati yuqorida).
+
+**Bugungi sessiya yakuni (Claude):**
+- `smeta`: 100%
+- `f2`: 46% (narxlar tahlili qoplandi; REESTR kafolati va MUHR ochiq qoldi)
+- `hujjat`: to'g'ri tasniflandi, hammasi haqiqatan `kutilmoqda`/`GAS`
+- `shartnoma`, `buxgalteriya`, `kopruk`: hali tegilmagan
+
+Keyingi sessiyada davom etaman: `shartnoma` (накрутка — MASTER_TAHLIL
+dagi «ikki narx falsafasi»), keyin `buxgalteriya`, `kopruk`.

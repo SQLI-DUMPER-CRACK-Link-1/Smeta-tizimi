@@ -147,14 +147,6 @@
       "toliq": true,
       "qatlam": "GAS"
     },
-    "apiAktYoz": {
-      "qopladi": "t2_akt_yarat",
-      "toliq": true
-    },
-    "apiAktlarOl": {
-      "qopladi": "t2_akt_reestr",
-      "toliq": true
-    },
     "apiF2ReestrOl": {
       "qopladi": "t2_akt_reestr",
       "toliq": false
@@ -659,6 +651,38 @@
       "qopladi": "t2_akt_yarat o'zining invariant tekshiruvi",
       "toliq": false,
       "izoh": "oldindan ko'rish emas - real chaqiruvda tekshiradi va buzilish qaytaradi; alohida 'ruxsat so'rash' RPC hali yo'q"
+    },
+    "apiHujjatlarRoyxat": {
+      "qatlam": "GAS",
+      "izoh": "uchta alohida Sheets hujjatiga statik havolalar menyusi"
+    },
+    "apiPrixodOl": {
+      "qatlam": "GAS",
+      "izoh": "alohida 'prixod' Sheets hujjatidan o'qiydi - smeta emas"
+    },
+    "apiPrixodYoz": {
+      "qatlam": "GAS",
+      "izoh": "alohida 'prixod' Sheets hujjatiga yozadi"
+    },
+    "apiRashodYoz": {
+      "qatlam": "GAS",
+      "izoh": "alohida 'prixod' Sheets hujjatiga yozadi"
+    },
+    "apiRashodYozMass": {
+      "qatlam": "GAS",
+      "izoh": "alohida 'prixod' Sheets hujjatiga ommaviy yozadi"
+    },
+    "apiSkladOl": {
+      "qatlam": "GAS",
+      "izoh": "alohida 'prixod' hujjatidagi Остаток varag'idan o'qiydi"
+    },
+    "apiViborkaOl": {
+      "qatlam": "GAS",
+      "izoh": "alohida 'viborka' Sheets hujjatidan o'qiydi - Smeta bilan ATAYLAB ulanmagan (nomlar har xil, [[material-mustaqil-tizimlar]])"
+    },
+    "apiM29Yarat": {
+      "qatlam": "GAS",
+      "izoh": "yangi Google Sheets hujjatini generatsiya qiladi (M-29 hisoboti)"
     }
   },
   "keyingiNavbat": {

@@ -2,13 +2,13 @@
   "versiya": 1,
   "manba": {
     "jami": 253,
-    "hisobga": 163,
-    "tayyor": 104,
+    "hisobga": 155,
+    "tayyor": 102,
     "qisman": 2,
-    "joyida": 80,
+    "joyida": 88,
     "kerakmas": 10
   },
-  "foiz": 64,
+  "foiz": 66,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -365,13 +365,13 @@
       "kochiriladi": true
     },
     "hujjat": {
-      "qatlam": "SUPABASE",
+      "qatlam": "GAS",
       "jami": 19,
-      "tayyor": 2,
+      "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 17,
+      "kutilmoqda": 11,
       "kerakmas": 0,
-      "joyida": 0,
+      "joyida": 8,
       "funksiyalar": [
         "apiAktBoglanmagan",
         "apiAktCoverage",
@@ -395,7 +395,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "navbatda",
-      "foiz": 11,
+      "foiz": 0,
       "kochiriladi": true
     },
     "navbat": {
@@ -1911,10 +1911,10 @@
       "qator": 44,
       "argSoni": 0,
       "domen": "hujjat",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "uchta alohida Sheets hujjatiga statik havolalar menyusi"
     },
     "apiAktlarOl": {
       "fayl": "45_Hujjatlar.js",
@@ -1922,8 +1922,8 @@
       "argSoni": 2,
       "domen": "hujjat",
       "qatlam": "SUPABASE",
-      "holat": "tayyor",
-      "qopladi": "t2_akt_reestr",
+      "holat": "kutilmoqda",
+      "qopladi": null,
       "izoh": null
     },
     "apiAktYoz": {
@@ -1932,8 +1932,8 @@
       "argSoni": 1,
       "domen": "hujjat",
       "qatlam": "SUPABASE",
-      "holat": "tayyor",
-      "qopladi": "t2_akt_yarat",
+      "holat": "kutilmoqda",
+      "qopladi": null,
       "izoh": null
     },
     "apiAktIshlar": {
@@ -2031,60 +2031,60 @@
       "qator": 524,
       "argSoni": 2,
       "domen": "hujjat",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "alohida 'prixod' Sheets hujjatidan o'qiydi - smeta emas"
     },
     "apiPrixodYoz": {
       "fayl": "45_Hujjatlar.js",
       "qator": 582,
       "argSoni": 1,
       "domen": "hujjat",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "alohida 'prixod' Sheets hujjatiga yozadi"
     },
     "apiRashodYoz": {
       "fayl": "45_Hujjatlar.js",
       "qator": 603,
       "argSoni": 1,
       "domen": "hujjat",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "alohida 'prixod' Sheets hujjatiga yozadi"
     },
     "apiRashodYozMass": {
       "fayl": "45_Hujjatlar.js",
       "qator": 629,
       "argSoni": 1,
       "domen": "hujjat",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "alohida 'prixod' Sheets hujjatiga ommaviy yozadi"
     },
     "apiSkladOl": {
       "fayl": "45_Hujjatlar.js",
       "qator": 744,
       "argSoni": 1,
       "domen": "hujjat",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "alohida 'prixod' hujjatidagi Остаток varag'idan o'qiydi"
     },
     "apiViborkaOl": {
       "fayl": "45_Hujjatlar.js",
       "qator": 793,
       "argSoni": 2,
       "domen": "hujjat",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "alohida 'viborka' Sheets hujjatidan o'qiydi - Smeta bilan ATAYLAB ulanmagan (nomlar har xil, [[material-mustaqil-tizimlar]])"
     },
     "apiNavbatHolat": {
       "fayl": "50_Navbat.js",
@@ -2381,10 +2381,10 @@
       "qator": 2,
       "argSoni": 2,
       "domen": "hujjat",
-      "qatlam": "SUPABASE",
-      "holat": "kutilmoqda",
+      "qatlam": "GAS",
+      "holat": "joyida",
       "qopladi": null,
-      "izoh": null
+      "izoh": "yangi Google Sheets hujjatini generatsiya qiladi (M-29 hisoboti)"
     },
     "apiFaktSinxron": {
       "fayl": "77_ReverseSync.js",
