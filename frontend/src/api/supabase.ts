@@ -608,18 +608,9 @@ export function sbSkladgaYozish(kompaniya_id: number, operatsiya: 'prixod' | 'ra
   });
 }
 
-export function sbSkladNomTaklifOl(nom: string, lim = 3) {
-  return fetch('/api/sb', {
-    method: 'POST',
-    body: JSON.stringify({ rpc: 't2_sklad_nom_taklif', p_nom: nom, p_limit: lim })
-  }).then(r => r.json());
-}
-
 export async function sbSkladNomTaklifOl(nom: string, limit = 5): Promise<{ok: boolean, qatorlar?: any[], error?: string}> {
   if (!nom || nom.length < 2) return { ok: true, qatorlar: [] };
-  // A simple ilike filter over the view
-  const filtr = 
-omi.ilike.% + nom + %;
+  const filtr = 'nomi.ilike.%' + nom + '%';
   const res = await fetch('/api/sb', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -627,7 +618,6 @@ omi.ilike.% + nom + %;
   });
   return await res.json();
 }
-
 
 // --- FAKTURA (EHF / Didox) ---
 
@@ -648,7 +638,7 @@ export async function sbFakturalarOl(kompaniya_id: number): Promise<{ok: boolean
   const res = await fetch('/api/sb', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jadval: 't2_faktura', filtr: \kompaniya_id.eq.\\ })
+    body: JSON.stringify({ jadval: 't2_faktura', filtr: 'kompaniya_id.eq.' + kompaniya_id })
   });
   return await res.json();
 }
@@ -663,13 +653,12 @@ export function sbFakturaYoz(item: T2Faktura) {
 export async function sbFakturaFaylYoz(file: File, faktura_id: number): Promise<{ok: boolean, url?: string, error?: string}> {
   // Supabase Storage orqali R2 ga yuklash (shablon)
   const ext = file.name.split('.').pop();
-  const path = \akturalar/\_\.\\;
+  const path = 'fakturalar/' + faktura_id + '_' + Date.now() + '.' + ext;
   
   // Haqiqiy loyihada supabase.storage.from('hujjatlar').upload(path, file)
   // Mock qilib turamiz, chunki @supabase/supabase-js o'rnatilmagan yoki import qilinmagan bo'lishi mumkin
-  return { ok: true, url: \https://r2.milliy-os.uz/\\ };
+  return { ok: true, url: 'https://r2.milliy-os.uz/' + path };
 }
-
 
 // --- SPRAVOCHNIK (Ish turlari va Shaxsiy smetalar) ---
 
@@ -688,7 +677,7 @@ export async function sbIshTurlariOl(kompaniya_id: number): Promise<{ok: boolean
   const res = await fetch('/api/sb', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jadval: 't2_ish_turi', filtr: \kompaniya_id.eq.\\ })
+    body: JSON.stringify({ jadval: 't2_ish_turi', filtr: 'kompaniya_id.eq.' + kompaniya_id })
   });
   return await res.json();
 }
@@ -705,7 +694,7 @@ export async function sbShaxsiySmetalarOl(kompaniya_id: number) {
   const res = await fetch('/api/sb', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jadval: 't2_shaxsiy_smeta', filtr: \kompaniya_id.eq.\\ })
+    body: JSON.stringify({ jadval: 't2_shaxsiy_smeta', filtr: 'kompaniya_id.eq.' + kompaniya_id })
   });
   return await res.json();
 }
@@ -718,3 +707,4 @@ export function sbShaxsiySmetaYarat(kompaniya_id: number, nom: string, qatorlar:
     qatorlar
   });
 }
+

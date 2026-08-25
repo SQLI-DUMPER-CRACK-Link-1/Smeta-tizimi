@@ -1,7 +1,7 @@
 ﻿import { yozAmali } from './supabase';
 
 export async function sbBirjaSorovOl(kategoriya?: string) {
-  const filtr = kategoriya ? \kategoriya.eq.\\ : '';
+  const filtr = kategoriya ? 'kategoriya.eq.' + kategoriya : '';
   const res = await fetch('/api/sb', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
