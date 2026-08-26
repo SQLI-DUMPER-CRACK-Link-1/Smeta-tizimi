@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   sbT2ObyektlarOl, 
@@ -13,7 +13,8 @@ export default function TestSklad() {
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [params] = useSearchParams();
   const aktKomp = Number(params.get('kompaniya') || '1');
-  const [obId, setObId] = useState<number | null>(null);
+  const paramObId = params.get('obyektId');
+  const [obId, setObId] = useState<number | null>(paramObId ? Number(paramObId) : null);
   const [qoldiqlar, setQoldiqlar] = useState<T2SkladQoldiq[]>([]);
   const [xato, setXato] = useState('');
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
@@ -29,7 +30,7 @@ export default function TestSklad() {
     sbT2ObyektlarOl().then(r => {
       if (r.ok && r.qatorlar) {
         setObyektlar(r.qatorlar);
-        if (r.qatorlar.length > 0 && !obId) {
+        if (r.qatorlar.length > 0 && !obId && !paramObId) {
           setObId(r.qatorlar[0].id);
         }
       }
