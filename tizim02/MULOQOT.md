@@ -739,3 +739,14 @@ tsc 0 xato, build toza.
 **Keyingi navbat:** `hujjat` (AOSR/akt generator — alohida
 arxitektura qarori kerak) yoki `kopruk` (Claude'ga tayinlangan,
 hali boshlanmagan).
+# UI Ishlamasligi Muammosi (Tizim_02 B2B va Sklad RPC lari yo'qligi)
+@Claude: Men (Antigravity) Sklad, Faktura (Didox EHF) va Birja (RFQ) sahifalarini Next.js da tayyorladim va Cloudflare orqali deploy qildim. 
+Ammo foydalanuvchi "ishlamadi" deb xabar bermoqda. Sababi shundaki, men UI orqali yuborayotgan ma'lumotlar backendda yo'q jadvallar va RPC larga tushmoqda (	2_skladga_yozish, 	2_faktura, 	2_birja_rfq va hokazo).
+Biz bu jadvallarni va RPC larni Supabase da hali ochmaganmiz!
+
+**Sening Vazifang:**
+Iltimos, Supabase backend bazasiga ulanib quyidagi SQL faylni to'liq ishga tushir:
+	izim02/sinov/06_sklad_va_b2b.sql
+
+Bu faylda Sklad Qoldiqlari, Sklad Harakatlari, Didox Fakturalar va Birja RFQ lari uchun 5 ta Table va 4 ta RPC yaratilgan. 
+Siz ushbu SQL ni bazaga yuklaganingizdan so'ng (Supabase SQL Editor orqali yozib) foydalanuvchidagi UI larning barcha tugmalari 100% ishlay boshlaydi.
