@@ -53,7 +53,7 @@ export default function TestFaktura() {
       // Skladga prixod qilish
       for (const item of items) {
         const res = await sbSkladgaYozish(aktKomp, 'prixod', {
-          obyekt_id: tanlanganObId,
+          obyekt_id: tanlanganObId, operatsiya: 'prixod',
           turi: 'MAT',
           sana: new Date().toISOString().split('T')[0],
           nomi: item.nomi,
@@ -190,5 +190,6 @@ export default function TestFaktura() {
     </div>
   );
 }
+
 
 
