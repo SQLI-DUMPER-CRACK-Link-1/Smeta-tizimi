@@ -713,3 +713,86 @@ export function sbShaxsiySmetaYarat(kompaniya_id: number, nom: string, qatorlar:
   });
 }
 
+
+// ==========================================
+// KORZINKA VA TAHRIRLASH (TIZIM_02)
+// ==========================================
+
+export async function sbObyektOchirish(id: number): Promise<any> {
+  // 1. Supabase da korzinkaga tashlash
+  const res = await fetch('/api/sb-yoz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rpc: 't2_korzinkaga_tashlash', rpcArgs: { p_jadval: 't2_obyekt', p_id: id } })
+  });
+  const data = await res.json();
+  
+  // 2. Google Drive dan ham o'chirish (yoki Korzinkaga o'tkazish) uchun GAS ga yuboriladi
+  // Buni Claude backendda t2_drive_trash amali bilan bog'laydi.
+  fetch('/api/gas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 't2_drive_trash', payload: { type: 'obyekt', id } })
+  }).catch(console.error);
+
+  return data;
+}
+
+export async function sbObyektTahrirlash(id: number, nomi: string, tur: string): Promise<any> {
+  const res = await fetch('/api/sb-yoz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rpc: 't2_obyekt_yangila', rpcArgs: { p_id: id, p_nomi: nomi, p_tur: tur } })
+  });
+  
+  // Drive dagi papka nomini ham o'zgartirish
+  fetch('/api/gas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 't2_drive_rename', payload: { type: 'obyekt', id, yangiNom: nomi } })
+  }).catch(console.error);
+
+  return await res.json();
+}
+
+export async function sbKorzinkadanTiklash(jadval: string, id: number): Promise<any> {
+  const res = await fetch('/api/sb-yoz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rpc: 't2_korzinkadan_tiklash', rpcArgs: { p_jadval: jadval, p_id: id } })
+  });
+  
+  fetch('/api/gas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 't2_drive_restore', payload: { type: jadval, id } })
+  }).catch(console.error);
+
+  return await res.json();
+}
+
+export async function sbButunlayOchirish(jadval: string, id: number): Promise<any> {
+  const res = await fetch('/api/sb-yoz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rpc: 't2_butunlay_ochirish', rpcArgs: { p_jadval: jadval, p_id: id } })
+  });
+  
+  fetch('/api/gas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 't2_drive_hard_delete', payload: { type: jadval, id } })
+  }).catch(console.error);
+
+  return await res.json();
+}
+
+export async function sbKorzinkaOqish(): Promise<any> {
+  const res = await fetch('/api/sb', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rpc: 't2_korzinka_ol' }) // Returns all items where is_deleted = true
+  });
+  return await res.json();
+}
+

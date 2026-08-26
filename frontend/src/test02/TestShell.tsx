@@ -23,7 +23,7 @@
  */
 import { Outlet, NavLink } from 'react-router-dom';
 import { KompaniyaProvider, KompaniyaTanlagich } from './KompaniyaTanlov';
-import { FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer, Upload, Tags,
+import { Trash2, FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer, Upload, Tags,
          TrendingUp, FileInput, Box, ShoppingCart, UserPlus, CreditCard, FileText, Archive,
          BarChart, Settings, ShieldAlert, LayoutDashboard } from 'lucide-react';
 
@@ -44,6 +44,7 @@ const TEST_MENYU = [
   { yol: '/admin/test/hisobot',   nom: 'Boss Tahlil',  Ikonka: BarChart },
   { yol: '/admin/test/erp',       nom: 'ERP Boshqaruv', Ikonka: LayoutDashboard },
   { yol: '/admin/test/sozlama',   nom: 'Sozlamalar',   Ikonka: Settings },
+  { yol: '/admin/test/korzinka',  nom: 'Korzinka', Ikonka: Trash2 },
   { yol: '/admin/test/tizim',     nom: 'Audit & Loglar', Ikonka: ShieldAlert },
   { yol: '/admin/test/oqish',     nom: 'GAS o\'qish tezligi', Ikonka: Timer },
   { yol: '/admin/tezlik',         nom: 'Tezlik sinovi', Ikonka: Gauge },
@@ -94,4 +95,5 @@ export default function TestShell() {
     </KompaniyaProvider>
   );
 }
+
 

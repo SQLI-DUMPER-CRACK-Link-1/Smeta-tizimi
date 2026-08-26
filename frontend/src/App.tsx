@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+﻿import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from './umumiy/ui/Toast';
 import SahifaTopilmadi from './umumiy/ui/SahifaTopilmadi';
@@ -19,8 +19,9 @@ import Hujjatlar from './admin/sahifalar/Hujjatlar';
 import ShaxsiySmeta from './admin/sahifalar/ShaxsiySmeta';
 import SupabaseSozlama from './admin/sahifalar/SupabaseSozlama';
 import TezlikSinovi from './admin/sahifalar/TezlikSinovi';
-/* TIZIM_02 — Supabase sinov muhiti. Tizim_01 ga TEGMAYDI. */
+/* TIZIM_02 вЂ” Supabase sinov muhiti. Tizim_01 ga TEGMAYDI. */
 const TestShell     = lazy(() => import('./test02/TestShell'));
+const TestKorzinka  = lazy(() => import('./test02/TestKorzinka'));
 const TestXarita    = lazy(() => import('./test02/TestXarita'));
 const TestObyektlar = lazy(() => import('./test02/TestObyektlar'));
 const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
@@ -84,18 +85,19 @@ export default function App() {
           <Route path="ierarxiya" element={<Ierarxiya />} />
           <Route path="monitoring" element={<Monitoring />} />
           <Route path="sozlamalar" element={<Sozlamalar />} />
-          {/* ⚡ 2026-08-16: eski GAS paneldagi «Файл боғлаш» tabi */}
+          {/* вљЎ 2026-08-16: eski GAS paneldagi В«Р¤Р°Р№Р» Р±РѕТ“Р»Р°С€В» tabi */}
           <Route path="fayl-boglash" element={<FaylBoglash />} />
           <Route path="hujjatlar" element={<Hujjatlar />} />
           <Route path="shaxsiy-smeta" element={<ShaxsiySmeta />} />
           <Route path="supabase" element={<SupabaseSozlama />} />
           <Route path="tezlik" element={<TezlikSinovi />} />
 
-          {/* ===== TIZIM_02 (SINOV) — alohida bo’lim =====
-              Ma’lumot Supabase’dan o’qiladi. Tizim_01 ning bironta
-              marshruti/sahifasi o’zgartirilmagan. */}
+          {/* ===== TIZIM_02 (SINOV) вЂ” alohida boвЂ™lim =====
+              MaвЂ™lumot SupabaseвЂ™dan oвЂ™qiladi. Tizim_01 ning bironta
+              marshruti/sahifasi oвЂ™zgartirilmagan. */}
           <Route path="test" element={<TestShell />}>
             <Route index element={<Navigate to="/admin/test/obyektlar" replace />} />
+            <Route path="korzinka" element={<TestKorzinka />} />
             <Route path="xarita" element={<TestXarita />} />
             <Route path="obyektlar" element={<TestObyektlar />} />
             <Route path="daraxt" element={<TestDaraxt />} />
@@ -121,20 +123,20 @@ export default function App() {
           <Route path="taminot" element={<ErpTaminot />} />
           <Route path="sifat" element={<ErpSifat />} />
 
-          {/* WARN 2026-08-17 — ESKI MANZILLAR UCHUN KO’PRIK.
-              Menyudagi `shartnoma` → `shartnomalar` xatosi tuzatilgach ham
+          {/* WARN 2026-08-17 вЂ” ESKI MANZILLAR UCHUN KOвЂ™PRIK.
+              Menyudagi `shartnoma` в†’ `shartnomalar` xatosi tuzatilgach ham
               muammo qaytdi, chunki eski manzil FOYDALANUVCHIDA qolgan
-              bo’lishi mumkin: xatcho’p, brauzer tarixi, avtoto’ldirish,
-              yorliq, boshqaga yuborilgan havola. Ular hammasi eski yo’lga
-              boradi. Bitta havolani tuzatish YETMAYDI — eski manzil ham
+              boвЂ™lishi mumkin: xatchoвЂ™p, brauzer tarixi, avtotoвЂ™ldirish,
+              yorliq, boshqaga yuborilgan havola. Ular hammasi eski yoвЂ™lga
+              boradi. Bitta havolani tuzatish YETMAYDI вЂ” eski manzil ham
               ishlashi kerak. */}
           <Route path="shartnoma" element={<Navigate to="/admin/shartnomalar" replace />} />
           <Route path="kalkulyator" element={<Navigate to="/admin/shaxsiy-smeta" replace />} />
 
-          {/* WARN 2026-08-17 — ENG MUHIMI: noma’lum `/admin/...` manzil endi
+          {/* WARN 2026-08-17 вЂ” ENG MUHIMI: nomaвЂ™lum `/admin/...` manzil endi
               QOBIQ ICHIDA ochiladi. Avval u pastdagi `path="*"` ga tushib,
-              foydalanuvchini KIRISH SAHIFASIGA otib yuborardi — aynan
-              "шартномалар табига кирсам кириш панелига қайтариб юборайапди"
+              foydalanuvchini KIRISH SAHIFASIGA otib yuborardi вЂ” aynan
+              "С€Р°СЂС‚РЅРѕРјР°Р»Р°СЂ С‚Р°Р±РёРіР° РєРёСЂСЃР°Рј РєРёСЂРёС€ РїР°РЅРµР»РёРіР° Т›Р°Р№С‚Р°СЂРёР± СЋР±РѕСЂР°Р№Р°РїРґРё"
               shikoyatining ildizi shu. Adashgan manzil chiqarib yuborish
               uchun sabab EMAS. */}
           <Route path="*" element={<SahifaTopilmadi />} />
@@ -162,3 +164,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+

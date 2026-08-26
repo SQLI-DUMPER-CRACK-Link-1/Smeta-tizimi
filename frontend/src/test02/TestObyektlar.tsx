@@ -11,7 +11,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Database, RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Database, RefreshCw, ChevronRight, AlertTriangle, Trash2, Edit3 } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
 /* WARN 2026-08-19: endi TIZIM_02 ning O’Z jadvallari o’qiladi (t2_*),
@@ -19,7 +19,8 @@ import { FmtN } from '../lib/format';
    «tizim_02 ni supabase ni yangi shu tizim uchun ochilgan jadvallargagina
    bog’lash». Ikkisi aralashsa qaysi raqam qaysi tizimdan kelgani
    bilinmay qoladi. */
-import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../api/supabase';
+import { sbT2ObyektlarOlKomp, sbObyektOchirish, sbObyektTahrirlash, type T2Obyekt } from '../api/supabase';
+import { showToast } from '../umumiy/ui/Toast';
 import { useKompaniya } from './KompaniyaTanlov';
 
 type Qator = T2Obyekt;
@@ -46,6 +47,44 @@ export default function TestObyektlar() {
   const [xato, setXato] = useState('');
   const [ms, setMs] = useState(0);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
+  const [editObj, setEditObj] = useState<Qator | null>(null);
+  const [nomi, setNomi] = useState('');
+  const [tur, setTur] = useState('');
+
+  const handleOchirish = async (e: any, o: Qator) => {
+    e.stopPropagation();
+    if (!confirm(o.nom + " obyektini Korzinkaga o'tkazasizmi? (Drive dan ham axlat qutiga o'tadi)")) return;
+    try {
+      setYuklanmoqda(true);
+      await sbObyektOchirish(o.id);
+      showToast('Obyekt Korzinkaga o\'tkazildi', 'success');
+      yukla();
+    } catch(err: any) {
+      showToast('Xatolik: ' + err.message, 'error');
+      setYuklanmoqda(false);
+    }
+  };
+
+  const handleTahrir = (e: any, o: Qator) => {
+    e.stopPropagation();
+    setEditObj(o);
+    setNomi(o.nom);
+    setTur(o.tur || '');
+  };
+
+  const saqlashTahrir = async () => {
+    if(!editObj) return;
+    try {
+      setYuklanmoqda(true);
+      await sbObyektTahrirlash(editObj.id, nomi, tur);
+      showToast('Obyekt tahrirlandi', 'success');
+      setEditObj(null);
+      yukla();
+    } catch(err: any) {
+      showToast('Xatolik: ' + err.message, 'error');
+      setYuklanmoqda(false);
+    }
+  };
 
   const yukla = async () => {
     if (kompYuklanmoqda) return;          // kompaniya hali aniqlanmagan
@@ -87,6 +126,19 @@ export default function TestObyektlar() {
       }
     >
       <div className="space-y-3">
+        {editObj && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="bg-surface border border-border p-5 rounded-xl w-[400px]">
+              <h3 className="font-bold text-lg mb-4 text-text">Obyektni Tahrirlash</h3>
+              <input value={nomi} onChange={e=>setNomi(e.target.value)} className="w-full bg-bg border border-border rounded p-2 mb-3 text-text outline-none focus:border-sky-500" placeholder="Yangi nomi..." />
+              <input value={tur} onChange={e=>setTur(e.target.value)} className="w-full bg-bg border border-border rounded p-2 mb-4 text-text outline-none focus:border-sky-500" placeholder="Obyekt turi..." />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setEditObj(null)} className="px-4 py-2 rounded text-text-dim hover:bg-surface-2">Bekor qilish</button>
+                <button onClick={saqlashTahrir} className="px-4 py-2 rounded bg-accent text-white">Saqlash</button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="karta p-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px]">
           <span className="inline-flex items-center gap-2 text-text">
             <Database size={14} className="text-accent" />
@@ -162,7 +214,10 @@ export default function TestObyektlar() {
                         <td className={`px-3 py-2 ${y.eski ? 'text-warn' : 'text-text-mute'}`}>
                           {y.matn}
                         </td>
-                        <td className="px-2 text-text-mute"><ChevronRight size={14} /></td>
+                        <td className="px-3 py-2 flex items-center gap-2 justify-end">
+                           <button onClick={(e) => handleTahrir(e, o)} className="p-1.5 hover:bg-sky-500/20 text-sky-500 rounded transition-colors"><Edit3 size={15}/></button>
+                           <button onClick={(e) => handleOchirish(e, o)} className="p-1.5 hover:bg-red-500/20 text-red-500 rounded transition-colors"><Trash2 size={15}/></button>
+                        </td>
                       </tr>
                     );
                   })}
