@@ -1,7 +1,7 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { sbKorzinkaOqish, sbKorzinkadanTiklash, sbButunlayOchirish } from '../api/supabase';
 import { Trash2, RefreshCw, AlertTriangle, Building2, FileText, Package } from 'lucide-react';
-import { showToast } from '../umumiy/ui/Toast';
+import { toast } from '../umumiy/ui/Toast';
 
 export default function TestKorzinka() {
   const [items, setItems] = useState<any[]>([]);
@@ -28,10 +28,10 @@ export default function TestKorzinka() {
   const handleTiklash = async (id: number) => {
     try {
       await sbKorzinkadanTiklash(tab, id);
-      showToast('Muvaffaqiyatli tiklandi', 'success');
+      toast('Muvaffaqiyatli tiklandi', 'ok');
       yuklash();
     } catch(e) {
-      showToast('Xatolik yuz berdi', 'error');
+      toast('Xatolik yuz berdi', 'danger');
     }
   };
 
@@ -39,10 +39,10 @@ export default function TestKorzinka() {
     if (!confirm('Rostdan ham butunlay o\'chirasizmi? (Drive dan ham o\'chib ketadi!)')) return;
     try {
       await sbButunlayOchirish(tab, id);
-      showToast('Butunlay o\'chirildi', 'success');
+      toast('Butunlay o\'chirildi', 'ok');
       yuklash();
     } catch(e) {
-      showToast('Xatolik yuz berdi', 'error');
+      toast('Xatolik yuz berdi', 'danger');
     }
   };
 

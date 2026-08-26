@@ -20,7 +20,7 @@ import { FmtN } from '../lib/format';
    bog’lash». Ikkisi aralashsa qaysi raqam qaysi tizimdan kelgani
    bilinmay qoladi. */
 import { sbT2ObyektlarOlKomp, sbObyektOchirish, sbObyektTahrirlash, type T2Obyekt } from '../api/supabase';
-import { showToast } from '../umumiy/ui/Toast';
+import { toast } from '../umumiy/ui/Toast';
 import { useKompaniya } from './KompaniyaTanlov';
 
 type Qator = T2Obyekt;
@@ -57,10 +57,10 @@ export default function TestObyektlar() {
     try {
       setYuklanmoqda(true);
       await sbObyektOchirish(o.id);
-      showToast('Obyekt Korzinkaga o\'tkazildi', 'success');
+      toast('Obyekt Korzinkaga o\'tkazildi', 'ok');
       yukla();
     } catch(err: any) {
-      showToast('Xatolik: ' + err.message, 'error');
+      toast('Xatolik: ' + err.message, 'danger');
       setYuklanmoqda(false);
     }
   };
@@ -77,11 +77,11 @@ export default function TestObyektlar() {
     try {
       setYuklanmoqda(true);
       await sbObyektTahrirlash(editObj.id, nomi, tur);
-      showToast('Obyekt tahrirlandi', 'success');
+      toast('Obyekt tahrirlandi', 'ok');
       setEditObj(null);
       yukla();
     } catch(err: any) {
-      showToast('Xatolik: ' + err.message, 'error');
+      toast('Xatolik: ' + err.message, 'danger');
       setYuklanmoqda(false);
     }
   };
