@@ -1,4 +1,4 @@
-/**
+﻿/**
  * T2_Kozgu.js — TIZIM_02: «ИШЧИ СМЕТА» VARAG'I
  * ═══════════════════════════════════════════════════════════════════════════
  *
@@ -49,6 +49,18 @@ function _t2ObyektOl(nom){
  * ko'zgu yarim chiziladi — bu eng xavfli xato turi (xato chiqmaydi,
  * lekin hujjat noto'g'ri).
  */
+function _t2HolatlarOl(obyektId){
+  var hammasi = [], offset = 0, SAHIFA = 1000;
+  for(var qadam = 0; qadam < 100; qadam++){
+    var bolak = _t2Get('t2_qator_holat?obyekt_id=eq.' + obyektId + '&limit=' + SAHIFA + '&offset=' + offset);
+    if(!bolak.length) break;
+    hammasi = hammasi.concat(bolak);
+    if(bolak.length < SAHIFA) break;
+    offset += bolak.length;
+  }
+  return hammasi;
+}
+
 function _t2QatorlarOl(obyektId){
   var hammasi = [], offset = 0, SAHIFA = 1000;
   for(var qadam = 0; qadam < 100; qadam++){          // xavfsizlik chegarasi
@@ -121,7 +133,18 @@ function apiT2VaraqYarat(obyekt){
 
     /* ── Iyerarxiyani tiklaymiz (chuqurlikni bilish uchun) ── */
     var xarita = {}, i;
-    for(i = 0; i < qatorlar.length; i++) xarita[qatorlar[i].id] = qatorlar[i];
+        var holatlar = _t2HolatlarOl(ob.id);
+    var holatXarita = {};
+    for(var hi = 0; hi < holatlar.length; hi++) holatXarita[holatlar[hi].qator_id] = holatlar[hi];
+    
+    for(i = 0; i < qatorlar.length; i++) {
+      var h = holatXarita[qatorlar[i].id];
+      if(h) {
+        qatorlar[i].fakt_hajm = h.fakt_hajm; qatorlar[i].fakt_summa = h.fakt_summa;
+        qatorlar[i].qoldiq_hajm = h.qoldiq_hajm; qatorlar[i].qoldiq_summa = h.qoldiq_summa;
+      }
+      xarita[qatorlar[i].id] = qatorlar[i];
+    }
     function chuqurlik(q){
       var d = 0, kor = {};
       while(q && q.ota_id != null && !kor[q.id]){
@@ -218,11 +241,11 @@ function apiT2VaraqYarat(obyekt){
     var USTUNLAR = ['№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.',
                     'ХАЖМ (ед)', 'ХАЖМ (жами)', 'НАРХ (1 ед)', 'СУММА', 'ТИП',
                     'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ',
-                    '_id', '_v'];
+                    'F2 HAJM', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA', '_id', '_v'];
     var NU = USTUNLAR.length;
-    var KO_RINADI = 13;                      // 14–15 yashirin
+    var KO_RINADI = 17;                      // 14–15 yashirin
     var C_NORMA = 5, C_HAJM = 6, C_NARX = 7, C_SUMMA = 8, C_KAT1 = 10;
-    var C_ID = 14, C_VER = 15;
+    var C_F2_HAJM = 14, C_F2_SUM = 15, C_QOLD_HAJM = 16, C_QOLD_SUM = 17; var C_ID = 18, C_VER = 19;
     var bosh = function(){ return new Array(NU).join('.').split('.'); };
 
     /* Kategoriya bo'yicha jamlanma — sarlavhada ko'rsatiladi */
@@ -382,6 +405,11 @@ function apiT2VaraqYarat(obyekt){
         qator[kUst - 1] = '=IF($H' + qn + '=""' + AJR + '""' + AJR + '$H' + qn + ')';
       }
 
+            qator[C_F2_HAJM - 1] = (r.fakt_hajm == null) ? '' : Number(r.fakt_hajm);
+      qator[C_F2_SUM - 1]  = (r.fakt_summa == null) ? '' : Number(r.fakt_summa);
+      qator[C_QOLD_HAJM - 1] = (r.qoldiq_hajm == null) ? '' : Number(r.qoldiq_hajm);
+      qator[C_QOLD_SUM - 1]  = (r.qoldiq_summa == null) ? '' : Number(r.qoldiq_summa);
+      
       qator[C_ID - 1]  = r.id;
       qator[C_VER - 1] = (r.versiya == null) ? '' : r.versiya;
 
@@ -1013,3 +1041,4 @@ function _t2Ajratgich(sh){
   try{ if(yac) yac.clearContent(); }catch(e2){}
   return ',';                                     // ma'lum bo'lmasa — odatiy
 }
+
