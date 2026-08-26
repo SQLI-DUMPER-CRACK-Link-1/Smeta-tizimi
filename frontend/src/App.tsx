@@ -21,6 +21,7 @@ import SupabaseSozlama from './admin/sahifalar/SupabaseSozlama';
 import TezlikSinovi from './admin/sahifalar/TezlikSinovi';
 /* TIZIM_02 — Supabase sinov muhiti. Tizim_01 ga TEGMAYDI. */
 const TestShell     = lazy(() => import('./test02/TestShell'));
+const TestXarita    = lazy(() => import('./test02/TestXarita'));
 const TestObyektlar = lazy(() => import('./test02/TestObyektlar'));
 const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
 const TestImport    = lazy(() => import('./test02/TestImport'));
@@ -95,6 +96,7 @@ export default function App() {
               marshruti/sahifasi o’zgartirilmagan. */}
           <Route path="test" element={<TestShell />}>
             <Route index element={<Navigate to="/admin/test/obyektlar" replace />} />
+            <Route path="xarita" element={<TestXarita />} />
             <Route path="obyektlar" element={<TestObyektlar />} />
             <Route path="daraxt" element={<TestDaraxt />} />
             <Route path="import" element={<TestImport />} />
