@@ -11,7 +11,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Database, RefreshCw, ChevronRight, AlertTriangle, Trash2, Edit3 } from 'lucide-react';
+import { Database, RefreshCw, AlertTriangle, Trash2, Edit3 } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
 /* WARN 2026-08-19: endi TIZIM_02 ning O’Z jadvallari o’qiladi (t2_*),

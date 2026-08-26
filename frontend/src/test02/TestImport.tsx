@@ -215,13 +215,13 @@ export default function TestImport() {
     const nom = yangiNom.trim();
     if (!nom) { toast('Obyekt nomini kiriting', 'warn'); return; }
     if (obyektlar.some((o) => o.nom === nom)) {
-      toast('Bunday obyekt bor — ro\'yxatdan tanlang', 'warn'); return;
+      toast('Bunday obyekt bor — ro'yxatdan tanlang', 'warn'); return;
     }
     setYaratilmoqda(true);
     try {
-      const r = await gas<any>('apiT2ObyektYarat', nom);
+      const r = await gas<any>('apiT2YangiObyektYarat', nom);
       if (!r.ok) { toast(r.xabar || 'Yaratilmadi', 'danger', undefined, 9000); return; }
-      toast('Obyekt yaratildi — endi ichini to\'ldiring', 'ok');
+      toast('Obyekt va Drive papkalari yaratildi', 'ok');
       setYangiNom(''); obyektlarYukla(); obyektTanla(nom);
     } catch (e: any) {
       toast(e?.message || 'Xato', 'danger', undefined, 9000);
