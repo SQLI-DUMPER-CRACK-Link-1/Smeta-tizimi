@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { sbT2ObyektlarOl, type T2Obyekt } from '../api/supabase';
 import { Network, Building2, HardHat, Warehouse, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -48,19 +48,20 @@ export default function TestXarita() {
           
           {obyektlar.map((ob, idx) => (
             <div key={idx} className="flex items-center gap-6 relative">
-              {/* Object Node */}
-              <motion.div 
-                initial={{ x: -50, opacity: 0 }} 
-                animate={{ x: 0, opacity: 1 }} 
-                transition={{ delay: idx * 0.1 }}
-                className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 w-56 relative z-20 hover:border-sky-500 transition-colors shadow-lg cursor-pointer group"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg"><HardHat size={20}/></div>
-                  <h3 className="font-bold text-zinc-100 group-hover:text-sky-400 transition-colors">{ob.nom}</h3>
-                </div>
-                <p className="text-xs text-zinc-500 line-clamp-1">{ob.tur || "Tavsif yo'q"}</p>
-              </motion.div>
+              <Link to={`/admin/test/daraxt?obyekt=${ob.id}`}>
+                <motion.div 
+                  initial={{ x: -50, opacity: 0 }} 
+                  animate={{ x: 0, opacity: 1 }} 
+                  transition={{ delay: idx * 0.1 }}
+                  className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 w-56 relative z-20 hover:border-sky-500 transition-colors shadow-lg cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg"><HardHat size={20}/></div>
+                    <h3 className="font-bold text-zinc-100 group-hover:text-sky-400 transition-colors">{ob.nom}</h3>
+                  </div>
+                  <p className="text-xs text-zinc-500 line-clamp-1">{ob.tur || "Tavsif yo'q"}</p>
+                </motion.div>
+              </Link>
 
               <div className="w-10 relative">
                 <div className="absolute top-1/2 left-0 w-full h-[2px] bg-zinc-700 -translate-y-1/2"></div>
@@ -68,24 +69,30 @@ export default function TestXarita() {
 
               {/* LEVEL 2: Leaves (Sklad, Smeta, etc) */}
               <div className="flex flex-col gap-3">
-                <motion.div 
-                  initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: idx * 0.1 + 0.1 }}
-                  className="bg-black border border-zinc-800 rounded p-2 text-sm text-zinc-300 flex items-center gap-2 hover:bg-zinc-900 cursor-pointer"
-                >
-                  <Warehouse size={16} className="text-amber-400"/> Obyekt Skladi
-                </motion.div>
-                <motion.div 
-                  initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: idx * 0.1 + 0.2 }}
-                  className="bg-black border border-zinc-800 rounded p-2 text-sm text-zinc-300 flex items-center gap-2 hover:bg-zinc-900 cursor-pointer"
-                >
-                  <FileText size={16} className="text-indigo-400"/> Asosiy Smeta
-                </motion.div>
-                <motion.div 
-                  initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: idx * 0.1 + 0.3 }}
-                  className="bg-black border border-zinc-800 rounded p-2 text-sm text-zinc-300 flex items-center gap-2 hover:bg-zinc-900 cursor-pointer"
-                >
-                  <Network size={16} className="text-rose-400"/> F2 (Bajarilgan ishlar)
-                </motion.div>
+                <Link to="/admin/test/sklad">
+                  <motion.div 
+                    initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: idx * 0.1 + 0.1 }}
+                    className="bg-black border border-zinc-800 rounded p-2 text-sm text-zinc-300 flex items-center gap-2 hover:bg-zinc-900 cursor-pointer"
+                  >
+                    <Warehouse size={16} className="text-amber-400"/> Obyekt Skladi
+                  </motion.div>
+                </Link>
+                <Link to={`/admin/test/daraxt?obyekt=${ob.id}`}>
+                  <motion.div 
+                    initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: idx * 0.1 + 0.2 }}
+                    className="bg-black border border-zinc-800 rounded p-2 text-sm text-zinc-300 flex items-center gap-2 hover:bg-zinc-900 cursor-pointer"
+                  >
+                    <FileText size={16} className="text-indigo-400"/> Asosiy Smeta
+                  </motion.div>
+                </Link>
+                <Link to="/admin/test/f2">
+                  <motion.div 
+                    initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: idx * 0.1 + 0.3 }}
+                    className="bg-black border border-zinc-800 rounded p-2 text-sm text-zinc-300 flex items-center gap-2 hover:bg-zinc-900 cursor-pointer"
+                  >
+                    <Network size={16} className="text-rose-400"/> F2 (Bajarilgan ishlar)
+                  </motion.div>
+                </Link>
               </div>
             </div>
           ))}
@@ -99,5 +106,6 @@ export default function TestXarita() {
     </div>
   );
 }
+
 
 
