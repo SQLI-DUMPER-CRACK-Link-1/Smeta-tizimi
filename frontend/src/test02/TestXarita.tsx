@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { sbT2ObyektlarOl, type T2Obyekt } from '../api/supabase';
-import { Network, Building2, HardHat, Warehouse, FileText, Pickaxe, Map, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Building2, HardHat, Warehouse, FileText, Pickaxe, Map, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 
 export default function TestXarita() {
