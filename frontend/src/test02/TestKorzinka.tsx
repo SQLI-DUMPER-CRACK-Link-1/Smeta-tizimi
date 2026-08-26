@@ -71,13 +71,13 @@ export default function TestKorzinka() {
       </div>
 
       <div className="flex gap-2 mb-6">
-        <button onClick={() => setTab('t2_obyekt')} className={px-4 py-2 rounded-lg font-medium flex items-center gap-2 }>
+        <button onClick={() => setTab('t2_obyekt')} className={"px-4 py-2 rounded-lg font-medium flex items-center gap-2 " + (tab === 't2_obyekt' ? 'bg-accent text-white' : 'bg-surface text-text hover:bg-surface-2')}>
           <Building2 size={16}/> Obyektlar
         </button>
-        <button onClick={() => setTab('t2_shaxsiy_smeta')} className={px-4 py-2 rounded-lg font-medium flex items-center gap-2 }>
+        <button onClick={() => setTab('t2_shaxsiy_smeta')} className={"px-4 py-2 rounded-lg font-medium flex items-center gap-2 " + (tab === 't2_shaxsiy_smeta' ? 'bg-accent text-white' : 'bg-surface text-text hover:bg-surface-2')}>
           <FileText size={16}/> Smetalar
         </button>
-        <button onClick={() => setTab('t2_sklad_harakat')} className={px-4 py-2 rounded-lg font-medium flex items-center gap-2 }>
+        <button onClick={() => setTab('t2_sklad_harakat')} className={"px-4 py-2 rounded-lg font-medium flex items-center gap-2 " + (tab === 't2_sklad_harakat' ? 'bg-accent text-white' : 'bg-surface text-text hover:bg-surface-2')}>
           <Package size={16}/> Sklad Hujjatlari
         </button>
       </div>
