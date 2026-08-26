@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { sbT2ObyektlarOl, type T2Obyekt } from '../api/supabase';
 import { Network, Building2, HardHat, Warehouse, FileText, Pickaxe, Map, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
@@ -81,9 +81,9 @@ export default function TestXarita() {
                 const total = obyektlar.length;
                 const gap = 140; // Approx height per child
                 const startY = '50%';
-                const endY = \calc(50% + \px)\;
+                const endY = `calc(50% + ${(i - (total-1)/2) * gap}px)`;
                 return (
-                   <path key={i} d={\M 0 \ C 32 \, 32 \, 64 \\} fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                   <path key={i} d={`M 0 ${startY} C 32 ${startY}, 32 ${endY}, 64 ${endY}`} fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
                 );
               })}
             </svg>
