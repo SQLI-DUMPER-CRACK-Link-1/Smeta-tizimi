@@ -56,7 +56,7 @@ export default function TestObyektlar() {
     if (!confirm(o.nom + " obyektini Korzinkaga o'tkazasizmi? (Drive dan ham axlat qutiga o'tadi)")) return;
     try {
       setYuklanmoqda(true);
-      await sbObyektOchirish(o.id);
+      await sbObyektOchirish(o.id, o.nom);
       toast('Obyekt Korzinkaga o\'tkazildi', 'ok');
       yukla();
     } catch(err: any) {

@@ -25,9 +25,9 @@ export default function TestKorzinka() {
     yuklash();
   }, []);
 
-  const handleTiklash = async (id: number) => {
+  const handleTiklash = async (id: number, nomi: string) => {
     try {
-      await sbKorzinkadanTiklash(tab, id);
+      await sbKorzinkadanTiklash(tab, id, nomi);
       toast('Muvaffaqiyatli tiklandi', 'ok');
       yuklash();
     } catch(e) {
@@ -35,10 +35,10 @@ export default function TestKorzinka() {
     }
   };
 
-  const handleOchirish = async (id: number) => {
+  const handleOchirish = async (id: number, nomi: string) => {
     if (!confirm('Rostdan ham butunlay o\'chirasizmi? (Drive dan ham o\'chib ketadi!)')) return;
     try {
-      await sbButunlayOchirish(tab, id);
+      await sbButunlayOchirish(tab, id, nomi);
       toast('Butunlay o\'chirildi', 'ok');
       yuklash();
     } catch(e) {
@@ -99,10 +99,10 @@ export default function TestKorzinka() {
                   <p className="text-xs text-text-dim">O'chirilgan vaqt: {new Date(item.ochirilgan_vaqt).toLocaleString()}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => handleTiklash(item.id)} className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded flex items-center gap-1 text-sm font-medium transition-colors">
+                  <button onClick={() => handleTiklash(item.id, item.nomi || item.nom || 'Nomsiz')} className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded flex items-center gap-1 text-sm font-medium transition-colors">
                     <RefreshCw size={14}/> Tiklash
                   </button>
-                  <button onClick={() => handleOchirish(item.id)} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded flex items-center gap-1 text-sm font-medium transition-colors">
+                  <button onClick={() => handleOchirish(item.id, item.nomi || item.nom || 'Nomsiz')} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded flex items-center gap-1 text-sm font-medium transition-colors">
                     <AlertTriangle size={14}/> Butunlay O'chirish
                   </button>
                 </div>

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * supabase.ts — SUPABASE KO'ZGUSIDAN O'QISH
  * ═══════════════════════════════════════════════════════════════════
  *
@@ -718,7 +718,7 @@ export function sbShaxsiySmetaYarat(kompaniya_id: number, nom: string, qatorlar:
 // KORZINKA VA TAHRIRLASH (TIZIM_02)
 // ==========================================
 
-export async function sbObyektOchirish(id: number): Promise<any> {
+export async function sbObyektOchirish(id: number, nomi: string): Promise<any> {
   // 1. Supabase da korzinkaga tashlash
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',
@@ -732,7 +732,7 @@ export async function sbObyektOchirish(id: number): Promise<any> {
   fetch('/api/gas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 't2_drive_trash', payload: { type: 'obyekt', id } })
+    body: JSON.stringify({ fn: 'apiT2DriveTrash', args: [{ type: 'obyekt', id, nomi }] })
   }).catch(console.error);
 
   return data;
@@ -749,13 +749,13 @@ export async function sbObyektTahrirlash(id: number, nomi: string, tur: string):
   fetch('/api/gas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 't2_drive_rename', payload: { type: 'obyekt', id, yangiNom: nomi } })
+    body: JSON.stringify({ fn: 'apiT2DriveRename', args: [{ type: 'obyekt', id, yangiNom: nomi }] })
   }).catch(console.error);
 
   return await res.json();
 }
 
-export async function sbKorzinkadanTiklash(jadval: string, id: number): Promise<any> {
+export async function sbKorzinkadanTiklash(jadval: string, id: number, nomi: string): Promise<any> {
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -765,13 +765,13 @@ export async function sbKorzinkadanTiklash(jadval: string, id: number): Promise<
   fetch('/api/gas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 't2_drive_restore', payload: { type: jadval, id } })
+    body: JSON.stringify({ fn: 'apiT2DriveRestore', args: [{ type: jadval, id, nomi }] })
   }).catch(console.error);
 
   return await res.json();
 }
 
-export async function sbButunlayOchirish(jadval: string, id: number): Promise<any> {
+export async function sbButunlayOchirish(jadval: string, id: number, nomi: string): Promise<any> {
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -781,7 +781,7 @@ export async function sbButunlayOchirish(jadval: string, id: number): Promise<an
   fetch('/api/gas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 't2_drive_hard_delete', payload: { type: jadval, id } })
+    body: JSON.stringify({ fn: 'apiT2DriveHardDelete', args: [{ type: jadval, id, nomi }] })
   }).catch(console.error);
 
   return await res.json();
