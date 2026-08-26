@@ -215,7 +215,7 @@ export default function TestImport() {
     const nom = yangiNom.trim();
     if (!nom) { toast('Obyekt nomini kiriting', 'warn'); return; }
     if (obyektlar.some((o) => o.nom === nom)) {
-      toast('Bunday obyekt bor — ro'yxatdan tanlang', 'warn'); return;
+      toast('Bunday obyekt bor — ro\'yxatdan tanlang', 'warn'); return;
     }
     setYaratilmoqda(true);
     try {
