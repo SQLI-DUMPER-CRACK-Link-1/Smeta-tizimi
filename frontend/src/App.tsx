@@ -28,6 +28,16 @@ const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
 const TestF2Import  = lazy(() => import('./test02/TestF2Import'));
 const TestF2        = lazy(() => import('./test02/TestF2'));
 const TestOqishOlchov = lazy(() => import('./test02/TestOqishOlchov'));
+const TestSklad     = lazy(() => import('./test02/TestSklad'));
+const TestBirja     = lazy(() => import('./test02/TestBirja'));
+const TestInvite    = lazy(() => import('./test02/TestInvite'));
+const TestTolov     = lazy(() => import('./test02/TestTolov'));
+const TestFaktura   = lazy(() => import('./test02/TestFaktura'));
+const TestHujjat    = lazy(() => import('./test02/TestHujjat'));
+const TestHisobot   = lazy(() => import('./test02/TestHisobot'));
+const TestErp       = lazy(() => import('./test02/TestErp'));
+const TestSozlama   = lazy(() => import('./test02/TestSozlama'));
+const TestTizim     = lazy(() => import('./test02/TestTizim'));
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
 import { Narxlar } from './admin/sahifalar/Narxlar';
@@ -92,6 +102,16 @@ export default function App() {
             <Route path="f2" element={<TestF2 />} />
             <Route path="f2-import" element={<TestF2Import />} />
             <Route path="oqish" element={<TestOqishOlchov />} />
+            <Route path="sklad" element={<TestSklad />} />
+            <Route path="birja" element={<TestBirja />} />
+            <Route path="invite" element={<TestInvite />} />
+            <Route path="tolov" element={<TestTolov />} />
+            <Route path="faktura" element={<TestFaktura />} />
+            <Route path="hujjat" element={<TestHujjat />} />
+            <Route path="hisobot" element={<TestHisobot />} />
+            <Route path="erp" element={<TestErp />} />
+            <Route path="sozlama" element={<TestSozlama />} />
+            <Route path="tizim" element={<TestTizim />} />
           </Route>
           {/* ERP routes for Admin */}
           <Route path="kadrlar" element={<ErpKadrlar />} />

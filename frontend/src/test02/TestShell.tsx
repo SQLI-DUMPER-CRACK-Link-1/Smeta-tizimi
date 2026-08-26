@@ -24,7 +24,8 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { KompaniyaProvider, KompaniyaTanlagich } from './KompaniyaTanlov';
 import { FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer, Upload, Tags,
-         TrendingUp, FileInput } from 'lucide-react';
+         TrendingUp, FileInput, Box, ShoppingCart, UserPlus, CreditCard, FileText, Archive,
+         BarChart, Settings, ShieldAlert, LayoutDashboard } from 'lucide-react';
 
 const TEST_MENYU = [
   { yol: '/admin/test/import',    nom: 'Smeta yuklash', Ikonka: Upload },
@@ -33,7 +34,17 @@ const TEST_MENYU = [
   { yol: '/admin/test/f2',        nom: 'F2 / Fakt',    Ikonka: TrendingUp },
   { yol: '/admin/test/f2-import', nom: 'F2 import',    Ikonka: FileInput },
   { yol: '/admin/test/daraxt',    nom: 'Smeta daraxti', Ikonka: Network },
-  { yol: '/admin/test/oqish',     nom: 'GAS o’qish tezligi', Ikonka: Timer },
+  { yol: '/admin/test/sklad',     nom: 'Sklad',        Ikonka: Box },
+  { yol: '/admin/test/birja',     nom: 'Birja RFQ',    Ikonka: ShoppingCart },
+  { yol: '/admin/test/invite',    nom: 'Takliflar',    Ikonka: UserPlus },
+  { yol: '/admin/test/tolov',     nom: 'To\'lov',       Ikonka: CreditCard },
+  { yol: '/admin/test/faktura',   nom: 'EHF (Didox)',  Ikonka: FileText },
+  { yol: '/admin/test/hujjat',    nom: 'Arxiv (R2)',   Ikonka: Archive },
+  { yol: '/admin/test/hisobot',   nom: 'Boss Tahlil',  Ikonka: BarChart },
+  { yol: '/admin/test/erp',       nom: 'ERP Boshqaruv', Ikonka: LayoutDashboard },
+  { yol: '/admin/test/sozlama',   nom: 'Sozlamalar',   Ikonka: Settings },
+  { yol: '/admin/test/tizim',     nom: 'Audit & Loglar', Ikonka: ShieldAlert },
+  { yol: '/admin/test/oqish',     nom: 'GAS o\'qish tezligi', Ikonka: Timer },
   { yol: '/admin/tezlik',         nom: 'Tezlik sinovi', Ikonka: Gauge },
 ];
 
