@@ -103,6 +103,8 @@ export default function App() {
             <Route path="obyektlar" element={<TestObyektlar />} />
             <Route path="daraxt" element={<TestDaraxt />} />
             <Route path="import" element={<TestImport />} />
+            <Route path="grafik" element={<TestGrafik />} />
+            <Route path="spravochnik" element={<TestSpravochnik />} />
             <Route path="narxlar" element={<TestNarxlar />} />
             <Route path="f2" element={<TestF2 />} />
             <Route path="f2-import" element={<TestF2Import />} />
@@ -166,5 +168,6 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
 
 

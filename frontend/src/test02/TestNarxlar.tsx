@@ -21,6 +21,7 @@
  * yasash demak.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { sbT2NarxBelgila } from '../api/t2-narx';
 import { Tags, AlertTriangle, RefreshCw, Search } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
@@ -48,6 +49,8 @@ export default function TestNarxlar() {
   const [narxsizlar, setNarxsizlar] = useState<Narxsiz[] | null>(null);
   const [qidiruv, setQidiruv] = useState('');
   const [yuk, setYuk] = useState(false);
+  const [narxQoyish, setNarxQoyish] = useState<number | null>(null);
+  const [yangiNarx, setYangiNarx] = useState('');
   const [xato, setXato] = useState('');
 
   useEffect(() => {
@@ -93,6 +96,12 @@ export default function TestNarxlar() {
     return (r || []).filter((x) => String(x.nom || '').toLowerCase().includes(s));
   };
 
+  const belgilash = async (r: Narxsiz) => {
+    if(!yangiNarx) return setNarxQoyish(null);
+    setYuk(true);
+    await sbT2NarxBelgila({ nom: r.nom || '', birlik: r.birlik || '', narx: Number(yangiNarx), kat: r.kat || undefined });
+    setNarxQoyish(null); setYangiNarx(''); yukla();
+  };
   const shubhaliSoni = useMemo(
     () => (narxlar || []).filter((x) => x.shubhali).length, [narxlar]);
 
@@ -169,6 +178,14 @@ export default function TestNarxlar() {
                       {r.hajm ?? ''}
                     </span>
                     <span className="text-text-mute w-12">{r.tur}</span>
+                    {narxQoyish === r.id ? (
+                      <div className="flex items-center gap-1">
+                        <input type="number" autoFocus value={yangiNarx} onChange={e => setYangiNarx(e.target.value)} className="w-20 px-1 py-0.5 bg-black border border-zinc-700 text-white rounded outline-none" />
+                        <button onClick={() => belgilash(r)} className="text-accent font-bold px-2 py-0.5 bg-accent/20 rounded">OK</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setNarxQoyish(r.id); setYangiNarx(''); }} className="text-accent hover:underline">+Narx</button>
+                    )}
                   </div>
                 ))}
                 {suz(narxsizlar).length > 300 && (
@@ -243,3 +260,4 @@ export default function TestNarxlar() {
     </Sahifa>
   );
 }
+
