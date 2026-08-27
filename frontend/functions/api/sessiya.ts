@@ -25,5 +25,13 @@ export const onRequestGet: PagesFunction<{ SESSIYA_KALIT: string }> = async (ctx
        admin bo'lib kira oladi. Bu ataylab qoldirilgan vaqtinchalik
        holat; ko'zdan yo'qolmasligi uchun shu yerda ochiq turadi. */
     zaxira_kalit: !kalitBormi(secret),
+    /* ⚡ 2026-08-27: "Auth Session -> User -> Tenant" poydevori — sess
+     * endi (yangi kirishlardan keyin) foydalanuvchi a'zo bo'lgan
+     * kompaniyalarni biladi. Eski sessiyalarda bu `undefined` (frontend
+     * buni "hammasi ko'rinadi, hali eski sessiya" deb talqin qilishi
+     * mumkin — UI o'zgarishi hozircha qilinmadi, faqat ma'lumot
+     * uzatiladi). */
+    foydalanuvchi_id: sess.foydalanuvchi_id,
+    kompaniyalar: sess.kompaniyalar,
   });
 };

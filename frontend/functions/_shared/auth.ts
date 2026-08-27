@@ -1,10 +1,31 @@
 export type Rol = 'superadmin' | 'admin' | 'boss' | 'rahbar' | 'bugalter' | 'pto' | 'prorab';
 
-export type Sess = { 
-  rol: Rol; 
-  email?: string; 
-  exp: number; 
+/* ⚡ 2026-08-27 (Claude, foydalanuvchi tasdig'i bilan — "Auth Session ->
+ * User -> Tenant -> Role" poydevori): sessiya avval faqat `rol`/`email`
+ * saqlardi — HECH QANDAY foydalanuvchi identifikatori yoki qaysi
+ * kompaniya(lar)ga tegishli ekani yo'q edi. Amalda bu shuni anglatardi:
+ * har qanday tizimga kirgan odam `kompaniya_id`ni o'zgartirib istalgan
+ * mijozning ma'lumotini ko'ra olardi (frontend UI cheklovi bo'lsa ham,
+ * server darajasida tekshiruv YO'Q edi).
+ *
+ * ⚠️ ATAYLAB QISMAN: `foydalanuvchi_id`/`kompaniyalar` IXTIYORIY
+ * (optional) — eski (bu o'zgarishdan oldin chiqarilgan) sessiya
+ * cookie'lari hali ham yaroqli bo'lib qolishi kerak (12 soatlik
+ * muddat tugagunicha), ular bu maydonlarsiz keladi. `sb.ts`/
+ * `sb-yoz.ts` bu maydon yo'qligini "eski sessiya, tekshiruv hali
+ * qo'llanmaydi" deb talqin qiladi — YANGI kirishlar esa to'liq
+ * tekshiriladi. */
+export type Sess = {
+  rol: Rol;
+  email?: string;
+  exp: number;
   jti: string;
+  foydalanuvchi_id?: number;
+  /** Shu foydalanuvchi a'zo bo'lgan barcha kompaniya ID'lari — sessiya
+   *  ichida saqlanadi (har so'rovda bazaga qayta so'rov yubormaslik
+   *  uchun). A'zolik o'zgarsa, foydalanuvchi qayta kirishi kerak
+   *  (12 soat ichida) — bu bilib turilgan cheklov. */
+  kompaniyalar?: number[];
 };
 
 async function importKey(secret: string) {
