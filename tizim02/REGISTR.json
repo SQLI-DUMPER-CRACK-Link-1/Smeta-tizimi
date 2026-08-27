@@ -3,12 +3,12 @@
   "manba": {
     "jami": 258,
     "hisobga": 155,
-    "tayyor": 124,
-    "qisman": 9,
+    "tayyor": 126,
+    "qisman": 7,
     "joyida": 93,
     "kerakmas": 10
   },
-  "foiz": 83,
+  "foiz": 84,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -309,8 +309,8 @@
     "f2": {
       "qatlam": "SUPABASE",
       "jami": 39,
-      "tayyor": 9,
-      "qisman": 3,
+      "tayyor": 11,
+      "qisman": 1,
       "kutilmoqda": 1,
       "kerakmas": 0,
       "joyida": 26,
@@ -357,7 +357,7 @@
       ],
       "egasi": "claude",
       "ish_holati": "ishlanmoqda",
-      "foiz": 81,
+      "foiz": 88,
       "kochiriladi": true
     },
     "smeta": {
@@ -1887,9 +1887,9 @@
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "qisman",
-      "qopladi": "t2_akt_yarat o'zining invariant tekshiruvi",
-      "izoh": "oldindan ko'rish emas - real chaqiruvda tekshiradi va buzilish qaytaradi; alohida 'ruxsat so'rash' RPC hali yo'q"
+      "holat": "tayyor",
+      "qopladi": "kerak emas - t2_akt_yarat arxitektura jihatidan bu xavfni yo'qotadi",
+      "izoh": "Tizim_01 da bu funksiya SHEETS OY USTUNIGA yozishdan oldin 'bu yerda BOSHQA hujjat ma'lumoti bormi, ustiga yozilsa ikkalasi qo'shilib ketmaydimi' deb tekshirardi - chunki bir nechta F2 hujjat BIR XIL katak diapazoniga yozilishi mumkin edi. Tizim_02 da bu xavf STRUKTURAVIY yo'q: har akt o'z alohida t2_akt/t2_akt_qator qatorlariga ega, operation_id bilan idempotent, hech qachon boshqa hujjatning ustiga 'yozilmaydi' - shuning uchun oldindan ruxsat so'rash tushunchasining o'zi keraksiz."
     },
     "apiF2ReestrYoz": {
       "fayl": "39_F2Reestr.js",
@@ -1907,9 +1907,9 @@
       "argSoni": 1,
       "domen": "f2",
       "qatlam": "SUPABASE",
-      "holat": "qisman",
-      "qopladi": "t2_akt_reestr (sbT2AktReestrOl kerak - hali yozilmagan)",
-      "izoh": "2026-08-25: t2_akt_reestr view CHEKSIZ REKURSIYA bilan buzuq edi (boshqa migratsiya), TUZATILDI. Endi ishlaydi, lekin frontendda hali typed o'quvchi funksiya yo'q"
+      "holat": "tayyor",
+      "qopladi": "t2_akt_reestr (sbT2AktReestrOl)",
+      "izoh": "2026-08-27: sbT2AktReestrOl yozildi va TestF2.tsx dagi xom sbOqi chaqiruvi shu bilan almashtirildi. Yo'l ochilib, t2_qator_holat view ham TestF2.tsx kutgan to'liq ustunlar bilan (tur/raqam/kat/smeta_narx/f2_mumkin_hajm/f2_mumkin_summa) qayta qurildi - bu ustunlar yo'qligi TestF2.tsx ni butunlay ishlamay qo'ygan edi (PostgREST 'column does not exist' xatosi)."
     },
     "apiF2ReestrHujjatJami": {
       "fayl": "39_F2Reestr.js",

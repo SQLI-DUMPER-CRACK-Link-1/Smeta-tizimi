@@ -316,6 +316,27 @@ export function sbT2QatorHolatOl(obyektId: number) {
     limit: 200000,
   });
 }
+
+/** `t2_akt_reestr` — «qancha kirdi = qancha tushdi» kafolat reestri
+ *  (Tizim_01 dagi `apiF2ReestrOl` ning o'rnini bosadi — bazada VIEW
+ *  sifatida jonli hisoblanadi, alohida yozish/tiklash kerak emas). */
+export type T2AktReestr = {
+  id: number; obyekt_id: number; kompaniya_id: number; obyekt: string | null;
+  tur: string; raqam: string | null; oy: string; holat: string;
+  fayl_id: string | null; izoh: string | null; yaratildi: string;
+  hujjat_jami: number | null; yozilgan_jami: number; qator_soni: number | null;
+  narxsiz_qator: number | null; manfiy_qator: number | null;
+  farq: number | null; reestr_holat: string; versiya: number;
+};
+
+export function sbT2AktReestrOl(obyektId: number) {
+  return sbOqi<T2AktReestr>({
+    jadval: 't2_akt_reestr',
+    filtr: 'obyekt_id=eq.' + obyektId,
+    tartib: 'oy.desc',
+    limit: 500,
+  });
+}
 export function sbT2DaraxtOl(obyektId: number) {
   return sbOqi<T2Qator>({
     jadval: 't2_daraxt',

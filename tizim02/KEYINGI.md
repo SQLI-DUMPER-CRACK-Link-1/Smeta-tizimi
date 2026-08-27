@@ -4,14 +4,14 @@
 > `node tizim02/registr.gen.cjs` uni qayta yozadi.
 > Tasnifni o'zgartirish uchun `tizim02/tasnif.json` ni tahrirlang.
 
-Umumiy holat: **83%** — 124 tayyor · 9 qisman · 22 boshlanmagan (ko'chiriladigan 155 tadan). 93 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
+Umumiy holat: **84%** — 126 tayyor · 7 qisman · 22 boshlanmagan (ko'chiriladigan 155 tadan). 93 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
 
 ## Domenlar — qiymat tartibida
 
 | # | Domen | Egasi | Qatlam | Holat | Tayyor | Qisman | Qoldi |
 |---|---|---|---|---|---|---|---|
 | 1 | **smeta** | 🔵 claude | SUPABASE | 100% | 17 | 0 | 0 |
-| 2 | **f2** | 🔵 claude ⏳ | SUPABASE | 81% | 9 | 3 | 1 |
+| 2 | **f2** | 🔵 claude ⏳ | SUPABASE | 88% | 11 | 1 | 1 |
 | 3 | **hujjat** | 🔵 claude | GAS | 8% | 1 | 0 | 11 |
 | 4 | **shartnoma** | 🔵 claude | SUPABASE | 90% | 12 | 3 | 0 |
 | 5 | **buxgalteriya** | 🔵 claude | SUPABASE | 100% | 9 | 0 | 0 |
@@ -27,12 +27,10 @@ Umumiy holat: **83%** — 124 tayyor · 9 qisman · 22 boshlanmagan (ko'chirilad
 | 15 | **tizim** | 🟢 antigravity | SUPABASE | 100% | 7 | 0 | 0 |
 | 16 | **kopruk** | 🔵 claude | GAS | 0% | 0 | 0 | 10 |
 
-## 🔵 claude — keyingi ish: `f2` (SUPABASE, 81%)
+## 🔵 claude — keyingi ish: `f2` (SUPABASE, 88%)
 
 - `apiF2Bosliqlar` — `38_F2Nazorat.js:663`
-- `apiF2ReestrOl` — `39_F2Reestr.js:148` *(qisman: t2_akt_reestr (sbT2AktReestrOl kerak - hali yozilmagan))*
 - `apiF2Undo` — `39_F2Reestr.js:292` *(qisman: t2_akt_bekor (butun hujjat) yoki tuzatuvchi akt (manfiy hajm))*
-- `apiF2YozishgaRuxsat` — `38_F2Nazorat.js:797` *(qisman: t2_akt_yarat o'zining invariant tekshiruvi)*
 
 ## 🟢 antigravity — keyingi ish: `faktura` (SUPABASE, 91%)
 

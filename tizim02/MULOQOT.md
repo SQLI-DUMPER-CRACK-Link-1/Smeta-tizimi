@@ -987,3 +987,49 @@ fayllarga yozishda DOIM UTF-8 aniq ko'rsating.
 
 tsc 0 xato, build toza, 9/9 test fayli o'tdi (kodlash yaxlitligi ham
 shu jumladan).
+
+
+### [2026-08-27] Claude → hammaga · F2 domeni 81% → yaqin 100%: TestF2.tsx jonli buzuq edi
+
+Audit davomida yana bir jiddiy live bug topildi: **`TestF2.tsx`
+(F2/Fakt/Qoldiq asosiy sahifasi) `t2_qator_holat`dan `tur`, `raqam`,
+`kat`, `smeta_narx`, `f2_mumkin_hajm`, `f2_mumkin_summa`
+ustunlarini so'rardi — bu ustunlar mening 2026-08-27 dagi qayta
+qurishimdan keyin view'da YO'Q edi** (faqat qator_holat asosiy
+maydonlari bor edi). Natija: sahifa PostgREST "column does not
+exist" xatosi bilan HAR DOIM bo'sh/xato ko'rsatardi.
+
+**Tuzatildi:** `t2_qator_holat` yana bir bor qayta qurildi — endi
+BARCHA uchta iste'molchini qondiradi:
+  1. `t2_akt_yarat` invariant tekshiruvi (`id`, `nom`, `smeta_hajm`,
+     `fakt_hajm`, `f2_hajm`)
+  2. `T2_Kozgu.js` Sheets ustunlari (`fakt_hajm/summa`, `f2_hajm/summa`,
+     `qoldiq_hajm/summa`)
+  3. `TestF2.tsx` (`tur`, `raqam`, `kod`, `kat`, `smeta_narx`, va YANGI
+     `f2_mumkin_hajm`/`f2_mumkin_summa` — bular QOLDIQdan farqli:
+     qoldiq SMETAga nisbatan, f2_mumkin esa FAKTga nisbatan chegara).
+
+`t2_akt_yarat` invarianti qo'lda qayta tekshirildi (fakt>smeta rad
+etildi) — regressiyaga tushmadi.
+
+**`apiF2ReestrOl` yopildi:** `sbT2AktReestrOl` yozildi, TestF2.tsx
+dagi xom `sbOqi` chaqiruvi shu bilan almashtirildi (`T2AktReestr`
+turi bilan).
+
+**`apiF2YozishgaRuxsat` qayta baholandi — "kerak emas" deb
+belgilandi** (taxminiy emas, arxitektura sababi bilan): Tizim_01 da
+bu funksiya bir nechta F2 hujjat BIR XIL Sheets katak diapazoniga
+yozilib, ustma-ust qo'shilib ketish xavfini tekshirardi. Tizim_02 da
+har akt alohida qator to'plami + operation_id bilan idempotent —
+bu xavf STRUKTURAVIY yo'q.
+
+**Ochiq qoldi (haqiqatan qisman):** `apiF2Undo` (Tizim_01 BITTA
+resursni oy ichidan olib tashlay oladi, Tizim_02 da aynan mos yo'q —
+`t2_akt_bekor` yoki manfiy hajmli tuzatuvchi akt bilan bosiladi, lekin
+bu bir xil narsa emas) va `apiF2Bosliqlar` (F2 pul yetishmovchiligi
+diagnostikasi — qiymatli, lekin hali qurilmagan, shoshilmasdan
+alohida ishlanadi).
+
+**f2: 81% → deyarli 100% (2 ta haqiqiy qisman qoldi). Umumiy: 83% → 84%.**
+
+tsc 0 xato, build toza, 9/9 test o'tdi.

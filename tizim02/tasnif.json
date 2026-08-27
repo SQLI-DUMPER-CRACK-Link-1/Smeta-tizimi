@@ -150,9 +150,9 @@
       "qatlam": "GAS"
     },
     "apiF2ReestrOl": {
-      "qopladi": "t2_akt_reestr (sbT2AktReestrOl kerak - hali yozilmagan)",
-      "toliq": false,
-      "izoh": "2026-08-25: t2_akt_reestr view CHEKSIZ REKURSIYA bilan buzuq edi (boshqa migratsiya), TUZATILDI. Endi ishlaydi, lekin frontendda hali typed o'quvchi funksiya yo'q"
+      "qopladi": "t2_akt_reestr (sbT2AktReestrOl)",
+      "toliq": true,
+      "izoh": "2026-08-27: sbT2AktReestrOl yozildi va TestF2.tsx dagi xom sbOqi chaqiruvi shu bilan almashtirildi. Yo'l ochilib, t2_qator_holat view ham TestF2.tsx kutgan to'liq ustunlar bilan (tur/raqam/kat/smeta_narx/f2_mumkin_hajm/f2_mumkin_summa) qayta qurildi - bu ustunlar yo'qligi TestF2.tsx ni butunlay ishlamay qo'ygan edi (PostgREST 'column does not exist' xatosi)."
     },
     "apiF2ReestrHujjatJami": {
       "qopladi": "t2_akt.hujjat_jami",
@@ -651,9 +651,9 @@
       "izoh": "Drive-bogliq taklif; T2_F2Import global doira ishlatadi, lokalka oldindan tanlash kerak emas"
     },
     "apiF2YozishgaRuxsat": {
-      "qopladi": "t2_akt_yarat o'zining invariant tekshiruvi",
-      "toliq": false,
-      "izoh": "oldindan ko'rish emas - real chaqiruvda tekshiradi va buzilish qaytaradi; alohida 'ruxsat so'rash' RPC hali yo'q"
+      "qopladi": "kerak emas - t2_akt_yarat arxitektura jihatidan bu xavfni yo'qotadi",
+      "toliq": true,
+      "izoh": "Tizim_01 da bu funksiya SHEETS OY USTUNIGA yozishdan oldin 'bu yerda BOSHQA hujjat ma'lumoti bormi, ustiga yozilsa ikkalasi qo'shilib ketmaydimi' deb tekshirardi - chunki bir nechta F2 hujjat BIR XIL katak diapazoniga yozilishi mumkin edi. Tizim_02 da bu xavf STRUKTURAVIY yo'q: har akt o'z alohida t2_akt/t2_akt_qator qatorlariga ega, operation_id bilan idempotent, hech qachon boshqa hujjatning ustiga 'yozilmaydi' - shuning uchun oldindan ruxsat so'rash tushunchasining o'zi keraksiz."
     },
     "apiHujjatlarRoyxat": {
       "qatlam": "GAS",

@@ -31,7 +31,7 @@ import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
 import {
   sbOqi, sbT2ObyektlarOlKomp, sbT2AktYarat, sbT2AktTasdiqlash, sbT2AktBekor,
-  yangiOperationId, type T2Obyekt, type AktNatija,
+  sbT2AktReestrOl, yangiOperationId, type T2Obyekt, type AktNatija, type T2AktReestr,
 } from '../api/supabase';
 import { toast } from '../umumiy/ui/Toast';
 import { useKompaniya } from './KompaniyaTanlov';
@@ -46,12 +46,9 @@ type QatorHolat = {
   fakt_hajm: number; f2_hajm: number; f2_mumkin_hajm: number;
 };
 
-type Reestr = {
-  id: number; tur: string; raqam: string | null; oy: string; holat: string;
-  hujjat_jami: number | null; yozilgan_jami: number; farq: number | null;
-  reestr_holat: string; qator_soni: number | null; versiya: number;
-  narxsiz_qator: number | null; manfiy_qator: number | null;
-};
+/* ⚠️ 2026-08-27: mahalliy shakl o'rniga `sbT2AktReestrOl` ning haqiqiy
+   javob turi (`T2AktReestr`) ishlatiladi — ikkisi ajralib ketmasin. */
+type Reestr = T2AktReestr;
 
 const REESTR_RANG: Record<string, string> = {
   mos: 'text-ok',
@@ -166,11 +163,7 @@ export default function TestF2() {
                   'smeta_hajm,smeta_narx,fakt_hajm,f2_hajm,f2_mumkin_hajm',
         tartib: 'tartib.asc', limit: 20000,
       }),
-      sbOqi<Reestr>({
-        jadval: 't2_akt_reestr',
-        filtr: 'obyekt_id=eq.' + obyektId,
-        tartib: 'oy.desc', limit: 500,
-      }),
+      sbT2AktReestrOl(obyektId),
     ]);
 
     setYuk(false);
