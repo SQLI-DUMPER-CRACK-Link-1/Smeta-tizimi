@@ -112,6 +112,47 @@ export const onRequestPost: PagesFunction<{
       return Response.json({ ok: false, error: 'Noma\'lum amal: ' + String(so.amal) });
     }
 
+    /* ⚡ 2026-08-27 (Claude, foydalanuvchi tasdig'i — "haqiqiy multi-
+     * tenant" poydevorining birinchi haqiqiy TEKSHIRUVI): avvalgacha
+     * `kompaniya_id` mijoz yuborgan har qanday qiymat bo'lardi va
+     * SERVER buni sessiya bilan solishtirmasdi — ya'ni har qanday
+     * tizimga kirgan odam so'rov tanasida boshqa kompaniyaning
+     * `kompaniya_id`sini yuborib, o'sha kompaniyaga yozishi (nazariy
+     * jihatdan) mumkin edi. Endi: sessiya `kompaniyalar` ro'yxatini
+     * bilsa (YANGI kirishlardan keyin — `t2_kirish_royxatga_ol` orqali)
+     * va so'rov `kompaniya_id` yuborsa, u shu ro'yxatda BO'LISHI SHART.
+     *
+     * ⚠️ ATAYLAB QISMAN: `sess.kompaniyalar === undefined` (ESKI
+     * sessiya, bu o'zgarishdan oldin chiqarilgan) bo'lsa — tekshiruv
+     * O'TKAZIB YUBORILADI (eski foydalanuvchilar 12 soat ichida
+     * bloklanib qolmasin). Bu vaqtinchalik ko'prik, sessiyalar tabiiy
+     * yangilangach hamma yangi tekshiruv ostida bo'ladi. */
+    if (Array.isArray(sess.kompaniyalar) && so.kompaniya_id != null) {
+      const soraganKompaniya = Number(so.kompaniya_id);
+      if (Number.isFinite(soraganKompaniya)) {
+        /* ⚡ 2026-08-27: `kompaniyalar` endi {kompaniya_id, rol}
+         * juftliklari — a'zolikning O'ZINI (borligini) VA o'sha
+         * kompaniyadagi ROLINI birga topamiz. */
+        const azolik = sess.kompaniyalar.find((a) => a.kompaniya_id === soraganKompaniya);
+        if (!azolik) {
+          return Response.json({ ok: false,
+            error: 'Bu kompaniyaga a\'zo emassiz (kompaniya_id: ' + soraganKompaniya + ')' },
+            { status: 403 });
+        }
+        /* "POLIMORFIK ROL" — yuqoridagi global `sess.rol` tekshiruvi
+         * GAS'dan kelgan BITTA rolga asoslanadi (barcha kompaniya uchun
+         * bir xil). Lekin bitta odam bir kompaniyada admin, boshqasida
+         * faqat rahbar (ko'ruvchi) bo'lishi mumkin — bu haqiqiy
+         * maqsad. Shu kompaniyaga xos rol boss/rahbar bo'lsa, global
+         * rol boshqacha bo'lsa ham bu YOZUV rad etiladi. */
+        if (azolik.rol === 'boss' || azolik.rol === 'rahbar') {
+          return Response.json({ ok: false,
+            error: 'Bu kompaniyada rahbar rolida yozish mumkin emas' },
+            { status: 403 });
+        }
+      }
+    }
+
     let yuk: Record<string, unknown>;
 
     /* ══════════ QATOR TAHRIRI ══════════ */

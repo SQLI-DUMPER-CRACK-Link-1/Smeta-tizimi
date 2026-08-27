@@ -123,6 +123,37 @@ export const onRequestPost: PagesFunction<{
       return Response.json({ ok: false, error: 'Filtr shakli qabul qilinmadi' });
     }
 
+    /* ⚡ 2026-08-27 (Claude, foydalanuvchi tasdig'i — multi-tenant
+     * poydevorining O'QISH TOMONI): `sb-yoz.ts` da yozish uchun
+     * kompaniya a'zoligi tekshiruvi qo'shilgan edi — o'qishda ham xuddi
+     * shu tekshiruv kerak, aks holda kimdir yozolmasa ham BOSHQA
+     * kompaniyaning ma'lumotini "faqat o'qish" bilan ko'rishi mumkin.
+     *
+     * ⚠️ QISMAN, ATAYLAB: `filtr` — erkin PostgREST satri
+     * (`kompaniya_id=eq.5&obyekt_id=eq.10`), har jadval to'g'ridan-
+     * to'g'ri `kompaniya_id` bilan filtrlanmaydi (masalan ba'zilari
+     * `obyekt_id` orqali bog'lanadi). Shuning uchun: FAQAT `filtr`da
+     * ANIQ `kompaniya_id=eq.N` ko'rinishida uchrasa tekshiramiz;
+     * boshqacha filtrlangan so'rovlar HOZIRCHA o'tkazib yuboriladi
+     * (keyingi qadam — ularni ham jadval-jadval ko'rib chiqish).
+     * `sess.kompaniyalar === undefined` bo'lsa (eski sessiya) —
+     * tekshiruv o'tkazib yuboriladi (12 soat ko'prik, sb-yoz.ts dagi
+     * bilan bir xil qoida). */
+    if (Array.isArray(sess.kompaniyalar)) {
+      const mos = (so.filtr || '').match(/(?:^|&)kompaniya_id=eq\.(-?\d+)/);
+      if (mos) {
+        const soraganKompaniya = Number(mos[1]);
+        /* ⚡ 2026-08-27: `kompaniyalar` endi {kompaniya_id, rol}
+         * juftliklari (avval faqat ID massivi edi) — a'zolikni
+         * `.some(...)` bilan qidiramiz. */
+        if (!sess.kompaniyalar.some((a) => a.kompaniya_id === soraganKompaniya)) {
+          return Response.json({ ok: false,
+            error: 'Bu kompaniyaga a\'zo emassiz (kompaniya_id: ' + soraganKompaniya + ')' },
+            { status: 403 });
+        }
+      }
+    }
+
     /* ══════════════════════════════════════════════════════════════
      * ⚠️ 2026-08-17 — SAHIFALAB O'QISH (1000 QATOR CHEGARASI)
      *
