@@ -79,7 +79,8 @@ const AMALLAR = {
   loyiha_ochir: { rpc: 't2_loyiha_ochir' },
   obyekt_loyihaga_biriktir: { rpc: 't2_obyekt_loyihaga_biriktir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
-  kontragent_ochir: { rpc: 't2_kontragent_ochir' }
+  kontragent_ochir: { rpc: 't2_kontragent_ochir' },
+  kompaniya_yangila: { rpc: 't2_kompaniya_yangila' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -851,6 +852,32 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
       }
       yuk = { p_id: id };
+
+    /* ══════════ KOMPANIYA (o'z tashkilot profili) ══════════
+       ⚠️ 2026-08-27: t2_kompaniya avvalgacha FAQAT o'qilardi — Sozlamalar
+       "Umumiy Akkaunt" formasi (Antigravity) buni saqlay olmasdi. */
+    } else if (amal === 'kompaniya_yangila') {
+      const id = Number(so.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      if (so.kutilgan_versiya == null) {
+        return Response.json({ ok: false, error: 'kutilgan_versiya majburiy' });
+      }
+      const MAVQE_RUXSAT2 = ['zakazchik', 'pudratchi', 'loyihachi'];
+      const mavqe2 = so.mavqe && MAVQE_RUXSAT2.includes(String(so.mavqe)) ? String(so.mavqe) : null;
+      yuk = {
+        p_id: id, p_kutilgan_versiya: Number(so.kutilgan_versiya),
+        p_toliq_nom: so.toliq_nom != null ? String(so.toliq_nom).slice(0, 300) : null,
+        p_inn: so.inn != null ? String(so.inn).slice(0, 20) : null,
+        p_manzil: so.manzil != null ? String(so.manzil).slice(0, 500) : null,
+        p_rahbar: so.rahbar != null ? String(so.rahbar).slice(0, 200) : null,
+        p_telefon: so.telefon != null ? String(so.telefon).slice(0, 40) : null,
+        p_bank: so.bank != null ? String(so.bank).slice(0, 200) : null,
+        p_hisob_raqam: so.hisob_raqam != null ? String(so.hisob_raqam).slice(0, 40) : null,
+        p_mfo: so.mfo != null ? String(so.mfo).slice(0, 20) : null,
+        p_mavqe: mavqe2,
+      };
 
     /* ══════════ KORZINKA ══════════
        ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan

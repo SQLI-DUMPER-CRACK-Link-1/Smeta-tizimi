@@ -421,7 +421,10 @@ export type KompaniyaMavqe = 'zakazchik' | 'pudratchi' | 'loyihachi' | string;
 
 export type T2Kompaniya = {
   id: number; nom: string; kod: string; faol: boolean; izoh: string | null;
-  mavqe: KompaniyaMavqe | null;
+  mavqe: KompaniyaMavqe | null; versiya: number;
+  toliq_nom: string | null; inn: string | null; manzil: string | null;
+  rahbar: string | null; telefon: string | null; bank: string | null;
+  hisob_raqam: string | null; mfo: string | null;
 };
 
 export function sbT2KompaniyalarOl() {
@@ -861,6 +864,26 @@ export function sbKorzinkaOqish(kompaniyaId?: number | null) {
     filtr: kompaniyaId ? 'kompaniya_id=eq.' + kompaniyaId : undefined,
     tartib: 'ochirilgan_vaqt.desc',
     limit: 500,
+  });
+}
+
+/* ⚡ 2026-08-27 (Claude): `t2_kompaniya` avvalgacha FAQAT o'qilardi —
+ * Sozlamalar "Umumiy Akkaunt" formasi (Antigravity) tashkilot
+ * rekvizitlarini saqlay olmasdi. Har maydon ixtiyoriy: faqat
+ * o'zgartirilgani yuboriladi (`undefined` — teginmaydi), boshqalar
+ * o'z holicha qoladi. `kutilganVersiya` MAJBURIY (optimistik qulf —
+ * ikki foydalanuvchi bir vaqtda tahrirlasa, ikkinchisi "versiya"
+ * sababi bilan rad etiladi, jimgina ustidan yozilmaydi). */
+export function sbKompaniyaYangila(id: number, kutilganVersiya: number, maydonlar: {
+  toliqNom?: string; inn?: string; manzil?: string; rahbar?: string;
+  telefon?: string; bank?: string; hisobRaqam?: string; mfo?: string;
+  mavqe?: 'zakazchik' | 'pudratchi' | 'loyihachi';
+}) {
+  return yozAmali({
+    amal: 'kompaniya_yangila', id, kutilgan_versiya: kutilganVersiya,
+    toliq_nom: maydonlar.toliqNom, inn: maydonlar.inn, manzil: maydonlar.manzil,
+    rahbar: maydonlar.rahbar, telefon: maydonlar.telefon, bank: maydonlar.bank,
+    hisob_raqam: maydonlar.hisobRaqam, mfo: maydonlar.mfo, mavqe: maydonlar.mavqe,
   });
 }
 
