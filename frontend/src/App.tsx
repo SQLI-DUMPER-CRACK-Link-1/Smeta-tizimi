@@ -29,6 +29,7 @@ const TestObyektlar = lazy(() => import('./test02/TestObyektlar'));
 const WrapperPortfel = lazy(() => import('./test02/WrapperPortfel'));
 const WrapperMoliya = lazy(() => import('./test02/WrapperMoliya'));
 const WrapperLogistika = lazy(() => import('./test02/WrapperLogistika'));
+const WrapperCRM = lazy(() => import('./test02/WrapperCRM'));
 const TestSmetaBirlashgan = lazy(() => import('./test02/TestSmetaBirlashgan'));
 const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
 const TestF2Import  = lazy(() => import('./test02/TestF2Import'));
@@ -116,6 +117,7 @@ export default function App() {
             <Route path="portfel" element={<WrapperPortfel />} />
             <Route path="moliya" element={<WrapperMoliya />} />
             <Route path="logistika" element={<WrapperLogistika />} />
+            <Route path="crm" element={<WrapperCRM />} />
 
             <Route path="loyiha" element={<TestLoyiha />} />
             <Route path="korzinka" element={<TestKorzinka />} />

@@ -15,6 +15,7 @@ const TIZIM_02_GURUHLAR = [
     menyular: [
       { yol: '/admin/test/hisobot', nom: 'Dashboard (Boss)', Ikonka: BarChart },
       { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
+      { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
     ]
   },
   {
