@@ -26,10 +26,10 @@ export default function TestErp() {
     try {
       if (modul === 'kadrlar') {
         const res = await sbKadrlarOl(joriy.id);
-        setKadrlarList(res.data || []);
+        setKadrlarList(res.qatorlar || []);
       } else if (modul === 'texnika') {
         const res = await sbTexnikalarOl(joriy.id);
-        setTexnikaList(res.data || []);
+        setTexnikaList(res.qatorlar || []);
       }
     } catch (e: any) {
       toast(e.message, 'danger');

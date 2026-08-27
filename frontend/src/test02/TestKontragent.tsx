@@ -27,7 +27,7 @@ export default function TestKontragent() {
     setRoyxatYuklanmoqda(true);
     try {
       const res = await sbKontragentlarOl(joriy.id);
-      setKontragentlar(res.data || []);
+      setKontragentlar(res.qatorlar || []);
     } catch (e: any) {
       toast(e.message, 'danger');
     } finally {

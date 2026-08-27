@@ -32,7 +32,7 @@ export default function TestShartnoma() {
     try {
       const res = await sbT2ShartnomalarOl(false); // hammasini oqiymiz
       // Faqat shu kompaniyanikini filtrlaymiz garchi DB da qilingan bo'lsa ham ishonch uchun
-      setShartnomalar((res.data || []).filter(s => s.kompaniya_id === joriy.id));
+      setShartnomalar((res.qatorlar || []).filter((s: Shartnoma) => s.kompaniya_id === joriy.id));
     } catch (e: any) {
       toast(e.message, 'danger');
     } finally {

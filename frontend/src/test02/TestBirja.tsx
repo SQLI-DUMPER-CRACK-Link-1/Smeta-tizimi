@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Gavel, PackageSearch, Plus, TrendingDown, Clock, ChevronRight, X, Save, RefreshCw, Handshake } from 'lucide-react';
+import { ShoppingCart, Gavel, PackageSearch, Plus, TrendingDown, Clock, ChevronRight, X, Save, RefreshCw, Handshake, CheckCircle2 } from 'lucide-react';
 import { toast } from '../umumiy/ui/Toast';
 import { FmtN } from '../lib/format';
 import { useKompaniya } from './KompaniyaTanlov';
@@ -35,7 +35,7 @@ export default function TestBirja() {
     setYuklanmoqda(true);
     try {
       const res = await sbBirjaSorovOl();
-      setRfqList(res.data || []);
+      setRfqList(res.qatorlar || []);
     } catch (e: any) {
       toast(e.message, 'danger');
     } finally {
@@ -76,7 +76,7 @@ export default function TestBirja() {
     setTaklifYuklanmoqda(true);
     try {
       const res = await sbBirjaTakliflarOl(r.id);
-      setTakliflar(res.data || []);
+      setTakliflar(res.qatorlar || []);
     } catch (e: any) {
       toast(e.message, 'danger');
     } finally {
@@ -95,7 +95,7 @@ export default function TestBirja() {
       setYangiTaklif({ narx: '', izoh: '' });
       // qayta yuklash
       const res = await sbBirjaTakliflarOl(tanlanganRfq.id);
-      setTakliflar(res.data || []);
+      setTakliflar(res.qatorlar || []);
     } catch (e: any) {
       toast(e.message, "danger");
     } finally {
