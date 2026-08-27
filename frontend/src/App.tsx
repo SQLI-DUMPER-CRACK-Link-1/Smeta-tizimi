@@ -26,6 +26,9 @@ const TestXarita    = lazy(() => import('./test02/TestXarita'));
 const TestLoyiha    = lazy(() => import('./test02/TestLoyiha'));
 const TestKontragent = lazy(() => import('./test02/TestKontragent'));
 const TestObyektlar = lazy(() => import('./test02/TestObyektlar'));
+const WrapperPortfel = lazy(() => import('./test02/WrapperPortfel'));
+const WrapperMoliya = lazy(() => import('./test02/WrapperMoliya'));
+const WrapperLogistika = lazy(() => import('./test02/WrapperLogistika'));
 const TestSmetaBirlashgan = lazy(() => import('./test02/TestSmetaBirlashgan'));
 const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
 const TestF2Import  = lazy(() => import('./test02/TestF2Import'));
@@ -107,31 +110,26 @@ export default function App() {
               Ma’lumot Supabase’dan o’qiladi. Tizim_01 ning bironta
               marshruti/sahifasi o’zgartirilmagan. */}
           <Route path="test" element={<TestShell />}>
-            <Route index element={<Navigate to="/admin/test/obyektlar" replace />} />
+            <Route index element={<Navigate to="/admin/test/portfel" replace />} />
+            
+            {/* Yangi Wrapper Marshrutlar */}
+            <Route path="portfel" element={<WrapperPortfel />} />
+            <Route path="moliya" element={<WrapperMoliya />} />
+            <Route path="logistika" element={<WrapperLogistika />} />
+
             <Route path="loyiha" element={<TestLoyiha />} />
             <Route path="korzinka" element={<TestKorzinka />} />
             <Route path="xarita" element={<TestXarita />} />
             <Route path="kontragent" element={<TestKontragent />} />
             <Route path="obyektlar" element={<TestObyektlar />} />
-            <Route path="import" element={<TestSmetaBirlashgan />} />
-            <Route path="grafik" element={<TestGrafik />} />
-            <Route path="spravochnik" element={<TestSpravochnik />} />
-            <Route path="narxlar" element={<TestNarxlar />} />
-            {/* ⚠️ f2/f2-import endi menyuda YO'Q ("import" ichida
-                sub-tab sifatida) — lekin marshrutlar qoladi, Mind Map
-                va boshqa joylardan chuqur havolalar buzilmasin. */}
-            <Route path="f2" element={<TestF2 />} />
-            <Route path="f2-import" element={<TestF2Import />} />
-            <Route path="sklad" element={<TestSklad />} />
-            <Route path="birja" element={<TestBirja />} />
-            <Route path="invite" element={<TestInvite />} />
-            <Route path="tolov" element={<TestTolov />} />
-            <Route path="faktura" element={<TestFaktura />} />
-            <Route path="hujjat" element={<TestHujjat />} />
-            <Route path="hisobot" element={<TestHisobot />} />
-            <Route path="erp" element={<TestErp />} />
-            <Route path="sozlama" element={<TestSozlama />} />
+            <Route path="smeta" element={<TestSmetaBirlashgan />} />
             <Route path="shartnomalar" element={<TestShartnoma />} />
+            <Route path="tolov" element={<TestTolov />} />
+            <Route path="sklad" element={<TestSklad />} />
+            <Route path="faktura" element={<TestFaktura />} />
+            <Route path="erp" element={<TestErp />} />
+            <Route path="hisobot" element={<TestHisobot />} />
+            <Route path="sozlama" element={<TestSozlama />} />
             <Route path="tizim" element={<TestTizim />} />
             <Route path="aosr" element={<TestAosr />} />
           </Route>

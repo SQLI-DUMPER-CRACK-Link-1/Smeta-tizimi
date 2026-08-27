@@ -9,64 +9,30 @@ import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 
 const TIZIM_02_GURUHLAR = [
   {
-    nom: 'Asosiy Boshqaruv',
+    nom: 'Platforma',
     Ikonka: LayoutDashboard,
     id: 'asosiy',
     menyular: [
-      { yol: '/admin/test/hisobot', nom: 'Boss Tahlil', Ikonka: BarChart },
-      { yol: '/admin/test/loyiha', nom: 'Loyihalar', Ikonka: FolderKanban },
-      { yol: '/admin/test/obyektlar', nom: 'Obyektlar', Ikonka: Building2 },
-      { yol: '/admin/test/xarita', nom: 'Mind Map', Ikonka: Network },
-      { yol: '/admin/test/grafik', nom: 'Grafik', Ikonka: CalendarDays },
+      { yol: '/admin/test/hisobot', nom: 'Dashboard (Boss)', Ikonka: BarChart },
+      { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
     ]
   },
   {
-    nom: 'Muhandislik (PTO)',
+    nom: 'Operatsion Boshqaruv',
     Ikonka: HardHat,
-    id: 'pto',
+    id: 'operatsion',
     menyular: [
-      { yol: '/admin/test/import', nom: 'Smeta / F2 / Fakt', Ikonka: Upload },
-      { yol: '/admin/test/aosr', nom: 'АОСР (Yashirin ish)', Ikonka: ClipboardList },
-      { yol: '/admin/test/spravochnik', nom: 'Ish turlari', Ikonka: BookOpen },
+      { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
+      { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
+      { yol: '/admin/test/erp', nom: 'Kadrlar, Texnika (ERP)', Ikonka: Users },
     ]
   },
   {
-    nom: 'Moliya va Tijorat',
-    Ikonka: Briefcase,
-    id: 'moliya',
-    menyular: [
-      { yol: '/admin/test/shartnomalar', nom: 'Shartnomalar', Ikonka: Briefcase },
-      { yol: '/admin/test/tolov', nom: 'To\'lov', Ikonka: CreditCard },
-      { yol: '/admin/test/faktura', nom: 'Fakturalar (PDF)', Ikonka: FileText },
-      { yol: '/admin/test/narxlar', nom: 'Narxlar', Ikonka: Tags },
-    ]
-  },
-  {
-    nom: 'Ta\'minot va Sklad',
-    Ikonka: ShoppingCart,
-    id: 'taminot',
-    menyular: [
-      { yol: '/admin/test/birja', nom: 'Birja RFQ', Ikonka: ShoppingCart },
-      { yol: '/admin/test/invite', nom: 'Takliflar', Ikonka: UserPlus },
-      { yol: '/admin/test/kontragent', nom: 'Kontragentlar', Ikonka: Building2 },
-      { yol: '/admin/test/sklad', nom: 'Sklad (WMS)', Ikonka: Box },
-    ]
-  },
-  {
-    nom: 'ERP va Resurslar',
-    Ikonka: Users,
-    id: 'erp',
-    menyular: [
-      { yol: '/admin/test/erp', nom: 'Kadrlar, Texnika, HSE', Ikonka: LayoutDashboard },
-    ]
-  },
-  {
-    nom: 'Tizim va Xavfsizlik',
+    nom: 'Tizim',
     Ikonka: ShieldAlert,
     id: 'tizim',
     menyular: [
       { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
-      { yol: '/admin/test/hujjat', nom: 'Obyekt Hujjatlari', Ikonka: Archive },
       { yol: '/admin/test/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
     ]
   }
