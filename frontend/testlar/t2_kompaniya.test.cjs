@@ -61,7 +61,8 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       't2_obyekt_loyihaga_biriktir',
                       't2_loyiha_qatnashchi_biriktir', 't2_loyiha_qatnashchi_ochir',
                       't2_kontragent_saqla', 't2_kontragent_ochir',
-                      't2_azolik_qosh', 't2_azolik_rol_ozgartir', 't2_azolik_ochir'].sort();
+                      't2_azolik_qosh', 't2_azolik_rol_ozgartir', 't2_azolik_ochir',
+                      't2_fakt_yoz', 't2_fakt_belgila'].sort();
     T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));

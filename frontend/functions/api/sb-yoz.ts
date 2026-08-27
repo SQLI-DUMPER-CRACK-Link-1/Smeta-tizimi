@@ -83,6 +83,8 @@ const AMALLAR = {
   loyiha_qatnashchi_ochir: { rpc: 't2_loyiha_qatnashchi_ochir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
   kontragent_ochir: { rpc: 't2_kontragent_ochir' },
+  fakt_yoz: { rpc: 't2_fakt_yoz' },
+  fakt_belgila: { rpc: 't2_fakt_belgila' },
   azolik_qosh: { rpc: 't2_azolik_qosh' },
   azolik_rol_ozgartir: { rpc: 't2_azolik_rol_ozgartir' },
   azolik_ochir: { rpc: 't2_azolik_ochir' }
@@ -962,6 +964,49 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
       }
       yuk = { p_id: id };
+
+    /* ══════════ ФАКТ KIRITISH (bajarilgan ish) ══════════
+       Foydalanuvchi: «ikkalasi ham bo'lishi kerak» — prorab kunlik ham,
+       PTO jamlab ham. Ikkalasi AYNI RPC ga yozadi, farq faqat paket
+       kattaligida; jamlash mantig'i o'zgarmaydi. */
+    } else if (amal === 'fakt_yoz') {
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      const sana = String(so.sana || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(sana)) {
+        return Response.json({ ok: false, error: 'sana YYYY-MM-DD shaklida bo\'lishi kerak' });
+      }
+      if (!Array.isArray(so.qatorlar) || so.qatorlar.length === 0) {
+        return Response.json({ ok: false, error: 'qatorlar bo\'sh' });
+      }
+      yuk = {
+        p_obyekt_id: obyektId,
+        p_sana: sana,
+        p_qatorlar: so.qatorlar,
+        p_kim: sess.email || null,
+        p_operation_id: so.operation_id || null,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_raqam: so.raqam ? String(so.raqam).slice(0, 50) : null,
+      };
+
+    /* Ko'zgu varaqdan: JAMI qiymat beriladi, FARQ hujjat qilib yoziladi.
+       ⚠️ Manfiy farq (перерасчёт) ATAYLAB bloklanmaydi — loyiha qoidasi. */
+    } else if (amal === 'fakt_belgila') {
+      const qatorId = Number(so.qator_id);
+      if (!Number.isFinite(qatorId) || qatorId <= 0) {
+        return Response.json({ ok: false, error: 'qator_id noto\'g\'ri' });
+      }
+      if (so.yangi_jami == null || !Number.isFinite(Number(so.yangi_jami))) {
+        return Response.json({ ok: false, error: 'yangi_jami son bo\'lishi kerak' });
+      }
+      yuk = {
+        p_qator_id: qatorId,
+        p_yangi_jami: Number(so.yangi_jami),
+        p_sana: so.sana ? String(so.sana) : null,
+        p_kim: sess.email || null,
+      };
 
     /* ══════════ A'ZOLIK (Xodimlar va Rollar) ══════════
        ⚠️ Multi-tenant poydevorining ochiq bo'shlig'i edi: t2_azolik

@@ -1639,3 +1639,49 @@ Avval faqat Sheet→baza avtomat edi, teskarisi qo'lda tugma bilan.
 `tsc --noEmit` toza. Jonli sinov (MCP): loyiha yaratildi → obyekt
 biriktirildi → qatnashchi qo'shildi → byudjet tahrirlandi → eski versiya
 bilan urinish RAD ETILDI → tozalandi (0 qoldiq).
+
+### [2026-08-28] Claude → hammaga · ФАКТ organi qurildi (backend) — UI SENDAN
+
+**Muammo:** bazada **0 ta ФАКТ hujjati** bor edi — uni kiritadigan yo'l
+umuman yo'q. Shuning uchun Ф2 tekshiriladigan asosga ega emasdi va pul
+zanjiri (to'lov 0, xarajat 0, АОСР 0) boshlanmasdi. Tizim skeletida bu
+**yurak o'rni bo'sh** degani edi.
+
+**Foydalanuvchi qarori:** «ikkalasi ham bo'lishi kerak» — prorab kunlik
+ham, PTO jamlab ham. Ikkalasi **AYNI mexanizmga** yozadi (`t2_akt`
+tur='fakt'), farq faqat paket kattaligida. Jamlash
+(`t2_qator_holat.fakt_hajm`) ikkalasini qo'shadi — hisob mantig'i
+**o'zgarmadi**.
+
+**Qurildi (3 yo'l):**
+
+| Yo'l | RPC | Kim uchun |
+|---|---|---|
+| Kunlik / jamlab kiritish | `t2_fakt_yoz` | prorab (mobil), PTO (jadval) |
+| Ko'zgu varaqdan | `t2_fakt_belgila` | odam allaqachon o'sha varaqda ishlaydi |
+| (mavjud) hujjat sifatida | `t2_akt_yarat` tur='fakt' | to'liq hujjat |
+
+`t2_fakt_belgila` — varaqda ФАКТ ustuni **jami** ko'rsatadi, shuning uchun
+odam 3 ni 8 qilsa tizim **+5** yozadi (jami 8 emas). Manfiy farq
+(ПЕРЕРАСЧЁТ) **ataylab bloklanmaydi** — loyiha qoidasi 3.4.
+
+⚠️ **Jonli sinovda topilgan cheklov:** `t2_akt_kalit_uniq` tufayli
+raqamsiz ФАКТ hujjati **oyiga bitta** bo'la olardi — «prorab kunlik»
+talabiga zid. Cheklovga TEGILMADI (u foydali), har kunlik yozuvga o'z
+raqami beriladi: `F20260828-01`, `F20260828-02`…
+
+**Sinov (MCP, real Amfiteatr qatorida):** kunlik +3 → varaqdan «jami 8»
+→ tizim +5 yozdi → `fakt_hajm=8`, `f2_mumkin_hajm=8` avtomat hisoblandi
+→ tozalandi (0 qoldiq).
+
+**Frontend (tayyor, ulash SENDAN):** `frontend/src/api/t2-fakt.ts`
+— `sbFaktYoz({obyektId, sana, qatorlar, operationId})`,
+`sbFaktBelgila({qatorId, yangiJami})`, `sbQatorHolatOl(obyektId)`.
+Kerak: (a) prorab uchun sodda mobil forma — obyekt + sana + qator/hajm,
+(b) PTO uchun jadval ko'rinishi (`t2_qator_holat` dan smeta/fakt/qoldiq
+ustunlari bilan). `operationId` ni **sen berasan** (UUID) — takroriy
+yuborishdan himoya shunga tayanadi.
+
+⚠️ **Men hali qilmadim:** ko'zgu varaqqa ФАКТ ustunini QO'SHISH
+(`T2_Kozgu.js` dagi `USTUNLAR` da hozir Ф2 bor, ФАКТ **yo'q**) va uni
+teskari sinxga ulash. Bu keyingi ishim — backend RPC tayyor turibdi.
