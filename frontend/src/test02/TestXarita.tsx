@@ -226,7 +226,7 @@ export default function TestXarita() {
           })}
 
           {/* Objects → Sub-modules */}
-          {obyektlar.map((ob, i) => {
+          {obyektlar.map((_, i) => {
             const oy = objStartY + i * rowStep;
             const subGroupTop = oy + (OB_H / 2) - (totalSubH / 2);
             return OBJ_SUBS.map((s, j) => {
