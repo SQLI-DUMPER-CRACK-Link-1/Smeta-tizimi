@@ -31,10 +31,10 @@
  ********************************************************************/
 
 var T2_STRUKTURA = {
-  SMETA:     'Смета',
+  SMETA:     'SMETA',
   F2:        'F2',
-  LOYIHA:    'Лойиҳа ҳужжатлари',
-  VIBORKA:   'Виборка',
+  LOYIHA:    'Loyihalar va Chizmalar',
+  VIBORKA:   'Viborka'
 };
 
 /** Papka ichida shu nomdagi quyi papkani topadi yoki yaratadi. */
@@ -130,6 +130,6 @@ function apiT2YangiObyektYarat(nom){
       smeta: tuzilma.smeta.getUrl(), f2: tuzilma.f2.getUrl(),
       loyiha: tuzilma.loyiha.getUrl(), viborka: tuzilma.viborka.getUrl(),
     },
-    xabar: '"' + nom + '" yaratildi: Смета/F2, Лойиҳа ҳужжатлари, Виборка papkalari bilan.'
+    xabar: '"' + nom + '" yaratildi: SMETA, F2, Loyihalar va Viborka papkalari bilan.'
   };
 }
