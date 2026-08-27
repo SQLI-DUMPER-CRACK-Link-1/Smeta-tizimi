@@ -30,6 +30,7 @@ import {
   sbT2DaraxtOl, sbT2QatorHolatOl,
   sbT2TreeQur,
   sbT2AktYarat,
+  sbT2QatorQosh,
   yangiOperationId,
   type T2Obyekt,
   type AktNatija
@@ -166,9 +167,9 @@ export default function TestF2Import() {
 
   // Yangi qator (Dop/Zamena) modal holatlari
   const [qatorQoshModal, setQatorQoshModal] = useState(false);
-  const [yangiSmeta, setYangiSmeta] = useState('');
+  /** Yangi qatorning ota (bl/rz) qatori — Postgres id, Sheet qatori EMAS. */
+  const [yangiOtaId, setYangiOtaId] = useState<number | null>(null);
   const [yangiTur, setYangiTur] = useState('rz');
-  const [yangiQator, setYangiQator] = useState('');
   const [yangiKod, setYangiKod] = useState('');
   const [yangiNom, setYangiNom] = useState('');
   const [yangiBirlik, setYangiBirlik] = useState('');
@@ -370,6 +371,18 @@ export default function TestF2Import() {
     return null;
   };
 
+  /** `uid` ning bevosita otasini topadi — F2 (akt) daraxti bo'yicha. */
+  const findAktParentOf = (nodes: any[], uid: string, ota: any = null): any | null => {
+    for (const n of nodes) {
+      if (n.uid === uid) return ota;
+      if (n.children) {
+        const found = findAktParentOf(n.children, uid, n);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const findSmetaNode = (nodes: TreeNode[], id: number): TreeNode | null => {
     for (const n of nodes) {
       if (n.id === id) return n;
@@ -380,6 +393,35 @@ export default function TestF2Import() {
     }
     return null;
   };
+
+  /** `childId` ning bevosita otasini topadi (smetaTree bo'yicha, rekursiv). */
+  const findParentOf = (nodes: TreeNode[], childId: number, ota: TreeNode | null = null): TreeNode | null => {
+    for (const n of nodes) {
+      if (n.id === childId) return ota;
+      if (n.children) {
+        const found = findParentOf(n.children, childId, n);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  /** Zamena/qo'shimcha ish uchun ota nomzodlari — faqat rz/bl (RPC qoidasi:
+   *  bl faqat rz ostiga, rs/mat/ob esa rz YOKI bl ostiga qo'shiladi). */
+  const otaNomzodlari = useMemo(() => {
+    const natija: { id: number; label: string; type: string }[] = [];
+    const yur = (nodes: TreeNode[], chuqurlik: number) => {
+      for (const n of nodes) {
+        if ((n.type === 'rz' || n.type === 'bl') && n.id) {
+          natija.push({ id: n.id as number, type: n.type,
+            label: (chuqurlik ? '— ' : '') + (n.nom || '(nomsiz)') });
+        }
+        if (n.children) yur(n.children, chuqurlik + 1);
+      }
+    };
+    if (smetaTree) yur(smetaTree, 0);
+    return natija;
+  }, [smetaTree]);
 
   // Matching check functions
   const bogMi = useCallback((kalit: string | undefined) => {
@@ -530,31 +572,12 @@ export default function TestF2Import() {
     if (smetaKalit && !smetaKalit.startsWith('rz:') && smetaTree) {
       const sn = findSmetaNode(smetaTree, Number(smetaKalit));
       if (sn) {
-        setYangiSmeta(sn.varaq || '');
-        let targetRow = sn.row || '';
-        // Agar resurs bo'lsa (rs/mat/ob), backendga ona BLOK qatori kerak
-        if (sn.type === 'rs' || sn.type === 'mat' || sn.type === 'ob') {
-          let parentBlRow: number | null = null;
-          const findParentBl = (nodes: any[]) => {
-            for (const rz of nodes) {
-              if (rz.children) {
-                for (const bl of rz.children) {
-                  if (bl.type === 'bl') {
-                    if (bl.id === sn.id) { parentBlRow = bl.row; return; }
-                    if (bl.children) {
-                      for (const child of bl.children) {
-                        if (child.id === sn.id) { parentBlRow = bl.row; return; }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          };
-          findParentBl(smetaTree);
-          if (parentBlRow) targetRow = parentBlRow;
-        }
-        setYangiQator(String(targetRow));
+        /* Bl/rz ustida bosilsa — shu qator ota. rs/mat/ob ustida
+         * bosilsa — uning otasi (ish/bl) tanlanadi (birodar sifatida
+         * qo'shiladi). Sheet qatori (`row`) EMAS — Postgres id. */
+        const ota = (sn.type === 'rz' || sn.type === 'bl')
+          ? sn : findParentOf(smetaTree, sn.id as number);
+        setYangiOtaId(ota && ota.id ? (ota.id as number) : null);
       }
     }
     // F2 panelidan "qo'shish" bosilsa, F2 node ma'lumotlari bilan to'ldirish
@@ -568,6 +591,7 @@ export default function TestF2Import() {
         setYangiNarx(String(n.narx ?? ''));
         setYangiTur(n.type === 'bl' ? 'bl' : n.type === 'mat' ? 'mat' : n.type === 'ob' ? 'ob' : 'rs');
         setYangiAktBoglashUid(aktKalit); // Zamena uchun eslab qolamiz
+        if (!smetaKalit) setYangiOtaId(otaTaklifTop(n, aktKalit));
       }
     } else {
       setYangiAktBoglashUid(null);
@@ -879,7 +903,23 @@ export default function TestF2Import() {
     }
   };
 
-  // Dop/Zamena qator qo'shish modalini ko'rsatish
+  /* Zamena/qo'shimcha ish uchun eng mos ota (bl)ni topishga urinadi —
+   * F2 daraxtidagi (korish.tree) ushbu resurs qaysi ish (bl) ostida
+   * bo'lsa, xuddi shu nomdagi/kodli bl smetaTree da qidiriladi.
+   * Topilmasa — foydalanuvchi dropdown'dan o'zi tanlaydi (majburiy). */
+  const otaTaklifTop = (akt: any, aktKalit: string): number | null => {
+    if (!korish?.tree || !smetaTree) return null;
+    const otaAkt = findAktParentOf(korish.tree, akt.uid ?? aktKalit);
+    if (!otaAkt || otaAkt.type !== 'bl') return null;
+    const nomTarget = String(otaAkt.nom || '').trim().toUpperCase();
+    const kodTarget = String(otaAkt.kod || '').trim().toUpperCase();
+    const kandidat = otaNomzodlari.find((o) => o.type === 'bl' &&
+      (o.label.replace(/^—\s*/, '').trim().toUpperCase() === nomTarget) ||
+      (kodTarget && o.label.toUpperCase().includes(kodTarget)));
+    return kandidat ? kandidat.id : null;
+  };
+
+  // Dop/Zamena qator qo'shish modalini ko'rsatish — MAT/OB HAM QO'LLAB-QUVVATLANADI
   const onDopClick = (aktKalit: string) => {
     if (!korish?.tree) return;
     const n = findAktNode(korish.tree, aktKalit);
@@ -890,13 +930,11 @@ export default function TestF2Import() {
     setYangiBirlik(String(n.bir || n.birlik || ''));
     setYangiHajm(String(n.hajm ?? ''));
     setYangiNarx(String(n.narx ?? ''));
-    setYangiTur(n.type === 'bl' ? 'bl' : 'rs');
-
-    if (korish.obyekt_id) {
-      const firstSheet = smetaTree && smetaTree[0]?.varaq ? smetaTree[0].varaq : (varaqlar[0] || '');
-      setYangiSmeta(firstSheet);
-    }
-    setYangiQator('');
+    /* ⚠️ 2026-08-27: avval faqat bl/rs bo'lardi — mat/ob zamena/qo'shimcha
+     * ish sifatida kiritilmasdi. Endi F2 tugunidagi haqiqiy turi olinadi. */
+    setYangiTur(n.type === 'bl' ? 'bl' : n.type === 'mat' ? 'mat' : n.type === 'ob' ? 'ob' : 'rs');
+    setYangiOtaId(otaTaklifTop(n, aktKalit));
+    setYangiAktBoglashUid(aktKalit);
     setQatorQoshModal(true);
   };
 
@@ -905,8 +943,13 @@ export default function TestF2Import() {
     const node = findSmetaNode(smetaTree, Number(smetaKalit));
     if (!node) return;
 
-    setYangiSmeta(node.varaq);
-    setYangiQator(String(node.row));
+    /* Bl/rz ustida bosilsa — shu qator ota bo'ladi (uning ostiga
+     * qo'shiladi). rs/mat/ob ustida bosilsa — SHU qatorning otasi
+     * (birodar/sibling sifatida) tanlanadi. */
+    const ota = (node.type === 'rz' || node.type === 'bl')
+      ? node
+      : findParentOf(smetaTree, node.id as number);
+    setYangiOtaId(ota && ota.id ? (ota.id as number) : null);
     setYangiNom('');
     setYangiKod('');
     setYangiBirlik('');
@@ -916,63 +959,80 @@ export default function TestF2Import() {
     setQatorQoshModal(true);
   };
 
+  /**
+   * ⚠️ 2026-08-27 (Claude): TO'LIQ QAYTA YOZILDI — Tizim_01'ning
+   * `apiF2TezYoz`/`apiF2Qolla` falsafasiga mos: Postgres'ga TO'G'RIDAN
+   * TO'G'RI, formula yoki butun obyektni qayta import qilmasdan.
+   *
+   * ESKI YO'L (SEKIN, XAVFLI): GAS `apiSmetaQatorQosh` (Sheet'ga yozadi)
+   * → keyin BUTUN obyektni `apiT2ObyektImport` bilan qayta import
+   * qilish (bir necha soniyadan bir necha o'nlab soniyagacha, katta
+   * obyektda 6 daqiqa GAS limitiga uriladi — xuddi Tizim_01'da
+   * `apiOyQosh`/`apiF2Qolla` eski yo'li yiqilgani kabi).
+   *
+   * YANGI YO'L: `t2_qator_qosh` RPC'ga TO'G'RIDAN TO'G'RI — bitta
+   * so'rov, versiyalangan, idempotent (`operation_id`), MAT/OB/RS/BL
+   * hammasini qo'llab-quvvatlaydi (backend allaqachon to'liq edi —
+   * faqat frontend bl/rs bilan cheklangandi).
+   */
   const onQatorSaqlash = async () => {
-    if (!obyekt || !yangiSmeta || !yangiNom || !korish?.obyekt_id) {
-      toast("Obyekt, Smeta (varaq) va Nomni kiritish majburiy!", "danger");
+    if (!korish?.obyekt_id || !yangiNom.trim()) {
+      toast("Nomni kiritish majburiy!", "danger");
       return;
     }
-    if (yangiTur !== 'rz' && (!yangiKod || !yangiBirlik || !yangiHajm)) {
-      toast("Ish yoki resurs uchun Kod, Birlik va Hajm kiritilishi shart (Yuridik aniqlik uchun)!", "danger");
+    if (yangiTur !== 'rz' && !yangiOtaId) {
+      toast("Ota qator (Razdel/Ish) tanlanmagan — qaysi ish ostiga qo'shilishini ko'rsating!", "danger");
+      return;
+    }
+    if (yangiTur !== 'rz' && (!yangiBirlik || !yangiHajm)) {
+      toast("Ish yoki resurs uchun Birlik va Hajm kiritilishi shart (Yuridik aniqlik uchun)!", "danger");
       return;
     }
 
     setQatorLoading(true);
     try {
-      const res = await gas<{ ok: boolean; row?: number; xabar?: string }>('apiSmetaQatorQosh', obyekt, yangiSmeta, yangiTur, yangiQator, yangiKod, yangiNom, yangiBirlik, yangiHajm, yangiNarx);
-      if (res && res.ok) {
-        toast("Yangi qator Google Sheets'ga qo'shildi. Supabase sinxronizatsiya qilinmoqda...", "ok");
-        
-        // Sync to Supabase via apiT2ObyektImport
-        const impRes = await gas<any>('apiT2ObyektImport', obyekt);
-        if (impRes && impRes.ok) {
-          toast("✓ Baza muvaffaqiyatli yangilandi", "ok");
-          setQatorQoshModal(false);
-          setYangiNom(''); setYangiKod(''); setYangiBirlik(''); setYangiHajm(''); setYangiNarx(''); setYangiQator('');
-          
-          // Reload tree from Supabase
-          setSmetaLoading(true);
-          const [r, h] = await Promise.all([sbT2DaraxtOl(korish.obyekt_id as number), sbT2QatorHolatOl(korish.obyekt_id as number)]);
-          setSmetaLoading(false);
-          if (r.ok && r.qatorlar) {
-            const tree = sbT2TreeQur(r.qatorlar, h ? (h.qatorlar || []) : []);
-            setSmetaTree(tree);
-            
-            // Avto-bog'lash (agar F2 dan ochilgan bo'lsa)
-            if (yangiAktBoglashUid && res.row) {
-              const findNewNode = (nodes: any[]): number | null => {
-                for (const node of nodes) {
-                  if (node.varaq === yangiSmeta && node.row === res.row) return node.id;
-                  if (node.children) {
-                    const found = findNewNode(node.children);
-                    if (found) return found;
-                  }
-                }
-                return null;
-              };
-              const newId = findNewNode(tree);
-              if (newId) {
-                setUndoStack((prev) => [...prev.slice(-29), qolBog]);
-                setQolBog((prev) => ({ ...prev, [yangiAktBoglashUid]: newId }));
-                toast(`✓ Yangi qator yaratildi va avtomatik bog'landi!`, 'ok');
-              }
-            }
-            setYangiAktBoglashUid(null);
+      const res = await sbT2QatorQosh({
+        obyektId: korish.obyekt_id as number,
+        tur: yangiTur as 'rz' | 'bl' | 'rs' | 'mat' | 'ob',
+        nom: yangiNom.trim(),
+        otaId: yangiTur === 'rz' ? null : yangiOtaId,
+        kod: yangiKod || undefined,
+        birlik: yangiBirlik || undefined,
+        /* F2/zamena hujjatidan kelgan hajm — norma ko'paytmasi EMAS,
+         * AYNAN shu son (eObyom:true), Tizim_01'dagi bir xil qoida
+         * bilan: "obyom DOIM yoziladi, o'zidan to'qilmaydi". */
+        norma: yangiHajm ? Number(yangiHajm) : undefined,
+        eObyom: true,
+        narx: yangiNarx ? Number(yangiNarx) : undefined,
+        operationId: yangiOperationId(),
+      });
+
+      if (res.ok && res.qator_id) {
+        toast(res.izoh || "✓ Qator qo'shildi", "ok");
+        setQatorQoshModal(false);
+        const boglanadiganUid = yangiAktBoglashUid;
+        setYangiNom(''); setYangiKod(''); setYangiBirlik(''); setYangiHajm(''); setYangiNarx('');
+        setYangiOtaId(null);
+
+        // Daraxtni yangilaymiz — faqat shu obyekt, faqat kerak bo'lganda
+        setSmetaLoading(true);
+        const [r, h] = await Promise.all([sbT2DaraxtOl(korish.obyekt_id as number), sbT2QatorHolatOl(korish.obyekt_id as number)]);
+        setSmetaLoading(false);
+        if (r.ok && r.qatorlar) {
+          const tree = sbT2TreeQur(r.qatorlar, h ? (h.qatorlar || []) : []);
+          setSmetaTree(tree);
+
+          // Avto-bog'lash — endi ID to'g'ridan-to'g'ri RPC javobidan keladi,
+          // qayta qidirish/taxmin kerak emas.
+          if (boglanadiganUid) {
+            setUndoStack((prev) => [...prev.slice(-29), qolBog]);
+            setQolBog((prev) => ({ ...prev, [boglanadiganUid]: res.qator_id as number }));
+            toast(`✓ Yangi qator yaratildi va avtomatik bog'landi!`, 'ok');
           }
-        } else {
-          toast(impRes?.xabar || "Supabase import xatosi", "danger");
         }
+        setYangiAktBoglashUid(null);
       } else {
-        toast(res?.xabar || "Xatolik", "danger");
+        toast((res as any).xabar || (res as any).error || "Xatolik", "danger");
       }
     } catch(e: any) {
       toast(e.message || String(e), "danger");
@@ -1881,37 +1941,43 @@ export default function TestF2Import() {
                       <h3 className="text-md font-bold text-accent">
                         Smetaga Yangi Qator Qo'shish (DOP / ZAMENA)
                       </h3>
-                      {yangiQator && yangiSmeta && (
-                        <p className="text-[11px] text-text-dim mt-1">
-                          «{yangiSmeta}» varag'ining <b className="text-text">{yangiQator}</b>-qatoridan KEYIN qo'shiladi.
-                        </p>
-                      )}
+                      <p className="text-[11px] text-text-dim mt-1">
+                        To'g'ridan-to'g'ri bazaga yoziladi — Sheets orqali emas, tezkor.
+                      </p>
                     </div>
                     <button onClick={() => setQatorQoshModal(false)}
                       className="text-text-mute hover:text-text p-1 rounded hover:bg-white/10">
                       <X size={16} />
                     </button>
                   </div>
-                  
-                  <div className="flex gap-4">
-                    <div className="flex flex-col gap-1 w-1/2">
-                      <label className="text-[12px] font-medium text-text-dim">Varaq (Smeta):</label>
-                      <select value={yangiSmeta} onChange={(e) => setYangiSmeta(e.target.value)}
-                        className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none">
-                        {varaqlar.map((v) => <option key={v} value={v}>{v}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex flex-col gap-1 w-1/2">
-                      <label className="text-[12px] font-medium text-text-dim">Qator turi:</label>
-                      <select value={yangiTur} onChange={(e) => setYangiTur(e.target.value)}
-                        className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none">
-                        <option value="rz">Razdel (Sarlavha)</option>
-                        <option value="bl">Ish turi (Blok)</option>
-                        <option value="rs">Resurs (Ish/Mat/Ob)</option>
-                      </select>
-                    </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[12px] font-medium text-text-dim">Qator turi:</label>
+                    <select value={yangiTur} onChange={(e) => { setYangiTur(e.target.value); setYangiOtaId(null); }}
+                      className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none">
+                      <option value="rz">Razdel (Sarlavha)</option>
+                      <option value="bl">Ish turi (Blok)</option>
+                      <option value="rs">Resurs (ЧЕЛ/МАШ — birlikdan avto aniqlanadi)</option>
+                      <option value="mat">Material (МАТ)</option>
+                      <option value="ob">Uskuna (ОБ)</option>
+                    </select>
                   </div>
-                  
+
+                  {yangiTur !== 'rz' && (
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-medium text-text-dim">
+                        Ota qator ({yangiTur === 'bl' ? 'faqat Razdel' : 'Razdel yoki Ish'}):
+                      </label>
+                      <select value={yangiOtaId ?? ''} onChange={(e) => setYangiOtaId(e.target.value ? Number(e.target.value) : null)}
+                        className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none">
+                        <option value="">— tanlang —</option>
+                        {otaNomzodlari
+                          .filter((o) => yangiTur === 'bl' ? o.type === 'rz' : true)
+                          .map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-1">
                     <label className="text-[12px] font-medium text-text-dim">Nomi:</label>
                     <input value={yangiNom} onChange={(e) => setYangiNom(e.target.value)}
@@ -1922,7 +1988,7 @@ export default function TestF2Import() {
                   {yangiTur !== 'rz' && (
                     <div className="grid grid-cols-2 gap-3 bg-black/20 p-3 rounded-md border border-border/30 text-[12px] text-text-dim">
                       <div className="flex flex-col gap-1">
-                        <label className="font-medium">Kodi (Asos):</label>
+                        <label className="font-medium">Kodi (ixtiyoriy):</label>
                         <input value={yangiKod} onChange={(e) => setYangiKod(e.target.value)}
                           placeholder="Masalan: E11-1-1"
                           className="bg-[var(--surface-2)] border border-border rounded px-2.5 py-1 text-text outline-none w-full" />
@@ -1942,20 +2008,12 @@ export default function TestF2Import() {
                       <div className="flex flex-col gap-1">
                         <label className="font-medium">Narx:</label>
                         <input value={yangiNarx} onChange={(e) => setYangiNarx(e.target.value)}
-                          type="number" step="any" placeholder="Ixtiyoriy"
+                          type="number" step="any" placeholder="Ixtiyoriy — bo'sh qoldirilsa narxlar bazasidan qidiriladi"
                           className="bg-[var(--surface-2)] border border-border rounded px-2.5 py-1 text-text outline-none w-full" />
                       </div>
                     </div>
                   )}
-                  
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[12px] font-medium text-text-dim">Qaysi qatordan keyin (ixtiyoriy):</label>
-                    <input value={yangiQator} onChange={(e) => setYangiQator(e.target.value)}
-                      placeholder="Bo'sh qoldirilsa oxiriga tushadi"
-                      type="number"
-                      className="bg-[var(--surface-2)] border border-border rounded px-3 py-1.5 text-[12px] text-text outline-none w-full" />
-                  </div>
-                  
+
                   <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border/20">
                     <button onClick={() => setQatorQoshModal(false)} disabled={qatorLoading}
                       className="px-4 py-1.5 rounded-lg border border-border hover:bg-white/5 text-[12px] text-text-dim disabled:opacity-40 cursor-pointer">

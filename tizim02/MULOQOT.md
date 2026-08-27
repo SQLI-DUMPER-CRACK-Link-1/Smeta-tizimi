@@ -895,3 +895,51 @@ Cloudflare Functions sintaksis skani toza, build toza.
 **Umumiy: 84% → 83%** (denominator o'sdi — yangi funksiyalar
 qo'shildi, ko'pi darhol `toliq:true` bilan yozilgani uchun foiz
 deyarli o'zgarmadi).
+
+
+### [2026-08-27] Claude → hammaga · F2 zamena/qo'shimcha ish endi MAT/OB ni ham qo'llab-quvvatlaydi + Kozgu F2 ustuni bugi
+
+Foydalanuvchi: "F2 ni ko'zguga tizim1daka qilib yozadigan qilib ber —
+faqat yozilishi kerak bo'lgan qatorlarga qiymat yozsin, formula kerak
+emas. Zamena ham qo'shimcha ish mat/rs/ob hammasini kirita oladigan
+qilib berishing kerak."
+
+**Topilgan ikkita real bug:**
+
+1. **`T2_Kozgu.js` "F2 HAJM"/"F2 SUMMA" ustunlari FAKT qiymatini
+   ko'rsatardi**, F2 emas — `r.fakt_hajm`/`r.fakt_summa` o'qilardi,
+   `r.f2_hajm`/`r.f2_summa` kerak edi (ikkalasi `t2_qator_holat` da
+   ALOHIDA ustun — invariant tekshiruvi shu farqga tayanadi).
+   Tuzatildi. `T2QatorHolat` TS turi ham to'liqlashtirildi
+   (`id`, `nom`, `f2_hajm`, `f2_summa` qo'shildi).
+
+2. **Zamena/qo'shimcha ish qo'shish (`TestF2Import.tsx`) ESKI, SEKIN
+   yo'ldan o'tardi**: GAS `apiSmetaQatorQosh` (Sheet'ga yozadi) →
+   BUTUN obyektni `apiT2ObyektImport` bilan qayta import — xuddi
+   Tizim_01'dagi eski `apiOyQosh`/`apiF2Qolla` yiqilgan yo'li kabi
+   (37_F2TezYoz.js'dagi izohga qarang — bu ANIQ sabab bilan qayta
+   loyihalashtirilgan edi). Ustiga, tur tanlovi FAQAT bl/rs bilan
+   cheklangandi (`onDopClick`da `n.type==='bl'?'bl':'rs'` — mat/ob
+   HECH QACHON tanlanmasdi, garchi backend — `t2_qator_qosh` RPC —
+   ALLAQACHON mat/ob/rs/bl/rz hammasini to'g'ri qo'llab-quvvatlar edi).
+
+   **Tuzatildi — Tizim_01'ning `apiF2TezYoz` falsafasi bilan bir xil**
+   («faqat kerakli qatorga qiymat, formula/butun-qayta-hisoblash
+   yo'q»): endi `sbT2QatorQosh` (Postgres RPC) ga TO'G'RIDAN TO'G'RI
+   yoziladi — bitta so'rov, versiyalangan, idempotent
+   (`operation_id`), MAT/OB/RS/BL/RZ hammasi tanlanadi. Ota qator
+   (Razdel/Ish) endi aniq dropdown orqali tanlanadi — Sheet qator
+   raqami emas, Postgres `ota_id` orqali (RPC talab qilgan tuzilish
+   qoidasiga — bl faqat rz ostiga, rs/mat/ob esa rz yoki bl ostiga —
+   mos). Yangi qator yaratilgach ID RPC javobidan TO'G'RIDAN TO'G'RI
+   keladi (qayta qidirish/taxmin qilish shart emas) va F2 qatoriga
+   avtomatik bog'lanadi.
+
+**Sinov (Supabase MCP, sinov obyekti id=2):** `t2_qator_qosh` tur='mat'
+va tur='ob' bilan qo'lda chaqirildi — ikkalasi ham to'g'ri `kat`
+bilan (МАТ/МАШ — birlikdan avto) yaratildi va tozalandi. ⚠️ Kichik
+nuance: tur='ob' + birlik="маш-час" bo'lganda avto-aniqlash kat=МАШ
+beradi (ОБ emas) — bu `t2_qator_qosh`ning ESKI, oldindan qabul
+qilingan xatti-harakati (bugungi ishga aloqasi yo'q, tegilmadi).
+
+tsc 0 xato, build toza, barcha 8 ta .cjs test o'tdi.

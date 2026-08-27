@@ -393,8 +393,11 @@ function apiT2VaraqYarat(obyekt){
         qator[kUst - 1] = '=IF($H' + qn + '=""' + AJR + '""' + AJR + '$H' + qn + ')';
       }
 
-      qator[C_F2_HAJM - 1] = (r.fakt_hajm != null) ? Number(r.fakt_hajm) : '';
-      qator[C_F2_SUM - 1]  = (r.fakt_summa != null) ? Number(r.fakt_summa) : '';
+      /* ⚠️ 2026-08-27: `r.fakt_hajm`/`r.fakt_summa` EMAS — ustun nomi
+       * "F2 HAJM"/"F2 SUMMA", lekin FAKT summasi yozilardi (t2_qator_holat
+       * `f2_hajm`/`f2_summa` deb ALOHIDA ustunga ega, aynan shu kerak). */
+      qator[C_F2_HAJM - 1] = (r.f2_hajm != null) ? Number(r.f2_hajm) : '';
+      qator[C_F2_SUM - 1]  = (r.f2_summa != null) ? Number(r.f2_summa) : '';
       qator[C_QOLD_HAJM - 1] = (r.qoldiq_hajm != null) ? Number(r.qoldiq_hajm) : '';
       qator[C_QOLD_SUM - 1] = (r.qoldiq_summa != null) ? Number(r.qoldiq_summa) : '';
 

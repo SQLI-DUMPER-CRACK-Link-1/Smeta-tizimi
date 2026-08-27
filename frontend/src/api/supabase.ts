@@ -655,6 +655,8 @@ export interface T2Faktura {
   pdf_url?: string;
   holat: 'yangi' | 'tasdiqlangan' | 'bekor_qilingan';
   items?: any[];
+  /** Faqat yaratishda — qayta urinishda o'sha-o'sha bo'lishi kerak. */
+  operation_id?: string;
 }
 
 export function sbFakturalarOl(kompaniya_id: number) {
