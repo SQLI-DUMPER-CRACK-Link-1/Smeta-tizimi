@@ -78,6 +78,8 @@ const AMALLAR = {
   loyiha_yarat: { rpc: 't2_loyiha_yarat' },
   loyiha_ochir: { rpc: 't2_loyiha_ochir' },
   obyekt_loyihaga_biriktir: { rpc: 't2_obyekt_loyihaga_biriktir' },
+  loyiha_qatnashchi_biriktir: { rpc: 't2_loyiha_qatnashchi_biriktir' },
+  loyiha_qatnashchi_ochir: { rpc: 't2_loyiha_qatnashchi_ochir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
   kontragent_ochir: { rpc: 't2_kontragent_ochir' }
 } as const;
@@ -855,6 +857,44 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
       }
       yuk = { p_obyekt_id: obyektId, p_loyiha_id: loyihaId };
+
+    /* ⚠️ Polimorfik tashkilot bog'lanishi (MASTER_REJA band 1): taraf
+       kompaniya_id YOKI kontragent_id — ANIQ BITTASI, ikkalasi ham yoki
+       hech biri emas. RPC ham CHECK bilan tekshiradi, bu ikkinchi
+       qatlam (frontend soxta ikkalasini ham yuborsa ham ushlanadi). */
+    } else if (amal === 'loyiha_qatnashchi_biriktir') {
+      const loyihaId = Number(so.loyiha_id);
+      if (!Number.isFinite(loyihaId) || loyihaId <= 0) {
+        return Response.json({ ok: false, error: 'loyiha_id noto\'g\'ri' });
+      }
+      const kompaniyaId = so.kompaniya_id == null ? null : Number(so.kompaniya_id);
+      const kontragentId = so.kontragent_id == null ? null : Number(so.kontragent_id);
+      const bittaTaraf = (kompaniyaId != null) !== (kontragentId != null);
+      if (!bittaTaraf) {
+        return Response.json({ ok: false, error: 'Aynan bittasi kerak: kompaniya_id YOKI kontragent_id' });
+      }
+      const ROL_RUXSAT = ['zakazchik', 'bosh_pudratchi', 'subpudratchi', 'loyihachi', 'taminotchi'];
+      if (!ROL_RUXSAT.includes(String(so.rol))) {
+        return Response.json({ ok: false, error: 'rol noto\'g\'ri: ' + ROL_RUXSAT.join('|') });
+      }
+      yuk = {
+        p_loyiha_id: loyihaId,
+        p_kompaniya_id: kompaniyaId,
+        p_kontragent_id: kontragentId,
+        p_rol: String(so.rol),
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+      };
+
+    } else if (amal === 'loyiha_qatnashchi_ochir') {
+      const id = Number(so.id);
+      const kutilganVersiya = Number(so.kutilgan_versiya);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      if (!Number.isFinite(kutilganVersiya)) {
+        return Response.json({ ok: false, error: 'kutilgan_versiya kerak (optimistik qulf)' });
+      }
+      yuk = { p_id: id, p_kutilgan_versiya: kutilganVersiya };
 
     /* ══════════ KONTRAGENTLAR (B2B Reestr) ══════════
        ⚠️ STIR/INN validatsiyasi shu yerda ham (RPC ichida ham bor,

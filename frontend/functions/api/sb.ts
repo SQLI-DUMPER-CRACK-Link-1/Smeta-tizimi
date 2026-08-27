@@ -77,6 +77,10 @@ const RUXSAT_JADVALLAR = new Set([
      (2026-08-27, MASTER_REJA_ENTERPRISE_OS.md FAZA-oldi ustuvor
      bo'shliq: "32 gektar, 40 obyekt, bitta park" guruhlash). */
   't2_loyiha_royxat',
+  /* Polimorfik tashkilot bog'lanishi (MASTER_REJA band 1, 2026-08-28):
+     har loyiha uchun qatnashchilar (kompaniya YOKI kontragent + rol)
+     bitta jsonb_agg'da — zero re-fetch. */
+  't2_loyiha_qatnashchilar_royxat',
   /* KONTRAGENTLAR (B2B Reestr) — biznes hamkorlar adress daftari,
      t2_kompaniya (tizim tenant'lari) EMAS (2026-08-27). */
   't2_kontragent_royxat',

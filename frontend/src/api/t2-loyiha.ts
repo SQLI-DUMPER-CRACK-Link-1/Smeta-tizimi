@@ -32,3 +32,50 @@ export function sbLoyihaOchir(id: number) {
 export function sbObyektLoyihagaBiriktir(obyektId: number, loyihaId: number | null) {
   return yozAmali({ amal: 'obyekt_loyihaga_biriktir', obyekt_id: obyektId, loyiha_id: loyihaId });
 }
+
+/* ⚡ 2026-08-28 (Claude, MASTER_REJA band 1 — polimorfik tashkilot modeli):
+ * "Bitta kompaniya turli loyihalarda turli rol o'ynaydi: Buyurtmachi,
+ * Bosh pudratchi, Subpudratchi, Loyihachi, Ta'minotchi." Taraf ikki xil
+ * bo'lishi mumkin — bizning tenant (`t2_kompaniya`) yoki tashqi B2B
+ * reestr (`t2_kontragent`) — ANIQ BITTASI, hech qachon ikkalasi birga. */
+
+export type LoyihaRol =
+  | 'zakazchik' | 'bosh_pudratchi' | 'subpudratchi' | 'loyihachi' | 'taminotchi';
+
+export type LoyihaQatnashchi = {
+  id: number; rol: LoyihaRol; izoh: string | null; versiya: number;
+  kompaniya_id: number | null; kompaniya_nom: string | null;
+  kontragent_id: number | null; kontragent_nom: string | null;
+};
+
+export type LoyihaQatnashchilar = {
+  loyiha_id: number; loyiha_nom: string; qatnashchilar: LoyihaQatnashchi[];
+};
+
+export function sbLoyihaQatnashchilarOl(loyihaId: number) {
+  return sbOqi<LoyihaQatnashchilar>({
+    jadval: 't2_loyiha_qatnashchilar_royxat',
+    filtr: 'loyiha_id=eq.' + loyihaId,
+    limit: 1,
+  });
+}
+
+/** Taraf sifatida FAQAT bittasini bering: `kompaniyaId` YOKI `kontragentId`. */
+export function sbLoyihaQatnashchiBiriktir(p: {
+  loyihaId: number; kompaniyaId?: number | null; kontragentId?: number | null;
+  rol: LoyihaRol; izoh?: string;
+}) {
+  return yozAmali({
+    amal: 'loyiha_qatnashchi_biriktir',
+    loyiha_id: p.loyihaId,
+    kompaniya_id: p.kompaniyaId ?? null,
+    kontragent_id: p.kontragentId ?? null,
+    rol: p.rol,
+    izoh: p.izoh,
+  });
+}
+
+/** Optimistik qulf — `kutilganVersiya` ro'yxatdan olingan `versiya` bo'lishi shart. */
+export function sbLoyihaQatnashchiOchir(id: number, kutilganVersiya: number) {
+  return yozAmali({ amal: 'loyiha_qatnashchi_ochir', id, kutilgan_versiya: kutilganVersiya });
+}
