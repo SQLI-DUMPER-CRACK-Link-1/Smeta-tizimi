@@ -58,7 +58,11 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
    * sessiyada bo'lmay qoladi, sb.ts/sb-yoz.ts buni "eski sessiya" deb
    * ko'radi va yangi tekshiruvni o'tkazib yuboradi. */
   let foydalanuvchiId: number | undefined;
-  let kompaniyalar: number[] | undefined;
+  /* ⚡ 2026-08-27: avval faqat ID'larga tekislangan edi (`.map(a =>
+   * a.kompaniya_id)`) — RPC allaqachon har a'zolikning ROLINI ham
+   * qaytaradi, uni tashlab yuborish "polimorfik rol" ma'lumotini yo'q
+   * qilardi. Endi to'liq {kompaniya_id, rol} juftligi saqlanadi. */
+  let kompaniyalar: { kompaniya_id: number; rol: string }[] | undefined;
   try {
     if (ctx.env.SUPABASE_URL && ctx.env.SUPABASE_KEY) {
       const r = await fetch(
@@ -76,7 +80,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
         const natija = await r.json<{ ok: boolean; foydalanuvchi_id?: number; azoliklar?: { kompaniya_id: number; rol: string }[] }>();
         if (natija.ok) {
           foydalanuvchiId = natija.foydalanuvchi_id;
-          kompaniyalar = (natija.azoliklar || []).map((a) => a.kompaniya_id);
+          kompaniyalar = natija.azoliklar || [];
         }
       }
     }

@@ -143,7 +143,10 @@ export const onRequestPost: PagesFunction<{
       const mos = (so.filtr || '').match(/(?:^|&)kompaniya_id=eq\.(-?\d+)/);
       if (mos) {
         const soraganKompaniya = Number(mos[1]);
-        if (!sess.kompaniyalar.includes(soraganKompaniya)) {
+        /* ⚡ 2026-08-27: `kompaniyalar` endi {kompaniya_id, rol}
+         * juftliklari (avval faqat ID massivi edi) — a'zolikni
+         * `.some(...)` bilan qidiramiz. */
+        if (!sess.kompaniyalar.some((a) => a.kompaniya_id === soraganKompaniya)) {
           return Response.json({ ok: false,
             error: 'Bu kompaniyaga a\'zo emassiz (kompaniya_id: ' + soraganKompaniya + ')' },
             { status: 403 });

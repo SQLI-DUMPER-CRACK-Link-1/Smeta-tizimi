@@ -21,11 +21,18 @@ export type Sess = {
   exp: number;
   jti: string;
   foydalanuvchi_id?: number;
-  /** Shu foydalanuvchi a'zo bo'lgan barcha kompaniya ID'lari — sessiya
-   *  ichida saqlanadi (har so'rovda bazaga qayta so'rov yubormaslik
-   *  uchun). A'zolik o'zgarsa, foydalanuvchi qayta kirishi kerak
-   *  (12 soat ichida) — bu bilib turilgan cheklov. */
-  kompaniyalar?: number[];
+  /** Shu foydalanuvchi a'zo bo'lgan barcha kompaniyalar VA har biridagi
+   *  ROLI — sessiya ichida saqlanadi (har so'rovda bazaga qayta so'rov
+   *  yubormaslik uchun). A'zolik o'zgarsa, foydalanuvchi qayta kirishi
+   *  kerak (12 soat ichida) — bu bilib turilgan cheklov.
+   *
+   *  ⚡ 2026-08-27: avval bu oddiy `number[]` (faqat ID) edi — «shu
+   *  kompaniyaga a'zomi» tekshiruvi uchun yetarli edi, lekin «polimorfik
+   *  rol» (bitta odam bir kompaniyada admin, boshqasida faqat ko'ruvchi
+   *  bo'lishi) uchun YETARLI EMAS — global `rol` (yuqorida, GAS'dan)
+   *  BARCHA kompaniya uchun bir xil bo'lib qolardi. Endi har yozuv o'z
+   *  ROLINI olib yuradi. */
+  kompaniyalar?: { kompaniya_id: number; rol: string }[];
 };
 
 async function importKey(secret: string) {

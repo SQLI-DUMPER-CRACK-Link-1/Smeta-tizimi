@@ -38,7 +38,11 @@ console.log('\n── 1. SESS TYPE FOYDALANUVCHI/KOMPANIYANI BILADIMI ──');
 {
   const s = oqi('functions/_shared/auth.ts');
   T('Sess da foydalanuvchi_id bor', /foydalanuvchi_id\?:\s*number/.test(s));
-  T('Sess da kompaniyalar ro\'yxati bor', /kompaniyalar\?:\s*number\[\]/.test(s));
+  /* ⚡ 2026-08-27: `kompaniyalar` oddiy ID massividan {kompaniya_id,
+     rol} juftlik massiviga o'tdi — "polimorfik rol" (bir odam bir
+     kompaniyada admin, boshqasida faqat rahbar) uchun. */
+  T('Sess da kompaniyalar {id,rol} juftlik ro\'yxati bor',
+    /kompaniyalar\?:\s*\{\s*kompaniya_id:\s*number;\s*rol:\s*string\s*\}\[\]/.test(s));
   T('eski sessiya buzilmasin deb IXTIYORIY (?:) belgilangan',
     /foydalanuvchi_id\?:/.test(s) && /kompaniyalar\?:/.test(s));
 }
@@ -56,13 +60,15 @@ console.log('\n── 2. KIRISHDA HAQIQIY A\'ZOLIK YOZUVI YARATILADIMI ──');
 console.log('\n── 3. sb-yoz.ts HAR YOZUVDA A\'ZOLIKNI TEKSHIRADIMI ──');
 {
   const s = oqi('functions/api/sb-yoz.ts');
-  T('kompaniya_id sessiya a\'zoligi bilan solishtiriladi',
-    /sess\.kompaniyalar\.includes\(soraganKompaniya\)/.test(s));
+  T('kompaniya_id sessiya a\'zoligi bilan solishtiriladi (topilmasa rad)',
+    /sess\.kompaniyalar\.find\(\(a\) => a\.kompaniya_id === soraganKompaniya\)/.test(s));
   T('tekshiruv AMAL branchlaridan OLDIN turadi (hech biri o\'tkazib yubormaydi)',
-    s.indexOf('sess.kompaniyalar.includes') < s.indexOf("amal === 'qator_tahrir'"));
+    s.indexOf('sess.kompaniyalar.find') < s.indexOf("amal === 'qator_tahrir'"));
   T('eski sessiya (kompaniyalar yo\'q) bloklanib qolmaydi',
     /Array\.isArray\(sess\.kompaniyalar\)/.test(s));
   T('rad javobi 403 bilan qaytadi', /zo emassiz[\s\S]{0,80}status:\s*403/.test(s));
+  T('POLIMORFIK ROL: shu kompaniyadagi rol boss/rahbar bo\'lsa yozish rad etiladi',
+    /azolik\.rol === 'boss' \|\| azolik\.rol === 'rahbar'/.test(s));
 }
 
 console.log('\n── 4. sb.ts (O\'QISH) HAM KOMPANIYA A\'ZOLIGINI TEKSHIRADIMI ──');
@@ -71,7 +77,7 @@ console.log('\n── 4. sb.ts (O\'QISH) HAM KOMPANIYA A\'ZOLIGINI TEKSHIRADIMI 
   T('filtrdan kompaniya_id ajratib olinadi',
     /filtr \|\| ''\)\.match\(\/.*kompaniya_id=eq/.test(s));
   T('sessiya a\'zoligi bilan solishtiriladi',
-    /sess\.kompaniyalar\.includes\(soraganKompaniya\)/.test(s));
+    /sess\.kompaniyalar\.some\(\(a\) => a\.kompaniya_id === soraganKompaniya\)/.test(s));
   T('eski sessiya (kompaniyalar yo\'q) bloklanib qolmaydi',
     /Array\.isArray\(sess\.kompaniyalar\)/.test(s));
   T('rad javobi 403 bilan qaytadi', /zo emassiz[\s\S]{0,80}status:\s*403/.test(s));
