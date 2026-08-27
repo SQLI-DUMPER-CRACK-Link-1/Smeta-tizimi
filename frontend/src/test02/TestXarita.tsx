@@ -50,22 +50,22 @@ const COLORS: Record<string, string> = {
    DATA
 ───────────────────────────────────────────────────────── */
 const GLOBAL_MODS = [
-  { nomi: 'Boshqaruv / Analitika', color: 'violet',  Icon: BarChart3,     path: '/admin/test/dashboard' },
-  { nomi: 'Moliya & Buxgalteriya', color: 'emerald', Icon: Calculator,    path: '/admin/test/tolovlar' },
-  { nomi: 'Xaridlar & Birja',      color: 'cyan',    Icon: ShoppingCart,  path: '/admin/test/xaridlar' },
-  { nomi: 'Markaziy Ombor',        color: 'amber',   Icon: Warehouse,     path: '/admin/test/baza' },
-  { nomi: 'Avtopark / Texnika',    color: 'orange',  Icon: Truck,         path: '/admin/test/texnika' },
-  { nomi: 'Kompaniya HR',          color: 'blue',    Icon: Users,         path: '/admin/test/ishchilar' },
-  { nomi: 'Tizim Sozlamalari',     color: 'slate',   Icon: Settings,      path: '/admin/test/sozlamalar' },
+  { nomi: 'Boshqaruv / Analitika', color: 'violet',  Icon: BarChart3,     path: '/admin/test/hisobot' },
+  { nomi: 'Moliya & Buxgalteriya', color: 'emerald', Icon: Calculator,    path: '/admin/test/tolov' },
+  { nomi: 'Xaridlar & Birja',      color: 'cyan',    Icon: ShoppingCart,  path: '/admin/test/birja' },
+  { nomi: 'Markaziy Ombor',        color: 'amber',   Icon: Warehouse,     path: '/admin/test/sklad' },
+  { nomi: 'Avtopark / Texnika',    color: 'orange',  Icon: Truck,         path: '/admin/test/erp' },
+  { nomi: 'Kompaniya HR',          color: 'blue',    Icon: Users,         path: '/admin/test/erp' },
+  { nomi: 'Tizim Sozlamalari',     color: 'slate',   Icon: Settings,      path: '/admin/test/sozlama' },
 ];
 
 const OBJ_SUBS = [
   { nomi: 'Obyekt Skladi',         color: 'amber',   Icon: Warehouse,     pathFn: (id: number, _: string) => `/admin/test/sklad?obyektId=${id}` },
   { nomi: 'Asosiy Smeta',         color: 'indigo',  Icon: FileText,      pathFn: (_: number, nom: string) => `/admin/test/daraxt?obyekt=${encodeURIComponent(nom)}` },
   { nomi: 'F2 Dalolatnoma',        color: 'rose',    Icon: Pickaxe,       pathFn: (_: number, nom: string) => `/admin/test/f2?obyekt=${encodeURIComponent(nom)}` },
-  { nomi: 'Pudrat Shartnomalari',  color: 'fuchsia', Icon: Briefcase,     pathFn: (_: number, nom: string) => `/admin/test/shartnomalar?obyekt=${encodeURIComponent(nom)}` },
-  { nomi: 'Obyekt HR & Tabel',     color: 'sky',     Icon: ClipboardList, pathFn: (_: number, nom: string) => `/admin/test/hr?obyekt=${encodeURIComponent(nom)}` },
-  { nomi: 'Texnadzor / Sifat',     color: 'red',     Icon: ShieldCheck,   pathFn: (_: number, nom: string) => `/admin/test/nuqson?obyekt=${encodeURIComponent(nom)}` },
+  { nomi: 'Pudrat Shartnomalari',  color: 'fuchsia', Icon: Briefcase,     pathFn: (_: number, _nom: string) => `/admin/test/tolov` },
+  { nomi: 'Obyekt HR & Tabel',     color: 'sky',     Icon: ClipboardList, pathFn: (_: number, _nom: string) => `/admin/test/erp` },
+  { nomi: 'Texnadzor / Sifat',     color: 'red',     Icon: ShieldCheck,   pathFn: (_: number, _nom: string) => `/admin/test/oqish` },
 ];
 
 /* ─────────────────────────────────────────────────────────
