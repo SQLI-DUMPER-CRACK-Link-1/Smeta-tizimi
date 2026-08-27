@@ -901,6 +901,57 @@
       "toliq": true,
       "izoh": "versiyalangan (optimistik qulf)"
     },
+    "apiAktlarOl": {
+      "qopladi": "t2_aosr_reestr (sbAosrReestrOl)",
+      "toliq": true,
+      "izoh": "2026-08-27 (foydalanuvchi qarori: Postgres-native qayta qurish). Tizim_01 da BITTA umumiy Sheets fayl OBJECT_NAME matn moslashtirish orqali; bu yerda har akt REAL obyekt_id ga bog'langan."
+    },
+    "apiAktYoz": {
+      "qopladi": "t2_aosr_yoz",
+      "toliq": true,
+      "izoh": "versiyalangan (tahrirlash) + idempotent (yaratish, operation_id)"
+    },
+    "apiAktIshlar": {
+      "qopladi": "t2_aosr_coverage VIEW (sbAosrCoverageOl)",
+      "toliq": true
+    },
+    "apiAktCoverage": {
+      "qopladi": "t2_aosr_coverage VIEW (sbAosrCoverageOl)",
+      "toliq": true,
+      "izoh": "apiAktIshlar bilan birlashtirildi - Tizim_01 da ikkalasi deyarli bir xil ma'lumotni qaytarardi (bajarilgan ishlar + akt_bor/yashirin belgisi)"
+    },
+    "apiAktBoglanmagan": {
+      "qopladi": "t2_aosr_coverage VIEW (akt_bor=false filtri)",
+      "toliq": true
+    },
+    "apiAktUlash": {
+      "qopladi": "t2_aosr_bog_saqla",
+      "toliq": true,
+      "izoh": "SMETA_REF ';' bilan ajratilgan matn ro'yxati o'rniga real t2_aosr_bog jadvali - dublikatga qarshi UNIQUE(aosr_id,qator_id)"
+    },
+    "apiAktMassUlash": {
+      "qopladi": "t2_aosr_bog_saqla (massiv argumentlar bilan)",
+      "toliq": true,
+      "izoh": "bir xil RPC ommaviy (M:N) va yakka bog'lashni ham qamrab oladi"
+    },
+    "apiAktMassUlashTree": {
+      "qopladi": "sbAosrCoverageOl + sbT2DaraxtOl (frontend birlashtiradi)",
+      "toliq": true
+    },
+    "apiAktSmetadan": {
+      "qopladi": "kerak emas - frontend t2_qator/t2_qator_holat dan to'g'ridan-to'g'ri o'qiydi",
+      "toliq": true,
+      "izoh": "Tizim_01 da GAS ichida qayta hisoblanardi (materiallar ro'yxati, hajm) - Tizim_02 da bu ma'lumot allaqachon bazada, frontend akt formasini to'ldirishda qator_id orqali to'g'ridan-to'g'ri ishlatadi"
+    },
+    "apiAktSmetadanKop": {
+      "qopladi": "kerak emas - yuqoridagi bilan bir xil sabab",
+      "toliq": true
+    },
+    "apiAktNomzodlar": {
+      "qopladi": "kutilmoqda - fuzzy moslashtirish RPC hali yozilmagan",
+      "toliq": false,
+      "izoh": "Eski aktni smetaga ulash uchun o'xshashlik bo'yicha taklif (Jaccard so'z-kesishish skori). Qiymatli, lekin CRUD+coverage dan keyingi ustuvorlik - qo'lda dropdown orqali bog'lash allaqachon ishlaydi."
+    },
     "apiT2DriveTrash": {
       "qopladi": "GAS qatlamida qoladi (Drive setTrashed() - Postgres bilan almashtirilmaydi)",
       "toliq": true,

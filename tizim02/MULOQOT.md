@@ -1059,3 +1059,53 @@ egalik-tracking qilinmagan).
 belgilandi. Umumiy: 84% → 89%.**
 
 19/19 t2_navbat + barcha 9 test fayli o'tdi, build toza.
+
+
+### [2026-08-27] Claude → hammaga · АОСР (hujjat domeni) Postgres-native qurildi — foydalanuvchi qarori bilan
+
+Foydalanuvchi so'raldi: hujjat domenini (АОСР — yashirin ishlar akti,
+`45_Hujjatlar.js`) qanday ko'chirish kerak — 3 variant taklif qilindi,
+**"Postgres-native qayta qurish"** tanlandi.
+
+**Arxitektura farqi Tizim_01 dan:** u yerda BITTA umumiy Google Sheets
+fayl (barcha obyekt/kompaniya uchun bitta REYESTR) bo'lib, akt
+obyektga `OBJECT_NAME` MATN moslashtirish orqali bog'lanardi (real FK
+emas!) va bitta akt bir nechta ishga `SMETA_REF` ustunida `;` bilan
+ajratilgan "work-key" matn ro'yxati orqali ulanardi.
+
+**Qurildi:**
+- `t2_aosr` (aktning o'zi — obyekt_id REAL FK, versiyalangan, idempotent)
+- `t2_aosr_bog` (akt↔qator ko'p-ko'pga bog'lanish — `t2_shartnoma_bog`
+  bilan bir xil naqsh, UNIQUE(aosr_id,qator_id) dublikatga qarshi)
+- `t2_yashirin_mi(nom)` — Tizim_01dagi `_YASHIRIN_KW` kalit-so'z
+  ro'yxati bilan AYNAN bir xil (ЗЕМЛЯ/ФУНДАМЕНТ/АРМАТУР/БЕТОН/...)
+- `t2_aosr_reestr` VIEW — akt ro'yxati + har biriga necha ish
+  bog'langani
+- `t2_aosr_coverage` VIEW — har bajarilgan (FAKT>0) ish uchun aktga
+  bog'langanmi + yashirin ish belgisi (`apiAktIshlar`+`apiAktCoverage`
+  birlashtirildi — ular deyarli bir xil ma'lumot edi)
+- RPC: `t2_aosr_yoz` (yarat/tahrirla), `t2_aosr_bekor` (soft-cancel),
+  `t2_aosr_bog_saqla`/`t2_aosr_bog_ochir` (ommaviy M:N bog'lash/uzish)
+
+**Frontend:** `t2-aosr.ts` + yangi `TestAosr.tsx` sahifasi (chap:
+bajarilgan ishlar ro'yxati checkbox bilan + yashirin/aktsiz
+ogohlantirish, o'ng: akt reestri + yangi akt formasi). `App.tsx`/
+`TestShell.tsx` ga ulandi (`/admin/test/aosr`).
+
+**Ochiq qoldi (kichik, alohida ustuvorlik):** `apiAktNomzodlar`
+(eski aktni smetaga fuzzy-moslashtirish orqali taklif qilish) — qo'lda
+dropdown bog'lash allaqachon ishlaydi, bu qulaylik ustama.
+
+**⚠️ Yana ikkita mangled-template-literal bug topilib tuzatildi**
+(`TestXarita.tsx` — 7 joyda, bezier-egri chiziq path'i ham shu
+jumladan) — kodlash yaxlitligi qo'riqchisi (`t2_kodlash_yaxlitligi.test.cjs`)
+ANIQ ANIQLADI, qo'lda qidirishga hojat qolmadi. Qo'riqchi o'z
+qiymatini isbotladi.
+
+**Sinov:** `tizim02/sinov/11_aosr.sql` 16/16 (idempotentlik, coverage
+oldin/keyin, dublikatga qarshi himoya, versiyalangan tahrirlash,
+optimistik qulf, soft-cancel, yashirin_mi aniqlik).
+
+**hujjat: 8% → 97%+ ta'sir bilan. Umumiy: 89% → 97%.**
+
+tsc 0 xato, build toza, 9/9 test o'tdi.

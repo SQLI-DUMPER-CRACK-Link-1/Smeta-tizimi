@@ -25,7 +25,7 @@ import { Outlet, NavLink } from 'react-router-dom';
 import { KompaniyaProvider, KompaniyaTanlagich } from './KompaniyaTanlov';
 import { Trash2, FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer, Upload, Tags,
          TrendingUp, FileInput, Box, ShoppingCart, UserPlus, CreditCard, FileText, Archive, Briefcase,
-         BarChart, Settings, ShieldAlert, LayoutDashboard, CalendarDays, BookOpen } from 'lucide-react';
+         BarChart, Settings, ShieldAlert, LayoutDashboard, CalendarDays, BookOpen, ClipboardList } from 'lucide-react';
 
 const TEST_MENYU = [
   { yol: '/admin/test/import',    nom: 'Smeta yuklash', Ikonka: Upload },
@@ -44,6 +44,7 @@ const TEST_MENYU = [
   { yol: '/admin/test/tolov',     nom: 'To\'lov',       Ikonka: CreditCard },
   { yol: '/admin/test/faktura',   nom: 'EHF (Didox)',  Ikonka: FileText },
   { yol: '/admin/test/hujjat',    nom: 'Arxiv (R2)',   Ikonka: Archive },
+  { yol: '/admin/test/aosr',      nom: 'АОСР (yashirin ish)', Ikonka: ClipboardList },
   { yol: '/admin/test/hisobot',   nom: 'Boss Tahlil',  Ikonka: BarChart },
   { yol: '/admin/test/erp',       nom: 'ERP Boshqaruv', Ikonka: LayoutDashboard },
   { yol: '/admin/test/sozlama',   nom: 'Sozlamalar',   Ikonka: Settings },

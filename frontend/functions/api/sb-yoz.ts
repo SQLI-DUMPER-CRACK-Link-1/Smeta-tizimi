@@ -62,7 +62,11 @@ const AMALLAR = {
   korzinkaga_tashlash: { rpc: 't2_korzinkaga_tashlash' },
   korzinkadan_tiklash: { rpc: 't2_korzinkadan_tiklash' },
   butunlay_ochirish: { rpc: 't2_butunlay_ochirish' },
-  obyekt_yangila: { rpc: 't2_obyekt_yangila' }
+  obyekt_yangila: { rpc: 't2_obyekt_yangila' },
+  aosr_yoz: { rpc: 't2_aosr_yoz' },
+  aosr_bekor: { rpc: 't2_aosr_bekor' },
+  aosr_bog_saqla: { rpc: 't2_aosr_bog_saqla' },
+  aosr_bog_ochir: { rpc: 't2_aosr_bog_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -604,6 +608,60 @@ export const onRequestPost: PagesFunction<{
         p_qatorlar: so.qatorlar || [],
         p_kim: sess.email || '',
       };
+
+    /* ══════════ АОСР (yashirin ishlar akti) ══════════ */
+    } else if (amal === 'aosr_yoz') {
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      const id = so.id ? Number(so.id) : null;
+      if (!id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi akt yaratadi' });
+      }
+      yuk = {
+        p_obyekt_id: obyektId,
+        p_raqam: so.raqam ? String(so.raqam).slice(0, 100) : null,
+        p_ish_nomi: so.ish_nomi ? String(so.ish_nomi).slice(0, 500) : null,
+        p_boshlanish_sana: so.boshlanish_sana || null,
+        p_tugash_sana: so.tugash_sana || null,
+        p_bajarilgan: so.bajarilgan ? String(so.bajarilgan).slice(0, 300) : null,
+        p_pdf_url: so.pdf_url ? String(so.pdf_url).slice(0, 1000) : null,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 1000) : null,
+        p_holat: so.holat || 'yangi',
+        p_id: id,
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+        p_operation_id: id ? null : so.operation_id,
+        p_manba: 'frontend',
+        p_kim: sess.email || '',
+      };
+
+    } else if (amal === 'aosr_bekor') {
+      const id = Number(so.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      yuk = { p_id: id, p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya) };
+
+    } else if (amal === 'aosr_bog_saqla') {
+      if (!Array.isArray(so.aosr_ids) || !so.aosr_ids.length ||
+          !Array.isArray(so.qator_ids) || !so.qator_ids.length) {
+        return Response.json({ ok: false, error: 'akt yoki qator tanlanmagan' });
+      }
+      yuk = {
+        p_aosr_ids: so.aosr_ids.slice(0, 200).map(Number),
+        p_qator_ids: so.qator_ids.slice(0, 500).map(Number),
+      };
+
+    } else if (amal === 'aosr_bog_ochir') {
+      const aosrId = Number(so.aosr_id);
+      const qatorId = Number(so.qator_id);
+      if (!Number.isFinite(aosrId) || aosrId <= 0 || !Number.isFinite(qatorId) || qatorId <= 0) {
+        return Response.json({ ok: false, error: 'aosr_id yoki qator_id noto\'g\'ri' });
+      }
+      yuk = { p_aosr_id: aosrId, p_qator_id: qatorId };
 
     /* ══════════ KORZINKA ══════════
        ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan

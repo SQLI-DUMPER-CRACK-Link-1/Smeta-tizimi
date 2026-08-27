@@ -60,6 +60,8 @@ const RUXSAT_JADVALLAR = new Set([
   't2_obyekt_nakrutka',
   /* БУХГАЛТЕРИЯ — to'lov/xarajat + hisoblangan ko'rishlar (2026-08-25) */
   't2_tolov', 't2_xarajat', 't2_bux_dashboard', 't2_debitor_aging', 't2_bux_umumiy',
+  /* АОСР — yashirin ishlar akti (2026-08-27, hujjat domeni) */
+  't2_aosr_reestr', 't2_aosr_coverage',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

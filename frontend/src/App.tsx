@@ -41,6 +41,7 @@ const TestErp       = lazy(() => import('./test02/TestErp'));
 const TestSozlama   = lazy(() => import('./test02/TestSozlama'));
 const TestShartnoma = lazy(() => import('./test02/TestShartnoma'));
 const TestTizim     = lazy(() => import('./test02/TestTizim'));
+const TestAosr      = lazy(() => import('./test02/TestAosr'));
 const TestGrafik    = lazy(() => import('./test02/TestGrafik'));
 const TestSpravochnik = lazy(() => import('./test02/TestSpravochnik'));
  import { F2Import } from './admin/sahifalar/F2Import';
@@ -122,6 +123,7 @@ export default function App() {
             <Route path="sozlama" element={<TestSozlama />} />
             <Route path="shartnomalar" element={<TestShartnoma />} />
             <Route path="tizim" element={<TestTizim />} />
+            <Route path="aosr" element={<TestAosr />} />
           </Route>
           {/* ERP routes for Admin */}
           <Route path="kadrlar" element={<ErpKadrlar />} />
