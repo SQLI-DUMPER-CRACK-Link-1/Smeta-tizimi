@@ -57,7 +57,8 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       't2_obyekt_hujjat_yoz', 't2_obyekt_hujjat_ochir',
                       't2_sklad_yarat', 't2_kadr_yarat', 't2_texnika_yarat',
                       't2_resurs_bog_saqla', 't2_resurs_bog_ochir',
-                      't2_loyiha_yarat', 't2_loyiha_ochir', 't2_obyekt_loyihaga_biriktir',
+                      't2_loyiha_yarat', 't2_loyiha_yangila', 't2_loyiha_ochir',
+                      't2_obyekt_loyihaga_biriktir',
                       't2_loyiha_qatnashchi_biriktir', 't2_loyiha_qatnashchi_ochir',
                       't2_kontragent_saqla', 't2_kontragent_ochir',
                       't2_azolik_qosh', 't2_azolik_rol_ozgartir', 't2_azolik_ochir'].sort();

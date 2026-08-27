@@ -76,6 +76,7 @@ const AMALLAR = {
   resurs_bog_saqla: { rpc: 't2_resurs_bog_saqla' },
   resurs_bog_ochir: { rpc: 't2_resurs_bog_ochir' },
   loyiha_yarat: { rpc: 't2_loyiha_yarat' },
+  loyiha_yangila: { rpc: 't2_loyiha_yangila' },
   loyiha_ochir: { rpc: 't2_loyiha_ochir' },
   obyekt_loyihaga_biriktir: { rpc: 't2_obyekt_loyihaga_biriktir' },
   loyiha_qatnashchi_biriktir: { rpc: 't2_loyiha_qatnashchi_biriktir' },
@@ -844,6 +845,32 @@ export const onRequestPost: PagesFunction<{
         p_nom: String(so.nom).slice(0, 300),
         p_izoh: so.izoh ? String(so.izoh).slice(0, 1000) : null,
         p_hudud: so.hudud ? String(so.hudud).slice(0, 200) : null,
+        /* ⚠️ byudjet: 0 va "belgilanmagan" FARQLI. `undefined`/`null` →
+           NULL bo'lib qoladi, 0 esa haqiqiy nol byudjet sifatida saqlanadi. */
+        p_byudjet: so.byudjet == null || so.byudjet === '' ? null : Number(so.byudjet),
+      };
+
+    } else if (amal === 'loyiha_yangila') {
+      const id = Number(so.id);
+      const kutilganVersiya = Number(so.kutilgan_versiya);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      if (!Number.isFinite(kutilganVersiya)) {
+        return Response.json({ ok: false, error: 'kutilgan_versiya kerak (optimistik qulf)' });
+      }
+      const HOLAT_RUXSAT = ['faol', 'tuxtatilgan', 'yakunlangan', 'bekor'];
+      if (so.holat != null && !HOLAT_RUXSAT.includes(String(so.holat))) {
+        return Response.json({ ok: false, error: 'holat noto\'g\'ri: ' + HOLAT_RUXSAT.join('|') });
+      }
+      yuk = {
+        p_id: id,
+        p_kutilgan_versiya: kutilganVersiya,
+        p_nom: so.nom ? String(so.nom).slice(0, 300) : null,
+        p_izoh: so.izoh != null ? String(so.izoh).slice(0, 1000) : null,
+        p_hudud: so.hudud != null ? String(so.hudud).slice(0, 200) : null,
+        p_byudjet: so.byudjet == null || so.byudjet === '' ? null : Number(so.byudjet),
+        p_holat: so.holat ? String(so.holat) : null,
       };
 
     } else if (amal === 'loyiha_ochir') {
