@@ -82,7 +82,7 @@ export default function TestBirja() {
               <div className="flex gap-4 mb-6">
                 <div>
                   <p className="text-[10px] uppercase text-text-dim mb-0.5">Talab Hajmi</p>
-                  <p className="text-sm font-bold text-sky-400">{FmtN(rfq.hajm)} {rfq.birlik}</p>
+                  <p className="text-sm font-bold text-sky-400"><FmtN val={rfq.hajm} /> {rfq.birlik}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase text-text-dim mb-0.5">So'nggi Muddat</p>
@@ -97,7 +97,7 @@ export default function TestBirja() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-text-dim">Eng arzon taklif:</span>
-                  <span className="text-sm font-bold font-mono text-emerald-400">{FmtN(rfq.minNarx)} UZS/{rfq.birlik}</span>
+                  <span className="text-sm font-bold font-mono text-emerald-400"><FmtN val={rfq.minNarx} /> UZS/{rfq.birlik}</span>
                 </div>
               </div>
 

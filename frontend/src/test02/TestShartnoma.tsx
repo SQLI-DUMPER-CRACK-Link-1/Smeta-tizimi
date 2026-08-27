@@ -46,19 +46,19 @@ export default function TestShartnoma() {
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-surface border border-border p-5 rounded-xl">
           <h3 className="text-sm font-medium text-text-dim mb-1">Jami Shartnomalar (Portfolio)</h3>
-          <p className="text-2xl font-bold font-mono text-white">{FmtN(15750000000)} <span className="text-sm text-text-dim font-sans">UZS</span></p>
+          <p className="text-2xl font-bold font-mono text-white"><FmtN val={15750000000} /> <span className="text-sm text-text-dim font-sans">UZS</span></p>
         </div>
         <div className="bg-gradient-to-br from-emerald-900/20 to-emerald-900/5 border border-emerald-500/20 p-5 rounded-xl">
           <h3 className="text-sm font-medium text-emerald-400 mb-1">Bosh Pudrat (Daromad)</h3>
-          <p className="text-2xl font-bold font-mono text-white">{FmtN(12500000000)} <span className="text-sm text-text-dim font-sans">UZS</span></p>
+          <p className="text-2xl font-bold font-mono text-white"><FmtN val={12500000000} /> <span className="text-sm text-text-dim font-sans">UZS</span></p>
         </div>
         <div className="bg-rose-500/10 border border-rose-500/20 p-5 rounded-xl">
           <h3 className="text-sm font-medium text-rose-400 mb-1">Sub-Pudrat / Xarid (Xarajat)</h3>
-          <p className="text-2xl font-bold font-mono text-white">{FmtN(3250000000)} <span className="text-sm text-text-dim font-sans">UZS</span></p>
+          <p className="text-2xl font-bold font-mono text-white"><FmtN val={3250000000} /> <span className="text-sm text-text-dim font-sans">UZS</span></p>
         </div>
         <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-xl">
           <h3 className="text-sm font-medium text-amber-400 mb-1">Kafolat Depoziti (Retention)</h3>
-          <p className="text-2xl font-bold font-mono text-white">{FmtN(745000000)} <span className="text-sm text-text-dim font-sans">UZS</span></p>
+          <p className="text-2xl font-bold font-mono text-white"><FmtN val={745000000} /> <span className="text-sm text-text-dim font-sans">UZS</span></p>
         </div>
       </div>
 
@@ -178,7 +178,7 @@ export default function TestShartnoma() {
                   <td className="px-6 py-4 font-bold text-white">{s.nomi}</td>
                   <td className="px-6 py-4 text-text-dim">{s.taraf}</td>
                   <td className="px-6 py-4 text-right">
-                    <div className="font-mono font-bold text-white">{FmtN(s.summa)}</div>
+                    <div className="font-mono font-bold text-white"><FmtN val={s.summa} /></div>
                     {s.nds ? (
                       <span className="text-[10px] text-emerald-400 font-bold">QQS (12%) bilan</span>
                     ) : (

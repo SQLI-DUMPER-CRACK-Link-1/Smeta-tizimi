@@ -62,7 +62,7 @@ export default function TestTolov() {
             <h3 className="text-sm font-medium">Jami Kassa Qoldig'i</h3>
           </div>
           <p className="text-2xl font-bold font-mono tracking-tight text-white mb-1">
-            {FmtN(kpi.jamiKassa)} <span className="text-sm text-text-dim font-sans">UZS</span>
+            <FmtN val={kpi.jamiKassa} /> <span className="text-sm text-text-dim font-sans">UZS</span>
           </p>
           <div className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
             <ArrowUpRight size={14} /> 12% o'tgan oydan ko'p
@@ -75,7 +75,7 @@ export default function TestTolov() {
             <h3 className="text-sm font-medium">Kreditor (Bizning Qarzimiz)</h3>
           </div>
           <p className="text-2xl font-bold font-mono tracking-tight text-white mb-1">
-            {FmtN(kpi.kreditor)} <span className="text-sm text-text-dim font-sans">UZS</span>
+            <FmtN val={kpi.kreditor} /> <span className="text-sm text-text-dim font-sans">UZS</span>
           </p>
           <div className="flex items-center gap-1 text-xs text-rose-400 font-medium">
             Ochiq Forma-2 lar bo'yicha
@@ -88,7 +88,7 @@ export default function TestTolov() {
             <h3 className="text-sm font-medium">Debitor (Bizga Qarzlar)</h3>
           </div>
           <p className="text-2xl font-bold font-mono tracking-tight text-white mb-1">
-            {FmtN(kpi.debitor)} <span className="text-sm text-text-dim font-sans">UZS</span>
+            <FmtN val={kpi.debitor} /> <span className="text-sm text-text-dim font-sans">UZS</span>
           </p>
           <div className="flex items-center gap-1 text-xs text-text-dim font-medium">
             Berilgan avanslar hisobidan
@@ -101,7 +101,7 @@ export default function TestTolov() {
             <h3 className="text-sm font-medium">Oylik Sarflov</h3>
           </div>
           <p className="text-2xl font-bold font-mono tracking-tight text-white mb-1">
-            {FmtN(kpi.oylikSarflov)} <span className="text-sm text-text-dim font-sans">UZS</span>
+            <FmtN val={kpi.oylikSarflov} /> <span className="text-sm text-text-dim font-sans">UZS</span>
           </p>
           <div className="flex items-center gap-1 text-xs text-amber-400 font-medium">
             Joriy oy xarajatlari
@@ -177,7 +177,7 @@ export default function TestTolov() {
                     <td className="px-6 py-4 text-text-dim">{t.toifa}</td>
                     <td className="px-6 py-4 text-text-dim truncate max-w-[200px]" title={t.izoh}>{t.izoh}</td>
                     <td className={`px-6 py-4 text-right font-mono font-bold whitespace-nowrap ${t.turi === 'kirim' ? 'text-emerald-400' : 'text-white'}`}>
-                      {t.turi === 'kirim' ? '+' : ''}{FmtN(t.summa)}
+                      {t.turi === 'kirim' ? '+' : ''}<FmtN val={t.summa} />
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${t.holat === 'tasdiqlangan' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>

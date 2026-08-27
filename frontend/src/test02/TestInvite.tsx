@@ -187,7 +187,7 @@ export default function TestInvite() {
                   <td className="px-6 py-4 font-mono text-text-dim">{t.sana}</td>
                   <td className="px-6 py-4">
                     {t.holat === 'qabul qilingan' && <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold uppercase"><CheckCircle2 size={14}/> Qabul qilingan</span>}
-                    {t.holat === 'kutilmoqda' && <span className="flex items-center gap-1.5 text-amber-400 text-xs font-bold uppercase"><Clock size={14}/> Kutilmoqda</span>}
+                    {t.holat === 'kutilmoqda' && <span className="flex items-center gap-1.5 text-amber-400 text-xs font-bold uppercase"><Lock size={14}/> Kutilmoqda</span>}
                     {t.holat === 'rad etilgan' && <span className="flex items-center gap-1.5 text-rose-400 text-xs font-bold uppercase"><XCircle size={14}/> Rad etilgan</span>}
                   </td>
                 </tr>

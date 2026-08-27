@@ -5,7 +5,7 @@ import { useKompaniya } from './KompaniyaTanlov';
 
 export default function TestTizim() {
   const { joriy } = useKompaniya();
-  const [data, setData] = useState<AuditLog[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   const [xato, setXato] = useState('');
   const [search, setSearch] = useState('');
@@ -125,7 +125,7 @@ export default function TestTizim() {
           )}
 
           <div className="space-y-3">
-            {filtered.map((r, i) => (
+            {filtered.map((r: any, i) => (
               <div key={i} className="bg-bg border border-border hover:border-border-hover rounded-lg p-4 transition-colors flex flex-col gap-3 group">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">

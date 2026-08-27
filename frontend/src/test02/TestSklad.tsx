@@ -185,7 +185,7 @@ export default function TestSklad() {
                     {item.qoldiq} <span className="text-text-dim font-sans text-xs">{item.birlik}</span>
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-text-dim">
-                    {FmtN(item.narx)} UZS
+                    <FmtN val={item.narx} /> UZS
                   </td>
                   <td className="px-6 py-4 text-center">
                     {item.holat === 'yaxshi' ? (
