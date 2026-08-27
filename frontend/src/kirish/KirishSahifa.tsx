@@ -1,13 +1,24 @@
 import { useState, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, ShieldCheck, Lock, User, ArrowRight, Building2, FlaskConical } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Lock, User, ArrowRight, Building2, FlaskConical, Mail, Phone } from 'lucide-react';
+import { toast } from '../umumiy/ui/Toast';
 
 const Sahna3D = lazy(() => import('./Sahna3D'));
 
 export default function KirishSahifa() {
+  const [isLogin, setIsLogin] = useState(true);
+
+  // Login form state
   const [login, setLogin] = useState('');
   const [parol, setParol] = useState('');
+  
+  // Register form state
+  const [regKompaniya, setRegKompaniya] = useState('');
+  const [regInn, setRegInn] = useState('');
+  const [regIsm, setRegIsm] = useState('');
+  const [regTelefon, setRegTelefon] = useState('');
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -28,7 +39,7 @@ export default function KirishSahifa() {
 
       if (data.ok) {
         if (['admin', 'superadmin', 'bugalter', 'pto', 'prorab'].includes(data.rol)) {
-          navigate('/admin/obyektlar');
+          navigate('/admin/test/obyektlar');
         } else if (['boss', 'rahbar'].includes(data.rol)) {
           navigate('/boss');
         }
@@ -40,6 +51,25 @@ export default function KirishSahifa() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regKompaniya || !regInn || !regIsm || !regTelefon) {
+      setError("Barcha maydonlarni to'ldiring");
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    // Hozircha SaaS tizimda registratsiya mock. API yozilganda ulanadi.
+    setTimeout(() => {
+      setLoading(false);
+      toast("Sizning so'rovingiz qabul qilindi. Operator aloqaga chiqadi!", "ok");
+      setIsLogin(true);
+      setRegKompaniya(''); setRegInn(''); setRegIsm(''); setRegTelefon('');
+    }, 1500);
   };
 
   const handleBossLogin = async () => {
@@ -75,7 +105,7 @@ export default function KirishSahifa() {
       });
       const data = await r.json();
       if (data.ok && data.rol === 'superadmin') {
-        navigate('/admin/test/obyektlar'); // Tizim_02 ga olib kiramiz
+        navigate('/admin/test/obyektlar');
       } else {
         setError('Xato yuz berdi');
       }
@@ -122,17 +152,17 @@ export default function KirishSahifa() {
               Qurilishni <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Raqamli Boshqaring</span>
             </h1>
             <p className="text-zinc-400 text-lg leading-relaxed mb-8">
-              Barcha loyihalar, smetalar, va pudratchilarni bir joyda nazorat qiling. Kriptografik xavfsizlik va zamonaviy arxitektura.
+              Barcha loyihalar, smetalar, va pudratchilarni bir joyda nazorat qiling. O'zbekistonning eng ilg'or SaaS platformasi.
             </p>
             
-            <div className="flex items-center gap-4 text-sm font-medium text-zinc-300">
+            <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-zinc-300">
               <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-2 border border-white/10 backdrop-blur-md">
                 <ShieldCheck size={16} className="text-emerald-400" />
                 Bitcoin-level himoya
               </div>
               <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-2 border border-white/10 backdrop-blur-md">
                 <FlaskConical size={16} className="text-indigo-400" />
-                Tizim_02 Yadro
+                SaaS Multi-Tenant
               </div>
             </div>
           </motion.div>
@@ -155,10 +185,10 @@ export default function KirishSahifa() {
         </div>
       </div>
 
-      {/* RIGHT SIDE: Login Form */}
-      <div className="w-full lg:w-[480px] xl:w-[560px] flex flex-col justify-center items-center p-8 sm:p-12 xl:p-16 bg-[#020617] relative z-20">
+      {/* RIGHT SIDE: Login / Register Form */}
+      <div className="w-full lg:w-[480px] xl:w-[560px] flex flex-col justify-center items-center p-8 sm:p-12 xl:p-16 bg-[#020617] relative z-20 overflow-y-auto custom-scrollbar">
         
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-sm py-8">
           <div className="lg:hidden flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
               <Building2 className="text-indigo-400" size={24} />
@@ -166,98 +196,215 @@ export default function KirishSahifa() {
             <span className="text-xl font-bold tracking-widest text-white">SMETA OS<span className="text-indigo-500">.</span></span>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <h2 className="text-2xl font-bold text-white mb-2">Tizimga kirish</h2>
-            <p className="text-zinc-400 text-sm mb-8">O'z hisob ma'lumotlaringizni kiriting</p>
+          <div className="flex bg-[#0a0f1d] border border-white/10 p-1 rounded-xl mb-8">
+            <button 
+              onClick={() => { setIsLogin(true); setError(''); }}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${isLogin ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-400 hover:text-white'}`}
+            >
+              Kirish
+            </button>
+            <button 
+              onClick={() => { setIsLogin(false); setError(''); }}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${!isLogin ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-400 hover:text-white'}`}
+            >
+              Ro'yxatdan o'tish
+            </button>
+          </div>
 
-            <form onSubmit={handleLogin} className="flex flex-col gap-5">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-zinc-300">Логин</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-                  <input
-                    type="text"
-                    value={login}
-                    onChange={e => setLogin(e.target.value)}
-                    className="w-full bg-[#0a0f1d] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-zinc-600"
-                    placeholder="foydalanuvchi_nomi"
-                    autoFocus
-                  />
-                </div>
-              </div>
+          <AnimatePresence mode="wait">
+            {isLogin ? (
+              <motion.div
+                key="login"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <h2 className="text-2xl font-bold text-white mb-2">Tizimga kirish</h2>
+                <p className="text-zinc-400 text-sm mb-8">O'z hisob ma'lumotlaringizni kiriting</p>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-zinc-300">Парол</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-                  <input
-                    type="password"
-                    value={parol}
-                    onChange={e => setParol(e.target.value)}
-                    className="w-full bg-[#0a0f1d] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-zinc-600"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-              
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm">
-                      {error}
+                <form onSubmit={handleLogin} className="flex flex-col gap-5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-300">Логин</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                      <input
+                        type="text"
+                        value={login}
+                        onChange={e => setLogin(e.target.value)}
+                        className="w-full bg-[#0a0f1d] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-zinc-600"
+                        placeholder="foydalanuvchi_nomi"
+                        autoFocus
+                      />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={loading || !login || !parol}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2 shadow-[0_4px_14px_0_rgba(79,70,229,0.39)]"
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-300">Парол</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                      <input
+                        type="password"
+                        value={parol}
+                        onChange={e => setParol(e.target.value)}
+                        className="w-full bg-[#0a0f1d] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-zinc-600"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm">
+                          {error}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <button
+                    type="submit"
+                    disabled={loading || !login || !parol}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2 shadow-[0_4px_14px_0_rgba(79,70,229,0.39)]"
+                  >
+                    {loading ? 'Текширилмоқда...' : (
+                      <>Kirish <ArrowRight size={18} /></>
+                    )}
+                  </button>
+                </form>
+
+                <div className="flex items-center gap-4 my-8">
+                  <div className="flex-1 h-px bg-white/10"></div>
+                  <span className="text-zinc-500 text-xs font-medium uppercase tracking-widest">Tezkor</span>
+                  <div className="flex-1 h-px bg-white/10"></div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSuperadminLogin}
+                    disabled={loading}
+                    className="w-full bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600/20 text-indigo-400 rounded-xl py-3 text-sm font-semibold transition-all disabled:opacity-50 flex justify-center items-center gap-2 group"
+                  >
+                    <ShieldCheck size={18} className="group-hover:scale-110 transition-transform" />
+                    Anvar (Superadmin)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleBossLogin}
+                    disabled={loading}
+                    className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-300 rounded-xl py-3 text-sm font-medium transition-all disabled:opacity-50"
+                  >
+                    Раҳбар кириши (Сводка)
+                  </button>
+                </div>
+
+              </motion.div>
+            ) : (
+              <motion.div
+                key="register"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
               >
-                {loading ? 'Текширилмоқда...' : (
-                  <>Kirish <ArrowRight size={18} /></>
-                )}
-              </button>
-            </form>
+                <h2 className="text-2xl font-bold text-white mb-2">Platformaga ulanish</h2>
+                <p className="text-zinc-400 text-sm mb-6">Kompaniyangizni ro'yxatdan o'tkazing va bepul sinov muddatini boshlang.</p>
 
-            <div className="flex items-center gap-4 my-8">
-              <div className="flex-1 h-px bg-white/10"></div>
-              <span className="text-zinc-500 text-xs font-medium uppercase tracking-widest">Tezkor</span>
-              <div className="flex-1 h-px bg-white/10"></div>
-            </div>
+                <form onSubmit={handleRegister} className="flex flex-col gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-300">Kompaniya Nomi</label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                      <input
+                        type="text"
+                        value={regKompaniya}
+                        onChange={e => setRegKompaniya(e.target.value)}
+                        className="w-full bg-[#0a0f1d] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-zinc-600"
+                        placeholder="MChJ / XK nomi"
+                      />
+                    </div>
+                  </div>
 
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={handleSuperadminLogin}
-                disabled={loading}
-                className="w-full bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600/20 text-indigo-400 rounded-xl py-3 text-sm font-semibold transition-all disabled:opacity-50 flex justify-center items-center gap-2 group"
-              >
-                <ShieldCheck size={18} className="group-hover:scale-110 transition-transform" />
-                Anvar (Superadmin)
-              </button>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-300">STIR (INN)</label>
+                    <div className="relative">
+                      <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                      <input
+                        type="text"
+                        value={regInn}
+                        onChange={e => setRegInn(e.target.value)}
+                        className="w-full bg-[#0a0f1d] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-zinc-600"
+                        placeholder="9 xonali raqam"
+                      />
+                    </div>
+                  </div>
 
-              <button
-                type="button"
-                onClick={handleBossLogin}
-                disabled={loading}
-                className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-300 rounded-xl py-3 text-sm font-medium transition-all disabled:opacity-50"
-              >
-                Раҳбар кириши (Сводка)
-              </button>
-            </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-300">Sizning ismingiz</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                      <input
+                        type="text"
+                        value={regIsm}
+                        onChange={e => setRegIsm(e.target.value)}
+                        className="w-full bg-[#0a0f1d] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-zinc-600"
+                        placeholder="F.I.Sh."
+                      />
+                    </div>
+                  </div>
 
-          </motion.div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-300">Telefon raqam</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                      <input
+                        type="text"
+                        value={regTelefon}
+                        onChange={e => setRegTelefon(e.target.value)}
+                        className="w-full bg-[#0a0f1d] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-zinc-600"
+                        placeholder="+998"
+                      />
+                    </div>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm">
+                          {error}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-3 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2 shadow-[0_4px_14px_0_rgba(16,185,129,0.39)]"
+                  >
+                    {loading ? 'Yuborilmoqda...' : 'Sotib olish / Bepul sinash'}
+                  </button>
+                </form>
+                
+                <p className="text-xs text-zinc-500 text-center mt-6">
+                  Ro'yxatdan o'tish orqali siz <a href="#" className="text-indigo-400 hover:underline">Foydalanish shartlariga</a> rozi bo'lasiz
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
