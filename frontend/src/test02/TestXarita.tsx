@@ -245,7 +245,7 @@ export default function TestXarita() {
         {GLOBAL_MODS.map((m, i) => {
           const y = glStartY + i * (SUB_H + SUB_GAP);
           return (
-            <foreignObject key={m.nomi} x={glX} y={y} width={SUB_W} height={SUB_H}>
+            <div key={m.nomi} style={{ position: 'absolute', left: glX, top: y, width: SUB_W, height: SUB_H }}>
               <div
                 onClick={(e) => nav(m.path, e)}
                 className="w-full h-full px-3 flex items-center justify-between gap-2 bg-surface border border-border rounded-lg text-sm cursor-pointer group transition-all hover:border-accent/60 hover:shadow-md hover:shadow-accent/10"
@@ -256,12 +256,12 @@ export default function TestXarita() {
                 </div>
                 <ChevronRight size={12} className="text-text-dim shrink-0" />
               </div>
-            </foreignObject>
+            </div>
           );
         })}
 
         {/* ════ HQ NODE ════ */}
-        <foreignObject x={HQ_X} y={HQ_Y - HQ_H / 2} width={HQ_W} height={HQ_H}>
+        <div style={{ position: 'absolute', left: HQ_X, top: HQ_Y - HQ_H / 2, width: HQ_W, height: HQ_H }}>
           <motion.div
             initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring' }}
             className="w-full h-full flex flex-col items-center justify-center bg-surface border-2 border-accent/60 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.25)] text-center p-3"
@@ -272,13 +272,13 @@ export default function TestXarita() {
             <h2 className="text-sm font-black text-text leading-tight">Bosh Kompaniya</h2>
             <span className="text-[10px] mt-1 px-2 py-0.5 bg-surface-2 text-text-dim rounded-full">Boshqaruv Markazi</span>
           </motion.div>
-        </foreignObject>
+        </div>
 
         {/* ════ OBJECT NODES + SUB-MODULES ════ */}
         {yuklanmoqda && (
-          <foreignObject x={OBJ_X} y={HQ_Y - 20} width={220} height={40}>
+          <div style={{ position: 'absolute', left: OBJ_X, top: HQ_Y - 20, width: 220, height: 40 }}>
             <div className="text-text-dim text-sm animate-pulse">Yuklanmoqda...</div>
-          </foreignObject>
+          </div>
         )}
 
         {obyektlar.map((ob, i) => {
@@ -286,9 +286,9 @@ export default function TestXarita() {
           const subGroupTop = oy + (OB_H / 2) - (totalSubH / 2);
 
           return (
-            <g key={ob.id}>
+            <React.Fragment key={ob.id}>
               {/* Object node */}
-              <foreignObject x={OBJ_X} y={oy} width={OB_W} height={OB_H}>
+              <div style={{ position: 'absolute', left: OBJ_X, top: oy, width: OB_W, height: OB_H }}>
                 <motion.div
                   initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
                   onClick={(e) => nav(`/admin/test/daraxt?obyekt=${encodeURIComponent(ob.nom)}`, e)}
@@ -302,13 +302,13 @@ export default function TestXarita() {
                     <p className="text-[10px] text-text-dim truncate">{ob.tur || 'Qurilish obyekti'}</p>
                   </div>
                 </motion.div>
-              </foreignObject>
+              </div>
 
               {/* Sub-module leaves */}
               {OBJ_SUBS.map((s, j) => {
                 const sy = subGroupTop + j * (SUB_H + SUB_GAP);
                 return (
-                  <foreignObject key={s.nomi} x={OBJ_SUB_X} y={sy} width={SUB_W} height={SUB_H}>
+                  <div key={s.nomi} style={{ position: 'absolute', left: OBJ_SUB_X, top: sy, width: SUB_W, height: SUB_H }}>
                     <motion.div
                       initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 + j * 0.03 }}
                       onClick={(e) => nav(s.pathFn(ob.id, ob.nom), e)}
@@ -317,22 +317,24 @@ export default function TestXarita() {
                       <s.Icon size={13} className={`text-${s.color}-500 shrink-0`} />
                       <span className={`font-medium text-text group-hover:text-${s.color}-400 truncate`}>{s.nomi}</span>
                     </motion.div>
-                  </foreignObject>
+                  </div>
                 );
               })}
-            </g>
+            </React.Fragment>
           );
         })}
 
         {!yuklanmoqda && obyektlar.length === 0 && (
-          <foreignObject x={OBJ_X} y={HQ_Y - 60} width={260} height={120}>
+          <div style={{ position: 'absolute', left: OBJ_X, top: HQ_Y - 60, width: 260, height: 120 }}>
             <div className="w-full h-full flex items-center justify-center bg-surface border border-border rounded-xl text-text-dim text-sm text-center p-4">
               Obyektlar mavjud emas.<br />
               <span className="text-accent cursor-pointer" onClick={(e) => nav('/admin/test/settings', e)}>Tizimga qo'shing</span>
             </div>
-          </foreignObject>
+          </div>
         )}
       </motion.div>
     </div>
   );
 }
+
+
