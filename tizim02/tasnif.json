@@ -51,7 +51,9 @@
     "99_DiagnostikaOcr.js": "tashxis",
     "30_Panel.js": "panel",
     "06_ObyektPapka.js": "kopruk",
-    "09_KorzinkaDrive.js": "kopruk"
+    "09_KorzinkaDrive.js": "kopruk",
+    "95_ObyektHujjat.js": "kopruk",
+    "96_T2Papka.js": "kopruk"
   },
   "domenQatlam": {
     "ai": "GAS",
@@ -1009,6 +1011,30 @@
       "qopladi": "kerak emas - GAS deploy versiyasini probe qilish uchun (bu sessiyada ko'p marta ishlatilgan)",
       "toliq": true,
       "qatlam": "GAS"
+    },
+    "apiT2PapkaTayyorla": {
+      "qopladi": "GAS qatlamida qoladi (DriveApp papka yaratish - Postgres qila olmaydi)",
+      "toliq": true,
+      "qatlam": "GAS",
+      "izoh": "Tuzilma REJASI bazadan keladi (t2_papka_reja), GAS faqat Drive'da yaratadi va t2_papka_qayd bilan ID ni qaytarib yozadi. Mavjud obyekt papkalari KO'CHIRILMAYDI - joyida qoladi, ichiga tur papkalari qo'shiladi."
+    },
+    "apiT2HujjatDriveSaqla": {
+      "qopladi": "GAS qatlamida qoladi (DriveApp fayl yozish)",
+      "toliq": true,
+      "qatlam": "GAS",
+      "izoh": "95_ObyektHujjat.js dagi eskisining o'rniga: u faqat 2 ta turni bilardi va kompaniya/loyiha darajasini hisobga olmasdi. Bu turni t2_hujjat_turi katalogidan oladi."
+    },
+    "apiT2PapkaHammasi": {
+      "qopladi": "GAS qatlamida qoladi (ommaviy Drive amali)",
+      "toliq": true,
+      "qatlam": "GAS",
+      "izoh": "Barcha faol obyektlar uchun papka zanjiri. 6 daqiqa chegarasi uchun 4 daqiqadan keyin to'xtaydi, qolgani keyingi yurishda."
+    },
+    "apiObyektHujjatDriveSaqla": {
+      "qopladi": "GAS qatlamida qoladi (DriveApp) - LEKIN apiT2HujjatDriveSaqla bilan almashtirildi",
+      "toliq": true,
+      "qatlam": "GAS",
+      "izoh": "Eski yo'l: faqat 'Loyiha chizmalari'/'Boshqa hujjatlar' ni bilardi. Yangi kod apiT2HujjatDriveSaqla ni ishlatsin."
     },
     "apiWebApiLog": {
       "qopladi": "kerak emas - Web API'ning o'z jurnali (GAS CacheService)",

@@ -1,11 +1,11 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 258,
+    "jami": 262,
     "hisobga": 145,
     "tayyor": 136,
     "qisman": 8,
-    "joyida": 103,
+    "joyida": 107,
     "kerakmas": 10
   },
   "foiz": 97,
@@ -20,6 +20,7 @@
     "apiT2Ishla",
     "apiT2KompaniyaHolat",
     "apiT2KompaniyaTanla",
+    "apiT2KozguYangila",
     "apiT2ManbaFayllar",
     "apiT2ObyektHujjatlar",
     "apiT2ObyektImport",
@@ -119,16 +120,17 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 15,
+      "jami": 19,
       "tayyor": 0,
       "qisman": 0,
       "kutilmoqda": 0,
       "kerakmas": 0,
-      "joyida": 15,
+      "joyida": 19,
       "funksiyalar": [
         "apiAntigravityExport",
         "apiFaktSinxron",
         "apiKodVersiya",
+        "apiObyektHujjatDriveSaqla",
         "apiSupabaseSinxKursor",
         "apiSupabaseSinxReset",
         "apiSupabaseSozlamaOl",
@@ -137,6 +139,9 @@
         "apiT2DriveRename",
         "apiT2DriveRestore",
         "apiT2DriveTrash",
+        "apiT2HujjatDriveSaqla",
+        "apiT2PapkaHammasi",
+        "apiT2PapkaTayyorla",
         "apiT2YangiObyektYarat",
         "apiWebApiFunksiyalar",
         "apiWebApiLog",
@@ -3190,6 +3195,46 @@
       "holat": "tayyor",
       "qopladi": "t2_ozgarish",
       "izoh": null
+    },
+    "apiObyektHujjatDriveSaqla": {
+      "fayl": "95_ObyektHujjat.js",
+      "qator": 28,
+      "argSoni": 5,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS qatlamida qoladi (DriveApp) - LEKIN apiT2HujjatDriveSaqla bilan almashtirildi",
+      "izoh": "Eski yo'l: faqat 'Loyiha chizmalari'/'Boshqa hujjatlar' ni bilardi. Yangi kod apiT2HujjatDriveSaqla ni ishlatsin."
+    },
+    "apiT2PapkaTayyorla": {
+      "fayl": "96_T2Papka.js",
+      "qator": 48,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS qatlamida qoladi (DriveApp papka yaratish - Postgres qila olmaydi)",
+      "izoh": "Tuzilma REJASI bazadan keladi (t2_papka_reja), GAS faqat Drive'da yaratadi va t2_papka_qayd bilan ID ni qaytarib yozadi. Mavjud obyekt papkalari KO'CHIRILMAYDI - joyida qoladi, ichiga tur papkalari qo'shiladi."
+    },
+    "apiT2HujjatDriveSaqla": {
+      "fayl": "96_T2Papka.js",
+      "qator": 184,
+      "argSoni": 5,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS qatlamida qoladi (DriveApp fayl yozish)",
+      "izoh": "95_ObyektHujjat.js dagi eskisining o'rniga: u faqat 2 ta turni bilardi va kompaniya/loyiha darajasini hisobga olmasdi. Bu turni t2_hujjat_turi katalogidan oladi."
+    },
+    "apiT2PapkaHammasi": {
+      "fayl": "96_T2Papka.js",
+      "qator": 219,
+      "argSoni": 0,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS qatlamida qoladi (ommaviy Drive amali)",
+      "izoh": "Barcha faol obyektlar uchun papka zanjiri. 6 daqiqa chegarasi uchun 4 daqiqadan keyin to'xtaydi, qolgani keyingi yurishda."
     },
     "apiTolaDiagnostika": {
       "fayl": "99_Diagnostika.js",

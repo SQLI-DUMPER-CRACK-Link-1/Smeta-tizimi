@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy } from 'react';
+import { useState, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, ShieldCheck, Lock, User, ArrowRight, Building2, FlaskConical, Mail, Phone } from 'lucide-react';
@@ -62,59 +62,51 @@ export default function KirishSahifa() {
     
     setLoading(true);
     setError('');
-    
-    // Hozircha SaaS tizimda registratsiya mock. API yozilganda ulanadi.
-    setTimeout(() => {
-      setLoading(false);
-      toast("Sizning so'rovingiz qabul qilindi. Operator aloqaga chiqadi!", "ok");
-      setIsLogin(true);
-      setRegKompaniya(''); setRegInn(''); setRegIsm(''); setRegTelefon('');
-    }, 1500);
-  };
 
-  const handleBossLogin = async () => {
-    setError('');
-    setLoading(true);
+    /* ⚠️ 2026-08-28: avval bu yerda `setTimeout` bilan SOXTA muvaffaqiyat
+       ko'rsatilardi — odamga «so'rovingiz qabul qilindi, operator aloqaga
+       chiqadi» deyilardi, lekin hech narsa saqlanmasdi va hech kim
+       xabar olmasdi. Endi haqiqiy so'rov `/api/royxat` ga ketadi va
+       `t2_royxat_sorov` jadvaliga yoziladi. */
     try {
-      const r = await fetch('/api/kirish', {
+      const r = await fetch('/api/royxat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isBoss: true }),
+        body: JSON.stringify({
+          kompaniya: regKompaniya, inn: regInn, ism: regIsm, telefon: regTelefon,
+        }),
       });
       const data = await r.json();
-      if (data.ok && data.rol === 'boss') {
-        navigate('/boss');
+      if (data.ok) {
+        toast("So'rovingiz ro'yxatga yozildi. Operator aloqaga chiqadi.", "ok");
+        setIsLogin(true);
+        setRegKompaniya(''); setRegInn(''); setRegIsm(''); setRegTelefon('');
       } else {
-        setError('Xato yuz berdi');
+        setError(data.xabar || "So'rovni saqlab bo'lmadi");
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Tarmoq xatosi');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSuperadminLogin = async () => {
+  /* ⚠️ 2026-08-28 XAVFSIZLIK TUZATISHI.
+   * Avval bu tugmalar `{isBoss:true}` / `{isSuperadmin:true}` yuborardi va
+   * server buni PAROLSIZ qabul qilardi — ya'ni internetdagi istalgan odam
+   * bitta so'rov bilan superadmin bo'la olardi.
+   * Endi tugmalar faqat LOGIN NOMINI to'ldiradi, parolni odam kiritadi. */
+  const parolMaydoni = useRef<HTMLInputElement>(null);
+
+  const loginniToldir = (nomi: string) => {
     setError('');
-    setLoading(true);
-    try {
-      const r = await fetch('/api/kirish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isSuperadmin: true }),
-      });
-      const data = await r.json();
-      if (data.ok && data.rol === 'superadmin') {
-        navigate('/admin/test/obyektlar');
-      } else {
-        setError('Xato yuz berdi');
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setLogin(nomi);
+    setParol('');
+    setTimeout(() => parolMaydoni.current?.focus(), 0);
   };
+
+  const handleBossLogin = () => loginniToldir('boss');
+  const handleSuperadminLogin = () => loginniToldir('Anvar');
 
   return (
     <div className="flex w-full h-screen overflow-hidden bg-[#020617] text-white">
@@ -244,6 +236,7 @@ export default function KirishSahifa() {
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
                       <input
+                        ref={parolMaydoni}
                         type="password"
                         value={parol}
                         onChange={e => setParol(e.target.value)}

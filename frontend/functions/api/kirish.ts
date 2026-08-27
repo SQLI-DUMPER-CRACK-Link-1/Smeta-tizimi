@@ -9,41 +9,51 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
   
   let rol: Rol | null = null;
-  let login = '';
 
-  if (req.isBoss) {
-    rol = 'boss';
-    login = 'boss';
-  } else if (req.isSuperadmin) {
-    rol = 'superadmin';
-    login = 'Anvar';
-  } else {
-    login = req.login || '';
-    const parol = req.parol || '';
+  /* ⚠️ 2026-08-28 XAVFSIZLIK TUZATISHI (Claude, login auditi).
+   *
+   * AVVAL BU YERDA TO'LIQ AUTENTIFIKATSIYA CHETLAB O'TILARDI:
+   *     if (req.isBoss)        { rol = 'boss'; }
+   *     else if (req.isSuperadmin) { rol = 'superadmin'; }
+   * Ya'ni brauzerdan `{"isSuperadmin": true}` yuborgan HAR QANDAY odam —
+   * internetdagi istalgan kishi — PAROLSIZ superadmin sessiyasini olardi.
+   * Sayt jonli (smeta-tizimi.pages.dev), demak bu nazariy emas, HAQIQIY
+   * ochiq eshik edi.
+   *
+   * ENDI: `isBoss`/`isSuperadmin` faqat LOGIN NOMINI oldindan to'ldiradi
+   * (qulaylik uchun), lekin PAROL baribir talab qilinadi va u avvalgidek
+   * GAS orqali tekshiriladi. Ya'ni tugmalar yo'qolmaydi — ular endi
+   * parol so'raydi.
+   *
+   * ⚠️ Rol MIJOZDAN olinmaydi. GAS nima qaytarsa — o'sha. Mijoz
+   * `isSuperadmin` yuborib, GAS 'prorab' desa — prorab bo'ladi. */
+  let login = req.login || '';
+  if (!login && req.isBoss) login = 'boss';
+  if (!login && req.isSuperadmin) login = 'Anvar';
 
-    if (!login || !parol) {
-      return Response.json({ ok: false, xato: 'Логин ва паролни киритинг' }, { status: 400 });
+  const parol = req.parol || '';
+  if (!login || !parol) {
+    return Response.json({ ok: false, xato: 'Логин ва паролни киритинг' }, { status: 400 });
+  }
+
+  try {
+    const r = await fetch(ctx.env.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        __api: 1,
+        token: ctx.env.GAS_TOKEN,
+        fn: 'apiKirishTekshir',
+        args: [login, parol]
+      }),
+    });
+
+    const data = await r.json<{ ok: boolean; data: string | null }>();
+    if (data.ok && data.data) {
+      rol = data.data as Rol;
     }
-    
-    try {
-      const r = await fetch(ctx.env.GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ 
-          __api: 1, 
-          token: ctx.env.GAS_TOKEN, 
-          fn: 'apiKirishTekshir', 
-          args: [login, parol] 
-        }),
-      });
-      
-      const data = await r.json<{ ok: boolean; data: string | null }>();
-      if (data.ok && data.data) {
-        rol = data.data as Rol;
-      }
-    } catch (err) {
-      console.error('GAS ga bog\'lanishda xato:', err);
-    }
+  } catch (err) {
+    console.error('GAS ga bog\'lanishda xato:', err);
   }
 
   if (!rol) {
