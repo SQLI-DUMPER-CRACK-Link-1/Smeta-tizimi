@@ -209,3 +209,14 @@ RLS/Auth (band 5-6) atayLAB **oxiriga qoldiriladi** — sabab tepada
 yozilgan (funksional foyda yo'q hozirgi arxitekturada).
 
 Bu reja `tizim02/MULOQOT.md` da Antigravity bilan ham baham ko'rilgan.
+
+## 0. "BITCOIN-LEVEL SECURITY" - Kriptografik ID lar va RLS (YANGI QO'SHIMCHA)
+**DIQQAT: Tizim xavfsizligi va raqobatbardoshligi uchun qabul qilingan qat'iy standart.**
+
+Hozirgi sinov (test) siklida kompaniya ID lari, obyekt ID lari oddiy tartib raqam (masalan, id: 1, id: 2) ko'rinishida turibdi. Bu ochiq va bashorat qilib bo'ladigan bemanilikdir. Raqamli ID'lar yordamida tashqi hujumchilar yoki boshqa tenantlar tizim ko'lamini osongina bilib olishi yoki Insecure Direct Object Reference (IDOR) orqali boshqa mijozlarning ma'lumotlariga kirishga urinishi mumkin.
+
+Shu sababli, **keyingi qadamlarda (Production'ga o'tish arafasida) barcha ID'lar "Bitcoin xavfsizligi" darajasiga ko'tarilishi SHART:**
+
+1. **UUIDv4 yoki ULID:** Barcha asosiy jadvallar (Kompaniya, Obyekt, Shartnoma, Tranzaksiya) identifikatorlari BIGINT dan UUID (Universally Unique Identifier) yoki kripotografik tasodifiy string'larga o'tkaziladi. Hech qachon brauzer tarmog'ida yoki URL'da id=1 degan yozuv chiqmasligi kerak (huddi Bitcoin hamyon manzili kabi: id=f47ac10b-58cc-4372-a567-0e02b2c3d479).
+2. **Kriptografik RLS (Row Level Security):** Supabase RLS yordamida har bir so'rovda foydalanuvchining sessiya tokeni (JWT) tekshiriladi. Token ichida uning shifrlangan kompaniya_id (UUID)si bo'ladi va ma'lumotlar bazasi faqat shu UUID ga tegishli qatorlarni qaytaradi. Birovning UUID'sini topib olish ehtimoli nolga teng (2^122 kombinatsiya).
+3. **Imzolangan URL'lar (Signed URLs):** Fayllar, shartnoma nusxalari va PDF aktlar faqatgina vaqtinchalik kriptografik imzolangan havolalar orqali o'qiladi.

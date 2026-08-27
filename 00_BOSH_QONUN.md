@@ -609,3 +609,8 @@ yana eski faylga uriladi.
 
 *Bu hujjat o'zgarsa — sababini shu yerga yozing. Qoidani sababisiz
 o'chirish man etiladi.*
+
+---
+# 8-QONUN: BITCOIN-DARAJASIDAGI XAVFSIZLIK (Yangi tahrir)
+Hech qachon tizim URLlarida, API chaqiruvlarida yoki bazaning tashqi qatlamlarida osongina bashorat qilish mumkin bo'lgan inkremental ID'lar (1, 2, 3...) ishlatilmasligi shart.
+Barcha xavfsizlik va ajratish (multi-tenancy) mantig'i Bitcoin kabi ishonchli kriptografiyaga tayanishi kerak. Asosiy jadvallar (Kompaniya, Obyekt, Shartnoma) uchun identifikatorlar UUIDv4 (128-bit) yordamida himoyalanishi, va Supabase RLS siyosatlari shu UUID asnosida qurilishi kerak. Bu har qanday tashqi urinishlar (IDOR) yoki "tahmin qilish" xavfini butunlay yo'q qiladi.
