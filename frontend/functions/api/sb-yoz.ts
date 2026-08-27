@@ -74,7 +74,12 @@ const AMALLAR = {
   kadr_mustaqil_yarat: { rpc: 't2_kadr_yarat' },
   texnika_mustaqil_yarat: { rpc: 't2_texnika_yarat' },
   resurs_bog_saqla: { rpc: 't2_resurs_bog_saqla' },
-  resurs_bog_ochir: { rpc: 't2_resurs_bog_ochir' }
+  resurs_bog_ochir: { rpc: 't2_resurs_bog_ochir' },
+  loyiha_yarat: { rpc: 't2_loyiha_yarat' },
+  loyiha_ochir: { rpc: 't2_loyiha_ochir' },
+  obyekt_loyihaga_biriktir: { rpc: 't2_obyekt_loyihaga_biriktir' },
+  kontragent_saqla: { rpc: 't2_kontragent_saqla' },
+  kontragent_ochir: { rpc: 't2_kontragent_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -778,6 +783,74 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'resurs_id yoki obyekt_id noto\'g\'ri' });
       }
       yuk = { p_tur: tur, p_resurs_id: resursId, p_obyekt_id: obyektId };
+
+    /* ══════════ LOYIHA (Kompaniya→Loyiha→Obyekt) ══════════ */
+    } else if (amal === 'loyiha_yarat') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      if (!String(so.nom || '').trim()) {
+        return Response.json({ ok: false, error: 'nom bo\'sh bo\'lishi mumkin emas' });
+      }
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_nom: String(so.nom).slice(0, 300),
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 1000) : null,
+        p_hudud: so.hudud ? String(so.hudud).slice(0, 200) : null,
+      };
+
+    } else if (amal === 'loyiha_ochir') {
+      const id = Number(so.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      yuk = { p_id: id };
+
+    } else if (amal === 'obyekt_loyihaga_biriktir') {
+      const obyektId = Number(so.obyekt_id);
+      const loyihaId = so.loyiha_id == null ? null : Number(so.loyiha_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      yuk = { p_obyekt_id: obyektId, p_loyiha_id: loyihaId };
+
+    /* ══════════ KONTRAGENTLAR (B2B Reestr) ══════════
+       ⚠️ STIR/INN validatsiyasi shu yerda ham (RPC ichida ham bor,
+       ikki qatlamli himoya — frontend soxta 9 xonali son yuborishi
+       mumkin bo'lsa ham, format xato bo'lsa RAD etiladi). */
+    } else if (amal === 'kontragent_saqla') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      if (!String(so.nom || '').trim()) {
+        return Response.json({ ok: false, error: 'nom bo\'sh bo\'lishi mumkin emas' });
+      }
+      const inn = so.inn ? String(so.inn).trim() : null;
+      if (inn && !/^[0-9]{9}$/.test(inn)) {
+        return Response.json({ ok: false, error: 'STIR (INN) 9 ta raqamdan iborat bo\'lishi shart' });
+      }
+      const MAVQE_RUXSAT = ['buyurtmachi', 'pudratchi', 'subpudratchi', 'loyihachi', 'taminotchi'];
+      const mavqe = so.mavqe && MAVQE_RUXSAT.includes(String(so.mavqe)) ? String(so.mavqe) : null;
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_inn: inn,
+        p_nom: String(so.nom).slice(0, 300),
+        p_rahbar: so.rahbar ? String(so.rahbar).slice(0, 200) : null,
+        p_manzil: so.manzil ? String(so.manzil).slice(0, 500) : null,
+        p_mfo: so.mfo ? String(so.mfo).slice(0, 20) : null,
+        p_hisob_raqam: so.hisob_raqam ? String(so.hisob_raqam).slice(0, 40) : null,
+        p_qqs_tolovchi: so.qqs_tolovchi == null ? null : Boolean(so.qqs_tolovchi),
+        p_mavqe: mavqe,
+      };
+
+    } else if (amal === 'kontragent_ochir') {
+      const id = Number(so.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      yuk = { p_id: id };
 
     /* ══════════ KORZINKA ══════════
        ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan
