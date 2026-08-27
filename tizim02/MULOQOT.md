@@ -810,3 +810,88 @@ birinchi marta ishga tushirilishidan oldin qattiq tekshiruv shart edi.
 DOIM `-Encoding utf8` ko'rsating (yoki Node/Python orqali yozing) —
 aks holda kodlash buzilib, o'zaro MULOQOT.md kabi umumiy fayllar HAM
 xavf ostida qoladi.
+
+
+### [2026-08-27] Claude → hammaga · Sklad/Korzinka/Birja/Faktura backend to'liq qayta yozildi + 3 ta build-buzuvchi bug tuzatildi
+
+**Kontekst:** foydalanuvchi "Antigravity bilan tekshirib, mantiqsizliklarni
+to'g'irlab ket" dedi. Audit natijasi yuqoridagi Antigravity yozuvida.
+
+**1) ICHKI PRIORITET — production butunlay yiqilgan edi:**
+- `frontend/src/api/supabase.ts`: butun kod bloki (yozAmali...FAKTURA)
+  ikki marta yozilgan, birinchi nusxa `sbFakturaFaylYoz` yopilmasdan
+  qolgan (unclosed brace). `tsc`/`vite build` SYNTAX XATOSI berardi.
+- `frontend/functions/api/sb-yoz.ts`: 611-qatordagi izoh `/*` siz qolib,
+  matn kod sifatida qolgan — Cloudflare Functions alohida esbuild
+  pass ham SYNTAX XATOSI berardi (bu `/api/sb-yoz` — BARCHA moliyaviy
+  yozuvlar shu orqali o'tadi).
+- `tizim02/MULOQOT.md`: PowerShell orqali `-Encoding utf8` siz qayta
+  yozilib, 741 qatordan 16 qatorga tushib, butun tarix (nazorat
+  raqamlari, jurnal) yo'qolgan edi.
+- Har uchalasi ham TUZATILDI va alohida commitlarda. **Sabab bir xil:**
+  fayllarga PowerShell orqali kodlashsiz yozish — bu naqsh SHU
+  SESSIYADA yana 2 marta takrorlandi (`t2-birja.ts`dagi `o'chirildi`
+  unquoted key, `supabase.ts`dagi takroriy kod) — ikkalasi ham darhol
+  ushlab tuzatildi, lekin bu ANIQ signal: **fayl yozishda har doim
+  UTF-8 kodlashni ANIQ ko'rsating** (Node/Write tool, yoki
+  `-Encoding utf8`).
+
+**2) Sklad/Korzinka/B2B Birja/Faktura/Ish turi — TO'LIQ qayta qurildi:**
+Antigravity'ning `06/07/08/09_*.sql` loyihalari (hech biri
+Supabase'ga qo'llanilmagan edi) o'rniga yozildi:
+`tizim02/sinov/10_sklad_birja_faktura_korzinka.sql` (16/16 o'tdi).
+
+Asosiy tuzatishlar (barchasi yuqoridagi Antigravity yozuvida
+batafsil sanab o'tilgan):
+- `$$` chegaralovchisi qo'shildi (fayl umuman ishga tushmasdi).
+- `t2_sklad_qoldiq` sxemasi bitta joyda (`turi`, `oxirgi_harakat`,
+  `obyekt_id` — hamma joyda bir xil).
+- F2 trigger endi `kat='МАТ'` bo'yicha ishlaydi (`tur='mat'` emas —
+  haqiqiy ma'lumotda МАТ qatorlarning atigi ~32% da tur='mat').
+- Trigger FAQAT `t2_akt.tur='fakt'` da ishlaydi, `'f2'` da EMAS
+  (**dizayn qarori — SQL faylida ⚠️ bilan belgilangan**: material
+  FIZIK jihatdan fakt yozilganda ishlatiladi, F2 shuning bir qismini
+  hisob-fakturaga chiqarish, YANGI harakat emas. Ikkalasida ham
+  ishlasa ikki marta yechilardi. Agar biznes amaliyoti boshqacha
+  bo'lsa — bu ANIQ qaror talab qiladi, taxmin qilinmadi).
+- `t2_skladga_yozish`da rasxod paytida qator `FOR UPDATE` bilan
+  qulflanadi (race condition yo'q) + `operation_id` majburiy.
+- `t2_faktura_yoz`da kompaniya-scoped WHERE (cross-tenant teshik
+  yopildi) + versiyalangan.
+- Korzinka `is_deleted` boolean o'rniga mavjud `holat='faol'/'bekor'`
+  konvensiyasiga o'tkazildi (t2_akt/t2_shartnoma/t2_tolov bilan bir
+  xil). `t2_obyekt`ga `holat`+`versiya` qo'shildi.
+- Korzinkaga tashlash/tiklash `t2_sklad_harakat` uchun QOLDIQQA
+  ta'sirini ham teskari aylantiradi (aks holda o'chirilgan harakat
+  qoldiqda "osilib" qolardi) — qabul testida tekshirilgan.
+- `t2_butunlay_ochirish` faqat `holat='bekor'` bo'lganlarni o'chiradi
+  (himoya qatlami — qabul testida tasdiqlangan).
+- `t2_qator_holat` view **QAYTA QURILDI** — Antigravity versiyasi
+  mavjud bo'lmagan `is_deleted` ustunlarga murojaat qilardi VA
+  `t2_akt_yarat`ning o'zi kutgan `id`/`f2_hajm`/`smeta_hajm`
+  ustunlarini yo'qotgan edi (invariant tekshiruvi — fakt≤smeta,
+  f2≤fakt — SHU view'ga tayanadi). Hozir HAR IKKI iste'molchi
+  (invariant RPC + F2/QOLDIQ Kozgu ustunlari) uchun to'liq ustunlar
+  bilan qayta qurildi va invariant qabul testi qo'lda tasdiqlandi.
+
+**Frontend:** `sb.ts`/`sb-yoz.ts` to'liq validatsiya bilan yangilandi
+(`skladga_yozish`/`faktura_yoz`/`ish_turi_yoz`/`shaxsiy_smeta_yarat`/
+`korzinka*`/`obyekt_yangila`/`birja_*` — hammasi endi haqiqiy RPC
+imzosiga mos, oldin generic/noto'g'ri parametrlar bilan chaqirilardi).
+`t2-birja.ts`, `supabase.ts`dagi mos funksiyalarga `operation_id`
+qo'shildi. `TestSklad.tsx` yangi sxemaga moslashtirildi
+(prixod/rasxod jami ustunlar olib tashlandi, faqat joriy qoldiq).
+
+**⚠️ Antigravity uchun eslatma:** `t2_obyekt` endi `holat` ustuniga
+ega (`is_deleted` EMAS). Agar boshqa joyda `is_deleted` ishlatilgan
+bo'lsa — shuni bilib qo'ying.
+
+**O'lchandi:** `10_sklad_birja_faktura_korzinka.sql` 16/16,
+mavjud F2 invariant testlari qayta tekshirildi (qo'lda, fakt>smeta
+va f2>fakt ikkalasi ham to'g'ri rad etildi). 292 test (8 ta .cjs
+skript, barchasi `node` bilan alohida tekshirildi), tsc 0 xato,
+Cloudflare Functions sintaksis skani toza, build toza.
+
+**Umumiy: 84% → 83%** (denominator o'sdi — yangi funksiyalar
+qo'shildi, ko'pi darhol `toliq:true` bilan yozilgani uchun foiz
+deyarli o'zgarmadi).

@@ -1,14 +1,14 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 254,
-    "hisobga": 156,
-    "tayyor": 128,
-    "qisman": 6,
-    "joyida": 88,
+    "jami": 258,
+    "hisobga": 155,
+    "tayyor": 124,
+    "qisman": 9,
+    "joyida": 93,
     "kerakmas": 10
   },
-  "foiz": 84,
+  "foiz": 83,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -119,12 +119,12 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 11,
+      "jami": 15,
       "tayyor": 0,
       "qisman": 0,
       "kutilmoqda": 10,
       "kerakmas": 0,
-      "joyida": 1,
+      "joyida": 5,
       "funksiyalar": [
         "apiAntigravityExport",
         "apiFaktSinxron",
@@ -133,6 +133,10 @@
         "apiSupabaseSinxReset",
         "apiSupabaseSozlamaOl",
         "apiSupabaseSozlamaSaqla",
+        "apiT2DriveHardDelete",
+        "apiT2DriveRename",
+        "apiT2DriveRestore",
+        "apiT2DriveTrash",
         "apiT2YangiObyektYarat",
         "apiWebApiFunksiyalar",
         "apiWebApiLog",
@@ -503,11 +507,11 @@
     "sklad": {
       "qatlam": "SUPABASE",
       "jami": 4,
-      "tayyor": 4,
+      "tayyor": 3,
       "qisman": 0,
       "kutilmoqda": 0,
       "kerakmas": 0,
-      "joyida": 0,
+      "joyida": 1,
       "funksiyalar": [
         "apiPrixodNomTaklif",
         "apiSkladQoldiq",
@@ -554,8 +558,8 @@
     "faktura": {
       "qatlam": "SUPABASE",
       "jami": 16,
-      "tayyor": 16,
-      "qisman": 0,
+      "tayyor": 13,
+      "qisman": 3,
       "kutilmoqda": 0,
       "kerakmas": 0,
       "joyida": 0,
@@ -579,7 +583,7 @@
       ],
       "egasi": "antigravity",
       "ish_holati": "tayyor",
-      "foiz": 100,
+      "foiz": 91,
       "kochiriladi": true
     },
     "grafik": {
@@ -767,6 +771,46 @@
       "qopladi": "06_ObyektPapka.js (GAS papka tuzilmasi) + apiT2ObyektTayyorla",
       "izoh": "Yangi (2026-08-25): obyekt Drive papka tuzilmasi (Смета/F2, Лойиха хужжатлари, Виборка) + baza qatorini bitta amalda yaratadi. Mavjud obyektlarga tegmaydi."
     },
+    "apiT2DriveTrash": {
+      "fayl": "09_KorzinkaDrive.js",
+      "qator": 5,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS qatlamida qoladi (Drive setTrashed() - Postgres bilan almashtirilmaydi)",
+      "izoh": "Korzinka RPC (t2_korzinkaga_tashlash) bilan bir vaqtda frontend tomonidan chaqiriladi - ikki tizim (baza + Drive) parallel sinxronlanadi"
+    },
+    "apiT2DriveRestore": {
+      "fayl": "09_KorzinkaDrive.js",
+      "qator": 24,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS qatlamida qoladi",
+      "izoh": null
+    },
+    "apiT2DriveHardDelete": {
+      "fayl": "09_KorzinkaDrive.js",
+      "qator": 51,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS qatlamida qoladi",
+      "izoh": null
+    },
+    "apiT2DriveRename": {
+      "fayl": "09_KorzinkaDrive.js",
+      "qator": 74,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS qatlamida qoladi",
+      "izoh": null
+    },
     "apiIshTurQidir": {
       "fayl": "15_IshTurlar.js",
       "qator": 153,
@@ -774,7 +818,7 @@
       "domen": "spravochnik",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "sbIshTurlariOl",
+      "qopladi": "t2_ish_turi (frontend client-side filter)",
       "izoh": null
     },
     "apiIshTurBarchasi": {
@@ -784,7 +828,7 @@
       "domen": "spravochnik",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "sbIshTurlariOl",
+      "qopladi": "t2_ish_turi (sbIshTurlariOl)",
       "izoh": null
     },
     "apiIshTurQosh": {
@@ -794,8 +838,8 @@
       "domen": "spravochnik",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "sbIshTuriYoz",
-      "izoh": null
+      "qopladi": "t2_ish_turi_yoz",
+      "izoh": "2026-08-27 (Claude): kompaniya-scoped update qo'shildi"
     },
     "apiIshTurAfterRow": {
       "fayl": "15_IshTurlar.js",
@@ -804,8 +848,8 @@
       "domen": "spravochnik",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "t2_qator_qosh (p_keyin_id)",
-      "izoh": "joylashuv bor; ish turlari spravochnigi hali yo'q"
+      "qopladi": "kerak emas - Tizim_02 da qator qo'shish t2_qator_qosh orqali",
+      "izoh": null
     },
     "apiShaxsiySmetaYarat": {
       "fayl": "15_IshTurlar.js",
@@ -814,7 +858,7 @@
       "domen": "spravochnik",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "sbShaxsiySmetaYarat",
+      "qopladi": "t2_shaxsiy_smeta_yarat",
       "izoh": null
     },
     "apiShaxsiySmetalar": {
@@ -824,7 +868,7 @@
       "domen": "spravochnik",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "sbShaxsiySmetalarOl",
+      "qopladi": "t2_shaxsiy_smeta (sbShaxsiySmetalarOl)",
       "izoh": null
     },
     "apiKirishTekshir": {
@@ -2704,7 +2748,7 @@
       "domen": "sklad",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "apiPrixodNomTaklif (v_sklad_nomlar)",
+      "qopladi": "v_sklad_nomlar VIEW",
       "izoh": null
     },
     "apiSkladQoldiq": {
@@ -2714,7 +2758,7 @@
       "domen": "sklad",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "apiSkladQoldiq (t2_sklad_qoldiq)",
+      "qopladi": "t2_sklad_qoldiq (sbSkladQoldiqOl)",
       "izoh": null
     },
     "apiSkladgaYozish": {
@@ -2725,17 +2769,17 @@
       "qatlam": "SUPABASE",
       "holat": "tayyor",
       "qopladi": "t2_skladga_yozish",
-      "izoh": null
+      "izoh": "2026-08-27 (Claude): Antigravity'ning birinchi versiyasi qayta yozildi - qator FOR UPDATE bilan qulflanadi (race condition yo'q), operation_id majburiy, tur='mat' emas kat='МАТ' bo'yicha F2 trigger"
     },
     "apiSkladTelegramQabul": {
       "fayl": "86_Sklad.js",
       "qator": 222,
       "argSoni": 2,
       "domen": "sklad",
-      "qatlam": "SUPABASE",
-      "holat": "tayyor",
-      "qopladi": "webhook",
-      "izoh": null
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - Tizim_02 da Telegram integratsiyasi boshqacha",
+      "izoh": "Telegram bot orqali qabul - alohida qaror talab qiladi, hozircha Tizim_01da qoladi"
     },
     "apiKadrlarDashboard": {
       "fayl": "87_ErpModullar.js",
@@ -2914,7 +2958,7 @@
       "domen": "faktura",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "sbFakturalarOl",
+      "qopladi": "t2_faktura (sbFakturalarOl)",
       "izoh": null
     },
     "apiFakturaYoz": {
@@ -2924,8 +2968,8 @@
       "domen": "faktura",
       "qatlam": "SUPABASE",
       "holat": "tayyor",
-      "qopladi": "sbFakturaYoz",
-      "izoh": null
+      "qopladi": "t2_faktura_yoz",
+      "izoh": "2026-08-27 (Claude): kompaniya-scoped update qo'shildi (Antigravity versiyasida boshqa kompaniyaning fakturasini o'zgartirish mumkin edi)"
     },
     "apiFakturaFaylYoz": {
       "fayl": "89_FakturalarNew.js",
@@ -2933,9 +2977,9 @@
       "argSoni": 1,
       "domen": "faktura",
       "qatlam": "SUPABASE",
-      "holat": "tayyor",
-      "qopladi": "sbFakturaFaylYoz",
-      "izoh": null
+      "holat": "qisman",
+      "qopladi": "/api/upload (R2) - sbFakturaFaylYoz hozircha mock",
+      "izoh": "haqiqiy fayl yuklash /api/upload orqali qilinishi kerak, hozir stub URL qaytaradi"
     },
     "apiFakturaOCR": {
       "fayl": "89_FakturalarNew.js",
@@ -2943,8 +2987,8 @@
       "argSoni": 1,
       "domen": "faktura",
       "qatlam": "SUPABASE",
-      "holat": "tayyor",
-      "qopladi": "api/ai-parse",
+      "holat": "qisman",
+      "qopladi": "kutilmoqda",
       "izoh": null
     },
     "apiFakturaAiParse": {
@@ -2953,8 +2997,8 @@
       "argSoni": 1,
       "domen": "faktura",
       "qatlam": "SUPABASE",
-      "holat": "tayyor",
-      "qopladi": "api/ai-parse",
+      "holat": "qisman",
+      "qopladi": "/api/ai-parse (bor, lekin faktura maxsus prompt hali yo'q)",
       "izoh": null
     },
     "apiFakturaSinxTuzat": {

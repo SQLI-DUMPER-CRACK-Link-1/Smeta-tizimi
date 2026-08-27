@@ -24,7 +24,7 @@ export default function TestSklad() {
   const [nomi, setNomi] = useState('');
   const [birligi, setBirligi] = useState('sht');
   const [obyomi, setObyomi] = useState('');
-  const [turi] = useState('MAT');
+  const [turi] = useState('mat');
 
   useEffect(() => {
     sbT2ObyektlarOl().then(r => {
@@ -78,8 +78,8 @@ export default function TestSklad() {
         setXato('Kiritilgan nom bazada yo\'q!');
         return;
       }
-      if (joriyQoldiqData.qoldiq_obyomi < o) {
-        setXato('Qoldiq yetarli emas! Faqat ' + joriyQoldiqData.qoldiq_obyomi + ' ' + joriyQoldiqData.birligi + ' bor.');
+      if (joriyQoldiqData.qoldiq < o) {
+        setXato('Qoldiq yetarli emas! Faqat ' + joriyQoldiqData.qoldiq + ' ' + joriyQoldiqData.birligi + ' bor.');
         return;
       }
       ishlatiladiganBirlik = joriyQoldiqData.birligi;
@@ -96,8 +96,7 @@ export default function TestSklad() {
     };
     
     setXato('');
-    // Yozish uchun versiya kerak, hozircha 1 deb beramiz (yoki DB dagi joriy versiya)
-    const r = await sbSkladgaYozish(aktKomp, operatsiya, item, 1);
+    const r = await sbSkladgaYozish(aktKomp, operatsiya, item);
     if (r.ok) {
       // Refresh
       const q = await sbSkladQoldiqOl(obId);
@@ -148,8 +147,8 @@ export default function TestSklad() {
               onChange={(e) => setNomi(e.target.value)}
             >
               <option value="">-- Ombordagi mahsulotni tanlang --</option>
-              {qoldiqlar.filter(q => q.qoldiq_obyomi > 0).map((q, i) => (
-                <option key={i} value={q.nomi}>{q.nomi} (Qoldiq: {q.qoldiq_obyomi} {q.birligi})</option>
+              {qoldiqlar.filter(q => q.qoldiq > 0).map((q, i) => (
+                <option key={i} value={q.nomi}>{q.nomi} (Qoldiq: {q.qoldiq} {q.birligi})</option>
               ))}
             </select>
           ) : (
@@ -176,7 +175,7 @@ export default function TestSklad() {
 
         <div className="w-32">
           <label className="block text-xs text-zinc-400 mb-1">
-            Miqdori {joriyQoldiqData && operatsiya === 'rasxod' ? '(Maks: ' + joriyQoldiqData.qoldiq_obyomi + ')' : ''}
+            Miqdori {joriyQoldiqData && operatsiya === 'rasxod' ? '(Maks: ' + joriyQoldiqData.qoldiq + ')' : ''}
           </label>
           <div className="flex items-center">
             <input 
@@ -209,8 +208,6 @@ export default function TestSklad() {
               <tr className="bg-zinc-800 border-b border-zinc-700">
                 <th className="p-3 text-zinc-300">Nomi</th>
                 <th className="p-3 text-zinc-300">Birligi</th>
-                <th className="p-3 text-right text-zinc-300">Jami Kirim</th>
-                <th className="p-3 text-right text-zinc-300">Jami Chiqim</th>
                 <th className="p-3 text-right text-emerald-400 font-bold bg-emerald-900/10">Joriy Qoldiq</th>
               </tr>
             </thead>
@@ -219,9 +216,7 @@ export default function TestSklad() {
                 <tr key={i} className="border-b border-zinc-800 hover:bg-zinc-800/50">
                   <td className="p-3 text-sky-100">{q.nomi}</td>
                   <td className="p-3 text-zinc-400">{q.birligi}</td>
-                  <td className="p-3 text-right text-emerald-400/80">+{q.prixod_obyomi}</td>
-                  <td className="p-3 text-right text-rose-400/80">-{q.rasxod_obyomi}</td>
-                  <td className="p-3 text-right text-emerald-400 font-bold bg-emerald-900/10">{q.qoldiq_obyomi}</td>
+                  <td className="p-3 text-right text-emerald-400 font-bold bg-emerald-900/10">{q.qoldiq}</td>
                 </tr>
               ))}
               {qoldiqlar.length === 0 && (

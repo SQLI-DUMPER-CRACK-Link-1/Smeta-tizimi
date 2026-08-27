@@ -125,7 +125,10 @@ tek('openById oldidan MIME tekshiriladi (V8 qulashi)',
 
 console.log('\n── Frontend: obyekt → qismlar ──');
 
-tek('obyekt yaratish bor', /apiT2ObyektYarat/.test(IMPORT_UI));
+/* ⚠️ 2026-08-25: `apiT2ObyektYarat` → `apiT2YangiObyektYarat` ga
+   almashtirildi — endi Drive papka tuzilmasini (Смета/F2, Лойиха
+   ҳужжатлари, Виборка) ham bitta amalda yaratadi. */
+tek('obyekt yaratish bor', /apiT2YangiObyektYarat/.test(IMPORT_UI));
 tek('obyekt tanlansa bazadagi hujjatlar tortiladi', /apiT2ObyektHujjatlar/.test(IMPORT_UI));
 tek('bazadagi hujjat «bazada» deb belgilanadi', /bazada: true/.test(IMPORT_UI));
 tek('LRV va RES — ikki alohida qism',

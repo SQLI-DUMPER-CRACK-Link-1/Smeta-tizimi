@@ -50,7 +50,8 @@
     "99_Diagnostika.js": "tashxis",
     "99_DiagnostikaOcr.js": "tashxis",
     "30_Panel.js": "panel",
-    "06_ObyektPapka.js": "kopruk"
+    "06_ObyektPapka.js": "kopruk",
+    "09_KorzinkaDrive.js": "kopruk"
   },
   "domenQatlam": {
     "ai": "GAS",
@@ -820,6 +821,106 @@
     "apiDebitorAging": {
       "qopladi": "t2_debitor_aging VIEW (sbT2DebitorAgingOl)",
       "toliq": true
+    },
+    "apiSkladQoldiq": {
+      "qopladi": "t2_sklad_qoldiq (sbSkladQoldiqOl)",
+      "toliq": true
+    },
+    "apiSkladgaYozish": {
+      "qopladi": "t2_skladga_yozish",
+      "toliq": true,
+      "izoh": "2026-08-27 (Claude): Antigravity'ning birinchi versiyasi qayta yozildi - qator FOR UPDATE bilan qulflanadi (race condition yo'q), operation_id majburiy, tur='mat' emas kat='МАТ' bo'yicha F2 trigger"
+    },
+    "apiPrixodNomTaklif": {
+      "qopladi": "v_sklad_nomlar VIEW",
+      "toliq": true
+    },
+    "apiSkladTelegramQabul": {
+      "qopladi": "kerak emas - Tizim_02 da Telegram integratsiyasi boshqacha",
+      "toliq": false,
+      "qatlam": "GAS",
+      "izoh": "Telegram bot orqali qabul - alohida qaror talab qiladi, hozircha Tizim_01da qoladi"
+    },
+    "apiFakturalarOl": {
+      "qopladi": "t2_faktura (sbFakturalarOl)",
+      "toliq": true
+    },
+    "apiFakturaYoz": {
+      "qopladi": "t2_faktura_yoz",
+      "toliq": true,
+      "izoh": "2026-08-27 (Claude): kompaniya-scoped update qo'shildi (Antigravity versiyasida boshqa kompaniyaning fakturasini o'zgartirish mumkin edi)"
+    },
+    "apiFakturaFaylYoz": {
+      "qopladi": "/api/upload (R2) - sbFakturaFaylYoz hozircha mock",
+      "toliq": false,
+      "izoh": "haqiqiy fayl yuklash /api/upload orqali qilinishi kerak, hozir stub URL qaytaradi"
+    },
+    "apiFakturaOCR": { "qopladi": "kutilmoqda", "toliq": false },
+    "apiFakturaAiParse": { "qopladi": "/api/ai-parse (bor, lekin faktura maxsus prompt hali yo'q)", "toliq": false },
+    "apiIshTurBarchasi": {
+      "qopladi": "t2_ish_turi (sbIshTurlariOl)",
+      "toliq": true
+    },
+    "apiIshTurQosh": {
+      "qopladi": "t2_ish_turi_yoz",
+      "toliq": true,
+      "izoh": "2026-08-27 (Claude): kompaniya-scoped update qo'shildi"
+    },
+    "apiIshTurQidir": {
+      "qopladi": "t2_ish_turi (frontend client-side filter)",
+      "toliq": true
+    },
+    "apiIshTurAfterRow": {
+      "qopladi": "kerak emas - Tizim_02 da qator qo'shish t2_qator_qosh orqali",
+      "toliq": true
+    },
+    "apiShaxsiySmetaYarat": {
+      "qopladi": "t2_shaxsiy_smeta_yarat",
+      "toliq": true
+    },
+    "apiShaxsiySmetalar": {
+      "qopladi": "t2_shaxsiy_smeta (sbShaxsiySmetalarOl)",
+      "toliq": true
+    },
+    "apiT2KorzinkagaTashlash": {
+      "qopladi": "t2_korzinkaga_tashlash",
+      "toliq": true,
+      "izoh": "Tizim_01da yo'q edi - Tizim_02ning yangi imkoniyati (soft-delete + Drive trash sinxronizatsiyasi)"
+    },
+    "apiT2KorzinkadanTiklash": {
+      "qopladi": "t2_korzinkadan_tiklash",
+      "toliq": true
+    },
+    "apiT2ButunlayOchirish": {
+      "qopladi": "t2_butunlay_ochirish",
+      "toliq": true,
+      "izoh": "faqat holat='bekor' bo'lgan qatorlarni o'chiradi - himoya qatlami"
+    },
+    "apiT2ObyektYangila": {
+      "qopladi": "t2_obyekt_yangila",
+      "toliq": true,
+      "izoh": "versiyalangan (optimistik qulf)"
+    },
+    "apiT2DriveTrash": {
+      "qopladi": "GAS qatlamida qoladi (Drive setTrashed() - Postgres bilan almashtirilmaydi)",
+      "toliq": true,
+      "qatlam": "GAS",
+      "izoh": "Korzinka RPC (t2_korzinkaga_tashlash) bilan bir vaqtda frontend tomonidan chaqiriladi - ikki tizim (baza + Drive) parallel sinxronlanadi"
+    },
+    "apiT2DriveRestore": {
+      "qopladi": "GAS qatlamida qoladi",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiT2DriveHardDelete": {
+      "qopladi": "GAS qatlamida qoladi",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiT2DriveRename": {
+      "qopladi": "GAS qatlamida qoladi",
+      "toliq": true,
+      "qatlam": "GAS"
     }
   },
   "keyingiNavbat": {

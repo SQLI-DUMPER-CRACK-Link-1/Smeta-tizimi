@@ -508,61 +508,180 @@ export const onRequestPost: PagesFunction<{
                 p_sabab: so.sabab ? String(so.sabab).slice(0, 500) : null };
       }
 
+    /* ══════════ SKLADGA YOZISH ══════════
+       ⚠️ IDEMPOTENTLIK MAJBURIY — sklad qoldig'iga ta'sir qiladi. */
     } else if (amal === 'skladga_yozish') {
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      if (so.operatsiya !== 'prixod' && so.operatsiya !== 'rasxod') {
+        return Response.json({ ok: false, error: 'operatsiya faqat «prixod» yoki «rasxod»' });
+      }
+      const obyomi = Number(so.obyomi);
+      if (!Number.isFinite(obyomi) || obyomi <= 0) {
+        return Response.json({ ok: false, error: 'obyomi musbat son bo\'lishi kerak' });
+      }
+      if (!String(so.nomi || '').trim() || !String(so.birligi || '').trim()) {
+        return Response.json({ ok: false, error: 'nomi va birligi bo\'sh bo\'lishi mumkin emas' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi harakat yaratadi' });
+      }
       yuk = {
         p_kompaniya_id: Number(so.kompaniya_id),
         p_operatsiya: so.operatsiya,
-        p_obyekt_id: Number(so.obyekt_id),
-        p_turi: so.turi,
-        p_sana: so.sana,
-        p_nomi: so.nomi,
-        p_birligi: so.birligi,
-        p_obyomi: Number(so.obyomi)
+        p_obyekt_id: obyektId,
+        p_turi: so.turi ? String(so.turi).slice(0, 20) : 'mat',
+        p_sana: so.sana || null,
+        p_nomi: String(so.nomi).slice(0, 300),
+        p_birligi: String(so.birligi).slice(0, 50),
+        p_obyomi: obyomi,
+        p_postavshik: so.postavshik ? String(so.postavshik).slice(0, 200) : null,
+        p_qabul_qiluvchi: so.qabul_qiluvchi ? String(so.qabul_qiluvchi).slice(0, 200) : null,
+        p_qabul_turi: so.qabul_turi ? String(so.qabul_turi).slice(0, 50) : null,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_operation_id: so.operation_id,
+        p_manba: 'frontend',
+        p_kim: sess.email || '',
       };
 
+    /* ══════════ FAKTURA (Didox EHF) ══════════
+       ⚠️ Yaratishda operation_id majburiy; tahrirlashda (p_id berilsa)
+       kompaniya_id ham bazada tekshiriladi (boshqa kompaniyaga tegishli
+       fakturani o'zgartirib bo'lmaydi) va versiya tekshiriladi. */
     } else if (amal === 'faktura_yoz') {
+      if (!String(so.raqam || '').trim() || !String(so.inn || '').trim()) {
+        return Response.json({ ok: false, error: 'raqam va inn bo\'sh bo\'lishi mumkin emas' });
+      }
+      const id = so.id ? Number(so.id) : null;
+      if (!id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi faktura yaratadi' });
+      }
       yuk = {
         p_kompaniya_id: Number(so.kompaniya_id),
-        p_raqam: so.raqam,
+        p_raqam: String(so.raqam).slice(0, 100),
         p_sana: so.sana,
-        p_kontragent: so.kontragent,
-        p_inn: so.inn,
+        p_kontragent: String(so.kontragent || '').slice(0, 300),
+        p_inn: String(so.inn).slice(0, 20),
         p_summa: Number(so.summa),
-        p_holat: so.holat,
+        p_holat: so.holat || 'yangi',
         p_items: so.items || [],
-        p_id: so.id ? Number(so.id) : null
+        p_id: id,
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+        p_operation_id: id ? null : so.operation_id,
+        p_kim: sess.email || '',
       };
 
+    /* ══════════ ISH TURI (spravochnik) ══════════ */
     } else if (amal === 'ish_turi_yoz') {
+      if (!String(so.kod || '').trim() || !String(so.nomi || '').trim()) {
+        return Response.json({ ok: false, error: 'kod va nomi bo\'sh bo\'lishi mumkin emas' });
+      }
       yuk = {
         p_kompaniya_id: Number(so.kompaniya_id),
-        p_kod: so.kod,
-        p_nomi: so.nomi,
-        p_birligi: so.birligi,
-        p_norma: Number(so.norma),
-        p_narx: Number(so.narx),
-        p_kategoriya: so.kategoriya,
+        p_kod: String(so.kod).slice(0, 100),
+        p_nomi: String(so.nomi).slice(0, 300),
+        p_birligi: String(so.birligi || '').slice(0, 50),
+        p_norma: so.norma == null ? 0 : Number(so.norma),
+        p_narx: so.narx == null ? 0 : Number(so.narx),
+        p_kategoriya: so.kategoriya ? String(so.kategoriya).slice(0, 100) : null,
         p_id: so.id ? Number(so.id) : null
       };
 
+    /* ══════════ SHAXSIY SMETA ══════════ */
     } else if (amal === 'shaxsiy_smeta_yarat') {
+      if (!String(so.nom || '').trim()) {
+        return Response.json({ ok: false, error: 'nom bo\'sh bo\'lishi mumkin emas' });
+      }
       yuk = {
         p_kompaniya_id: Number(so.kompaniya_id),
-        p_nom: String(so.nom || ''),
-        p_qatorlar: so.qatorlar ? JSON.stringify(so.qatorlar) : '[]'
+        p_nom: String(so.nom).slice(0, 500),
+        p_qatorlar: so.qatorlar || [],
+        p_kim: sess.email || '',
       };
 
+    /* ══════════ KORZINKA ══════════
+       ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan
+       oq ro'yxatdan (t2_obyekt/t2_shaxsiy_smeta/t2_sklad_harakat) —
+       shu yerda ham qo'shimcha tekshiramiz, ixtiyoriy jadval nomi
+       yozishga yo'l qo'ymaslik uchun ikki qatlamli himoya. */
     } else if (amal === 'korzinkaga_tashlash' || amal === 'korzinkadan_tiklash' || amal === 'butunlay_ochirish') {
+      const jadval = String(so.jadval || so.rpcArgs?.p_jadval || '');
+      const JADVAL_RUXSAT = ['t2_obyekt', 't2_shaxsiy_smeta', 't2_sklad_harakat'];
+      if (!JADVAL_RUXSAT.includes(jadval)) {
+        return Response.json({ ok: false, error: 'Bu jadval korzinka orqali boshqarilmaydi: ' + jadval });
+      }
+      const id = Number(so.id || so.rpcArgs?.p_id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      yuk = { p_jadval: jadval, p_id: id, p_kim: sess.email || '' };
+
+    /* ══════════ OBYEKT TAHRIRLASH ══════════ */
+    } else if (amal === 'obyekt_yangila') {
+      const id = Number(so.id || so.rpcArgs?.p_id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
       yuk = {
-        p_jadval: String(so.jadval || so.rpcArgs?.p_jadval || ''),
-        p_id: Number(so.id || so.rpcArgs?.p_id)
+        p_id: id,
+        p_nomi: String(so.nomi || so.rpcArgs?.p_nomi || ''),
+        p_tur: so.tur || so.rpcArgs?.p_tur || null,
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
       };
 
-    } else if (amal === 'obyekt_yangila') {
+    /* ══════════ B2B BIRJA ══════════
+       ⚠️ IDEMPOTENTLIK MAJBURIY — RFQ va taklif narxga bog'liq. */
+    } else if (amal === 'birja_rfq_yarat') {
+      const hajm = Number(so.hajm);
+      if (!String(so.nom || '').trim() || !String(so.birlik || '').trim()) {
+        return Response.json({ ok: false, error: 'nom va birlik bo\'sh bo\'lishi mumkin emas' });
+      }
+      if (!Number.isFinite(hajm) || hajm <= 0) {
+        return Response.json({ ok: false, error: 'hajm musbat son bo\'lishi kerak' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi RFQ yaratadi' });
+      }
       yuk = {
-        p_id: Number(so.id || so.rpcArgs?.p_id),
-        p_nomi: String(so.nomi || so.rpcArgs?.p_nomi || ''),
-        p_tur: String(so.tur || so.rpcArgs?.p_tur || '')
+        p_kompaniya_id: Number(so.kompaniya_id),
+        p_nom: String(so.nom).slice(0, 300),
+        p_birlik: String(so.birlik).slice(0, 50),
+        p_hajm: hajm,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_holat: 'ochiq',
+        p_operation_id: so.operation_id,
+        p_kim: sess.email || '',
+      };
+
+    } else if (amal === 'birja_taklif_ber') {
+      const rfqId = Number(so.rfq_id);
+      const narx = Number(so.narx);
+      if (!Number.isFinite(rfqId) || rfqId <= 0) {
+        return Response.json({ ok: false, error: 'rfq_id noto\'g\'ri' });
+      }
+      if (!Number.isFinite(narx) || narx <= 0) {
+        return Response.json({ ok: false, error: 'narx musbat son bo\'lishi kerak' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false,
+          error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi taklif yaratadi' });
+      }
+      yuk = {
+        p_rfq_id: rfqId,
+        p_kompaniya_id: Number(so.kompaniya_id),
+        p_narx: narx,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_operation_id: so.operation_id,
+        p_kim: sess.email || '',
       };
 
     } else if (amal === 'grafik_yangilash' || amal === 'grafik_sozlama_saqla') {
@@ -602,12 +721,14 @@ export const onRequestPost: PagesFunction<{
         p_oy: String(so.oy || '')
       };
 
-    } else if (amal === 'kirish_amal' || amal === 'taklif_yubor' || amal === 'taklif_qabul' || amal === 'birja_rfq_yarat' || amal === 'birja_taklif_ber') {
+    } else if (amal === 'kirish_amal' || amal === 'taklif_yubor' || amal === 'taklif_qabul') {
       yuk = {
         p_kompaniya_id: so.kompaniya_id ? Number(so.kompaniya_id) : 0,
         p_foydalanuvchi: String(so.foydalanuvchi || ''),
         p_payload: so.payload ? JSON.stringify(so.payload) : JSON.stringify(so)
       };
+
+    /* ══════════ HALI KOD YOZILMAGAN AMALLAR ══════════
        🚧 2026-08-25 (Claude): `AMALLAR` da RO'YXATDAN O'TGAN, lekin bu
        yerda o'z shoxobchasi bo'lmagan amallar avval JIM shu yerga —
        aslida `akt_tasdiqlash`/`akt_bekor` uchun yozilgan yuqoridagi

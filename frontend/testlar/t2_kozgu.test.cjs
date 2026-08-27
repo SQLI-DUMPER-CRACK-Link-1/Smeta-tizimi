@@ -36,15 +36,21 @@ if (um) {
   const KUTILGAN = ['№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.',
                     'ХАЖМ (ед)', 'ХАЖМ (жами)', 'НАРХ (1 ед)', 'СУММА', 'ТИП',
                     'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ'];
-  /* 13 ta KO'RINADIGAN ustun + 2 ta yashirin xizmat ustuni (_id, _v).
+  /* ⚠️ 2026-08-26 (Antigravity): 4 ta F2/QOLDIQ ustuni qo'shildi.
+     Endi 17 ta KO'RINADIGAN ustun (13 LRV_PLUS + 4 F2/qoldiq) + 2 ta
+     yashirin xizmat ustuni (_id, _v).
      Xizmat ustunlari oxirida — o'rtaga qo'yilsa LRV_PLUS tartibi buzilardi. */
-  tek('15 ta ustun (13 ko\'rinadigan + 2 yashirin)',
-      ustunlar.length === 15, 'topildi: ' + ustunlar.length);
+  tek('19 ta ustun (17 ko\'rinadigan + 2 yashirin)',
+      ustunlar.length === 19, 'topildi: ' + ustunlar.length);
   tek('birinchi 13 tasi LRV_PLUS tartibida',
       JSON.stringify(ustunlar.slice(0, 13)) === JSON.stringify(KUTILGAN),
       JSON.stringify(ustunlar.slice(0, 13)));
+  tek('F2/QOLDIQ ustunlari LRV_PLUS dan keyin, xizmatdan oldin',
+      JSON.stringify(ustunlar.slice(13, 17)) ===
+      JSON.stringify(['F2 HAJM', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA']),
+      JSON.stringify(ustunlar.slice(13, 17)));
   tek('xizmat ustunlari OXIRIDA',
-      ustunlar[13] === '_id' && ustunlar[14] === '_v');
+      ustunlar[17] === '_id' && ustunlar[18] === '_v');
   tek('NORMA ustuni bor (avval yo\'q edi)', ustunlar.includes('ХАЖМ (ед)'));
   tek('ТИП ustuni bor — rz/bl/rs/mat/ob', ustunlar.includes('ТИП'));
   tek('kategoriya ustunlari bor', ['ЧЕЛ','МАШ','МАТ','ОБ'].every((k) => ustunlar.includes(k)));
@@ -243,7 +249,7 @@ tek('yashirin `_id` va `_v` ustunlari yoziladi',
     /'_id', '_v'/.test(KOZGU) && /qator\[C_ID - 1\]\s*= r\.id/.test(KOZGU));
 tek('ular ko\'zdan yashiriladi, lekin o\'chirilmaydi',
     /hideColumns\(C_ID, 2\)/.test(KOZGU));
-tek('qaytishda qator `_id` orqali topiladi', /var id = Number\(qiy\[i\]\[13\]\)/.test(KOZGU));
+tek('qaytishda qator `_id` orqali topiladi', /var id = Number\(qiy\[i\]\[17\]\)/.test(KOZGU));
 
 /* Ziddiyat — «oxirgi yozgan yutadi» BO'LMASLIGI kerak */
 tek('kutilgan versiya yuboriladi', /p_kutilgan_versiya: kutilganV/.test(KOZGU));

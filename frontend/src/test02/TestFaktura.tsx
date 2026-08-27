@@ -54,12 +54,12 @@ export default function TestFaktura() {
       for (const item of items) {
         const res = await sbSkladgaYozish(aktKomp, 'prixod', {
           obyekt_id: tanlanganObId, operatsiya: 'prixod',
-          turi: 'MAT',
+          turi: 'mat',
           sana: new Date().toISOString().split('T')[0],
           nomi: item.nomi,
           birligi: item.birligi,
           obyomi: Number(item.obyomi)
-        }, 1);
+        });
         if (!res.ok) throw new Error(res.error || 'Skladga yozishda xato');
       }
 
