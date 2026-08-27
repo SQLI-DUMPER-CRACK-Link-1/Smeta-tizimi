@@ -660,6 +660,201 @@ export async function sbFakturaFaylYoz(file: File, faktura_id: number): Promise<
   const ext = file.name.split('.').pop();
   const path = 'fakturalar/' + faktura_id + '_' + Date.now() + '.' + ext;
   
+export async function yozAmali(yuk: Record<string, unknown>): Promise<AktNatija> {
+  const t0 = performance.now();
+  try {
+    const r = await fetch('/api/sb-yoz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(yuk),
+    });
+    const j = (await r.json()) as AktNatija;
+    return { ...j, ms: Math.round(performance.now() - t0) };
+  } catch (e: any) {
+    return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)),
+             ms: Math.round(performance.now() - t0) };
+  }
+}
+
+/**
+ * Fakt yoki F2 hujjatini yaratadi.
+ *
+ * ⚠️ `operation_id` HAR CHAQIRUVDA YANGI bo'lishi kerak, lekin QAYTA
+ * URINISHDA O'SHA-O'SHA qolishi kerak. Shuning uchun uni chaqiruvchi
+ * beradi — bu yerda generatsiya qilsak, qayta urinish yangi UUID bilan
+ * ketib IKKINCHI hujjat yaratardi va idempotentlik ma'nosini yo'qotardi.
+ */
+export function sbT2AktYarat(p: {
+  obyektId: number; tur: 'fakt' | 'f2'; oy: string;
+  qatorlar: Array<{ qator_id: number; hajm: number | string; narx?: number; izoh?: string }>;
+  operationId: string; raqam?: string; majburiy?: boolean;
+}): Promise<AktNatija> {
+  return yozAmali({
+    amal: 'akt_yarat', obyekt_id: p.obyektId, tur: p.tur, oy: p.oy,
+    qatorlar: p.qatorlar, operation_id: p.operationId,
+    raqam: p.raqam, majburiy: p.majburiy === true,
+  });
+}
+
+/**
+ * Smetaga yangi qator qo'shadi (`t2_qator_qosh`).
+ *
+ * Tizim_01 dagi `apiRzQosh` / `apiBlQosh` / `apiRsQosh` ning o'rnini
+ * bosadi. ⚠️ Hisob-kitob shu yerda EMAS, bazada:
+ *
+ *  • `norma` ≠ `hajm`. `eObyom` berilmasa `rs` da hajm = ota.hajm × norma.
+ *    Frontendda ko'paytirsak ikki xil hisob paydo bo'lardi.
+ *  • `norma` MANFIY bo'lishi mumkin — ПЕРЕРАСЧЁТ haqiqiy hujjat.
+ *  • `kat` yubormang: ЧЕЛ/МАШ birlikdan aniqlanadi va tanlov uni
+ *    bosib o'tolmaydi. `kat` faqat МАТ/ОБ/М-К/КАБ ajratish uchun.
+ *  • `narx` yubormasangiz narxlar bazasidan qidiriladi; topilmasa
+ *    BO'SH qoladi. 0 yozilmaydi — 0 «bepul» degani.
+ */
+export function sbT2QatorQosh(p: {
+  obyektId: number;
+  tur: 'rz' | 'bl' | 'rs' | 'mat' | 'ob';
+  nom: string;
+  otaId?: number | null;
+  kod?: string;
+  birlik?: string;
+  norma?: number;
+  narx?: number;
+  /** true → hajm AYNAN norma (E ustuni butun hajm). Aks holda ko'paytiriladi. */
+  eObyom?: boolean;
+  kat?: string;
+  /** Shu qatordan KEYIN joylashadi; berilmasa oxiriga. */
+  keyinId?: number;
+  /** ⚠️ Qayta urinishda O'ZGARMASIN — aks holda ikkinchi qator yaraladi. */
+  operationId: string;
+}): Promise<AktNatija> {
+  return yozAmali({
+    amal: 'qator_qosh', obyekt_id: p.obyektId, tur: p.tur, nom: p.nom,
+    ota_id: p.otaId ?? null, kod: p.kod, birlik: p.birlik,
+    norma: p.norma, narx: p.narx, e_obyom: p.eObyom, kat: p.kat,
+    keyin_id: p.keyinId, operation_id: p.operationId,
+  });
+}
+
+export function sbT2AktTasdiqlash(aktId: number, kutilganVersiya?: number): Promise<AktNatija> {
+  return yozAmali({ amal: 'akt_tasdiqlash', akt_id: aktId,
+                    kutilgan_versiya: kutilganVersiya });
+}
+
+export function sbT2AktBekor(aktId: number, sabab: string,
+                             kutilganVersiya?: number): Promise<AktNatija> {
+  return yozAmali({ amal: 'akt_bekor', akt_id: aktId, sabab,
+                    kutilgan_versiya: kutilganVersiya });
+}
+
+/** Brauzerda ishonchli UUID (eski brauzerlar uchun zaxira bilan). */
+export function yangiOperationId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+
+
+
+// SKLAD DOMENI
+export type T2SkladHarakat = {
+  id?: number;
+  obyekt_id: number;
+  operatsiya: 'prixod' | 'rasxod';
+  turi: string;
+  sana: string;
+  nomi: string;
+  birligi: string;
+  obyomi: number;
+  postavshik?: string;
+  qabul_qiluvchi?: string;
+  qabul_turi?: string;
+  izoh?: string;
+};
+
+export type T2SkladQoldiq = {
+  nomi: string;
+  birligi: string;
+  prixod_obyomi: number;
+  rasxod_obyomi: number;
+  qoldiq_obyomi: number;
+};
+
+export function sbSkladQoldiqOl(obyektId: number) {
+  return sbOqi<T2SkladQoldiq>({
+    jadval: 't2_sklad_qoldiq',
+    filtr: 'obyekt_id=eq.' + obyektId
+  });
+}
+
+export function sbSkladgaYozish(kompaniya_id: number, operatsiya: 'prixod' | 'rasxod', item: T2SkladHarakat, versiya: number) {
+  return yozAmali({ 
+    amal: 'skladga_yozish',
+    kompaniya_id,
+    operatsiya,
+    obyekt_id: item.obyekt_id,
+    turi: item.turi,
+    sana: item.sana,
+    nomi: item.nomi,
+    birligi: item.birligi,
+    obyomi: item.obyomi,
+    postavshik: item.postavshik || null,
+    qabul_qiluvchi: item.qabul_qiluvchi || null,
+    qabul_turi: item.qabul_turi || null,
+    izoh: item.izoh || null,
+    versiya 
+  });
+}
+
+export async function sbSkladNomTaklifOl(nom: string, limit = 5): Promise<{ok: boolean, qatorlar?: any[], error?: string}> {
+  if (!nom || nom.length < 2) return { ok: true, qatorlar: [] };
+  const filtr = 'nomi.ilike.%' + nom + '%';
+  const res = await fetch('/api/sb', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jadval: 'v_sklad_nomlar', filtr, limit })
+  });
+  return await res.json();
+}
+
+// --- FAKTURA (EHF / Didox) ---
+
+export interface T2Faktura {
+  id?: number;
+  kompaniya_id: number;
+  raqam: string;
+  sana: string;
+  kontragent: string;
+  inn: string;
+  summa: number;
+  pdf_url?: string;
+  holat: 'yangi' | 'tasdiqlangan' | 'bekor_qilingan';
+  items?: any[];
+}
+
+export async function sbFakturalarOl(kompaniya_id: number): Promise<{ok: boolean, qatorlar?: T2Faktura[], error?: string}> {
+  const res = await fetch('/api/sb', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jadval: 't2_faktura', filtr: 'kompaniya_id.eq.' + kompaniya_id })
+  });
+  return await res.json();
+}
+
+export function sbFakturaYoz(item: T2Faktura) {
+  return yozAmali({
+    amal: 'faktura_yoz',
+    ...item
+  });
+}
+
+export async function sbFakturaFaylYoz(file: File, faktura_id: number): Promise<{ok: boolean, url?: string, error?: string}> {
+  // Supabase Storage orqali R2 ga yuklash (shablon)
+  const ext = file.name.split('.').pop();
+  const path = 'fakturalar/' + faktura_id + '_' + Date.now() + '.' + ext;
+  
   // Haqiqiy loyihada supabase.storage.from('hujjatlar').upload(path, file)
   // Mock qilib turamiz, chunki @supabase/supabase-js o'rnatilmagan yoki import qilinmagan bo'lishi mumkin
   return { ok: true, url: 'https://r2.milliy-os.uz/' + path };
@@ -723,12 +918,11 @@ export async function sbObyektOchirish(id: number, nomi: string): Promise<any> {
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rpc: 't2_korzinkaga_tashlash', rpcArgs: { p_jadval: 't2_obyekt', p_id: id } })
+    body: JSON.stringify({ amal: 'korzinkaga_tashlash', jadval: 't2_obyekt', id })
   });
   const data = await res.json();
-  
-  // 2. Google Drive dan ham o'chirish (yoki Korzinkaga o'tkazish) uchun GAS ga yuboriladi
-  // Buni Claude backendda t2_drive_trash amali bilan bog'laydi.
+
+  // 2. Drive'da trash qutisiga ko'chirish
   fetch('/api/gas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -742,10 +936,10 @@ export async function sbObyektTahrirlash(id: number, nomi: string, tur: string):
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rpc: 't2_obyekt_yangila', rpcArgs: { p_id: id, p_nomi: nomi, p_tur: tur } })
+    body: JSON.stringify({ amal: 'obyekt_yangila', id, nomi, tur })
   });
   
-  // Drive dagi papka nomini ham o'zgartirish
+  // Drive'da nomini yangilash
   fetch('/api/gas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
