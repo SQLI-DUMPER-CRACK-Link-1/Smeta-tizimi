@@ -1,153 +1,305 @@
-import React, { useState } from 'react';
-import { Search, Building2, UserCircle, MapPin, CreditCard, CheckCircle2, AlertCircle, Building } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Building2, UserCircle, MapPin, CreditCard, CheckCircle2, AlertCircle, Building, Save, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from '../umumiy/ui/Toast';
+import { useKompaniya } from './KompaniyaTanlov';
+import { sbKontragentSaqla, sbKontragentlarOl, sbKontragentOchir, type Kontragent } from '../api/t2-kontragent';
 
 export default function TestKontragent() {
-  const [inn, setInn] = useState('');
+  const { joriy } = useKompaniya();
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
-  const [topildi, setTopildi] = useState(false);
+  const [royxatYuklanmoqda, setRoyxatYuklanmoqda] = useState(false);
+  const [kontragentlar, setKontragentlar] = useState<Kontragent[]>([]);
 
   // Form states
+  const [inn, setInn] = useState('');
   const [formData, setFormData] = useState({
-    nomi: '',
+    nom: '',
     rahbar: '',
     manzil: '',
     mfo: '',
     hisobRaqam: '',
-    qqs: false
+    qqsTolovchi: false,
+    mavqe: 'subpudratchi' as any
   });
 
+  const royxatniYangila = async () => {
+    if (!joriy) return;
+    setRoyxatYuklanmoqda(true);
+    try {
+      const res = await sbKontragentlarOl(joriy.id);
+      setKontragentlar(res.data || []);
+    } catch (e: any) {
+      toast(e.message, 'danger');
+    } finally {
+      setRoyxatYuklanmoqda(false);
+    }
+  };
+
+  useEffect(() => {
+    royxatniYangila();
+  }, [joriy]);
+
   const handleFetchINN = async () => {
-    if (inn.length !== 9) {
-      toast("STIR (INN) 9 ta raqamdan iborat bo'lishi shart!", "danger");
+    // ⚠️ QAT'IY QOIDA: Bu yerda endi mock yo'q!
+    // Haqiqiy Didox/Soliq API bog'lanmaguncha biz faqat ma'lumotni qo'lda kiritishni so'raymiz.
+    toast("Didox API hali ulanmagan. Iltimos, ma'lumotlarni qo'lda kiriting.", "warn");
+  };
+
+  const handleSave = async () => {
+    if (!joriy) return;
+    if (!formData.nom.trim()) {
+      toast("Kompaniya nomini kiritish shart!", "danger");
       return;
     }
 
     setYuklanmoqda(true);
-    setTopildi(false);
-
-    // MOCK SOLIQ/DIDOX API DELAY
-    setTimeout(() => {
-      setFormData({
-        nomi: "MCHJ 'GOLDEN BRIDGE CONSTRUCTION'",
-        rahbar: "TOSHMATOV ESHMAT TOSHMATOVICH",
-        manzil: "Toshkent sh., Yunusobod tumani, 19-daha, 45-uy",
-        mfo: "01044",
-        hisobRaqam: "20208000900123456789",
-        qqs: true
+    try {
+      await sbKontragentSaqla({
+        kompaniyaId: joriy.id,
+        inn: inn || undefined,
+        nom: formData.nom,
+        rahbar: formData.rahbar,
+        manzil: formData.manzil,
+        mfo: formData.mfo,
+        hisobRaqam: formData.hisobRaqam,
+        qqsTolovchi: formData.qqsTolovchi,
+        mavqe: formData.mavqe
       });
+      toast("Kontragent bazaga saqlandi!", "ok");
+      
+      // Tozalash
+      setInn('');
+      setFormData({ nom: '', rahbar: '', manzil: '', mfo: '', hisobRaqam: '', qqsTolovchi: false, mavqe: 'subpudratchi' });
+      royxatniYangila();
+    } catch (e: any) {
+      toast(e.message, "danger");
+    } finally {
       setYuklanmoqda(false);
-      setTopildi(true);
-      toast("Kontragent ma'lumotlari muvaffaqiyatli tortib olindi!", "ok");
-    }, 1500);
+    }
   };
 
-  const handleSave = () => {
-    // Bu yerda supabase API chaqiriladi (Claude yozadi)
-    toast("Kompaniya bazaga saqlandi va Tarmoq Reestriga qo'shildi!", "ok");
+  const handleOchir = async (id: number) => {
+    if (!confirm("Haqiqatan ham o'chirmoqchimisiz?")) return;
+    try {
+      await sbKontragentOchir(id);
+      toast("O'chirildi", "ok");
+      royxatniYangila();
+    } catch (e: any) {
+      toast(e.message, "danger");
+    }
   };
+
+  if (!joriy) {
+    return <div className="p-6 text-warn">Kompaniya tanlanmagan</div>;
+  }
 
   return (
-    <div className="p-6 bg-bg min-h-screen text-text">
-      <div className="max-w-4xl mx-auto">
+    <div className="p-6 bg-bg min-h-screen text-text overflow-y-auto">
+      <div className="max-w-6xl mx-auto space-y-6">
         
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold flex items-center gap-2 mb-2">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2 mb-2 text-white">
             <Building className="text-accent" />
-            Kontragentlar va Hamkorlar (B2B Reestr)
+            Kontragentlar va Hamkorlar Reestri
           </h1>
           <p className="text-text-dim text-sm">
-            Tizimga yangi Buyurtmachi, Pudratchi yoki Ta'minotchi qo'shish. Barcha rekvizitlar STIR (INN) orqali davlat bazasidan avtomat tortib olinadi.
+            Tizimga yangi Buyurtmachi, Pudratchi, Loyihachi yoki Ta'minotchi qo'shish.
+            Hozircha Didox integratsiyasi yo'qligi sababli rekvizitlar qo'lda kiritiladi.
           </p>
         </div>
 
-        <div className="bg-surface border border-border rounded-xl p-6 shadow-xl mb-6">
-          <label className="block text-sm font-medium text-text-dim mb-2">STIR (INN) ni kiriting</label>
-          <div className="flex gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" size={18} />
-              <input 
-                type="text" 
-                maxLength={9}
-                value={inn}
-                onChange={(e) => setInn(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="Masalan: 301234567"
-                className="w-full bg-bg border border-border rounded-lg pl-10 pr-4 py-3 text-lg font-mono text-white focus:border-accent focus:ring-1 focus:ring-accent transition-all outline-none"
-              />
-            </div>
-            <button 
-              onClick={handleFetchINN}
-              disabled={yuklanmoqda || inn.length !== 9}
-              className="bg-accent hover:bg-blue-600 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
-            >
-              {yuklanmoqda ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Search size={18} />
-              )}
-              Ma'lumotlarni tortish
-            </button>
-          </div>
-        </div>
-
-        {/* NATIJA KARTOCHKASI */}
-        <div className={`transition-all duration-500 ${topildi ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-          <div className="bg-surface border border-border rounded-xl p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-emerald-400 flex items-center gap-2 mb-6 pb-4 border-b border-border">
-              <CheckCircle2 size={20} />
-              Ma'lumotlar topildi (Davlat Soliq Qo'mitasi)
-            </h2>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="flex items-center gap-2 text-xs font-medium text-text-dim mb-1"><Building2 size={14}/> Kompaniya To'liq Nomi</label>
-                <input value={formData.nomi} readOnly className="w-full bg-bg/50 border border-border rounded-md p-2.5 text-white font-medium" />
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* YANGI QO'SHISH FORMASI */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-surface border border-border rounded-xl p-5 shadow-xl">
+              <h2 className="text-lg font-bold text-white mb-4">Yangi kontragent qo'shish</h2>
               
-              <div>
-                <label className="flex items-center gap-2 text-xs font-medium text-text-dim mb-1"><UserCircle size={14}/> Rahbar (Direktor)</label>
-                <input value={formData.rahbar} readOnly className="w-full bg-bg/50 border border-border rounded-md p-2.5 text-white" />
-              </div>
-
-              <div className="col-span-2">
-                <label className="flex items-center gap-2 text-xs font-medium text-text-dim mb-1"><MapPin size={14}/> Yuridik Manzil</label>
-                <input value={formData.manzil} readOnly className="w-full bg-bg/50 border border-border rounded-md p-2.5 text-white" />
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-xs font-medium text-text-dim mb-1"><CreditCard size={14}/> Asosiy Hisob Raqam (20208...)</label>
-                <input value={formData.hisobRaqam} readOnly className="w-full bg-bg/50 border border-border rounded-md p-2.5 font-mono text-emerald-300" />
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="flex items-center gap-2 text-xs font-medium text-text-dim mb-1">MFO Kodi</label>
-                  <input value={formData.mfo} readOnly className="w-full bg-bg/50 border border-border rounded-md p-2.5 font-mono text-white" />
-                </div>
-                <div className="flex-1">
-                  <label className="flex items-center gap-2 text-xs font-medium text-text-dim mb-1">QQS To'lovchi</label>
-                  <div className="w-full bg-bg/50 border border-border rounded-md p-2.5 flex items-center gap-2">
-                    {formData.qqs ? (
-                      <span className="flex items-center gap-1 text-emerald-400 font-bold text-sm"><CheckCircle2 size={16}/> FAOL (12%)</span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-rose-400 font-bold text-sm"><AlertCircle size={16}/> YO'Q</span>
-                    )}
+              <div className="space-y-4 text-sm">
+                <div>
+                  <label className="block font-medium text-text-dim mb-1">STIR (INN)</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      maxLength={9}
+                      value={inn}
+                      onChange={(e) => setInn(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="9 xonali raqam"
+                      className="flex-1 bg-bg border border-border rounded-lg px-3 py-2 font-mono text-white focus:border-accent outline-none"
+                    />
+                    <button 
+                      onClick={handleFetchINN}
+                      className="bg-surface-2 hover:bg-surface-3 border border-border text-white px-3 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                      title="Didox'dan tortish (Hozircha ishlamaydi)"
+                    >
+                      <Search size={16} />
+                    </button>
                   </div>
                 </div>
+
+                <div>
+                  <label className="block font-medium text-text-dim mb-1">Kompaniya To'liq Nomi *</label>
+                  <input 
+                    type="text"
+                    value={formData.nom}
+                    onChange={(e) => setFormData(p => ({...p, nom: e.target.value}))}
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-accent outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium text-text-dim mb-1">Rahbar F.I.O</label>
+                    <input 
+                      type="text"
+                      value={formData.rahbar}
+                      onChange={(e) => setFormData(p => ({...p, rahbar: e.target.value}))}
+                      className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-accent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-text-dim mb-1">Mavqei (Roli)</label>
+                    <select
+                      value={formData.mavqe}
+                      onChange={(e) => setFormData(p => ({...p, mavqe: e.target.value as any}))}
+                      className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-accent outline-none appearance-none"
+                    >
+                      <option value="buyurtmachi">Buyurtmachi</option>
+                      <option value="bosh_pudratchi">Bosh Pudratchi</option>
+                      <option value="subpudratchi">Subpudratchi</option>
+                      <option value="loyihachi">Loyihachi</option>
+                      <option value="taminotchi">Ta'minotchi</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-text-dim mb-1">Yuridik Manzil</label>
+                  <input 
+                    type="text"
+                    value={formData.manzil}
+                    onChange={(e) => setFormData(p => ({...p, manzil: e.target.value}))}
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-accent outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium text-text-dim mb-1">Hisob Raqami</label>
+                    <input 
+                      type="text"
+                      maxLength={20}
+                      value={formData.hisobRaqam}
+                      onChange={(e) => setFormData(p => ({...p, hisobRaqam: e.target.value.replace(/[^0-9]/g, '')}))}
+                      className="w-full bg-bg border border-border rounded-lg px-3 py-2 font-mono text-white focus:border-accent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-text-dim mb-1">MFO Kodi</label>
+                    <input 
+                      type="text"
+                      maxLength={5}
+                      value={formData.mfo}
+                      onChange={(e) => setFormData(p => ({...p, mfo: e.target.value.replace(/[^0-9]/g, '')}))}
+                      className="w-full bg-bg border border-border rounded-lg px-3 py-2 font-mono text-white focus:border-accent outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    id="qqs"
+                    checked={formData.qqsTolovchi}
+                    onChange={(e) => setFormData(p => ({...p, qqsTolovchi: e.target.checked}))}
+                    className="w-4 h-4 accent-accent rounded border-border"
+                  />
+                  <label htmlFor="qqs" className="text-sm font-medium text-text cursor-pointer">
+                    QQS (NDS) to'lovchisi
+                  </label>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-border">
+                  <button 
+                    onClick={handleSave} 
+                    disabled={yuklanmoqda}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg font-medium flex justify-center items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20"
+                  >
+                    {yuklanmoqda ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+                    Bazaga Saqlash
+                  </button>
+                </div>
+
               </div>
             </div>
+          </div>
 
-            <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-border">
-              <button onClick={() => setTopildi(false)} className="px-5 py-2.5 rounded-lg font-medium text-text-dim hover:text-white hover:bg-surface-2 transition-colors">
-                Bekor qilish
-              </button>
-              <button onClick={handleSave} className="px-5 py-2.5 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-lg shadow-emerald-900/20">
-                Bazaga Saqlash
-              </button>
+          {/* MAVJUD KONTRAGENTLAR RO'YXATI */}
+          <div className="lg:col-span-7">
+            <div className="bg-surface border border-border rounded-xl shadow-xl flex flex-col h-full">
+              <div className="p-4 border-b border-border flex justify-between items-center bg-bg/50 rounded-t-xl">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  <Building2 size={18} className="text-accent" />
+                  Mavjud Kontragentlar
+                </h3>
+                <button onClick={royxatniYangila} className="p-1.5 text-text-dim hover:text-white transition-colors">
+                  <RefreshCw size={16} className={royxatYuklanmoqda ? "animate-spin" : ""} />
+                </button>
+              </div>
+
+              <div className="p-0 overflow-y-auto max-h-[600px] scrollbar-thin">
+                {kontragentlar.length === 0 ? (
+                  <div className="p-8 text-center text-text-dim">
+                    Hozircha hech qanday kontragent qo'shilmagan.
+                  </div>
+                ) : (
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-surface-2 sticky top-0 z-10 shadow-sm border-b border-border">
+                      <tr className="text-text-dim font-medium">
+                        <th className="px-4 py-3">Kompaniya Nomi</th>
+                        <th className="px-4 py-3">INN / MFO</th>
+                        <th className="px-4 py-3">Roli</th>
+                        <th className="px-4 py-3 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {kontragentlar.map(k => (
+                        <tr key={k.id} className="hover:bg-bg/50 transition-colors group">
+                          <td className="px-4 py-3">
+                            <div className="font-bold text-white">{k.nom}</div>
+                            <div className="text-[11px] text-text-dim flex items-center gap-1 mt-0.5">
+                              {k.qqs_tolovchi ? <CheckCircle2 size={10} className="text-emerald-400" /> : <AlertCircle size={10} className="text-rose-400" />}
+                              {k.qqs_tolovchi ? 'QQS to\'lovchi' : 'QQS siz'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-mono text-xs">{k.inn || '-'}</div>
+                            <div className="font-mono text-[11px] text-text-dim mt-0.5">{k.mfo || '-'}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="bg-surface-2 text-text px-2 py-1 rounded text-[11px] font-medium border border-border uppercase">
+                              {k.mavqe || '-'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button 
+                              onClick={() => handleOchir(k.id)}
+                              className="text-text-dim hover:text-rose-400 transition-colors p-1.5 opacity-0 group-hover:opacity-100"
+                              title="O'chirish"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );

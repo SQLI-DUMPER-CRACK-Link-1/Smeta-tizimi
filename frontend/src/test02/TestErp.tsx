@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { sbErpDashboardOl } from '../api/t2-erp';
-import { Users, Truck, Wrench, ShieldCheck, Plus, Search, Building2, MapPin, HardHat, FileText, CheckCircle2 } from 'lucide-react';
+import { sbKadrlarOl, sbKadrYarat, sbTexnikalarOl, sbTexnikaYarat, type KadrMustaqil, type TexnikaMustaqil } from '../api/t2-resurs';
+import { Users, Truck, Wrench, ShieldCheck, Plus, Search, Building2, MapPin, HardHat, FileText, CheckCircle2, RefreshCw, Save, X } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
 
@@ -15,23 +15,64 @@ export default function TestErp() {
   const [fToifa, setFToifa] = useState('');
   const [fNarx, setFNarx] = useState('');
 
-  // Demoga moslashtirilgan o'zgaruvchilar. (Keyin supabase ga ulanadi)
-  const kadrlarList = [
-    { id: 1, ism: "Rustamov Alisher", lavozim: "Prorab", brigada: "Betonchilar-1", tel: "+998 90 123 45 67", holat: "obyektda" },
-    { id: 2, ism: "Valiyev Sherzod", lavozim: "Usta", brigada: "Suvoqchilar-2", tel: "+998 99 987 65 43", holat: "obyektda" },
-  ];
+  const [kadrlarList, setKadrlarList] = useState<KadrMustaqil[]>([]);
+  const [texnikaList, setTexnikaList] = useState<TexnikaMustaqil[]>([]);
+  const [yuklanmoqda, setYuklanmoqda] = useState(false);
+  const [saqlamoqda, setSaqlamoqda] = useState(false);
 
-  const texnikaList = [
-    { id: 1, nomi: "Ekskavator CAT 320", toifa: "Og'ir texnika", davRaqami: "01 H 123 AB", motochas: 1450, holat: "ishlamoqda" },
-    { id: 2, nomi: "Avtokran XCMG 25t", toifa: "Kranlar", davRaqami: "10 A 987 BA", motochas: 3200, holat: "ta'mirda" },
-  ];
+  const yukla = async () => {
+    if (!joriy) return;
+    setYuklanmoqda(true);
+    try {
+      if (modul === 'kadrlar') {
+        const res = await sbKadrlarOl(joriy.id);
+        setKadrlarList(res.data || []);
+      } else if (modul === 'texnika') {
+        const res = await sbTexnikalarOl(joriy.id);
+        setTexnikaList(res.data || []);
+      }
+    } catch (e: any) {
+      toast(e.message, 'danger');
+    } finally {
+      setYuklanmoqda(false);
+    }
+  };
 
-  const saqlash = () => {
-    toast(`${modul === 'kadrlar' ? 'Xodim' : 'Texnika'} muvaffaqiyatli saqlandi (Demo)`, 'ok');
-    setIsFormOpen(false);
-    setFNomi('');
-    setFToifa('');
-    setFNarx('');
+  useEffect(() => {
+    yukla();
+  }, [joriy, modul]);
+
+  const saqlash = async () => {
+    if (!joriy) return;
+    if (!fNomi) return toast("Nomini / F.I.Sh kiriting", "warn");
+    setSaqlamoqda(true);
+    try {
+      if (modul === 'kadrlar') {
+        await sbKadrYarat({
+          kompaniyaId: joriy.id,
+          ismSharif: fNomi,
+          lavozim: fToifa || 'Ishchi',
+          oylikMaosh: Number(fNarx) || undefined
+        });
+      } else if (modul === 'texnika') {
+        await sbTexnikaYarat({
+          kompaniyaId: joriy.id,
+          nomi: fNomi,
+          davlatRaqami: fToifa || undefined,
+          yoqilgiMejori: Number(fNarx) || undefined
+        });
+      }
+      toast("Muvaffaqiyatli saqlandi!", "ok");
+      setIsFormOpen(false);
+      setFNomi('');
+      setFToifa('');
+      setFNarx('');
+      yukla();
+    } catch (e: any) {
+      toast(e.message, 'danger');
+    } finally {
+      setSaqlamoqda(false);
+    }
   };
 
   return (
@@ -48,13 +89,18 @@ export default function TestErp() {
             Kompaniyaning markazlashgan HR, Maxsus texnikalar parki va Mehnat muhofazasi (HSE) boshqaruvi. Bu resurslar Obyektlarga dinamik biriktiriladi.
           </p>
         </div>
-        <button 
-          onClick={() => setIsFormOpen(true)}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-blue-900/20"
-        >
-          <Plus size={18} />
-          {modul === 'kadrlar' ? 'Yangi Xodim' : modul === 'texnika' ? 'Yangi Texnika' : 'Yangi Yozuv'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={yukla} className="p-2.5 bg-surface border border-border rounded-lg text-text hover:text-white transition-colors">
+            <RefreshCw size={18} className={yuklanmoqda ? "animate-spin" : ""} />
+          </button>
+          <button 
+            onClick={() => setIsFormOpen(true)}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-blue-900/20"
+          >
+            <Plus size={18} />
+            {modul === 'kadrlar' ? 'Yangi Xodim' : modul === 'texnika' ? 'Yangi Texnika' : 'Yangi Yozuv'}
+          </button>
+        </div>
       </div>
 
       {/* TABS */}
@@ -84,6 +130,7 @@ export default function TestErp() {
                 {modul === 'kadrlar' ? <HardHat className="text-blue-400"/> : <Truck className="text-blue-400"/>}
                 {modul === 'kadrlar' ? 'Xodimni ro\'yxatga olish' : 'Texnikani ro\'yxatga olish'}
               </h3>
+              <button onClick={() => setIsFormOpen(false)} className="text-text-dim hover:text-white"><X size={20}/></button>
             </div>
             <div className="p-5 space-y-4">
               <div>
@@ -112,19 +159,26 @@ export default function TestErp() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-dim mb-1">
-                    {modul === 'kadrlar' ? 'Brigada (Ixtiyoriy)' : 'YoMM turi'}
+                    {modul === 'kadrlar' ? 'Oylik Maosh' : 'Yoqilg\'i / Motochas'}
                   </label>
                   <input 
                     type="text" 
                     value={fNarx}
-                    onChange={e => setFNarx(e.target.value)}
-                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-accent outline-none" 
+                    onChange={e => setFNarx(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white font-mono focus:border-accent outline-none" 
                   />
                 </div>
               </div>
               <div className="pt-4 flex justify-end gap-3 border-t border-border mt-4">
                 <button onClick={() => setIsFormOpen(false)} className="px-4 py-2 text-text-dim hover:text-white transition-colors">Bekor qilish</button>
-                <button onClick={saqlash} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-blue-900/20">Saqlash</button>
+                <button 
+                  onClick={saqlash} 
+                  disabled={saqlamoqda}
+                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-blue-900/20"
+                >
+                  {saqlamoqda ? <RefreshCw size={18} className="animate-spin"/> : <Save size={18}/>}
+                  Saqlash
+                </button>
               </div>
             </div>
           </div>
@@ -144,35 +198,37 @@ export default function TestErp() {
               />
             </div>
           </div>
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="bg-surface-2 border-b border-border text-text-dim font-medium">
-                <th className="px-6 py-4">F.I.Sh</th>
-                <th className="px-6 py-4">Kasb / Lavozim</th>
-                <th className="px-6 py-4">Brigada</th>
-                <th className="px-6 py-4">Telefon</th>
-                <th className="px-6 py-4">Holat</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {kadrlarList.map(k => (
-                <tr key={k.id} className="hover:bg-bg/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-white flex items-center gap-2">
-                    <Users size={16} className="text-blue-500" />
-                    {k.ism}
-                  </td>
-                  <td className="px-6 py-4 text-text-dim">{k.lavozim}</td>
-                  <td className="px-6 py-4 font-mono text-text-dim">{k.brigada}</td>
-                  <td className="px-6 py-4 font-mono text-white">{k.tel}</td>
-                  <td className="px-6 py-4">
-                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">
-                      {k.holat}
-                    </span>
-                  </td>
+          {kadrlarList.length === 0 && !yuklanmoqda ? (
+            <div className="p-8 text-center text-text-dim">
+              Hali xodimlar kiritilmagan.
+            </div>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-surface-2 border-b border-border text-text-dim font-medium">
+                  <th className="px-6 py-4">F.I.Sh</th>
+                  <th className="px-6 py-4">Kasb / Lavozim</th>
+                  <th className="px-6 py-4 text-center">Holat</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {kadrlarList.map(k => (
+                  <tr key={k.id} className="hover:bg-bg/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-white flex items-center gap-2">
+                      <Users size={16} className="text-blue-500" />
+                      {k.ism_sharif}
+                    </td>
+                    <td className="px-6 py-4 text-text-dim">{k.lavozim}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">
+                        {k.obyektlar?.length > 0 ? 'Obyektda' : 'Zaxirada'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -189,39 +245,41 @@ export default function TestErp() {
               />
             </div>
           </div>
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="bg-surface-2 border-b border-border text-text-dim font-medium">
-                <th className="px-6 py-4">Texnika Nomi</th>
-                <th className="px-6 py-4">Toifa</th>
-                <th className="px-6 py-4">Davlat Raqami</th>
-                <th className="px-6 py-4">Motochas / YoMM</th>
-                <th className="px-6 py-4">Holat</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {texnikaList.map(t => (
-                <tr key={t.id} className="hover:bg-bg/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-white flex items-center gap-2">
-                    <Truck size={16} className="text-amber-500" />
-                    {t.nomi}
-                  </td>
-                  <td className="px-6 py-4 text-text-dim">{t.toifa}</td>
-                  <td className="px-6 py-4 font-mono font-bold text-sky-300">
-                    <span className="border border-sky-500/30 px-2 py-0.5 rounded bg-sky-950/20">{t.davRaqami}</span>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-white">{t.motochas} soat</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${
-                      t.holat === 'ishlamoqda' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                    }`}>
-                      {t.holat}
-                    </span>
-                  </td>
+          {texnikaList.length === 0 && !yuklanmoqda ? (
+            <div className="p-8 text-center text-text-dim">
+              Hali texnikalar kiritilmagan.
+            </div>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-surface-2 border-b border-border text-text-dim font-medium">
+                  <th className="px-6 py-4">Texnika Nomi</th>
+                  <th className="px-6 py-4">Davlat Raqami</th>
+                  <th className="px-6 py-4 text-center">Holat</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {texnikaList.map(t => (
+                  <tr key={t.id} className="hover:bg-bg/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-white flex items-center gap-2">
+                      <Truck size={16} className="text-amber-500" />
+                      {t.nomi}
+                    </td>
+                    <td className="px-6 py-4 font-mono font-bold text-sky-300">
+                      {t.davlat_raqami ? (
+                        <span className="border border-sky-500/30 px-2 py-0.5 rounded bg-sky-950/20">{t.davlat_raqami}</span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">
+                        {t.obyektlar?.length > 0 ? 'Ishlamoqda' : 'Garajda'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
