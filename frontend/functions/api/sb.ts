@@ -84,6 +84,9 @@ const RUXSAT_JADVALLAR = new Set([
   /* KONTRAGENTLAR (B2B Reestr) — biznes hamkorlar adress daftari,
      t2_kompaniya (tizim tenant'lari) EMAS (2026-08-27). */
   't2_kontragent_royxat',
+  /* A'ZOLIK (Xodimlar va Rollar) — kompaniya a'zolari ro'yxati
+     (foydalanuvchi + rol), 2026-08-28. */
+  't2_azolik_royxat',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

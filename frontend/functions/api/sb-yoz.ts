@@ -81,7 +81,10 @@ const AMALLAR = {
   loyiha_qatnashchi_biriktir: { rpc: 't2_loyiha_qatnashchi_biriktir' },
   loyiha_qatnashchi_ochir: { rpc: 't2_loyiha_qatnashchi_ochir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
-  kontragent_ochir: { rpc: 't2_kontragent_ochir' }
+  kontragent_ochir: { rpc: 't2_kontragent_ochir' },
+  azolik_qosh: { rpc: 't2_azolik_qosh' },
+  azolik_rol_ozgartir: { rpc: 't2_azolik_rol_ozgartir' },
+  azolik_ochir: { rpc: 't2_azolik_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -932,6 +935,48 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
       }
       yuk = { p_id: id };
+
+    /* ══════════ A'ZOLIK (Xodimlar va Rollar) ══════════
+       ⚠️ Multi-tenant poydevorining ochiq bo'shlig'i edi: t2_azolik
+       jadvali bor edi, lekin uni boshqaradigan RPC yo'q — faqat GAS
+       login orqali BIRINCHI marta avtomatik yaratilardi. */
+    } else if (amal === 'azolik_qosh') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      if (!String(so.login || '').trim()) {
+        return Response.json({ ok: false, error: 'login bo\'sh bo\'lishi mumkin emas' });
+      }
+      const ROL_RUXSAT = ['superadmin', 'admin', 'boss', 'rahbar', 'bugalter', 'pto', 'prorab'];
+      if (!ROL_RUXSAT.includes(String(so.rol))) {
+        return Response.json({ ok: false, error: 'rol noto\'g\'ri: ' + ROL_RUXSAT.join('|') });
+      }
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_login: String(so.login).trim().slice(0, 100),
+        p_rol: String(so.rol),
+        p_email: so.email ? String(so.email).slice(0, 200) : null,
+        p_ism: so.ism ? String(so.ism).slice(0, 200) : null,
+      };
+
+    } else if (amal === 'azolik_rol_ozgartir') {
+      const azolikId = Number(so.azolik_id);
+      if (!Number.isFinite(azolikId) || azolikId <= 0) {
+        return Response.json({ ok: false, error: 'azolik_id noto\'g\'ri' });
+      }
+      const ROL_RUXSAT = ['superadmin', 'admin', 'boss', 'rahbar', 'bugalter', 'pto', 'prorab'];
+      if (!ROL_RUXSAT.includes(String(so.yangi_rol))) {
+        return Response.json({ ok: false, error: 'yangi_rol noto\'g\'ri: ' + ROL_RUXSAT.join('|') });
+      }
+      yuk = { p_azolik_id: azolikId, p_yangi_rol: String(so.yangi_rol) };
+
+    } else if (amal === 'azolik_ochir') {
+      const azolikId = Number(so.azolik_id);
+      if (!Number.isFinite(azolikId) || azolikId <= 0) {
+        return Response.json({ ok: false, error: 'azolik_id noto\'g\'ri' });
+      }
+      yuk = { p_azolik_id: azolikId };
 
     /* ══════════ KORZINKA ══════════
        ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan
