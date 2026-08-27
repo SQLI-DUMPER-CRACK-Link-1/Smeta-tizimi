@@ -16,7 +16,27 @@
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { Building } from 'lucide-react';
-import { sbT2KompaniyalarOl, type T2Kompaniya } from '../api/supabase';
+import { sbT2KompaniyalarOl, type T2Kompaniya, type KompaniyaMavqe } from '../api/supabase';
+
+/* ⚡ 2026-08-27 (Claude, foydalanuvchi ko'rsatmasi — "sayt 3 xil
+ * rejimda ishlasin: zakazchik, pudratchi, loyihachi"): DB dagi
+ * `mavqe` ustuni endi frontend TYPE'ida bor (supabase.ts) — bu yerda
+ * uni ko'rinadigan qilamiz, aks holda rol tanlangan bo'lsa ham
+ * foydalanuvchi qaysi rejimda turganini bilmaydi. */
+const MAVQE_BELGI: Record<string, { nom: string; rang: string }> = {
+  zakazchik: { nom: 'Zakazchik', rang: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
+  pudratchi: { nom: 'Pudratchi', rang: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+  loyihachi: { nom: 'Loyihachi', rang: 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30' },
+};
+export function MavqeBelgisi({ mavqe }: { mavqe: KompaniyaMavqe | null | undefined }) {
+  if (!mavqe) return null;
+  const b = MAVQE_BELGI[mavqe] || { nom: mavqe, rang: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' };
+  return (
+    <span className={'inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide ' + b.rang}>
+      {b.nom}
+    </span>
+  );
+}
 
 type Holat = {
   kompaniyalar: T2Kompaniya[];
@@ -86,6 +106,7 @@ export function KompaniyaTanlagich() {
     return (
       <span className="inline-flex items-center gap-1.5 text-[11px] text-text-dim">
         <Building size={12} /> {kompaniyalar[0].nom}
+        <MavqeBelgisi mavqe={kompaniyalar[0].mavqe} />
       </span>
     );
   }
@@ -103,6 +124,7 @@ export function KompaniyaTanlagich() {
           <option key={k.id} value={k.id}>{k.nom}</option>
         ))}
       </select>
+      <MavqeBelgisi mavqe={joriy?.mavqe} />
     </span>
   );
 }

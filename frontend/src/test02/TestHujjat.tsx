@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { sbHujjatlarOl, sbHujjatYoz, sbHujjatOchir, uploadFayl, type ObyektHujjat } from '../api/t2-hujjat';
+import { sbHujjatlarOl, sbHujjatYoz, sbHujjatOchir, uploadFayl, driveNusxaYubor, type ObyektHujjat } from '../api/t2-hujjat';
 import { sbT2ObyektlarOlKomp } from '../api/supabase';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
@@ -50,20 +50,30 @@ export default function TestHujjat() {
   useEffect(() => { yukla(); }, [obyektId]);
 
   const yuklashVaSaqlash = async () => {
-    if (!obyektId) { toast('Avval obyekt tanlang', 'danger'); return; }
+    if (!obyektId || !joriy?.id) { toast('Avval obyekt tanlang', 'danger'); return; }
     if (!fayl) { toast('Fayl tanlanmagan', 'danger'); return; }
+    const obyektNomi = obyektlar.find((o: any) => o.id === obyektId)?.nom;
     setYozilmoqda(true);
     try {
-      const yuk = await uploadFayl(fayl);
+      /* 1) R2 — asosiy nusxa, tartibli manzilda: kompaniya/obyekt/turi/asl_nom */
+      const yuk = await uploadFayl(fayl, { kompaniyaId: joriy.id, obyektId, turi });
       if (!yuk.ok) { toast('Fayl yuklanmadi: ' + (yuk.error || ''), 'danger'); setYozilmoqda(false); return; }
+
       const r = await sbHujjatYoz({ obyektId, turi, nom: fayl.name, url: yuk.url, izoh: izoh || undefined });
-      if (r.ok) {
-        toast('Hujjat saqlandi', 'ok');
-        setFayl(null); setIzoh('');
-        yukla();
-      } else {
-        toast('Saqlanmadi: ' + (r.error || ''), 'danger');
+      if (!r.ok) { toast('Saqlanmadi: ' + (r.error || ''), 'danger'); setYozilmoqda(false); return; }
+
+      /* 2) Drive — DUAL-STORAGE qo'shimcha nusxasi (best-effort, R2 yozuvini
+         bloklamaydi — obyekt nomi Drive papkasida topilmasa ham hujjat R2/DB
+         da saqlangan bo'ladi, foydalanuvchiga faqat ogohlantirish ko'rinadi). */
+      if (obyektNomi) {
+        driveNusxaYubor(fayl, obyektNomi, turi).then((d) => {
+          if (!d.ok) toast('R2 ga saqlandi, lekin Drive nusxasi ketmadi: ' + (d.error || ''), 'danger');
+        });
       }
+
+      toast('Hujjat saqlandi', 'ok');
+      setFayl(null); setIzoh('');
+      yukla();
     } catch (e: any) {
       toast('Xatolik: ' + (e?.message || String(e)), 'danger');
     }

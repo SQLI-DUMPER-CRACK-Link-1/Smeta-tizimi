@@ -69,6 +69,10 @@ const RUXSAT_JADVALLAR = new Set([
   't2_audit_reestr',
   /* OBYEKT HUJJATLARI — har obyektga bog'langan loyiha/tasdiqlangan fayllar */
   't2_obyekt_hujjat_royxat',
+  /* MUSTAQIL RESURSLAR (M:N) — sklad/kadr/texnika bitta obyektga emas,
+     junction jadval orqali bir nechta obyektga bog'lanadi (2026-08-27,
+     Antigravity SQL + Claude qattiqlashtirgan). */
+  't2_sklad_royxat', 't2_kadr_royxat', 't2_texnika_royxat',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

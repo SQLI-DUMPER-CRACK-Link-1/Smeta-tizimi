@@ -60,22 +60,24 @@ export default function TestShell() {
   return (
     <KompaniyaProvider>
     <div className="flex flex-col h-full min-h-0">
-      {/* ⚠️ SINOV BELGISI — doim ko'rinadi, chalkashmasin */}
+      {/* ⚡ 2026-08-27 (Claude, foydalanuvchi ko'rsatmasi): Tizim_02 endi
+          ASOSIY sahna — "SINOV" belgisi olib tashlandi, chunki bu endi
+          sinov emas. Eski Tizim_01 arxiv sifatida saqlanadi, sidebar
+          ichida "Eski Tizim (Arxiv)" yopiq bo'limida. */}
       <div className="flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2.5
-                      bg-amber-500/10 border-b border-amber-500/30">
+                      bg-emerald-500/10 border-b border-emerald-500/30">
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded
-                         bg-amber-500/20 text-amber-300 text-[11px] font-bold tracking-wide">
-          <FlaskConical size={13} /> TIZIM_02 · SINOV
+                         bg-emerald-500/20 text-emerald-300 text-[11px] font-bold tracking-wide">
+          <FlaskConical size={13} /> TIZIM_02 · ASOSIY
         </span>
-        <span className="text-[11px] text-amber-200/80">
-          Ma'lumot <b>Supabase</b> dan o'qiladi. Ishlab turgan tizim (Tizim_01)
-          o'zgarmagan — chapdagi menyudan istagan vaqt qaytishingiz mumkin.
+        <span className="text-[11px] text-emerald-200/80">
+          Ma'lumot <b>Supabase</b> dan o'qiladi (haqiqat manbai).
         </span>
         <KompaniyaTanlagich />
         <NavLink to="/admin/obyektlar"
-          className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-amber-200
+          className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-emerald-200/70
                      hover:text-white transition-colors">
-          <ArrowLeft size={13} /> Tizim_01 ga qaytish
+          <ArrowLeft size={13} /> Eski Tizim (Arxiv)
         </NavLink>
       </div>
 

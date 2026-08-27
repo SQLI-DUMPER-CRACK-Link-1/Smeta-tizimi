@@ -1,13 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Archive } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 
-const MENYU = [
+/* ⚡ 2026-08-27 (Claude, foydalanuvchi ko'rsatmasi: "Tizim_02 endi
+ * asosiy tizim bo'lishi shart... Tizim_01 ni... bitta alohida yopiq
+ * tab yoki route ichiga olib o't"):
+ *
+ * Marshrutlarning o'zi (App.tsx) O'ZGARMAGAN — Tizim_01 ning hech bir
+ * sahifasi ko'chirilmagan, hech bir chuqur havola (bookmark, eski
+ * yorliq) buzilmagan. O'zgargani — SIDEBAR TUZILISHI: Tizim_02 tepada,
+ * yagona ustuvor bo'lim; Tizim_01 ning hammasi pastda BITTA yopiq
+ * ("Eski Tizim / Arxiv") bo'lim ichiga yig'ilgan, standart holatda
+ * YOPIQ. Route darajasida ko'chirish (masalan `/admin/eski/...`) katta
+ * qayta yozishni talab qilardi va `holat/:id` kabi parametrli
+ * marshrutlarda yangi xato manbai bo'lardi — bu yerda foyda xavfga
+ * arzimaydi. */
+const ESKI_TIZIM_MENYU = [
   { yol: '/admin/obyektlar',  nom: 'Obyektlar',   Ikonka: Building2 },
   { yol: '/admin/f2',         nom: 'Ф2 импорт',    Ikonka: FileInput },
   { yol: '/admin/buxgalteriya', nom: 'Buxgalteriya', Ikonka: Calculator },
@@ -34,20 +47,27 @@ const MENYU = [
   { yol: '/admin/shaxsiy-smeta', nom: 'Shaxsiy smeta', Ikonka: NotebookPen },
   { yol: '/admin/supabase', nom: 'Supabase', Ikonka: Database },
   { yol: '/admin/tezlik', nom: 'Tezlik sinovi', Ikonka: Gauge },
-  { yol: '/admin/test', nom: '🧪 Test Supabase', Ikonka: FlaskConical },
-  { yol: '/admin/sozlamalar', nom: 'Sozlamalar',   Ikonka: Settings },
+  { yol: '/admin/sozlamalar', nom: 'Sozlamalar (eski)',   Ikonka: Settings },
 ];
+
+/* Yangi asosiy sahna — bitta yo'l, TestShell o'z ichki menyusini beradi. */
+const MENYU = [{ yol: '/admin/test', nom: '⭐ Tizim_02 (Asosiy)', Ikonka: FlaskConical }];
 
 export default function AdminShell() {
   const sess = useSessiya();
   const joy = useLocation();
+  /* Eski tizim ostida turilsa avtomatik ochiq boshlansin — aks holda
+     foydalanuvchi qayerdaligini yo'qotadi. */
+  const eskiIchida = ESKI_TIZIM_MENYU.some((m) => joy.pathname.startsWith(m.yol));
+  const [eskiOchiq, setEskiOchiq] = useState(eskiIchida);
+  useEffect(() => { if (eskiIchida) setEskiOchiq(true); }, [eskiIchida]);
 
   /* ⚠️ 2026-08-17: menyu havolalari marshrutlar bilan mos kelishini DEV da
      tekshiramiz. `/admin/shartnoma` ↔ `shartnomalar` nom xatosi
      foydalanuvchini kirish sahifasiga otib yuborardi va bu turdagi xatoni
      na TypeScript, na lint ko'radi (ikkisi ham oddiy matn).
      Produksiyada bu chaqiruv hech narsa qilmaydi. */
-  menyuTekshirDev(MENYU.map((m) => m.yol));
+  menyuTekshirDev([...MENYU, ...ESKI_TIZIM_MENYU].map((m) => m.yol));
 
   /* ⚡ Og'ir ish sahifalari — bu yerda 3D bezak fon o'chiriladi (pastga qara) */
   const OGIR = ['/admin/f2', '/admin/holat', '/admin/ierarxiya', '/admin/narxlar', '/admin/f2-tayyorlash'];
@@ -194,11 +214,11 @@ export default function AdminShell() {
               key={m.yol}
               to={m.yol}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold
                  transition-colors duration-[120ms] cursor-pointer ${
                    isActive
-                     ? 'bg-[var(--accent)]/10 text-accent'
-                     : 'text-text-dim hover:bg-surface-2 hover:text-text'
+                     ? 'bg-[var(--accent)]/15 text-accent'
+                     : 'text-text hover:bg-surface-2'
                  }`
               }
             >
@@ -206,6 +226,40 @@ export default function AdminShell() {
               <span>{m.nom}</span>
             </NavLink>
           ))}
+
+          {/* ⚡ 2026-08-27: Tizim_01 — yopiq (default), foydalanuvchi
+              ko'rsatmasi bilan "alohida yopiq tab" sifatida yig'ilgan. */}
+          <button
+            onClick={() => setEskiOchiq((v) => !v)}
+            className="w-full flex items-center gap-3 px-3 py-2 mt-3 rounded-lg text-sm font-medium
+                       text-text-dim hover:bg-surface-2 hover:text-text transition-colors cursor-pointer
+                       border-t border-white/10 pt-3"
+          >
+            <Archive className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.5} />
+            <span className="flex-1 text-left">Eski Tizim (Arxiv)</span>
+            {eskiOchiq ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+          {eskiOchiq && (
+            <div className="pl-2 space-y-1 border-l border-white/10 ml-4">
+              {ESKI_TIZIM_MENYU.map((m) => (
+                <NavLink
+                  key={m.yol}
+                  to={m.yol}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-1.5 rounded-lg text-[13px] font-medium
+                     transition-colors duration-[120ms] cursor-pointer ${
+                       isActive
+                         ? 'bg-[var(--accent)]/10 text-accent'
+                         : 'text-text-dim hover:bg-surface-2 hover:text-text'
+                     }`
+                  }
+                >
+                  <m.Ikonka className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+                  <span>{m.nom}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
         </nav>
 
         <div className="p-4 border-t border-border">

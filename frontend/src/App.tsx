@@ -74,7 +74,14 @@ export default function App() {
             <AdminShell />
           </Suspense>
         }>
-          <Route index element={<Navigate to="/admin/obyektlar" replace />} />
+          {/* ⚡ 2026-08-27 (Claude, foydalanuvchi ko'rsatmasi bilan):
+              TIZIM ALMASHUVI — Tizim_02 endi ASOSIY sahna. Avval bu yerda
+              `/admin/obyektlar` (Tizim_01) turardi; endi saytga kirganda
+              to'g'ridan-to'g'ri Tizim_02 ochiladi. Tizim_01 ning o'zi
+              O'CHIRILMAGAN — barcha marshrutlari joyida, faqat AdminShell
+              sidebar'ida "Eski Tizim (Arxiv)" degan yopiq bo'lim ostiga
+              yig'ildi (pastga qara). */}
+          <Route index element={<Navigate to="/admin/test" replace />} />
           <Route path="obyektlar" element={<Obyektlar />} />
           <Route path="holat/:id" element={<Holat />} />
           <Route path="f2" element={<F2Import />} />

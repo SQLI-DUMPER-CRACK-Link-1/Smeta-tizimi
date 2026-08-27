@@ -69,7 +69,12 @@ const AMALLAR = {
   aosr_bog_ochir: { rpc: 't2_aosr_bog_ochir' },
   audit_yoz: { rpc: 't2_audit_yoz' },
   hujjat_yoz: { rpc: 't2_obyekt_hujjat_yoz' },
-  hujjat_ochir: { rpc: 't2_obyekt_hujjat_ochir' }
+  hujjat_ochir: { rpc: 't2_obyekt_hujjat_ochir' },
+  sklad_mustaqil_yarat: { rpc: 't2_sklad_yarat' },
+  kadr_mustaqil_yarat: { rpc: 't2_kadr_yarat' },
+  texnika_mustaqil_yarat: { rpc: 't2_texnika_yarat' },
+  resurs_bog_saqla: { rpc: 't2_resurs_bog_saqla' },
+  resurs_bog_ochir: { rpc: 't2_resurs_bog_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -710,6 +715,69 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
       }
       yuk = { p_id: id };
+
+    /* ══════════ MUSTAQIL RESURSLAR (M:N sklad/kadr/texnika) ══════════
+       ⚠️ 2026-08-27: "32 gektar ichida 40 obyekt, 1 umumiy sklad"
+       arxitekturasi — resurs bitta obyektga qattiq bog'lanmaydi,
+       junction jadval orqali bir yoki bir nechta obyektga ulanadi. */
+    } else if (amal === 'sklad_mustaqil_yarat') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      if (!String(so.nomi || '').trim()) {
+        return Response.json({ ok: false, error: 'nomi bo\'sh bo\'lishi mumkin emas' });
+      }
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_nomi: String(so.nomi).slice(0, 300),
+        p_manzil: so.manzil ? String(so.manzil).slice(0, 500) : null,
+        p_masul_shaxs: so.masul_shaxs ? String(so.masul_shaxs).slice(0, 200) : null,
+      };
+
+    } else if (amal === 'kadr_mustaqil_yarat') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      if (!String(so.ism_sharif || '').trim() || !String(so.lavozim || '').trim()) {
+        return Response.json({ ok: false, error: 'ism_sharif va lavozim bo\'sh bo\'lishi mumkin emas' });
+      }
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_ism_sharif: String(so.ism_sharif).slice(0, 200),
+        p_lavozim: String(so.lavozim).slice(0, 200),
+        p_oylik_maosh: so.oylik_maosh == null ? null : Number(so.oylik_maosh),
+        p_valyuta: so.valyuta ? String(so.valyuta).slice(0, 10) : 'UZS',
+      };
+
+    } else if (amal === 'texnika_mustaqil_yarat') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      if (!String(so.nomi || '').trim()) {
+        return Response.json({ ok: false, error: 'nomi bo\'sh bo\'lishi mumkin emas' });
+      }
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_nomi: String(so.nomi).slice(0, 300),
+        p_davlat_raqami: so.davlat_raqami ? String(so.davlat_raqami).slice(0, 50) : null,
+        p_yoqilgi_mejori: so.yoqilgi_mejori == null ? null : Number(so.yoqilgi_mejori),
+      };
+
+    } else if (amal === 'resurs_bog_saqla' || amal === 'resurs_bog_ochir') {
+      const TUR_RUXSAT = ['sklad', 'kadr', 'texnika'];
+      const tur = String(so.tur || '');
+      const resursId = Number(so.resurs_id);
+      const obyektId = Number(so.obyekt_id);
+      if (!TUR_RUXSAT.includes(tur)) {
+        return Response.json({ ok: false, error: 'noma\'lum tur: ' + tur });
+      }
+      if (!Number.isFinite(resursId) || resursId <= 0 || !Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'resurs_id yoki obyekt_id noto\'g\'ri' });
+      }
+      yuk = { p_tur: tur, p_resurs_id: resursId, p_obyekt_id: obyektId };
 
     /* ══════════ KORZINKA ══════════
        ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan

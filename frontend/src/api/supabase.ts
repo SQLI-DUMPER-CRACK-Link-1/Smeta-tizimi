@@ -411,8 +411,17 @@ export function sbT2TreeQur(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): Tre
  * `t2_` jadvallarda atigi 13 qator bor edi — ya'ni deyarli tekin.
  * ══════════════════════════════════════════════════════════════════ */
 
+/* ⚡ 2026-08-27 (Claude, foydalanuvchi ko'rsatmasi — "sayt 3 xil rejimda
+ * ishlasin: zakazchik, pudratchi, loyihachi"): bu rol DB da allaqachon
+ * bor edi (`mavqe` ustuni), lekin frontend TYPE'ida yo'q edi — ya'ni
+ * hech bir sahifa buni bila olmasdi. Qiymatlari: 'zakazchik' |
+ * 'pudratchi' | 'loyihachi' (erkin matn — DB da CHECK yo'q, lekin
+ * amalda shu uchtasi ishlatiladi). */
+export type KompaniyaMavqe = 'zakazchik' | 'pudratchi' | 'loyihachi' | string;
+
 export type T2Kompaniya = {
   id: number; nom: string; kod: string; faol: boolean; izoh: string | null;
+  mavqe: KompaniyaMavqe | null;
 };
 
 export function sbT2KompaniyalarOl() {
