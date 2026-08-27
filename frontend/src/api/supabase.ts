@@ -700,14 +700,21 @@ export function sbFakturaYoz(item: T2Faktura) {
   });
 }
 
+/* ⚠️ 2026-08-27 (Claude): avval haqiqatda YUKLAMASDAN `ok:true` va
+ * SOXTA URL qaytarardi (`r2.milliy-os.uz` — mavjud bo'lmagan domen).
+ * Hech kim chaqirmasdi hozircha, lekin fake-success stub qoldirish
+ * xavfli — chaqirilganda "muvaffaqiyatli" deb yolg'on ko'rsatardi.
+ * Endi HAQIQIY `/api/upload` (R2) ga yuklaydi. */
 export async function sbFakturaFaylYoz(file: File, faktura_id: number): Promise<{ok: boolean, url?: string, error?: string}> {
-  // Supabase Storage orqali R2 ga yuklash (shablon)
-  const ext = file.name.split('.').pop();
-  const path = 'fakturalar/' + faktura_id + '_' + Date.now() + '.' + ext;
-
-  // Haqiqiy loyihada supabase.storage.from('hujjatlar').upload(path, file)
-  // Mock qilib turamiz, chunki @supabase/supabase-js o'rnatilmagan yoki import qilinmagan bo'lishi mumkin
-  return { ok: true, url: 'https://r2.milliy-os.uz/' + path };
+  const formData = new FormData();
+  formData.append('fayl', file);
+  formData.append('rfq_id', 'faktura-' + faktura_id);
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    return await res.json();
+  } catch (e: any) {
+    return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)) };
+  }
 }
 
 // --- SPRAVOCHNIK (Ish turlari va Shaxsiy smetalar) ---

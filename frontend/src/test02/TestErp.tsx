@@ -1,47 +1,39 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { sbErpDashboardOl } from '../api/t2-erp';
 import { LayoutDashboard, Users, Wrench, PackageSearch, Activity } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 
-const MOCK_DATA: any = {
-  kadrlar: [
-    { ism: 'Alijon Valiyev', lavozim: 'Usta', oylik_maosh: 5000000, status: 'ishda', obyekt_id: 1 },
-    { ism: 'Zarif Tojiyev', lavozim: 'Quruvchi', oylik_maosh: 4500000, status: 'smenada', obyekt_id: 1 },
-    { ism: 'Kamola Qosimova', lavozim: 'Buxgalter', oylik_maosh: 7000000, status: 'ishda', obyekt_id: 2 }
-  ],
-  texnika: [
-    { texnika_nomi: 'Ekskavator CAT-320', raqam: '01 A 123 BB', holat: 'ishchi', yoqilgi_sarfi: 15, obyekt_id: 1 },
-    { texnika_nomi: 'Yuk mashinasi KAMAZ', raqam: '01 456 CCC', holat: 'tamirda', yoqilgi_sarfi: 25, obyekt_id: 2 }
-  ],
-  taminot: [
-    { buyurtma_raqami: 'T-001', maxsulot: 'Sement M400', miqdor: 50, birlik: 'tonna', holat: 'kutilmoqda', obyekt_id: 1 },
-    { buyurtma_raqami: 'T-002', maxsulot: 'Armatura 12mm', miqdor: 20, birlik: 'tonna', holat: 'yetkazildi', obyekt_id: 1 }
-  ],
-  sifat: [
-    { tekshiruv_sana: '2026-08-25', obyekt: 'A-Blok', inspektor: 'N. Tursunov', xulosa: 'Qoniqarli', kamchiliklar: 'Yoq', obyekt_id: 1 },
-    { tekshiruv_sana: '2026-08-26', obyekt: 'B-Blok', inspektor: 'N. Tursunov', xulosa: 'Ogirlik', kamchiliklar: 'Beton qurimagan', obyekt_id: 2 }
-  ]
-};
-
+/* ⚠️ 2026-08-27 (Claude): BU YERDA AVVAL `MOCK_DATA` FALLBACK BOR EDI —
+ * backend so'rovi bo'sh yoki xato qaytarsa, TO'QILGAN soxta ism/texnika/
+ * tekshiruv yozuvlari (masalan "Alijon Valiyev", "Ekskavator CAT-320")
+ * jim ko'rsatilardi, haqiqiy ma'lumotdan farqlanmaydigan holda.
+ * Foydalanuvchi to'g'ri payqadi: "ERP boshqaruvda nima bo'ladi
+ * tushunmadim, yolg'on tizim". Bu loyihaning ENG QATTIQ qoidasini
+ * buzardi (NARX/MA'LUMOT O'ZIDAN TO'QILMAYDI). Olib tashlandi — endi
+ * bo'sh bo'lsa OCHIQ "ma'lumot yo'q" holati ko'rsatiladi. */
 export default function TestErp() {
   const [params] = useSearchParams();
   const { joriy } = useKompaniya();
   const [modul, setModul] = useState<'kadrlar'|'texnika'|'taminot'|'sifat'>((params.get('modul') as any) || 'kadrlar');
   const [data, setData] = useState<any[]>([]);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
+  const [xato, setXato] = useState('');
   const obyektId = params.get('obyektId');
 
   useEffect(() => {
+    if (!joriy?.id) return;
     setYuklanmoqda(true);
-    sbErpDashboardOl(modul, joriy?.id || 1).then(r => {
-      let q = r.qatorlar || [];
-      // Fallback to MOCK if backend view is not ready
-      if (!r.ok || q.length === 0) {
-        q = MOCK_DATA[modul] || [];
-      }
-      setData(obyektId ? q.filter((x: any) => x.obyekt_id == obyektId) : q);
+    setXato('');
+    sbErpDashboardOl(modul, joriy.id).then(r => {
       setYuklanmoqda(false);
+      if (!r.ok) {
+        setXato(r.error || 'O\'qilmadi');
+        setData([]);
+        return;
+      }
+      const q = r.qatorlar || [];
+      setData(obyektId ? q.filter((x: any) => x.obyekt_id == obyektId) : q);
     });
   }, [modul, obyektId, joriy]);
 
@@ -75,7 +67,11 @@ export default function TestErp() {
           </button>
         ))}
       </div>
-      
+
+      {xato && (
+        <div className="mb-4 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">{xato}</div>
+      )}
+
       {yuklanmoqda ? <div className="text-zinc-500 animate-pulse">Yuklanmoqda...</div> : (
         <div className="border border-zinc-800 rounded-lg overflow-x-auto bg-black">
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -110,3 +106,4 @@ export default function TestErp() {
     </div>
   );
 }
+

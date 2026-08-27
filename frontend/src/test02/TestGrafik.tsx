@@ -4,28 +4,29 @@ import { sbGrafikHolatOl } from '../api/t2-grafik';
 import { CalendarDays } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 
-const MOCK_GRAFIK = [
-  { ish_turi: 'Kotlovan qazish', holat: 'bajarildi', boshlanish_sana: '2026-08-01', tugash_sana: '2026-08-05', kun: 5, foiz: 100 },
-  { ish_turi: 'Fundament quyish', holat: 'jarayonda', boshlanish_sana: '2026-08-06', tugash_sana: '2026-08-20', kun: 14, foiz: 60 },
-  { ish_turi: 'Devor terish (1-qavat)', holat: 'reja', boshlanish_sana: '2026-08-21', tugash_sana: '2026-09-10', kun: 20, foiz: 0 }
-];
-
+/* ⚠️ 2026-08-27 (Claude): avval bo'sh/xato javobda `MOCK_GRAFIK`
+ * (to'qilgan "Kotlovan qazish" va h.k.) ko'rsatilardi — olib
+ * tashlandi, bo'sh bo'lsa OCHIQ "ma'lumot yo'q" holati. */
 export default function TestGrafik() {
   const [params] = useSearchParams();
   const { joriy } = useKompaniya();
-  const aktKomp = joriy?.id || 1;
-  const obyektId = Number(params.get('obyekt') || '1');
+  const aktKomp = joriy?.id;
+  const obyektId = params.get('obyekt') ? Number(params.get('obyekt')) : null;
   const [grafik, setGrafik] = useState<any[]>([]);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
+  const [xato, setXato] = useState('');
 
   useEffect(() => {
+    if (!aktKomp || !obyektId) return;
     setYuklanmoqda(true);
+    setXato('');
     sbGrafikHolatOl(aktKomp, obyektId).then(r => {
       setYuklanmoqda(false);
-      if (r.ok && r.qatorlar && r.qatorlar.length > 0) {
-        setGrafik(r.qatorlar);
+      if (r.ok) {
+        setGrafik(r.qatorlar || []);
       } else {
-        setGrafik(MOCK_GRAFIK);
+        setXato(r.error || 'O\'qilmadi');
+        setGrafik([]);
       }
     });
   }, [aktKomp, obyektId]);
@@ -41,7 +42,11 @@ export default function TestGrafik() {
           <p className="text-sm text-zinc-400 mt-1">Loyiha rejalashtirish va amalda bajarilish muddatlari</p>
         </div>
       </div>
-      
+
+      {xato && (
+        <div className="mb-4 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">{xato}</div>
+      )}
+
       {yuklanmoqda ? <div className="text-zinc-500 animate-pulse">Yuklanmoqda...</div> : (
         <div className="bg-black border border-zinc-800 rounded-lg overflow-x-auto shadow-lg">
           <table className="w-full text-left text-sm">

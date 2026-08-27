@@ -66,7 +66,8 @@ const AMALLAR = {
   aosr_yoz: { rpc: 't2_aosr_yoz' },
   aosr_bekor: { rpc: 't2_aosr_bekor' },
   aosr_bog_saqla: { rpc: 't2_aosr_bog_saqla' },
-  aosr_bog_ochir: { rpc: 't2_aosr_bog_ochir' }
+  aosr_bog_ochir: { rpc: 't2_aosr_bog_ochir' },
+  audit_yoz: { rpc: 't2_audit_yoz' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -662,6 +663,23 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'aosr_id yoki qator_id noto\'g\'ri' });
       }
       yuk = { p_aosr_id: aosrId, p_qator_id: qatorId };
+
+    /* ══════════ AUDIT LOG ══════════
+       ⚠️ Log yozuvi — idempotentlik shart emas (ikkilanib yozilishi
+       jiddiy xavf emas, log yo'qolib qolishi yomonroq). */
+    } else if (amal === 'audit_yoz') {
+      if (!String(so.amal_turi || '').trim() || !String(so.modul || '').trim()) {
+        return Response.json({ ok: false, error: 'amal_turi va modul bo\'sh bo\'lishi mumkin emas' });
+      }
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id),
+        p_amal_turi: String(so.amal_turi).slice(0, 100),
+        p_modul: String(so.modul).slice(0, 100),
+        p_obyekt_id: so.obyekt_id == null ? null : Number(so.obyekt_id),
+        p_tafsilot: so.tafsilot ? String(so.tafsilot).slice(0, 2000) : null,
+        p_kim: sess.email || '',
+        p_ip: ctx.request.headers.get('CF-Connecting-IP') || null,
+      };
 
     /* ══════════ KORZINKA ══════════
        ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan

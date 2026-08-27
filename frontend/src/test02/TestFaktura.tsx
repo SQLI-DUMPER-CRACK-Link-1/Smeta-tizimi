@@ -46,11 +46,15 @@ export default function TestFaktura() {
     setXato('');
     
     try {
-      // Mock items if empty for demonstration
-      const items = faktura.items && faktura.items.length > 0 ? faktura.items : [
-        { nomi: 'Sement M400 (Didox)', birligi: 't', obyomi: 20 },
-        { nomi: 'Armatura 12mm (Didox)', birligi: 't', obyomi: 5 }
-      ];
+      /* ⚠️ 2026-08-27 (Claude): fakturada tovar bo'lmasa TO'QILGAN
+       * "Sement M400"/"Armatura" o'rniga yozilmaydi — bu hujjatda
+       * bo'lmagan narsani "bor" deyish bo'lardi. */
+      if (!faktura.items || faktura.items.length === 0) {
+        setXato('Bu fakturada tovarlar ro\'yxati yo\'q — Didox\'dan items kelmagan. Skladga qabul qilib bo\'lmaydi.');
+        setYuklanmoqda(false);
+        return;
+      }
+      const items = faktura.items;
 
       // Skladga prixod qilish
       for (const item of items) {
@@ -78,27 +82,6 @@ export default function TestFaktura() {
     }
   };
 
-  // Yangi mock faktura yaratish
-  const mockFakturaYarat = async () => {
-    setYuklanmoqda(true);
-    await sbFakturaYoz({
-      kompaniya_id: aktKomp,
-      raqam: 'EHF-' + Math.floor(Math.random() * 10000),
-      sana: new Date().toISOString().split('T')[0],
-      kontragent: "OOO Qurilish Ta'minot",
-      inn: '30' + Math.floor(Math.random() * 10000000),
-      summa: Math.floor(Math.random() * 50000000) + 1000000,
-      holat: 'yangi',
-      items: [
-        { nomi: 'G\'isht', birligi: 'sht', obyomi: 10000 },
-        { nomi: 'Kafel', birligi: 'm2', obyomi: 200 }
-      ],
-      operation_id: opId
-    } as T2Faktura);
-    fakturalarniYukla();
-    setOpId(yangiOperationId());
-  };
-
   return (
     <div className="p-6 bg-zinc-900 text-white min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -111,13 +94,6 @@ export default function TestFaktura() {
             Didox.uz / Soliq.uz orqali kelgan EHF larni to'g'ridan-to'g'ri skladga kirim qilish (Avto-Prixod)
           </p>
         </div>
-        <button 
-          onClick={mockFakturaYarat}
-          disabled={yuklanmoqda}
-          className="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded font-medium text-sm transition-colors disabled:opacity-50"
-        >
-          + Yangi EHF (Mock)
-        </button>
       </div>
 
       {xato && (
@@ -164,14 +140,18 @@ export default function TestFaktura() {
 
             <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50 mb-4">
               <div className="text-xs text-zinc-500 mb-2 font-medium">Tarkibidagi tovarlar:</div>
-              <ul className="text-xs text-zinc-300 space-y-1">
-                {(f.items && f.items.length > 0 ? f.items : [{nomi:'Sement', birligi:'t', obyomi:20}]).map((item: any, idx: number) => (
-                  <li key={idx} className="flex justify-between border-b border-zinc-800/50 pb-1">
-                    <span>{item.nomi}</span>
-                    <span className="text-sky-400 font-mono">{item.obyomi} {item.birligi}</span>
-                  </li>
-                ))}
-              </ul>
+              {f.items && f.items.length > 0 ? (
+                <ul className="text-xs text-zinc-300 space-y-1">
+                  {f.items.map((item: any, idx: number) => (
+                    <li key={idx} className="flex justify-between border-b border-zinc-800/50 pb-1">
+                      <span>{item.nomi}</span>
+                      <span className="text-sky-400 font-mono">{item.obyomi} {item.birligi}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-xs text-zinc-600 italic">Tovarlar ro'yxati kelmagan</div>
+              )}
             </div>
 
             {f.holat === 'yangi' && (
@@ -188,7 +168,8 @@ export default function TestFaktura() {
         ))}
         {fakturalar.length === 0 && !yuklanmoqda && (
           <div className="col-span-full text-center text-zinc-500 py-10 border border-dashed border-zinc-800 rounded-lg">
-            Hozircha fakturalar yo'q. "Yangi EHF" tugmasini bosib mock ma'lumot yarating.
+            Hozircha fakturalar yo'q. Didox.uz orqali real EHF kelishini kutmoqda —
+            bu yerda hujjatlar hozircha faqat AVTOMATIK kelganda ko'rinadi (qo'lda soxta hujjat yaratish yo'q).
           </div>
         )}
       </div>

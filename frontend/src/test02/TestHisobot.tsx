@@ -4,30 +4,30 @@ import { BarChart3, RefreshCw } from 'lucide-react';
 import { FmtN } from '../lib/format';
 import { useKompaniya } from './KompaniyaTanlov';
 
-const MOCK_INIT = { foyda: 250000000, daromad: 1200000000, xarajat: 950000000, kassa: 150000000 };
-const MOCK_DATA = [
-  { kategoriya: 'Obyekt A Blok', kirim: 500000000, chiqim: 400000000 },
-  { kategoriya: 'Obyekt B Blok', kirim: 700000000, chiqim: 500000000 },
-  { kategoriya: "Texnika ta'mirlash", kirim: 0, chiqim: 50000000 }
-];
-
+/* ⚠️ 2026-08-27 (Claude): bu yerda avval `MOCK_INIT`/`MOCK_DATA` bor
+ * edi — real ma'lumot bo'sh yoki xato bo'lsa TO'QILGAN raqamlar
+ * (masalan "250 000 000 foyda") jim ko'rsatilardi. Foydalanuvchi
+ * to'g'ri payqadi: "Boss tahlil ham yo'q joydan to'qib yotibdi".
+ * Olib tashlandi — bo'sh bo'lsa OCHIQ "ma'lumot yo'q" holati. */
 export default function TestHisobot() {
   const { joriy } = useKompaniya();
   const [initData, setInitData] = useState<any>(null);
   const [data, setData] = useState<any[]>([]);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
+  const [xato, setXato] = useState('');
 
   const yukla = () => {
+    if (!joriy?.id) return;
     setYuklanmoqda(true);
-    const kId = joriy?.id || 1;
+    setXato('');
     Promise.all([
-      sbBossInitOl(kId).then((r: any) => {
-        if(r.ok && r.qatorlar && r.qatorlar.length > 0) setInitData(r.qatorlar[0]);
-        else setInitData(MOCK_INIT);
+      sbBossInitOl(joriy.id).then((r: any) => {
+        if (r.ok) setInitData((r.qatorlar && r.qatorlar[0]) || null);
+        else setXato((prev: string) => prev || r.error || 'O\'qilmadi');
       }),
-      sbBossDataOl(kId).then((r: any) => {
-        if(r.ok && r.qatorlar && r.qatorlar.length > 0) setData(r.qatorlar);
-        else setData(MOCK_DATA);
+      sbBossDataOl(joriy.id).then((r: any) => {
+        if (r.ok) setData(r.qatorlar || []);
+        else setXato((prev: string) => prev || r.error || 'O\'qilmadi');
       })
     ]).finally(() => setYuklanmoqda(false));
   };
@@ -48,8 +48,17 @@ export default function TestHisobot() {
         </button>
       </div>
 
+      {xato && (
+        <div className="mb-4 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">{xato}</div>
+      )}
+
       {yuklanmoqda && !initData ? <div className="text-zinc-500 animate-pulse">Yuklanmoqda...</div> : (
         <div className="flex flex-col gap-6">
+          {!initData && data.length === 0 && !xato && (
+            <div className="text-center text-zinc-500 py-10 border border-dashed border-zinc-800 rounded-lg">
+              Hozircha tahlil uchun ma'lumot yo'q.
+            </div>
+          )}
           {initData && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-black border border-zinc-800 p-4 rounded-lg border-t-4 border-t-emerald-500 shadow-lg">

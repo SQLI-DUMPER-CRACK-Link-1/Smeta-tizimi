@@ -1,12 +1,13 @@
 ﻿import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { sbBirjaSorovOl, sbBirjaRfqYarat, sbBirjaTaklifBer } from '../api/t2-birja';
+import { sbBirjaSorovOl, sbBirjaRfqYarat, sbBirjaTaklifBer, type BirjaRfq } from '../api/t2-birja';
 import { ShoppingCart, Gavel, FileCheck, PackageSearch, Plus, MapPin, Building2 } from 'lucide-react';
+import { toast } from '../umumiy/ui/Toast';
+import { useKompaniya } from './KompaniyaTanlov';
 
 export default function TestBirja() {
-  const [params] = useSearchParams();
-  const aktKomp = Number(params.get('kompaniya') || '1');
-  const [rfqlar, setRfqlar] = useState<any[]>([]);
+  const { joriy } = useKompaniya();
+  const aktKomp = joriy?.id ?? 0;
+  const [rfqlar, setRfqlar] = useState<BirjaRfq[]>([]);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   
   // Modals
@@ -29,30 +30,60 @@ export default function TestBirja() {
   const yukla = () => {
     setYuklanmoqda(true);
     sbBirjaSorovOl().then(r => {
-      setRfqlar(r.qatorlar || []);
       setYuklanmoqda(false);
+      if (r.ok) {
+        setRfqlar(r.qatorlar || []);
+      } else {
+        toast(r.error || 'RFQ ro\'yxati o\'qilmadi', 'danger');
+      }
     });
   };
 
   const rfqYarat = async () => {
+    if (!fNom.trim() || !fHajm || Number(fHajm) <= 0) {
+      toast('Material nomi va hajmini kiriting', 'warn');
+      return;
+    }
+    if (!aktKomp) {
+      toast('Kompaniya tanlanmagan', 'warn');
+      return;
+    }
     setYuklanmoqda(true);
-    await sbBirjaRfqYarat({
-      nom: fNom,
-      birlik: fBirlik,
-      hajm: Number(fHajm),
-      izoh: fIzoh,
-      kompaniya_id: aktKomp, // mock: as if this company created it
-      holat: 'ochiq'
+    const r = await sbBirjaRfqYarat({
+      nom: fNom, birlik: fBirlik, hajm: Number(fHajm), izoh: fIzoh,
+      kompaniya_id: aktKomp,
     });
-    setYangiRfqOchiq(false);
-    yukla();
+    setYuklanmoqda(false);
+    if (r.ok) {
+      toast('✓ Tender yaratildi', 'ok');
+      setYangiRfqOchiq(false);
+      setFNom(''); setFHajm(''); setFIzoh('');
+      yukla();
+    } else {
+      toast(r.error || 'Xato', 'danger');
+    }
   };
 
   const taklifBer = async (rfqId: number) => {
+    if (!tNarx || Number(tNarx) <= 0) {
+      toast('Narx kiriting', 'warn');
+      return;
+    }
+    if (!aktKomp) {
+      toast('Kompaniya tanlanmagan', 'warn');
+      return;
+    }
     setYuklanmoqda(true);
-    await sbBirjaTaklifBer(rfqId, Number(tNarx), tIzoh);
-    setTaklifOchiq(null);
-    yukla();
+    const r = await sbBirjaTaklifBer(rfqId, aktKomp, Number(tNarx), tIzoh);
+    setYuklanmoqda(false);
+    if (r.ok) {
+      toast('✓ Taklif yuborildi', 'ok');
+      setTaklifOchiq(null);
+      setTNarx(''); setTIzoh('');
+      yukla();
+    } else {
+      toast(r.error || 'Xato', 'danger');
+    }
   };
 
   return (

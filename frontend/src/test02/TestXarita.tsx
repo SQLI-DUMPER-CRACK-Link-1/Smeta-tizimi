@@ -62,11 +62,11 @@ const GLOBAL_MODS = [
 
 const OBJ_SUBS = [
   { nomi: 'Obyekt Skladi',         color: 'amber',   Icon: Warehouse,     pathFn: (id: number, _: string) => '/admin/test/sklad?obyektId=' + id },
-  { nomi: 'Asosiy Smeta',          color: 'indigo',  Icon: FileText,      pathFn: (_: number, nom: string) => '/admin/test/daraxt?obyekt=' + nom },
+  { nomi: 'Asosiy Smeta',          color: 'indigo',  Icon: FileText,      pathFn: (_: number, nom: string) => '/admin/test/f2?obyekt=' + nom },
   { nomi: 'F2 Dalolatnoma',        color: 'rose',    Icon: Pickaxe,       pathFn: (_: number, nom: string) => '/admin/test/f2?obyekt=' + nom },
   { nomi: 'Obyekt Shartnomalari',  color: 'fuchsia', Icon: Briefcase,     pathFn: (id: number, _nom: string) => '/admin/test/shartnomalar?obyektId=' + id },
   { nomi: 'Obyekt HR & Tabel',     color: 'sky',     Icon: ClipboardList, pathFn: (id: number, _nom: string) => '/admin/test/erp?modul=kadrlar&obyektId=' + id },
-  { nomi: 'Texnadzor / Sifat',     color: 'red',     Icon: ShieldCheck,   pathFn: (id: number, _nom: string) => '/admin/test/oqish?obyektId=' + id },
+  { nomi: 'Texnadzor / Sifat',     color: 'red',     Icon: ShieldCheck,   pathFn: (id: number, _nom: string) => '/admin/test/erp?modul=sifat&obyektId=' + id },
 ];
 
 /* ─────────────────────────────────────────────────────────
@@ -252,7 +252,7 @@ export default function TestXarita() {
               return (
                 <React.Fragment key={ob.id}>
                   <foreignObject x={OBJ_X} y={oy} width={OB_W} height={OB_H}>
-                    <div onClick={(e) => nav('/admin/test/daraxt?obyekt=' + ob.nom, e)} className="w-full h-full flex items-center gap-2 px-3 bg-surface border border-border rounded-xl cursor-pointer hover:border-accent">
+                    <div onClick={(e) => nav('/admin/test/f2?obyekt=' + ob.nom, e)} className="w-full h-full flex items-center gap-2 px-3 bg-surface border border-border rounded-xl cursor-pointer hover:border-accent">
                       <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0">
                         <HardHat size={16} className="text-emerald-500" />
                       </div>

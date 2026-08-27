@@ -24,12 +24,10 @@ const TestShell     = lazy(() => import('./test02/TestShell'));
 const TestKorzinka  = lazy(() => import('./test02/TestKorzinka'));
 const TestXarita    = lazy(() => import('./test02/TestXarita'));
 const TestObyektlar = lazy(() => import('./test02/TestObyektlar'));
-const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
-const TestImport    = lazy(() => import('./test02/TestImport'));
+const TestSmetaBirlashgan = lazy(() => import('./test02/TestSmetaBirlashgan'));
 const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
 const TestF2Import  = lazy(() => import('./test02/TestF2Import'));
 const TestF2        = lazy(() => import('./test02/TestF2'));
-const TestOqishOlchov = lazy(() => import('./test02/TestOqishOlchov'));
 const TestSklad     = lazy(() => import('./test02/TestSklad'));
 const TestBirja     = lazy(() => import('./test02/TestBirja'));
 const TestInvite    = lazy(() => import('./test02/TestInvite'));
@@ -104,14 +102,15 @@ export default function App() {
             <Route path="korzinka" element={<TestKorzinka />} />
             <Route path="xarita" element={<TestXarita />} />
             <Route path="obyektlar" element={<TestObyektlar />} />
-            <Route path="daraxt" element={<TestDaraxt />} />
-            <Route path="import" element={<TestImport />} />
+            <Route path="import" element={<TestSmetaBirlashgan />} />
             <Route path="grafik" element={<TestGrafik />} />
             <Route path="spravochnik" element={<TestSpravochnik />} />
             <Route path="narxlar" element={<TestNarxlar />} />
+            {/* ⚠️ f2/f2-import endi menyuda YO'Q ("import" ichida
+                sub-tab sifatida) — lekin marshrutlar qoladi, Mind Map
+                va boshqa joylardan chuqur havolalar buzilmasin. */}
             <Route path="f2" element={<TestF2 />} />
             <Route path="f2-import" element={<TestF2Import />} />
-            <Route path="oqish" element={<TestOqishOlchov />} />
             <Route path="sklad" element={<TestSklad />} />
             <Route path="birja" element={<TestBirja />} />
             <Route path="invite" element={<TestInvite />} />

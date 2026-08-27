@@ -65,6 +65,8 @@ const RUXSAT_JADVALLAR = new Set([
   /* KORZINKA — bekor qilingan obyekt/smeta/sklad harakat (3 jadval
      birlashgan VIEW — `holat='bekor'`, is_deleted EMAS). */
   't2_korzinka',
+  /* AUDIT & LOGLAR (2026-08-27, Antigravity SQL + Claude qo'llagan) */
+  't2_audit_reestr',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

@@ -23,35 +23,37 @@
  */
 import { Outlet, NavLink } from 'react-router-dom';
 import { KompaniyaProvider, KompaniyaTanlagich } from './KompaniyaTanlov';
-import { Trash2, FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer, Upload, Tags,
-         TrendingUp, FileInput, Box, ShoppingCart, UserPlus, CreditCard, FileText, Archive, Briefcase,
-         BarChart, Settings, ShieldAlert, LayoutDashboard, CalendarDays, BookOpen, ClipboardList } from 'lucide-react';
+import { Trash2, FlaskConical, Building2, Network, ArrowLeft, Upload, Tags,
+         Box, ShoppingCart, UserPlus, CreditCard, FileText, Archive, Briefcase,
+         BarChart, Settings, LayoutDashboard, CalendarDays, BookOpen, ClipboardList } from 'lucide-react';
 
+/* ⚠️ 2026-08-27: foydalanuvchi ko'rsatmasi bilan qayta tuzildi —
+ *   - "Smeta yuklash" / "F2 Fakt" / "F2 import" BITTA tabga
+ *     birlashtirildi (TestSmeta.tsx ichki sub-tab bilan).
+ *   - "Smeta daraxti" olib tashlandi (vazifasi noaniq/keraksiz edi).
+ *   - "GAS o'qish tezligi" va "Tezlik sinovi" olib tashlandi (kerak emas).
+ *   - "Audit & Loglar" tepadagi menyudan olib tashlandi — Sozlamalar
+ *     ichiga ko'chirildi (pastda link sifatida qoladi).
+ */
 const TEST_MENYU = [
-  { yol: '/admin/test/import',    nom: 'Smeta yuklash', Ikonka: Upload },
+  { yol: '/admin/test/import',    nom: 'Smeta / F2 / Fakt', Ikonka: Upload },
   { yol: '/admin/test/grafik',    nom: 'Grafik',        Ikonka: CalendarDays },
-  { yol: '/admin/test/spravochnik',nom: 'Spravochnik',  Ikonka: BookOpen },
+  { yol: '/admin/test/spravochnik',nom: 'Ish turlari (Spravochnik)',  Ikonka: BookOpen },
   { yol: '/admin/test/obyektlar', nom: 'Obyektlar',    Ikonka: Building2 },
   { yol: '/admin/test/narxlar',   nom: 'Narxlar',      Ikonka: Tags },
-  { yol: '/admin/test/f2',        nom: 'F2 / Fakt',    Ikonka: TrendingUp },
   { yol: '/admin/test/shartnomalar', nom: 'Shartnomalar', Ikonka: Briefcase },
-  { yol: '/admin/test/f2-import', nom: 'F2 import',    Ikonka: FileInput },
   { yol: '/admin/test/xarita',    nom: 'Mind Map', Ikonka: Network },
-  { yol: '/admin/test/daraxt',    nom: 'Smeta daraxti', Ikonka: Network },
   { yol: '/admin/test/sklad',     nom: 'Sklad',        Ikonka: Box },
   { yol: '/admin/test/birja',     nom: 'Birja RFQ',    Ikonka: ShoppingCart },
   { yol: '/admin/test/invite',    nom: 'Takliflar',    Ikonka: UserPlus },
   { yol: '/admin/test/tolov',     nom: 'To\'lov',       Ikonka: CreditCard },
   { yol: '/admin/test/faktura',   nom: 'EHF (Didox)',  Ikonka: FileText },
-  { yol: '/admin/test/hujjat',    nom: 'Arxiv (R2)',   Ikonka: Archive },
+  { yol: '/admin/test/hujjat',    nom: 'Obyekt hujjatlari', Ikonka: Archive },
   { yol: '/admin/test/aosr',      nom: 'АОСР (yashirin ish)', Ikonka: ClipboardList },
   { yol: '/admin/test/hisobot',   nom: 'Boss Tahlil',  Ikonka: BarChart },
   { yol: '/admin/test/erp',       nom: 'ERP Boshqaruv', Ikonka: LayoutDashboard },
   { yol: '/admin/test/sozlama',   nom: 'Sozlamalar',   Ikonka: Settings },
   { yol: '/admin/test/korzinka',  nom: 'Korzinka', Ikonka: Trash2 },
-  { yol: '/admin/test/tizim',     nom: 'Audit & Loglar', Ikonka: ShieldAlert },
-  { yol: '/admin/test/oqish',     nom: 'GAS o\'qish tezligi', Ikonka: Timer },
-  { yol: '/admin/tezlik',         nom: 'Tezlik sinovi', Ikonka: Gauge },
 ];
 
 export default function TestShell() {
