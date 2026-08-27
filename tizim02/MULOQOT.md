@@ -943,3 +943,47 @@ beradi (ОБ emas) — bu `t2_qator_qosh`ning ESKI, oldindan qabul
 qilingan xatti-harakati (bugungi ishga aloqasi yo'q, tegilmadi).
 
 tsc 0 xato, build toza, barcha 8 ta .cjs test o'tdi.
+
+
+### [2026-08-27] Claude → hammaga · Kodlash yaxlitligi qo'riqchisi qo'shildi + ~10 marta takrorlangan build-buzilishi
+
+Foydalanuvchi: "integratsiyani qurishni davom ettir jigar. hali ham
+juda ko'p kamchiliklari borda" — davom etildi, quyidagi haqiqiy
+buglar topilib tuzatildi (bir soatlik oynada production build
+KAMIDA O'N MARTA yiqildi, har safar bitta fayl tuzatilib ulgurguncha
+YANGI faylda xuddi shu naqsh paydo bo'lardi):
+
+**Ikkita takroriy naqsh:**
+1. Fayl UTF-16 da saqlangan (`frontend/src/api/t2-korzinka.ts`) —
+   PowerShell orqali `-Encoding utf8` siz yozilgan, xuddi
+   MULOQOT.md'ni yeb qo'ygan sabab bilan bir xil.
+2. Template literal (backtick+`${...}`) buzilib, o'rniga yakka
+   backslash qolgan — `TestErp.tsx`, `TestGrafik.tsx`,
+   `TestShartnoma.tsx` (ikki marta — fayl qayta yozilgach bug qaytdi),
+   `TestTolov.tsx`, `TestHisobot.tsx` (ikki marta).
+
+**Qo'shimcha topilgan buglar:**
+- `FmtN` React komponenti (`<FmtN val={x}/>`) funksiya sifatida
+  chaqirilgan (`{FmtN(x)}`) — bir necha joyda, obyekt qaytarib JSX
+  render qilinmasdi.
+- `App.tsx`da `TestGrafik`/`TestSpravochnik` route'lari bor edi, lekin
+  lazy import qatorlari yo'q edi.
+- `TestFaktura.tsx`: `useKompaniya()` obyekt qaytaradi
+  (`{joriy, kompaniyalar, ...}`), lekin to'g'ridan-to'g'ri
+  `kompaniya_id` sifatida ishlatilgandi.
+
+**⚠️ STRUKTURAVIY YECHIM:** har safar qo'lda topib-tuzatish o'rniga,
+yangi qo'riqchi test qo'shildi: `frontend/testlar/t2_kodlash_yaxlitligi.test.cjs`.
+U `src/`, `functions/`, `testlar/` dagi BARCHA fayllarni:
+  1) qat'iy UTF-8 dekodlab tekshiradi (UTF-16 saqlanib qolgan bo'lsa
+     DARHOL topadi — `npm run build`ni to'liq ishga tushirmasdan),
+  2) buzilgan template literal izini qidiradi (`={` dan keyin darhol
+     backslash — bu hech qachon to'g'ri JSX emas).
+`npm test` (vitest) buni avtomat oladi. Endi bu ikki naqsh build
+kutmasdan, millisekundlarda ushlanadi.
+
+**Ikkalamizga ham eslatma (yana bir bor, endi TEST bilan mustahkamlangan):**
+fayllarga yozishda DOIM UTF-8 aniq ko'rsating.
+
+tsc 0 xato, build toza, 9/9 test fayli o'tdi (kodlash yaxlitligi ham
+shu jumladan).
