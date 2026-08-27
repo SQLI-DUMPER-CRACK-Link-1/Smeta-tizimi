@@ -120,7 +120,75 @@ export const onRequestPost: PagesFunction<{
     const so = await ctx.request.json<{
       jadval?: string; filtr?: string; ustunlar?: string;
       tartib?: string; limit?: number;
+      soro?: string; obyekt_id?: number; kompaniya_id?: number;
     }>();
+
+    /* ══════════ O'QISH-RPC (AI konteksti) ══════════════════════════════
+     * ⚠️ ATAYLAB O'TA TOR: bu yerda faqat SANAB O'TILGAN, FAQAT O'QIYDIGAN
+     * funksiyalar. Ixtiyoriy RPC nomi qabul QILINMAYDI — aks holda bu
+     * o'qish eshigi jimgina yozish eshigiga aylanardi.
+     *
+     * Nega kerak: AI ga bitta obyekt bo'yicha to'liq kontekst kerak
+     * (jami, kategoriya, ogohlantirishlar). Buni jadval-jadval o'qib
+     * frontendda yig'ish — aynan Tizim_01 dagi sekin yo'l. Postgres
+     * hammasini bitta chaqiruvda beradi.
+     *
+     * Rol: `boss`/`rahbar` ham CHAQIRA OLADI — bu faqat o'qish. */
+    if (so.soro) {
+      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya'> = {
+        ai_kontekst: 'obyekt',
+        ai_umumiy: 'kompaniya',
+      };
+      const tur = OQISH_RPC[so.soro];
+      if (!tur) {
+        return Response.json({ ok: false, error: 'So\'rov ochiq emas: ' + so.soro });
+      }
+
+      /* ⚠️ GET bilan chaqiriladi, POST bilan EMAS — va bu ATAYLAB.
+       * `/api/sb` ning bosh kafolati: u HECH QACHON yoza olmaydi. Buni
+       * qo'riqchi test ham tekshiradi («faqat GET so'rov»). POST ga
+       * o'tsak kafolat zaiflashardi: keyinchalik kimdir ro'yxatga
+       * yozuvchi funksiyani qo'shsa, hech narsa to'smasdi.
+       *
+       * PostgREST `STABLE`/`IMMUTABLE` funksiyalarni GET bilan chaqirishga
+       * ruxsat beradi, `VOLATILE` (yozuvchi) larni esa RAD ETADI. Ya'ni
+       * cheklovni endi POSTGRESNING O'ZI majburlaydi — yozuvchi funksiya
+       * bu yerga qo'shilsa, u GET da umuman ishlamaydi. */
+      const q = new URLSearchParams();
+      if (tur === 'obyekt') {
+        const id = Number(so.obyekt_id);
+        if (!Number.isFinite(id) || id <= 0) {
+          return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+        }
+        q.set('p_obyekt_id', String(id));
+      } else {
+        const kid = so.kompaniya_id == null ? null : Number(so.kompaniya_id);
+        /* Kompaniya berilsa — sessiya a'zoligida bo'lishi shart
+           (sb-yoz.ts dagi bilan bir xil qoida). */
+        if (kid != null && Array.isArray(sess.kompaniyalar) &&
+            !sess.kompaniyalar.some((a) => a.kompaniya_id === kid)) {
+          return Response.json(
+            { ok: false, error: 'Bu kompaniyaga ruxsat yo\'q' }, { status: 403 });
+        }
+        if (kid != null) q.set('p_kompaniya_id', String(kid));
+      }
+
+      const rr = await fetch(
+        ctx.env.SUPABASE_URL.replace(/\/+$/, '') +
+          '/rest/v1/rpc/t2_' + so.soro + '?' + q.toString(),
+        {
+          headers: {
+            apikey: ctx.env.SUPABASE_KEY,
+            Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY,
+          },
+        });
+      if (!rr.ok) {
+        return Response.json(
+          { ok: false, error: 'So\'rov bajarilmadi (' + rr.status + ')' });
+      }
+      const natija = await rr.json();
+      return Response.json({ ok: true, natija, ms: Date.now() - t0 });
+    }
 
     const jadval = String(so.jadval || '');
     if (!RUXSAT_JADVALLAR.has(jadval)) {
