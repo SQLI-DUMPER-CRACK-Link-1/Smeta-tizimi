@@ -58,7 +58,11 @@ const AMALLAR = {
   tolov_ochir: { rpc: 't2_tolov_ochir' },
   xarajat_yoz: { rpc: 't2_xarajat_yoz' },
   xarajat_tahrir: { rpc: 't2_xarajat_tahrir' },
-  xarajat_ochir: { rpc: 't2_xarajat_ochir' }
+  xarajat_ochir: { rpc: 't2_xarajat_ochir' },
+  korzinkaga_tashlash: { rpc: 't2_korzinkaga_tashlash' },
+  korzinkadan_tiklash: { rpc: 't2_korzinkadan_tiklash' },
+  butunlay_ochirish: { rpc: 't2_butunlay_ochirish' },
+  obyekt_yangila: { rpc: 't2_obyekt_yangila' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -541,7 +545,69 @@ export const onRequestPost: PagesFunction<{
         p_id: so.id ? Number(so.id) : null
       };
 
-    /* ──────────────────────── HALI KOD YOZILMAGAN AMALLAR ────────────────────────
+    } else if (amal === 'shaxsiy_smeta_yarat') {
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id),
+        p_nom: String(so.nom || ''),
+        p_qatorlar: so.qatorlar ? JSON.stringify(so.qatorlar) : '[]'
+      };
+
+    } else if (amal === 'korzinkaga_tashlash' || amal === 'korzinkadan_tiklash' || amal === 'butunlay_ochirish') {
+      yuk = {
+        p_jadval: String(so.jadval || so.rpcArgs?.p_jadval || ''),
+        p_id: Number(so.id || so.rpcArgs?.p_id)
+      };
+
+    } else if (amal === 'obyekt_yangila') {
+      yuk = {
+        p_id: Number(so.id || so.rpcArgs?.p_id),
+        p_nomi: String(so.nomi || so.rpcArgs?.p_nomi || ''),
+        p_tur: String(so.tur || so.rpcArgs?.p_tur || '')
+      };
+
+    } else if (amal === 'grafik_yangilash' || amal === 'grafik_sozlama_saqla') {
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id || 0),
+        p_obyekt_id: Number(so.obyekt_id || 0),
+        p_payload: JSON.stringify(so)
+      };
+
+    } else if (amal === 'sozlama_saqla') {
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id || 0),
+        p_sozlamalar: so.sozlamalar ? JSON.stringify(so.sozlamalar) : JSON.stringify(so)
+      };
+
+    } else if (amal === 'tizim_amal') {
+      yuk = {
+        p_turi: String(so.tizim_amal_turi || so.turi || so.harakat || ''),
+        p_payload: so.payload ? JSON.stringify(so.payload) : JSON.stringify(so)
+      };
+
+    } else if (amal === 'xato_yoz') {
+      yuk = {
+        p_payload: so.payload ? JSON.stringify(so.payload) : JSON.stringify(so)
+      };
+
+    } else if (amal === 'erp_amal') {
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id || 0),
+        p_operatsiya: String(so.operatsiya || ''),
+        p_payload: so.payload ? JSON.stringify(so.payload) : JSON.stringify(so)
+      };
+
+    } else if (amal === 'boss_tahlil_boshla') {
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id || 0),
+        p_oy: String(so.oy || '')
+      };
+
+    } else if (amal === 'kirish_amal' || amal === 'taklif_yubor' || amal === 'taklif_qabul' || amal === 'birja_rfq_yarat' || amal === 'birja_taklif_ber') {
+      yuk = {
+        p_kompaniya_id: so.kompaniya_id ? Number(so.kompaniya_id) : 0,
+        p_foydalanuvchi: String(so.foydalanuvchi || ''),
+        p_payload: so.payload ? JSON.stringify(so.payload) : JSON.stringify(so)
+      };
        🚧 2026-08-25 (Claude): `AMALLAR` da RO'YXATDAN O'TGAN, lekin bu
        yerda o'z shoxobchasi bo'lmagan amallar avval JIM shu yerga —
        aslida `akt_tasdiqlash`/`akt_bekor` uchun yozilgan yuqoridagi
