@@ -5,7 +5,7 @@ import {
   Building2, HardHat, Warehouse, FileText, Pickaxe,
   Map, ZoomIn, ZoomOut, Maximize2, Briefcase, Users, Settings,
   Calculator, BarChart3, ShoppingCart, Truck, ShieldCheck, ClipboardList,
-  ChevronRight,
+  ChevronRight, FolderOpen,
 } from 'lucide-react';
 import { sbT2ObyektlarOl, type T2Obyekt } from '../api/supabase';
 
@@ -67,6 +67,7 @@ const OBJ_SUBS = [
   { nomi: 'Obyekt Shartnomalari',  color: 'fuchsia', Icon: Briefcase,     pathFn: (id: number, _nom: string) => '/admin/test/shartnomalar?obyektId=' + id },
   { nomi: 'Obyekt HR & Tabel',     color: 'sky',     Icon: ClipboardList, pathFn: (id: number, _nom: string) => '/admin/test/erp?modul=kadrlar&obyektId=' + id },
   { nomi: 'Texnadzor / Sifat',     color: 'red',     Icon: ShieldCheck,   pathFn: (id: number, _nom: string) => '/admin/test/erp?modul=sifat&obyektId=' + id },
+  { nomi: 'Obyekt Hujjatlari',     color: 'cyan',    Icon: FolderOpen,    pathFn: (id: number, _nom: string) => '/admin/test/hujjat?obyektId=' + id },
 ];
 
 /* ─────────────────────────────────────────────────────────

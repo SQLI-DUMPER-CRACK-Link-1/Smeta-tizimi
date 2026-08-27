@@ -67,6 +67,8 @@ const RUXSAT_JADVALLAR = new Set([
   't2_korzinka',
   /* AUDIT & LOGLAR (2026-08-27, Antigravity SQL + Claude qo'llagan) */
   't2_audit_reestr',
+  /* OBYEKT HUJJATLARI — har obyektga bog'langan loyiha/tasdiqlangan fayllar */
+  't2_obyekt_hujjat_royxat',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

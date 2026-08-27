@@ -67,7 +67,9 @@ const AMALLAR = {
   aosr_bekor: { rpc: 't2_aosr_bekor' },
   aosr_bog_saqla: { rpc: 't2_aosr_bog_saqla' },
   aosr_bog_ochir: { rpc: 't2_aosr_bog_ochir' },
-  audit_yoz: { rpc: 't2_audit_yoz' }
+  audit_yoz: { rpc: 't2_audit_yoz' },
+  hujjat_yoz: { rpc: 't2_obyekt_hujjat_yoz' },
+  hujjat_ochir: { rpc: 't2_obyekt_hujjat_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -680,6 +682,34 @@ export const onRequestPost: PagesFunction<{
         p_kim: sess.email || '',
         p_ip: ctx.request.headers.get('CF-Connecting-IP') || null,
       };
+
+    /* ══════════ OBYEKT HUJJATLARI (loyiha/tasdiqlangan fayllar) ══════════
+       ⚠️ 2026-08-27 (Claude): «Arxiv (R2)» avval obyektga UMUMAN
+       bog'lanmagan, ro'yxatsiz bitta-fayl-yuklovchi edi. Endi har fayl
+       aniq obyektga (`obyekt_id`) va turga (loyiha|hujjat) bog'lanadi. */
+    } else if (amal === 'hujjat_yoz') {
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      if (!String(so.nom || '').trim() || !String(so.url || '').trim()) {
+        return Response.json({ ok: false, error: 'nom va url bo\'sh bo\'lishi mumkin emas' });
+      }
+      yuk = {
+        p_obyekt_id: obyektId,
+        p_turi: so.turi === 'loyiha' ? 'loyiha' : 'hujjat',
+        p_nom: String(so.nom).slice(0, 300),
+        p_url: String(so.url).slice(0, 1000),
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 1000) : null,
+        p_kim: sess.email || '',
+      };
+
+    } else if (amal === 'hujjat_ochir') {
+      const id = Number(so.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      yuk = { p_id: id };
 
     /* ══════════ KORZINKA ══════════
        ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan
