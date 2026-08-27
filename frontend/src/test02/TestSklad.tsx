@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { 
+import { yangiOperationId, 
   sbT2ObyektlarOl, 
   sbSkladQoldiqOl, 
   sbSkladgaYozish, 
@@ -25,6 +25,7 @@ export default function TestSklad() {
   const [birligi, setBirligi] = useState('sht');
   const [obyomi, setObyomi] = useState('');
   const [turi] = useState('mat');
+  const [opId, setOpId] = useState(yangiOperationId());
 
   useEffect(() => {
     sbT2ObyektlarOl().then(r => {
@@ -92,7 +93,7 @@ export default function TestSklad() {
       sana: new Date().toISOString().split('T')[0],
       nomi,
       birligi: ishlatiladiganBirlik,
-      obyomi: o
+      obyomi: o, operation_id: opId
     };
     
     setXato('');
@@ -101,7 +102,7 @@ export default function TestSklad() {
       // Refresh
       const q = await sbSkladQoldiqOl(obId);
       if (q.ok && q.qatorlar) setQoldiqlar(q.qatorlar);
-      setNomi(''); setObyomi('');
+      setNomi(''); setObyomi(''); setOpId(yangiOperationId());
     } else {
       setXato(r.error || 'Saqlashda xato');
     }
@@ -233,4 +234,6 @@ export default function TestSklad() {
     </div>
   );
 }
+
+
 

@@ -274,12 +274,22 @@ export function sbT2ObyektlarOl() {
 
 /** `t2_daraxt` — hisoblangan daraxt qatorlari (view). */
 export type T2QatorHolat = {
+  id: number;
   qator_id: number;
   obyekt_id: number;
+  nom: string | null;
   smeta_hajm: number;
   smeta_summa: number;
+  /** ⚠️ FAKT — barcha `tur='fakt'` hujjatlarning yig'indisi. */
   fakt_hajm: number;
   fakt_summa: number;
+  /** F2 — barcha `tur='f2'` hujjatlarning yig'indisi (fakt bilan
+   *  ARALASHTIRILMAYDI: invariant f2≤fakt≤smeta shu ikkisini alohida
+   *  talab qiladi). */
+  f2_hajm: number;
+  f2_summa: number;
+  /** Qoldiq — smeta dan F2 orqali OLINMAGAN qism (hali hisob-fakturaga
+   *  chiqmagan). */
   qoldiq_hajm: number;
   qoldiq_summa: number;
 };
@@ -453,7 +463,8 @@ export type AktBuzilish = {
 
 export type AktNatija = {
   ok: boolean; error?: string; sabab?: string; xabar?: string; izoh?: string;
-  akt_id?: number; takror?: boolean; holat?: string; tur?: string; oy?: string;
+  operation_id?: string;
+  akt_id?: number; qator_id?: number; takror?: boolean; holat?: string; tur?: string; oy?: string;
   qator_soni?: number; narxsiz?: number; jami?: number | null; toliq?: boolean;
   buzilish?: AktBuzilish[] | null; maslahat?: string;
   sizning_versiya?: number; bazadagi_versiya?: number;
@@ -577,6 +588,7 @@ export type T2SkladHarakat = {
   qabul_qiluvchi?: string;
   qabul_turi?: string;
   izoh?: string;
+  operation_id?: string;
 };
 
 export type T2SkladQoldiq = {
@@ -615,7 +627,7 @@ export function sbSkladgaYozish(kompaniya_id: number, operatsiya: 'prixod' | 'ra
     qabul_qiluvchi: item.qabul_qiluvchi || null,
     qabul_turi: item.qabul_turi || null,
     izoh: item.izoh || null,
-    operation_id: yangiOperationId(),
+    operation_id: item.operation_id || yangiOperationId(),
   });
 }
 
@@ -661,7 +673,7 @@ export function sbFakturaYoz(item: T2Faktura) {
   return yozAmali({
     amal: 'faktura_yoz',
     ...item,
-    operation_id: item.id ? undefined : yangiOperationId(),
+    operation_id: item.id ? undefined : (item.operation_id || yangiOperationId()),
   });
 }
 
@@ -808,3 +820,5 @@ export function sbKorzinkaOqish() {
     limit: 500,
   });
 }
+
+
