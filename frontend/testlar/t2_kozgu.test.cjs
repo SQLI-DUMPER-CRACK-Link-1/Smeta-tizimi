@@ -37,20 +37,29 @@ if (um) {
                     'ХАЖМ (ед)', 'ХАЖМ (жами)', 'НАРХ (1 ед)', 'СУММА', 'ТИП',
                     'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ'];
   /* ⚠️ 2026-08-26 (Antigravity): 4 ta F2/QOLDIQ ustuni qo'shildi.
-     Endi 17 ta KO'RINADIGAN ustun (13 LRV_PLUS + 4 F2/qoldiq) + 2 ta
-     yashirin xizmat ustuni (_id, _v).
-     Xizmat ustunlari oxirida — o'rtaga qo'yilsa LRV_PLUS tartibi buzilardi. */
-  tek('19 ta ustun (17 ko\'rinadigan + 2 yashirin)',
-      ustunlar.length === 19, 'topildi: ' + ustunlar.length);
+     ⚠️ 2026-08-28 (Claude): ФАКТ ХАЖМ/СУММА qo'shildi — avval odam
+     ko'zguda «qancha bajarildi» ni NA ko'ra, NA kirita olardi, holbuki
+     u aynan shu varaqda ishlaydi. ФАКТ ХАЖМ — YAGONA tahrirlanadigan
+     hisob ustuni: unga yozilsa teskari sinx `t2_fakt_belgila` ni
+     chaqiradi (jami beriladi, tizim farqni hujjat qilib yozadi).
+     Endi 19 ta KO'RINADIGAN (13 LRV_PLUS + 2 ФАКТ + 4 F2/qoldiq)
+     + 2 ta yashirin xizmat ustuni (_id, _v).
+     Tartib mantiqiy: smeta → ФАКТ (bajarildi) → Ф2 (hisob) → qoldiq. */
+  tek('21 ta ustun (19 ko\'rinadigan + 2 yashirin)',
+      ustunlar.length === 21, 'topildi: ' + ustunlar.length);
   tek('birinchi 13 tasi LRV_PLUS tartibida',
       JSON.stringify(ustunlar.slice(0, 13)) === JSON.stringify(KUTILGAN),
       JSON.stringify(ustunlar.slice(0, 13)));
-  tek('F2/QOLDIQ ustunlari LRV_PLUS dan keyin, xizmatdan oldin',
-      JSON.stringify(ustunlar.slice(13, 17)) ===
+  tek('ФАКТ ustunlari Ф2 dan OLDIN (bajarildi → hisoblandi)',
+      JSON.stringify(ustunlar.slice(13, 15)) ===
+      JSON.stringify(['ФАКТ ХАЖМ', 'ФАКТ СУММА']),
+      JSON.stringify(ustunlar.slice(13, 15)));
+  tek('F2/QOLDIQ ustunlari ФАКТ dan keyin, xizmatdan oldin',
+      JSON.stringify(ustunlar.slice(15, 19)) ===
       JSON.stringify(['F2 HAJM', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA']),
-      JSON.stringify(ustunlar.slice(13, 17)));
+      JSON.stringify(ustunlar.slice(15, 19)));
   tek('xizmat ustunlari OXIRIDA',
-      ustunlar[17] === '_id' && ustunlar[18] === '_v');
+      ustunlar[19] === '_id' && ustunlar[20] === '_v');
   tek('NORMA ustuni bor (avval yo\'q edi)', ustunlar.includes('ХАЖМ (ед)'));
   tek('ТИП ustuni bor — rz/bl/rs/mat/ob', ustunlar.includes('ТИП'));
   tek('kategoriya ustunlari bor', ['ЧЕЛ','МАШ','МАТ','ОБ'].every((k) => ustunlar.includes(k)));
@@ -249,7 +258,19 @@ tek('yashirin `_id` va `_v` ustunlari yoziladi',
     /'_id', '_v'/.test(KOZGU) && /qator\[C_ID - 1\]\s*= r\.id/.test(KOZGU));
 tek('ular ko\'zdan yashiriladi, lekin o\'chirilmaydi',
     /hideColumns\(C_ID, 2\)/.test(KOZGU));
-tek('qaytishda qator `_id` orqali topiladi', /var id = Number\(qiy\[i\]\[17\]\)/.test(KOZGU));
+/* ⚠️ 2026-08-28: `_id` endi QATTIQ INDEKS bilan emas, SARLAVHADAN
+   topiladi (`iId`). Sabab: ФАКТ ustunlari qo'shilgach indeks 17 dan 19 ga
+   surildi va qattiq raqam eski ko'zgularni buzardi. Sarlavhadan izlash
+   ustun tartibi kelajakda yana o'zgarsa ham ishlaydi. */
+tek('qaytishda qator `_id` orqali topiladi',
+    /var id = Number\(qiy\[i\]\[iId\]\)/.test(KOZGU) &&
+    /sn === '_id'/.test(KOZGU));
+tek('ФАКТ varaqdan bazaga qaytadi (t2_fakt_belgila)',
+    /t2_fakt_belgila/.test(KOZGU));
+/* Takroriy hujjat xavfi: joriy fakt `t2_daraxt` da YO'Q, faqat
+   `t2_qator_holat` da. O'qilmasa har sinx yangi hujjat yaratardi. */
+tek('joriy ФАКТ `t2_qator_holat` dan o\'qiladi (takror hujjat bo\'lmasin)',
+    /faktJoriy\[/.test(KOZGU) && /_t2HolatlarOl\(ob\.id\)/.test(KOZGU));
 
 /* Ziddiyat — «oxirgi yozgan yutadi» BO'LMASLIGI kerak */
 tek('kutilgan versiya yuboriladi', /p_kutilgan_versiya: kutilganV/.test(KOZGU));

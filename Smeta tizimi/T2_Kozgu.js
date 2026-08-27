@@ -226,14 +226,25 @@ function apiT2VaraqYarat(obyekt){
      * (o'zgarmas kalit) va `versiya` (ziddiyatni aniqlash uchun)
      * yashirin ustunlarda yuriydi. Ular odamga ko'rinmaydi.
      */
+    /* ⚠️ 2026-08-28: ФАКТ ustunlari QO'SHILDI.
+     *
+     * Avval varaqda faqat Ф2 bor edi — odam «qancha bajarildi» ni ko'zguda
+     * NA KO'RA olardi, NA KIRITA olardi. Foydalanuvchi esa aynan shu
+     * varaqda ishlaydi. Endi ФАКТ ХАЖМ tahrirlanadigan ustun: unga yozilsa
+     * teskari sinx `t2_fakt_belgila` ni chaqiradi (jami beriladi — tizim
+     * FARQNI hujjat qilib yozadi).
+     *
+     * Tartib mantiqiy: smeta → ФАКТ (bajarildi) → Ф2 (hisob) → qoldiq. */
     var USTUNLAR = ['№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.',
                     'ХАЖМ (ед)', 'ХАЖМ (жами)', 'НАРХ (1 ед)', 'СУММА', 'ТИП',
                     'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ',
+                    'ФАКТ ХАЖМ', 'ФАКТ СУММА',
                     'F2 HAJM', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA', '_id', '_v'];
-    var NU = USTUNLAR.length;
-    var KO_RINADI = 17;                      // 14–15 yashirin -> now 18-19 yashirin
+    var NU = USTUNLAR.length;                // 21
+    var KO_RINADI = 19;                      // 20-21 (_id/_v) yashirin
     var C_NORMA = 5, C_HAJM = 6, C_NARX = 7, C_SUMMA = 8, C_KAT1 = 10;
-    var C_F2_HAJM = 14, C_F2_SUM = 15, C_QOLD_HAJM = 16, C_QOLD_SUM = 17, C_ID = 18, C_VER = 19;
+    var C_FAKT_HAJM = 14, C_FAKT_SUM = 15;
+    var C_F2_HAJM = 16, C_F2_SUM = 17, C_QOLD_HAJM = 18, C_QOLD_SUM = 19, C_ID = 20, C_VER = 21;
     var bosh = function(){ return new Array(NU).join('.').split('.'); };
 
     /* Kategoriya bo'yicha jamlanma — sarlavhada ko'rsatiladi */
@@ -393,6 +404,11 @@ function apiT2VaraqYarat(obyekt){
         qator[kUst - 1] = '=IF($H' + qn + '=""' + AJR + '""' + AJR + '$H' + qn + ')';
       }
 
+      /* ФАКТ — bajarilgan ish. Bu ustun TAHRIRLANADI (qolganlaridan farqli):
+         odam bu yerga yozsa `t2_fakt_belgila` chaqiriladi. */
+      qator[C_FAKT_HAJM - 1] = (r.fakt_hajm != null) ? Number(r.fakt_hajm) : '';
+      qator[C_FAKT_SUM - 1]  = (r.fakt_summa != null) ? Number(r.fakt_summa) : '';
+
       /* ⚠️ 2026-08-27: `r.fakt_hajm`/`r.fakt_summa` EMAS — ustun nomi
        * "F2 HAJM"/"F2 SUMMA", lekin FAKT summasi yozilardi (t2_qator_holat
        * `f2_hajm`/`f2_summa` deb ALOHIDA ustunga ega, aynan shu kerak). */
@@ -507,7 +523,8 @@ function apiT2VaraqYarat(obyekt){
         .setNumberFormat('#,##0.00');
       sh.getRange(SARLAVHA_QATOR + 1, C_KAT1, qatorlar.length, 4)
         .setNumberFormat('#,##0.00');
-      sh.getRange(SARLAVHA_QATOR + 1, C_F2_HAJM, qatorlar.length, 4)
+      /* ФАКТ + Ф2 + QOLDIQ — 6 ta ustun ketma-ket */
+      sh.getRange(SARLAVHA_QATOR + 1, C_FAKT_HAJM, qatorlar.length, 6)
         .setNumberFormat('#,##0.00');
       /* Kategoriya ustunlari ko'z bilan ajralib tursin.
          Chegara — sof bezak, hujjatni yiqitishga haqqi yo'q. */
@@ -522,10 +539,21 @@ function apiT2VaraqYarat(obyekt){
     sh.setColumnWidth(7, 100); sh.setColumnWidth(8, 120);
     sh.setColumnWidth(9, 45);
     for(var kc = C_KAT1; kc < C_KAT1 + 4; kc++) sh.setColumnWidth(kc, 115);
+    sh.setColumnWidth(C_FAKT_HAJM, 105);
+    sh.setColumnWidth(C_FAKT_SUM, 110);
     sh.setColumnWidth(C_F2_HAJM, 100);
     sh.setColumnWidth(C_F2_SUM, 100);
     sh.setColumnWidth(C_QOLD_HAJM, 100);
     sh.setColumnWidth(C_QOLD_SUM, 100);
+    /* ФАКТ ХАЖМ — TAHRIRLANADIGAN ustun, ko'z bilan ajralib tursin */
+    try{
+      sh.getRange(SARLAVHA_QATOR, C_FAKT_HAJM)
+        .setBackground('#E8F5E9').setNote(
+          'Bu ustun TAHRIRLANADI.\n\n' +
+          'Bajarilgan JAMI hajmni yozing (masalan 3 dan 8 ga).\n' +
+          'Tizim farqni (+5) hisoblab, ФАКТ hujjatini o\'zi yaratadi.\n' +
+          'Kamaytirish ham mumkin — перерасчёт sifatida yoziladi.');
+    }catch(e){}
     /* ⚠️ BEZAK HUJJATNI TO'SMASIN.
      *
      * `setFrozenColumns(3)` yiqilgan edi: 1/2/4-qatorlar butun kenglikda
@@ -569,8 +597,10 @@ function apiT2VaraqYarat(obyekt){
           'ТИП ва ЧЕЛ/МАШ/МАТ/ОБ — формула, ҳисобдан келади');
         qulf2.setWarningOnly(true);
 
-        var qulf3 = sh.getRange(BOSH_QATOR, C_F2_HAJM, qatorlar.length, 4).protect().setDescription(
-          'F2 ва Қолдиқ — ҳисобдан келади, фақат ўқиш учун');
+        /* ⚠️ ФАКТ ХАЖМ ATAYLAB QULFLANMAYDI — u kiritish ustuni.
+           Qulf faqat ФАКТ СУММА dan boshlanadi (u hisobdan keladi). */
+        var qulf3 = sh.getRange(BOSH_QATOR, C_FAKT_SUM, qatorlar.length, 5).protect().setDescription(
+          'ФАКТ сумма, F2 ва Қолдиқ — ҳисобдан келади, фақат ўқиш учун');
         qulf3.setWarningOnly(true);
       }
     }catch(e){}
@@ -709,11 +739,38 @@ function apiT2VaraqQaytar(obyekt){
     if(oxirgi <= sarlavha) return {ok:true, tekshirildi:0, ozgardi:0, ziddiyat:[], xatolar:[]};
 
     var soni = oxirgi - sarlavha;
-    var qiy = sh.getRange(sarlavha + 1, 1, soni, 19).getValues();
+    /* 21 ustun: ФАКТ ХАЖМ/СУММА qo'shilgach kengaydi (2026-08-28).
+       Eski ko'zgu (19 ustunli) ham o'qiladi — `getValues` mavjud
+       kenglikdan oshmaydi, shuning uchun aniq son beramiz. */
+    var oxirgiUst = Math.min(sh.getLastColumn(), 21);
+    var qiy = sh.getRange(sarlavha + 1, 1, soni, oxirgiUst).getValues();
+    /* Eski (19 ustunli) varaqda _id 18-, yangisida 20-ustunda.
+       Sarlavhadan aniqlaymiz — ustun tartibi o'zgarsa ham ishlasin. */
+    var sarQiy = sh.getRange(sarlavha, 1, 1, oxirgiUst).getValues()[0];
+    var iId = -1, iVer = -1, iFakt = -1;
+    for(var si = 0; si < sarQiy.length; si++){
+      var sn = String(sarQiy[si] || '').trim();
+      if(sn === '_id') iId = si;
+      else if(sn === '_v') iVer = si;
+      else if(sn === 'ФАКТ ХАЖМ') iFakt = si;
+    }
+    if(iId < 0) return {ok:false, xabar:'«_id» ustuni topilmadi — ko\'zgu qayta chizilsinmi?'};
 
     /* Bazadagi holat — bitta o'qish, qatorma-qator so'rov EMAS */
     var bazadagi = {}, hammasi = _t2QatorlarOl(ob.id);
     for(var h = 0; h < hammasi.length; h++) bazadagi[hammasi[h].id] = hammasi[h];
+
+    /* ⚠️ ФАКТ `t2_daraxt` da YO'Q — u hujjatlardan yig'iladi va faqat
+     * `t2_qator_holat` da bor. Uni o'qimasak `fakt_hajm` undefined bo'lib,
+     * har sinxda «0 dan X ga o'zgardi» deb TAKRORIY hujjat yaratilardi —
+     * fakt har safar ikkilanib ketardi. Shuning uchun alohida o'qiymiz. */
+    var faktJoriy = {};
+    if(iFakt >= 0){
+      var hol = _t2HolatlarOl(ob.id);
+      for(var hh = 0; hh < hol.length; hh++){
+        faktJoriy[hol[hh].qator_id] = Number(hol[hh].fakt_hajm || 0);
+      }
+    }
 
     var MAYDON = [
       {ust: 3,  nom: 'nom',    matn: true},
@@ -725,14 +782,44 @@ function apiT2VaraqQaytar(obyekt){
     var ozgardi = 0, ziddiyat = [], xatolar = [], tekshirildi = 0;
 
     for(var i = 0; i < qiy.length; i++){
-      var id = Number(qiy[i][17]);                 // 18-ustun: _id
+      var id = Number(qiy[i][iId]);                 // _id (sarlavhadan topilgan)
       if(!id) continue;                             // xizmat/bo'sh qator
       var baza = bazadagi[id];
       if(!baza) continue;                           // bazadan o'chgan
       tekshirildi++;
 
-      var kutilganV = qiy[i][18];                   // 19-ustun: _v
+      var kutilganV = (iVer >= 0) ? qiy[i][iVer] : null;
       kutilganV = (kutilganV === '' || kutilganV == null) ? null : Number(kutilganV);
+
+      /* ── ФАКТ ustuni ALOHIDA ishlanadi ──────────────────────────────
+       * Boshqa maydonlar (nom/birlik/hajm/narx) `t2_qator_tahrir` bilan
+       * TO'G'RIDAN-TO'G'RI yoziladi. ФАКТ esa unday EMAS: u hujjatlardan
+       * (`t2_akt` tur='fakt') YIG'ILADI, shuning uchun ustiga yozib
+       * bo'lmaydi. Varaqdagi qiymat JAMI ni bildiradi, demak farqni
+       * hisoblab yangi hujjat yaratish kerak — buni `t2_fakt_belgila`
+       * qiladi. Manfiy farq (перерасчёт) ham qabul qilinadi. */
+      if(iFakt >= 0){
+        var faktXom = qiy[i][iFakt];
+        if(faktXom !== '' && faktXom != null && String(faktXom).indexOf('нарх') < 0){
+          var faktYangi = Number(faktXom);
+          var faktEski = Number(faktJoriy[id] || 0);
+          if(isFinite(faktYangi) && Math.abs(faktYangi - faktEski) > 0.0000001){
+            try{
+              var fr = _t2Rpc('t2_fakt_belgila', {
+                p_qator_id: id, p_yangi_jami: faktYangi, p_kim: 'kozgu'});
+              if(fr && fr.ok){
+                if(!fr.ozgarmadi) ozgardi++;
+              }else{
+                ziddiyat.push({qator: sarlavha + 1 + i, nom: baza.nom,
+                               maydon: 'fakt', sabab: (fr && fr.xabar) || 'yozilmadi'});
+              }
+            }catch(ef){
+              xatolar.push('«' + (baza.nom || id) + '» / fakt: ' +
+                           ((ef && ef.message) || ef));
+            }
+          }
+        }
+      }
 
       for(var m = 0; m < MAYDON.length; m++){
         var f = MAYDON[m], xom = qiy[i][f.ust - 1];
