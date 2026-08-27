@@ -23,6 +23,7 @@ import TezlikSinovi from './admin/sahifalar/TezlikSinovi';
 const TestShell     = lazy(() => import('./test02/TestShell'));
 const TestKorzinka  = lazy(() => import('./test02/TestKorzinka'));
 const TestXarita    = lazy(() => import('./test02/TestXarita'));
+const TestKontragent = lazy(() => import('./test02/TestKontragent'));
 const TestObyektlar = lazy(() => import('./test02/TestObyektlar'));
 const TestSmetaBirlashgan = lazy(() => import('./test02/TestSmetaBirlashgan'));
 const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
@@ -108,6 +109,7 @@ export default function App() {
             <Route index element={<Navigate to="/admin/test/obyektlar" replace />} />
             <Route path="korzinka" element={<TestKorzinka />} />
             <Route path="xarita" element={<TestXarita />} />
+            <Route path="kontragent" element={<TestKontragent />} />
             <Route path="obyektlar" element={<TestObyektlar />} />
             <Route path="import" element={<TestSmetaBirlashgan />} />
             <Route path="grafik" element={<TestGrafik />} />

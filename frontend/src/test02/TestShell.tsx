@@ -40,6 +40,7 @@ const TEST_MENYU = [
   { yol: '/admin/test/grafik',    nom: 'Grafik',        Ikonka: CalendarDays },
   { yol: '/admin/test/spravochnik',nom: 'Ish turlari (Spravochnik)',  Ikonka: BookOpen },
   { yol: '/admin/test/obyektlar', nom: 'Obyektlar',    Ikonka: Building2 },
+  { yol: '/admin/test/kontragent',nom: 'Kontragentlar',Ikonka: Building2 },
   { yol: '/admin/test/narxlar',   nom: 'Narxlar',      Ikonka: Tags },
   { yol: '/admin/test/shartnomalar', nom: 'Shartnomalar', Ikonka: Briefcase },
   { yol: '/admin/test/xarita',    nom: 'Mind Map', Ikonka: Network },

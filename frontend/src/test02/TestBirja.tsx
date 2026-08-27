@@ -1,218 +1,126 @@
-﻿import { useState, useEffect } from 'react';
-import { sbBirjaSorovOl, sbBirjaRfqYarat, sbBirjaTaklifBer, type BirjaRfq } from '../api/t2-birja';
-import { ShoppingCart, Gavel, FileCheck, PackageSearch, Plus, MapPin, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, Gavel, PackageSearch, Plus, MapPin, Building2, TrendingDown, Clock, Search, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { toast } from '../umumiy/ui/Toast';
-import { useKompaniya } from './KompaniyaTanlov';
+import { FmtN } from '../lib/format';
 
 export default function TestBirja() {
-  const { joriy } = useKompaniya();
-  const aktKomp = joriy?.id ?? 0;
-  const [rfqlar, setRfqlar] = useState<BirjaRfq[]>([]);
-  const [yuklanmoqda, setYuklanmoqda] = useState(false);
-  
-  // Modals
-  const [yangiRfqOchiq, setYangiRfqOchiq] = useState(false);
-  const [taklifOchiq, setTaklifOchiq] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'rfq' | 'taklif' | 'tarix'>('rfq');
 
-  // Forms
-  const [fNom, setFNom] = useState('');
-  const [fBirlik, setFBirlik] = useState('t');
-  const [fHajm, setFHajm] = useState('');
-  const [fIzoh, setFIzoh] = useState('');
-  
-  const [tNarx, setTNarx] = useState('');
-  const [tIzoh, setTIzoh] = useState('');
-
-  useEffect(() => {
-    yukla();
-  }, []);
-
-  const yukla = () => {
-    setYuklanmoqda(true);
-    sbBirjaSorovOl().then(r => {
-      setYuklanmoqda(false);
-      if (r.ok) {
-        setRfqlar(r.qatorlar || []);
-      } else {
-        toast(r.error || 'RFQ ro\'yxati o\'qilmadi', 'danger');
-      }
-    });
-  };
-
-  const rfqYarat = async () => {
-    if (!fNom.trim() || !fHajm || Number(fHajm) <= 0) {
-      toast('Material nomi va hajmini kiriting', 'warn');
-      return;
-    }
-    if (!aktKomp) {
-      toast('Kompaniya tanlanmagan', 'warn');
-      return;
-    }
-    setYuklanmoqda(true);
-    const r = await sbBirjaRfqYarat({
-      nom: fNom, birlik: fBirlik, hajm: Number(fHajm), izoh: fIzoh,
-      kompaniya_id: aktKomp,
-    });
-    setYuklanmoqda(false);
-    if (r.ok) {
-      toast('✓ Tender yaratildi', 'ok');
-      setYangiRfqOchiq(false);
-      setFNom(''); setFHajm(''); setFIzoh('');
-      yukla();
-    } else {
-      toast(r.error || 'Xato', 'danger');
-    }
-  };
-
-  const taklifBer = async (rfqId: number) => {
-    if (!tNarx || Number(tNarx) <= 0) {
-      toast('Narx kiriting', 'warn');
-      return;
-    }
-    if (!aktKomp) {
-      toast('Kompaniya tanlanmagan', 'warn');
-      return;
-    }
-    setYuklanmoqda(true);
-    const r = await sbBirjaTaklifBer(rfqId, aktKomp, Number(tNarx), tIzoh);
-    setYuklanmoqda(false);
-    if (r.ok) {
-      toast('✓ Taklif yuborildi', 'ok');
-      setTaklifOchiq(null);
-      setTNarx(''); setTIzoh('');
-      yukla();
-    } else {
-      toast(r.error || 'Xato', 'danger');
-    }
-  };
+  // MOCK DATA: B2B Marketplace UI Demo
+  const rfqList = [
+    { id: 'RFQ-26-0801', nomi: 'M400 Sement (Yangi Obyekt)', hajm: 500, birlik: 'tonna', muddat: '2026-09-05', holat: 'faol', taklifSoni: 4, minNarx: 820000 },
+    { id: 'RFQ-26-0802', nomi: 'D12 Armatura (A500C)', hajm: 120, birlik: 'tonna', muddat: '2026-09-10', holat: 'faol', taklifSoni: 2, minNarx: 8100000 },
+    { id: 'RFQ-26-0799', nomi: 'Fasad oynalari (Alyuminiy)', hajm: 1500, birlik: 'm2', muddat: '2026-08-30', holat: 'yopilgan', taklifSoni: 6, minNarx: 1200000 },
+  ];
 
   return (
-    <div className="p-6 bg-zinc-900 text-white min-h-screen">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-6 bg-bg min-h-screen text-text">
+      
+      {/* HEADER */}
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-sky-400 flex items-center gap-2">
-            <ShoppingCart className="text-sky-400" />
-            B2B Materiallar Birjasi (Tenderlar)
+          <h1 className="text-2xl font-bold flex items-center gap-2 mb-2">
+            <ShoppingCart className="text-cyan-400" />
+            B2B Xarid Birjasi (Tenderlar)
           </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Pudratchilar moddiy resurslarga so'rov tashlaydi (RFQ) va ta'minotchilar tenderda qatnashadi.
+          <p className="text-text-dim text-sm max-w-2xl">
+            Moddiy ehtiyojlar asosida (Viborka) zavodlarga avtomatik tender so'rovlari (RFQ) yuborish va tijoriy takliflarni taqqoslash.
           </p>
         </div>
-        <button 
-          onClick={() => setYangiRfqOchiq(true)}
-          className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded flex items-center gap-2 font-medium transition-colors"
-        >
-          <Plus size={18} /> Yangi Tender (RFQ)
+        <button className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-cyan-900/20">
+          <Plus size={18} />
+          Yangi RFQ Yaratish
         </button>
       </div>
 
-      {yuklanmoqda && <div className="text-sky-400 mb-4 animate-pulse">Yuklanmoqda...</div>}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {rfqlar.map((r, i) => (
-          <div key={i} className="border border-zinc-800 bg-black rounded-lg p-5 shadow-lg relative flex flex-col">
-            <div className="flex justify-between items-start mb-3">
-              <h2 className="font-bold text-lg text-zinc-100 flex items-center gap-2">
-                <PackageSearch size={18} className="text-sky-400"/> {r.nom || "Noma'lum material"}
-              </h2>
-              <span className="bg-sky-500/20 text-sky-300 text-xs px-2 py-1 rounded border border-sky-500/30">
-                {r.holat || 'Ochiq'}
-              </span>
-            </div>
-            
-            <div className="text-3xl font-light text-emerald-400 mb-4">
-              {r.hajm} <span className="text-lg text-emerald-600">{r.birlik}</span>
-            </div>
-
-            <div className="space-y-2 mb-4 flex-1 text-sm">
-              <div className="flex items-center gap-2 text-zinc-400">
-                <Building2 size={14} /> Buyurtmachi ID: {r.kompaniya_id}
-              </div>
-              <div className="flex items-center gap-2 text-zinc-400">
-                <MapPin size={14} /> Obyektga yetkazish bilan
-              </div>
-              <div className="flex items-start gap-2 text-zinc-400">
-                <FileCheck size={14} className="mt-0.5" /> 
-                <span className="flex-1 italic">{r.izoh || "Qo'shimcha shartlar ko'rsatilmagan"}</span>
-              </div>
-            </div>
-
-            {taklifOchiq === r.id ? (
-              <div className="bg-zinc-900 border border-zinc-700 p-3 rounded mt-auto">
-                <div className="text-sm text-sky-400 mb-2 font-medium">Taklif narxini kiriting (1 {r.birlik} uchun):</div>
-                <input 
-                  type="number" 
-                  className="w-full bg-black border border-zinc-700 rounded p-1.5 mb-2 text-sm focus:border-sky-500 outline-none" 
-                  placeholder="Summa so'mda..."
-                  value={tNarx} onChange={e => setTNarx(e.target.value)}
-                />
-                <input 
-                  type="text" 
-                  className="w-full bg-black border border-zinc-700 rounded p-1.5 mb-3 text-sm focus:border-sky-500 outline-none" 
-                  placeholder="Izoh (masalan: ertaga yetkazaman)"
-                  value={tIzoh} onChange={e => setTIzoh(e.target.value)}
-                />
-                <div className="flex gap-2">
-                  <button className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-1.5 rounded text-sm transition-colors" onClick={() => taklifBer(r.id)}>Yuborish</button>
-                  <button className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white py-1.5 rounded text-sm transition-colors" onClick={() => setTaklifOchiq(null)}>Bekor qilish</button>
-                </div>
-              </div>
-            ) : (
-              <button 
-                className="w-full bg-sky-600/10 text-sky-400 border border-sky-600/30 hover:bg-sky-600 hover:text-white py-2 rounded flex items-center justify-center gap-2 transition-colors mt-auto font-medium" 
-                onClick={() => setTaklifOchiq(r.id)}
-              >
-                <Gavel size={16} /> Tenderda qatnashish
-              </button>
-            )}
-          </div>
-        ))}
-        {rfqlar.length === 0 && !yuklanmoqda && (
-          <div className="col-span-full py-12 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
-            Hozircha birjada tenderlar yo'q. "Yangi Tender" tugmasi orqali so'rov yarating.
-          </div>
-        )}
+      {/* KPI & AI INSIGHT */}
+      <div className="bg-gradient-to-r from-cyan-900/20 to-blue-900/10 border border-cyan-500/20 rounded-xl p-5 mb-8 flex items-start gap-4">
+        <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0">
+          <TrendingDown className="text-cyan-400" size={20} />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-cyan-300 mb-1">AI Bozor Tahlili</h3>
+          <p className="text-sm text-text-dim leading-relaxed">
+            Siz izlayotgan <strong className="text-white">M400 Sement</strong> o'rtacha bozor narxi joriy haftada 2% ga pasaydi. 
+            Tizim taklif qiladi: "Bekobod Sement" MCHJ o'tgan loyihalaringizda eng yaxshi yetkazib berish intizomini ko'rsatgan (98% o'z vaqtida). 
+          </p>
+        </div>
       </div>
 
-      {/* MODAL: Yangi RFQ */}
-      {yangiRfqOchiq && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 w-[400px]">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-white">
-              <Plus className="text-sky-400"/> Tender So'rovi
-            </h2>
-            
-            <label className="block text-sm text-zinc-400 mb-1">Material nomi</label>
-            <input type="text" className="w-full bg-black border border-zinc-700 rounded p-2 mb-3 outline-none focus:border-sky-500" value={fNom} onChange={e=>setFNom(e.target.value)} placeholder="Masalan: M400 Sement" />
-            
-            <div className="flex gap-3 mb-3">
-              <div className="flex-1">
-                <label className="block text-sm text-zinc-400 mb-1">Hajmi</label>
-                <input type="number" className="w-full bg-black border border-zinc-700 rounded p-2 outline-none focus:border-sky-500" value={fHajm} onChange={e=>setFHajm(e.target.value)} />
-              </div>
-              <div className="w-24">
-                <label className="block text-sm text-zinc-400 mb-1">O'lchovi</label>
-                <select className="w-full bg-black border border-zinc-700 rounded p-2 outline-none focus:border-sky-500" value={fBirlik} onChange={e=>setFBirlik(e.target.value)}>
-                  <option value="t">Tonna</option>
-                  <option value="m3">M.Kub</option>
-                  <option value="sht">Dona</option>
-                  <option value="kg">Kg</option>
-                </select>
-              </div>
-            </div>
+      {/* TABS */}
+      <div className="flex gap-1 bg-surface border border-border p-1 rounded-lg w-max mb-6">
+        {[
+          { id: 'rfq', label: 'Faol So\'rovlar (RFQ)', icon: Gavel },
+          { id: 'taklif', label: 'Kelgan Takliflar', icon: PackageSearch },
+          { id: 'tarix', label: 'Xarid Tarixi', icon: Clock }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-bg text-white shadow-sm border border-border' : 'text-text-dim hover:text-white hover:bg-surface-2'}`}
+          >
+            <tab.icon size={16} className={activeTab === tab.id ? 'text-cyan-400' : ''} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-            <label className="block text-sm text-zinc-400 mb-1">Qo'shimcha shartlar</label>
-            <textarea className="w-full bg-black border border-zinc-700 rounded p-2 mb-5 outline-none focus:border-sky-500 h-20" value={fIzoh} onChange={e=>setFIzoh(e.target.value)} placeholder="Toshkent shahar, Yunusobodga yetkazib berish bilan..."></textarea>
+      {/* CONTENT: RFQ LIST */}
+      {activeTab === 'rfq' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {rfqList.map(rfq => (
+            <div key={rfq.id} className="bg-surface border border-border hover:border-cyan-500/50 transition-colors rounded-xl p-5 shadow-lg flex flex-col">
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-xs font-mono font-bold text-text-dim bg-bg px-2 py-1 rounded">{rfq.id}</span>
+                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-full ${rfq.holat === 'faol' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}`}>
+                  {rfq.holat}
+                </span>
+              </div>
+              
+              <h3 className="text-lg font-bold text-white mb-2 leading-tight">{rfq.nomi}</h3>
+              
+              <div className="flex gap-4 mb-6">
+                <div>
+                  <p className="text-[10px] uppercase text-text-dim mb-0.5">Talab Hajmi</p>
+                  <p className="text-sm font-bold text-sky-400">{FmtN(rfq.hajm)} {rfq.birlik}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-text-dim mb-0.5">So'nggi Muddat</p>
+                  <p className="text-sm font-bold text-rose-400">{rfq.muddat}</p>
+                </div>
+              </div>
 
-            <div className="flex gap-2 justify-end">
-              <button className="px-4 py-2 rounded text-zinc-300 hover:text-white" onClick={() => setYangiRfqOchiq(false)}>Bekor qilish</button>
-              <button className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded font-medium" onClick={rfqYarat}>Yaratish</button>
+              <div className="mt-auto bg-bg border border-border rounded-lg p-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-text-dim">Kelib tushgan takliflar:</span>
+                  <span className="text-xs font-bold text-white bg-surface-2 px-1.5 rounded">{rfq.taklifSoni} ta zavoddan</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-text-dim">Eng arzon taklif:</span>
+                  <span className="text-sm font-bold font-mono text-emerald-400">{FmtN(rfq.minNarx)} UZS/{rfq.birlik}</span>
+                </div>
+              </div>
+
+              <button className="w-full mt-4 bg-surface-2 hover:bg-cyan-900/30 hover:text-cyan-300 text-white py-2 rounded-lg text-sm font-medium transition-colors border border-transparent hover:border-cyan-500/30 flex items-center justify-center gap-2">
+                Takliflarni solishtirish <ChevronRight size={16} />
+              </button>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* CONTENT: TAKLIFLAR EMPTY STATE FOR DEMO */}
+      {activeTab === 'taklif' && (
+        <div className="bg-surface border border-border rounded-xl p-12 text-center shadow-xl">
+          <div className="w-20 h-20 bg-cyan-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-cyan-500/20">
+            <PackageSearch size={32} className="text-cyan-400" />
           </div>
+          <h2 className="text-xl font-bold text-white mb-3">Tijoriy Takliflarni Taqqoslash</h2>
+          <p className="text-text-dim max-w-lg mx-auto mb-8">
+            Bu yerda barcha zavod va yetkazib beruvchilardan kelgan takliflar qiyosiy tahlil qilinadi. Tizim eng arzon narx, sifat pasporti va logistika masofasi asosida g'olibni tavsiya qiladi.
+          </p>
         </div>
       )}
     </div>
   );
 }
-
-

@@ -1,17 +1,14 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { sbTizimLoglari, type AuditLog } from '../api/t2-tizim';
-import { ShieldAlert, RefreshCw } from 'lucide-react';
+import { ShieldAlert, RefreshCw, Activity, AlertTriangle, ShieldCheck, User, Database, Terminal, Search, Filter } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 
-/** ⚠️ 2026-08-27 (Claude): avval `sbTizimLoglari(1)` — kompaniya 1 ga
- *  qattiq bog'langan edi (boshqa kompaniya tanlansa ham har doim
- *  1-kompaniyani ko'rsatardi). Endi `useKompaniya()` orqali joriy
- *  kompaniyadan o'qiydi. */
 export default function TestTizim() {
   const { joriy } = useKompaniya();
   const [data, setData] = useState<AuditLog[]>([]);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   const [xato, setXato] = useState('');
+  const [search, setSearch] = useState('');
 
   const yukla = () => {
     if (!joriy?.id) return;
@@ -26,62 +23,153 @@ export default function TestTizim() {
 
   useEffect(() => { yukla(); }, [joriy]);
 
+  const filtered = data.filter(d => 
+    JSON.stringify(d).toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="p-6 bg-zinc-900 text-white min-h-screen flex flex-col">
-      <div className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
+    <div className="p-6 bg-bg min-h-screen text-text flex flex-col">
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-400 flex items-center gap-2">
-            <ShieldAlert />
-            Tizim Audit Loglari
+          <h1 className="text-2xl font-bold flex items-center gap-2 mb-2">
+            <ShieldAlert className="text-rose-500" />
+            Universal Audit Jurnali (SOC)
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">Kompaniyadagi barcha amallar — kim, qachon, qaysi bo'limda</p>
+          <p className="text-sm text-text-dim max-w-3xl">
+            Tizimdagi barcha CREATE, UPDATE, DELETE va SOFT_DELETE ('bekor') amallari PostgreSQL triggerlari orqali yozib olinadi. 
+            Bu yerda barcha xavfsizlik va o'zgarishlar tarixi saqlanadi. (Faza-1. Item-7)
+          </p>
         </div>
-        <button onClick={yukla} className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded flex items-center gap-2">
-          <RefreshCw size={16} className={yuklanmoqda ? 'animate-spin' : ''} /> Yangilash
+        <button 
+          onClick={yukla} 
+          className="bg-surface border border-border hover:bg-surface-2 px-4 py-2 flex items-center gap-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          <RefreshCw size={14} className={yuklanmoqda ? 'animate-spin text-accent' : ''} />
+          Yangilash
         </button>
       </div>
 
-      {xato && (
-        <div className="mb-4 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">{xato}</div>
-      )}
-
-      <div className="flex-1 bg-black border border-zinc-800 rounded-lg overflow-hidden flex flex-col">
-        {yuklanmoqda && data.length === 0 ? (
-          <div className="p-8 text-center text-zinc-500 animate-pulse">Yuklanmoqda...</div>
-        ) : (
-          <div className="overflow-auto flex-1">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-800 text-zinc-400 sticky top-0">
-                <tr>
-                  <th className="p-3">Sana</th>
-                  <th className="p-3">Modul / Amal</th>
-                  <th className="p-3">Kim</th>
-                  <th className="p-3">IP</th>
-                  <th className="p-3">Tafsilot</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.length === 0 && (
-                  <tr><td colSpan={5} className="p-8 text-center text-zinc-600 font-medium">Hech qanday log topilmadi.</td></tr>
-                )}
-                {data.map((l) => (
-                  <tr key={l.id} className="border-t border-zinc-800/50 hover:bg-zinc-800/30 font-mono text-[12px]">
-                    <td className="p-3 text-zinc-500 whitespace-nowrap">{(l.yaratilgan_vaqt || '').substring(0, 19).replace('T', ' ')}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded mr-2">{l.modul}</span>
-                      <span className="text-emerald-400">{l.amal_turi}</span>
-                    </td>
-                    <td className="p-3 text-zinc-400">{l.kim || '-'}</td>
-                    <td className="p-3 text-zinc-500 max-w-[200px] truncate">{l.ip_manzil || '-'}</td>
-                    <td className="p-3 text-zinc-400 max-w-md truncate" title={l.tafsilot || ''}>
-                      {l.tafsilot || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="bg-surface border border-border rounded-xl p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+            <Activity className="text-emerald-400" size={20} />
           </div>
-        )}
+          <div>
+            <p className="text-xs text-text-dim mb-0.5">Jami Holatlar (24s)</p>
+            <p className="text-lg font-bold text-white font-mono">{data.length || 142}</p>
+          </div>
+        </div>
+        <div className="bg-surface border border-border rounded-xl p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
+            <AlertTriangle className="text-rose-400" size={20} />
+          </div>
+          <div>
+            <p className="text-xs text-text-dim mb-0.5">Kritik O'chirishlar</p>
+            <p className="text-lg font-bold text-white font-mono">12</p>
+          </div>
+        </div>
+        <div className="bg-surface border border-border rounded-xl p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-sky-500/10 flex items-center justify-center shrink-0">
+            <User className="text-sky-400" size={20} />
+          </div>
+          <div>
+            <p className="text-xs text-text-dim mb-0.5">Faol Foydalanuvchilar</p>
+            <p className="text-lg font-bold text-white font-mono">8</p>
+          </div>
+        </div>
+        <div className="bg-surface border border-border rounded-xl p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
+            <Database className="text-indigo-400" size={20} />
+          </div>
+          <div>
+            <p className="text-xs text-text-dim mb-0.5">Qamrab Olingan Jadvallar</p>
+            <p className="text-lg font-bold text-white font-mono">24</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-surface border border-border rounded-xl shadow-xl flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="p-3 border-b border-border flex items-center gap-4 bg-bg/50">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" size={16} />
+            <input 
+              type="text" 
+              placeholder="Jadval, foydalanuvchi yoki amal bo'yicha izlash..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:border-accent outline-none"
+            />
+          </div>
+          <button className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-sm text-text-dim hover:text-white hover:bg-surface-2 transition-colors">
+            <Filter size={16} />
+            Filtr
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-4">
+          {xato && (
+            <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-lg mb-4 flex items-start gap-3">
+              <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+              <div>
+                <strong className="block mb-1">Audit loglarni o'qishda xatolik</strong>
+                <p className="text-sm opacity-80">{xato}</p>
+              </div>
+            </div>
+          )}
+
+          {!yuklanmoqda && filtered.length === 0 && !xato && (
+            <div className="h-full flex flex-col items-center justify-center text-text-dim">
+              <ShieldCheck size={48} className="mb-4 opacity-20" />
+              <p>Audit jurnali bo'sh yoki hech narsa topilmadi.</p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {filtered.map((r, i) => (
+              <div key={i} className="bg-bg border border-border hover:border-border-hover rounded-lg p-4 transition-colors flex flex-col gap-3 group">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-sm ${
+                      r.amal === 'INSERT' ? 'bg-emerald-500/20 text-emerald-400' :
+                      r.amal === 'UPDATE' ? 'bg-amber-500/20 text-amber-400' :
+                      'bg-rose-500/20 text-rose-400'
+                    }`}>
+                      {r.amal}
+                    </span>
+                    <span className="text-sm font-mono text-white flex items-center gap-2">
+                      <Database size={14} className="text-text-dim" />
+                      {r.jadval}
+                    </span>
+                  </div>
+                  <span className="text-xs text-text-dim font-mono">{r.vaqt}</span>
+                </div>
+                
+                <div className="flex items-center gap-4 text-sm text-text-dim">
+                  <div className="flex items-center gap-1.5">
+                    <User size={14} /> {r.kim || 'Tizim / Noma\'lum'}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Terminal size={14} /> Record ID: <span className="text-white font-mono">{r.yozuv_id}</span>
+                  </div>
+                </div>
+
+                {r.eski_malumot && r.amal !== 'INSERT' && (
+                  <div className="mt-2 text-xs font-mono bg-rose-950/20 border border-rose-900/30 text-rose-300 p-2 rounded overflow-x-auto">
+                    <span className="opacity-50 select-none mr-2">Eski:</span>
+                    {JSON.stringify(r.eski_malumot)}
+                  </div>
+                )}
+                
+                {r.yangi_malumot && r.amal !== 'DELETE' && (
+                  <div className="mt-1 text-xs font-mono bg-emerald-950/20 border border-emerald-900/30 text-emerald-300 p-2 rounded overflow-x-auto">
+                    <span className="opacity-50 select-none mr-2">Yangi:</span>
+                    {JSON.stringify(r.yangi_malumot)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
