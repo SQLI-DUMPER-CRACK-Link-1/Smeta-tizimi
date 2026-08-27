@@ -1,7 +1,7 @@
 import { imzola, Rol } from '../_shared/auth';
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
-  let req: { login?: string; parol?: string; isBoss?: boolean } = {};
+  let req: { login?: string; parol?: string; isBoss?: boolean; isSuperadmin?: boolean } = {};
   try {
     req = await ctx.request.json();
   } catch (err) {

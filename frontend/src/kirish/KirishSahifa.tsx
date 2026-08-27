@@ -64,6 +64,28 @@ export default function KirishSahifa() {
     }
   };
 
+  const handleSuperadminLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const r = await fetch('/api/kirish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isSuperadmin: true }),
+      });
+      const data = await r.json();
+      if (data.ok && data.rol === 'superadmin') {
+        navigate('/admin/obyektlar');
+      } else {
+        setError('Xato yuz berdi');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-bg flex items-center justify-center">
       {/* 3D Background */}
@@ -157,14 +179,25 @@ export default function KirishSahifa() {
             <div className="flex-1 h-px bg-border"></div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleBossLogin}
-            disabled={loading}
-            className="w-full bg-surface-2 border border-border hover:bg-surface-3 text-text rounded-lg py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            Раҳбар кириши (паролсиз)
-          </button>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleBossLogin}
+              disabled={loading}
+              className="w-full bg-surface-2 border border-border hover:bg-surface-3 text-text rounded-lg py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              Раҳбар кириши (паролсиз)
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSuperadminLogin}
+              disabled={loading}
+              className="w-full bg-sky-600/20 border border-sky-500/30 hover:bg-sky-600/40 text-sky-400 rounded-lg py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              Anvar (Superadmin)
+            </button>
+          </div>
         </motion.div>
       </div>
     </div>
