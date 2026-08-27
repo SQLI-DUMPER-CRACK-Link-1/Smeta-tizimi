@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle, ChevronDown, ChevronRight, Archive, Eye, EyeOff } from 'lucide-react';
-import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users } from 'lucide-react';
+import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
@@ -14,6 +14,7 @@ const TIZIM_02_GURUHLAR = [
     id: 'asosiy',
     menyular: [
       { yol: '/admin/test/hisobot', nom: 'Boss Tahlil', Ikonka: BarChart },
+      { yol: '/admin/test/loyiha', nom: 'Loyihalar', Ikonka: FolderKanban },
       { yol: '/admin/test/obyektlar', nom: 'Obyektlar', Ikonka: Building2 },
       { yol: '/admin/test/xarita', nom: 'Mind Map', Ikonka: Network },
       { yol: '/admin/test/grafik', nom: 'Grafik', Ikonka: CalendarDays },
