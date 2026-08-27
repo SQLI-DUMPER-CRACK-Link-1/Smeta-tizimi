@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { sbT2ObyektlarOl, type T2Obyekt } from '../api/supabase';
 import { Building2, HardHat, Warehouse, FileText, Pickaxe, Map, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
@@ -86,7 +86,7 @@ export default function TestXarita() {
               const startY = rootCenterY;
               const endY = i * stepY + obHeight / 2;
               return (
-                 <path key={i} d={M 0  C 32 , 32 , 64 } fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                 <path key={i} d={`M 0 ${startY} C 32 ${startY}, 32 ${endY}, 64 ${endY}`} fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
               );
             })}
           </svg>
@@ -117,12 +117,12 @@ export default function TestXarita() {
 
                 {/* SVG Connectors to Sub-modules */}
                 <svg className="absolute left-[256px] top-0 w-12 h-full pointer-events-none z-0">
-                   {/* Top: Sklad (y=32) */}
-                   <path d="M 0 64 C 24 64, 24 32, 48 32" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
-                   {/* Middle: Daraxt (y=64) */}
-                   <path d="M 0 64 L 48 64" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
-                   {/* Bottom: F2 (y=96) */}
-                   <path d="M 0 64 C 24 64, 24 96, 48 96" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                   {/* Top: Sklad (y=18) */}
+                   <path d="M 0 64 C 24 64, 24 18, 48 18" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                   {/* Middle: Daraxt (y=62) */}
+                   <path d="M 0 64 C 24 64, 24 62, 48 62" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                   {/* Bottom: F2 (y=106) */}
+                   <path d="M 0 64 C 24 64, 24 106, 48 106" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
                 </svg>
 
                 {/* Sub-modules */}
