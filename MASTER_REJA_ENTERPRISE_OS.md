@@ -176,30 +176,36 @@ Hali boshlanmagan — kelajak FAZA (10-band, AI Agentlar klasteri).
 
 ---
 
-## Joriy holat xulosasi (2026-08-27, Claude tomonidan)
+## Joriy holat xulosasi (2026-08-28 yangilandi, Claude tomonidan)
 
-Tizim_02 hozir taxminan **FAZA 4-8 ning parcha-parcha qismlarini**
-qamrab oladi (smeta/F2/sklad/shartnoma/AOSR/M:N resurslar), lekin
-**FAZA 1-3 ning poydevor qatlami (multi-tenant RLS, RBAC, "Loyiha"
-darajasi, polimorfik rol) deyarli yo'q** — bularsiz FAZA 4+ ustiga
-qurilgan hamma narsa bitta kompaniya doirasida ishlaydi, ko'p-tenant
-B2B tarmoq sifatida emas.
+Tizim_02 **FAZA 4-8** ning parcha-parcha qismlarini qamrab oladi
+(smeta/F2/sklad/shartnoma/AOSR/M:N resurslar). **FAZA 1-3 poydevori**
+holati:
 
-**Tavsiya etilgan ketma-ketlik** (keyingi sessiyalar uchun, katta →
-kichik emas, poydevor → ustki qavat tartibida, chunki ustiga qurilgan
-narsani keyin qayta yozish qimmatga tushadi):
-1. FAZA 1 dan: RLS siyosatlari (2-band) — hozir `kompaniya_id` filtri
-   FAQAT ilova darajasida (`sb.ts`/`sb-yoz.ts`), bazaning o'zida RLS
-   yo'q. Boshqa mijozning yozuvi noto'g'ri so'rov bilan sizib chiqishi
-   mumkin. **Xavfsizlik jihatidan eng ustuvor.**
-2. "Loyiha" (Project) darajasi — Kompaniya→**Loyiha**→Obyekt. Bir
-   nechta obyektni bitta loyihaga guruhlash — foydalanuvchining "32
-   gektar park" talabining haqiqiy javobi (mindmapdagi chiziq-tortish
-   UI buning USTIGA quriladi, ostisiz emas).
-3. Polimorfik rol — `t2_loyiha_qatnashchi` (kompaniya bitta loyihada
-   pudratchi, boshqasida buyurtmachi bo'la olishi).
-4. STIR/INN enrichment servisi.
-5. Qolgan FAZA 2 (me'yoriy baza, hududiy narxlar) — Antigravity bilan
-   bo'lib olinadi (spravochnik/narxlar ularning domeni).
+| Band | Nima | Holat |
+|---|---|---|
+| 2. Multi-Tenant Master Sxema | `t2_kompaniya`, `t2_foydalanuvchi`, `t2_azolik` | ✅ BOR |
+| 1. Polimorfik tashkilot modeli | `t2_loyiha_qatnashchi` (kompaniya/kontragent × loyiha × rol) | ✅ BOR (2026-08-28) |
+| — | "Loyiha" darajasi — Kompaniya→Loyiha→Obyekt | ✅ BOR |
+| — | Polimorfik ODAM roli — bitta odam kompaniya A da admin, B da rahbar | ✅ BOR (`sess.kompaniyalar: {kompaniya_id, rol}[]`) |
+| 3. Granular RBAC + ABAC | Har amal uchun aniq rol-ruxsat xaritasi | ⚠️ QISMAN — faqat "boss/rahbar yoza olmaydi" (global) + 2 joyda admin/superadmin tekshiruvi. Boshqa yozuvchi rollar (prorab/pto/bugalter) orasida farq YO'Q |
+| 4. STIR/INN enrichment | Kontragent/kompaniya rekvizitini avto-to'ldirish | ❌ YO'Q — API kalit kerak (foydalanuvchi qarori) |
+| 5. RLS siyosatlari | Bazaning o'zida qator darajasidagi xavfsizlik | ❌ YO'Q, **ATAYLAB** — barcha so'rov `service_role` orqali o'tadi, u RLS'ni avtomatik bypass qiladi (Supabase'da BYPASSRLS). RLS policy yozish hozircha **funksional foydasiz** bo'lardi — haqiqiy foyda faqat Supabase Auth + anon key arxitekturasiga o'tilsa (band 6) ma'noli bo'ladi, bu katta refaktor |
+| 6. Auth/session (Supabase Auth+JWT) | Hozir custom cookie (GAS login orqali) | ❌ YO'Q, band 5 bilan bog'liq |
+| 7. Audit jurnali | `t2_audit_log`/`t2_audit_reestr` | ✅ BOR |
+| 8. R2 Object Storage | Obyekt hujjatlari (`t2_obyekt_hujjat`) | ✅ BOR |
+
+**Tavsiya etilgan navbatdagi qadam — Granular RBAC (band 3):**
+Hozir istalgan yozuvchi rol (prorab, pto, bugalter...) bitta kompaniya
+ichida BARCHA amalni bajara oladi — faqat "boss/rahbar" global bloklangan
+va 2 ta amal (majburiy invariant o'tkazish, shartnoma-tashqi ish)
+admin/superadmin'ga cheklangan. Masalan hozir istalgan yozuvchi rol
+`loyiha_yarat`/`kontragent_saqla`/`t2_azolik` boshqaruvi kabi ADMINISTRATIV
+amallarni ham bajara oladi — bu noto'g'ri, lekin **to'g'ri rol xaritasi
+odam (foydalanuvchi) biznes qarori** (qaysi rol nima qila olishi kerak),
+Claude buni o'zicha noldan o'ylab belgilamaydi — buzilish xavfi bor.
+
+RLS/Auth (band 5-6) atayLAB **oxiriga qoldiriladi** — sabab tepada
+yozilgan (funksional foyda yo'q hozirgi arxitekturada).
 
 Bu reja `tizim02/MULOQOT.md` da Antigravity bilan ham baham ko'rilgan.
