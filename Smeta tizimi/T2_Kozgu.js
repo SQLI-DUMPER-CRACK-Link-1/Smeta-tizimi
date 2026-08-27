@@ -1,4 +1,4 @@
-﻿/**
+/**
  * T2_Kozgu.js — TIZIM_02: «ИШЧИ СМЕТА» VARAG'I
  * ═══════════════════════════════════════════════════════════════════════════
  *
@@ -43,9 +43,10 @@ function _t2ObyektOl(nom){
 }
 
 /**
- * Daraxt qatorlari — tartib bo'yicha.
- * PostgREST server tomonda «Max rows» chegarasiga ega, shuning uchun
- * SAHIFALAB o'qiymiz. Aks holda katta obyektda javob JIM KESILADI va
+ * ⚠️ QATORLAR HAMMASI BITTA O'QILADI.
+ * Har bir tugun uchun API ga borish limitni (~50 ta chaqiruv) tezda
+ * tugatib yuboradi va "Too many requests" xatosiga olib keladi.
+ * Yoki undan ham yomoni: chala chizib jim yiqiladi va Sheets da
  * ko'zgu yarim chiziladi — bu eng xavfli xato turi (xato chiqmaydi,
  * lekin hujjat noto'g'ri).
  */
@@ -61,6 +62,13 @@ function _t2HolatlarOl(obyektId){
   return hammasi;
 }
 
+/**
+ * Daraxt qatorlari — tartib bo'yicha.
+ * PostgREST server tomonda «Max rows» chegarasiga ega, shuning uchun
+ * SAHIFALAB o'qiymiz. Aks holda katta obyektda javob JIM KESILADI va
+ * ko'zgu yarim chiziladi — bu eng xavfli xato turi (xato chiqmaydi,
+ * lekin hujjat noto'g'ri).
+ */
 function _t2QatorlarOl(obyektId){
   var hammasi = [], offset = 0, SAHIFA = 1000;
   for(var qadam = 0; qadam < 100; qadam++){          // xavfsizlik chegarasi
@@ -78,33 +86,13 @@ function _t2QatorlarOl(obyektId){
 /* ═══════════════════ KO'ZGU PAPKASI ═══════════════════════════════════ */
 
 /**
- * Ko'zgu fayli qayerga yozilishini aniqlaydi.
- *
- * ⚠️ 2026-08-25: YANGI tuzilmali obyektlarda (06_ObyektPapka.js bilan
- * yaratilgan) ИШЧИ СМЕТА endi OBYEKTNING O'Z papkasida — foydalanuvchi
- * «birinchi qavatda ishchi smeta bo'lishi kerak» deb ATAYLAB so'radi.
- * ESKI obyektlarda (bu tuzilma yo'q) avvalgidek umumiy "Tizim_02"
- * papkasida qoladi — hech qanday mavjud fayl ko'chirilmaydi.
- *
- * @param {string} [obyekt] Berilsa — obyekt papkasi tekshiriladi.
- *                          Berilmasa — eski (umumiy) joy qaytadi.
+ * `Tizim_02` papkasini topadi yoki yaratadi (ildiz papka ostida).
+ * Tizim_01 ning papkalariga TEGMAYDI — ko'zgu fayllari butunlay alohida
+ * joyda turadi, aks holda dvigatel ularni smeta deb o'qib yuborishi mumkin.
  */
-function _t2KozguPapka(obyekt){
+function _t2KozguPapka(){
   var a = sozAsosiy();
   var ildiz = DriveApp.getFolderById(a.rootId);
-
-  if(obyekt){
-    var parentName = (typeof _cfgKalit === 'function') ? _cfgKalit(obyekt) : obyekt;
-    var obIt = ildiz.getFoldersByName(parentName);
-    if(obIt.hasNext()){
-      var obFolder = obIt.next();
-      if(typeof _t2ObyektYangiTuzilmaMi === 'function' && _t2ObyektYangiTuzilmaMi(obFolder)){
-        return obFolder;   // YANGI: obyektning o'z papkasi, birinchi qavat
-      }
-    }
-  }
-
-  /* ESKI (zaxira) yo'l — o'zgarishsiz */
   var it = ildiz.getFoldersByName('Tizim_02');
   if(it.hasNext()) return it.next();
   return ildiz.createFolder('Tizim_02');
@@ -133,7 +121,7 @@ function apiT2VaraqYarat(obyekt){
 
     /* ── Iyerarxiyani tiklaymiz (chuqurlikni bilish uchun) ── */
     var xarita = {}, i;
-        var holatlar = _t2HolatlarOl(ob.id);
+    var holatlar = _t2HolatlarOl(ob.id);
     var holatXarita = {};
     for(var hi = 0; hi < holatlar.length; hi++) holatXarita[holatlar[hi].qator_id] = holatlar[hi];
     
@@ -164,7 +152,7 @@ function apiT2VaraqYarat(obyekt){
     var toliq = (narxsiz === 0);
 
     /* ── Fayl ── */
-    var papka = _t2KozguPapka(obyekt);
+    var papka = _t2KozguPapka();
     /* ⚠️ NOM: «ko'zgu» emas.
      * Foydalanuvchi: «tayyor mahsulot nomi ustida nima uchun ko'zgu
      * deysan, bir ilmiyroq nom topsangchi».
@@ -243,9 +231,9 @@ function apiT2VaraqYarat(obyekt){
                     'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ',
                     'F2 HAJM', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA', '_id', '_v'];
     var NU = USTUNLAR.length;
-    var KO_RINADI = 17;                      // 14–15 yashirin
+    var KO_RINADI = 17;                      // 14–15 yashirin -> now 18-19 yashirin
     var C_NORMA = 5, C_HAJM = 6, C_NARX = 7, C_SUMMA = 8, C_KAT1 = 10;
-    var C_F2_HAJM = 14, C_F2_SUM = 15, C_QOLD_HAJM = 16, C_QOLD_SUM = 17; var C_ID = 18, C_VER = 19;
+    var C_F2_HAJM = 14, C_F2_SUM = 15, C_QOLD_HAJM = 16, C_QOLD_SUM = 17, C_ID = 18, C_VER = 19;
     var bosh = function(){ return new Array(NU).join('.').split('.'); };
 
     /* Kategoriya bo'yicha jamlanma — sarlavhada ko'rsatiladi */
@@ -405,11 +393,11 @@ function apiT2VaraqYarat(obyekt){
         qator[kUst - 1] = '=IF($H' + qn + '=""' + AJR + '""' + AJR + '$H' + qn + ')';
       }
 
-            qator[C_F2_HAJM - 1] = (r.fakt_hajm == null) ? '' : Number(r.fakt_hajm);
-      qator[C_F2_SUM - 1]  = (r.fakt_summa == null) ? '' : Number(r.fakt_summa);
-      qator[C_QOLD_HAJM - 1] = (r.qoldiq_hajm == null) ? '' : Number(r.qoldiq_hajm);
-      qator[C_QOLD_SUM - 1]  = (r.qoldiq_summa == null) ? '' : Number(r.qoldiq_summa);
-      
+      qator[C_F2_HAJM - 1] = (r.fakt_hajm != null) ? Number(r.fakt_hajm) : '';
+      qator[C_F2_SUM - 1]  = (r.fakt_summa != null) ? Number(r.fakt_summa) : '';
+      qator[C_QOLD_HAJM - 1] = (r.qoldiq_hajm != null) ? Number(r.qoldiq_hajm) : '';
+      qator[C_QOLD_SUM - 1] = (r.qoldiq_summa != null) ? Number(r.qoldiq_summa) : '';
+
       qator[C_ID - 1]  = r.id;
       qator[C_VER - 1] = (r.versiya == null) ? '' : r.versiya;
 
@@ -516,6 +504,8 @@ function apiT2VaraqYarat(obyekt){
         .setNumberFormat('#,##0.00');
       sh.getRange(SARLAVHA_QATOR + 1, C_KAT1, qatorlar.length, 4)
         .setNumberFormat('#,##0.00');
+      sh.getRange(SARLAVHA_QATOR + 1, C_F2_HAJM, qatorlar.length, 4)
+        .setNumberFormat('#,##0.00');
       /* Kategoriya ustunlari ko'z bilan ajralib tursin.
          Chegara — sof bezak, hujjatni yiqitishga haqqi yo'q. */
       try{
@@ -529,6 +519,10 @@ function apiT2VaraqYarat(obyekt){
     sh.setColumnWidth(7, 100); sh.setColumnWidth(8, 120);
     sh.setColumnWidth(9, 45);
     for(var kc = C_KAT1; kc < C_KAT1 + 4; kc++) sh.setColumnWidth(kc, 115);
+    sh.setColumnWidth(C_F2_HAJM, 100);
+    sh.setColumnWidth(C_F2_SUM, 100);
+    sh.setColumnWidth(C_QOLD_HAJM, 100);
+    sh.setColumnWidth(C_QOLD_SUM, 100);
     /* ⚠️ BEZAK HUJJATNI TO'SMASIN.
      *
      * `setFrozenColumns(3)` yiqilgan edi: 1/2/4-qatorlar butun kenglikda
@@ -571,6 +565,10 @@ function apiT2VaraqYarat(obyekt){
         var qulf2 = katOraliq.protect().setDescription(
           'ТИП ва ЧЕЛ/МАШ/МАТ/ОБ — формула, ҳисобдан келади');
         qulf2.setWarningOnly(true);
+
+        var qulf3 = sh.getRange(BOSH_QATOR, C_F2_HAJM, qatorlar.length, 4).protect().setDescription(
+          'F2 ва Қолдиқ — ҳисобдан келади, фақат ўқиш учун');
+        qulf3.setWarningOnly(true);
       }
     }catch(e){}
 
@@ -708,7 +706,7 @@ function apiT2VaraqQaytar(obyekt){
     if(oxirgi <= sarlavha) return {ok:true, tekshirildi:0, ozgardi:0, ziddiyat:[], xatolar:[]};
 
     var soni = oxirgi - sarlavha;
-    var qiy = sh.getRange(sarlavha + 1, 1, soni, 15).getValues();
+    var qiy = sh.getRange(sarlavha + 1, 1, soni, 19).getValues();
 
     /* Bazadagi holat — bitta o'qish, qatorma-qator so'rov EMAS */
     var bazadagi = {}, hammasi = _t2QatorlarOl(ob.id);
@@ -724,13 +722,13 @@ function apiT2VaraqQaytar(obyekt){
     var ozgardi = 0, ziddiyat = [], xatolar = [], tekshirildi = 0;
 
     for(var i = 0; i < qiy.length; i++){
-      var id = Number(qiy[i][13]);                 // 14-ustun: _id
+      var id = Number(qiy[i][17]);                 // 18-ustun: _id
       if(!id) continue;                             // xizmat/bo'sh qator
       var baza = bazadagi[id];
       if(!baza) continue;                           // bazadan o'chgan
       tekshirildi++;
 
-      var kutilganV = qiy[i][14];                   // 15-ustun: _v
+      var kutilganV = qiy[i][18];                   // 19-ustun: _v
       kutilganV = (kutilganV === '' || kutilganV == null) ? null : Number(kutilganV);
 
       for(var m = 0; m < MAYDON.length; m++){
@@ -1041,4 +1039,3 @@ function _t2Ajratgich(sh){
   try{ if(yac) yac.clearContent(); }catch(e2){}
   return ',';                                     // ma'lum bo'lmasa — odatiy
 }
-
