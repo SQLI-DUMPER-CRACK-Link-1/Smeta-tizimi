@@ -2,13 +2,13 @@
   "versiya": 1,
   "manba": {
     "jami": 258,
-    "hisobga": 155,
+    "hisobga": 145,
     "tayyor": 126,
     "qisman": 7,
-    "joyida": 93,
+    "joyida": 103,
     "kerakmas": 10
   },
-  "foiz": 84,
+  "foiz": 89,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -122,9 +122,9 @@
       "jami": 15,
       "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 10,
+      "kutilmoqda": 0,
       "kerakmas": 0,
-      "joyida": 5,
+      "joyida": 15,
       "funksiyalar": [
         "apiAntigravityExport",
         "apiFaktSinxron",
@@ -142,10 +142,10 @@
         "apiWebApiLog",
         "apiWebApiSalom"
       ],
-      "egasi": "claude",
-      "ish_holati": "navbatda",
-      "foiz": 0,
-      "kochiriladi": true
+      "egasi": null,
+      "ish_holati": null,
+      "foiz": null,
+      "kochiriladi": false
     },
     "spravochnik": {
       "qatlam": "SUPABASE",
@@ -2376,19 +2376,19 @@
       "qator": 194,
       "argSoni": 0,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - bu SUPABASE'GA SINXRONLAYDIGAN dvigatelning o'zi",
+      "izoh": "GAS -> Supabase ko'zgu sinxronizatsiyasi (kursor asosida bosqichma-bosqich). Ko'chirish mumkin emas - bu funksiya AYNAN o'sha ko'prikning o'zi, ko'chirilsa sinxronlanadigan narsa qolmaydi."
     },
     "apiSupabaseSinxReset": {
       "fayl": "70_Supabase.js",
       "qator": 275,
       "argSoni": 0,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - sinx kursorini nolga qaytaradi (GAS ScriptProperties)",
       "izoh": null
     },
     "apiSupabaseSozlamaOl": {
@@ -2396,9 +2396,9 @@
       "qator": 302,
       "argSoni": 0,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - Supabase URL/kalit GAS ScriptProperties'da saqlanadi",
       "izoh": null
     },
     "apiSupabaseSozlamaSaqla": {
@@ -2406,9 +2406,9 @@
       "qator": 314,
       "argSoni": 2,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - Supabase ulanish sozlamasini GAS tomonida saqlaydi",
       "izoh": null
     },
     "apiSmetaSavol": {
@@ -2446,19 +2446,19 @@
       "qator": 8,
       "argSoni": 2,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - teskari sinxronizatsiya (Postgres/tashqi -> Sheets)",
+      "izoh": "77_ReverseSync.js - ko'prikning teskari yo'nalishi (bazadan Sheetsga qaytarish). Bridge funksiyasi, migratsiya nishoni emas."
     },
     "apiAntigravityExport": {
       "fayl": "78_AntigravityAPI.js",
       "qator": 13,
       "argSoni": 1,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - Antigravity iste'moli uchun GAS export utility",
       "izoh": null
     },
     "apiKodVersiya": {
@@ -2466,9 +2466,9 @@
       "qator": 45,
       "argSoni": 0,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - GAS deploy versiyasini probe qilish uchun (bu sessiyada ko'p marta ishlatilgan)",
       "izoh": null
     },
     "apiWebApiLog": {
@@ -2476,9 +2476,9 @@
       "qator": 163,
       "argSoni": 0,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - Web API'ning o'z jurnali (GAS CacheService)",
       "izoh": null
     },
     "apiWebApiSalom": {
@@ -2486,9 +2486,9 @@
       "qator": 172,
       "argSoni": 0,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - Web API health-check/ping endpoint",
       "izoh": null
     },
     "apiWebApiFunksiyalar": {
@@ -2496,9 +2496,9 @@
       "qator": 191,
       "argSoni": 0,
       "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "kerak emas - GAS'dagi barcha global funksiyalarni sanab beradi (introspection)",
       "izoh": null
     },
     "apiNakrutkaOl": {

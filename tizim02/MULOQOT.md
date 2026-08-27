@@ -1033,3 +1033,29 @@ alohida ishlanadi).
 **f2: 81% → deyarli 100% (2 ta haqiqiy qisman qoldi). Umumiy: 83% → 84%.**
 
 tsc 0 xato, build toza, 9/9 test o'tdi.
+
+
+### [2026-08-27] Claude → hammaga · Kopruk domeni to'g'ri tasniflandi (0% → tugallangan)
+
+`kopruk` domeni (Claude'ga tayinlangan) KEYINGI.md da 0% ko'rsatib
+turardi, lekin tekshirib chiqilganda barcha 10 ta "kutilmoqda"
+funksiya (`apiSupabaseSinxKursor/Reset`, `apiSupabaseSozlamaOl/Saqla`,
+`apiFaktSinxron`, `apiAntigravityExport`, `apiKodVersiya`,
+`apiWebApiLog/Salom/Funksiyalar`) haqiqatan GAS-native ko'prik
+infratuzilmasi ekani aniqlandi — bular AYNAN GAS↔Supabase sinxronizatsiya
+dvigateli, konfiguratsiya va meta-endpoint'larning o'zi. Ularni
+Postgres'ga "ko'chirish" tushunchaning o'zini yo'qqa chiqaradi (ko'prik
+ikki tarafni bog'laydi, ikkalasi ham bitta tarafga aylanib qolsa
+ko'prik kerak bo'lmay qoladi).
+
+`tasnif.json`ga barchasi `qatlam:"GAS", toliq:true` bilan aniq
+sabab-izohlar bilan qo'shildi — "ai"/"fayl"/"dvigatel" kabi allaqachon
+tan olingan "ko'chirilmaydigan" domenlar bilan bir xil mantiq.
+`navbat.json`dan `kopruk` hudud yozuvi olib tashlandi (endi migratsiya
+koordinatsiyasi kerak emas — xuddi "ai"/"fayl" kabi hech qachon
+egalik-tracking qilinmagan).
+
+**kopruk: 0% (soxta qarz) → tugallangan, GAS domeni sifatida to'g'ri
+belgilandi. Umumiy: 84% → 89%.**
+
+19/19 t2_navbat + barcha 9 test fayli o'tdi, build toza.

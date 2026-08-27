@@ -921,6 +921,58 @@
       "qopladi": "GAS qatlamida qoladi",
       "toliq": true,
       "qatlam": "GAS"
+    },
+    "apiSupabaseSinxKursor": {
+      "qopladi": "kerak emas - bu SUPABASE'GA SINXRONLAYDIGAN dvigatelning o'zi",
+      "toliq": true,
+      "qatlam": "GAS",
+      "izoh": "GAS -> Supabase ko'zgu sinxronizatsiyasi (kursor asosida bosqichma-bosqich). Ko'chirish mumkin emas - bu funksiya AYNAN o'sha ko'prikning o'zi, ko'chirilsa sinxronlanadigan narsa qolmaydi."
+    },
+    "apiSupabaseSinxReset": {
+      "qopladi": "kerak emas - sinx kursorini nolga qaytaradi (GAS ScriptProperties)",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiSupabaseSozlamaOl": {
+      "qopladi": "kerak emas - Supabase URL/kalit GAS ScriptProperties'da saqlanadi",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiSupabaseSozlamaSaqla": {
+      "qopladi": "kerak emas - Supabase ulanish sozlamasini GAS tomonida saqlaydi",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiFaktSinxron": {
+      "qopladi": "kerak emas - teskari sinxronizatsiya (Postgres/tashqi -> Sheets)",
+      "toliq": true,
+      "qatlam": "GAS",
+      "izoh": "77_ReverseSync.js - ko'prikning teskari yo'nalishi (bazadan Sheetsga qaytarish). Bridge funksiyasi, migratsiya nishoni emas."
+    },
+    "apiAntigravityExport": {
+      "qopladi": "kerak emas - Antigravity iste'moli uchun GAS export utility",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiKodVersiya": {
+      "qopladi": "kerak emas - GAS deploy versiyasini probe qilish uchun (bu sessiyada ko'p marta ishlatilgan)",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiWebApiLog": {
+      "qopladi": "kerak emas - Web API'ning o'z jurnali (GAS CacheService)",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiWebApiSalom": {
+      "qopladi": "kerak emas - Web API health-check/ping endpoint",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
+    "apiWebApiFunksiyalar": {
+      "qopladi": "kerak emas - GAS'dagi barcha global funksiyalarni sanab beradi (introspection)",
+      "toliq": true,
+      "qatlam": "GAS"
     }
   },
   "keyingiNavbat": {
