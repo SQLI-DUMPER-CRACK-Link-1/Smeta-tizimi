@@ -62,6 +62,9 @@ const RUXSAT_JADVALLAR = new Set([
   't2_tolov', 't2_xarajat', 't2_bux_dashboard', 't2_debitor_aging', 't2_bux_umumiy',
   /* АОСР — yashirin ishlar akti (2026-08-27, hujjat domeni) */
   't2_aosr_reestr', 't2_aosr_coverage',
+  /* KORZINKA — bekor qilingan obyekt/smeta/sklad harakat (3 jadval
+     birlashgan VIEW — `holat='bekor'`, is_deleted EMAS). */
+  't2_korzinka',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

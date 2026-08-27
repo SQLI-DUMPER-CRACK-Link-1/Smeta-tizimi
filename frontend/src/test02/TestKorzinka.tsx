@@ -2,28 +2,31 @@ import { useState, useEffect } from 'react';
 import { sbKorzinkaOqish, sbKorzinkadanTiklash, sbButunlayOchirish } from '../api/supabase';
 import { Trash2, RefreshCw, AlertTriangle, Building2, FileText, Package } from 'lucide-react';
 import { toast } from '../umumiy/ui/Toast';
+import { useKompaniya } from './KompaniyaTanlov';
 
 export default function TestKorzinka() {
+  const { joriy } = useKompaniya();
   const [items, setItems] = useState<any[]>([]);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
+  const [xato, setXato] = useState('');
   const [tab, setTab] = useState<'t2_obyekt' | 't2_shaxsiy_smeta' | 't2_sklad_harakat'>('t2_obyekt');
 
   const yuklash = async () => {
     setYuklanmoqda(true);
-    try {
-      const res = await sbKorzinkaOqish();
-      if (res?.ok) {
-        setItems(res.qatorlar || []);
-      }
-    } catch(e) {
-      console.error(e);
-    }
+    setXato('');
+    const res = await sbKorzinkaOqish(joriy?.id);
     setYuklanmoqda(false);
+    if (res.ok) {
+      setItems(res.qatorlar || []);
+    } else {
+      setXato(res.error || 'O\'qilmadi');
+      setItems([]);
+    }
   };
 
   useEffect(() => {
     yuklash();
-  }, []);
+  }, [joriy]);
 
   const handleTiklash = async (id: number, nomi: string) => {
     try {
@@ -69,6 +72,12 @@ export default function TestKorzinka() {
           <RefreshCw size={18} className={yuklanmoqda ? "animate-spin" : ""} />
         </button>
       </div>
+
+      {xato && (
+        <div className="mb-4 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">
+          {xato}
+        </div>
+      )}
 
       <div className="flex gap-2 mb-6">
         <button onClick={() => setTab('t2_obyekt')} className={"px-4 py-2 rounded-lg font-medium flex items-center gap-2 " + (tab === 't2_obyekt' ? 'bg-accent text-white' : 'bg-surface text-text hover:bg-surface-2')}>

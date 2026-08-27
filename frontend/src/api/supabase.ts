@@ -830,16 +830,20 @@ export async function sbButunlayOchirish(jadval: string, id: number, nomi: strin
   return await res.json();
 }
 
-/* ⚠️ 2026-08-27 (Claude): `t2_obyekt.is_deleted` emas, `holat` — korzinka
-   `holat='bekor'`/`'faol'` konvensiyasi bilan ishlaydi (t2_akt/t2_shartnoma/
-   t2_tolov/t2_xarajat bilan bir xil, `is_deleted` boolean HECH QACHON
-   qo'shilmagan). To'liq ro'yxat uchun `t2_korzinka_ol()` RPC ishlatiladi
-   (3 jadvalni birlashtiradi) — bu funksiya faqat obyektlarga qisqa yo'l. */
-export function sbKorzinkaOqish() {
-  return sbOqi<{id: number; nom: string; tur: string | null; ochirildi: string | null}>({
-    jadval: 't2_obyekt',
-    filtr: 'is_deleted=is.true',
-    tartib: 'nom.asc',
+/* ⚠️ 2026-08-27 (Claude): BU FUNKSIYA IKKI MARTA BUZILGAN EDI — avval
+   `t2_obyekt.is_deleted` (bunday ustun UMUMAN yo'q, `holat='bekor'`
+   ishlatiladi), keyin bu izoh to'g'ri yozilgandan keyin ham kimdir
+   qayta xato versiyaga qaytargan. Natija: PostgREST "column does not
+   exist" xatosi bilan so'rov muvaffaqiyatsiz bo'lardi va Korzinka
+   sahifasi HAR DOIM bo'sh ko'rinardi — biror narsa o'chirilganidan
+   keyin ham. Endi `t2_korzinka` VIEW orqali (3 jadval — t2_obyekt/
+   t2_shaxsiy_smeta/t2_sklad_harakat — birlashgan, `jadval` ustuni
+   bilan) va kompaniya bo'yicha filtrlangan holda o'qiydi. */
+export function sbKorzinkaOqish(kompaniyaId?: number | null) {
+  return sbOqi<{ id: number; nomi: string; jadval: string; kompaniya_id: number; ochirilgan_vaqt: string }>({
+    jadval: 't2_korzinka',
+    filtr: kompaniyaId ? 'kompaniya_id=eq.' + kompaniyaId : undefined,
+    tartib: 'ochirilgan_vaqt.desc',
     limit: 500,
   });
 }
