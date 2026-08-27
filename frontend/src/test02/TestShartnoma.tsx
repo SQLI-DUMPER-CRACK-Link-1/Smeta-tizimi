@@ -17,7 +17,6 @@ export default function TestShartnoma() {
       const bRes = await sbT2ShartnomaBogOl(Number(obyektId));
       if (bRes.ok && bRes.qatorlar && bRes.qatorlar.length > 0) {
         boundId = bRes.qatorlar[0].shartnoma_id;
-        setBogId(boundId);
       }
     }
 
@@ -81,11 +80,11 @@ export default function TestShartnoma() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Summa:</span>
-                  <span className="text-emerald-400 font-medium">{FmtN(s.summa_bez_nds || 0)}</span>
+                  <span className="text-emerald-400 font-medium"><FmtN val={s.summa_bez_nds} /></span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">NDS:</span>
-                  <span>{FmtN(s.nds || 0)}</span>
+                  <span><FmtN val={s.nds} /></span>
                 </div>
               </div>
             </div>

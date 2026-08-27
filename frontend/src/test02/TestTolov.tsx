@@ -2,7 +2,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { sbT2TolovlarOl, sbT2BuxDashboardOl, type Tolov, type BuxDashboard } from '../api/t2-buxgalteriya';
 import { sbT2ShartnomaBogOl } from '../api/t2-shartnoma';
-import { Calculator, AlertCircle, ArrowRightLeft, DollarSign } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { FmtN } from '../lib/format';
 import { yangiOperationId } from '../api/supabase';
 import { sbT2TolovYoz } from '../api/t2-buxgalteriya';
@@ -53,7 +53,7 @@ export default function TestTolov() {
       setOpId(yangiOperationId());
       yukla();
     } else {
-      alert(r.error || r.xabar || 'Xato');
+      alert(r.error || 'Xato');
       setYuklanmoqda(false);
     }
   };
@@ -89,10 +89,10 @@ export default function TestTolov() {
                   <div className="text-xs text-zinc-400 mb-3">{d.nom || 'Shartnoma'} | {d.taraf}</div>
                   
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>Jami summa:</div><div className="text-right text-emerald-300 font-medium">{FmtN(d.dog_summa)}</div>
-                    <div>Bajarilgan F2:</div><div className="text-right font-medium">{FmtN(d.bajarilgan)}</div>
-                    <div>To'langan:</div><div className="text-right font-medium text-emerald-400">{FmtN(d.tolangan)}</div>
-                    <div>Debitor qarz:</div><div className="text-right font-bold text-red-400">{FmtN(d.debitor)}</div>
+                    <div>Jami summa:</div><div className="text-right text-emerald-300 font-medium"><FmtN val={d.dog_summa} /></div>
+                    <div>Bajarilgan F2:</div><div className="text-right font-medium"><FmtN val={d.bajarilgan} /></div>
+                    <div>To'langan:</div><div className="text-right font-medium text-emerald-400"><FmtN val={d.tolangan} /></div>
+                    <div>Debitor qarz:</div><div className="text-right font-bold text-red-400"><FmtN val={d.debitor} /></div>
                   </div>
                 </div>
               ))}
@@ -116,11 +116,16 @@ export default function TestTolov() {
                   <tr key={t.id} className="border-t border-zinc-800 hover:bg-zinc-800/50">
                     <td className="p-3">{t.sana.substring(0,10)}</td>
                     <td className="p-3">
-                      <span className={\px-2 py-0.5 rounded text-xs \\}>
+                      <span className={
+                        "px-2 py-0.5 rounded text-xs " +
+                        (t.tur === 'qaytarim' ? 'bg-red-500/20 text-red-400'
+                          : t.tur === 'avans' ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-emerald-500/20 text-emerald-400')
+                      }>
                         {t.tur.toUpperCase()}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-emerald-400">{FmtN(t.summa)}</td>
+                    <td className="p-3 font-medium text-emerald-400"><FmtN val={t.summa} /></td>
                     <td className="p-3 text-zinc-400">{t.izoh || '-'}</td>
                     <td className="p-3">{t.holat}</td>
                   </tr>

@@ -63,7 +63,12 @@ export default function TestGrafik() {
                 <tr key={i} className="border-t border-zinc-800/50 hover:bg-zinc-800/30">
                   <td className="p-4 font-medium text-slate-300 max-w-sm truncate">{g.nom || g.nomi || g.ish_turi || '-'}</td>
                   <td className="p-4">
-                    <span className={\px-2 py-1 rounded text-xs font-medium \\}>
+                    <span className={
+                      "px-2 py-1 rounded text-xs font-medium " +
+                      (g.holat === 'bajarildi' ? 'bg-emerald-500/20 text-emerald-400'
+                        : g.holat === 'jarayonda' ? 'bg-amber-500/20 text-amber-400'
+                        : 'bg-zinc-700 text-zinc-400')
+                    }>
                       {(g.holat || 'reja').toUpperCase()}
                     </span>
                   </td>
@@ -73,7 +78,7 @@ export default function TestGrafik() {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-full bg-zinc-800 rounded-full h-2 max-w-[120px] overflow-hidden">
-                        <div className="bg-emerald-400 h-2 rounded-full transition-all duration-1000" style={{ width: \\%\ }}></div>
+                        <div className="bg-emerald-400 h-2 rounded-full transition-all duration-1000" style={{ width: (g.foiz || 0) + '%' }}></div>
                       </div>
                       <span className="text-xs text-zinc-400 font-mono">{g.foiz || 0}%</span>
                     </div>

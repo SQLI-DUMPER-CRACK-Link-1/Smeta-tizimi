@@ -41,6 +41,8 @@ const TestErp       = lazy(() => import('./test02/TestErp'));
 const TestSozlama   = lazy(() => import('./test02/TestSozlama'));
 const TestShartnoma = lazy(() => import('./test02/TestShartnoma'));
 const TestTizim     = lazy(() => import('./test02/TestTizim'));
+const TestGrafik    = lazy(() => import('./test02/TestGrafik'));
+const TestSpravochnik = lazy(() => import('./test02/TestSpravochnik'));
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
 import { Narxlar } from './admin/sahifalar/Narxlar';

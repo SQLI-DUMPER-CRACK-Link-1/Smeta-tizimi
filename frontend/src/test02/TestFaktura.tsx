@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { sbFakturalarOl, sbFakturaYoz, sbSkladgaYozish, sbT2ObyektlarOl, yangiOperationId, type T2Faktura, type T2Obyekt } from '../api/supabase';
 import { FileText, CheckCircle2, PackagePlus, AlertCircle, Building2 } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 
 export default function TestFaktura() {
-  const [params] = useSearchParams();
-  const aktKomp = useKompaniya();
+  const { joriy } = useKompaniya();
+  const aktKomp = joriy?.id ?? 0;
   const [opId, setOpId] = useState(yangiOperationId());
-  
+
   const [fakturalar, setFakturalar] = useState<T2Faktura[]>([]);
-  const [faktura, setFaktura] = useState<T2Faktura | null>(null);
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [tanlanganObId, setTanlanganObId] = useState<number | null>(null);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
