@@ -504,8 +504,45 @@ export const onRequestPost: PagesFunction<{
                 p_sabab: so.sabab ? String(so.sabab).slice(0, 500) : null };
       }
 
-    /* ══════════ HALI KOD YOZILMAGAN AMALLAR ══════════
-       ⚠️ 2026-08-25 (Claude): `AMALLAR` da RO'YXATDAN O'TGAN, lekin bu
+    } else if (amal === 'skladga_yozish') {
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id),
+        p_operatsiya: so.operatsiya,
+        p_obyekt_id: Number(so.obyekt_id),
+        p_turi: so.turi,
+        p_sana: so.sana,
+        p_nomi: so.nomi,
+        p_birligi: so.birligi,
+        p_obyomi: Number(so.obyomi)
+      };
+
+    } else if (amal === 'faktura_yoz') {
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id),
+        p_raqam: so.raqam,
+        p_sana: so.sana,
+        p_kontragent: so.kontragent,
+        p_inn: so.inn,
+        p_summa: Number(so.summa),
+        p_holat: so.holat,
+        p_items: so.items || [],
+        p_id: so.id ? Number(so.id) : null
+      };
+
+    } else if (amal === 'ish_turi_yoz') {
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id),
+        p_kod: so.kod,
+        p_nomi: so.nomi,
+        p_birligi: so.birligi,
+        p_norma: Number(so.norma),
+        p_narx: Number(so.narx),
+        p_kategoriya: so.kategoriya,
+        p_id: so.id ? Number(so.id) : null
+      };
+
+    /* ──────────────────────── HALI KOD YOZILMAGAN AMALLAR ────────────────────────
+       🚧 2026-08-25 (Claude): `AMALLAR` da RO'YXATDAN O'TGAN, lekin bu
        yerda o'z shoxobchasi bo'lmagan amallar avval JIM shu yerga —
        aslida `akt_tasdiqlash`/`akt_bekor` uchun yozilgan yuqoridagi
        blokka — tushib, ular kutmagan `p_akt_id` kabi parametrlar bilan

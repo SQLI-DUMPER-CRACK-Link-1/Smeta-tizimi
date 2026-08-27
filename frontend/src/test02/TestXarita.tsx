@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { sbT2ObyektlarOl, type T2Obyekt } from '../api/supabase';
 import { Building2, HardHat, Warehouse, FileText, Pickaxe, Map, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
@@ -27,9 +27,17 @@ export default function TestXarita() {
     scale.set(Math.min(Math.max(scale.get() + amount, 0.3), 2));
   };
 
-  const nav = (path: string) => {
+  const nav = (path: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     navigate(path);
   };
+
+  // Node sizes
+  const obHeight = 128; // h-32
+  const obGap = 40;     // gap-10
+  const stepY = obHeight + obGap;
+  const totalHeight = obyektlar.length * obHeight + Math.max(0, obyektlar.length - 1) * obGap;
+  const rootCenterY = totalHeight / 2;
 
   return (
     <div className="w-full h-full bg-bg relative overflow-hidden flex flex-col font-sans" ref={containerRef}>
@@ -56,13 +64,13 @@ export default function TestXarita() {
       >
         
         {/* Graph Layout using Flexbox */}
-        <div className="flex items-center gap-16">
+        <div className="flex items-center gap-16 relative">
           
           {/* ROOT */}
-          <div className="relative">
+          <div className="relative z-20">
             <motion.div 
               initial={{ scale: 0 }} animate={{ scale: 1 }}
-              className="w-72 bg-surface border-2 border-accent/50 shadow-[0_0_30px_rgba(var(--accent-rgb),0.3)] p-6 rounded-2xl flex flex-col items-center justify-center text-center relative z-10"
+              className="w-72 bg-surface border-2 border-accent/50 shadow-[0_0_30px_rgba(var(--accent-rgb),0.3)] p-6 rounded-2xl flex flex-col items-center justify-center text-center relative"
             >
               <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mb-4">
                 <Building2 size={32} className="text-accent" />
@@ -72,22 +80,19 @@ export default function TestXarita() {
             </motion.div>
           </div>
 
-          {/* CHILDREN */}
-          <div className="flex flex-col gap-10 relative">
-            
-            {/* SVG Connector Lines from Root to Children */}
-            <svg className="absolute left-[-64px] top-0 w-16 h-full pointer-events-none z-0">
-              {obyektlar.map((_, i) => {
-                const total = obyektlar.length;
-                const gap = 140; // Approx height per child
-                const startY = '50%';
-                const endY = `calc(50% + ${(i - (total-1)/2) * gap}px)`;
-                return (
-                   <path key={i} d={`M 0 ${startY} C 32 ${startY}, 32 ${endY}, 64 ${endY}`} fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
-                );
-              })}
-            </svg>
+          {/* SVG Connector Lines from Root to Children */}
+          <svg className="absolute left-[288px] top-1/2 -translate-y-1/2 w-16 pointer-events-none z-0" style={{ height: Math.max(totalHeight, 1) }}>
+            {obyektlar.map((_, i) => {
+              const startY = rootCenterY;
+              const endY = i * stepY + obHeight / 2;
+              return (
+                 <path key={i} d={M 0  C 32 , 32 , 64 } fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+              );
+            })}
+          </svg>
 
+          {/* CHILDREN */}
+          <div className="flex flex-col gap-10 relative z-20" style={{ minHeight: totalHeight }}>
             {yuklanmoqda && <div className="text-text-dim animate-pulse">Yuklanmoqda...</div>}
 
             {obyektlar.map((ob, idx) => (
@@ -98,45 +103,48 @@ export default function TestXarita() {
               >
                 {/* Object Node */}
                 <div 
-                  onClick={() => nav('/admin/test/daraxt?obyekt=' + encodeURIComponent(ob.nom))}
-                  className="w-64 bg-surface border border-border hover:border-accent p-4 rounded-xl shadow-lg relative z-10 cursor-pointer group transition-all hover:-translate-y-1"
+                  onClick={(e) => nav('/admin/test/daraxt?obyekt=' + encodeURIComponent(ob.nom), e)}
+                  className="w-64 bg-surface border border-border hover:border-accent p-4 rounded-xl shadow-lg relative z-20 cursor-pointer group transition-all hover:-translate-y-1"
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-500">
                       <HardHat size={20} />
                     </div>
-                    <h3 className="font-bold text-text group-hover:text-accent truncate">{ob.nom}</h3>
+                    <h3 className="font-bold text-text group-hover:text-accent truncate" title={ob.nom}>{ob.nom}</h3>
                   </div>
                   <p className="text-xs text-text-dim truncate">{ob.tur || 'Qurilish obyekti'}</p>
                 </div>
 
                 {/* SVG Connectors to Sub-modules */}
                 <svg className="absolute left-[256px] top-0 w-12 h-full pointer-events-none z-0">
-                   <path d="M 0 50% C 24 50%, 24 20%, 48 20%" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
-                   <path d="M 0 50% C 24 50%, 24 50%, 48 50%" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
-                   <path d="M 0 50% C 24 50%, 24 80%, 48 80%" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                   {/* Top: Sklad (y=32) */}
+                   <path d="M 0 64 C 24 64, 24 32, 48 32" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                   {/* Middle: Daraxt (y=64) */}
+                   <path d="M 0 64 L 48 64" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                   {/* Bottom: F2 (y=96) */}
+                   <path d="M 0 64 C 24 64, 24 96, 48 96" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
                 </svg>
 
                 {/* Sub-modules */}
-                <div className="flex flex-col gap-2 relative z-10">
-                  <div onClick={() => nav('/admin/test/sklad?obyektId=' + ob.id)} className="px-4 py-2 bg-bg border border-border hover:border-amber-500/50 rounded-lg text-sm text-text flex items-center gap-3 cursor-pointer group whitespace-nowrap shadow-sm hover:shadow-amber-500/10 transition-all">
+                <div className="flex flex-col gap-2 relative z-20 w-48">
+                  <div onClick={(e) => nav('/admin/test/sklad?obyektId=' + ob.id, e)} className="h-[36px] px-3 bg-bg border border-border hover:border-amber-500/50 rounded-lg text-sm text-text flex items-center gap-2 cursor-pointer group shadow-sm hover:shadow-amber-500/10 transition-all">
                     <Warehouse size={16} className="text-amber-500" /> 
-                    <span className="group-hover:text-amber-500 font-medium">Sklad / Ta'minot</span>
+                    <span className="group-hover:text-amber-500 font-medium truncate">Sklad / Ta'minot</span>
                   </div>
-                  <div onClick={() => nav('/admin/test/daraxt?obyekt=' + encodeURIComponent(ob.nom))} className="px-4 py-2 bg-bg border border-border hover:border-indigo-500/50 rounded-lg text-sm text-text flex items-center gap-3 cursor-pointer group whitespace-nowrap shadow-sm hover:shadow-indigo-500/10 transition-all">
+                  <div onClick={(e) => nav('/admin/test/daraxt?obyekt=' + encodeURIComponent(ob.nom), e)} className="h-[36px] px-3 bg-bg border border-border hover:border-indigo-500/50 rounded-lg text-sm text-text flex items-center gap-2 cursor-pointer group shadow-sm hover:shadow-indigo-500/10 transition-all">
                     <FileText size={16} className="text-indigo-500" /> 
-                    <span className="group-hover:text-indigo-500 font-medium">Asosiy Smeta (Daraxt)</span>
+                    <span className="group-hover:text-indigo-500 font-medium truncate">Asosiy Smeta</span>
                   </div>
-                  <div onClick={() => nav('/admin/test/f2?obyekt=' + encodeURIComponent(ob.nom))} className="px-4 py-2 bg-bg border border-border hover:border-rose-500/50 rounded-lg text-sm text-text flex items-center gap-3 cursor-pointer group whitespace-nowrap shadow-sm hover:shadow-rose-500/10 transition-all">
+                  <div onClick={(e) => nav('/admin/test/f2?obyekt=' + encodeURIComponent(ob.nom), e)} className="h-[36px] px-3 bg-bg border border-border hover:border-rose-500/50 rounded-lg text-sm text-text flex items-center gap-2 cursor-pointer group shadow-sm hover:shadow-rose-500/10 transition-all">
                     <Pickaxe size={16} className="text-rose-500" /> 
-                    <span className="group-hover:text-rose-500 font-medium">F2 Bajarilgan Ishlar</span>
+                    <span className="group-hover:text-rose-500 font-medium truncate">F2 Fakt Aktlar</span>
                   </div>
                 </div>
               </motion.div>
             ))}
 
             {!yuklanmoqda && obyektlar.length === 0 && (
-              <div className="p-6 bg-surface border border-border rounded-xl text-text-dim text-center shadow-lg w-64">
+              <div className="p-6 bg-surface border border-border rounded-xl text-text-dim text-center shadow-lg w-64 mt-12 mx-auto">
                 Obyektlar mavjud emas.<br/>Import qiling.
               </div>
             )}
