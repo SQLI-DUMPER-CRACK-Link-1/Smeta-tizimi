@@ -1,12 +1,16 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { sbFakturalarOl, sbFakturaYoz, sbSkladgaYozish, sbT2ObyektlarOl, type T2Faktura, type T2Obyekt } from '../api/supabase';
+import { sbFakturalarOl, sbFakturaYoz, sbSkladgaYozish, sbT2ObyektlarOl, yangiOperationId, type T2Faktura, type T2Obyekt } from '../api/supabase';
 import { FileText, CheckCircle2, PackagePlus, AlertCircle, Building2 } from 'lucide-react';
+import { useKompaniya } from './KompaniyaTanlov';
 
 export default function TestFaktura() {
   const [params] = useSearchParams();
-  const aktKomp = Number(params.get('kompaniya') || '1');
+  const aktKomp = useKompaniya();
+  const [opId, setOpId] = useState(yangiOperationId());
+  
   const [fakturalar, setFakturalar] = useState<T2Faktura[]>([]);
+  const [faktura, setFaktura] = useState<T2Faktura | null>(null);
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [tanlanganObId, setTanlanganObId] = useState<number | null>(null);
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
@@ -64,10 +68,11 @@ export default function TestFaktura() {
       }
 
       // Fakturani tasdiqlangan holatga o'tkazish
-      const fRes = await sbFakturaYoz({ ...faktura, holat: 'tasdiqlangan' });
+      const fRes = await sbFakturaYoz({ ...faktura, holat: 'tasdiqlangan', operation_id: opId });
       if (!fRes.ok) throw new Error(fRes.error || 'Faktura holatini yangilashda xato');
 
       fakturalarniYukla();
+      setOpId(yangiOperationId());
     } catch (err: any) {
       setXato(err.message);
     } finally {
@@ -89,9 +94,11 @@ export default function TestFaktura() {
       items: [
         { nomi: 'G\'isht', birligi: 'sht', obyomi: 10000 },
         { nomi: 'Kafel', birligi: 'm2', obyomi: 200 }
-      ]
+      ],
+      operation_id: opId
     } as T2Faktura);
     fakturalarniYukla();
+    setOpId(yangiOperationId());
   };
 
   return (
