@@ -1042,3 +1042,98 @@ function _t2Ajratgich(sh){
   try{ if(yac) yac.clearContent(); }catch(e2){}
   return ',';                                     // ma'lum bo'lmasa — odatiy
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * BAZA → KO'ZGU AVTO-YANGILANISH (2026-08-28)
+ *
+ * FOYDALANUVCHI XABARI: «f2 import qilib ko'rgan edim, lekin u faqat
+ * bazaga kiritildi, ko'zgu sheetda yozilmadi — mani talabim yozilishi
+ * kerak edi».
+ *
+ * SABAB — ko'prik BIR TOMONLAMA avtomat edi:
+ *     Sheet -> baza :  t2VaraqOnEdit -> t2VaraqSinxFon    AVTOMAT
+ *     baza -> Sheet :  apiT2VaraqYarat   faqat QO'LDA tugma bilan
+ * Ya'ni Ф2 bazaga tushsa ham, varaq eski holicha qolardi.
+ *
+ * Endi baza tomonida t2_akt_qator ga yozilganda trigger
+ * t2_kozgu.holat ni 'farqli' qilib qo'yadi (migratsiya
+ * t2_akt_kozguni_eskirtiradi), bu funksiya esa shundaylarni topib
+ * QAYTA CHIZADI. apiT2VaraqYarat oxirida holatni 'sinxron' ga
+ * qaytaradi — demak keyingi yurishda u qayta ishlanmaydi.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+/** Bir yurishda nechta obyekt chiziladi — GAS 6 daqiqa chegarasi uchun. */
+var T2_KOZGU_BIR_YURISH = 3;
+
+/**
+ * Eskirgan ('farqli') ko'zgularni topib qayta chizadi.
+ * Vaqt tirgagidan ham, qo'lda ham chaqirilishi mumkin.
+ */
+function t2KozguYangila(){
+  var boshlandi = Date.now();
+  var natija = { korildi: 0, chizildi: 0, xato: 0, tafsilot: [] };
+
+  try{
+    var eskirgan = _t2Get('t2_kozgu?holat=eq.farqli&select=obyekt_id&limit=' + T2_KOZGU_BIR_YURISH);
+    natija.korildi = eskirgan.length;
+    if(!eskirgan.length) return natija;
+
+    for(var i = 0; i < eskirgan.length; i++){
+      /* 6 daqiqa chegarasi: 4 daqiqadan oshsa to'xtaymiz, qolgani
+         keyingi yurishda chiziladi (holat 'farqli' bo'lib turaveradi). */
+      if(Date.now() - boshlandi > 4 * 60 * 1000){
+        natija.tafsilot.push('vaqt tugadi — qolgani keyingi yurishda');
+        break;
+      }
+      try{
+        var ob = _t2Get('t2_obyekt?id=eq.' + eskirgan[i].obyekt_id + '&select=nom');
+        if(!ob.length){ natija.xato++; continue; }
+        apiT2VaraqYarat(ob[0].nom);           // oxirida holat 'sinxron' bo'ladi
+        natija.chizildi++;
+        natija.tafsilot.push(ob[0].nom + ' — chizildi');
+      }catch(e){
+        natija.xato++;
+        natija.tafsilot.push('xato: ' + ((e && e.message) || e));
+      }
+    }
+  }catch(e){
+    natija.xato++;
+    natija.tafsilot.push('t2KozguYangila: ' + ((e && e.message) || e));
+  }
+  Logger.log('t2KozguYangila: ' + JSON.stringify(natija));
+  return natija;
+}
+
+/** Saytdan chaqirish uchun (Tizim_02 panelidagi 'Ko'zguni yangilash'). */
+function apiT2KozguYangila(){
+  return t2KozguYangila();
+}
+
+/**
+ * Har 5 daqiqada avtomat yurishni o'rnatadi. BIR MARTA chaqiriladi.
+ * Tirgak chegarasi 20 ta — bori bo'lsa yangisini yasamaymiz.
+ */
+function t2KozguTriggerOrnat(){
+  var trg = ScriptApp.getProjectTriggers();
+  for(var i = 0; i < trg.length; i++){
+    if(trg[i].getHandlerFunction() === 't2KozguYangila'){
+      return { ok: true, xabar: 'Tirgak allaqachon bor' };
+    }
+  }
+  if(trg.length >= 19){
+    return { ok: false,
+             xabar: 'Tirgaklar chegarasi (' + trg.length + '/20) — qolda yangilang' };
+  }
+  ScriptApp.newTrigger('t2KozguYangila').timeBased().everyMinutes(5).create();
+  return { ok: true, xabar: 'Har 5 daqiqada kozgu yangilanadi' };
+}
+
+function t2KozguTriggerOchir(){
+  var trg = ScriptApp.getProjectTriggers(), n = 0;
+  for(var i = 0; i < trg.length; i++){
+    if(trg[i].getHandlerFunction() === 't2KozguYangila'){
+      ScriptApp.deleteTrigger(trg[i]); n++;
+    }
+  }
+  return { ok: true, ochirildi: n };
+}

@@ -14,6 +14,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (req.isBoss) {
     rol = 'boss';
     login = 'boss';
+  } else if (req.isSuperadmin) {
+    rol = 'superadmin';
+    login = 'Anvar';
   } else {
     login = req.login || '';
     const parol = req.parol || '';
