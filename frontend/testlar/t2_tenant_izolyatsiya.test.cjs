@@ -65,5 +65,17 @@ console.log('\n── 3. sb-yoz.ts HAR YOZUVDA A\'ZOLIKNI TEKSHIRADIMI ──');
   T('rad javobi 403 bilan qaytadi', /zo emassiz[\s\S]{0,80}status:\s*403/.test(s));
 }
 
+console.log('\n── 4. sb.ts (O\'QISH) HAM KOMPANIYA A\'ZOLIGINI TEKSHIRADIMI ──');
+{
+  const s = oqi('functions/api/sb.ts');
+  T('filtrdan kompaniya_id ajratib olinadi',
+    /filtr \|\| ''\)\.match\(\/.*kompaniya_id=eq/.test(s));
+  T('sessiya a\'zoligi bilan solishtiriladi',
+    /sess\.kompaniyalar\.includes\(soraganKompaniya\)/.test(s));
+  T('eski sessiya (kompaniyalar yo\'q) bloklanib qolmaydi',
+    /Array\.isArray\(sess\.kompaniyalar\)/.test(s));
+  T('rad javobi 403 bilan qaytadi', /zo emassiz[\s\S]{0,80}status:\s*403/.test(s));
+}
+
 console.log(`\n═══ ${ok} o'tdi, ${xato} yiqildi ═══`);
 process.exit(xato ? 1 : 0);

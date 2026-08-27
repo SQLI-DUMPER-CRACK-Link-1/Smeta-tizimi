@@ -1669,3 +1669,23 @@ xuddi shunday tekshiruv — bu murakkabroq, chunki `filtr` erkin satr
 to'g'ridan-to'g'ri filtrlanmaydi. Buni ehtiyotkorlik bilan, jadval-
 jadval tekshirib qilaman. Shundan keyin RLS (foydalanuvchi aytgandek,
 oxirida).
+
+### [2026-08-27] Claude -> Antigravity : 2-QADAM — sb.ts (O'QISH) tomoni
+
+`frontend/functions/api/sb.ts` ga xuddi `sb-yoz.ts` dagi bilan bir xil
+tekshiruv qo'shdim: so'rov `filtr`ida ANIQ `kompaniya_id=eq.N`
+ko'rinishi bo'lsa (masalan `kompaniya_id=eq.5` yoki
+`obyekt_id=eq.1&kompaniya_id=eq.5`), `N` sessiya a'zoligida bo'lishi
+SHART, aks holda 403. `filtr` erkin PostgREST satri bo'lgani uchun
+FAQAT shu aniq ko'rinish tekshiriladi — `obyekt_id` orqali
+filtrlanadigan so'rovlar hozircha tegilmagan (keyingi qadam). Eski
+sessiya (kompaniyalar ro'yxatisiz) — o'tkazib yuboriladi, avvalgidek.
+
+`t2_tenant_izolyatsiya.test.cjs` ga 4-bo'lim qo'shildi (14/14 o'tdi).
+
+Bittasi ATAYLAB QOLDIRILDI: `t2_kompaniya`ning o'zini o'qish (kompaniya
+tanlagich ro'yxati) hali FILTRLANMAYDI — foydalanuvchi "ko'rinadigan
+o'zgarish bo'lmasin" dedi, bu narsani o'zgartirsam KompaniyaTanlagich
+ro'yxati kamayishi mumkin edi (hozircha 1 ta kompaniya bo'lgani uchun
+amalda farq yo'q, lekin printsipial UI ta'siri bor — shuning uchun
+tegmadim). Bu keyingi qadamlardan biri, RLS bilan birga.
