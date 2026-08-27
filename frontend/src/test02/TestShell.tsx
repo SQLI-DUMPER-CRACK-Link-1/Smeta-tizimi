@@ -24,7 +24,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { KompaniyaProvider, KompaniyaTanlagich } from './KompaniyaTanlov';
 import { Trash2, FlaskConical, Building2, Network, ArrowLeft, Gauge, Timer, Upload, Tags,
-         TrendingUp, FileInput, Box, ShoppingCart, UserPlus, CreditCard, FileText, Archive,
+         TrendingUp, FileInput, Box, ShoppingCart, UserPlus, CreditCard, FileText, Archive, Briefcase,
          BarChart, Settings, ShieldAlert, LayoutDashboard } from 'lucide-react';
 
 const TEST_MENYU = [
@@ -32,6 +32,7 @@ const TEST_MENYU = [
   { yol: '/admin/test/obyektlar', nom: 'Obyektlar',    Ikonka: Building2 },
   { yol: '/admin/test/narxlar',   nom: 'Narxlar',      Ikonka: Tags },
   { yol: '/admin/test/f2',        nom: 'F2 / Fakt',    Ikonka: TrendingUp },
+  { yol: '/admin/test/shartnomalar', nom: 'Shartnomalar', Ikonka: Briefcase },
   { yol: '/admin/test/f2-import', nom: 'F2 import',    Ikonka: FileInput },
   { yol: '/admin/test/xarita',    nom: 'Mind Map', Ikonka: Network },
   { yol: '/admin/test/daraxt',    nom: 'Smeta daraxti', Ikonka: Network },
@@ -95,5 +96,6 @@ export default function TestShell() {
     </KompaniyaProvider>
   );
 }
+
 
 

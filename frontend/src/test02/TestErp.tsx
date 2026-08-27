@@ -1,13 +1,19 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { sbErpDashboardOl } from '../api/t2-erp';
 
 export default function TestErp() {
-  const [modul, setModul] = useState<'kadrlar'|'texnika'|'taminot'|'sifat'>('kadrlar');
+  const [params] = useSearchParams();
+  const [modul, setModul] = useState<'kadrlar'|'texnika'|'taminot'|'sifat'>((params.get('modul') as any) || 'kadrlar');
   const [data, setData] = useState<any[]>([]);
+  const obyektId = params.get('obyektId');
 
   useEffect(() => {
-    sbErpDashboardOl(modul, 1).then(r => setData(r.qatorlar || []));
-  }, [modul]);
+    sbErpDashboardOl(modul, 1).then(r => {
+      const q = r.qatorlar || [];
+      setData(obyektId ? q.filter((x: any) => x.obyekt_id == obyektId) : q);
+    });
+  }, [modul, obyektId]);
 
   return (
     <div className="p-4 bg-zinc-900 text-white min-h-screen">
@@ -29,3 +35,4 @@ export default function TestErp() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from './umumiy/ui/Toast';
 import SahifaTopilmadi from './umumiy/ui/SahifaTopilmadi';
@@ -19,7 +19,7 @@ import Hujjatlar from './admin/sahifalar/Hujjatlar';
 import ShaxsiySmeta from './admin/sahifalar/ShaxsiySmeta';
 import SupabaseSozlama from './admin/sahifalar/SupabaseSozlama';
 import TezlikSinovi from './admin/sahifalar/TezlikSinovi';
-/* TIZIM_02 вЂ” Supabase sinov muhiti. Tizim_01 ga TEGMAYDI. */
+/* TIZIM_02 — Supabase sinov muhiti. Tizim_01 ga TEGMAYDI. */
 const TestShell     = lazy(() => import('./test02/TestShell'));
 const TestKorzinka  = lazy(() => import('./test02/TestKorzinka'));
 const TestXarita    = lazy(() => import('./test02/TestXarita'));
@@ -39,6 +39,7 @@ const TestHujjat    = lazy(() => import('./test02/TestHujjat'));
 const TestHisobot   = lazy(() => import('./test02/TestHisobot'));
 const TestErp       = lazy(() => import('./test02/TestErp'));
 const TestSozlama   = lazy(() => import('./test02/TestSozlama'));
+const TestShartnoma = lazy(() => import('./test02/TestShartnoma'));
 const TestTizim     = lazy(() => import('./test02/TestTizim'));
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
@@ -85,16 +86,16 @@ export default function App() {
           <Route path="ierarxiya" element={<Ierarxiya />} />
           <Route path="monitoring" element={<Monitoring />} />
           <Route path="sozlamalar" element={<Sozlamalar />} />
-          {/* вљЎ 2026-08-16: eski GAS paneldagi В«Р¤Р°Р№Р» Р±РѕТ“Р»Р°С€В» tabi */}
+          {/* ⚡ 2026-08-16: eski GAS paneldagi «Файл боғлаш» tabi */}
           <Route path="fayl-boglash" element={<FaylBoglash />} />
           <Route path="hujjatlar" element={<Hujjatlar />} />
           <Route path="shaxsiy-smeta" element={<ShaxsiySmeta />} />
           <Route path="supabase" element={<SupabaseSozlama />} />
           <Route path="tezlik" element={<TezlikSinovi />} />
 
-          {/* ===== TIZIM_02 (SINOV) вЂ” alohida boвЂ™lim =====
-              MaвЂ™lumot SupabaseвЂ™dan oвЂ™qiladi. Tizim_01 ning bironta
-              marshruti/sahifasi oвЂ™zgartirilmagan. */}
+          {/* ===== TIZIM_02 (SINOV) — alohida bo’lim =====
+              Ma’lumot Supabase’dan o’qiladi. Tizim_01 ning bironta
+              marshruti/sahifasi o’zgartirilmagan. */}
           <Route path="test" element={<TestShell />}>
             <Route index element={<Navigate to="/admin/test/obyektlar" replace />} />
             <Route path="korzinka" element={<TestKorzinka />} />
@@ -115,6 +116,7 @@ export default function App() {
             <Route path="hisobot" element={<TestHisobot />} />
             <Route path="erp" element={<TestErp />} />
             <Route path="sozlama" element={<TestSozlama />} />
+            <Route path="shartnomalar" element={<TestShartnoma />} />
             <Route path="tizim" element={<TestTizim />} />
           </Route>
           {/* ERP routes for Admin */}
@@ -123,20 +125,20 @@ export default function App() {
           <Route path="taminot" element={<ErpTaminot />} />
           <Route path="sifat" element={<ErpSifat />} />
 
-          {/* WARN 2026-08-17 вЂ” ESKI MANZILLAR UCHUN KOвЂ™PRIK.
-              Menyudagi `shartnoma` в†’ `shartnomalar` xatosi tuzatilgach ham
+          {/* WARN 2026-08-17 — ESKI MANZILLAR UCHUN KO’PRIK.
+              Menyudagi `shartnoma` → `shartnomalar` xatosi tuzatilgach ham
               muammo qaytdi, chunki eski manzil FOYDALANUVCHIDA qolgan
-              boвЂ™lishi mumkin: xatchoвЂ™p, brauzer tarixi, avtotoвЂ™ldirish,
-              yorliq, boshqaga yuborilgan havola. Ular hammasi eski yoвЂ™lga
-              boradi. Bitta havolani tuzatish YETMAYDI вЂ” eski manzil ham
+              bo’lishi mumkin: xatcho’p, brauzer tarixi, avtoto’ldirish,
+              yorliq, boshqaga yuborilgan havola. Ular hammasi eski yo’lga
+              boradi. Bitta havolani tuzatish YETMAYDI — eski manzil ham
               ishlashi kerak. */}
           <Route path="shartnoma" element={<Navigate to="/admin/shartnomalar" replace />} />
           <Route path="kalkulyator" element={<Navigate to="/admin/shaxsiy-smeta" replace />} />
 
-          {/* WARN 2026-08-17 вЂ” ENG MUHIMI: nomaвЂ™lum `/admin/...` manzil endi
+          {/* WARN 2026-08-17 — ENG MUHIMI: noma’lum `/admin/...` manzil endi
               QOBIQ ICHIDA ochiladi. Avval u pastdagi `path="*"` ga tushib,
-              foydalanuvchini KIRISH SAHIFASIGA otib yuborardi вЂ” aynan
-              "С€Р°СЂС‚РЅРѕРјР°Р»Р°СЂ С‚Р°Р±РёРіР° РєРёСЂСЃР°Рј РєРёСЂРёС€ РїР°РЅРµР»РёРіР° Т›Р°Р№С‚Р°СЂРёР± СЋР±РѕСЂР°Р№Р°РїРґРё"
+              foydalanuvchini KIRISH SAHIFASIGA otib yuborardi — aynan
+              "шартномалар табига кирсам кириш панелига қайтариб юборайапди"
               shikoyatining ildizi shu. Adashgan manzil chiqarib yuborish
               uchun sabab EMAS. */}
           <Route path="*" element={<SahifaTopilmadi />} />
@@ -164,4 +166,5 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
 
