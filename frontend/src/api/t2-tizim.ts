@@ -1,14 +1,13 @@
-﻿import { yozAmali } from './supabase';
+import { yozAmali, sbOqi } from './supabase';
 
 // --- TIZIM (Audit, Loglar, Ruxsatlar) ---
 
-export async function sbTizimLoglari(kompaniya_id: number) {
-  // Aslida bu yerda audit log jadvali bo'ladi
-  return fetch('/api/sb', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jadval: 't2_kompaniya', filtr: 'id.eq.' + kompaniya_id })
-  }).then(r => r.json());
+export function sbTizimLoglari(kompaniya_id: number) {
+  return sbOqi({
+    jadval: 't2_kompaniya',
+    filtr: 'id=eq.' + kompaniya_id,
+    limit: 10,
+  });
 }
 
 export function sbTizimAmal(amal: string, payload: any) {

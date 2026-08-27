@@ -580,11 +580,15 @@ export type T2SkladHarakat = {
 };
 
 export type T2SkladQoldiq = {
+  id: number;
+  kompaniya_id: number;
+  obyekt_id: number;
+  turi: string;
   nomi: string;
   birligi: string;
-  prixod_obyomi: number;
-  rasxod_obyomi: number;
-  qoldiq_obyomi: number;
+  qoldiq: number;
+  versiya: number;
+  oxirgi_harakat: string;
 };
 
 export function sbSkladQoldiqOl(obyektId: number) {
@@ -594,8 +598,10 @@ export function sbSkladQoldiqOl(obyektId: number) {
   });
 }
 
-export function sbSkladgaYozish(kompaniya_id: number, operatsiya: 'prixod' | 'rasxod', item: T2SkladHarakat, versiya: number) {
-  return yozAmali({ 
+/** ⚠️ `operation_id` MAJBURIY — sklad qoldig'iga ta'sir qiladi, qayta
+ *  urinishda ikkinchi harakat yaratmasligi kerak. */
+export function sbSkladgaYozish(kompaniya_id: number, operatsiya: 'prixod' | 'rasxod', item: T2SkladHarakat) {
+  return yozAmali({
     amal: 'skladga_yozish',
     kompaniya_id,
     operatsiya,
@@ -609,7 +615,7 @@ export function sbSkladgaYozish(kompaniya_id: number, operatsiya: 'prixod' | 'ra
     qabul_qiluvchi: item.qabul_qiluvchi || null,
     qabul_turi: item.qabul_turi || null,
     izoh: item.izoh || null,
-    versiya 
+    operation_id: yangiOperationId(),
   });
 }
 
@@ -639,19 +645,23 @@ export interface T2Faktura {
   items?: any[];
 }
 
-export async function sbFakturalarOl(kompaniya_id: number): Promise<{ok: boolean, qatorlar?: T2Faktura[], error?: string}> {
-  const res = await fetch('/api/sb', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jadval: 't2_faktura', filtr: 'kompaniya_id.eq.' + kompaniya_id })
+export function sbFakturalarOl(kompaniya_id: number) {
+  return sbOqi<T2Faktura>({
+    jadval: 't2_faktura',
+    filtr: 'kompaniya_id=eq.' + kompaniya_id,
+    tartib: 'sana.desc',
+    limit: 1000,
   });
-  return await res.json();
 }
 
+/** ⚠️ Yangi faktura yaratishda `operation_id` avtomatik biriktiriladi
+ *  (idempotentlik). Tahrirlashda (`item.id` bor) kerak emas — bazada
+ *  `id` + `kompaniya_id` + versiya bilan himoyalangan. */
 export function sbFakturaYoz(item: T2Faktura) {
   return yozAmali({
     amal: 'faktura_yoz',
-    ...item
+    ...item,
+    operation_id: item.id ? undefined : yangiOperationId(),
   });
 }
 
@@ -678,13 +688,13 @@ export interface T2IshTuri {
   kategoriya: string;
 }
 
-export async function sbIshTurlariOl(kompaniya_id: number): Promise<{ok: boolean, qatorlar?: T2IshTuri[], error?: string}> {
-  const res = await fetch('/api/sb', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jadval: 't2_ish_turi', filtr: 'kompaniya_id.eq.' + kompaniya_id })
+export function sbIshTurlariOl(kompaniya_id: number) {
+  return sbOqi<T2IshTuri>({
+    jadval: 't2_ish_turi',
+    filtr: 'kompaniya_id=eq.' + kompaniya_id,
+    tartib: 'kod.asc',
+    limit: 5000,
   });
-  return await res.json();
 }
 
 export function sbIshTuriYoz(item: T2IshTuri) {
@@ -694,14 +704,13 @@ export function sbIshTuriYoz(item: T2IshTuri) {
   });
 }
 
-export async function sbShaxsiySmetalarOl(kompaniya_id: number) {
-  // Shaxsiy smetalar t2_ish_turi ning o'ziga xos to'plami yoki alohida jadval
-  const res = await fetch('/api/sb', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jadval: 't2_shaxsiy_smeta', filtr: 'kompaniya_id.eq.' + kompaniya_id })
+export function sbShaxsiySmetalarOl(kompaniya_id: number) {
+  return sbOqi<{id: number; kompaniya_id: number; nom: string; qatorlar: any[]; yaratildi: string}>({
+    jadval: 't2_shaxsiy_smeta',
+    filtr: 'kompaniya_id=eq.' + kompaniya_id,
+    tartib: 'nom.asc',
+    limit: 1000,
   });
-  return await res.json();
 }
 
 export function sbShaxsiySmetaYarat(kompaniya_id: number, nom: string, qatorlar: any[]) {
@@ -709,7 +718,7 @@ export function sbShaxsiySmetaYarat(kompaniya_id: number, nom: string, qatorlar:
     amal: 'shaxsiy_smeta_yarat',
     kompaniya_id,
     nom,
-    qatorlar
+    qatorlar,
   });
 }
 
@@ -758,7 +767,7 @@ export async function sbKorzinkadanTiklash(jadval: string, id: number, nomi: str
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rpc: 't2_korzinkadan_tiklash', rpcArgs: { p_jadval: jadval, p_id: id } })
+    body: JSON.stringify({ amal: 'korzinkadan_tiklash', jadval, id })
   });
   
   fetch('/api/gas', {
@@ -774,7 +783,7 @@ export async function sbButunlayOchirish(jadval: string, id: number, nomi: strin
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rpc: 't2_butunlay_ochirish', rpcArgs: { p_jadval: jadval, p_id: id } })
+    body: JSON.stringify({ amal: 'butunlay_ochirish', jadval, id })
   });
   
   fetch('/api/gas', {
@@ -786,12 +795,16 @@ export async function sbButunlayOchirish(jadval: string, id: number, nomi: strin
   return await res.json();
 }
 
-export async function sbKorzinkaOqish(): Promise<any> {
-  const res = await fetch('/api/sb', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rpc: 't2_korzinka_ol' }) // Returns all items where is_deleted = true
+/* ⚠️ 2026-08-27 (Claude): `t2_obyekt.is_deleted` emas, `holat` — korzinka
+   `holat='bekor'`/`'faol'` konvensiyasi bilan ishlaydi (t2_akt/t2_shartnoma/
+   t2_tolov/t2_xarajat bilan bir xil, `is_deleted` boolean HECH QACHON
+   qo'shilmagan). To'liq ro'yxat uchun `t2_korzinka_ol()` RPC ishlatiladi
+   (3 jadvalni birlashtiradi) — bu funksiya faqat obyektlarga qisqa yo'l. */
+export function sbKorzinkaOqish() {
+  return sbOqi<{id: number; nom: string; tur: string | null; ochirildi: string | null}>({
+    jadval: 't2_obyekt',
+    filtr: 'is_deleted=is.true',
+    tartib: 'nom.asc',
+    limit: 500,
   });
-  return await res.json();
 }
-

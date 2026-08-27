@@ -1,13 +1,11 @@
-﻿import { yozAmali } from './supabase';
+import { sbOqi, yozAmali } from './supabase';
 
-export async function sbSozlamaOl(kompaniya_id: number) {
-  const res = await fetch('/api/sb', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jadval: 't2_sozlama', filtr: 'kompaniya_id.eq.' + kompaniya_id })
-  });
-  const json = await res.json();
-  return json.qatorlar?.[0] || null;
+export function sbSozlamaOl(kompaniya_id: number) {
+  return sbOqi<Record<string, unknown>>({
+    jadval: 't2_sozlama',
+    filtr: 'kompaniya_id=eq.' + kompaniya_id,
+    limit: 10,
+  }).then(r => r.qatorlar?.[0] ?? null);
 }
 
 export function sbSozlamaSaqla(kompaniya_id: number, sozlamalar: any) {
