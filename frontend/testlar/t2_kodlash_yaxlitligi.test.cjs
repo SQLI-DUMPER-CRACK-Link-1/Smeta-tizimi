@@ -90,8 +90,15 @@ for (const f of barchaFayllar) {
   if (/\.(tsx?|jsx?)$/.test(f)) {
     const matn = buf.toString('utf8');
     /* `={` dan keyin darhol backslash — bu HECH QACHON to'g'ri JS/JSX
-       emas (shablon satr `={` dan keyin ochilmaydi). */
-    if (/=\{\\[a-zA-Z(]/.test(matn)) {
+       emas (shablon satr `={` dan keyin ochilmaydi).
+       ⚠️ 2026-08-27: avval faqat `\` dan keyin harf/`(` kelsa mos
+       kelardi (`=\{\\[a-zA-Z(]`) — lekin yo'qolgan backtikdan keyingi
+       birinchi belgi TAB/probel ham bo'lishi mumkin ekan (masalan
+       "transition" so'zidagi "t" yeb ketilib, o'rniga TAB qolgan holat
+       jonli topildi). `={` dan keyin backslash — QANDAY BELGI kelishidan
+       qat'i nazar — hech qachon to'g'ri emas, shuning uchun keyingi
+       belgini умuman tekshirmaymiz. */
+    if (/=\{\\/.test(matn)) {
       shablonBuzilgan.push(nisbiy);
     }
   }

@@ -73,6 +73,13 @@ const RUXSAT_JADVALLAR = new Set([
      junction jadval orqali bir nechta obyektga bog'lanadi (2026-08-27,
      Antigravity SQL + Claude qattiqlashtirgan). */
   't2_sklad_royxat', 't2_kadr_royxat', 't2_texnika_royxat',
+  /* LOYIHA (Project) — Kompaniya→Loyiha→Obyekt oraliq bosqichi
+     (2026-08-27, MASTER_REJA_ENTERPRISE_OS.md FAZA-oldi ustuvor
+     bo'shliq: "32 gektar, 40 obyekt, bitta park" guruhlash). */
+  't2_loyiha_royxat',
+  /* KONTRAGENTLAR (B2B Reestr) — biznes hamkorlar adress daftari,
+     t2_kompaniya (tizim tenant'lari) EMAS (2026-08-27). */
+  't2_kontragent_royxat',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

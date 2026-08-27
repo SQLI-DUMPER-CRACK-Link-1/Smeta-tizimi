@@ -1,6 +1,7 @@
 import { useState, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 
 const Sahna3D = lazy(() => import('./Sahna3D'));
 
@@ -10,6 +11,7 @@ export default function KirishSahifa() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [uch_D, setUch_D] = useState(() => localStorage.getItem('uchD') !== 'off');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,10 +67,27 @@ export default function KirishSahifa() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-bg flex items-center justify-center">
       {/* 3D Background */}
-      <div className="absolute inset-0 z-0">
-        <Suspense fallback={<div className="w-full h-full bg-gradient-to-br from-bg via-surface to-bg opacity-50" />}>
-          <Sahna3D />
-        </Suspense>
+      {uch_D && (
+        <div className="absolute inset-0 z-0">
+          <Suspense fallback={<div className="w-full h-full bg-gradient-to-br from-bg via-surface to-bg opacity-50" />}>
+            <Sahna3D />
+          </Suspense>
+        </div>
+      )}
+
+      {/* Toggle Button */}
+      <div className="absolute top-4 right-4 z-20">
+        <button
+          onClick={() => {
+            const newVal = !uch_D;
+            setUch_D(newVal);
+            localStorage.setItem('uchD', newVal ? 'on' : 'off');
+          }}
+          className="flex items-center gap-2 px-3 py-2 bg-surface-2/80 backdrop-blur border border-glass-border rounded-lg text-text hover:bg-surface-3 transition-colors"
+        >
+          {uch_D ? <Eye size={16} /> : <EyeOff size={16} />}
+          <span className="text-sm font-medium">3D: {uch_D ? 'ON' : 'OFF'}</span>
+        </button>
       </div>
 
       {/* Foreground */}

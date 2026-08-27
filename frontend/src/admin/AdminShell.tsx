@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
-import { AlertTriangle, ChevronDown, ChevronRight, Archive } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Archive, Eye, EyeOff } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
@@ -56,6 +56,9 @@ const MENYU = [{ yol: '/admin/test', nom: '⭐ Tizim_02 (Asosiy)', Ikonka: Flask
 export default function AdminShell() {
   const sess = useSessiya();
   const joy = useLocation();
+  /* 3D background toggle state */
+  const [uch_D, setUch_D] = useState(() => localStorage.getItem('uchD') !== 'off');
+
   /* Eski tizim ostida turilsa avtomatik ochiq boshlansin — aks holda
      foydalanuvchi qayerdaligini yo'qotadi. */
   const eskiIchida = ESKI_TIZIM_MENYU.some((m) => joy.pathname.startsWith(m.yol));
@@ -189,7 +192,7 @@ export default function AdminShell() {
           YECHIM: bezak fon faqat YENGIL sahifalarda. Ish sahifalarida
           (F2 import, Holat, Ierarxiya, Narxlar) o'chiriladi — bu yerda
           tezlik chiroylikdan muhimroq. */}
-      {!ogirSahifa && (
+      {!ogirSahifa && uch_D && (
         <div className="absolute inset-0 z-0 pointer-events-none">
            <Sahna3D />
         </div>
@@ -262,13 +265,24 @@ export default function AdminShell() {
           )}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <button
+            onClick={() => {
+              const newVal = !uch_D;
+              setUch_D(newVal);
+              localStorage.setItem('uchD', newVal ? 'on' : 'off');
+            }}
+            className="flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg text-text hover:bg-surface-2 transition-colors"
+          >
+            {uch_D ? <Eye className="w-5 h-5 text-text-dim" /> : <EyeOff className="w-5 h-5 text-text-dim" />}
+            <span className="text-sm">3D Animatsiya: {uch_D ? 'ON' : 'OFF'}</span>
+          </button>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg text-text hover:bg-surface-2 transition-colors"
           >
             <LogOut className="w-5 h-5 text-text-dim" />
-            <span>Чиқиш</span>
+            <span className="text-sm">Чиқиш</span>
           </button>
         </div>
       </aside>

@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { gas } from '../api/client';
 import ReactMarkdown from 'react-markdown';
-import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert, Bot, X, Send } from 'lucide-react';
+import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert, Bot, X, Send, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sahna3D from '../kirish/Sahna3DXavfsiz';
 
@@ -34,6 +34,7 @@ export default function BossShell() {
   const [aiYuklanmoqda, setAiYuklanmoqda] = useState(false);
   const aiOxiriRef = useRef<HTMLDivElement>(null);
   const sess = useSessiya();
+  const [uch_D, setUch_D] = useState(() => localStorage.getItem('uchD') !== 'off');
 
   useEffect(() => {
     if (isAiOpen) aiOxiriRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -82,9 +83,11 @@ export default function BossShell() {
           ildizi edi (batafsil: `Umumiy.tsx` dagi AuroraBackground izohi).
           Endi fon FAQAT qobiqda, bitta marta va `Sahna3DXavfsiz` orqali:
           WebGL yiqilsa oddiy gradientga o'tadi, sahifa buzilmaydi. */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <Sahna3D />
-      </div>
+      {uch_D && (
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <Sahna3D />
+        </div>
+      )}
       <div className="absolute inset-0 z-0 bg-black/40 pointer-events-none" />
 
       {/* LEFT SIDEBAR */}
@@ -177,7 +180,18 @@ export default function BossShell() {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-white/5 space-y-2">
+          <button
+            onClick={() => {
+              const newVal = !uch_D;
+              setUch_D(newVal);
+              localStorage.setItem('uchD', newVal ? 'on' : 'off');
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 border border-transparent transition-all"
+          >
+            {uch_D ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            <span className="font-semibold text-sm">3D Animatsiya: {uch_D ? 'ON' : 'OFF'}</span>
+          </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 border border-transparent transition-all"
