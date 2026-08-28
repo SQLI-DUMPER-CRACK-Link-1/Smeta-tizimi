@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { FolderKanban, Building2, Network, CalendarDays } from 'lucide-react';
+import { FolderKanban, Building2, Network, CheckCircle2 } from 'lucide-react';
 import TestLoyiha from './TestLoyiha';
 import TestObyektlar from './TestObyektlar';
 import TestXarita from './TestXarita';
 import TestFakt from './TestFakt';
+import TestAosr from './TestAosr';
 
 export default function WrapperPortfel() {
-  const [activeTab, setActiveTab] = useState<'loyiha' | 'obyekt' | 'fakt' | 'xarita'>('loyiha');
+  const [activeTab, setActiveTab] = useState<'loyiha' | 'obyekt' | 'fakt' | 'xarita' | 'aosr'>('loyiha');
 
   return (
     <div className="h-full flex flex-col bg-transparent">
@@ -25,10 +26,22 @@ export default function WrapperPortfel() {
           <Building2 size={16} /> Obyektlar
         </button>
         <button
+          onClick={() => setActiveTab('fakt')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'fakt' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-zinc-400 hover:text-white'}`}
+        >
+          <CheckCircle2 size={16} /> Fakt (Bajarilgan)
+        </button>
+        <button
           onClick={() => setActiveTab('xarita')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'xarita' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-zinc-400 hover:text-white'}`}
         >
           <Network size={16} /> Xarita (Mind Map)
+        </button>
+        <button
+          onClick={() => setActiveTab('aosr')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'aosr' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-zinc-400 hover:text-white'}`}
+        >
+          <FolderKanban size={16} /> AOSR
         </button>
       </div>
 
@@ -36,8 +49,9 @@ export default function WrapperPortfel() {
       <div className="flex-1 overflow-hidden relative">
         {activeTab === 'loyiha' && <TestLoyiha />}
         {activeTab === 'obyekt' && <TestObyektlar />}
-        {activeTab === 'xarita' && <TestXarita />}
         {activeTab === 'fakt' && <TestFakt />}
+        {activeTab === 'xarita' && <TestXarita />}
+        {activeTab === 'aosr' && <TestAosr />}
       </div>
     </div>
   );

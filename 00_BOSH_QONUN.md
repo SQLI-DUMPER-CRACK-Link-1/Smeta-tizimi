@@ -611,38 +611,34 @@ yana eski faylga uriladi.
 o'chirish man etiladi.*
 
 ---
-# 8-QONUN: BITCOIN-DARAJASIDAGI XAVFSIZLIK (Yangi tahrir)
-Hech qachon tizim URLlarida, API chaqiruvlarida yoki bazaning tashqi qatlamlarida osongina bashorat qilish mumkin bo'lgan inkremental ID'lar (1, 2, 3...) ishlatilmasligi shart.
-Barcha xavfsizlik va ajratish (multi-tenancy) mantig'i Bitcoin kabi ishonchli kriptografiyaga tayanishi kerak. Asosiy jadvallar (Kompaniya, Obyekt, Shartnoma) uchun identifikatorlar UUIDv4 (128-bit) yordamida himoyalanishi, va Supabase RLS siyosatlari shu UUID asnosida qurilishi kerak. Bu har qanday tashqi urinishlar (IDOR) yoki "tahmin qilish" xavfini butunlay yo'q qiladi.
+# 8-QONUN: XAVFSIZLIK POYDEVORI (2026-08-28 da foydalanuvchi tomonidan aniqlashtirildi)
 
-> ⚠️ **MUHARRIR IZOHI (Claude, 2026-08-28) — bu bilan ZIDDIYAT TOPILDI, hal qilinmagan holda qoldirilmoqda (o'zim o'zim g'olib deb e'lon qilmayapman, bu faylning o'z qoidasiga ziddir):**
->
-> `MASTER_REJA_ENTERPRISE_OS.md` (0-A bo'limi) da shu taklif BATAFSIL
-> texnik sabab bilan RAD ETILGAN va REJADAN OLIB TASHLANGAN edi (bu
-> yozuvdan OLDIN yozilgan bo'lishi kerak, sana bir xil kunga to'g'ri
-> kelgani uchun tartib aniq emas). Qisqacha sabab:
-> 1. UUID o'zi IDOR'dan HIMOYA QILMAYDI — faqat ID'ni **taxmin
->    qilishni** qiyinlashtiradi. Haqiqiy himoya — SERVER har so'rovda
->    "bu foydalanuvchi shu yozuvga tegishli kompaniyaga a'zomi" deb
->    TEKSHIRISHI. Bu ALLAQACHON qurilgan va ishlaydi (`sb.ts`/
->    `sb-yoz.ts`, "Auth Session -> User -> Tenant -> Role" poydevori,
->    2026-08-27/28 commitlari) — UUID bo'lmasa ham IDOR yopilgan.
-> 2. "Supabase RLS shu UUID asosida" — bu ARXITEKTURAVIY ISHLAMAYDI:
->    hamma so'rov `service_role` kaliti bilan ketadi (Cloudflare
->    Pages Functions orqali), u RLS'ni AVTOMATIK BYPASS qiladi
->    (Supabase'da BYPASSRLS). RLS policy yozish HOZIRGI arxitekturada
->    (Supabase Auth ishlatilmaydi, custom HMAC cookie session) hech
->    qanday HIMOYA QO'SHMAYDI — faqat "himoyalangan" degan noto'g'ri
->    taassurot beradi.
-> 3. `t2_loyiha`ga aynan shu UUID taklifi (`01_T2_LOYIHA_MIGRATSIYA.sql`)
->    allaqachon bir marta amalda RAD ETILGAN (`tizim02/MULOQOT.md`,
->    "QAROR: bigint qoldi" — 2026-08-28), chunki UUID'ga o'tish
->    RLS policy `request.jwt.claims`ga tayangan, biz esa Supabase
->    Auth ISHLATMAYMIZ.
->
-> **Hal qilinmagan savol foydalanuvchiga**: shu 8-QONUN band KUCHDA
-> qoladimi (shunda yangi jadvallar — `t2_kontragent`, `t2_kadr_mustaqil`
-> va h.k. — UUID'ga o'tkazilishi kerak bo'ladi, KATTA qayta yozish) yoki
-> bekor qilinadimi (yuqoridagi texnik sabab bilan)? Ikkala hujjat ham
-> o'zini "eng yuqori" deb hisoblaydi — bu ZIDDIYATNING O'ZI ham
-> muammo: kelajakda ikkita "bosh qonun" fayli bo'lmasligi kerak.
+> ✅ **HAL QILINDI.** Foydalanuvchining o'z izohi: *"Bitcoin darajasidagi
+> xavfsizlik" deganda mubolag'a qilib aytdim, xavfsiz bo'lsin degan
+> ma'noda. Xavfsizlikni farqi yo'q qaysi yo'ldan borsang ham, xavfsizlik
+> poydevorlarini qo'yib boraverish kerak; tizim tayyor bo'lganidan
+> keyin yoqishing kerak.* Ya'ni: **UUID/RLS literal talab EMAS** —
+> bu band pastdagi shaklga almashtirildi.
+
+**Qoida (yangi, kuchda):**
+1. Har bir yangi jadval/RPC yozilganda xavfsizlik POYDEVORI albatta
+   qo'yiladi: `id` immutable, `holat`/`versiya` (soft-delete + optimistik
+   qulf), kompaniya a'zoligi tekshiruvi (`sb.ts`/`sb-yoz.ts` naqshi),
+   audit yozuvi — bularning HAMMASI **hozirdanoq**, har safar.
+2. **To'liq yoqish** (RLS policy, Supabase Auth+JWT, ID formatini
+   almashtirish, secret rotation, MFA va h.k.) — tizim FAZA 1-9
+   asosiy funksionalligi bilan tayyor bo'lgach, YAKUNIY bosqichda
+   BITTA paket sifatida amalga oshiriladi (MASTER_REJA_ENTERPRISE_OS.md
+   0/0-A bo'limlarida allaqachon shu tartib yozilgan — GPT reja ham
+   band 31/39 da xuddi shu ketma-ketlikni tavsiya qiladi: "full security
+   hardening — oxirgi katta bosqich").
+3. Konkret ID formati (bigint yoki UUID) — MUHIM EMAS, chunki haqiqiy
+   himoya (server-tomon a'zolik tekshiruvi) format bilan bog'liq emas.
+   Yangi jadval qaysi formatda qulay bo'lsa (loyihada barchasi
+   `bigint GENERATED ALWAYS AS IDENTITY`) — shu davom etadi, ATAYLAB
+   UUID'ga o'tkazish shart EMAS.
+
+Eski matn (arxiv, endi kuchda emas, tarix uchun saqlanadi):
+> ~~Hech qachon tizim URLlarida... inkremental ID'lar ishlatilmasligi
+> shart. ...UUIDv4 (128-bit) yordamida himoyalanishi, va Supabase RLS
+> siyosatlari shu UUID asosida qurilishi kerak.~~
