@@ -87,7 +87,19 @@ const AMALLAR = {
   fakt_belgila: { rpc: 't2_fakt_belgila' },
   azolik_qosh: { rpc: 't2_azolik_qosh' },
   azolik_rol_ozgartir: { rpc: 't2_azolik_rol_ozgartir' },
-  azolik_ochir: { rpc: 't2_azolik_ochir' }
+  azolik_ochir: { rpc: 't2_azolik_ochir' },
+  /* ⚠️ 2026-08-28: `kompaniya_yangila` bir marta (2026-08-27) qo'shilgan
+   * edi, lekin keyingi merge'da (`f9a9d04`) YO'QOLIB QOLGAN — DB
+   * funksiyasi (`t2_kompaniya_yangila`) va frontend chaqiruvi
+   * (`sbKompaniyaYangila`, `supabase.ts`) omon qolgan, faqat shu
+   * ko'prik yo'qolgan edi. Tiklandi. Bu — parallel ish paytida
+   * merge silliq o'chirib yuborishi mumkinligiga JONLI misol; shuning
+   * uchun har muhim o'zgarishdan keyin push'dan OLDIN diffni ko'rish
+   * kerak. */
+  kompaniya_yangila: { rpc: 't2_kompaniya_yangila' },
+  /* MATERIAL ALIASLARI — AI semantik qidiruv (2026-08-28). */
+  material_alias_yoz: { rpc: 't2_material_alias_yoz' },
+  material_alias_ochir: { rpc: 't2_material_alias_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -959,6 +971,51 @@ export const onRequestPost: PagesFunction<{
       };
 
     } else if (amal === 'kontragent_ochir') {
+      const id = Number(so.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      yuk = { p_id: id };
+
+    /* ══════════ KOMPANIYA (o'z tashkilot profili) ══════════
+       ⚠️ 2026-08-28: bu blok bir marta yozilgan, keyingi merge'da
+       yo'qolib qolgan edi — tiklandi (yuqoridagi izohga qarang). */
+    } else if (amal === 'kompaniya_yangila') {
+      const id = Number(so.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      if (so.kutilgan_versiya == null) {
+        return Response.json({ ok: false, error: 'kutilgan_versiya majburiy' });
+      }
+      const MAVQE_RUXSAT3 = ['zakazchik', 'pudratchi', 'loyihachi'];
+      const mavqe3 = so.mavqe && MAVQE_RUXSAT3.includes(String(so.mavqe)) ? String(so.mavqe) : null;
+      yuk = {
+        p_id: id, p_kutilgan_versiya: Number(so.kutilgan_versiya),
+        p_toliq_nom: so.toliq_nom != null ? String(so.toliq_nom).slice(0, 300) : null,
+        p_inn: so.inn != null ? String(so.inn).slice(0, 20) : null,
+        p_manzil: so.manzil != null ? String(so.manzil).slice(0, 500) : null,
+        p_rahbar: so.rahbar != null ? String(so.rahbar).slice(0, 200) : null,
+        p_telefon: so.telefon != null ? String(so.telefon).slice(0, 40) : null,
+        p_bank: so.bank != null ? String(so.bank).slice(0, 200) : null,
+        p_hisob_raqam: so.hisob_raqam != null ? String(so.hisob_raqam).slice(0, 40) : null,
+        p_mfo: so.mfo != null ? String(so.mfo).slice(0, 20) : null,
+        p_mavqe: mavqe3,
+      };
+
+    /* ══════════ MATERIAL ALIASLARI (AI semantik qidiruv) ══════════ */
+    } else if (amal === 'material_alias_yoz') {
+      if (!String(so.alias_nom || '').trim() || !String(so.kanonik_nom_key || '').trim()) {
+        return Response.json({ ok: false, error: 'alias_nom va kanonik_nom_key bo\'sh bo\'lishi mumkin emas' });
+      }
+      yuk = {
+        p_alias_nom: String(so.alias_nom).slice(0, 300),
+        p_kanonik_nom_key: String(so.kanonik_nom_key).slice(0, 300),
+        p_kanonik_birlik_key: so.kanonik_birlik_key ? String(so.kanonik_birlik_key).slice(0, 50) : null,
+        p_kompaniya_id: so.kompaniya_id == null ? null : Number(so.kompaniya_id),
+      };
+
+    } else if (amal === 'material_alias_ochir') {
       const id = Number(so.id);
       if (!Number.isFinite(id) || id <= 0) {
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });

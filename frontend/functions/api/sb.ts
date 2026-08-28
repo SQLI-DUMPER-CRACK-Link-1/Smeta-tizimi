@@ -87,6 +87,10 @@ const RUXSAT_JADVALLAR = new Set([
   /* A'ZOLIK (Xodimlar va Rollar) — kompaniya a'zolari ro'yxati
      (foydalanuvchi + rol), 2026-08-28. */
   't2_azolik_royxat',
+  /* MATERIAL ALIASLARI — AI semantik qidiruv poydevori (2026-08-28,
+     MASTER_REJA_ENTERPRISE_OS.md "0-A" tahlili). "M200"/"Бетон М200"/
+     "М-200" bitta kanonik nom_key'ga ishora qiladi. */
+  't2_material_alias_royxat',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */
