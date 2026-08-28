@@ -23,7 +23,8 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: HardHat,
     id: 'operatsion',
     menyular: [
-      { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
+      { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
+        { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
       { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
       { yol: '/admin/test/erp', nom: 'Kadrlar, Texnika (ERP)', Ikonka: Users },
     ]
@@ -163,12 +164,12 @@ export default function AdminShell() {
     } else if (sess.data?.rol === 'pto') {
       // PTO Portfel va Moliya(Smeta/F2)
       if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
-      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya'));
+      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya') || m.yol.includes('smeta'));
       else allowedMenus = [];
     } else if (sess.data?.rol === 'bugalter') {
       // Bugalter Moliya, CRM
       if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('crm'));
-      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya'));
+      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya') || m.yol.includes('smeta'));
       else allowedMenus = [];
     } else if (sess.data?.rol === 'rahbar' || sess.data?.rol === 'boss' || sess.data?.rol === 'admin' || sess.data?.rol === 'superadmin') {
       // Ruxsat hammasiga
