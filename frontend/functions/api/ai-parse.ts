@@ -78,7 +78,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       'O\'qilmagan yoki yo\'q qiymatni null qaytaring. 0 faqat hujjatda aniq 0 bo\'lsa ishlatiladi.',
       'Har bir item bitta tovar qatori bo\'lsin. Rekvizit va summalarni matn/fayldan tekshiring.',
       'sana YYYY-MM-DD yoki DD.MM.YYYY bo\'lsin.',
-      text ? `Qo\'shimcha matn:\n${text}` : '',
+      text ? `Qo'shimcha matn:\n${text}` : '',
     ].filter(Boolean).join('\n');
 
     const result = await aiCall(ctx.env, {
