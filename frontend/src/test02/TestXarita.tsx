@@ -447,7 +447,16 @@ export default function TestXarita() {
                 className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg ' +
                   (nishon ? 'ring-2 ring-sky-400/70' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
                 style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
-                <div className="flex items-center gap-1.5 font-semibold text-[12px] truncate" style={{ color: rang }}>
+                
+                  {/* Bildirishnoma / Zayavka (Tick) */}
+                  {(t.meta?.zayavka || t.meta?.bildirishnoma) && (
+                    <div className="absolute -top-2 -left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-[#111827] shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse flex items-center gap-1 z-20">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                      {t.meta.zayavka || t.meta.bildirishnoma}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1.5 font-semibold text-[12px] truncate" style={{ color: rang }}>
                   <Ik size={13} className="flex-shrink-0" /><span className="truncate">{t.nom}</span>
                 </div>
                 <div className="text-[10px] text-zinc-500 truncate">{tafsilot(t)}</div>
