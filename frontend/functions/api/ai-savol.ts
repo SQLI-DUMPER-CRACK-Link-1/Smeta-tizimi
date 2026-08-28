@@ -18,6 +18,14 @@ type Env = {
   GROQ_MODEL?: string;
   OPENAI_MODEL?: string;
   ANTHROPIC_MODEL?: string;
+  /** Cloudflare Workers AI binding. Bu tashqi provider API kalitini talab qilmaydi. */
+  AI?: {
+    run: (model: string, input: Record<string, unknown>) => Promise<{
+      response?: string;
+      usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
+    }>;
+  };
+  AI_MODEL?: string;
 };
 
 type Savol = { savol?: unknown; kompaniya_id?: unknown };
@@ -56,6 +64,32 @@ function umumiyMatn(k: AiUmumiy): string {
     (o.toliq ? '' : ' ⚠️ TO\'LIQ EMAS (' + o.narxsiz + ' qatorda narx yo\'q)') +
     ' · fakt ' + pul(o.fakt) + ' · Ф2 ' + pul(o.f2));
   return 'OBYEKTLAR HOLATI (tizimdan):\n' + satrlar.join('\n') + '\n\n' + k.izoh;
+}
+
+async function jarvisJavobi(env: Env, system: string, text: string) {
+  /* Cloudflare Workers AI birinchi tanlov: kalit emas, Pages binding orqali
+     account ruxsati ishlatiladi. Tashqi providerlar faqat oldindan sozlangan
+     bo'lsa, eski gateway orqali fallback bo'lib qoladi. */
+  if (env.AI) {
+    const model = String(env.AI_MODEL || '@cf/meta/llama-3.1-8b-instruct-fast').trim();
+    const raw = await env.AI.run(model, {
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: text },
+      ],
+      temperature: 0.1,
+      max_tokens: 1000,
+    });
+    const javob = String(raw?.response || '').trim();
+    if (!javob) throw new Error('Workers AI bo\'sh javob qaytardi');
+    return {
+      text: javob,
+      provider: 'cloudflare-workers-ai',
+      model,
+      usage: raw.usage,
+    };
+  }
+  return aiCall(env, { system, text, temperature: 0.1, maxOutputTokens: 1000 });
 }
 
 /**
@@ -103,13 +137,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     const text = 'MA\'LUMOT (tizimdan):\n' + dalil + '\n\nSAVOL: ' + savol;
     if (text.length > MAX_PROMPT) return xato('Kontekst juda katta; aniqroq obyektni tanlang', 422);
 
-    const natija = await aiCall(ctx.env, {
-      system: 'Sening noming Jarvis. ' + AI_KORSATMA +
+    const natija = await jarvisJavobi(
+      ctx.env,
+      'Sening noming Jarvis. ' + AI_KORSATMA +
         '\n6. Bu beta agent faqat o\'qiydi; hech qanday amal bajarilgan deb aytma.',
       text,
-      temperature: 0.1,
-      maxOutputTokens: 1000,
-    });
+    );
 
     return Response.json({
       ok: true,
