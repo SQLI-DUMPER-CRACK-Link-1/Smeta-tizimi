@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
-import { AlertTriangle, ChevronDown, ChevronRight, Archive, Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Archive, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
@@ -34,6 +34,7 @@ const TIZIM_02_GURUHLAR = [
     id: 'tizim',
     menyular: [
       { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
+      { yol: '/admin/test/xodimlar', nom: 'Xodimlar va Rollar', Ikonka: ShieldCheck },
       { yol: '/admin/test/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
     ]
   }
@@ -151,6 +152,32 @@ export default function AdminShell() {
     );
   }
 
+  // Master Plan 4. ROLLAR VA WORKSPACE
+  const filtrKilinganGuruhlar = TIZIM_02_GURUHLAR.map(g => {
+    let allowedMenus = g.menyular;
+    if (sess.data?.rol === 'prorab') {
+      // Prorab faqat Logistika (Sklad) va Loyihalar(Fakt) ko'radi
+      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
+      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('logistika'));
+      else allowedMenus = [];
+    } else if (sess.data?.rol === 'pto') {
+      // PTO Portfel va Moliya(Smeta/F2)
+      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
+      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya'));
+      else allowedMenus = [];
+    } else if (sess.data?.rol === 'bugalter') {
+      // Bugalter Moliya, CRM
+      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('crm'));
+      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya'));
+      else allowedMenus = [];
+    } else if (sess.data?.rol === 'rahbar' || sess.data?.rol === 'boss' || sess.data?.rol === 'admin' || sess.data?.rol === 'superadmin') {
+      // Ruxsat hammasiga
+    } else {
+      allowedMenus = []; // Noma'lum rol bo'lsa yashirish
+    }
+    return { ...g, menyular: allowedMenus };
+  }).filter(g => g.menyular.length > 0);
+
   return (
     <div className="flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30 bg-[#020617]">
       {!ogirSahifa && uch_D && (
@@ -170,13 +197,13 @@ export default function AdminShell() {
           </div>
           <div>
             <h1 className="text-[15px] font-bold text-text leading-tight tracking-wider">SMETA TIZIM 02</h1>
-            <p className="text-[11px] text-text-dim uppercase tracking-wider font-medium mt-0.5 text-accent/80">👷 {sess.data?.rol ? sess.data.rol : 'Admin'}</p>
+            <p className="text-[11px] text-text-dim uppercase tracking-wider font-medium mt-0.5 text-accent/80">👑 {sess.data?.rol ? sess.data.rol : 'Admin'}</p>
           </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4">
           
-          {TIZIM_02_GURUHLAR.map(guruh => (
+          {filtrKilinganGuruhlar.map(guruh => (
             <div key={guruh.id} className="space-y-1">
               <button
                 onClick={() => toggleGuruh(guruh.id)}

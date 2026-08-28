@@ -48,6 +48,7 @@ const TestTizim     = lazy(() => import('./test02/TestTizim'));
 const TestAosr      = lazy(() => import('./test02/TestAosr'));
 const TestGrafik    = lazy(() => import('./test02/TestGrafik'));
 const TestSpravochnik = lazy(() => import('./test02/TestSpravochnik'));
+import TestXodimlarRollar from './test02/TestXodimlarRollar';
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
 import { Narxlar } from './admin/sahifalar/Narxlar';
@@ -119,6 +120,8 @@ export default function App() {
             <Route path="logistika" element={<WrapperLogistika />} />
             <Route path="crm" element={<WrapperCRM />} />
 
+            <Route path="sozlama" element={<TestSozlama />} />
+            <Route path="xodimlar" element={<TestXodimlarRollar />} />
             <Route path="loyiha" element={<TestLoyiha />} />
             <Route path="korzinka" element={<TestKorzinka />} />
             <Route path="xarita" element={<TestXarita />} />

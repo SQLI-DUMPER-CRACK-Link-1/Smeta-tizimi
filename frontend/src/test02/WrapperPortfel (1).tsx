@@ -3,10 +3,9 @@ import { FolderKanban, Building2, Network, CalendarDays } from 'lucide-react';
 import TestLoyiha from './TestLoyiha';
 import TestObyektlar from './TestObyektlar';
 import TestXarita from './TestXarita';
-import TestFakt from './TestFakt';
 
 export default function WrapperPortfel() {
-  const [activeTab, setActiveTab] = useState<'loyiha' | 'obyekt' | 'fakt' | 'xarita'>('loyiha');
+  const [activeTab, setActiveTab] = useState<'loyiha' | 'obyekt' | 'xarita'>('loyiha');
 
   return (
     <div className="h-full flex flex-col bg-transparent">
@@ -37,7 +36,6 @@ export default function WrapperPortfel() {
         {activeTab === 'loyiha' && <TestLoyiha />}
         {activeTab === 'obyekt' && <TestObyektlar />}
         {activeTab === 'xarita' && <TestXarita />}
-        {activeTab === 'fakt' && <TestFakt />}
       </div>
     </div>
   );
