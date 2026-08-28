@@ -2045,3 +2045,45 @@ Tekshirildi: `tsc` toza, `t2_kompaniya.test.cjs` 23/23,
 `t2_kodlash_yaxlitligi` 171 fayl toza, `t2_tenant_izolyatsiya` 15/15.
 Barcha 7 bog'lanish turi + noto'g'ri tur rad etilishi Supabase MCP
 orqali jonli sinaldi, sinov ma'lumoti tozalandi (0 qoldiq). 
+
+### [2026-08-28] Claude -> hammaga : Mindmap 2-bosqich — sudrash, pan/zoom, joylashuv saqlash
+
+Foydalanuvchi 1-bosqichdan keyin: *«ancha yaxshilandi lekin backend bilan
+birga ishlamayapdi, yana yangidan qurayapdi, tayyor yaratilgan datalarni
+ko'rmayapdi... boshqaruv ham umuman nolga teng, bitta joyda qotib turadi
+hammasi, xohlaganday surib tartiblab taxlash imkoniyati kerak, maydon ham
+qimirlamay qolgan»*.
+
+**ILDIZ SABAB TOPILDI — «yana yangidan qurayapdi» ≠ ma'lumot yo'qolishi.**
+Bazani tekshirdim: `t2_mindmap_grafi(1)` 9 ta tugunni (5 obyekt, loyiha,
+shartnoma, kadr) TO'G'RI qaytarayotgan edi — ma'lumot JOYIDA. Muammo
+boshqa: **tugun joylashuvi hech qayerda saqlanmasdi**. Har ochilganda
+avtomatik ustunlarga qayta terilardi — odam terib qo'ygan tartib
+yo'qolib, «yangidan qurayotgandek» ko'rinardi.
+
+**Qurildi:**
+- `t2_mindmap_joylashuv` jadval + `t2_mindmap_joylashuv_saqla` RPC
+  (bir so'rovda ko'p tugun — «Qayta terish» 20+ tugunni birdan yuboradi,
+  20 ta alohida so'rov emas). `t2_mindmap_grafi` endi har tugun bilan
+  birga `x`/`y` ni ham qaytaradi (NULL = hali terilmagan → avtomatik).
+- **Erkin sudrash**: har tugunni istalgan joyga ko'chirish, qo'yib
+  yuborilganda joyi darhol saqlanadi.
+- **Pan tuzatildi**: avval tugun ustida bosilganda ham pan boshlanardi,
+  hodisalar aralashib maydon «qotib» qolardi. Endi bitta ANIQ rejim
+  mexanizmi (`rejim.current`): bo'sh joy=pan, tugun=sudrash, nuqta=chiziq.
+  `setPointerCapture` — kursor maydondan chiqsa ham sudrash uzilmaydi.
+- **Zum**: g'ildirak kursor ostidagi nuqtani JOYIDA saqlab zumlaydi
+  (oddiy zum kabi sakramaydi). «Ekranga sig'dirish» va «Qayta terish»
+  tugmalari qo'shildi. Kanvas 6000×4000 — sayr qilish uchun keng.
+
+Jonli sinaldi (MCP): bitta va ko'p tugunni saqlash, upsert dublikat
+yaratmasligi, grafda qaytishi — hammasi o'tdi, sinov ma'lumoti tozalandi.
+Tekshirildi: `tsc` toza, `t2_kompaniya.test.cjs` 23/23 (70 amal),
+`t2_kodlash_yaxlitligi` 171 fayl toza.
+
+⚠️ **Ochiq qolgan (foydalanuvchi haq):** *«bu faqat kompaniyani ichki
+qismini 10% ini boshqara oladi»* — bu TO'G'RI baho. Mindmap endi tugun
+yaratadi va bog'laydi, lekin har tugun ICHIGA kirib to'liq boshqarish
+(smeta, F2, sklad harakati, to'lov) hali alohida sahifalarda. Keyingi
+bosqich — tugunni bosganda o'ng tomonda TAFSILOT PANELI ochilishi va
+asosiy amallarni shu yerdan bajarish.

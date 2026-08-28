@@ -41,6 +41,9 @@ export type MindmapTugun = {
   tur: TugunTur;
   nom: string;
   meta: Record<string, any> | null;
+  /** Saqlangan joylashuv. NULL — hali qo'lda terilmagan, avtomatik joylashtiriladi. */
+  x: number | null;
+  y: number | null;
 };
 
 export type MindmapBogich = {
@@ -76,6 +79,15 @@ export function sbMindmapBog(tur: BogTur, manbaId: number, maqsadId: number, rol
 /** Chiziq o'chirilganda — bog'lanish uziladi (yozuvlar YO'QOLMAYDI). */
 export function sbMindmapBogOchir(tur: BogTur, manbaId: number, maqsadId: number) {
   return yozAmali({ amal: 'mindmap_bog_ochir', tur, manba_id: manbaId, maqsad_id: maqsadId });
+}
+
+/** Sudrab ko'chirilgan tugun(lar) joylashuvini saqlaydi — bir so'rovda ko'pi.
+ *  Bu bo'lmasa har ochilganda avtomatik qayta terilib, odam terib qo'ygan
+ *  tartib yo'qolardi. */
+export function sbMindmapJoylashuvSaqla(
+  kompaniyaId: number, joylar: { tugun_id: string; x: number; y: number }[]
+) {
+  return yozAmali({ amal: 'mindmap_joylashuv_saqla', kompaniya_id: kompaniyaId, joylar });
 }
 
 /** Qaysi turdagi tugundan qaysi turga chiziq tortish MUMKIN. */

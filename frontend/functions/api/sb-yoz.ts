@@ -102,7 +102,8 @@ const AMALLAR = {
   material_alias_ochir: { rpc: 't2_material_alias_ochir' },
   /* MINDMAP — chiziq tortib bog'lash/uzish (2026-08-28) */
   mindmap_bog: { rpc: 't2_mindmap_bog' },
-  mindmap_bog_ochir: { rpc: 't2_mindmap_bog_ochir' }
+  mindmap_bog_ochir: { rpc: 't2_mindmap_bog_ochir' },
+  mindmap_joylashuv_saqla: { rpc: 't2_mindmap_joylashuv_saqla' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -1051,6 +1052,26 @@ export const onRequestPost: PagesFunction<{
       } else {
         yuk = { p_tur: tur, p_manba_id: manbaId, p_maqsad_id: maqsadId };
       }
+
+    /* Tugun sudrab ko'chirilganda joylashuv saqlanadi — aks holda har
+       ochilganda avtomatik qayta terilib, odam terib qo'ygan tartib
+       YO'QOLARDI (foydalanuvchi: «yana yangidan qurayapdi»). */
+    } else if (amal === 'mindmap_joylashuv_saqla') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: "kompaniya_id noto'g'ri" });
+      }
+      if (!Array.isArray(so.joylar) || !so.joylar.length) {
+        return Response.json({ ok: false, error: "joylar bo'sh" });
+      }
+      const joylar = so.joylar.slice(0, 500).map((j: any) => ({
+        tugun_id: String(j.tugun_id || '').slice(0, 60),
+        x: Number(j.x), y: Number(j.y),
+      })).filter((j: any) => j.tugun_id && Number.isFinite(j.x) && Number.isFinite(j.y));
+      if (!joylar.length) {
+        return Response.json({ ok: false, error: "yaroqli joylashuv yo'q" });
+      }
+      yuk = { p_kompaniya_id: kompaniyaId, p_joylar: joylar };
 
     /* ══════════ ФАКТ KIRITISH (bajarilgan ish) ══════════
        Foydalanuvchi: «ikkalasi ham bo'lishi kerak» — prorab kunlik ham,

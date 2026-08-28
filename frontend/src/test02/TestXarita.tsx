@@ -2,55 +2,40 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Building2, Warehouse, FileText, Truck, HardHat, FolderKanban,
   Users, Plus, X, ZoomIn, ZoomOut, RefreshCcw, Unlink, Move,
+  LayoutGrid, Maximize2, Save,
 } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
 import {
   sbMindmapGrafOl, sbMindmapBog, sbMindmapBogOchir, sbMindmapTugunYarat,
-  bogTuriniTop, RUXSAT_BOGLANISH,
+  sbMindmapJoylashuvSaqla, bogTuriniTop, RUXSAT_BOGLANISH,
   type MindmapGraf, type MindmapTugun, type TugunTur,
 } from '../api/t2-mindmap';
 
-/* ⚡ 2026-08-28 — MINDMAP TUBDAN QAYTA QURILDI (foydalanuvchi ko'rsatmasi).
+/* ⚡ 2026-08-28 (2-bosqich) — foydalanuvchi shikoyatlari bo'yicha:
  *
- * AVVALGI HOLAT (nima uchun "juda noto'g'ri ishlardi"):
- *   • Mindmapda HECH NARSA YARATIB BO'LMASDI — sklad, shartnoma,
- *     texnika (avtopark), kontragent qo'shish imkoni yo'q edi.
- *   • Har obyekt ostidagi "Sklad (WMS)" / "Shartnomalar" tugunlari
- *     DEKORATIV edi — hech qanday haqiqiy yozuvga bog'lanmagan,
- *     shunchaki boshqa sahifaga navigatsiya tugmasi. Ya'ni ular
- *     obyektga bog'langandek KO'RINARDI, lekin bog'lanish YO'Q edi.
- *   • Yagona haqiqiy amal — obyektni loyihaga biriktirish, u ham
- *     chiziq bilan emas, modal ro'yxatdan tanlash orqali.
+ *   «yana yangidan qurayapdi, tayyor yaratilgan datalarni ko'rmayapdi»
+ *      → JOYLASHUV SAQLANMASDI. Har ochilganda tugunlar avtomatik
+ *        ustunlarga qayta terilardi — odam terib qo'ygan tartib
+ *        yo'qolardi va "yangidan qurayotgandek" ko'rinardi. Endi har
+ *        tugun joyi `t2_mindmap_joylashuv` da saqlanadi.
  *
- * HOZIRGI HOLAT: to'liq tahrirlash maydoni.
- *   • 6 turdagi tugun shu yerda YARATILADI (loyiha, shartnoma, sklad,
- *     texnika, kadr, kontragent).
- *   • Bog'lanish — tugun chetidagi nuqtadan CHIZIQ TORTIB. 7 turdagi
- *     bog'lanish qo'llab-quvvatlanadi (`RUXSAT_BOGLANISH`).
- *   • Chiziqni bosib UZISH mumkin (yozuvlar o'chmaydi, faqat bog'lanish).
- *   • Butun graf BITTA so'rovda o'qiladi (`t2_mindmap_grafi`).
+ *   «bitta joyda qotib turadi hammasi... surib tartiblab taxlash kerak»
+ *      → Tugunlar QAT'IY ustunlarga mixlangan edi, sudrab bo'lmasdi.
+ *        Endi har tugunni sudrab istalgan joyga qo'yish mumkin.
  *
- * ⚠️ Obyekt ATAYLAB bu yerda yaratilmaydi — unga Drive papka tuzilmasi
- * ham kerak; yarim yaratilgan obyekt keyin smeta yuklashda sinardi.
+ *   «maydon ham qimirlamay qolgan, hamma joyga sayr qilish kerak»
+ *      → Pan buzuq edi: tugun ustida bosilganda ham pan boshlanardi,
+ *        hodisalar aralashib ketardi. Endi bitta ANIQ rejim mexanizmi
+ *        (`rejim.current`): bo'sh joy=pan, tugun=sudrash, nuqta=chiziq.
+ *        `setPointerCapture` bilan kursor maydondan chiqsa ham ishlaydi.
+ *        G'ildirak kursor ostidagi nuqtani joyida saqlab zumlaydi.
  */
 
-const NODE_W = 210;
-const NODE_H = 56;
-const GAP_Y = 18;
-const COL_GAP = 300;
-const TOP = 80;
-
-type UstunTa = { tur: TugunTur[]; nom: string; Ikonka: any; rang: string };
-
-/* Ustunlar chapdan o'ngga — bog'lanishlar tabiiy oqim bo'ylab ketsin */
-const USTUNLAR: UstunTa[] = [
-  { tur: ['kontragent'],                nom: 'Kontragentlar', Ikonka: Users,       rang: '#f472b6' },
-  { tur: ['kompaniya', 'loyiha'],       nom: 'Loyihalar',     Ikonka: FolderKanban, rang: '#0ea5e9' },
-  { tur: ['shartnoma'],                 nom: 'Shartnomalar',  Ikonka: FileText,    rang: '#d946ef' },
-  { tur: ['obyekt'],                    nom: 'Obyektlar',     Ikonka: Building2,   rang: '#10b981' },
-  { tur: ['sklad', 'texnika', 'kadr'],  nom: 'Resurslar',     Ikonka: Warehouse,   rang: '#f59e0b' },
-];
+const NODE_W = 200;
+const NODE_H = 54;
+const KANVAS_W = 6000;
+const KANVAS_H = 4000;
 
 const TUR_RANG: Record<TugunTur, string> = {
   kompaniya: '#8b5cf6', loyiha: '#0ea5e9', obyekt: '#10b981', shartnoma: '#d946ef',
@@ -60,15 +45,23 @@ const TUR_IKONKA: Record<TugunTur, any> = {
   kompaniya: Building2, loyiha: FolderKanban, obyekt: Building2, shartnoma: FileText,
   sklad: Warehouse, texnika: Truck, kadr: HardHat, kontragent: Users,
 };
+const TUR_NOM: Record<TugunTur, string> = {
+  kompaniya: 'Kompaniya', loyiha: 'Loyiha', obyekt: 'Obyekt', shartnoma: 'Shartnoma',
+  sklad: 'Sklad', texnika: 'Texnika', kadr: 'Xodim', kontragent: 'Kontragent',
+};
 
-/** Mindmapdan yaratsa bo'ladigan turlar va ularning maydonlari */
-const YARATSA_BOLADI: { tur: TugunTur; nom: string; maydonlar: { kalit: string; nom: string; majburiy?: boolean }[] }[] = [
-  { tur: 'loyiha',     nom: 'Loyiha',     maydonlar: [{ kalit: 'nom', nom: 'Loyiha nomi', majburiy: true }, { kalit: 'hudud', nom: 'Hudud' }] },
-  { tur: 'shartnoma',  nom: 'Shartnoma',  maydonlar: [{ kalit: 'nom', nom: 'Shartnoma raqami', majburiy: true }, { kalit: 'taraf', nom: 'Taraf (kim bilan)' }] },
-  { tur: 'sklad',      nom: 'Sklad',      maydonlar: [{ kalit: 'nom', nom: 'Sklad nomi', majburiy: true }, { kalit: 'manzil', nom: 'Manzil' }, { kalit: 'masul', nom: "Mas'ul shaxs" }] },
-  { tur: 'texnika',    nom: 'Texnika',    maydonlar: [{ kalit: 'nom', nom: 'Texnika nomi', majburiy: true }, { kalit: 'davlat_raqami', nom: 'Davlat raqami' }] },
-  { tur: 'kadr',       nom: 'Xodim',      maydonlar: [{ kalit: 'nom', nom: 'Ism sharif', majburiy: true }, { kalit: 'lavozim', nom: 'Lavozim', majburiy: true }] },
-  { tur: 'kontragent', nom: 'Kontragent', maydonlar: [{ kalit: 'nom', nom: 'Kompaniya nomi', majburiy: true }, { kalit: 'inn', nom: 'STIR (9 raqam)' }] },
+/** Avtomatik joylash ustunlari — FAQAT saqlangan joyi yo'q tugunlar uchun */
+const USTUN_TARTIB: TugunTur[][] = [
+  ['kontragent'], ['kompaniya', 'loyiha'], ['shartnoma'], ['obyekt'], ['sklad', 'texnika', 'kadr'],
+];
+
+const YARATSA_BOLADI: { tur: TugunTur; maydonlar: { kalit: string; nom: string; majburiy?: boolean }[] }[] = [
+  { tur: 'loyiha',     maydonlar: [{ kalit: 'nom', nom: 'Loyiha nomi', majburiy: true }, { kalit: 'hudud', nom: 'Hudud' }] },
+  { tur: 'shartnoma',  maydonlar: [{ kalit: 'nom', nom: 'Shartnoma raqami', majburiy: true }, { kalit: 'taraf', nom: 'Taraf (kim bilan)' }] },
+  { tur: 'sklad',      maydonlar: [{ kalit: 'nom', nom: 'Sklad nomi', majburiy: true }, { kalit: 'manzil', nom: 'Manzil' }, { kalit: 'masul', nom: "Mas'ul shaxs" }] },
+  { tur: 'texnika',    maydonlar: [{ kalit: 'nom', nom: 'Texnika nomi', majburiy: true }, { kalit: 'davlat_raqami', nom: 'Davlat raqami' }] },
+  { tur: 'kadr',       maydonlar: [{ kalit: 'nom', nom: 'Ism sharif', majburiy: true }, { kalit: 'lavozim', nom: 'Lavozim', majburiy: true }] },
+  { tur: 'kontragent', maydonlar: [{ kalit: 'nom', nom: 'Kompaniya nomi', majburiy: true }, { kalit: 'inn', nom: 'STIR (9 raqam)' }] },
 ];
 
 const ROLLAR = [
@@ -79,27 +72,50 @@ const ROLLAR = [
   { kalit: 'taminotchi', nom: "Ta'minotchi" },
 ];
 
-type Joylashuv = { x: number; y: number; tugun: MindmapTugun };
+type XY = { x: number; y: number };
+type Rejim =
+  | { tur: 'pan'; boshPan: XY; boshKursor: XY }
+  | { tur: 'tugun'; id: string; siljish: XY; kochdi: boolean }
+  | { tur: 'chiziq'; manba: string }
+  | null;
 
 export default function TestXarita() {
   const { joriy } = useKompaniya();
   const aktKomp = joriy?.id ?? 0;
 
   const [graf, setGraf] = useState<MindmapGraf>({ tugunlar: [], bogichlar: [] });
+  const [joylar, setJoylar] = useState<Record<string, XY>>({});
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   const [xato, setXato] = useState('');
+  const [saqlanmoqda, setSaqlanmoqda] = useState(false);
 
-  const [pan, setPan] = useState({ x: 40, y: 20 });
+  const [pan, setPan] = useState<XY>({ x: 60, y: 40 });
   const [zoom, setZoom] = useState(0.85);
-  const surish = useRef(false);
-  const oxirgi = useRef({ x: 0, y: 0 });
+  const [kursor, setKursor] = useState<XY>({ x: 0, y: 0 });
+  /* Rejim ref'da — har piksel siljishda qayta render qilmasin.
+     `rejimNishon` faqat KO'RINISH uchun (chiziq rejimida nishonlash). */
+  const rejim = useRef<Rejim>(null);
+  const [chiziqManbaId, setChiziqManbaId] = useState<string | null>(null);
 
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [qoralama, setQoralama] = useState<{ manba: string; x: number; y: number } | null>(null);
 
   const [yaratModal, setYaratModal] = useState<TugunTur | null>(null);
   const [maydonlar, setMaydonlar] = useState<Record<string, string>>({});
   const [rolModal, setRolModal] = useState<{ manbaId: number; maqsadId: number } | null>(null);
+
+  /** Saqlangan joyi yo'q tugunlarni ustunlarga teradi (mavjudlarga TEGMAYDI) */
+  const avtoJoylash = useCallback((tugunlar: MindmapTugun[], mavjud: Record<string, XY>) => {
+    const natija: Record<string, XY> = { ...mavjud };
+    USTUN_TARTIB.forEach((turlar, ui) => {
+      let qator = 0;
+      tugunlar.filter((t) => turlar.includes(t.tur)).forEach((t) => {
+        if (natija[t.id]) return;
+        natija[t.id] = { x: 60 + ui * 300, y: 80 + qator * 78 };
+        qator++;
+      });
+    });
+    return natija;
+  }, []);
 
   const yukla = useCallback(async () => {
     if (!aktKomp) return;
@@ -107,56 +123,109 @@ export default function TestXarita() {
     setXato('');
     const r = await sbMindmapGrafOl(aktKomp);
     setYuklanmoqda(false);
-    if (r.ok) setGraf(r.graf);
-    else setXato(r.error);
-  }, [aktKomp]);
+    if (!r.ok) { setXato(r.error); return; }
+    setGraf(r.graf);
+    const saqlangan: Record<string, XY> = {};
+    r.graf.tugunlar.forEach((t) => {
+      if (t.x != null && t.y != null) saqlangan[t.id] = { x: Number(t.x), y: Number(t.y) };
+    });
+    setJoylar(avtoJoylash(r.graf.tugunlar, saqlangan));
+  }, [aktKomp, avtoJoylash]);
 
   useEffect(() => { yukla(); }, [yukla]);
 
-  /* ── JOYLASHUV: har tur o'z ustunida, vertikal stack ── */
-  const joylar = new Map<string, Joylashuv>();
-  USTUNLAR.forEach((u, ui) => {
-    const tugunlar = graf.tugunlar.filter((t) => u.tur.includes(t.tur));
-    tugunlar.forEach((t, ti) => {
-      joylar.set(t.id, { x: 40 + ui * COL_GAP, y: TOP + ti * (NODE_H + GAP_Y), tugun: t });
-    });
-  });
-
-  const kanvasKoord = (e: React.PointerEvent | React.MouseEvent) => {
+  const kanvasKoord = useCallback((cx: number, cy: number): XY => {
     const r = wrapRef.current?.getBoundingClientRect();
     if (!r) return { x: 0, y: 0 };
-    return { x: (e.clientX - r.left - pan.x) / zoom, y: (e.clientY - r.top - pan.y) / zoom };
+    return { x: (cx - r.left - pan.x) / zoom, y: (cy - r.top - pan.y) / zoom };
+  }, [pan, zoom]);
+
+  /* ── ZUM: kursor ostidagi nuqta JOYIDA qoladi ── */
+  const gildirak = (e: React.WheelEvent) => {
+    const r = wrapRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const yangi = Math.min(2.5, Math.max(0.2, zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    setPan({ x: mx - ((mx - pan.x) / zoom) * yangi, y: my - ((my - pan.y) / zoom) * yangi });
+    setZoom(yangi);
   };
 
-  /* ── CHIZIQ TORTISH ── */
-  const chiziqBoshla = (e: React.PointerEvent, tugunId: string) => {
+  /* ── HODISALAR ── */
+  const bosildiBoshJoy = (e: React.PointerEvent) => {
+    if (rejim.current) return;                       // tugun/chiziq allaqachon boshlangan
+    wrapRef.current?.setPointerCapture(e.pointerId);
+    rejim.current = { tur: 'pan', boshPan: pan, boshKursor: { x: e.clientX, y: e.clientY } };
+  };
+
+  const bosildiTugun = (e: React.PointerEvent, id: string) => {
+    e.stopPropagation();                             // pan boshlanmasin
+    const joy = joylar[id];
+    if (!joy) return;
+    wrapRef.current?.setPointerCapture(e.pointerId);
+    const k = kanvasKoord(e.clientX, e.clientY);
+    rejim.current = { tur: 'tugun', id, siljish: { x: k.x - joy.x, y: k.y - joy.y }, kochdi: false };
+  };
+
+  const bosildiNuqta = (e: React.PointerEvent, id: string) => {
+    e.stopPropagation();                             // tugun sudrash boshlanmasin
+    wrapRef.current?.setPointerCapture(e.pointerId);
+    rejim.current = { tur: 'chiziq', manba: id };
+    setChiziqManbaId(id);
+    setKursor(kanvasKoord(e.clientX, e.clientY));
+  };
+
+  const harakat = (e: React.PointerEvent) => {
+    const r = rejim.current;
+    if (!r) return;
+    if (r.tur === 'pan') {
+      setPan({ x: r.boshPan.x + (e.clientX - r.boshKursor.x), y: r.boshPan.y + (e.clientY - r.boshKursor.y) });
+    } else if (r.tur === 'tugun') {
+      const k = kanvasKoord(e.clientX, e.clientY);
+      r.kochdi = true;
+      setJoylar((j) => ({ ...j, [r.id]: { x: Math.round(k.x - r.siljish.x), y: Math.round(k.y - r.siljish.y) } }));
+    } else if (r.tur === 'chiziq') {
+      setKursor(kanvasKoord(e.clientX, e.clientY));
+    }
+  };
+
+  /** Qo'yib yuborilganda: tugun ko'chgan bo'lsa joylashuvni SAQLAYMIZ */
+  const qoyibYuborildi = async () => {
+    const r = rejim.current;
+    rejim.current = null;
+    setChiziqManbaId(null);
+    if (r?.tur !== 'tugun' || !r.kochdi || !aktKomp) return;
+    const joy = joylar[r.id];
+    if (!joy) return;
+    setSaqlanmoqda(true);
+    const nat = await sbMindmapJoylashuvSaqla(aktKomp, [{ tugun_id: r.id, x: joy.x, y: joy.y }]);
+    setSaqlanmoqda(false);
+    if (!nat.ok) toast('Joylashuv saqlanmadi: ' + (nat.error || ''), 'danger');
+  };
+
+  const chiziqTugat = async (e: React.PointerEvent, maqsadId: string) => {
+    const r = rejim.current;
+    if (r?.tur !== 'chiziq') return;                 // sudrash bo'lsa — aralashmaymiz
     e.stopPropagation();
-    const p = kanvasKoord(e);
-    setQoralama({ manba: tugunId, x: p.x, y: p.y });
-  };
+    rejim.current = null;
+    setChiziqManbaId(null);
+    if (r.manba === maqsadId) return;
 
-  const chiziqTugat = async (maqsadId: string) => {
-    if (!qoralama || qoralama.manba === maqsadId) { setQoralama(null); return; }
-    const manba = graf.tugunlar.find((t) => t.id === qoralama.manba);
+    const manba = graf.tugunlar.find((t) => t.id === r.manba);
     const maqsad = graf.tugunlar.find((t) => t.id === maqsadId);
-    setQoralama(null);
     if (!manba || !maqsad) return;
 
     const qoida = bogTuriniTop(manba.tur, maqsad.tur);
     if (!qoida) {
-      toast(manba.tur + ' → ' + maqsad.tur + ' bog\'lanishi mavjud emas', 'danger');
+      toast(TUR_NOM[manba.tur] + ' → ' + TUR_NOM[maqsad.tur] + ' bog\'lanishi mavjud emas', 'danger');
       return;
     }
     const manbaId = Number(manba.id.split(':')[1]);
-    const maqsadId2 = Number(maqsad.id.split(':')[1]);
+    const maqsadRaqam = Number(maqsad.id.split(':')[1]);
+    if (qoida.tur === 'qatnashchi') { setRolModal({ manbaId, maqsadId: maqsadRaqam }); return; }
 
-    if (qoida.tur === 'qatnashchi') {
-      setRolModal({ manbaId, maqsadId: maqsadId2 });
-      return;
-    }
-    const r = await sbMindmapBog(qoida.tur, manbaId, maqsadId2);
-    if (r.ok) { toast(qoida.nom + ' — bajarildi', 'ok'); yukla(); }
-    else toast(r.error || 'Bog\'lanmadi', 'danger');
+    const nat = await sbMindmapBog(qoida.tur, manbaId, maqsadRaqam);
+    if (nat.ok) { toast(qoida.nom + ' — bajarildi', 'ok'); yukla(); }
+    else toast(nat.error || 'Bog\'lanmadi', 'danger');
   };
 
   const rolniTasdiqla = async (rol: string) => {
@@ -167,7 +236,7 @@ export default function TestXarita() {
     else toast(r.error || 'Bog\'lanmadi', 'danger');
   };
 
-  const chiziqUz = async (b: { manba: string; maqsad: string; tur: any; uzsa_boladi: boolean }) => {
+  const chiziqUz = async (b: MindmapGraf['bogichlar'][number]) => {
     if (!b.uzsa_boladi) { toast('Bu tuzilmaviy bog\'lanish — uzib bo\'lmaydi', 'danger'); return; }
     if (!confirm('Bog\'lanishni uzasizmi? (Yozuvlarning o\'zi O\'CHMAYDI)')) return;
     const r = await sbMindmapBogOchir(b.tur, Number(b.manba.split(':')[1]), Number(b.maqsad.split(':')[1]));
@@ -178,39 +247,80 @@ export default function TestXarita() {
   const tugunYarat = async () => {
     if (!yaratModal || !aktKomp) return;
     const r = await sbMindmapTugunYarat(yaratModal, aktKomp, maydonlar);
-    if (r.ok) {
-      toast('Yaratildi', 'ok');
-      setYaratModal(null); setMaydonlar({});
-      yukla();
-    } else toast(r.error || 'Yaratilmadi', 'danger');
+    if (r.ok) { toast('Yaratildi', 'ok'); setYaratModal(null); setMaydonlar({}); yukla(); }
+    else toast(r.error || 'Yaratilmadi', 'danger');
   };
 
-  /* ── BEZIER ── */
+  /** Hammasini ustunlarga qayta terib SAQLAYDI */
+  const hammasiniQaytaTer = async () => {
+    if (!aktKomp) return;
+    const yangi = avtoJoylash(graf.tugunlar, {});
+    setJoylar(yangi);
+    setSaqlanmoqda(true);
+    const r = await sbMindmapJoylashuvSaqla(aktKomp,
+      Object.entries(yangi).map(([tugun_id, p]) => ({ tugun_id, x: p.x, y: p.y })));
+    setSaqlanmoqda(false);
+    if (r.ok) toast('Qayta terildi va saqlandi', 'ok');
+    else toast(r.error || 'Saqlanmadi', 'danger');
+  };
+
+  /** Barcha tugun ko'rinadigan qilib zum/pan tanlaydi */
+  const ekrangaSigdir = () => {
+    const p = Object.values(joylar);
+    if (!p.length || !wrapRef.current) return;
+    const r = wrapRef.current.getBoundingClientRect();
+    const minX = Math.min(...p.map((a) => a.x)), maxX = Math.max(...p.map((a) => a.x)) + NODE_W;
+    const minY = Math.min(...p.map((a) => a.y)), maxY = Math.max(...p.map((a) => a.y)) + NODE_H;
+    const z = Math.min(2, Math.max(0.2,
+      Math.min((r.width - 80) / Math.max(1, maxX - minX), (r.height - 80) / Math.max(1, maxY - minY))));
+    setZoom(z);
+    setPan({ x: 40 - minX * z, y: 40 - minY * z });
+  };
+
   const bezier = (x1: number, y1: number, x2: number, y2: number) => {
     const cx = (x1 + x2) / 2;
     return 'M ' + x1 + ' ' + y1 + ' C ' + cx + ' ' + y1 + ', ' + cx + ' ' + y2 + ', ' + x2 + ' ' + y2;
   };
 
-  const qoralamaManba = qoralama ? joylar.get(qoralama.manba) : null;
+  const chiziqManba = chiziqManbaId ? joylar[chiziqManbaId] : null;
+
+  const tafsilot = (t: MindmapTugun) => {
+    const m = t.meta || {};
+    if (t.tur === 'obyekt') return m.lat != null ? '📍 ' + m.lat + ', ' + m.lng : 'lokatsiya belgilanmagan';
+    if (t.tur === 'loyiha') return m.byudjet != null ? 'Byudjet: ' + Number(m.byudjet).toLocaleString() : 'byudjet belgilanmagan';
+    if (t.tur === 'shartnoma') return m.taraf || 'taraf ko\'rsatilmagan';
+    if (t.tur === 'sklad') return m.manzil || 'manzil yo\'q';
+    if (t.tur === 'texnika') return m.davlat_raqami || 'davlat raqami yo\'q';
+    if (t.tur === 'kadr') return m.lavozim || '';
+    if (t.tur === 'kontragent') return m.inn ? 'STIR ' + m.inn : 'STIR kiritilmagan';
+    return 'Bosh tashkilot';
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#0a0f1d] text-white overflow-hidden">
-      {/* BOSHQARUV PANELI */}
-      <div className="flex-shrink-0 border-b border-white/10 bg-black/30 px-5 py-3">
+      {/* BOSHQARUV */}
+      <div className="flex-shrink-0 border-b border-white/10 bg-black/40 px-5 py-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-bold flex items-center gap-2">
               <Move size={18} className="text-sky-400" /> Arxitektura Xaritasi
+              {saqlanmoqda && <span className="text-[10px] text-amber-400 inline-flex items-center gap-1"><Save size={11} /> saqlanmoqda…</span>}
             </h1>
             <p className="text-[11px] text-zinc-400 mt-0.5">
-              Tugun chetidagi <span className="text-sky-400">•</span> nuqtadan boshqa tugunga <b>chiziq torting</b> — bog'lanadi.
-              Chiziqni bosib uzasiz.
+              Tugunni <b>sudrab</b> ko'chiring · o'ng chetidagi <span className="text-sky-400">•</span> dan <b>chiziq torting</b> ·
+              bo'sh joyni sudrab maydonni suring · g'ildirak bilan zumlang
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setZoom((z) => Math.max(0.3, z - 0.15))} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><ZoomOut size={15} /></button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={hammasiniQaytaTer} title="Hammasini ustunlarga qayta terish"
+              className="px-2.5 py-2 bg-white/5 hover:bg-white/10 rounded-lg inline-flex items-center gap-1.5 text-[11px]">
+              <LayoutGrid size={14} /> Qayta terish
+            </button>
+            <button onClick={ekrangaSigdir} title="Ekranga sig'dirish"
+              className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><Maximize2 size={15} /></button>
+            <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><ZoomOut size={15} /></button>
             <span className="text-[11px] text-zinc-500 w-10 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom((z) => Math.min(2, z + 0.15))} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><ZoomIn size={15} /></button>
+            <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><ZoomIn size={15} /></button>
             <button onClick={yukla} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><RefreshCcw size={15} className={yuklanmoqda ? 'animate-spin' : ''} /></button>
           </div>
         </div>
@@ -220,14 +330,16 @@ export default function TestXarita() {
           {YARATSA_BOLADI.map((y) => {
             const Ik = TUR_IKONKA[y.tur];
             return (
-              <button key={y.tur}
-                onClick={() => { setYaratModal(y.tur); setMaydonlar({}); }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors hover:bg-white/10"
+              <button key={y.tur} onClick={() => { setYaratModal(y.tur); setMaydonlar({}); }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border hover:bg-white/10 transition-colors"
                 style={{ borderColor: TUR_RANG[y.tur] + '55', color: TUR_RANG[y.tur] }}>
-                <Plus size={12} /> <Ik size={12} /> {y.nom}
+                <Plus size={12} /> <Ik size={12} /> {TUR_NOM[y.tur]}
               </button>
             );
           })}
+          <span className="text-[10px] text-zinc-600 ml-2">
+            (Obyekt — «Obyektlar» sahifasidan, unga Drive papkasi ham kerak)
+          </span>
         </div>
       </div>
 
@@ -236,80 +348,65 @@ export default function TestXarita() {
       {/* KANVAS */}
       <div
         ref={wrapRef}
-        className="flex-1 relative overflow-hidden"
-        style={{ cursor: surish.current ? 'grabbing' : 'grab' }}
-        onPointerDown={(e) => { if (!qoralama) { surish.current = true; oxirgi.current = { x: e.clientX, y: e.clientY }; } }}
-        onPointerMove={(e) => {
-          if (qoralama) { const p = kanvasKoord(e); setQoralama({ ...qoralama, x: p.x, y: p.y }); return; }
-          if (!surish.current) return;
-          setPan((p) => ({ x: p.x + (e.clientX - oxirgi.current.x), y: p.y + (e.clientY - oxirgi.current.y) }));
-          oxirgi.current = { x: e.clientX, y: e.clientY };
+        className="flex-1 relative overflow-hidden touch-none"
+        style={{
+          cursor: chiziqManbaId ? 'crosshair' : 'grab',
+          backgroundImage: 'radial-gradient(circle, #1e293b 1px, transparent 1px)',
+          backgroundSize: (24 * zoom) + 'px ' + (24 * zoom) + 'px',
+          backgroundPosition: pan.x + 'px ' + pan.y + 'px',
         }}
-        onPointerUp={() => { surish.current = false; setQoralama(null); }}
-        onPointerLeave={() => { surish.current = false; setQoralama(null); }}
+        onPointerDown={bosildiBoshJoy}
+        onPointerMove={harakat}
+        onPointerUp={qoyibYuborildi}
+        onPointerCancel={qoyibYuborildi}
+        onWheel={gildirak}
       >
-        <div className="absolute origin-top-left" style={{ transform: 'translate(' + pan.x + 'px,' + pan.y + 'px) scale(' + zoom + ')', width: 2400, height: 1800 }}>
-          {/* USTUN SARLAVHALARI */}
-          {USTUNLAR.map((u, ui) => (
-            <div key={u.nom} className="absolute text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5"
-              style={{ left: 40 + ui * COL_GAP, top: 40, color: u.rang }}>
-              <u.Ikonka size={13} /> {u.nom}
-            </div>
-          ))}
+        <div className="absolute top-0 left-0 origin-top-left"
+          style={{ transform: 'translate(' + pan.x + 'px,' + pan.y + 'px) scale(' + zoom + ')', width: KANVAS_W, height: KANVAS_H }}>
 
-          {/* CHIZIQLAR */}
-          <svg className="absolute inset-0 pointer-events-none" width={2400} height={1800}>
+          <svg className="absolute inset-0 pointer-events-none" width={KANVAS_W} height={KANVAS_H}>
             {graf.bogichlar.map((b, i) => {
-              const m = joylar.get(b.manba); const q = joylar.get(b.maqsad);
+              const m = joylar[b.manba], q = joylar[b.maqsad];
               if (!m || !q) return null;
-              const x1 = m.x + NODE_W, y1 = m.y + NODE_H / 2;
-              const x2 = q.x, y2 = q.y + NODE_H / 2;
-              const rang = TUR_RANG[m.tugun.tur] || '#64748b';
+              const manbaTur = graf.tugunlar.find((t) => t.id === b.manba)?.tur || 'obyekt';
+              const rang = TUR_RANG[manbaTur];
+              const d = bezier(m.x + NODE_W, m.y + NODE_H / 2, q.x, q.y + NODE_H / 2);
               return (
-                <g key={b.tur + i} className="pointer-events-auto" style={{ cursor: b.uzsa_boladi ? 'pointer' : 'default' }}
-                   onClick={() => chiziqUz(b)}>
-                  <path d={bezier(x1, y1, x2, y2)} fill="none" stroke="transparent" strokeWidth={14} />
-                  <path d={bezier(x1, y1, x2, y2)} fill="none" stroke={rang} strokeWidth={2}
-                        strokeOpacity={b.uzsa_boladi ? 0.55 : 0.25}
-                        strokeDasharray={b.uzsa_boladi ? 'none' : '4,4'} />
+                <g key={b.tur + '_' + i} className="pointer-events-auto"
+                  style={{ cursor: b.uzsa_boladi ? 'pointer' : 'default' }}
+                  onClick={() => chiziqUz(b)}>
+                  <path d={d} fill="none" stroke="transparent" strokeWidth={16} />
+                  <path d={d} fill="none" stroke={rang} strokeWidth={2}
+                    strokeOpacity={b.uzsa_boladi ? 0.6 : 0.25}
+                    strokeDasharray={b.uzsa_boladi ? 'none' : '4,4'} />
                 </g>
               );
             })}
-            {/* Tortilayotgan qoralama chiziq */}
-            {qoralama && qoralamaManba && (
-              <path d={bezier(qoralamaManba.x + NODE_W, qoralamaManba.y + NODE_H / 2, qoralama.x, qoralama.y)}
-                    fill="none" stroke="#38bdf8" strokeWidth={2} strokeDasharray="6,4" />
+            {chiziqManba && (
+              <path d={bezier(chiziqManba.x + NODE_W, chiziqManba.y + NODE_H / 2, kursor.x, kursor.y)}
+                fill="none" stroke="#38bdf8" strokeWidth={2} strokeDasharray="6,4" />
             )}
           </svg>
 
-          {/* TUGUNLAR */}
-          {Array.from(joylar.values()).map(({ x, y, tugun }) => {
-            const Ik = TUR_IKONKA[tugun.tur];
-            const rang = TUR_RANG[tugun.tur];
-            const nishon = qoralama && qoralama.manba !== tugun.id;
+          {graf.tugunlar.map((t) => {
+            const joy = joylar[t.id];
+            if (!joy) return null;
+            const Ik = TUR_IKONKA[t.tur];
+            const rang = TUR_RANG[t.tur];
+            const nishon = chiziqManbaId != null && chiziqManbaId !== t.id;
             return (
-              <div key={tugun.id}
-                onPointerUp={(e) => { e.stopPropagation(); chiziqTugat(tugun.id); }}
-                className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center transition-colors ' +
-                           (nishon ? 'ring-2 ring-sky-400/60' : '')}
-                style={{ left: x, top: y, width: NODE_W, height: NODE_H, borderColor: rang + '66' }}>
+              <div key={t.id}
+                onPointerDown={(e) => bosildiTugun(e, t.id)}
+                onPointerUp={(e) => chiziqTugat(e, t.id)}
+                className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg ' +
+                  (nishon ? 'ring-2 ring-sky-400/70' : '')}
+                style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
                 <div className="flex items-center gap-1.5 font-semibold text-[12px] truncate" style={{ color: rang }}>
-                  <Ik size={13} className="flex-shrink-0" /> <span className="truncate">{tugun.nom}</span>
+                  <Ik size={13} className="flex-shrink-0" /><span className="truncate">{t.nom}</span>
                 </div>
-                <div className="text-[10px] text-zinc-500 truncate">
-                  {tugun.tur === 'obyekt' && (tugun.meta?.lat != null ? '📍 ' + tugun.meta.lat + ', ' + tugun.meta.lng : 'lokatsiya belgilanmagan')}
-                  {tugun.tur === 'loyiha' && (tugun.meta?.byudjet != null ? 'Byudjet: ' + Number(tugun.meta.byudjet).toLocaleString() : 'byudjet belgilanmagan')}
-                  {tugun.tur === 'shartnoma' && (tugun.meta?.taraf || 'taraf ko\'rsatilmagan')}
-                  {tugun.tur === 'sklad' && (tugun.meta?.manzil || 'manzil yo\'q')}
-                  {tugun.tur === 'texnika' && (tugun.meta?.davlat_raqami || 'raqam yo\'q')}
-                  {tugun.tur === 'kadr' && (tugun.meta?.lavozim || '')}
-                  {tugun.tur === 'kontragent' && (tugun.meta?.inn ? 'STIR ' + tugun.meta.inn : 'STIR kiritilmagan')}
-                  {tugun.tur === 'kompaniya' && 'Bosh tashkilot'}
-                </div>
-                {/* CHIZIQ TORTISH NUQTASI */}
-                {tugun.tur !== 'kompaniya' && (
-                  <div
-                    onPointerDown={(e) => chiziqBoshla(e, tugun.id)}
+                <div className="text-[10px] text-zinc-500 truncate">{tafsilot(t)}</div>
+                {t.tur !== 'kompaniya' && (
+                  <div onPointerDown={(e) => bosildiNuqta(e, t.id)}
                     title="Bog'lash uchun shu nuqtadan chiziq torting"
                     className="absolute -right-[7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-[#0a0f1d] cursor-crosshair hover:scale-150 transition-transform"
                     style={{ background: rang }} />
@@ -319,7 +416,7 @@ export default function TestXarita() {
           })}
 
           {!yuklanmoqda && graf.tugunlar.length <= 1 && (
-            <div className="absolute text-center text-zinc-500 text-sm" style={{ left: 40, top: TOP + 20, width: 520 }}>
+            <div className="absolute text-zinc-500 text-sm" style={{ left: 60, top: 100, width: 520 }}>
               Hali tugun yo'q. Tepadagi «Yangi qo'shish» tugmalaridan loyiha, sklad,
               texnika yoki kontragent yarating — keyin ularni chiziq bilan bog'laysiz.
             </div>
@@ -328,12 +425,12 @@ export default function TestXarita() {
       </div>
 
       {/* QO'LLANMA */}
-      <div className="flex-shrink-0 border-t border-white/10 bg-black/30 px-5 py-2 flex flex-wrap gap-x-4 gap-y-1">
+      <div className="flex-shrink-0 border-t border-white/10 bg-black/40 px-5 py-2 flex flex-wrap gap-x-4 gap-y-1 items-center">
         {RUXSAT_BOGLANISH.map((r) => (
           <span key={r.tur} className="text-[10px] text-zinc-500">
-            <span style={{ color: TUR_RANG[r.manba] }}>{r.manba}</span>
+            <span style={{ color: TUR_RANG[r.manba] }}>{TUR_NOM[r.manba]}</span>
             <span className="mx-1">→</span>
-            <span style={{ color: TUR_RANG[r.maqsad] }}>{r.maqsad}</span>
+            <span style={{ color: TUR_RANG[r.maqsad] }}>{TUR_NOM[r.maqsad]}</span>
           </span>
         ))}
         <span className="text-[10px] text-zinc-600 inline-flex items-center gap-1 ml-auto">
@@ -341,14 +438,12 @@ export default function TestXarita() {
         </span>
       </div>
 
-      {/* YANGI TUGUN MODALI */}
+      {/* YANGI TUGUN */}
       {yaratModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setYaratModal(null)}>
           <div className="bg-[#111827] border border-white/10 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold" style={{ color: TUR_RANG[yaratModal] }}>
-                Yangi {YARATSA_BOLADI.find((y) => y.tur === yaratModal)?.nom}
-              </h3>
+              <h3 className="font-bold" style={{ color: TUR_RANG[yaratModal] }}>Yangi {TUR_NOM[yaratModal]}</h3>
               <button onClick={() => setYaratModal(null)} className="text-zinc-500 hover:text-white"><X size={18} /></button>
             </div>
             <div className="space-y-3">
@@ -357,29 +452,25 @@ export default function TestXarita() {
                   <label className="block text-[11px] text-zinc-400 mb-1">
                     {m.nom}{m.majburiy && <span className="text-rose-400"> *</span>}
                   </label>
-                  <input
-                    value={maydonlar[m.kalit] || ''}
+                  <input value={maydonlar[m.kalit] || ''}
                     onChange={(e) => setMaydonlar({ ...maydonlar, [m.kalit]: e.target.value })}
                     className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-sky-500 outline-none" />
                 </div>
               ))}
             </div>
-            <button onClick={tugunYarat}
-              className="w-full mt-4 bg-sky-600 hover:bg-sky-500 py-2 rounded-lg font-medium text-sm">
+            <button onClick={tugunYarat} className="w-full mt-4 bg-sky-600 hover:bg-sky-500 py-2 rounded-lg font-medium text-sm">
               Yaratish
             </button>
           </div>
         </div>
       )}
 
-      {/* ROL TANLASH MODALI (kontragent → loyiha) */}
+      {/* ROL TANLASH */}
       {rolModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setRolModal(null)}>
           <div className="bg-[#111827] border border-white/10 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold text-pink-400 mb-1">Loyihadagi roli</h3>
-            <p className="text-[11px] text-zinc-500 mb-4">
-              Bitta kompaniya turli loyihalarda turli rolda bo'lishi mumkin.
-            </p>
+            <p className="text-[11px] text-zinc-500 mb-4">Bitta kompaniya turli loyihalarda turli rolda bo'lishi mumkin.</p>
             <div className="space-y-2">
               {ROLLAR.map((r) => (
                 <button key={r.kalit} onClick={() => rolniTasdiqla(r.kalit)}
