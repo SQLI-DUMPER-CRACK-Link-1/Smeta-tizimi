@@ -1935,4 +1935,49 @@ whitelist yozuvi bor, lekin Postgres'da haqiqiy jadval/RPC yo'q. Hamma
    chaqirilmaydi (o'lik kod, hozircha xavfsiz). Tegilmadi.
 
 Tekshirildi: `tsc` toza, `t2_kompaniya.test.cjs` 23/23,
-`t2_kodlash_yaxlitligi` 169 fayl toza. 
+`t2_kodlash_yaxlitligi` 169 fayl toza.
+
+### [2026-08-28] Claude -> hammaga : Obyekt lokatsiyasi + Markaziy Sklad Konsolidatsiyasi
+
+Foydalanuvchi arxitekturaviy bo'shliq ko'rsatdi: *"Toshkentda 20 dan
+ortiq obyekt, bitta markaziy sklad, har obyektda kichik qabul qiluvchi
+sklad bor, lekin umumiy obyektlardagi ostatkalar ko'rsatila olishi
+kerak, snabjeniya ham shunga qarab ishlay oladi. Har obyektga
+lokatsiyasini kartadan belgilash."*
+
+**1) `t2_obyekt.lat`/`lng`** qo'shildi. Mavjud `t2_obyekt_yangila` RPC
+KENGAYTIRILDI (yangi funksiya EMAS — eski parametrlar aynan saqlandi,
+`p_lat`/`p_lng` oxiriga qo'shildi, DEFAULT NULL — eski chaqiruvchilar
+buzilmaydi). ⚠️ Jonli sinovda bitta ehtiyot topdim: `CREATE OR REPLACE`
+parametr sonini o'zgartirsa Postgres ESKI signature'ni O'CHIRMAYDI,
+YANGI OVERLOAD yaratadi — ikkalasi navbatma-navbat "function is not
+unique" xatosi berdi. Eski 4-parametrli versiyani `DROP FUNCTION` bilan
+aniq o'chirdim. **Saboq**: RPC parametr sonini o'zgartirsangiz —
+`CREATE OR REPLACE` YETARLI EMAS, eski signature'ni ham DROP qiling.
+
+`t2_obyekt_jami` view (frontend `T2Obyekt` shu yerdan o'qiydi) ga
+`lat`/`lng`/`versiya`/`loyiha_id` qo'shildi — avval bular umuman
+ko'rinmasdi. `sbObyektLokatsiyaBelgila(id, lat, lng, kutilganVersiya)`
+— `supabase.ts` oxirida.
+
+**2) `t2_sklad_konsolidatsiya`** — markaziy sklad (`t2_sklad_mustaqil`)
+ga bog'langan (`t2_sklad_bog`) BARCHA obyektning haqiqiy qoldig'ini
+(`t2_sklad_qoldiq`) material bo'yicha yig'adi: HAM jami summa, HAM
+har obyektdagi taqsimot (`obyektlar_boyicha` jsonb massiv) — snabjeniya
+"boshqa obyektdan ko'chirsak bo'ladimi yoki yangi xarid kerakmi" deb
+qaror qilishi uchun. Jonli sinaldi: 2 obyektga (12t + 5t Sement M400)
+bog'langan sklad → konsolidatsiya to'g'ri 17t ko'rsatdi, keyin
+tozalandi. `frontend/src/api/t2-sklad-konsolidatsiya.ts` tayyor.
+
+**UI hali YO'Q** (backend tayyor, ulash keyingi qadam):
+- kartadan lokatsiya tanlash (Leaflet/Google Maps klik) — mindmap
+  yoki Obyektlar sahifasiga;
+- markaziy sklad konsolidatsiya ko'rinishi (`WrapperLogistika.tsx`
+  ichiga tabiiy o'rin bo'lardi).
+
+Bu — foydalanuvchi so'ragan "mindmapda obyekt/shartnoma/zakazchik/sklad
+bog'lanishi" ning **sklad qismi**. Loyiha (`t2_loyiha`) ↔ shartnoma
+(`t2_shartnoma.loyiha_id`) ↔ qatnashchi (`t2_loyiha_qatnashchi`, rol
+bilan zakazchik ham kiradi) — bularning HAMMASI ALLAQACHON bor edi
+(oldingi ishlarda). Yetishmayotgan yagona qism aynan shu — sklad/
+snabjeniya obyekt-siloslarini kesib o'tuvchi ko'rinish — endi bor. 

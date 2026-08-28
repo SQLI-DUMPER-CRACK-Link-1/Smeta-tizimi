@@ -1124,17 +1124,30 @@ export const onRequestPost: PagesFunction<{
       }
       yuk = { p_jadval: jadval, p_id: id, p_kim: sess.email || '' };
 
-    /* ══════════ OBYEKT TAHRIRLASH ══════════ */
+    /* ══════════ OBYEKT TAHRIRLASH ══════════
+       ⚠️ 2026-08-28: `p_lat`/`p_lng` qo'shildi (foydalanuvchi
+       ko'rsatmasi — "har obyektga lokatsiyasini kartadan belgilash").
+       RPC ularni COALESCE bilan qo'llaydi — yuborilmasa (undefined)
+       eskisi saqlanadi, xato bo'lmaydi. */
     } else if (amal === 'obyekt_yangila') {
       const id = Number(so.id || so.rpcArgs?.p_id);
       if (!Number.isFinite(id) || id <= 0) {
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      const lat = so.lat == null ? null : Number(so.lat);
+      const lng = so.lng == null ? null : Number(so.lng);
+      if (lat != null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) {
+        return Response.json({ ok: false, error: 'lat -90..90 oralig\'ida bo\'lishi kerak' });
+      }
+      if (lng != null && (!Number.isFinite(lng) || lng < -180 || lng > 180)) {
+        return Response.json({ ok: false, error: 'lng -180..180 oralig\'ida bo\'lishi kerak' });
       }
       yuk = {
         p_id: id,
         p_nomi: String(so.nomi || so.rpcArgs?.p_nomi || ''),
         p_tur: so.tur || so.rpcArgs?.p_tur || null,
         p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+        p_lat: lat, p_lng: lng,
       };
 
     /* ══════════ B2B BIRJA ══════════

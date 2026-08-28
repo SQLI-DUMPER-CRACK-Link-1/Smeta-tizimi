@@ -96,6 +96,11 @@ const RUXSAT_JADVALLAR = new Set([
      FAQAT ko'rish uchun, yozishda bloklanmaydi (foydalanuvchi qarori:
      "faqat ogohlantirish"). */
   't2_overbilling_radar',
+  /* MARKAZIY SKLAD KONSOLIDATSIYASI (2026-08-28, foydalanuvchi
+     ko'rsatmasi — "20+ obyekt, bitta markaziy sklad, umumiy ostatka
+     ko'rinishi kerak"): bitta markaziy skladga bog'langan (t2_sklad_bog)
+     BARCHA obyektning haqiqiy qoldig'ini material bo'yicha yig'adi. */
+  't2_sklad_konsolidatsiya',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */

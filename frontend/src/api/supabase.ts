@@ -266,6 +266,9 @@ export type T2Obyekt = {
   narxsiz: number | null;
   chel: number | null; mash: number | null; mat: number | null; ob: number | null;
   yangilandi: string | null;
+  /** ⚡ 2026-08-28: kartadan belgilangan lokatsiya (bo'lmasa NULL — hali belgilanmagan). */
+  lat: number | null; lng: number | null;
+  versiya: number; loyiha_id: number | null;
 };
 
 export function sbT2ObyektlarOl() {
@@ -798,6 +801,19 @@ export async function sbObyektOchirish(id: number, nomi: string): Promise<any> {
   }).catch(console.error);
 
   return data;
+}
+
+/* ⚡ 2026-08-28 (foydalanuvchi ko'rsatmasi — "har obyektga lokatsiyasini
+ * kartadan belgilash"): `t2_obyekt.lat`/`lng` — kartadan (masalan Leaflet/
+ * Google Maps klik) tanlangan koordinata. `kutilganVersiya` MAJBURIY —
+ * ikki admin bir vaqtda tahrirlasa jimgina ustidan yozilmasin. */
+export async function sbObyektLokatsiyaBelgila(id: number, lat: number, lng: number, kutilganVersiya: number): Promise<any> {
+  const res = await fetch('/api/sb-yoz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amal: 'obyekt_yangila', id, nomi: '', kutilgan_versiya: kutilganVersiya, lat, lng })
+  });
+  return await res.json();
 }
 
 export async function sbObyektTahrirlash(id: number, nomi: string, tur: string): Promise<any> {
