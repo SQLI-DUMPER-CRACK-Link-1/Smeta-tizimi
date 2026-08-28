@@ -62,8 +62,8 @@ const GLOBAL_MODS = [
 ];
 
 const OBJ_SUBS = [
-  { nomi: 'Asosiy Smeta',          color: 'indigo',  Icon: FileText,      pathFn: (_: number, nom: string) => '/admin/test/f2?obyekt=' + nom },
-  { nomi: 'F2 Dalolatnoma',        color: 'rose',    Icon: Pickaxe,       pathFn: (_: number, nom: string) => '/admin/test/f2?obyekt=' + nom },
+  { nomi: 'Asosiy Smeta',          color: 'indigo',  Icon: FileText,      pathFn: (_: number, nom: string) => '/admin/test/smeta?obyekt=' + nom },
+  { nomi: 'F2 Dalolatnoma',        color: 'rose',    Icon: Pickaxe,       pathFn: (_: number, nom: string) => '/admin/test/smeta?obyekt=' + nom },
   { nomi: 'Obyekt Shartnomalari',  color: 'fuchsia', Icon: Briefcase,     pathFn: (id: number, _nom: string) => '/admin/test/shartnomalar?obyektId=' + id },
   { nomi: 'Texnadzor / Sifat',     color: 'red',     Icon: ShieldCheck,   pathFn: (id: number, _nom: string) => '/admin/test/erp?modul=sifat&obyektId=' + id },
   { nomi: 'Obyekt Hujjatlari',     color: 'cyan',    Icon: FolderOpen,    pathFn: (id: number, _nom: string) => '/admin/test/hujjat?obyektId=' + id },
@@ -351,7 +351,7 @@ export default function TestXarita() {
                         className={`w-4 h-4 rounded-full border-2 mr-2 shrink-0 flex items-center justify-center transition-all cursor-crosshair ${draftLink ? 'bg-accent/20 border-accent scale-150 animate-pulse' : 'bg-surface border-border'}`}
                         title="Shu obyektga ulash uchun shu yerga qo'yib yuboring"
                       />
-                      <div onClick={(e) => nav('/admin/test/f2?obyekt=' + ob.nom, e)} className="flex-1 h-full flex items-center gap-2 px-3 bg-surface border border-border rounded-xl cursor-pointer hover:border-accent">
+                      <div onClick={(e) => nav('/admin/test/smeta?obyekt=' + ob.nom, e)} className="flex-1 h-full flex items-center gap-2 px-3 bg-surface border border-border rounded-xl cursor-pointer hover:border-accent">
                         <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0">
                           <HardHat size={16} className="text-emerald-500" />
                         </div>

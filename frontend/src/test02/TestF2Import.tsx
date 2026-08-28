@@ -2070,7 +2070,7 @@ export default function TestF2Import() {
                 className="px-4 py-2 rounded-lg border border-border text-[12px] font-bold text-text hover:bg-white/5 transition-colors">
                 Yangi fayl yuklash
               </button>
-              <a href="/admin/test/f2"
+              <a href="/admin/test/smeta"
                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent text-white text-[12px] font-bold hover:bg-accent/90 transition-colors">
                 Hujjatlar ro'yxatiga o'tish <ExternalLink size={12} />
               </a>
