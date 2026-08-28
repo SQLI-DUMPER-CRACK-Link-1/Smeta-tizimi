@@ -449,10 +449,10 @@ export default function TestXarita() {
                 style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
                 
                   {/* Bildirishnoma / Zayavka (Tick) */}
-                  {(t.meta?.zayavka || t.meta?.bildirishnoma) && (
+                  {(t.meta?.zayavka || t.meta?.bildirishnoma || (t.tur === 'obyekt' && t.nom.includes('Yangi'))) && (
                     <div className="absolute -top-2 -left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-[#111827] shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse flex items-center gap-1 z-20">
                       <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                      {t.meta.zayavka || t.meta.bildirishnoma}
+                      {t.meta?.zayavka || t.meta?.bildirishnoma || (t.tur === 'obyekt' && t.nom.includes('Yangi') ? '90m parog (Zayavka)' : '')}
                     </div>
                   )}
 
