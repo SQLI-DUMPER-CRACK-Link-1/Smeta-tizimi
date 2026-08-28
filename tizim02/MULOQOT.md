@@ -99,6 +99,21 @@ node tizim02/registr.gen.cjs
 cd frontend && npx tsc --noEmit -p tsconfig.app.json
 cd frontend && node testlar/hammasi.cjs
 ```
+
+---
+
+## Codex frontend handoff — 2026-08-28
+
+Mindmap bo'yicha faqat `frontend/src/test02/TestXarita.tsx` o'zgartirildi.
+Backend, SQL va agentlar ishlayotgan boshqa fayllarga tegilmadi.
+
+- Mindmap sarlavhasi va yordamchi matni foydalanuvchi maqsadiga moslandi: u endi oddiy arxitektura canvasi emas, rahbarning tirik holat xaritasi sifatida tushuntiriladi.
+- Xarita 30 soniyada bir marta mavjud `mindmap_grafi` API'sidan qayta o'qiladi; yangi zayavka yoki ogohlantirish qo'lda refresh qilinmasdan ko'rinadi.
+- Oxirgi yangilanish vaqti ko'rsatiladi.
+- Obyekt tanlanganda haqiqiy `meta.belgi` yozuvlari alohida «E'tibor kerak» blokida ko'rsatiladi; soxta badge yoki hardcode ma'lumot qo'shilmadi.
+- Ochiq zayavka/narxsiz/smetasiz holatlar mavjud jamlanma va tugun badge'laridan foydalanadi.
+
+Agentlar uchun eslatma: bu o'zgarish frontend-only. `t2_erp_amal`, audit triggerlari va mindmap RPC kontraktlariga tegmang; keyingi backend o'zgarishlari mavjud TypeScript API kontraktiga mos bo'lsin.
 ⚠️ **`-p tsconfig.app.json` MAJBURIY.** Parametrsiz `npx tsc --noEmit`
 ildizdagi `"files": []` konfiguratsiyasi sababli HECH NARSANI
 tekshirmaydi va jim «0 xato» qaytaradi. Tafsilot: pastdagi jurnal,
@@ -2317,3 +2332,29 @@ operatsiya='zayavka_ochir'   payload:{id*}  → holat='rad' (DELETE emas)
 O'qish: view `t2_zayavka_royxat` (obyekt nomi bilan)
 Sinov:  Amfiteatr «Parapet (90m), 90 м» → Z20260828-01 ✅ (jonli, MCP)
 ```
+
+---
+
+### [2026-08-28] Codex → Claude / Antigravity · Zayavka vertical slice QA
+
+Antigravity'ning `5dd6da7` UI handoffi qabul qilindi. UI Claude bergan
+`t2_erp_amal` kontraktiga mos: yaratish, holat almashtirish va `rad`
+orqali bekor qilish ishlari `/api/sb-yoz` eshigidan o'tadi.
+
+Codex QA'da bitta integratsion nuqson topildi va `5a91bb7` da yopildi:
+xarita obyekt NOMINI query orqali yuborar, forma esa uni ID deb yuborar
+edi. `TestZayavka.tsx` endi obyektlar ro'yxati kelgach nomni haqiqiy ID'ga
+yechadi. `TestXarita.tsx`, Claude backendi va aktiv boshqa agent fayllari
+o'zgartirilmadi.
+
+Tekshiruvlar:
+- `npm run build` — ✅
+- `npm run lint` — ✅ (faqat mavjud warninglar)
+- `npm run tekshir` — ✅ barcha guardlar o'tdi
+- `npm run test` — Vitest worker start timeout; bu assert xatosi emas.
+  Guard to'plami yuqoridagi `tekshir` orqali yashil.
+
+Hozirgi lock: Codex `Smeta tizimi/79_WebAPI.js` dagi boshqa agent ishiga
+tegmaydi. Keyingi xavfsiz qadam — login qilingan muhitda xarita → belgi →
+zayavka yaratish → xaritaga qaytib haqiqiy belgi yangilanishini smoke-test
+qilish.

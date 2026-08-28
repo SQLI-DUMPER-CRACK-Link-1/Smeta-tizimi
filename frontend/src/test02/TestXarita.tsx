@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Building2, Warehouse, FileText, Truck, HardHat, FolderKanban,
   Users, Plus, X, ZoomIn, ZoomOut, RefreshCcw, Unlink, Move,
-  LayoutGrid, Maximize2, Save, Trash2, ExternalLink,
+  LayoutGrid, Maximize2, Save, Trash2, ExternalLink, AlertTriangle, Clock, CheckCircle2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useKompaniya } from './KompaniyaTanlov';
@@ -109,6 +109,7 @@ export default function TestXarita() {
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   const [xato, setXato] = useState('');
   const [saqlanmoqda, setSaqlanmoqda] = useState(false);
+  const [oxirgiYangilanish, setOxirgiYangilanish] = useState<Date | null>(null);
 
   const [pan, setPan] = useState<XY>({ x: 60, y: 40 });
   const [zoom, setZoom] = useState(0.85);
@@ -148,6 +149,7 @@ export default function TestXarita() {
     setYuklanmoqda(false);
     if (!r.ok) { setXato(r.error); return; }
     setGraf(r.graf);
+    setOxirgiYangilanish(new Date());
     const saqlangan: Record<string, XY> = {};
     r.graf.tugunlar.forEach((t) => {
       if (t.x != null && t.y != null) saqlangan[t.id] = { x: Number(t.x), y: Number(t.y) };
@@ -156,6 +158,14 @@ export default function TestXarita() {
   }, [aktKomp, avtoJoylash]);
 
   useEffect(() => { yukla(); }, [yukla]);
+
+  /* Faqat frontend polling: rahbar oynasi yangi zayavka/belgilarni
+     qo'lda Yangilash tugmasisiz ham ko'rsatsin. */
+  useEffect(() => {
+    if (!aktKomp) return;
+    const timer = window.setInterval(yukla, 30_000);
+    return () => window.clearInterval(timer);
+  }, [aktKomp, yukla]);
 
   const kanvasKoord = useCallback((cx: number, cy: number): XY => {
     const r = wrapRef.current?.getBoundingClientRect();
@@ -358,15 +368,16 @@ export default function TestXarita() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-bold flex items-center gap-2">
-              <Move size={18} className="text-sky-400" /> Arxitektura Xaritasi
+              <Move size={18} className="text-sky-400" /> Rahbarning tirik holat xaritasi
               {saqlanmoqda && <span className="text-[10px] text-amber-400 inline-flex items-center gap-1"><Save size={11} /> saqlanmoqda…</span>}
             </h1>
             <p className="text-[11px] text-zinc-400 mt-0.5">
-              Tugunni <b>sudrab</b> ko'chiring · o'ng chetidagi <span className="text-sky-400">•</span> dan <b>chiziq torting</b> ·
-              bo'sh joyni sudrab maydonni suring · g'ildirak bilan zumlang
+              Obyekt ustidagi belgi — shu obyekt bo'yicha real e'tibor talab qiladigan holat.
+              Xarita har 30 soniyada yangilanadi · tugunni sudrang, nuqtadan chiziq torting
             </p>
           </div>
           <div className="flex items-center gap-1.5">
+            {oxirgiYangilanish && <span className="text-[10px] text-zinc-500 inline-flex items-center gap-1 mr-1"><Clock size={11} /> {oxirgiYangilanish.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}</span>}
             <button onClick={hammasiniQaytaTer} title="Hammasini ustunlarga qayta terish"
               className="px-2.5 py-2 bg-white/5 hover:bg-white/10 rounded-lg inline-flex items-center gap-1.5 text-[11px]">
               <LayoutGrid size={14} /> Qayta terish
@@ -399,7 +410,7 @@ export default function TestXarita() {
 
         {graf.jamlanma && (
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-sky-500/15 bg-sky-500/5 px-3 py-2 text-[11px]">
-            <span className="font-semibold text-sky-300">Tashkilot holati</span>
+            <span className="font-semibold text-sky-300 inline-flex items-center gap-1.5"><CheckCircle2 size={13} /> Tashkilot holati</span>
             <span className="text-zinc-300">{graf.jamlanma.obyekt_soni} ta obyekt</span>
             <span className="text-zinc-400">Smeta: <b className="text-white">{pulQisqa(graf.jamlanma.smeta_jami)}</b></span>
             <span className="text-zinc-400">Fakt: <b className="text-white">{pulQisqa(graf.jamlanma.fakt_jami)}</b></span>
@@ -506,7 +517,7 @@ export default function TestXarita() {
                           'px-2 py-0.5 rounded-full border-2 border-[#111827] shadow-lg ' +
                           'flex items-center gap-1 z-20 ' +
                           (ogoh ? 'bg-amber-500 hover:bg-amber-400' : 'bg-sky-500 hover:bg-sky-400')}>
-                        <span className="w-1.5 h-1.5 bg-white rounded-full" />
+                        <AlertTriangle size={11} />
                         {belgilar.length === 1
                           ? (belgilar[0].soni ?? '') + ' ' + BELGI_QISQA[belgilar[0].tur]
                           : belgilar.length + ' ogohlantirish'}
@@ -566,6 +577,12 @@ export default function TestXarita() {
                       <div className="text-[12px] font-bold text-sky-400">{pulQisqa(tanlanganObyektHolati.f2)}</div>
                     </div>
                   </div>
+                  {(tanlanganObyektHolati.belgi?.length ?? 0) > 0 && (
+                    <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-2.5 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-300"><AlertTriangle size={12} /> E'tibor kerak</div>
+                      {tanlanganObyektHolati.belgi.map((b: MindmapBelgi, i: number) => <div key={i} className="text-[11px] text-amber-100">{b.matn}</div>)}
+                    </div>
+                  )}
                   <div className="bg-white/5 p-2 rounded-lg border border-white/5 space-y-2 text-[11px]">
                     <div className="flex justify-between"><span className="text-zinc-400">Fakt</span><span className="text-white font-bold">{pulQisqa(tanlanganObyektHolati.fakt)}</span></div>
                     <div className="flex justify-between"><span className="text-zinc-400">Fakt / smeta</span><span className="text-white font-bold">{tanlanganObyektHolati.fakt_foiz == null ? '—' : tanlanganObyektHolati.fakt_foiz + '%'}</span></div>

@@ -200,23 +200,7 @@ export default function TestSklad() {
             M-29 Hisobot
           </button>
         </div>
-      <div className="flex gap-1 bg-[var(--surface-1)] border border-border p-1 rounded-lg w-max mb-6">
-        {[
-          { id: 'qoldiq', label: 'Haqiqiy Qoldiq', icon: Box },
-          { id: 'kirim', label: 'Kirim Jurnali', icon: ArrowDownToLine },
-          { id: 'chiqim', label: 'Chiqim Jurnali', icon: ArrowUpFromLine },
-          { id: 'm29', label: 'M-29 (Moddiy Hisobot)', icon: ClipboardCheck }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-black text-white shadow-sm border border-border' : 'text-text-dim hover:text-white hover:bg-white/5'}`}
-          >
-            <tab.icon size={16} className={activeTab === tab.id ? 'text-amber-400' : ''} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        </div>
 
       {/* TRANSACTION MODAL */}
       {isFormOpen && (
