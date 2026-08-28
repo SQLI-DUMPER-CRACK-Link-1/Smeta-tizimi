@@ -42,11 +42,11 @@ if (um) {
      u aynan shu varaqda ishlaydi. ФАКТ ХАЖМ — YAGONA tahrirlanadigan
      hisob ustuni: unga yozilsa teskari sinx `t2_fakt_belgila` ni
      chaqiradi (jami beriladi, tizim farqni hujjat qilib yozadi).
-     Endi 19 ta KO'RINADIGAN (13 LRV_PLUS + 2 ФАКТ + 4 F2/qoldiq)
+     Endi 20 ta KO'RINADIGAN (13 LRV_PLUS + 2 ФАКТ + 4 F2/qoldiq + РАЗДЕЛ)
      + 2 ta yashirin xizmat ustuni (_id, _v).
      Tartib mantiqiy: smeta → ФАКТ (bajarildi) → Ф2 (hisob) → qoldiq. */
-  tek('21 ta ustun (19 ko\'rinadigan + 2 yashirin)',
-      ustunlar.length === 21, 'topildi: ' + ustunlar.length);
+  tek('23 ta ustun (21 ko\'rinadigan + 2 yashirin)',
+      ustunlar.length === 23, 'topildi: ' + ustunlar.length);
   tek('birinchi 13 tasi LRV_PLUS tartibida',
       JSON.stringify(ustunlar.slice(0, 13)) === JSON.stringify(KUTILGAN),
       JSON.stringify(ustunlar.slice(0, 13)));
@@ -55,11 +55,11 @@ if (um) {
       JSON.stringify(['ФАКТ ХАЖМ', 'ФАКТ СУММА']),
       JSON.stringify(ustunlar.slice(13, 15)));
   tek('F2/QOLDIQ ustunlari ФАКТ dan keyin, xizmatdan oldin',
-      JSON.stringify(ustunlar.slice(15, 19)) ===
-      JSON.stringify(['F2 HAJM', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA']),
+      JSON.stringify(ustunlar.slice(15, 20)) ===
+      JSON.stringify(['F2 HAJM', 'F2 НАРХ', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA']),
       JSON.stringify(ustunlar.slice(15, 19)));
   tek('xizmat ustunlari OXIRIDA',
-      ustunlar[19] === '_id' && ustunlar[20] === '_v');
+      ustunlar[21] === '_id' && ustunlar[22] === '_v');
   tek('NORMA ustuni bor (avval yo\'q edi)', ustunlar.includes('ХАЖМ (ед)'));
   tek('ТИП ustuni bor — rz/bl/rs/mat/ob', ustunlar.includes('ТИП'));
   tek('kategoriya ustunlari bor', ['ЧЕЛ','МАШ','МАТ','ОБ'].every((k) => ustunlar.includes(k)));

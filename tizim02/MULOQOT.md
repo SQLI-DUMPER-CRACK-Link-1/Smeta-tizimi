@@ -2474,6 +2474,14 @@ kontraktini va buildni tekshiradi. Yangi maydon yoki RPC nomi o'zgarsa,
 avval shu jurnalga aniq kontrakt yozilsin; frontendda taxminiy fallback
 ma'lumot qo'shilmasin.
 
+#### Hozirgi handoff holati
+
+Backend vazifasi alohida worktree'dagi backend agentiga uzatildi. U ishni
+boshlash paytida usage limitiga urildi va hozircha backend fayllarida
+o'zgarish yo'q. Shu sabab frontend Control Center o'zgarishlari mavjud
+kontraktlarga tayangan holda qoldirildi; backend agenti imkon topgach
+yuqoridagi 1–5 bandni bajaradi. Frontend agenti SQL/RPC fayllariga kirmaydi.
+
 ### [2026-08-28] Claude -> hammaga · v368: qo'lda qadam YO'Q QILINDI
 
 Oldingi yozuvda «bitta qo'lda qadam qoldi — `t2KozguTriggerOrnat()` ni
@@ -2504,3 +2512,74 @@ deployment @368** (19 tasi alohida o'tkazildi, xato 0).
 **Holat:** 4 ta ko'zgu `farqli` deb belgilangan (ularda FAKT ustuni
 yo'q). Endi kimdir varaqni ochib tahrirlashi yoki panelda qayta
 chizishi bilan tirgak yoqiladi va HAMMASI avtomat yangilanadi.
+
+### [2026-08-28] Claude -> hammaga · ⛔ MOLIYAVIY MA'LUMOT YO'QOLISHI TOPILDI VA YOPILDI
+
+**Foydalanuvchi xabari:** «fast food 1 etaj uchun f2 import qilib ko'rgan
+edim, lekin bu kiritilgan ma'lumotlarni na saytdan na ko'zgudan topa
+oldim».
+
+**Tekshiruv:** akt #19 (Fast food, Ф2, 2026-07) MAVJUD, lekin qatorlari
+**0 ta**. Shu sessiya boshida u **353 qator / 241 983 935 so'm** edi.
+
+**ILDIZ — kaskad zanjiri:**
+
+    t2_manba o'chirildi/almashtirildi
+       -> ON DELETE CASCADE
+    t2_qator o'chdi
+       -> ON DELETE CASCADE        <-- shu bo'g'in yopildi
+    t2_akt_qator (Ф2 qatorlari) o'chdi
+
+Fast food smetasi bugun **18:18** da qayta markirovka/import qilingan
+(manba 32 yaratilgan, manba 33 ham bor). O'shanda kaskad Ф2 ning 353
+qatorini olib ketgan. **Xato chiqmagan** — hujjat "bor" bo'lib turaveradi,
+faqat ichi bo'sh. Bu tizimdagi eng yomon xato turi: jim, moliyaviy, va
+tashqaridan to'g'ri ko'rinadi.
+
+⚠️ `t2_markirovka_himoya` MAVJUD va to'g'ri yozilgan (qoralama aktni ham
+to'sadi), lekin u FAQAT markirovka yo'lini qo'riqlaydi. **Manba o'chirish
+yo'li qo'riqlanmagan edi** — kaskad o'sha yerdan o'tgan.
+
+**YECHIM — himoya endi SXEMADA, funksiyada emas:**
+
+    t2_akt_qator.qator_id -> t2_qator(id)
+        ON DELETE CASCADE  =>  ON DELETE RESTRICT
+
+Sabab: funksiya qayta yozilsa himoya yo'qoladi (aynan shunday bo'lgan:
+`t2_markirovka_akt_himoyasi` 08-21 da qo'yilgan, keyingi qayta yozish
+uni yo'qotgan). FK esa qayta yozishdan omon qoladi.
+
+**Sinov (dalil bilan):**
+
+    smeta qatorini o'chirish     -> ✔ RAD ETILDI (FK RESTRICT)
+    manbani o'chirish (kaskad)   -> ✔ RAD ETILDI (kaskad to'sildi)
+
+**⚠️ Yo'qolgan ma'lumot QAYTARIB BO'LMAYDI** — qatorlar o'chgan.
+Foydalanuvchi Ф2 ni qayta import qilishi kerak. Endi u yo'qolmaydi.
+
+---
+
+### Ф2 BIRLIK NARXI ustuni qo'shildi
+
+**Foydalanuvchi:** «faqat f2 hajm va f2 summa ustunlari bor, lekin f2
+birlik narxi yo'q — bu ustun ham eng muhimlaridan edi».
+
+To'g'ri: `00_BOSH_QONUN` 6.5 — «Ф2 DOIM AKT NARXIDA, smeta narxida EMAS».
+Ya'ni Ф2 birlik narxi smeta narxidan farq qilishi mumkin, va usiz odam
+qaysi narxda yozilganini ko'rmaydi.
+
+- `t2_qator_holat` ga: `f2_narx`, `fakt_narx` (o'rtacha OG'IRLIKLI —
+  bitta qatorga turli oy/narxdagi bir necha Ф2 bog'langan bo'lishi
+  mumkin), va `f2_narx_farq_foiz` (smeta narxidan necha % farq).
+- Hajm 0 bo'lsa **NULL**, 0 emas — «narx nol» va «narx noma'lum» boshqa
+  ma'no.
+- Ko'zguga `F2 НАРХ` ustuni qo'shildi (F2 HAJM dan keyin).
+
+### РАЗДЕЛ ustuni qo'shildi
+
+LRV_PLUS da bor edi, ko'zguda yo'q edi. Bazaga ustun QO'SHILMADI (razdel
+iyerarxiyada `ota_id` orqali allaqachon bor; ustun qilib takrorlash
+ikkinchi haqiqat manbai yasardi). Chizishda joriy razdel eslab boriladi —
+LRV_PLUS ning o'zi ham shunday quriladi.
+
+**Deploy:** v369, 20/20 deployment. Ko'zgu testi 78/78.

@@ -408,7 +408,7 @@ export default function TestXarita() {
      o'chirmaydi yoki yashirincha qayta bog'lamaydi. */
   const tugunMuammolari = (t: MindmapTugun) => (Array.isArray(t.meta?.belgi) ? t.meta.belgi : []) as MindmapBelgi[];
   const qidiruvKalit = qidiruv.trim().toLocaleLowerCase('uz-UZ');
-  const ko'rsatilganTugunlar = graf.tugunlar.filter((t) => {
+  const korsatilganTugunlar = graf.tugunlar.filter((t) => {
     const belgilar = tugunMuammolari(t);
     const nomMos = !qidiruvKalit || t.nom.toLocaleLowerCase('uz-UZ').includes(qidiruvKalit);
     const holatMos = holatFiltri === 'barchasi'
@@ -416,8 +416,8 @@ export default function TestXarita() {
       || (holatFiltri === 'zayavka' && belgilar.some((b) => b.tur === 'zayavka'));
     return nomMos && holatMos;
   });
-  const ko'rsatilganIdlar = new Set(ko'rsatilganTugunlar.map((t) => t.id));
-  const ko'rsatilganBoglar = graf.bogichlar.filter((b) => ko'rsatilganIdlar.has(b.manba) && ko'rsatilganIdlar.has(b.maqsad));
+  const korsatilganIdlar = new Set(korsatilganTugunlar.map((t) => t.id));
+  const korsatilganBoglar = graf.bogichlar.filter((b) => korsatilganIdlar.has(b.manba) && korsatilganIdlar.has(b.maqsad));
   const tanlanganBogManba = tanlanganBog ? graf.tugunlar.find((t) => t.id === tanlanganBog.manba) : null;
   const tanlanganBogMaqsad = tanlanganBog ? graf.tugunlar.find((t) => t.id === tanlanganBog.maqsad) : null;
 
@@ -485,7 +485,7 @@ export default function TestXarita() {
           <div className="relative min-w-[220px] flex-1 max-w-sm">
             <input
               value={qidiruv}
-              onChange={(e) => setQidiruv(e.target.value)}
+              onChange={(e) => { setQidiruv(e.target.value); setTanlangan(null); setTanlanganBog(null); }}
               placeholder="Obyekt, loyiha yoki resursni qidiring…"
               aria-label="Mindmap tugunlarini qidirish"
               className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white outline-none placeholder:text-zinc-600 focus:border-sky-400/60"
@@ -494,18 +494,18 @@ export default function TestXarita() {
           <span className="text-[10px] text-zinc-600">Ko'rinish:</span>
           {([
             ['barchasi', 'Barchasi'],
-            ['etibor', 'E'tibor kerak'],
+            ['etibor', "E'tibor kerak"],
             ['zayavka', 'Ochiq zayavka'],
           ] as const).map(([kalit, nom]) => (
             <button
               key={kalit}
               type="button"
-              onClick={() => setHolatFiltri(kalit)}
+              onClick={() => { setHolatFiltri(kalit); setTanlangan(null); setTanlanganBog(null); }}
               className={'rounded-lg border px-2.5 py-1.5 text-[10px] transition-colors ' +
                 (holatFiltri === kalit ? 'border-sky-400/60 bg-sky-400/15 text-sky-200' : 'border-white/10 bg-white/5 text-zinc-400 hover:text-white')}
             >{nom}</button>
           ))}
-          <span className="text-[10px] text-zinc-600 ml-auto">{ko'rsatilganTugunlar.length}/{graf.tugunlar.length} tugun</span>
+          <span className="text-[10px] text-zinc-600 ml-auto">{korsatilganTugunlar.length}/{graf.tugunlar.length} tugun</span>
         </div>
       </div>
 
@@ -531,7 +531,7 @@ export default function TestXarita() {
           style={{ transform: 'translate(' + pan.x + 'px,' + pan.y + 'px) scale(' + zoom + ')', width: KANVAS_W, height: KANVAS_H }}>
 
           <svg className="absolute inset-0 pointer-events-none" width={KANVAS_W} height={KANVAS_H}>
-            {ko'rsatilganBoglar.map((b, i) => {
+            {korsatilganBoglar.map((b, i) => {
               const m = joylar[b.manba], q = joylar[b.maqsad];
               if (!m || !q) return null;
               const manbaTur = graf.tugunlar.find((t) => t.id === b.manba)?.tur || 'obyekt';
@@ -556,7 +556,7 @@ export default function TestXarita() {
             )}
           </svg>
 
-          {ko'rsatilganTugunlar.map((t) => {
+          {korsatilganTugunlar.map((t) => {
             const joy = joylar[t.id];
             if (!joy) return null;
             const Ik = TUR_IKONKA[t.tur];
@@ -568,7 +568,7 @@ export default function TestXarita() {
               <div key={t.id}
                 data-tugun={t.id}
                 onPointerDown={(e) => bosildiTugun(e, t.id)}
-                onClick={() => { if (!rejim.current) setTanlangan(t.id); }}
+                onClick={() => { if (!rejim.current) { setTanlangan(t.id); setTanlanganBog(null); } }}
                 className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg ' +
                   (nishon && boglashMumkin ? 'ring-2 ring-sky-400/70' : '') + (nishon && !boglashMumkin ? 'opacity-40' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
                 style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
@@ -643,7 +643,7 @@ export default function TestXarita() {
               texnika yoki kontragent yarating — keyin ularni chiziq bilan bog'laysiz.
             </div>
           )}
-          {!yuklanmoqda && graf.tugunlar.length > 1 && ko'rsatilganTugunlar.length === 0 && (
+          {!yuklanmoqda && graf.tugunlar.length > 1 && korsatilganTugunlar.length === 0 && (
             <div className="absolute text-zinc-500 text-sm" style={{ left: 60, top: 100, width: 520 }}>
               Qidiruv yoki tanlangan filtrga mos tugun topilmadi. «Barchasi»ni tanlab, qidiruvni tozalang.
             </div>
@@ -752,7 +752,7 @@ export default function TestXarita() {
                   if (!qt) return null;
                   const Ik = TUR_IKONKA[qt.tur];
                   return (
-                    <div key={i} onClick={() => setTanlanganBog(b)} className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 cursor-pointer hover:border-sky-400/40">
+                    <div key={i} onClick={(e) => { e.stopPropagation(); setTanlanganBog(b); setTanlangan(null); }} className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 cursor-pointer hover:border-sky-400/40">
                       <Ik size={13} style={{ color: TUR_RANG[qt.tur] }} className="flex-shrink-0" />
                       <span className="min-w-0 flex-1"><span className="block text-[11px] truncate">{qt.nom}</span><span className="block text-[9px] truncate text-zinc-600">{BOG_TUR_NOM[b.tur] || b.tur}</span></span>
                       {b.uzsa_boladi && (

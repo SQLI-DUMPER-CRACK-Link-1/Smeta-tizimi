@@ -239,12 +239,25 @@ function apiT2VaraqYarat(obyekt){
                     'ХАЖМ (ед)', 'ХАЖМ (жами)', 'НАРХ (1 ед)', 'СУММА', 'ТИП',
                     'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ',
                     'ФАКТ ХАЖМ', 'ФАКТ СУММА',
-                    'F2 HAJM', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA', '_id', '_v'];
-    var NU = USTUNLAR.length;                // 21
-    var KO_RINADI = 19;                      // 20-21 (_id/_v) yashirin
+                    'F2 HAJM', 'F2 НАРХ', 'F2 SUMMA', 'QOLDIQ HAJM', 'QOLDIQ SUMMA',
+                    'РАЗДЕЛ', '_id', '_v'];
+    var NU = USTUNLAR.length;                // 23
+    var KO_RINADI = 21;                      // 22-23 (_id/_v) yashirin
     var C_NORMA = 5, C_HAJM = 6, C_NARX = 7, C_SUMMA = 8, C_KAT1 = 10;
     var C_FAKT_HAJM = 14, C_FAKT_SUM = 15;
-    var C_F2_HAJM = 16, C_F2_SUM = 17, C_QOLD_HAJM = 18, C_QOLD_SUM = 19, C_ID = 20, C_VER = 21;
+    var C_F2_HAJM = 16, C_F2_NARX = 17, C_F2_SUM = 18,
+        C_QOLD_HAJM = 19, C_QOLD_SUM = 20;
+    /* ⚡ 2026-08-28: РАЗДЕЛ ustuni — LRV_PLUS da bor edi, ko'zguda YO'Q edi.
+     * Odam varaqda razdel bo'yicha filtrlaydi/guruhlaydi; usiz qator qaysi
+     * bo'limga tegishli ekanini bilish uchun yuqoriga qarab varaqlash
+     * kerak bo'lardi.
+     *
+     * ⚠️ Bazada `razdel` USTUNI YO'Q va u ATAYLAB qo'shilmadi: razdel
+     * iyerarxiyada (`ota_id`) allaqachon bor, uni ustun sifatida
+     * takrorlash ikkinchi haqiqat manbai yasardi (nom o'zgarsa ikkisi
+     * ajralib ketardi). Buning o'rniga chizishda joriy razdel eslab
+     * boriladi — LRV_PLUS ning o'zi ham aynan shunday ishlaydi. */
+    var C_RAZDEL = 21, C_ID = 22, C_VER = 23;
     var bosh = function(){ return new Array(NU).join('.').split('.'); };
 
     /* Kategoriya bo'yicha jamlanma — sarlavhada ko'rsatiladi */
@@ -301,6 +314,9 @@ function apiT2VaraqYarat(obyekt){
     var BOSH_QATOR = jadval.length + 1;
     var satr = {};                               // id → varaqdagi qator
     for(i = 0; i < qatorlar.length; i++) satr[qatorlar[i].id] = BOSH_QATOR + i;
+
+    /* РАЗДЕЛ ustuni uchun — chizish tsiklida oxirgi ko'rilgan bo'lim nomi */
+    var joriyRazdel = '';
 
     /* Blokning bolalari qaysi qatorlar oralig'ida — СУММА yig'indisi uchun */
     var bola = {};
@@ -413,9 +429,22 @@ function apiT2VaraqYarat(obyekt){
        * "F2 HAJM"/"F2 SUMMA", lekin FAKT summasi yozilardi (t2_qator_holat
        * `f2_hajm`/`f2_summa` deb ALOHIDA ustunga ega, aynan shu kerak). */
       qator[C_F2_HAJM - 1] = (r.f2_hajm != null) ? Number(r.f2_hajm) : '';
+      /* Ф2 birlik narxi — akt narxi, smeta narxidan FARQ QILISHI mumkin
+         (00_BOSH_QONUN 6.5). Bo'sh bo'lsa yozilmaydi, 0 QO'YILMAYDI. */
+      qator[C_F2_NARX - 1] = (r.f2_narx != null) ? Number(r.f2_narx) : '';
       qator[C_F2_SUM - 1]  = (r.f2_summa != null) ? Number(r.f2_summa) : '';
       qator[C_QOLD_HAJM - 1] = (r.qoldiq_hajm != null) ? Number(r.qoldiq_hajm) : '';
       qator[C_QOLD_SUM - 1] = (r.qoldiq_summa != null) ? Number(r.qoldiq_summa) : '';
+
+      /* РАЗДЕЛ — joriy bo'lim nomi. Qatorlar `tartib` bo'yicha keladi va
+         razdel o'z bolalaridan OLDIN turadi, shuning uchun oxirgi ko'rilgan
+         `rz` ni eslab qo'yish kifoya (LRV_PLUS ham shunday quriladi).
+         Razdelning O'ZIDA ustun bo'sh — nomi allaqachon НАИМЕНОВАНИЕ da. */
+      if(r.tur === 'rz'){
+        joriyRazdel = String(r.nom || '').trim();
+      }else{
+        qator[C_RAZDEL - 1] = joriyRazdel;
+      }
 
       qator[C_ID - 1]  = r.id;
       qator[C_VER - 1] = (r.versiya == null) ? '' : r.versiya;
@@ -524,7 +553,7 @@ function apiT2VaraqYarat(obyekt){
       sh.getRange(SARLAVHA_QATOR + 1, C_KAT1, qatorlar.length, 4)
         .setNumberFormat('#,##0.00');
       /* ФАКТ + Ф2 + QOLDIQ — 6 ta ustun ketma-ket */
-      sh.getRange(SARLAVHA_QATOR + 1, C_FAKT_HAJM, qatorlar.length, 6)
+      sh.getRange(SARLAVHA_QATOR + 1, C_FAKT_HAJM, qatorlar.length, 7)
         .setNumberFormat('#,##0.00');
       /* Kategoriya ustunlari ko'z bilan ajralib tursin.
          Chegara — sof bezak, hujjatni yiqitishga haqqi yo'q. */
@@ -542,9 +571,11 @@ function apiT2VaraqYarat(obyekt){
     sh.setColumnWidth(C_FAKT_HAJM, 105);
     sh.setColumnWidth(C_FAKT_SUM, 110);
     sh.setColumnWidth(C_F2_HAJM, 100);
+    sh.setColumnWidth(C_F2_NARX, 110);
     sh.setColumnWidth(C_F2_SUM, 100);
     sh.setColumnWidth(C_QOLD_HAJM, 100);
     sh.setColumnWidth(C_QOLD_SUM, 100);
+    sh.setColumnWidth(C_RAZDEL, 260);
     /* ФАКТ ХАЖМ — TAHRIRLANADIGAN ustun, ko'z bilan ajralib tursin */
     try{
       sh.getRange(SARLAVHA_QATOR, C_FAKT_HAJM)
@@ -599,8 +630,8 @@ function apiT2VaraqYarat(obyekt){
 
         /* ⚠️ ФАКТ ХАЖМ ATAYLAB QULFLANMAYDI — u kiritish ustuni.
            Qulf faqat ФАКТ СУММА dan boshlanadi (u hisobdan keladi). */
-        var qulf3 = sh.getRange(BOSH_QATOR, C_FAKT_SUM, qatorlar.length, 5).protect().setDescription(
-          'ФАКТ сумма, F2 ва Қолдиқ — ҳисобдан келади, фақат ўқиш учун');
+        var qulf3 = sh.getRange(BOSH_QATOR, C_FAKT_SUM, qatorlar.length, 7).protect().setDescription(
+          'ФАКТ сумма, F2, Қолдиқ ва РАЗДЕЛ — ҳисобдан келади, фақат ўқиш учун');
         qulf3.setWarningOnly(true);
       }
     }catch(e){}
@@ -761,7 +792,7 @@ function apiT2VaraqQaytar(obyekt){
     /* 21 ustun: ФАКТ ХАЖМ/СУММА qo'shilgach kengaydi (2026-08-28).
        Eski ko'zgu (19 ustunli) ham o'qiladi — `getValues` mavjud
        kenglikdan oshmaydi, shuning uchun aniq son beramiz. */
-    var oxirgiUst = Math.min(sh.getLastColumn(), 21);
+    var oxirgiUst = Math.min(sh.getLastColumn(), 23);
     var qiy = sh.getRange(sarlavha + 1, 1, soni, oxirgiUst).getValues();
     /* Eski (19 ustunli) varaqda _id 18-, yangisida 20-ustunda.
        Sarlavhadan aniqlaymiz — ustun tartibi o'zgarsa ham ishlasin. */
