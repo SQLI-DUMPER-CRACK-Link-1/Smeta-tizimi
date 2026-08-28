@@ -415,6 +415,7 @@ Hozirdanoq faqat architecture-ready talablar (immutable ID, version, audit, oper
 - Phase 6 — F2/Fact/Nakopitelniy
 - Phase 7 — Procurement/Warehouse
 - Phase 8 — Documents/Drive
+- Phase 8.5 ?" QA/QC & Auto-Docs (Lab, Certs, APPOK)
 - Phase 9 — Didox/Bank
 - Phase 10 — Sales
 - Phase 11 — BIM/Takeoff

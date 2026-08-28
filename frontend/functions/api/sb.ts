@@ -91,6 +91,11 @@ const RUXSAT_JADVALLAR = new Set([
      MASTER_REJA_ENTERPRISE_OS.md "0-A" tahlili). "M200"/"Бетон М200"/
      "М-200" bitta kanonik nom_key'ga ishora qiladi. */
   't2_material_alias_royxat',
+  /* OVERBILLING RADORI (MASTER_REJA FAZA 5, band 50, 2026-08-28):
+     F2 faktdan yoki (manfiy bo'lmagan) smetadan oshib ketgan qatorlar —
+     FAQAT ko'rish uchun, yozishda bloklanmaydi (foydalanuvchi qarori:
+     "faqat ogohlantirish"). */
+  't2_overbilling_radar',
 ]);
 
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */
