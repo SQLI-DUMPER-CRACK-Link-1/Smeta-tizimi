@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Database, RefreshCw, AlertTriangle, Trash2, Edit3, MapPin } from 'lucide-react';
+import { Database, RefreshCw, AlertTriangle, Trash2, Edit3, MapPin, X, Briefcase, Save } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
 import { sbT2ObyektlarOlKomp, sbObyektOchirish, sbObyektTahrirlash, sbObyektLokatsiyaBelgila, type T2Obyekt } from '../api/supabase';
