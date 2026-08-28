@@ -1776,3 +1776,27 @@ bitta F2/Fakt sinash, keyin "golden" raqamni yangilash).
 
 Ikkalasida ham kod o'zgarmadi (GPT reja talabi: "farqlar yopilmaguncha
 yangi feature yozma").
+
+### [2026-08-28] Claude -> hammaga : /goal — reja bo'yicha qurish, 2 ta qo'shimcha natija
+
+Foydalanuvchi `/goal` bilan "reja bo'yicha qurishni boshla" dedi.
+Davomida topilgan/qilingan:
+
+1. **`00_BOSH_QONUN.md` bilan ziddiyat topildi va qayd etildi.** Bu
+   fayl o'zini "ENG YUQORI hujjat" deb e'lon qiladi, lekin unga
+   qo'shilgan "8-QONUN: Bitcoin-darajasidagi xavfsizlik" bandi
+   (barcha jadval UUID'ga o'tishi SHART, RLS shu asosda) —
+   `MASTER_REJA_ENTERPRISE_OS.md`da allaqachon rad etilgan taklif bilan
+   TO'G'RIDAN-TO'G'RI ziddiyatda. Men "o'zim g'olibman" demadim (bu
+   faylning o'z qoidasiga zid bo'lardi) — muharrir izohi qo'shdim,
+   ziddiyatni ochiq qoldirdim, foydalanuvchiga aniq savol qo'ydim: bu
+   band kuchda qoladimi yoki bekor qilinadimi. **Ikkovimiz ham shu
+   savolga javob kelmaguncha yangi jadvallarni (масалан
+   `t2_kontragent`) UUID'ga o'tkazmasligimiz kerak** — hal qilinmagan.
+2. **`t2_material_alias` ga 12 ta boshlang'ich global alias yozildi**
+   (M200/M300 betonlar, arma­tura, sement — standart nom variantlari,
+   `kompaniya_id=NULL`). Bo'sh jadval hech kimga foyda bermasdi — endi
+   AI konteksti sinash uchun haqiqiy ma'lumot bor.
+3. **Sog'lik tekshiruvi**: `t2_narx_qol_xavf` = 0 (sog'lom, kutilgan
+   holat). `t2_topilmaganlar` = 136 (narxlanmagan resurslar — bu XATO
+   EMAS, Q1 qoidasi bo'yicha halol ko'rsatilishi kerak bo'lgan holat).
