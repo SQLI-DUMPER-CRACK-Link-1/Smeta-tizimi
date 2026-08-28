@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle, ChevronDown, ChevronRight, Archive, Eye, EyeOff, ShieldCheck } from 'lucide-react';
-import { LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
+import { Map, LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
 import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
@@ -15,6 +15,7 @@ const TIZIM_02_GURUHLAR = [
     menyular: [
       { yol: '/admin/test/hisobot', nom: 'Dashboard (Boss)', Ikonka: BarChart },
       { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
+        { yol: '/admin/test/xarita', nom: 'Mindmap (Xarita)', Ikonka: Map },
       { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
     ]
   },
@@ -26,6 +27,7 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
         { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
       { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
+        { yol: '/admin/test/aosr', nom: 'QA/QC (AOSR/APPOK)', Ikonka: ShieldCheck },
       { yol: '/admin/test/erp', nom: 'Kadrlar, Texnika (ERP)', Ikonka: Users },
     ]
   },

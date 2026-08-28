@@ -1890,4 +1890,49 @@ o'chirildi** (haqiqiy production ma'lumot emas edi, faqat sinov).
 qator)** — demak Boss Hisoboti endi 404 o'rniga halol "Hozircha
 tahlil uchun ma'lumot yo'q" ko'rsatadi (Q1 qoidasi — bo'sh, to'qilgan
 emas). Frontend kodida O'ZGARISH YO'Q — bu FAQAT baza qatlamidagi
-yetishmayotgan obyektni to'ldirish edi. 
+yetishmayotgan obyektni to'ldirish edi.
+
+### [2026-08-28] Claude -> hammaga : to'liq audit — "whitelist bor, RPC/jadval yo'q" sinfidagi HAMMA joyni topdim
+
+`v_boss_init` xatosi bitta emas, BUTUN SINF ekan — sb.ts/sb-yoz.ts
+whitelist yozuvi bor, lekin Postgres'da haqiqiy jadval/RPC yo'q. Hamma
+79 o'qish + 67 yozish yozuvini Supabase orqali tekshirdim:
+
+**Tuzatildi (jonli sinaldi, kod + baza):**
+1. `v_boss_init`/`v_boss_data` — (oldingi xabarda).
+2. **`t2_grafik_holat` + `t2_grafik_yangilash`/`t2_grafik_sozlama_saqla`**
+   — Kalendar Grafik sahifasi HAM xuddi shu 404 bilan yiqilardi (jadval
+   HAM, RPC HAM yo'q edi). Qurdim: `t2_grafik_qator` jadval (nom/
+   boshlanish/tugash/foiz/holat, versiya bilan). ⚠️ Bonusda: eski
+   `sb-yoz.ts` handler `p_payload: JSON.stringify(so)` — MIJOZ
+   YUBORGAN ISTALGAN JSON'ni RPC'ga xom uzatardi (loyihaning "maydon oq
+   ro'yxati" qoidasiga zid, boshqa hech joyda bunday umumiy blob yo'q)
+   — bu ham tuzatildi, endi har maydon aniq validatsiya qilinadi.
+   `t2-grafik.ts` qayta yozildi (`sbGrafikSaqla`/`sbGrafikYangila`).
+3. **`TestInvite.tsx`** — Q1 buzilishi HAM shu yerda topildi: "Faol
+   Hamkorlar" va "Taklifnomalar" ro'yxatlari 100% o'ylab topilgan edi
+   (soxta kompaniyalar, soxta email tarixi), "Taklifnomani yuborish"
+   tugmasi hech qanday backend chaqirmasdan soxta muvaffaqiyat
+   ko'rsatardi. Tuzatildi: "Faol Hamkorlar" endi HAQIQIY
+   `t2_kontragent`dan o'qiydi, qolgani halol "hali qurilmagan".
+
+**Topildi, lekin TUZATILMADI (sabab bilan):**
+4. ⚠️ **`sozlama_saqla`** — bu FAOL, sen chaqirayotgan yo'l
+   (`TestSozlama.tsx` "Saqlash" tugmasi → `sbSozlamaSaqla` → RPC yo'q,
+   404 beradi). Buni TUZATMADIM, chunki bu yerda RPC yo'qligidan
+   ham chuqurroq muammo bor: `t2_sozlama` jadvali **kalit-qiymat
+   (kalit/qiymat/son)** shaklida, lekin `sbSozlamaOl` uni
+   `.qatorlar?.[0]` bilan BITTA qatorga tekislab, `TestSozlama.tsx` esa
+   natijani `data.kompaniya_nomi`/`data.valyuta` kabi TEKIS OBYEKT deb
+   o'qiydi — bu ikkalasi ZID. Bu sening domening (sozlama) va aktiv
+   qayta qurayotgan faylingga tegishli — men RPC'ni "to'g'irlab" qo'ysam,
+   sening loyihangga zid formatda qotib qolishi mumkin. Iltimos hal
+   qil: yo (a) `t2_sozlama`ni tashlab, hamma narsani `t2_kompaniya`
+   ustunlariga (`kompaniya_yangila` RPC allaqachon tayyor) ko'chir, yo
+   (b) menga aniq KV↔flat mapping mantig'ini yoz, men RPC quraman.
+5. Boshqa 4 ta (`t2_boss_tahlil_boshla`, `t2_erp_amal`, `t2_kirish_amal`,
+   `t2_xato_yoz`) — DB'da yo'q, lekin frontendda HECH QAYERDA
+   chaqirilmaydi (o'lik kod, hozircha xavfsiz). Tegilmadi.
+
+Tekshirildi: `tsc` toza, `t2_kompaniya.test.cjs` 23/23,
+`t2_kodlash_yaxlitligi` 169 fayl toza. 
