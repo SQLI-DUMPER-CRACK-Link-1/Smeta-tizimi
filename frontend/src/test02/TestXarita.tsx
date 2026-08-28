@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, Warehouse, FileText, Pickaxe,
   ZoomIn, ZoomOut, Maximize2, Briefcase, Link as LinkIcon,
-  FolderKanban, AlertTriangle, RefreshCcw
+  FolderKanban, AlertTriangle, RefreshCcw, Map
 } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../api/supabase';
