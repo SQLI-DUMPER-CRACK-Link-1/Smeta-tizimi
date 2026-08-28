@@ -376,6 +376,12 @@ M200, M-200, М200, Бетон М200, Бетон марки 200 → bitta materi
 # 22. AI SAVOLGA JAVOB
 Javob faqat database daliliga asoslanadi. Agar exact topilmasa semantic/alias/documents orqali qidiriladi, keyin "topilmadi" deyiladi.
 
+# 22.5 "QURUVCHI AI" WA SHNQ/SNiP NORMALARI KNOWLEDGE BASE
+Tizimdagi AI nafaqat loyiha ma'lumotlarini, balki fundamental qurilish qoidalarini (Knowledge Base) ham bilishi va qo'llashi shart.
+- **Normativ Baza (Vector DB):** O'zbekistonning barcha qurilish normalari (SHNQ, QMQ), xalqaro standartlar (SNiP, GOST, Eurocodes) PDF va matn shaklida RAG (Retrieval-Augmented Generation) tizimiga yuklanadi (Supabase pgvector).
+- **Quruvchi AI (Konsultant):** Foydalanuvchilar (muhandislar, prorablar) AI bilan to'g'ridan-to'g'ri muloqot qilib, "Tom yopishda qanday qatlamlar bo'lishi shart?" yoki "Armatura choklari orasidagi masofa qancha bo'lishi kerak?" kabi savollarga aniq SHNQ bandiga havola (link) qilingan javoblarni olishadi.
+- **Avtomat Nazorat:** Smetaga yozilgan yoki Faktda ishlatilgan materiallar (masalan, beton markasi) obyektning loyiha talabiga va SHNQ normalariga to'g'ri kelish-kelmasligi AI tomonidan fonga tekshirilib, Xavf (Risk) signali beriladi.
+
 # 23. AI AGENTLAR
 Orchestrator, Estimate Agent, F2/Fact Agent, Procurement Agent, Warehouse Agent, Finance Agent, Document Agent, Project/BIM Agent, Sales Agent, Audit Agent, Monitoring Agent, Performance Agent, Code/Architecture Agent.
 
