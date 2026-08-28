@@ -200,7 +200,6 @@ export default function TestSklad() {
             M-29 Hisobot
           </button>
         </div>
-        </div>
 
       {/* TRANSACTION MODAL */}
       {isFormOpen && (

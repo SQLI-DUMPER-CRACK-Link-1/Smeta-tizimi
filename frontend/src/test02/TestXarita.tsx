@@ -580,7 +580,7 @@ export default function TestXarita() {
                   {(tanlanganObyektHolati.belgi?.length ?? 0) > 0 && (
                     <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-2.5 space-y-1.5">
                       <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-300"><AlertTriangle size={12} /> E'tibor kerak</div>
-                      {tanlanganObyektHolati.belgi.map((b: MindmapBelgi, i: number) => <div key={i} className="text-[11px] text-amber-100">{b.matn}</div>)}
+                      {tanlanganObyektHolati.belgi?.map((b: MindmapBelgi, i: number) => <div key={i} className="text-[11px] text-amber-100">{b.matn}</div>)}
                     </div>
                   )}
                   <div className="bg-white/5 p-2 rounded-lg border border-white/5 space-y-2 text-[11px]">
