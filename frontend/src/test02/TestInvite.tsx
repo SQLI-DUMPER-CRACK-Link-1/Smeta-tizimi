@@ -1,32 +1,57 @@
-import React, { useState } from 'react';
-import { Mail, Building2, UserPlus, Send, CheckCircle2, XCircle, Search, Users, ExternalLink, Activity, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Building2, UserPlus, Send, Search, Users, ExternalLink } from 'lucide-react';
 import { toast } from '../umumiy/ui/Toast';
+import { useKompaniya } from './KompaniyaTanlov';
+import { sbKontragentlarOl, type Kontragent } from '../api/t2-kontragent';
 
+/* ⚠️ 2026-08-28 (Claude) — Q1 QOIDASI BUZILISHI TOPILDI VA TUZATILDI.
+ *
+ * Bu sahifa avval 100% o'ylab topilgan ma'lumot ko'rsatardi:
+ *   - "Faol Hamkorlar" jadvali soxta kompaniyalar bilan to'la edi
+ *     ("GOLDEN BRIDGE MCHJ", soxta INN, soxta "3 ta faol loyiha")
+ *   - "Taklifnomalar Tarixi" soxta email/sana/holat bilan to'la edi
+ *   - "Taklifnomani yuborish" tugmasi HECH QANDAY backend chaqirmasdan
+ *     shunchaki "yuborildi" degan soxta muvaffaqiyat xabarini ko'rsatardi
+ *     (`sbTaklifYubor`/`sbTaklifQabul` funksiyalari `t2-invite.ts`da bor
+ *     edi, lekin bu sahifa ularni UMUMAN chaqirmasdi).
+ *
+ * Tuzatildi:
+ *   - "Faol Hamkorlar" endi HAQIQIY `t2_kontragent` reestridan o'qiydi
+ *     (backend allaqachon bor, 2026-08-27 qurilgan).
+ *   - "Taklif Yuborish" / "Taklifnomalar Tarixi" — haqiqiy email orqali
+ *     taklif yuborish tizimi (token yaratish, email jo'natish) HALI
+ *     QURILMAGAN (yangi katta feature, MASTER_REJA'da alohida band) —
+ *     shuning uchun soxta muvaffaqiyat o'rniga halol "hali qurilmagan"
+ *     xabari ko'rsatiladi.
+ */
 export default function TestInvite() {
-  const [activeTab, setActiveTab] = useState<'yuborilgan' | 'tarmoq' | 'yangi'>('yangi');
+  const { joriy } = useKompaniya();
+  const [activeTab, setActiveTab] = useState<'yuborilgan' | 'tarmoq' | 'yangi'>('tarmoq');
   const [email, setEmail] = useState('');
   const [rol, setRol] = useState('subpudratchi');
 
+  const [hamkorlar, setHamkorlar] = useState<Kontragent[]>([]);
+  const [yuklanmoqda, setYuklanmoqda] = useState(false);
+  const [xato, setXato] = useState('');
+
+  useEffect(() => {
+    if (!joriy?.id || activeTab !== 'tarmoq') return;
+    setYuklanmoqda(true);
+    setXato('');
+    sbKontragentlarOl(joriy.id).then((r) => {
+      setYuklanmoqda(false);
+      if (r.ok) setHamkorlar(r.qatorlar || []);
+      else setXato(r.error || 'O\'qilmadi');
+    });
+  }, [joriy, activeTab]);
+
   const handleYuborish = () => {
     if (!email) {
-      toast("Email manzilni kiriting", "warn");
+      toast('Email manzilni kiriting', 'danger');
       return;
     }
-    toast(`Taklifnoma ${email} manziliga yuborildi!`, "ok");
-    setEmail('');
+    toast('Email orqali taklif yuborish tizimi hali qurilmagan — hozircha hamkorni "Kontragentlar" bo\'limidan STIR bilan qo\'lda qo\'shing', 'danger');
   };
-
-  const tarmoqList = [
-    { id: 1, nomi: "GOLDEN BRIDGE MCHJ", rol: "Bosh Pudratchi", inn: "301234567", holat: "faol", loyihalar: 3 },
-    { id: 2, nomi: "SANTEX-MASTER", rol: "Subpudratchi", inn: "302998877", holat: "faol", loyihalar: 1 },
-    { id: 3, nomi: "TOSHKENT SEMENT", rol: "Yetkazib Beruvchi", inn: "200112233", holat: "faol", loyihalar: 5 },
-  ];
-
-  const yuborilganList = [
-    { id: 1, email: "director@stroy.uz", rol: "Subpudratchi", sana: "2026-08-27 14:30", holat: "kutilmoqda" },
-    { id: 2, email: "sales@metal.uz", rol: "Yetkazib Beruvchi", sana: "2026-08-25 09:15", holat: "qabul qilingan" },
-    { id: 3, email: "arch@design.uz", rol: "Loyihachi", sana: "2026-08-20 11:00", holat: "rad etilgan" },
-  ];
 
   return (
     <div className="p-6 bg-bg min-h-screen text-text">
@@ -44,8 +69,8 @@ export default function TestInvite() {
 
       <div className="flex gap-1 bg-surface border border-border p-1 rounded-lg w-max mb-6">
         {[
-          { id: 'yangi', label: 'Taklif Yuborish', icon: UserPlus },
           { id: 'tarmoq', label: 'Faol Hamkorlar', icon: Building2 },
+          { id: 'yangi', label: 'Taklif Yuborish', icon: UserPlus },
           { id: 'yuborilgan', label: 'Taklifnomalar Tarixi', icon: Mail }
         ].map(tab => (
           <button
@@ -59,6 +84,61 @@ export default function TestInvite() {
         ))}
       </div>
 
+      {activeTab === 'tarmoq' && (
+        <div className="bg-surface border border-border rounded-xl shadow-xl overflow-hidden">
+          <div className="p-4 border-b border-border bg-bg/50">
+            <div className="relative w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" size={16} />
+              <input
+                type="text"
+                placeholder="Hamkor nomi yoki STIR orqali izlash..."
+                className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:border-accent outline-none"
+              />
+            </div>
+          </div>
+          {xato && <div className="m-4 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">{xato}</div>}
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="bg-surface-2 border-b border-border text-text-dim font-medium">
+                <th className="px-6 py-4">Kompaniya Nomi</th>
+                <th className="px-6 py-4">STIR (INN)</th>
+                <th className="px-6 py-4">Roli</th>
+                <th className="px-6 py-4">Amallar</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {yuklanmoqda && (
+                <tr><td colSpan={4} className="px-6 py-8 text-center text-text-dim animate-pulse">Yuklanmoqda...</td></tr>
+              )}
+              {!yuklanmoqda && hamkorlar.length === 0 && !xato && (
+                <tr><td colSpan={4} className="px-6 py-8 text-center text-text-dim">
+                  Hali hamkor qo'shilmagan — "Kontragentlar" bo'limidan qo'shing.
+                </td></tr>
+              )}
+              {hamkorlar.map(t => (
+                <tr key={t.id} className="hover:bg-bg/50 transition-colors">
+                  <td className="px-6 py-4 font-bold text-white flex items-center gap-2">
+                    <Building2 size={16} className="text-indigo-400" />
+                    {t.nom}
+                  </td>
+                  <td className="px-6 py-4 font-mono text-text-dim">{t.inn || '-'}</td>
+                  <td className="px-6 py-4">
+                    <span className="bg-surface-2 text-text px-2.5 py-1 rounded-md text-xs font-medium border border-border">
+                      {t.mavqe || '-'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <a href="/admin/test/kontragent" className="text-sky-400 hover:text-sky-300 flex items-center gap-1 text-xs font-medium">
+                      Batafsil <ExternalLink size={14} />
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {activeTab === 'yangi' && (
         <div className="max-w-2xl">
           <div className="bg-surface border border-border rounded-xl p-8 shadow-xl">
@@ -66,27 +146,32 @@ export default function TestInvite() {
               <Send size={20} className="text-indigo-400" />
               Yangi hamkorni platformaga taklif qilish
             </h2>
-            
+
+            <div className="mb-5 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-300">
+              Email orqali taklif yuborish tizimi (token, xat jo'natish) hali qurilmagan.
+              Hozircha hamkorni "Kontragentlar" bo'limidan STIR bilan to'g'ridan-to'g'ri qo'shing.
+            </div>
+
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-text-dim mb-2">Hamkorning e-mail manzili</label>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="masalan: info@kompaniya.uz"
                   className="w-full bg-bg border border-border rounded-lg px-4 py-3 text-white focus:border-accent focus:ring-1 focus:ring-accent outline-none"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-text-dim mb-2">Loyihadagi Roli (Polimorfik)</label>
                 <div className="grid grid-cols-2 gap-3">
                   {['Subpudratchi', 'Yetkazib beruvchi', 'Loyihachi', 'Texnik Nazoratchi'].map(r => (
                     <label key={r} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${rol === r.toLowerCase() ? 'bg-indigo-500/10 border-indigo-500/50' : 'bg-bg border-border hover:border-text-dim'}`}>
-                      <input 
-                        type="radio" 
-                        name="rol" 
+                      <input
+                        type="radio"
+                        name="rol"
                         value={r.toLowerCase()}
                         checked={rol === r.toLowerCase()}
                         onChange={e => setRol(e.target.value)}
@@ -98,13 +183,7 @@ export default function TestInvite() {
                 </div>
               </div>
 
-              <div className="bg-indigo-950/30 border border-indigo-900/50 rounded-lg p-4 mt-6">
-                <p className="text-sm text-indigo-300 leading-relaxed">
-                  <strong>Eslatma:</strong> Taklif qilingan kompaniya ro'yxatdan o'tgach, o'zining STIR (INN) raqamini kiritishi bilan tizim barcha yuridik va bank rekvizitlarini avtomatik tortib oladi va sizning B2B tarmog'ingizga qo'shiladi.
-                </p>
-              </div>
-
-              <button 
+              <button
                 onClick={handleYuborish}
                 className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-indigo-900/20"
               >
@@ -116,84 +195,9 @@ export default function TestInvite() {
         </div>
       )}
 
-      {activeTab === 'tarmoq' && (
-        <div className="bg-surface border border-border rounded-xl shadow-xl overflow-hidden">
-          <div className="p-4 border-b border-border bg-bg/50">
-            <div className="relative w-96">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" size={16} />
-              <input 
-                type="text" 
-                placeholder="Hamkor nomi yoki STIR orqali izlash..."
-                className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:border-accent outline-none"
-              />
-            </div>
-          </div>
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="bg-surface-2 border-b border-border text-text-dim font-medium">
-                <th className="px-6 py-4">Kompaniya Nomi</th>
-                <th className="px-6 py-4">STIR (INN)</th>
-                <th className="px-6 py-4">Siz bilan roli</th>
-                <th className="px-6 py-4">Birgalikdagi loyihalar</th>
-                <th className="px-6 py-4">Amallar</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {tarmoqList.map(t => (
-                <tr key={t.id} className="hover:bg-bg/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-white flex items-center gap-2">
-                    <Building2 size={16} className="text-indigo-400" />
-                    {t.nomi}
-                  </td>
-                  <td className="px-6 py-4 font-mono text-text-dim">{t.inn}</td>
-                  <td className="px-6 py-4">
-                    <span className="bg-surface-2 text-text px-2.5 py-1 rounded-md text-xs font-medium border border-border">
-                      {t.rol}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                      <Activity size={14} /> {t.loyihalar} ta faol
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="text-sky-400 hover:text-sky-300 flex items-center gap-1 text-xs font-medium">
-                      Pasport <ExternalLink size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
       {activeTab === 'yuborilgan' && (
-        <div className="bg-surface border border-border rounded-xl shadow-xl overflow-hidden">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="bg-surface-2 border-b border-border text-text-dim font-medium">
-                <th className="px-6 py-4">Email / Qabul qiluvchi</th>
-                <th className="px-6 py-4">Taklif qilingan rol</th>
-                <th className="px-6 py-4">Yuborilgan sana</th>
-                <th className="px-6 py-4">Holat</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {yuborilganList.map(t => (
-                <tr key={t.id} className="hover:bg-bg/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-white">{t.email}</td>
-                  <td className="px-6 py-4 text-text-dim">{t.rol}</td>
-                  <td className="px-6 py-4 font-mono text-text-dim">{t.sana}</td>
-                  <td className="px-6 py-4">
-                    {t.holat === 'qabul qilingan' && <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold uppercase"><CheckCircle2 size={14}/> Qabul qilingan</span>}
-                    {t.holat === 'kutilmoqda' && <span className="flex items-center gap-1.5 text-amber-400 text-xs font-bold uppercase"><Lock size={14}/> Kutilmoqda</span>}
-                    {t.holat === 'rad etilgan' && <span className="flex items-center gap-1.5 text-rose-400 text-xs font-bold uppercase"><XCircle size={14}/> Rad etilgan</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-surface border border-border rounded-xl shadow-xl p-12 text-center text-text-dim">
+          Taklifnomalar tarixi hali qurilmagan (email orqali taklif tizimi bilan birga keladi).
         </div>
       )}
     </div>

@@ -33,13 +33,16 @@ export default function F2NavbatChip() {
   const job = useF2JobHolat(true);
   const tozala = useF2JobTozala();
   const [yigilgan, setYigilgan] = useState(false);
-  const [yopilgan, setYopilgan] = useState<string | null>(null);
+  const [yopilgan, setYopilgan] = useState<string | null>(() => sessionStorage.getItem("f2_chip_yopiq"));
 
   const j = job.data?.job;
   if (!j || !j.status) return null;
 
   const kalit = `${j.obyekt || ''}|${j.oyNom || ''}|${j.boshlandi || ''}`;
   if (yopilgan === kalit) return null;
+  const jimVaqt = j.yangilandi ? Date.now() - Number(j.yangilandi) : 0;
+  if (j.status === 'tugadi' && jimVaqt > 60_000) return null; // 1 daqiqadan eski tugagan ishni ko'rsatmaymiz
+
 
   const ishlayapti = j.status === 'navbat' || j.status === 'ishlayapti';
   const xato = j.status === 'xato';
@@ -84,7 +87,7 @@ export default function F2NavbatChip() {
         {yigilgan ? <ChevronUp size={14} className="text-text-mute" />
                   : <ChevronDown size={14} className="text-text-mute" />}
         <button
-          onClick={(e) => { e.stopPropagation(); setYopilgan(kalit); }}
+          onClick={(e) => { e.stopPropagation(); setYopilgan(kalit); sessionStorage.setItem("f2_chip_yopiq", kalit); }}
           className="text-text-mute hover:text-text p-0.5 rounded hover:bg-white/10"
           title="Yashirish">
           <X size={13} />
