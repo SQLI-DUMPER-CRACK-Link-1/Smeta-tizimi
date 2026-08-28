@@ -77,11 +77,20 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     const savol = String(body.savol || '').trim();
     if (!savol || savol.length > MAX_SAVOL) return xato('Savol 1–' + MAX_SAVOL + ' belgi bo\'lishi kerak');
 
-    const kompaniyaId = musbatId(body.kompaniya_id);
-    if (!kompaniyaId) return xato('kompaniya_id musbat butun son bo\'lishi kerak');
-
     if (!Array.isArray(sess.kompaniyalar)) {
       return xato('Sessiya kompaniya ruxsatini tasdiqlamayapti; qayta kiring', 403);
+    }
+    const soralganKompaniya = body.kompaniya_id == null ? null : musbatId(body.kompaniya_id);
+    if (body.kompaniya_id != null && !soralganKompaniya) {
+      return xato('kompaniya_id musbat butun son bo\'lishi kerak');
+    }
+    /* Global Jarvis ikonkasi Tizim_02 tanlagichidan tashqarida ham ochiladi.
+       Bitta ruxsatli kompaniya bo'lsa uni sessiyadan xavfsiz tanlaymiz;
+       bir nechta bo'lsa jimgina birinchisiga o'tmaymiz. */
+    const kompaniyaId = soralganKompaniya ??
+      (sess.kompaniyalar.length === 1 ? sess.kompaniyalar[0].kompaniya_id : null);
+    if (!kompaniyaId) {
+      return xato('Bir nechta kompaniya bor — Tizim_02 tepasidan kompaniyani tanlang', 422);
     }
     if (!sess.kompaniyalar.some((a) => a.kompaniya_id === kompaniyaId)) {
       return xato('Bu kompaniyaga ruxsat yo\'q', 403);

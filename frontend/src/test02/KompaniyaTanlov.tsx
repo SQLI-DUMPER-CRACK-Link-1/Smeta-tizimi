@@ -69,7 +69,12 @@ export function KompaniyaProvider({ children }: { children: ReactNode }) {
       /* Avval tanlangani saqlanadi — sahifa yangilanganda yo'qolmasin */
       const saqlangan = Number(localStorage.getItem(SAQLASH_KALIT) || 0);
       const topilgan = k.find((x) => x.id === saqlangan);
-      setJoriy(topilgan || k[0] || null);
+      const boshlangich = topilgan || k[0] || null;
+      setJoriy(boshlangich);
+      /* Jarvis global tugma bo'lgani uchun provider yuklagan default tanlov
+         ham saqlanishi shart; aks holda chat «kompaniya tanlanmagan» deb
+         turardi, garchi qobiqda kompaniya ko'rinib turgan bo'lsa ham. */
+      if (boshlangich) localStorage.setItem(SAQLASH_KALIT, String(boshlangich.id));
     });
   }, []);
 

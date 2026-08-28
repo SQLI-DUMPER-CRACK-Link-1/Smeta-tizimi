@@ -214,12 +214,12 @@ export type T2AiJarvisJavob = {
   ms?: number;
 };
 
-export async function t2AiJarvisSavol(kompaniyaId: number, savol: string): Promise<T2AiJarvisJavob> {
+export async function t2AiJarvisSavol(kompaniyaId: number | undefined, savol: string): Promise<T2AiJarvisJavob> {
   try {
     const response = await fetch('/api/ai-savol', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kompaniya_id: kompaniyaId, savol }),
+      body: JSON.stringify({ ...(kompaniyaId ? { kompaniya_id: kompaniyaId } : {}), savol }),
     });
     const raw = await response.text();
     try { return JSON.parse(raw) as T2AiJarvisJavob; }

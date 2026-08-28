@@ -46,10 +46,8 @@ export function AiHelper() {
     setIsLoading(true);
 
     try {
-      const kompaniyaId = Number(window.localStorage.getItem('t2_kompaniya_id'));
-      if (!Number.isInteger(kompaniyaId) || kompaniyaId <= 0) {
-        throw new Error('Avval Tizim_02 ichida kompaniyani tanlang');
-      }
+      const saqlangan = Number(window.localStorage.getItem('t2_kompaniya_id'));
+      const kompaniyaId = Number.isInteger(saqlangan) && saqlangan > 0 ? saqlangan : undefined;
       const res = await t2AiJarvisSavol(kompaniyaId, userText);
       const aiText = res.ok ? (res.javob || 'Jarvis javob bo\'sh qaytardi') : (res.xabar || 'Jarvis javob bera olmadi');
 

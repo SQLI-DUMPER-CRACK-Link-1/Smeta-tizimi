@@ -55,8 +55,13 @@ export type BuxDashboard = {
   bajarilgan_pct: number | null; tolangan_pct: number | null;
 };
 
-export function sbT2BuxDashboardOl() {
-  return sbOqi<BuxDashboard>({ jadval: 't2_bux_dashboard', tartib: 'raqam.asc', limit: 5000 });
+/* ⚠️ 2026-08-28 (Claude, tenant auditi): kompaniyaId MAJBURIY.
+ * Avval bu ko'rinishlarda kompaniya_id ustuni UMUMAN yo'q edi, shuning
+ * uchun filtrlash ham MUMKIN emasdi - bir mijoz boshqasining debitor va
+ * to'lov holatini ko'rardi. Ustun bazaga qo'shildi (oxiriga, mavjud
+ * kod sinmasin), endi filtr shu yerda. */
+export function sbT2BuxDashboardOl(kompaniyaId: number) {
+  return sbOqi<BuxDashboard>({ jadval: 't2_bux_dashboard', filtr: 'kompaniya_id=eq.' + kompaniyaId, tartib: 'raqam.asc', limit: 5000 });
 }
 
 export type DebitorAging = {
@@ -64,16 +69,16 @@ export type DebitorAging = {
   debitor: number; oxirgi_tolov_sana: string | null; kun_otdi: number | null;
 };
 
-export function sbT2DebitorAgingOl() {
-  return sbOqi<DebitorAging>({ jadval: 't2_debitor_aging', tartib: 'kun_otdi.desc', limit: 5000 });
+export function sbT2DebitorAgingOl(kompaniyaId: number) {
+  return sbOqi<DebitorAging>({ jadval: 't2_debitor_aging', filtr: 'kompaniya_id=eq.' + kompaniyaId, tartib: 'kun_otdi.desc', limit: 5000 });
 }
 
 export type BuxUmumiy = {
   jami_tolangan: number; jami_debitor: number; jami_xarajat: number; kassa_qoldiq: number;
 };
 
-export function sbT2BuxUmumiyOl() {
-  return sbOqi<BuxUmumiy>({ jadval: 't2_bux_umumiy' });
+export function sbT2BuxUmumiyOl(kompaniyaId: number) {
+  return sbOqi<BuxUmumiy>({ jadval: 't2_bux_umumiy', filtr: 'kompaniya_id=eq.' + kompaniyaId });
 }
 
 /* ══════════════════════════════════════════════════════════════════

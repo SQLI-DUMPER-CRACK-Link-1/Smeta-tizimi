@@ -3035,3 +3035,16 @@ orqali moslashtiring; yangi HEX/neon rang kiritmang.
 rahbar qarori uchun ma'lumot kerak bo'lsa, API faqat haqiqiy manbali
 `qiymat + yangilangan_vaqt + holat/sabab + obyekt_id` qaytarsin. Backend
 tayyor bo'lmasa UI ko'rsatkichni bezak yoki taxmin bilan to'ldirmasin.
+
+**Codex handoff — bajarildi:** `index.css` ga umumiy Command Center
+qobig'i (`os-app-shell`, `os-sidebar`, `os-workspace`, `os-nav-link`,
+`os-context-bar`) qo'shildi. `AdminShell`, `BossShell`, `TestShell` shu
+qobiqka o'tdi; admin/rahbar 3D fonlari va rahbar menyusining bo'limga qarab
+turli-neon ranglari olib tashlandi. `npm run build` production yig'ilishi
+toza o'tdi. Yuqoridagi 4 fayl lock'i endi **bo'sh**.
+
+**Keyingi frontend tartibi:** Antigravity modul sahifalarini bittadan
+o'tkazsin: avval `frontend/src/boss/sahifalar/Umumiy.tsx`, keyin `WrapperPortfel`,
+`WrapperMoliya`, `WrapperLogistika`, `WrapperCRM`, undan keyin qolgan
+operatsion ekranlar. Har ekranda faqat haqiqiy ma'lumot, bitta aniq asosiy
+amal, holatga bog'langan rang va ma'lumot yoshi bo'lsin.

@@ -26,7 +26,7 @@ export default function TestTolov() {
     
     setYuklanmoqda(true);
     Promise.all([
-      sbT2BuxDashboardOl(),
+      sbT2BuxDashboardOl(aktKomp),
       sbT2TolovlarOl()
     ]).then(([dashRes, tolovRes]) => {
       setYuklanmoqda(false);

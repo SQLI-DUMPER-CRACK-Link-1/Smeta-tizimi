@@ -132,8 +132,8 @@ export type QolXavf = {
   narx_yoqolgan: boolean;
 };
 
-export function sbT2QolXavfOl() {
-  return sbOqi<QolXavf>({ jadval: 't2_narx_qol_xavf', limit: 5000 });
+export function sbT2QolXavfOl(kompaniyaId: number) {
+  return sbOqi<QolXavf>({ jadval: 't2_narx_qol_xavf', filtr: 'kompaniya_id=eq.' + kompaniyaId, limit: 5000 });
 }
 
 /* ══════════════════════════════════════════════════════════════════
