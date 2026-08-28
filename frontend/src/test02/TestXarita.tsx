@@ -7,6 +7,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
+import { pulQisqa } from '../lib/format';
 import {
   sbMindmapGrafOl, sbMindmapBog, sbMindmapBogOchir, sbMindmapTugunYarat,
   sbMindmapJoylashuvSaqla, sbMindmapTugunOchir, bogTuriniTop, RUXSAT_BOGLANISH, OCHIRSA_BOLADI,
@@ -322,6 +323,7 @@ export default function TestXarita() {
   const tanlanganTugun = tanlangan ? graf.tugunlar.find((t) => t.id === tanlangan) || null : null;
   const tanlanganBoglar = tanlangan
     ? graf.bogichlar.filter((b) => b.manba === tanlangan || b.maqsad === tanlangan) : [];
+  const tanlanganObyektHolati = tanlanganTugun?.tur === 'obyekt' ? tanlanganTugun.meta : null;
 
   const tugunOchir = async (t: MindmapTugun) => {
     if (!confirm('«' + t.nom + '» o\'chirilsinmi? (Bekor qilinadi, butunlay yo\'qolmaydi)')) return;
@@ -394,6 +396,19 @@ export default function TestXarita() {
             (Obyekt — «Obyektlar» sahifasidan, unga Drive papkasi ham kerak)
           </span>
         </div>
+
+        {graf.jamlanma && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-sky-500/15 bg-sky-500/5 px-3 py-2 text-[11px]">
+            <span className="font-semibold text-sky-300">Tashkilot holati</span>
+            <span className="text-zinc-300">{graf.jamlanma.obyekt_soni} ta obyekt</span>
+            <span className="text-zinc-400">Smeta: <b className="text-white">{pulQisqa(graf.jamlanma.smeta_jami)}</b></span>
+            <span className="text-zinc-400">Fakt: <b className="text-white">{pulQisqa(graf.jamlanma.fakt_jami)}</b></span>
+            <span className="text-zinc-400">F2: <b className="text-white">{pulQisqa(graf.jamlanma.f2_jami)}</b></span>
+            {graf.jamlanma.zayavka_kutilmoqda > 0 && <span className="text-amber-300">{graf.jamlanma.zayavka_kutilmoqda} ta ochiq zayavka</span>}
+            {graf.jamlanma.narxsiz_obyekt > 0 && <span className="text-amber-300">{graf.jamlanma.narxsiz_obyekt} ta obyektda narx yo'q</span>}
+            {graf.jamlanma.smetasiz_obyekt > 0 && <span className="text-rose-300">{graf.jamlanma.smetasiz_obyekt} ta obyektda smeta yo'q</span>}
+          </div>
+        )}
       </div>
 
       {xato && <div className="m-3 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">{xato}</div>}
@@ -474,17 +489,28 @@ export default function TestXarita() {
                     if (!belgilar.length) return null;
                     const ogoh = belgilar.some((b) => b.daraja === 'ogoh');
                     return (
-                      <div
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const nom = encodeURIComponent(t.nom);
+                          const yol = belgilar[0].tur === 'zayavka'
+                            ? '/admin/test/zayavka?obyekt=' + nom
+                            : belgilar[0].tur === 'kozgu'
+                              ? '/admin/tezlik'
+                              : '/admin/test/smeta?obyekt=' + nom;
+                          navigate(yol);
+                        }}
                         title={belgilar.map((b) => '• ' + b.matn).join('\n')}
                         className={'absolute -top-2 -left-2 text-white text-[10px] font-bold ' +
                           'px-2 py-0.5 rounded-full border-2 border-[#111827] shadow-lg ' +
                           'flex items-center gap-1 z-20 ' +
-                          (ogoh ? 'bg-amber-500' : 'bg-sky-500')}>
+                          (ogoh ? 'bg-amber-500 hover:bg-amber-400' : 'bg-sky-500 hover:bg-sky-400')}>
                         <span className="w-1.5 h-1.5 bg-white rounded-full" />
                         {belgilar.length === 1
                           ? (belgilar[0].soni ?? '') + ' ' + BELGI_QISQA[belgilar[0].tur]
                           : belgilar.length + ' ogohlantirish'}
-                      </div>
+                      </button>
                     );
                   })()}
 
@@ -527,70 +553,32 @@ export default function TestXarita() {
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
               
-              {/* === MINI DASHBOARD (FUNKSIONALLIK KARKASI) === */}
-              {tanlanganTugun.tur === 'obyekt' && (
-                <div className="space-y-3 mb-6 bg-black/20 p-3 rounded-xl border border-white/5 shadow-[inset_0_0_20px_rgba(56,189,248,0.02)]">
-                  <h4 className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Building2 size={12} /> Obyekt Holati</h4>
-                  
+              {tanlanganObyektHolati && (
+                <div className="space-y-3 mb-6 bg-black/20 p-3 rounded-xl border border-white/5">
+                  <h4 className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Building2 size={12} /> Obyekt holati</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-white/5 p-2 rounded-lg border border-white/5">
-                      <div className="text-[10px] text-zinc-500">Byudjet (Smeta)</div>
-                      <div className="text-[12px] font-bold text-emerald-400">12.5 Mlrd</div>
+                      <div className="text-[10px] text-zinc-500">Smeta</div>
+                      <div className="text-[12px] font-bold text-emerald-400">{pulQisqa(tanlanganObyektHolati.smeta)}</div>
                     </div>
                     <div className="bg-white/5 p-2 rounded-lg border border-white/5">
-                      <div className="text-[10px] text-zinc-500">O'zlashtirildi (F2)</div>
-                      <div className="text-[12px] font-bold text-sky-400">8.2 Mlrd <span className="text-[10px] text-zinc-500">(65%)</span></div>
+                      <div className="text-[10px] text-zinc-500">F2</div>
+                      <div className="text-[12px] font-bold text-sky-400">{pulQisqa(tanlanganObyektHolati.f2)}</div>
                     </div>
                   </div>
-
-                  <div className="bg-white/5 p-2 rounded-lg border border-white/5 space-y-2 mt-2">
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-zinc-400">Jarayondagi Zayavkalar:</span>
-                      <span className="text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded cursor-pointer hover:bg-amber-500/20" onClick={() => window.location.href='/admin/test/zayavka'}>3 ta</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-zinc-400">Sklad qoldig'i:</span>
-                      <span className="text-emerald-400 font-bold cursor-pointer hover:text-emerald-300" onClick={() => window.location.href='/admin/test/logistika'}>142 tonna</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-zinc-400">Biriktirilgan Texnikalar:</span>
-                      <span className="text-white font-bold">4 ta aylanma</span>
-                    </div>
+                  <div className="bg-white/5 p-2 rounded-lg border border-white/5 space-y-2 text-[11px]">
+                    <div className="flex justify-between"><span className="text-zinc-400">Fakt</span><span className="text-white font-bold">{pulQisqa(tanlanganObyektHolati.fakt)}</span></div>
+                    <div className="flex justify-between"><span className="text-zinc-400">Fakt / smeta</span><span className="text-white font-bold">{tanlanganObyektHolati.fakt_foiz == null ? '—' : tanlanganObyektHolati.fakt_foiz + '%'}</span></div>
+                    <div className="flex justify-between"><span className="text-zinc-400">F2 / smeta</span><span className="text-white font-bold">{tanlanganObyektHolati.f2_foiz == null ? '—' : tanlanganObyektHolati.f2_foiz + '%'}</span></div>
+                    <div className="flex justify-between"><span className="text-zinc-400">Resurs qatorlari</span><span className="text-white font-bold">{tanlanganObyektHolati.resurs_qatori ?? '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-zinc-400">Narxsiz qatorlar</span><span className={(tanlanganObyektHolati.narxsiz ?? 0) > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>{tanlanganObyektHolati.narxsiz ?? '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-zinc-400">Hisob holati</span><span className={tanlanganObyektHolati.toliq === false ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>{tanlanganObyektHolati.toliq == null ? '—' : tanlanganObyektHolati.toliq ? 'To‘liq' : 'To‘liq emas'}</span></div>
+                    <button type="button" onClick={() => navigate('/admin/test/zayavka?obyekt=' + encodeURIComponent(tanlanganTugun!.nom))} className="w-full mt-1 rounded-lg bg-amber-500/10 px-2 py-1.5 text-amber-300 hover:bg-amber-500/20 text-left">
+                      Ochiq zayavkalar: <b>{tanlanganObyektHolati.zayavka ?? '—'}</b>
+                    </button>
                   </div>
                 </div>
               )}
-
-              {tanlanganTugun.tur === 'shartnoma' && (
-                <div className="space-y-3 mb-6 bg-black/20 p-3 rounded-xl border border-white/5 shadow-[inset_0_0_20px_rgba(52,211,153,0.02)]">
-                  <h4 className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><FileText size={12} /> Moliyaviy Holat</h4>
-                  <div className="bg-white/5 p-2 rounded-lg border border-white/5 space-y-2">
-                    <div>
-                      <div className="text-[10px] text-zinc-500">Shartnoma Summasi (NDS bilan)</div>
-                      <div className="text-[13px] font-bold text-white">4 500 000 000 so'm</div>
-                    </div>
-                    <div className="w-full bg-black/50 rounded-full h-1.5 mt-2 overflow-hidden">
-                      <div className="bg-emerald-500 h-1.5" style={{ width: '45%' }}></div>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-emerald-400">To'langan: 2.02 Mlrd</span>
-                      <span className="text-rose-400">Qarz: 2.47 Mlrd</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {tanlanganTugun.tur === 'kontragent' && (
-                <div className="space-y-3 mb-6 bg-black/20 p-3 rounded-xl border border-white/5 shadow-[inset_0_0_20px_rgba(251,146,60,0.02)]">
-                  <h4 className="text-[11px] font-bold text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Users size={12} /> Kontragent Ma'lumoti</h4>
-                  <div className="bg-white/5 p-3 rounded-lg border border-white/5 text-[11px] space-y-2">
-                    <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">Turi:</span><span className="text-white font-medium">Subpudratchi (B2B)</span></div>
-                    <div className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">Reyting:</span><span className="text-amber-400 tracking-widest">★★★★☆</span></div>
-                    <div className="flex justify-between"><span className="text-zinc-500">Aktiv Shartnomalar:</span><span className="text-emerald-400 font-bold">2 ta</span></div>
-                  </div>
-                </div>
-              )}
-              {/* ================================================== */}
-
               <div>
                 <div className="text-[11px] text-zinc-400 mb-2">Bog'lanishlari ({tanlanganBoglar.length})</div>
               {tanlanganBoglar.length === 0 && (

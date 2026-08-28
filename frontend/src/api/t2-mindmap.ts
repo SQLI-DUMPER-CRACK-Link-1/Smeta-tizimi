@@ -131,7 +131,17 @@ export async function sbMindmapGrafOl(kompaniyaId: number): Promise<
     const j = await res.json();
     if (!j.ok) return { ok: false, error: j.error || 'Graf o\'qilmadi' };
     const graf = (j.natija || {}) as MindmapGraf;
-    return { ok: true, graf: { tugunlar: graf.tugunlar || [], bogichlar: graf.bogichlar || [] } };
+    return {
+      ok: true,
+      graf: {
+        tugunlar: graf.tugunlar || [],
+        bogichlar: graf.bogichlar || [],
+        /* Rahbar paneli uchun kompaniya bo'yicha jamlanma ham shu
+         * bitta javobda keladi. Uni tashlab yuborish API kontraktini
+         * jimgina buzib, UI'ni yana soxta KPI qo'yishga undaydi. */
+        jamlanma: graf.jamlanma,
+      },
+    };
   } catch (e: any) {
     return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)) };
   }

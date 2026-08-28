@@ -1,41 +1,74 @@
-import { sbOqi, yozAmali } from './supabase';
+import { sbOqi, yozAmali, type AktNatija } from './supabase';
 
-export type ZayavkaHolat = 'yangi' | 'jarayonda' | 'qisman' | 'bajarildi' | 'bekor_qilindi';
+/** `t2_erp_amal` saqlaydigan haqiqiy holatlar. UI ularni o'zicha
+ * boshqa nomlarga aylantirmaydi — mindmap ham shu qiymatlarni ko'radi. */
+export type ZayavkaHolat = 'kutilmoqda' | 'tasdiqlandi' | 'yopildi' | 'rad';
 
+/** `t2_zayavka_royxat` view kontrakti (`t2_erp_taminot` ustunlari). */
 export type T2Zayavka = {
   id: number;
+  kompaniya_id: number;
   obyekt_id: number;
-  obyekt_nomi?: string;
-  tashabbuskor: string; // 'PTO', 'Prorab', 'Snabjeniya'
-  material: string;
-  hajm: number;
-  birlik: string;
-  muddat: string; 
+  obyekt_nomi?: string | null;
+  buyurtma_raqami?: string | null;
+  maxsulot: string;
+  miqdor: number;
+  birlik?: string | null;
   holat: ZayavkaHolat;
-  izoh: string;
-  yaratildi: string;
+  yaratilgan_vaqt: string;
 };
 
-// Zayavkalar ro'yxatini olish (obyekt bo'yicha yoki umumiy)
-export function sbZayavkalarOl(obyektId?: number) {
+export type ZayavkaNatija = AktNatija & {
+  id?: number;
+  raqam?: string;
+  holat?: ZayavkaHolat;
+};
+
+/** Kompaniya doirasidagi zayavkalar. Kompaniya filtri tenant xavfsizligi
+ * uchun majburiy: `/api/sb` uni sessiya a'zoligi bilan tekshiradi. */
+export function sbZayavkalarOl(kompaniyaId: number, obyektId?: number) {
+  const filtrlar = [`kompaniya_id=eq.${kompaniyaId}`];
+  if (obyektId != null) filtrlar.push(`obyekt_id=eq.${obyektId}`);
   return sbOqi<T2Zayavka>({
-    jadval: 't2_zayavka_royxat', // Claude shunga mos view yoki table qiladi
-    filtr: obyektId ? `obyekt_id=eq.${obyektId}` : undefined,
-    tartib: 'yaratildi.desc',
-    limit: 1000
+    jadval: 't2_zayavka_royxat',
+    filtr: filtrlar.join('&'),
+    tartib: 'yaratilgan_vaqt.desc',
+    limit: 1000,
   });
 }
 
-// Zayavka yaratish
-export function sbZayavkaYoz(p: { obyektId: number, tashabbuskor: string, material: string, hajm: number, birlik: string, muddat: string, izoh: string }) {
+/** Claude bergan kontraktga adapter:
+ * POST /api/sb-yoz { amal:'erp_amal', kompaniya_id,
+ * operatsiya:'zayavka_yarat', payload:{...} } */
+export function sbZayavkaYoz(
+  kompaniyaId: number,
+  p: { obyektId: number; maxsulot: string; miqdor: number; birlik?: string; buyurtmaRaqami?: string },
+): Promise<ZayavkaNatija> {
   return yozAmali({
-    amal: 'zayavka_yarat',
-    obyekt_id: p.obyektId,
-    tashabbuskor: p.tashabbuskor,
-    material: p.material,
-    hajm: p.hajm,
-    birlik: p.birlik,
-    muddat: p.muddat,
-    izoh: p.izoh
-  });
+    amal: 'erp_amal',
+    kompaniya_id: kompaniyaId,
+    operatsiya: 'zayavka_yarat',
+    payload: {
+      obyekt_id: p.obyektId,
+      maxsulot: p.maxsulot,
+      miqdor: p.miqdor,
+      birlik: p.birlik || undefined,
+      buyurtma_raqami: p.buyurtmaRaqami || undefined,
+    },
+  }) as Promise<ZayavkaNatija>;
+}
+
+/** Zayavkani keyingi bosqichga o'tkazadi. O'chirish yo'q: `rad` holati
+ * tarixni saqlaydi va backend shu qoidani majburlaydi. */
+export function sbZayavkaHolatYoz(
+  kompaniyaId: number,
+  id: number,
+  holat: ZayavkaHolat,
+): Promise<ZayavkaNatija> {
+  return yozAmali({
+    amal: 'erp_amal',
+    kompaniya_id: kompaniyaId,
+    operatsiya: 'zayavka_holat',
+    payload: { id, holat },
+  }) as Promise<ZayavkaNatija>;
 }
