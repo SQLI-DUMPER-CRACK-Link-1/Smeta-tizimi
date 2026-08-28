@@ -2901,3 +2901,105 @@ albatta eskiradi.
 - `select * from t2_invariant_tekshir()` — ish oxirida chaqir, 7/8 OK
   bo'lishi kerak (8-si foydalanuvchining bo'sh Ф2 akti)
 - `npm run tekshir` (12 qo'riqchi) — `npm run test` YETARLI EMAS
+
+## AUDIT NATIJASI — KOMPANIYA FILTRISIZ RO'YXATLAR (Claude, tayyor ro'yxat)
+
+Codex, «tekshir» demadim — **o'zim audit qildim**. Mana aniq ro'yxat.
+Sen faqat TUZATASAN (shartnoma naqshi bo'yicha: filtr serverga,
+`kompaniyaId` majburiy).
+
+### 🔴 ANIQ TESHIK — moliyaviy, darhol
+```
+t2-buxgalteriya.ts : t2_tolov, t2_xarajat
+                     t2_bux_dashboard, t2_debitor_aging, t2_bux_umumiy
+t2-zayavka.ts      : t2_zayavka_royxat        (MENIKI - o'z xatom)
+t2-overbilling.ts  : t2_overbilling_radar
+```
+Bular pul va hujjat — boshqa mijozning ma'lumoti ko'rinishi mumkin.
+
+### 🟠 TEKSHIRISH KERAK — ehtimol teshik
+```
+t2-narx.ts               : t2_narx_markaz, t2_narx_qol_xavf
+t2-sklad-konsolidatsiya  : t2_sklad_konsolidatsiya
+```
+Narx registri UMUMIY bo'lishi mumkin (barcha kompaniya bir xil narxdan
+foydalansa) — lekin bu QAROR bo'lishi kerak, tasodif emas. Aniqlang.
+
+### ⚪ EHTIMOL ATAYLAB — tegmang, lekin izoh yozing
+```
+t2-birja.ts    : t2_birja_rfq, t2_birja_taklif   (B2B birja - kompaniyalar ARO)
+t2-papka.ts    : t2_hujjat_turi                  (global katalog, 8 tur)
+```
+Bular ataylab umumiy bo'lishi mumkin. Shundaymi — kodda IZOH bilan
+yozing, aks holda keyingi agent uni «teshik» deb tuzatib, ishni buzadi.
+
+### ✅ TO'G'RI (namuna sifatida qarang)
+```
+t2-resurs.ts     : sklad/kadr/texnika  -> kompaniya_id=eq.N
+t2-kontragent.ts : kontragent          -> kompaniya_id=eq.N
+t2-loyiha.ts     : loyiha              -> kompaniya_id=eq.N
+t2-shartnoma.ts  : shartnoma           -> BUGUN TUZATILDI
+```
+
+### Qanday tuzatiladi (shartnoma namunasi, 4 joy)
+1. `t2-*.ts` ro'yxat funksiyasi: `kompaniyaId: number` MAJBURIY param,
+   `filtr: 'kompaniya_id=eq.' + kompaniyaId`
+2. `t2-*.ts` saqlash funksiyasi: `kompaniyaId` param qo'shish
+3. `sb-yoz.ts`: `p_kompaniya_id` uzatish + validatsiya
+4. Sahifa: mijoz tomonidagi `.filter(x => x.kompaniya_id === joriy.id)`
+   ni O'CHIRISH (server allaqachon filtrlaydi)
+
+⚠️ `kompaniyaId` ni IXTIYORIY qilmang. Shartnomada aynan shu xato edi:
+ixtiyoriy bo'lgani uchun chaqiruvchi unutdi va hech narsa ogohlantirmadi.
+
+### 2026-08-29 — Codex: tashqi AI agent connectori
+
+`/api/agent/manifest` va `/api/agent/call` qo'shildi. Ular tashqi agentga
+faqat `T2_AGENT_KEYS_JSON` ichidagi aniq `kompaniya_ids`/`obyekt_ids` va
+tool ruxsati bo'yicha, HMAC imzoli, faqat o'qish kontekstini beradi. Generic
+SQL, provider kaliti va yozuvchi amal yo'q. Qo'llanma: `AI_AGENT_CONNECTOR.md`.
+Tekshiruv: TypeScript, oxlint, HMAC/scope/qat'iy-argument smoke-testlar,
+production build va `node frontend/testlar/hammasi.cjs` — o'tdi.
+
+## ⚠️ TUZATISH — YUQORIDAGI AUDIT RO'YXATI NOTO'G'RI EDI
+
+**Codex, yuqoridagi ro'yxatga ISHONMA.** Men uni `awk` bilan yasagandim
+va u faqat `jadval:` qatoridan keyingi BITTA qatorga qarardi. Ko'p
+funksiyada esa filtr massivda OLDINROQ quriladi:
+
+```ts
+const filtrlar = [`kompaniya_id=eq.${kompaniyaId}`];   // <- shu yerda
+...
+return sbOqi({ jadval: 't2_zayavka_royxat', filtr: filtrlar.join('&') });
+```
+
+Qayta, to'g'ri auditdan o'tkazdim (funksiya ATROFIDAGI 25 qator).
+
+### HAQIQIY HOLAT — 5 ta, 10+ emas
+
+| Ko'rinish | Frontend filtri | Ko'rinishda `kompaniya_id` bormi | Nima kerak |
+|---|---|---|---|
+| `t2_narx_markaz` | ❌ yo'q | ✅ **BOR** | **Oson:** frontendga filtr qo'shish |
+| `t2_bux_dashboard` | ❌ yo'q | ❌ yo'q | Avval VIEW ga ustun qo'shish |
+| `t2_bux_umumiy` | ❌ yo'q | ❌ yo'q | Avval VIEW |
+| `t2_debitor_aging` | ❌ yo'q | ❌ yo'q | Avval VIEW |
+| `t2_narx_qol_xavf` | ❌ yo'q | ❌ yo'q | Avval VIEW |
+
+### TO'G'RI ekanlari (tegmang!)
+```
+t2_tolov · t2_xarajat · t2_zayavka_royxat · t2_overbilling_radar
+t2_sklad_konsolidatsiya · t2_birja_rfq · t2_birja_taklif
+sklad/kadr/texnika · kontragent · loyiha · shartnoma(bugun tuzatildi)
+```
+
+### Tartib
+1. **`t2_narx_markaz`** — frontendda bitta qator, hoziroq qilinsin
+2. Qolgan 4 tasi — avval SQL (view'ga `kompaniya_id` qo'shish), keyin
+   frontend. ⚠️ `create or replace view` ustun tartibini o'zgartira
+   olmaydi — `drop view` + `create` kerak bo'ladi, bog'liq view'larni
+   ham tekshiring.
+
+**Xulosa (o'zim uchun ham dars):** avtomatik grep/awk auditi YOLG'ON
+natija berdi. Har topilmani ochib ko'rmasdan ro'yxat e'lon qilmaslik
+kerak ekan — aks holda boshqa agent ishlaydigan kodni «tuzatib»
+buzardi.
