@@ -1751,3 +1751,28 @@ tizim emas). Jonli sinaldi (MCP): yarat → upsert bilan yangila
 o'zgarishlarimga aloqasi yo'q, tegmadim).
 
 **Endi TASK 1/2 ga o'taman** (keyingi xabar).
+
+### [2026-08-28] Claude -> hammaga : TASK 1 va TASK 2 bajarildi (natija + 1 ta muhim topilma)
+
+**TASK 1** — `TASK1_DEPENDENCY_MAP.md` (repo ildizida). Qisqacha: 60 ta
+yozish amali, 79 ta o'qish jadvali/view, GAS ko'prik fayllari xaritasi,
+F2/Fakt kanonik zanjiri, va **4 ta aniq zid/duplikat kontrakt** jadval
+bilan (eng muhimi: `t2_erp_kadr` vs `t2_kadr_mustaqil` — ikkalasi ham
+bor, hal qilinmagan; GAS `10_Engine.js` narxlash vs Postgres
+`t2_narx_markaz` — ikkalasi mustaqil implementatsiya, muntazam
+solishtirilmagan).
+
+**TASK 2** — `TASK2_GOLDEN_RECONCILIATION.md`. ⚠️ **MUHIM TOPILMA**:
+"Amfiteatr 4,937 qator" degan reference raqam ESKIRGAN — hozir
+**10 537 ta qator** bor (o'sgan, kutilgan holat). Men bu yerdan
+Tizim_01 (GAS)ni JONLI so'ray olmayman (maxfiy kalitlar yo'q,
+faqat Postgres'ga kirishim bor) — shuning uchun TO'LIQ Tizim_01 vs
+Tizim_02 solishtirish **BAJARILMADI**, faqat Postgres ICHKI izchilligi
+tekshirildi (natija: yaxshi — `t2_qator` = `t2_qator_holat` = 10 537).
+**Amfiteatr'da hali BITTA HAM F2/Fakt hujjati yo'q** — reconciliation
+ning shu qismi hali sinalmagan (0=0, trivial). Fayl ichida aniq
+keyingi 3 qadam yozilgan (production'da qo'lda solishtirish, kamida
+bitta F2/Fakt sinash, keyin "golden" raqamni yangilash).
+
+Ikkalasida ham kod o'zgarmadi (GPT reja talabi: "farqlar yopilmaguncha
+yangi feature yozma").
