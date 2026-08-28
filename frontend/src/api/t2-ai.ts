@@ -132,3 +132,71 @@ export function aiKontekstMatni(k: AiKontekst): string {
 
   return qatorlar.join('\n');
 }
+
+/**
+ * TIZIM_02 native AI — faktura/OCR parse.
+ *
+ * Eski GAS `apiFakturaAiParse` saqlanib qoladi, lekin Tizim_02 UI uchun
+ * chaqiruv Cloudflare darvozasidan o'tadi: sessiya, provider kalitlari,
+ * retry/timeout va fail-closed domain validator bir joyda ishlaydi.
+ */
+export type T2AiFakturaItem = {
+  fakturaRaqami: string;
+  postavshik: string;
+  kelganSana: string;
+  shartnomaRaqami: string;
+  shartnomaSanasi?: string;
+  postavshikInn?: string;
+  postavshikManzil?: string;
+  sotibOluvchiInn?: string;
+  sotibOluvchiManzil?: string;
+  nomi: string;
+  birligi: string;
+  miqdori: number;
+  narxi: number;
+  jamiNdsSiz: number;
+  ndsSummasi: number;
+  jamiNdsBilan: number;
+  aksizSummasi?: number;
+  ndsStavkasi?: number;
+};
+
+export type T2AiFakturaParse = {
+  ok: boolean;
+  items?: T2AiFakturaItem[];
+  supplier?: string;
+  warnings?: string[];
+  xabar?: string;
+  provider?: string;
+  model?: string;
+  ms?: number;
+};
+
+export async function t2AiFakturaParse(payload: {
+  base64: string;
+  mimeType: string;
+  nomi: string;
+}): Promise<T2AiFakturaParse> {
+  const t0 = performance.now();
+  try {
+    const response = await fetch('/api/ai-parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const raw = await response.text();
+    let result: T2AiFakturaParse;
+    try {
+      result = JSON.parse(raw) as T2AiFakturaParse;
+    } catch {
+      return { ok: false, xabar: 'AI serveri JSON qaytarmadi', ms: Math.round(performance.now() - t0) };
+    }
+    return { ...result, ms: Math.round(performance.now() - t0) };
+  } catch (error: any) {
+    return {
+      ok: false,
+      xabar: 'AI tarmoq xatosi: ' + (error?.message || String(error)),
+      ms: Math.round(performance.now() - t0),
+    };
+  }
+}

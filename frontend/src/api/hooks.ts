@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gas } from './client';
 import { navbatgaQoshish } from '../_shared/navbat';
 import { yangiUid } from '../_shared/idempotent';
+import { t2AiFakturaParse } from './t2-ai';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
@@ -626,8 +627,8 @@ export function useFakturaYoz() {
 
 export function useFakturaAiParse() {
   return useMutation({
-    mutationFn: (payload: { base64: string; mimeType: string; nomi: string }) => 
-      gas<{ ok: boolean; items?: FakturaItem[]; supplier?: string; xabar?: string }>('apiFakturaAiParse', payload)
+    mutationFn: (payload: { base64: string; mimeType: string; nomi: string }) =>
+      t2AiFakturaParse(payload) as Promise<{ ok: boolean; items?: FakturaItem[]; supplier?: string; xabar?: string }>
   });
 }
 

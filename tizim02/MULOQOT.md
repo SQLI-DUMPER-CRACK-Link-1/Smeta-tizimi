@@ -2583,3 +2583,186 @@ ikkinchi haqiqat manbai yasardi). Chizishda joriy razdel eslab boriladi —
 LRV_PLUS ning o'zi ham shunday quriladi.
 
 **Deploy:** v369, 20/20 deployment. Ko'zgu testi 78/78.
+
+# ═══════════════════════════════════════════════════════════════════
+# [2026-08-28] CLAUDE -> ANTIGRAVITY va CODEX · TO'LIQ TOPSHIRIQ REJASI
+# ═══════════════════════════════════════════════════════════════════
+
+**Sabab:** Claude haftalik limitiga yetdi. Men qaytgunimcha ikkalangiz
+shu reja bo'yicha ishlaysiz. Reja ustuvorlik tartibida — yuqoridagisi
+muhimroq.
+
+## 0. HAR ISH OLDIDAN VA KEYIN (ikkalangiz uchun)
+
+```bash
+cd frontend
+npm run build      # tsc -b + vite
+npm run tekshir    # 12 QO'RIQCHI — eng muhimi
+npm run lint
+```
+
+⚠️ `npm run test` (vitest) YETARLI EMAS — u atigi 2 ta faylni qamraydi.
+Loyihaning haqiqiy himoyasi `npm run tekshir` da.
+
+Bazaga tegsangiz, oxirida:
+```sql
+select * from t2_invariant_tekshir();
+```
+Hammasi `OK` bo'lishi kerak (akt#19 ogohlantirishi — kutilgan, u
+foydalanuvchining bo'sh Ф2 si).
+
+GAS tegsangiz: `node --check "Smeta tizimi/<fayl>.js"`
+
+---
+
+## 1. 🔴 CODEX — BIRINCHI NAVBATDA (sifat/xavfsizlik)
+
+### 1.1 Qo'riqchi test: apostrofli identifikator
+Bugun build **butunlay yiqilgan** edi: `function sanaKo'rsat(...)` —
+o'zbekcha so'z apostrof bilan identifikator qilib yozilgan, JS'da bu
+mumkin emas. `t2_kodlash_yaxlitligi` buni **ushlamadi**.
+Naqsh: `function|const|let|var` dan keyingi nomda `'` bo'lsa — xato.
+
+### 1.2 Qo'riqchi test: `(1)` dublikat fayllar
+Drive sinxronizatsiyasi `fayl (1).tsx` nusxalarini yaratadi va ular
+git'ga tushadi. Bugun **15 tasi** bor edi; 9 tasi aynan nusxa,
+**6 tasida esa YO'QOLGAN ISH** bor edi (yangi tablar: invite, alias,
+smeta, fakt, aosr). Test: `git ls-files | grep " (1)"` bo'sh bo'lsin.
+
+### 1.3 `.gitattributes`
+`* text=auto eol=lf` — CRLF/LF chalkashligi dublikatlarning ildizi.
+
+### 1.4 `t2_invariant_tekshir()` ni CI ga ulash
+Baza qoidalari jimgina yo'qolmasin (bugun aynan shunday bo'ldi:
+himoya 08-21 da qo'yilib, keyingi qayta yozishda yo'qolgan).
+
+---
+
+## 2. 🔴 ANTIGRAVITY — BIRINCHI NAVBATDA (UI)
+
+### 2.1 Hodisa lentasi ekranga
+Backend TAYYOR: `frontend/src/api/t2-hodisa.ts`
+- `sbHodisaLentaOl(kompaniyaId)` — kompaniya lentasi
+- `sbObyektHodisalariOl(obyektId)` — mindmapda tugun tanlanganda
+- `qachon(iso)` — «2 soat oldin»
+- `MODUL_RANG` — modul bo'yicha rang
+
+Kerak: rahbar panelida yon lenta + mindmapda tanlangan obyekt tarixi.
+Har yozuvda tayyor `satr` maydoni bor — uni ko'rsatish kifoya.
+
+### 2.2 Mindmap belgilariga bosish
+`meta.belgi[]` da `tur` bor: `zayavka` / `narx_yoq` / `kozgu` /
+`smeta_yoq`. Bosilganda tegishli sahifaga o'tsin:
+- `zayavka` -> `/admin/test/zayavka?obyekt=<nom>`
+- `narx_yoq` -> narxlar markazi (topilmaganlar)
+- `kozgu` -> ko'zguni qayta chizish
+- `smeta_yoq` -> smeta yuklash
+
+### 2.3 Zayavka formasi
+RPC TAYYOR (kontrakt pastda). `TestZayavka.tsx` bor, lekin bugun uchta
+xatosi tuzatildi — ishlashini TEKSHIRING (login qilib, haqiqiy zayavka
+yaratib, mindmapda belgi chiqishini ko'ring).
+
+---
+
+## 3. 🟠 KEYINGI QATLAM (kim bo'sh bo'lsa)
+
+### 3.1 PUL ZANJIRI — hozir 0 yozuv
+`t2_tolov`, `t2_xarajat` jadval va RPC tayyor, lekin **bitta ham yozuv
+yo'q**. Ular Ф2 TASDIQLANISHIDAN boshlanadi. Ketma-ketlik:
+```
+Ф2 qoralama -> tasdiqlangan -> shartnoma bo'yicha to'lov -> debitor
+```
+Kerak: Ф2 tasdiqlash UI + to'lov kiritish formasi.
+Ko'rinishlar tayyor: `t2_bux_dashboard`, `t2_debitor_aging`,
+`t2_bux_umumiy`.
+
+### 3.2 АОСР — 0 yozuv
+`t2_aosr_reestr`, `t2_aosr_coverage` tayyor. ФАКТ ga bog'liq.
+
+### 3.3 Papka tuzilmasi UI
+Backend TAYYOR: `frontend/src/api/t2-papka.ts` +
+`t2_papka_daraxt` view + GAS `apiT2PapkaTayyorla`.
+Kerak: mindmapda obyekt ostida papka turlari ko'rinsin (8 tur,
+Drive bilan AYNI tartibda), hujjat soni bilan.
+
+---
+
+## 4. KONTRAKTLAR (o'zboshimchalik bilan o'zgartirmang)
+
+### Zayavka
+```
+POST /api/sb-yoz {amal:'erp_amal', kompaniya_id, operatsiya, payload}
+  operatsiya='zayavka_yarat'
+    payload: {obyekt_id?, maxsulot*, miqdor*, birlik?, buyurtma_raqami?}
+    ok:   {ok:true, id, raqam:'Z20260828-01', holat:'kutilmoqda'}
+    xato: {ok:false, xabar:'...'}
+  operatsiya='zayavka_holat'  payload:{id*, holat*}
+  operatsiya='zayavka_ochir'  payload:{id*}   -> holat='rad' (DELETE emas)
+O'qish: view t2_zayavka_royxat
+```
+
+### ФАКТ kiritish
+```
+sbFaktYoz({obyektId, sana:'YYYY-MM-DD', qatorlar:[{qator_id,hajm}],
+           operationId})     <- operationId ni SIZ berasiz (UUID)
+sbFaktBelgila({qatorId, yangiJami})   <- JAMI beriladi, tizim FARQNI yozadi
+```
+⚠️ Invariant BUZILSA TO'SMAYDI — `ogohlantirish[]` qaytaradi. Uni
+foydalanuvchiga KO'RSATING (foydalanuvchi qarori: «faqat ogohlantirish
+berish yetarli»).
+
+### Mindmap
+```
+sbMindmapGrafOl(kompaniyaId) -> {tugunlar, bogichlar, jamlanma}
+  tugun.meta (obyekt): smeta, narxsiz, toliq, fakt, f2, fakt_foiz,
+                       f2_foiz, zayavka, kozgu, belgi[]
+  jamlanma: obyekt_soni, smeta_jami, fakt_jami, f2_jami,
+            zayavka_kutilmoqda, narxsiz_obyekt, smetasiz_obyekt,
+            kozgu_eskirgan
+```
+
+### AI konteksti
+```
+sbAiKontekst(obyektId)  -> bitta obyekt bo'yicha HAMMASI (50 ms)
+sbAiUmumiy(kompaniyaId) -> barcha obyektlar qisqacha
+aiKontekstMatni(k)      -> model'ga yuboriladigan MATN (bir joyda)
+```
+⚠️ Model'ga yuborganda `ogohlantirish` ni HAM yuboring — aks holda AI
+to'liq bo'lmagan raqamni ishonch bilan aytadi.
+
+---
+
+## 5. ⛔ TEGMANG
+
+- `t2_akt_qator.qator_id` FK — **ON DELETE RESTRICT** bo'lib qolsin.
+  CASCADE ga qaytarilsa Ф2/ФАКТ hujjatlari jimgina o'chadi (bugun
+  353 qator shunday yo'qolgan).
+- `t2_markirovka_himoya` va uning `t2_markirovka` dagi chaqiruvi.
+- `00_BOSH_QONUN.md` Q1: soxta ma'lumot. Bugun mindmapdan qattiq
+  yozilgan «90m parog (Zayavka)» belgisi olib tashlandi — qaytmasin.
+- NULL != 0: narx topilmasa summa NULL qoladi, 0 EMAS.
+
+---
+
+## 6. FOYDALANUVCHI UCHUN OCHIQ ISH
+
+- **Ф2 ni qayta import qilish** (Fast food) — 353 qator kaskad bilan
+  yo'qolgan, qaytarib bo'lmaydi. Smeta BUTUN (1447 qator, 744 054 071.73,
+  narxlash 100%). Faqat Ф2 fayli qayta yuklanishi kerak.
+- Ko'zgu varaqlari `farqli` deb belgilangan — birinchi ochilishda
+  yangi ustunlar (ФАКТ ХАЖМ/СУММА, F2 НАРХ, РАЗДЕЛ) bilan qayta
+  chiziladi. Tirgak endi O'ZI o'rnatiladi (v368+).
+
+## 7. JORIY HOLAT (raqamlar bilan)
+
+```
+GAS:        v369, 20/20 deployment
+Smeta:      14 653 qator · 4 obyekt · narxlash Amfiteatr 99.99%,
+            Fast food 100%, Stella/Avtosalon da narxsizlar bor
+Ko'prik:    IKKI TOMONLAMA (ФАКТ ustuni orqali)
+Invariant:  7/8 OK (8-si — foydalanuvchining bo'sh Ф2 akti)
+Zayavka:    0 (RPC tayyor)
+To'lov:     0 (RPC tayyor, Ф2 tasdiqlanishini kutadi)
+Audit:      trigger bilan avtomat, 0 yozuv (yangi)
+```
