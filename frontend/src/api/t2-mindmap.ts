@@ -90,6 +90,15 @@ export function sbMindmapJoylashuvSaqla(
   return yozAmali({ amal: 'mindmap_joylashuv_saqla', kompaniya_id: kompaniyaId, joylar });
 }
 
+/** Tugunni o'chiradi (QATTIQ emas — holat='bekor', tarix saqlanadi).
+ *  Obyekt ATAYLAB o'chirilmaydi: unda smeta/F2/pul bor → Korzinka orqali. */
+export function sbMindmapTugunOchir(tur: TugunTur, id: number) {
+  return yozAmali({ amal: 'mindmap_tugun_ochir', tur, id });
+}
+
+/** Mindmapdan o'chirsa bo'ladigan turlar */
+export const OCHIRSA_BOLADI: TugunTur[] = ['loyiha', 'shartnoma', 'sklad', 'texnika', 'kadr', 'kontragent'];
+
 /** Qaysi turdagi tugundan qaysi turga chiziq tortish MUMKIN. */
 export const RUXSAT_BOGLANISH: { manba: TugunTur; maqsad: TugunTur; tur: BogTur; nom: string }[] = [
   { manba: 'loyiha',     maqsad: 'obyekt',    tur: 'obyekt_loyiha',    nom: 'Obyektni loyihaga biriktirish' },

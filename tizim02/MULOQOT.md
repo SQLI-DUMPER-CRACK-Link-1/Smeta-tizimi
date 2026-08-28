@@ -2087,3 +2087,41 @@ yaratadi va bog'laydi, lekin har tugun ICHIGA kirib to'liq boshqarish
 (smeta, F2, sklad harakati, to'lov) hali alohida sahifalarda. Keyingi
 bosqich — tugunni bosganda o'ng tomonda TAFSILOT PANELI ochilishi va
 asosiy amallarni shu yerdan bajarish.
+
+### [2026-08-28] Claude -> hammaga : Mindmap 3-bosqich — «bog'lab bo'lmaydi» ILDIZI topildi
+
+Foydalanuvchi ekran surati bilan: *«baribir mantiqiy uzilishlar va
+mantiqsizliklarga to'laku bu!!! bo'g'lab bo'lmaydi, ko'p joylari
+ishlamaydi»*. Rasmda sklad («Bog' skladi») va xodim («Ahatqulov Anvar»)
+tugunlari hech narsaga bog'lanmay OSILIB qolgan edi.
+
+**KRITIK XATO — men kiritgan, men topdim:** chiziq tortishda
+`wrapRef.setPointerCapture(pointerId)` chaqirilardi. Pointer capture
+BARCHA keyingi pointer hodisalarini (shu jumladan `pointerup`) capture
+qilgan elementga YO'NALTIRADI — ya'ni nishon tugundagi `onPointerUp`
+**HECH QACHON ishlamasdi**. Chiziq chizilardi, kursor tugun ustiga
+kelardi, lekin qo'yib yuborilganda HECH NARSA bo'lmasdi. Ya'ni
+«bog'lab bo'lmaydi» — mutlaqo haq gap, funksiya 0% ishlagan.
+
+**Yechim:** nishon tugun endi `document.elementFromPoint(x, y)` bilan
+topiladi (capture bilan ham ishlaydi — DOM daraxti o'zgarmaydi), tugunlarga
+`data-tugun` atributi qo'shildi. Bonus: **teskari yo'nalish ham qabul
+qilinadi** — odam obyektdan skladga tortsa ham to'g'ri tushunadi
+(avval «bog'lanish mavjud emas» deb rad etilardi).
+
+**Qo'shimcha yopilgan bo'shliqlar (foydalanuvchi «ko'p joylari
+ishlamaydi» degani asosli edi):**
+- **Tafsilot paneli**: tugunni bosganda o'ngda panel ochiladi — barcha
+  bog'lanishlari ro'yxati, har birini alohida uzish tugmasi, to'liq
+  sahifaga o'tish, o'chirish.
+- **Tugunni o'chirish**: `t2_mindmap_tugun_ochir` RPC. Sklad/texnika/
+  kadr uchun o'chirish RPC'si UMUMAN YO'Q ekan (yaratish bor, o'chirish
+  yo'q) — endi bor. Hech qachon QATTIQ o'chirmaydi (`holat='bekor'`),
+  bog'lanishlari va joylashuvi ham birga tozalanadi.
+  ⚠️ Obyekt ATAYLAB o'chirilmaydi (unda smeta/F2/pul bor) — Korzinka orqali.
+
+Jonli sinaldi (MCP): sklad yarat → obyektga bog'la → joylashuv saqla →
+o'chir → sklad, bog'lanish, joylashuv HAMMASI tozalandi va grafdan
+yo'qoldi. Noto'g'ri tur va obyekt o'chirish rad etilishi ham sinaldi.
+Tekshirildi: `tsc` toza, `t2_kompaniya` 23/23 (71 amal),
+`t2_kodlash_yaxlitligi` 171 fayl, `t2_tenant_izolyatsiya` 15/15.

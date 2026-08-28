@@ -2,13 +2,14 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Building2, Warehouse, FileText, Truck, HardHat, FolderKanban,
   Users, Plus, X, ZoomIn, ZoomOut, RefreshCcw, Unlink, Move,
-  LayoutGrid, Maximize2, Save,
+  LayoutGrid, Maximize2, Save, Trash2, ExternalLink,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
 import {
   sbMindmapGrafOl, sbMindmapBog, sbMindmapBogOchir, sbMindmapTugunYarat,
-  sbMindmapJoylashuvSaqla, bogTuriniTop, RUXSAT_BOGLANISH,
+  sbMindmapJoylashuvSaqla, sbMindmapTugunOchir, bogTuriniTop, RUXSAT_BOGLANISH, OCHIRSA_BOLADI,
   type MindmapGraf, type MindmapTugun, type TugunTur,
 } from '../api/t2-mindmap';
 
@@ -72,6 +73,17 @@ const ROLLAR = [
   { kalit: 'taminotchi', nom: "Ta'minotchi" },
 ];
 
+/** Tugun turidan to'liq sahifaga o'tish yo'li (bo'lmasa — tugma ko'rsatilmaydi) */
+const SAHIFA_YOLI: Partial<Record<TugunTur, (id: number, nom: string) => string>> = {
+  obyekt:     (_id, nom) => '/admin/test/smeta?obyekt=' + encodeURIComponent(nom),
+  loyiha:     () => '/admin/test/portfel',
+  shartnoma:  () => '/admin/test/moliya',
+  sklad:      () => '/admin/test/logistika',
+  texnika:    () => '/admin/test/erp?modul=texnika',
+  kadr:       () => '/admin/test/erp?modul=kadrlar',
+  kontragent: () => '/admin/test/kontragent',
+};
+
 type XY = { x: number; y: number };
 type Rejim =
   | { tur: 'pan'; boshPan: XY; boshKursor: XY }
@@ -102,6 +114,8 @@ export default function TestXarita() {
   const [yaratModal, setYaratModal] = useState<TugunTur | null>(null);
   const [maydonlar, setMaydonlar] = useState<Record<string, string>>({});
   const [rolModal, setRolModal] = useState<{ manbaId: number; maqsadId: number } | null>(null);
+  const [tanlangan, setTanlangan] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   /** Saqlangan joyi yo'q tugunlarni ustunlarga teradi (mavjudlarga TEGMAYDI) */
   const avtoJoylash = useCallback((tugunlar: MindmapTugun[], mavjud: Record<string, XY>) => {
@@ -188,11 +202,30 @@ export default function TestXarita() {
     }
   };
 
-  /** Qo'yib yuborilganda: tugun ko'chgan bo'lsa joylashuvni SAQLAYMIZ */
-  const qoyibYuborildi = async () => {
+  /* ⚠️ 2026-08-28 KRITIK TUZATISH — «bog'lab bo'lmaydi» shikoyatining ildizi.
+   * Chiziq tortilganda `setPointerCapture` wrapper'ga qo'yilgan edi, ya'ni
+   * BARCHA keyingi pointer hodisalari (shu jumladan `pointerup`) wrapper'ga
+   * YO'NALTIRILADI — nishon tugundagi `onPointerUp` HECH QACHON ishlamasdi.
+   * Natijada chiziq tortilardi, lekin hech qachon TUGALLANMASDI: sklad,
+   * texnika, xodim tugunlari osilib qolardi.
+   * Yechim: nishonni kursor koordinatasidan `elementFromPoint` bilan
+   * topamiz — capture bilan ham ishlaydi. */
+  const nishonTugunniTop = (cx: number, cy: number): string | null => {
+    const el = document.elementFromPoint(cx, cy);
+    const tugun = (el as HTMLElement | null)?.closest('[data-tugun]');
+    return tugun?.getAttribute('data-tugun') || null;
+  };
+
+  const qoyibYuborildi = async (e: React.PointerEvent) => {
     const r = rejim.current;
     rejim.current = null;
     setChiziqManbaId(null);
+
+    if (r?.tur === 'chiziq') {
+      const maqsadId = nishonTugunniTop(e.clientX, e.clientY);
+      if (maqsadId && maqsadId !== r.manba) await chiziqniBogla(r.manba, maqsadId);
+      return;
+    }
     if (r?.tur !== 'tugun' || !r.kochdi || !aktKomp) return;
     const joy = joylar[r.id];
     if (!joy) return;
@@ -202,28 +235,29 @@ export default function TestXarita() {
     if (!nat.ok) toast('Joylashuv saqlanmadi: ' + (nat.error || ''), 'danger');
   };
 
-  const chiziqTugat = async (e: React.PointerEvent, maqsadId: string) => {
-    const r = rejim.current;
-    if (r?.tur !== 'chiziq') return;                 // sudrash bo'lsa — aralashmaymiz
-    e.stopPropagation();
-    rejim.current = null;
-    setChiziqManbaId(null);
-    if (r.manba === maqsadId) return;
-
-    const manba = graf.tugunlar.find((t) => t.id === r.manba);
+  /** Ikki tugunni bog'laydi. Odam teskari tortsa ham to'g'ri tushunadi. */
+  const chiziqniBogla = async (manbaId: string, maqsadId: string) => {
+    const manba = graf.tugunlar.find((t) => t.id === manbaId);
     const maqsad = graf.tugunlar.find((t) => t.id === maqsadId);
     if (!manba || !maqsad) return;
 
-    const qoida = bogTuriniTop(manba.tur, maqsad.tur);
-    if (!qoida) {
-      toast(TUR_NOM[manba.tur] + ' → ' + TUR_NOM[maqsad.tur] + ' bog\'lanishi mavjud emas', 'danger');
-      return;
-    }
-    const manbaId = Number(manba.id.split(':')[1]);
-    const maqsadRaqam = Number(maqsad.id.split(':')[1]);
-    if (qoida.tur === 'qatnashchi') { setRolModal({ manbaId, maqsadId: maqsadRaqam }); return; }
+    let qoida = bogTuriniTop(manba.tur, maqsad.tur);
+    let mId = Number(manba.id.split(':')[1]);
+    let qId = Number(maqsad.id.split(':')[1]);
 
-    const nat = await sbMindmapBog(qoida.tur, manbaId, maqsadRaqam);
+    if (!qoida) {
+      /* TESKARI yo'nalish — odam ko'pincha obyektdan skladga tortadi */
+      const teskari = bogTuriniTop(maqsad.tur, manba.tur);
+      if (!teskari) {
+        toast(TUR_NOM[manba.tur] + ' → ' + TUR_NOM[maqsad.tur] + ' bog\'lanishi mavjud emas', 'danger');
+        return;
+      }
+      qoida = teskari;
+      const v = mId; mId = qId; qId = v;
+    }
+    if (qoida.tur === 'qatnashchi') { setRolModal({ manbaId: mId, maqsadId: qId }); return; }
+
+    const nat = await sbMindmapBog(qoida.tur, mId, qId);
     if (nat.ok) { toast(qoida.nom + ' — bajarildi', 'ok'); yukla(); }
     else toast(nat.error || 'Bog\'lanmadi', 'danger');
   };
@@ -275,6 +309,17 @@ export default function TestXarita() {
       Math.min((r.width - 80) / Math.max(1, maxX - minX), (r.height - 80) / Math.max(1, maxY - minY))));
     setZoom(z);
     setPan({ x: 40 - minX * z, y: 40 - minY * z });
+  };
+
+  const tanlanganTugun = tanlangan ? graf.tugunlar.find((t) => t.id === tanlangan) || null : null;
+  const tanlanganBoglar = tanlangan
+    ? graf.bogichlar.filter((b) => b.manba === tanlangan || b.maqsad === tanlangan) : [];
+
+  const tugunOchir = async (t: MindmapTugun) => {
+    if (!confirm('«' + t.nom + '» o\'chirilsinmi? (Bekor qilinadi, butunlay yo\'qolmaydi)')) return;
+    const r = await sbMindmapTugunOchir(t.tur, Number(t.id.split(':')[1]));
+    if (r.ok) { toast('O\'chirildi', 'ok'); setTanlangan(null); yukla(); }
+    else toast(r.error || 'O\'chirilmadi', 'danger');
   };
 
   const bezier = (x1: number, y1: number, x2: number, y2: number) => {
@@ -396,10 +441,11 @@ export default function TestXarita() {
             const nishon = chiziqManbaId != null && chiziqManbaId !== t.id;
             return (
               <div key={t.id}
+                data-tugun={t.id}
                 onPointerDown={(e) => bosildiTugun(e, t.id)}
-                onPointerUp={(e) => chiziqTugat(e, t.id)}
+                onClick={() => { if (!rejim.current) setTanlangan(t.id); }}
                 className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg ' +
-                  (nishon ? 'ring-2 ring-sky-400/70' : '')}
+                  (nishon ? 'ring-2 ring-sky-400/70' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
                 style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
                 <div className="flex items-center gap-1.5 font-semibold text-[12px] truncate" style={{ color: rang }}>
                   <Ik size={13} className="flex-shrink-0" /><span className="truncate">{t.nom}</span>
@@ -423,6 +469,69 @@ export default function TestXarita() {
           )}
         </div>
       </div>
+
+      {/* TAFSILOT PANELI — tugun bosilganda o'ngda ochiladi */}
+      {tanlanganTugun && (
+        <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-[#0d1424] border-l border-white/10 z-30 flex flex-col shadow-2xl">
+          <div className="p-4 border-b border-white/10 flex justify-between items-start">
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: TUR_RANG[tanlanganTugun.tur] }}>
+                {TUR_NOM[tanlanganTugun.tur]}
+              </div>
+              <div className="font-bold truncate">{tanlanganTugun.nom}</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">{tafsilot(tanlanganTugun)}</div>
+            </div>
+            <button onClick={() => setTanlangan(null)} className="text-zinc-500 hover:text-white flex-shrink-0"><X size={16} /></button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div>
+              <div className="text-[11px] text-zinc-400 mb-2">Bog'lanishlari ({tanlanganBoglar.length})</div>
+              {tanlanganBoglar.length === 0 && (
+                <p className="text-[11px] text-zinc-600">Hali hech narsaga bog'lanmagan — o'ng chetidagi nuqtadan chiziq torting.</p>
+              )}
+              <div className="space-y-1.5">
+                {tanlanganBoglar.map((b, i) => {
+                  const qarshi = b.manba === tanlangan ? b.maqsad : b.manba;
+                  const qt = graf.tugunlar.find((t) => t.id === qarshi);
+                  if (!qt) return null;
+                  const Ik = TUR_IKONKA[qt.tur];
+                  return (
+                    <div key={i} className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5">
+                      <Ik size={13} style={{ color: TUR_RANG[qt.tur] }} className="flex-shrink-0" />
+                      <span className="text-[11px] truncate flex-1">{qt.nom}</span>
+                      {b.uzsa_boladi && (
+                        <button onClick={() => chiziqUz(b)} title="Bog'lanishni uzish"
+                          className="text-zinc-500 hover:text-rose-400 flex-shrink-0"><Unlink size={12} /></button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              {SAHIFA_YOLI[tanlanganTugun.tur] && (
+                <button onClick={() => navigate(SAHIFA_YOLI[tanlanganTugun.tur]!(Number(tanlanganTugun.id.split(':')[1]), tanlanganTugun.nom))}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 py-2 rounded-lg text-[12px]">
+                  <ExternalLink size={13} /> To'liq sahifada ochish
+                </button>
+              )}
+              {OCHIRSA_BOLADI.includes(tanlanganTugun.tur) && (
+                <button onClick={() => tugunOchir(tanlanganTugun)}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/40 text-rose-300 py-2 rounded-lg text-[12px]">
+                  <Trash2 size={13} /> O'chirish
+                </button>
+              )}
+              {tanlanganTugun.tur === 'obyekt' && (
+                <p className="text-[10px] text-zinc-600">
+                  Obyekt mindmapdan o'chirilmaydi — unda smeta/F2/pul bor, «Obyektlar» sahifasi orqali.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QO'LLANMA */}
       <div className="flex-shrink-0 border-t border-white/10 bg-black/40 px-5 py-2 flex flex-wrap gap-x-4 gap-y-1 items-center">

@@ -103,7 +103,8 @@ const AMALLAR = {
   /* MINDMAP — chiziq tortib bog'lash/uzish (2026-08-28) */
   mindmap_bog: { rpc: 't2_mindmap_bog' },
   mindmap_bog_ochir: { rpc: 't2_mindmap_bog_ochir' },
-  mindmap_joylashuv_saqla: { rpc: 't2_mindmap_joylashuv_saqla' }
+  mindmap_joylashuv_saqla: { rpc: 't2_mindmap_joylashuv_saqla' },
+  mindmap_tugun_ochir: { rpc: 't2_mindmap_tugun_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -1072,6 +1073,21 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: "yaroqli joylashuv yo'q" });
       }
       yuk = { p_kompaniya_id: kompaniyaId, p_joylar: joylar };
+
+    /* Mindmapdan tugun o'chirish — QATTIQ o'chirmaydi (holat='bekor').
+       Obyekt ATAYLAB ro'yxatda yo'q: unda smeta/F2/pul bor, u Korzinka
+       orqali o'chiriladi (u yerda tekshiruvlar bor). */
+    } else if (amal === 'mindmap_tugun_ochir') {
+      const TUR_RUXSAT = ['loyiha', 'shartnoma', 'sklad', 'texnika', 'kadr', 'kontragent'];
+      const tur = String(so.tur || '');
+      const id = Number(so.id);
+      if (!TUR_RUXSAT.includes(tur)) {
+        return Response.json({ ok: false, error: "bu turni mindmapdan o'chirib bo'lmaydi: " + tur });
+      }
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: "id noto'g'ri" });
+      }
+      yuk = { p_tur: tur, p_id: id };
 
     /* ══════════ ФАКТ KIRITISH (bajarilgan ish) ══════════
        Foydalanuvchi: «ikkalasi ham bo'lishi kerak» — prorab kunlik ham,
