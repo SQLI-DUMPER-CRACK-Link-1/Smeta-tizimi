@@ -2766,3 +2766,40 @@ Zayavka:    0 (RPC tayyor)
 To'lov:     0 (RPC tayyor, Ф2 tasdiqlanishini kutadi)
 Audit:      trigger bilan avtomat, 0 yozuv (yangi)
 ```
+
+## 8. ANIQLIK — AI QISMI ALLAQACHON ULANGAN (takrorlamang)
+
+Rejani yozgach tekshirdim: boshqa agent AI **model chaqiruv yo'lini**
+allaqachon qurgan. Takroriy ish qilinmasin:
+
+```
+frontend/functions/_shared/ai.ts       — provayder qatlami (ulangan)
+frontend/functions/api/ai-parse.ts     — Cloudflare darvozasi
+frontend/src/api/ai-contract.test.ts   — kontrakt testi
+frontend/src/api/t2-ai.ts              — t2AiFakturaParse() + AI konteksti
+tizim02/AI_INTEGRATSIYA_TALABLARI.md   — talablar hujjati
+```
+
+Ya'ni AI bo'yicha holat:
+- **Kontekst** (Postgres-native, 50 ms): `sbAiKontekst` / `sbAiUmumiy`
+  — MENIKI, tayyor
+- **Model chaqiruvi** (faktura/OCR parse): `t2AiFakturaParse` —
+  BOSHQA AGENT qurgan, tayyor
+
+**BIRLASHTIRISH BAJARILDI** (Claude, limitdan oldin): `t2-ai.ts` ga
+`aiSorovYig(obyektId, savol)` va `aiUmumiySorovYig(kompaniyaId, savol)`
+qo'shildi. Ular kontekstni olib, `{system, text}` qaytaradi — bu aynan
+`_shared/ai.ts` dagi `aiCall` kutadigan shakl.
+
+`AI_KORSATMA` konstantasi ham shu yerda: «raqamni o'zingdan to'qima,
+ogohlantirishlarni albatta ayt». U BIR JOYDA turadi — har sahifa o'zicha
+yozsa, bittasida tushib qoladi va aynan o'sha joyda AI raqam o'ylab
+topadi.
+
+**Qolgan ish (Antigravity):** AI savol-javob endpointini qurish —
+`/api/ai-savol`: `aiSorovYig` natijasini `aiCall(env, {system, text})`
+ga uzatish. Boshqa hech narsa kerak emas.
+
+⚠️ `ogohlantirish[]` ni ham yuboring — aks holda AI «jami 865 mln» deb
+ishonch bilan aytadi, «lekin 194 qatorda narx yo'q» degan qismini esa
+tushirib qoldiradi.

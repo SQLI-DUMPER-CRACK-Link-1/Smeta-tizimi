@@ -200,3 +200,89 @@ export async function t2AiFakturaParse(payload: {
     };
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+ * KONTEKST + SAVOL — model'ga yuboriladigan to'liq so'rov
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * ⚡ 2026-08-28 (Claude). Tizimda AI ning ikki qismi ALOHIDA qurilgan:
+ *   • kontekst  — `sbAiKontekst` (Postgres, 50 ms) — bu fayl
+ *   • model chaqiruvi — `/api/ai-parse` + `_shared/ai.ts` (boshqa agent)
+ *
+ * Ular BIRLASHTIRILMASA, model obyekt holatini BILMAYDI va raqamni
+ * o'zidan to'qishga urinadi. Quyidagi funksiyalar aynan shu bo'shliqni
+ * yopadi: kim AI savol-javob endpointini qursa, shu ikkitasini chaqirsa
+ * yetadi — ogohlantirishni tushirib qoldirib bo'lmaydi.
+ *
+ * ⚠️ NEGA `system` MATNI SHU YERDA: model'ga «bilmasang to'qima» degan
+ * ko'rsatma har chaqiruvda BIR XIL bo'lishi kerak. Har sahifa o'zicha
+ * yozsa, bittasida u tushib qoladi va aynan o'sha joyda AI raqam
+ * o'ylab topadi — bu tizimda eng qimmat xato turi.
+ */
+
+/** Model uchun doimiy ko'rsatma. O'zgartirilsa — SABAB bilan. */
+export const AI_KORSATMA =
+  'Sen qurilish smeta tizimining yordamchisisan. QAT\'IY QOIDALAR:\n' +
+  '1. Faqat berilgan MA\'LUMOTGA tayan. Raqamni O\'ZINGDAN TO\'QIMA.\n' +
+  '2. Ma\'lumotda yo\'q narsani so\'rashsa — «bu ma\'lumot tizimda yo\'q» deb ayt.\n' +
+  '3. OGOHLANTIRISHLAR bo\'limi bo\'lsa — javobingda ALBATTA aytib o\'t.\n' +
+  '   Masalan jami summa aytsang va narx topilmagan qatorlar bo\'lsa,\n' +
+  '   «lekin N qatorda narx yo\'q, shuning uchun jami to\'liq emas» deb qo\'sh.\n' +
+  '4. Pul summasini so\'m bilan, mingliklarga ajratib yoz.\n' +
+  '5. Qisqa va aniq javob ber.';
+
+/**
+ * Bitta obyekt bo'yicha savolga to'liq so'rov yig'adi.
+ *
+ * Qaytadi: `{system, text}` — `_shared/ai.ts` dagi `aiCall` aynan shu
+ * shaklni kutadi, shuning uchun endpoint yozilganda o'zgartirish
+ * kerak bo'lmaydi.
+ */
+export async function aiSorovYig(obyektId: number, savol: string): Promise<
+  { ok: true; system: string; text: string; kontekst: AiKontekst }
+  | { ok: false; xabar: string }
+> {
+  const r = await sbAiKontekst(obyektId);
+  if (!r.ok || !r.natija) {
+    return { ok: false, xabar: r.error || 'Obyekt konteksti olinmadi' };
+  }
+  const k = r.natija;
+  if (!k.ok) return { ok: false, xabar: k.xabar || 'Obyekt topilmadi' };
+
+  return {
+    ok: true,
+    system: AI_KORSATMA,
+    text: 'MA\'LUMOT (tizimdan, ' + new Date().toLocaleDateString('uz-UZ') + '):\n' +
+          aiKontekstMatni(k) + '\n\nSAVOL: ' + savol,
+    kontekst: k,
+  };
+}
+
+/**
+ * Butun kompaniya bo'yicha savol (qaysi obyekt og'ir, qayerda narx
+ * yetishmayapti va h.k.).
+ */
+export async function aiUmumiySorovYig(kompaniyaId: number, savol: string): Promise<
+  { ok: true; system: string; text: string } | { ok: false; xabar: string }
+> {
+  const r = await sbAiUmumiy(kompaniyaId);
+  if (!r.ok || !r.natija) {
+    return { ok: false, xabar: r.error || 'Umumiy holat olinmadi' };
+  }
+  const u = r.natija;
+
+  const pul = (n: number | null) =>
+    n == null ? 'noma\'lum' : Math.round(n).toLocaleString('ru-RU');
+
+  const satrlar = u.obyektlar.map((o) =>
+    '• ' + o.nom + ': smeta ' + pul(o.smeta) +
+    (o.toliq ? '' : ' ⚠️ TO\'LIQ EMAS (' + o.narxsiz + ' qatorda narx yo\'q)') +
+    ' · fakt ' + pul(o.fakt) + ' · Ф2 ' + pul(o.f2));
+
+  return {
+    ok: true,
+    system: AI_KORSATMA,
+    text: 'OBYEKTLAR HOLATI (tizimdan):\n' + satrlar.join('\n') +
+          '\n\n' + u.izoh + '\n\nSAVOL: ' + savol,
+  };
+}
