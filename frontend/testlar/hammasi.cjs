@@ -25,6 +25,8 @@ const TESTLAR = [
   ['TIZIM_02 smeta sarlavhasi',         't2_format.test.cjs'],
   ['TIZIM_02 ko‘chirish reestri',      't2_registr.test.cjs'],
   ['TIZIM_02 ikki agent hududi',       't2_navbat.test.cjs'],
+  ['TIZIM_02 kodlash yaxlitligi',       't2_kodlash_yaxlitligi.test.cjs'],
+  ['Git dublikat + apostrof qo\'riqchisi', 't2_git_yaxlitligi.test.cjs'],
 ];
 
 let yiqildi = 0;

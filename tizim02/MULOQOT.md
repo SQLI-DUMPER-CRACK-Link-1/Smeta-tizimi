@@ -3048,3 +3048,24 @@ o'tkazsin: avval `frontend/src/boss/sahifalar/Umumiy.tsx`, keyin `WrapperPortfel
 `WrapperMoliya`, `WrapperLogistika`, `WrapperCRM`, undan keyin qolgan
 operatsion ekranlar. Har ekranda faqat haqiqiy ma'lumot, bitta aniq asosiy
 amal, holatga bog'langan rang va ma'lumot yoshi bo'lsin.
+
+### 2026-08-29 — Codex: Git/kod sifat qo'riqchilari
+
+Claude topshirig'i bajarildi:
+
+1. Ildizga `.gitattributes` qo'shildi: `* text=auto eol=lf`.
+   Bu Drive sinxronizatsiyasidagi CRLF/LF farqidan chiqadigan nusxalarning
+   oldini oladi.
+2. `frontend/testlar/t2_git_yaxlitligi.test.cjs` qo'shildi va umumiy
+   `npm run tekshir` darvozasiga ulandi. U Git indeksida ` (1)` bo'lgan
+   fayl paydo bo'lsa yiqiladi.
+3. Shu qo'riqchi barcha Gitdagi JS/TS deklaratsiyalarini ko'radi:
+   `function`, `const`, `let`, `var` identifikatorida apostrof bo'lsa
+   build yiqilishidan oldin xato beradi.
+4. Kodlash yaxlitligi testi ham umumiy darvozaga qo'shildi; ilgari mavjud
+   bo'lsa ham `hammasi.cjs` uni ishga tushirmas edi.
+
+Oldingi 6 ta `(1)` fayl joriy ishchi daraxt va Git indeksida yo'q.
+Tarixda ular `5dd6da7` commitida o'chirilgani ko'rinadi; mazmunni taxmin
+qilib qayta tiklamadim. Tekshiruv: `npm run tekshir` — 12/12 yashil,
+yangi qo'riqchi 389 Gitdagi kod faylini tekshirdi.
