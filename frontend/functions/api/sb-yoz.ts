@@ -1186,11 +1186,45 @@ export const onRequestPost: PagesFunction<{
         p_kim: sess.email || '',
       };
 
-    } else if (amal === 'grafik_yangilash' || amal === 'grafik_sozlama_saqla') {
+    /* ══════════ KALENDAR GRAFIK (Gantt) ══════════
+       ⚠️ 2026-08-28: avval `p_payload: JSON.stringify(so)` — mijoz
+       yuborgan HAR QANDAY JSON'ni RPC'ga xom uzatardi (bu loyihaning
+       "maydon oq ro'yxati" konvensiyasiga zid, boshqa hech bir amalda
+       bunday umumiy blob yo'q). RPC'ning o'zi ham hali mavjud emas edi
+       (404 xatosi ildizi). Ikkalasi ham tuzatildi: RPC qurildi, maydon
+       oq ro'yxati bilan validatsiya qilinadi. */
+    } else if (amal === 'grafik_sozlama_saqla') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0 || !Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id yoki obyekt_id noto\'g\'ri' });
+      }
+      if (!String(so.nom || '').trim()) {
+        return Response.json({ ok: false, error: 'nom bo\'sh bo\'lishi mumkin emas' });
+      }
       yuk = {
-        p_kompaniya_id: Number(so.kompaniya_id || 0),
-        p_obyekt_id: Number(so.obyekt_id || 0),
-        p_payload: JSON.stringify(so)
+        p_kompaniya_id: kompaniyaId, p_obyekt_id: obyektId,
+        p_nom: String(so.nom).slice(0, 300),
+        p_boshlanish_sana: so.boshlanish_sana || null,
+        p_tugash_sana: so.tugash_sana || null,
+        p_id: so.id == null ? null : Number(so.id),
+        p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya),
+      };
+
+    } else if (amal === 'grafik_yangilash') {
+      const id = Number(so.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      if (so.kutilgan_versiya == null) {
+        return Response.json({ ok: false, error: 'kutilgan_versiya majburiy' });
+      }
+      const HOLAT_RUXSAT = ['reja', 'jarayonda', 'bajarildi'];
+      const holat = so.holat && HOLAT_RUXSAT.includes(String(so.holat)) ? String(so.holat) : null;
+      yuk = {
+        p_id: id, p_kutilgan_versiya: Number(so.kutilgan_versiya),
+        p_holat: holat,
+        p_foiz: so.foiz == null ? null : Number(so.foiz),
       };
 
     } else if (amal === 'sozlama_saqla') {
