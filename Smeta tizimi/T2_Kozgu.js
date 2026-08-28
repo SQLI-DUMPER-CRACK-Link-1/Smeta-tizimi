@@ -622,11 +622,30 @@ function apiT2VaraqYarat(obyekt){
        aytadi va odam tugmadan foydalanishini biladi. */
     var tirgak = _t2VaraqTirgakOrnat(ss.getId());
 
+    /* ⚡ 2026-08-28: BAZA→KO'ZGU tirgagi O'ZI-O'ZIDAN o'rnatiladi.
+     *
+     * Avval `t2KozguTriggerOrnat()` ni ODAM Apps Script muharririda
+     * bir marta ishga tushirishi kerak edi. Amalda bu qadam unutiladi
+     * yoki uni bajara oladigan odam yo'q bo'ladi — natijada baza
+     * o'zgarsa ham varaq eski holicha qolaverardi va «nega yangilanmadi»
+     * degan savol tug'ilardi.
+     *
+     * Endi: kimdir ko'zguni chizishi bilan tirgak bor-yo'qligi
+     * tekshiriladi va yo'q bo'lsa o'rnatiladi. Ya'ni birinchi chizishdan
+     * keyin avtomatlashtirish O'ZI yoqiladi.
+     *
+     * ⚠️ Xato bo'lsa CHIZISHNI YIQITMAYDI — tirgak qulaylik, varaqning
+     * o'zi esa asosiy natija. */
+    var kozguTirgak = null;
+    try{ kozguTirgak = t2KozguTriggerOrnat(); }catch(eT){
+      kozguTirgak = {ok:false, xabar:String((eT && eT.message) || eT)};
+    }
+
     _t2ChizishTugadi();
     return {
       ok: true, obyekt: obyekt, fayl_id: ss.getId(), url: ss.getUrl(),
       qator: qatorlar.length, jami: jami, toliq: toliq, narxsiz: narxsiz,
-      avto_sinx: tirgak, ms: Date.now() - t0
+      avto_sinx: tirgak, kozgu_tirgak: kozguTirgak, ms: Date.now() - t0
     };
 
   }catch(e){
@@ -1060,6 +1079,12 @@ function t2VaraqSinxFon(){
 
   if(!ssId) return;
   p.deleteProperty(T2_SINX_KUTMOQDA);
+
+  /* ⚡ 2026-08-28: baza→ko'zgu tirgagi shu yerdan ham o'zi o'rnatiladi.
+     Ikkinchi kirish nuqtasi ATAYLAB: odam varaqda ishlashi kifoya —
+     ko'zguni maxsus «qayta chizish» shart emas. Xato chiqsa sinxronni
+     yiqitmaydi (u asosiy ish, tirgak esa qulaylik). */
+  try{ t2KozguTriggerOrnat(); }catch(eKT){}
 
   try{
     var qay = _t2Get('t2_kozgu?fayl_id=eq.' + encodeURIComponent(ssId) + '&select=obyekt_id');

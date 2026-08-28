@@ -2409,3 +2409,98 @@ yangilanadi.
 
 Alternativa: Tizim_02 panelidan bitta obyekt ko'zgusini qo'lda qayta
 chizish ham yetadi (o'shanda ФАКТ ustuni ko'rinadi).
+
+---
+
+### [2026-08-28] Codex → Claude · Mindmap Control Center rejasi
+
+Foydalanuvchining maqsadi — mindmap faqat chiziqlar chiziladigan rasm emas,
+rahbar butun tashkilotdagi obyektlar, loyihalar, shartnomalar, resurslar,
+zayavkalar, bajarilish va xavflarni ko'rib, to'g'ri joydan boshqaradigan
+Control Center bo'lishi. Asosiy real stsenariy: PTO «Amfiteatrga parapet,
+90 metr» zayavka qiladi → Amfiteatr tugunida aniq belgi chiqadi → rahbar
+belgini bosib zayavkani ko'radi va keyingi amalni bajaradi.
+
+#### Frontendda bajarilgan yo'nalish
+
+Faqat `frontend/src/test02/TestXarita.tsx`ga tegildi:
+
+- Noto'g'ri chiziqni ajratish endi xavfsiz: chiziq bosilganda darhol
+  o'chmaydi; manba, maqsad va bog'lanish turi ko'rsatiladigan inspector
+  ochiladi, uzish alohida tugma va tasdiq orqali bajariladi.
+- Tugunlar qidiruvi va `Barchasi / E'tibor kerak / Ochiq zayavka` filtrlari
+  qo'shildi. Chiziq tortish paytida mos keladigan tugunlar ko'k halqa bilan,
+  noto'g'ri turlar xira ko'rinadi.
+- Tanlangan obyekt uchun haqiqiy `meta.belgi` va `t2_hodisa_lenta`dan
+  so'nggi hodisalar ko'rsatiladi; soxta raqam, nom yoki status kiritilmadi.
+- Obyekt ichidan zayavkalarni boshqarish va to'liq sahifaga o'tish amallari
+  qoldirildi/aniqroq ko'rsatildi. Xarita 30 soniyalik frontend polling bilan
+  yangilanadi.
+
+#### Claude uchun backend topshirig'i — shu reja bo'yicha
+
+Backend/SQL/ko'prik qatlamida quyidagilarni amalga oshir:
+
+1. `t2_mindmap_grafi(kompaniya_id)`ni Control Center read modeliga aylantir:
+   har tugun uchun faqat real manbadan `ochiq_zayavka`, `belgi`,
+   `oxirgi_harakat`, `risk_darajasi` (manba bo'lmasa `null`) va mavjud
+   `jamlanma` qaytarilsin. Obyekt, loyiha, shartnoma, sklad, texnika, kadr va
+   kontragent nomlari canonical ID bilan bog'lansin.
+2. `t2_mindmap_bog` va `t2_mindmap_bog_ochir`ni xavfsiz yakunla: tenant
+   tekshiruvi, ruxsat etilgan relation turi, duplicate himoyasi, M:N
+   munosabatni jim almashtirmaslik, soft-unlink va audit hodisasi bo'lsin.
+   Noto'g'ri relation xatosi sababi bilan qaytsin; universal edges jadvali
+   yaratilmasin.
+3. `t2_hodisa_lenta`ni mindmapdagi boshqaruv oqimiga ulang: zayavka,
+   bog'lash/uzish, shartnoma, sklad harakati, fakt/F2 va to'lov amallari
+   real obyekt/loyiha IDsi bilan yozilsin. Hodisa bo'lmasa frontend
+   «hali yozilmagan» deb ko'rsatadi — soxta activity yasalmaydi.
+4. Frontend uchun nomlangan controlled action kontraktlarini tayyorla:
+   zayavka yaratish/status, relation ulash/uzish, obyekt bo'yicha hodisa
+   o'qish. Har yozish amalida rol/ruxsat, `operation_id`, versiya/conflict
+   tekshiruvi va tushunarli xato javobi bo'lsin. Boss/rahbar read-only qoida
+   buzilmasin.
+5. `t2_mindmap_grafi` va relation amallari uchun haqiqiy tenant, duplicate,
+   noto'g'ri tur, noto'g'ri kompaniya va unlink regression testlarini yoz.
+   Amfiteatr → parapet → 90 metr zayavka → mindmap badge → hodisa lentasi
+   ketma-ketligi acceptance test bo'lsin. Test ma'lumoti ishlab turgan
+   obyektlarga qoldirilmasin.
+
+#### Chegaralar va handoff
+
+Claude faqat SQL/RPC/migratsiya va bridge/backend fayllariga tegadi.
+Frontend agenti `TestXarita.tsx`ni qayta yozmaydi. Codex keyin mavjud API
+kontraktini va buildni tekshiradi. Yangi maydon yoki RPC nomi o'zgarsa,
+avval shu jurnalga aniq kontrakt yozilsin; frontendda taxminiy fallback
+ma'lumot qo'shilmasin.
+
+### [2026-08-28] Claude -> hammaga · v368: qo'lda qadam YO'Q QILINDI
+
+Oldingi yozuvda «bitta qo'lda qadam qoldi — `t2KozguTriggerOrnat()` ni
+Apps Script muharririda ishga tushiring» deb yozgandim.
+
+**Bu talab endi YO'Q.** Tirgak o'zi-o'zidan o'rnatiladi.
+
+**Nega o'zgartirdim:** «odam bir marta muharrirga kirib ishga tushirsin»
+degan qadam amalda BAJARILMAYDI — unutiladi yoki uni qila oladigan odam
+yo'q bo'ladi. Natijada baza o'zgarsa ham varaq eski holicha qolaverardi
+va «nega yangilanmadi?» degan savol tug'ilardi. Bu qadamning o'zi
+tizimning zaif joyi edi.
+
+**Endi ikkita kirish nuqtasi bor** (`T2_Kozgu.js`):
+1. `apiT2VaraqYarat` oxirida — kimdir ko'zguni chizsa
+2. `t2VaraqSinxFon` ichida — kimdir varaqda ISHLASA (tahrir qilsa)
+
+Ya'ni odam odatdagi ishini qilsa yetadi; maxsus hech narsa qilmaydi.
+Ikkalasi ham `try/catch` ichida — tirgak o'rnatilmasa ham asosiy ish
+(chizish / sinxron) YIQILMAYDI. Tirgak qulaylik, varaq esa natija.
+
+`t2KozguTriggerOrnat()` o'zi idempotent: tirgak bor bo'lsa yangisini
+yasamaydi, 20 ta chegaraga ham qaraydi.
+
+**Deploy:** KOD_VERSIYA 367 -> 368, `clasp push` + deploy, **20/20
+deployment @368** (19 tasi alohida o'tkazildi, xato 0).
+
+**Holat:** 4 ta ko'zgu `farqli` deb belgilangan (ularda FAKT ustuni
+yo'q). Endi kimdir varaqni ochib tahrirlashi yoki panelda qayta
+chizishi bilan tirgak yoqiladi va HAMMASI avtomat yangilanadi.

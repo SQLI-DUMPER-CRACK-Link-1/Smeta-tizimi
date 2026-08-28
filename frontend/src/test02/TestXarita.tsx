@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
 import { pulQisqa } from '../lib/format';
+import { sbObyektHodisalariOl, qachon, MODUL_RANG, type Hodisa } from '../api/t2-hodisa';
 import {
   sbMindmapGrafOl, sbMindmapBog, sbMindmapBogOchir, sbMindmapTugunYarat,
   sbMindmapJoylashuvSaqla, sbMindmapTugunOchir, bogTuriniTop, RUXSAT_BOGLANISH, OCHIRSA_BOLADI,
@@ -60,6 +61,17 @@ const TUR_NOM: Record<TugunTur, string> = {
   sklad: 'Sklad', texnika: 'Texnika', kadr: 'Xodim', kontragent: 'Kontragent',
 };
 
+const BOG_TUR_NOM: Record<string, string> = {
+  loyiha_kompaniya: 'Kompaniya ↔ loyiha',
+  obyekt_loyiha: 'Loyiha → obyekt',
+  shartnoma_loyiha: 'Loyiha → shartnoma',
+  shartnoma_obyekt: 'Shartnoma → obyekt',
+  sklad_obyekt: 'Sklad → obyekt',
+  texnika_obyekt: 'Texnika → obyekt',
+  kadr_obyekt: 'Xodim → obyekt',
+  qatnashchi: 'Kontragent → loyiha',
+};
+
 /** Avtomatik joylash ustunlari — FAQAT saqlangan joyi yo'q tugunlar uchun */
 const USTUN_TARTIB: TugunTur[][] = [
   ['kontragent'], ['kompaniya', 'loyiha'], ['shartnoma'], ['obyekt'], ['sklad', 'texnika', 'kadr'],
@@ -110,6 +122,8 @@ export default function TestXarita() {
   const [xato, setXato] = useState('');
   const [saqlanmoqda, setSaqlanmoqda] = useState(false);
   const [oxirgiYangilanish, setOxirgiYangilanish] = useState<Date | null>(null);
+  const [qidiruv, setQidiruv] = useState('');
+  const [holatFiltri, setHolatFiltri] = useState<'barchasi' | 'etibor' | 'zayavka'>('barchasi');
 
   const [pan, setPan] = useState<XY>({ x: 60, y: 40 });
   const [zoom, setZoom] = useState(0.85);
@@ -125,6 +139,10 @@ export default function TestXarita() {
   const [maydonlar, setMaydonlar] = useState<Record<string, string>>({});
   const [rolModal, setRolModal] = useState<{ manbaId: number; maqsadId: number } | null>(null);
   const [tanlangan, setTanlangan] = useState<string | null>(null);
+  const [tanlanganBog, setTanlanganBog] = useState<MindmapGraf['bogichlar'][number] | null>(null);
+  const [obyektHodisalari, setObyektHodisalari] = useState<Hodisa[]>([]);
+  const [hodisaYuklanmoqda, setHodisaYuklanmoqda] = useState(false);
+  const [hodisaXato, setHodisaXato] = useState('');
   const navigate = useNavigate();
 
   /** Saqlangan joyi yo'q tugunlarni ustunlarga teradi (mavjudlarga TEGMAYDI) */
@@ -293,7 +311,7 @@ export default function TestXarita() {
     if (!b.uzsa_boladi) { toast('Bu tuzilmaviy bog\'lanish — uzib bo\'lmaydi', 'danger'); return; }
     if (!confirm('Bog\'lanishni uzasizmi? (Yozuvlarning o\'zi O\'CHMAYDI)')) return;
     const r = await sbMindmapBogOchir(b.tur, Number(b.manba.split(':')[1]), Number(b.maqsad.split(':')[1]));
-    if (r.ok) { toast('Bog\'lanish uzildi', 'ok'); yukla(); }
+    if (r.ok) { setTanlanganBog(null); toast('Bog\'lanish uzildi', 'ok'); yukla(); }
     else toast(r.error || 'Uzilmadi', 'danger');
   };
 
@@ -335,6 +353,30 @@ export default function TestXarita() {
     ? graf.bogichlar.filter((b) => b.manba === tanlangan || b.maqsad === tanlangan) : [];
   const tanlanganObyektHolati = tanlanganTugun?.tur === 'obyekt' ? tanlanganTugun.meta : null;
 
+  useEffect(() => {
+    if (!tanlanganTugun || tanlanganTugun.tur !== 'obyekt') {
+      setObyektHodisalari([]);
+      setHodisaXato('');
+      return;
+    }
+    const obyektId = Number(tanlanganTugun.id.split(':')[1]);
+    if (!Number.isFinite(obyektId)) return;
+    let bekor = false;
+    setHodisaYuklanmoqda(true);
+    setHodisaXato('');
+    sbObyektHodisalariOl(obyektId, 8).then((r) => {
+      if (bekor) return;
+      if (r.error) { setHodisaXato(r.error); setObyektHodisalari([]); }
+      else setObyektHodisalari(r.qatorlar || []);
+      setHodisaYuklanmoqda(false);
+    }).catch((e: any) => {
+      if (bekor) return;
+      setHodisaXato(e?.message || 'Hodisa tarixi o\'qilmadi');
+      setHodisaYuklanmoqda(false);
+    });
+    return () => { bekor = true; };
+  }, [tanlanganTugun?.id, tanlanganTugun?.tur]);
+
   const tugunOchir = async (t: MindmapTugun) => {
     if (!confirm('«' + t.nom + '» o\'chirilsinmi? (Bekor qilinadi, butunlay yo\'qolmaydi)')) return;
     const r = await sbMindmapTugunOchir(t.tur, Number(t.id.split(':')[1]));
@@ -360,6 +402,24 @@ export default function TestXarita() {
     if (t.tur === 'kontragent') return m.inn ? 'STIR ' + m.inn : 'STIR kiritilmagan';
     return 'Bosh tashkilot';
   };
+
+  /* Rahbar muammo chiqqan joyni tez ajratib olishi uchun canvas filtrlari.
+     Filtr faqat ko'rinishni o'zgartiradi — grafdagi hech qanday yozuvni
+     o'chirmaydi yoki yashirincha qayta bog'lamaydi. */
+  const tugunMuammolari = (t: MindmapTugun) => (Array.isArray(t.meta?.belgi) ? t.meta.belgi : []) as MindmapBelgi[];
+  const qidiruvKalit = qidiruv.trim().toLocaleLowerCase('uz-UZ');
+  const ko'rsatilganTugunlar = graf.tugunlar.filter((t) => {
+    const belgilar = tugunMuammolari(t);
+    const nomMos = !qidiruvKalit || t.nom.toLocaleLowerCase('uz-UZ').includes(qidiruvKalit);
+    const holatMos = holatFiltri === 'barchasi'
+      || (holatFiltri === 'etibor' && belgilar.length > 0)
+      || (holatFiltri === 'zayavka' && belgilar.some((b) => b.tur === 'zayavka'));
+    return nomMos && holatMos;
+  });
+  const ko'rsatilganIdlar = new Set(ko'rsatilganTugunlar.map((t) => t.id));
+  const ko'rsatilganBoglar = graf.bogichlar.filter((b) => ko'rsatilganIdlar.has(b.manba) && ko'rsatilganIdlar.has(b.maqsad));
+  const tanlanganBogManba = tanlanganBog ? graf.tugunlar.find((t) => t.id === tanlanganBog.manba) : null;
+  const tanlanganBogMaqsad = tanlanganBog ? graf.tugunlar.find((t) => t.id === tanlanganBog.maqsad) : null;
 
   return (
     <div className="h-full flex flex-col bg-[#0a0f1d] text-white overflow-hidden">
@@ -420,6 +480,33 @@ export default function TestXarita() {
             {graf.jamlanma.smetasiz_obyekt > 0 && <span className="text-rose-300">{graf.jamlanma.smetasiz_obyekt} ta obyektda smeta yo'q</span>}
           </div>
         )}
+
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <div className="relative min-w-[220px] flex-1 max-w-sm">
+            <input
+              value={qidiruv}
+              onChange={(e) => setQidiruv(e.target.value)}
+              placeholder="Obyekt, loyiha yoki resursni qidiring…"
+              aria-label="Mindmap tugunlarini qidirish"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white outline-none placeholder:text-zinc-600 focus:border-sky-400/60"
+            />
+          </div>
+          <span className="text-[10px] text-zinc-600">Ko'rinish:</span>
+          {([
+            ['barchasi', 'Barchasi'],
+            ['etibor', 'E'tibor kerak'],
+            ['zayavka', 'Ochiq zayavka'],
+          ] as const).map(([kalit, nom]) => (
+            <button
+              key={kalit}
+              type="button"
+              onClick={() => setHolatFiltri(kalit)}
+              className={'rounded-lg border px-2.5 py-1.5 text-[10px] transition-colors ' +
+                (holatFiltri === kalit ? 'border-sky-400/60 bg-sky-400/15 text-sky-200' : 'border-white/10 bg-white/5 text-zinc-400 hover:text-white')}
+            >{nom}</button>
+          ))}
+          <span className="text-[10px] text-zinc-600 ml-auto">{ko'rsatilganTugunlar.length}/{graf.tugunlar.length} tugun</span>
+        </div>
       </div>
 
       {xato && <div className="m-3 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">{xato}</div>}
@@ -444,19 +531,21 @@ export default function TestXarita() {
           style={{ transform: 'translate(' + pan.x + 'px,' + pan.y + 'px) scale(' + zoom + ')', width: KANVAS_W, height: KANVAS_H }}>
 
           <svg className="absolute inset-0 pointer-events-none" width={KANVAS_W} height={KANVAS_H}>
-            {graf.bogichlar.map((b, i) => {
+            {ko'rsatilganBoglar.map((b, i) => {
               const m = joylar[b.manba], q = joylar[b.maqsad];
               if (!m || !q) return null;
               const manbaTur = graf.tugunlar.find((t) => t.id === b.manba)?.tur || 'obyekt';
               const rang = TUR_RANG[manbaTur];
               const d = bezier(m.x + NODE_W, m.y + NODE_H / 2, q.x, q.y + NODE_H / 2);
+              const bogTanlangan = tanlanganBog?.manba === b.manba && tanlanganBog?.maqsad === b.maqsad && tanlanganBog?.tur === b.tur;
               return (
                 <g key={b.tur + '_' + i} className="pointer-events-auto"
                   style={{ cursor: b.uzsa_boladi ? 'pointer' : 'default' }}
-                  onClick={() => chiziqUz(b)}>
+                  onClick={(e) => { e.stopPropagation(); setTanlanganBog(b); setTanlangan(null); }}>
+                  <title>{BOG_TUR_NOM[b.tur] || b.tur} · {b.uzsa_boladi ? 'Tekshirish yoki uzish uchun bosing' : 'Tuzilmaviy bog\'lanish'}</title>
                   <path d={d} fill="none" stroke="transparent" strokeWidth={16} />
-                  <path d={d} fill="none" stroke={rang} strokeWidth={2}
-                    strokeOpacity={b.uzsa_boladi ? 0.6 : 0.25}
+                  <path d={d} fill="none" stroke={bogTanlangan ? '#f8fafc' : rang} strokeWidth={bogTanlangan ? 4 : 2}
+                    strokeOpacity={bogTanlangan ? 1 : (b.uzsa_boladi ? 0.6 : 0.25)}
                     strokeDasharray={b.uzsa_boladi ? 'none' : '4,4'} />
                 </g>
               );
@@ -467,19 +556,21 @@ export default function TestXarita() {
             )}
           </svg>
 
-          {graf.tugunlar.map((t) => {
+          {ko'rsatilganTugunlar.map((t) => {
             const joy = joylar[t.id];
             if (!joy) return null;
             const Ik = TUR_IKONKA[t.tur];
             const rang = TUR_RANG[t.tur];
             const nishon = chiziqManbaId != null && chiziqManbaId !== t.id;
+            const manbaTugun = chiziqManbaId ? graf.tugunlar.find((x) => x.id === chiziqManbaId) : null;
+            const boglashMumkin = !!manbaTugun && (bogTuriniTop(manbaTugun.tur, t.tur) || bogTuriniTop(t.tur, manbaTugun.tur));
             return (
               <div key={t.id}
                 data-tugun={t.id}
                 onPointerDown={(e) => bosildiTugun(e, t.id)}
                 onClick={() => { if (!rejim.current) setTanlangan(t.id); }}
                 className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg ' +
-                  (nishon ? 'ring-2 ring-sky-400/70' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
+                  (nishon && boglashMumkin ? 'ring-2 ring-sky-400/70' : '') + (nishon && !boglashMumkin ? 'opacity-40' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
                 style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
                 
                   {/* ⚠️ 2026-08-28 (Claude) — SOXTA BELGI OLIB TASHLANDI.
@@ -532,6 +623,7 @@ export default function TestXarita() {
                 {t.tur !== 'kompaniya' && (
                   <div onPointerDown={(e) => bosildiNuqta(e, t.id)}
                     title="Bog'lash uchun shu nuqtadan chiziq torting"
+                    aria-label={t.nom + ' uchun bog\'lash porti'}
                     className="absolute -right-[7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-[#0a0f1d] cursor-crosshair hover:scale-150 transition-transform"
                     style={{ background: rang }} />
                 )}
@@ -539,14 +631,48 @@ export default function TestXarita() {
             );
           })}
 
+          {chiziqManbaId && (
+            <div className="absolute left-4 top-4 z-10 rounded-lg border border-sky-400/30 bg-[#111827]/90 px-3 py-2 text-[10px] text-sky-100 shadow-lg backdrop-blur">
+              Ko'k halqali tugunlar — ulash mumkin · xira tugunlar — bu tur bilan ulash mumkin emas
+            </div>
+          )}
+
           {!yuklanmoqda && graf.tugunlar.length <= 1 && (
             <div className="absolute text-zinc-500 text-sm" style={{ left: 60, top: 100, width: 520 }}>
               Hali tugun yo'q. Tepadagi «Yangi qo'shish» tugmalaridan loyiha, sklad,
               texnika yoki kontragent yarating — keyin ularni chiziq bilan bog'laysiz.
             </div>
           )}
+          {!yuklanmoqda && graf.tugunlar.length > 1 && ko'rsatilganTugunlar.length === 0 && (
+            <div className="absolute text-zinc-500 text-sm" style={{ left: 60, top: 100, width: 520 }}>
+              Qidiruv yoki tanlangan filtrga mos tugun topilmadi. «Barchasi»ni tanlab, qidiruvni tozalang.
+            </div>
+          )}
         </div>
       </div>
+
+      {/* BOG'LANISH INSPEKTORI — noto'g'ri chiziqni avval ko'rib,
+          keyin ongli ravishda uzish uchun. Chiziq endi darhol o'chmaydi. */}
+      {tanlanganBog && tanlanganBogManba && tanlanganBogMaqsad && (
+        <div className="absolute right-4 top-4 z-20 w-[320px] rounded-xl border border-white/15 bg-[#111827]/95 p-4 shadow-2xl backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-sky-300">Bog'lanish tekshiruvi</div>
+              <div className="mt-1 text-sm font-semibold text-white">{BOG_TUR_NOM[tanlanganBog.tur] || tanlanganBog.tur}</div>
+            </div>
+            <button type="button" onClick={() => setTanlanganBog(null)} className="text-zinc-500 hover:text-white" aria-label="Bog'lanish panelini yopish"><X size={16} /></button>
+          </div>
+          <div className="mt-3 rounded-lg border border-white/10 bg-black/25 p-2.5 text-[11px]">
+            <div className="flex items-center gap-2"><span className="truncate" style={{ color: TUR_RANG[tanlanganBogManba.tur] }}>{tanlanganBogManba.nom}</span><span className="text-zinc-600">→</span><span className="truncate" style={{ color: TUR_RANG[tanlanganBogMaqsad.tur] }}>{tanlanganBogMaqsad.nom}</span></div>
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-zinc-400">Chiziq noto'g'ri bo'lsa, «Bog'lanishni uzish»ni bosing. Bu tegishli yozuvlarni o'chirmaydi, faqat ular orasidagi aloqani bekor qiladi.</p>
+          {tanlanganBog.uzsa_boladi ? (
+            <button type="button" onClick={() => chiziqUz(tanlanganBog)} className="mt-3 w-full rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[11px] font-semibold text-rose-200 hover:bg-rose-500/20">Bog'lanishni uzish</button>
+          ) : (
+            <div className="mt-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[10px] text-zinc-500">Bu tuzilmaviy bog'lanish. Uni uzib bo'lmaydi.</div>
+          )}
+        </div>
+      )}
 
       {/* TAFSILOT PANELI — tugun bosilganda o'ngda ochiladi */}
       {tanlanganTugun && (
@@ -596,6 +722,24 @@ export default function TestXarita() {
                   </div>
                 </div>
               )}
+              {tanlanganTugun?.tur === 'obyekt' && (
+                <div className="rounded-xl border border-white/5 bg-black/20 p-3">
+                  <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-300"><Clock size={12} /> So'nggi hodisalar</h4>
+                  {hodisaYuklanmoqda && <div className="text-[10px] text-zinc-500">Hodisa tarixi yuklanmoqda…</div>}
+                  {!hodisaYuklanmoqda && hodisaXato && <div className="text-[10px] text-amber-300">Hodisa tarixi mavjud emas: {hodisaXato}</div>}
+                  {!hodisaYuklanmoqda && !hodisaXato && obyektHodisalari.length === 0 && <div className="text-[10px] text-zinc-600">Bu obyekt uchun hali muhim hodisa yozilmagan.</div>}
+                  {!hodisaYuklanmoqda && obyektHodisalari.length > 0 && (
+                    <div className="space-y-2">
+                      {obyektHodisalari.slice(0, 5).map((h) => (
+                        <div key={h.id} className="flex gap-2 text-[10px]">
+                          <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: MODUL_RANG[h.modul] || '#64748b' }} />
+                          <div className="min-w-0 flex-1"><div className="text-zinc-200">{h.satr || h.tafsilot || h.amal_turi}</div><div className="mt-0.5 text-zinc-600">{qachon(h.yaratilgan_vaqt)}{h.kim ? ' · ' + h.kim : ''}</div></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <div className="text-[11px] text-zinc-400 mb-2">Bog'lanishlari ({tanlanganBoglar.length})</div>
               {tanlanganBoglar.length === 0 && (
@@ -608,9 +752,9 @@ export default function TestXarita() {
                   if (!qt) return null;
                   const Ik = TUR_IKONKA[qt.tur];
                   return (
-                    <div key={i} className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5">
+                    <div key={i} onClick={() => setTanlanganBog(b)} className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 cursor-pointer hover:border-sky-400/40">
                       <Ik size={13} style={{ color: TUR_RANG[qt.tur] }} className="flex-shrink-0" />
-                      <span className="text-[11px] truncate flex-1">{qt.nom}</span>
+                      <span className="min-w-0 flex-1"><span className="block text-[11px] truncate">{qt.nom}</span><span className="block text-[9px] truncate text-zinc-600">{BOG_TUR_NOM[b.tur] || b.tur}</span></span>
                       {b.uzsa_boladi && (
                         <button onClick={() => chiziqUz(b)} title="Bog'lanishni uzish"
                           className="text-zinc-500 hover:text-rose-400 flex-shrink-0"><Unlink size={12} /></button>
@@ -622,6 +766,12 @@ export default function TestXarita() {
             </div>
 
             <div className="space-y-2 pt-2 border-t border-white/10">
+              {tanlanganTugun.tur === 'obyekt' && (
+                <button type="button" onClick={() => navigate('/admin/test/zayavka?obyekt=' + encodeURIComponent(tanlanganTugun.nom))}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500/15 py-2 text-[12px] text-amber-200 hover:bg-amber-500/25">
+                  <AlertTriangle size={13} /> Zayavkalarni boshqarish
+                </button>
+              )}
               {SAHIFA_YOLI[tanlanganTugun.tur] && (
                 <button onClick={() => navigate(SAHIFA_YOLI[tanlanganTugun.tur]!(Number(tanlanganTugun.id.split(':')[1]), tanlanganTugun.nom))}
                   className="w-full inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 py-2 rounded-lg text-[12px]">
@@ -654,7 +804,7 @@ export default function TestXarita() {
           </span>
         ))}
         <span className="text-[10px] text-zinc-600 inline-flex items-center gap-1 ml-auto">
-          <Unlink size={11} /> chiziqni bosib uzasiz
+          <Unlink size={11} /> chiziqni bosing → tekshirib uzing
         </span>
       </div>
 
