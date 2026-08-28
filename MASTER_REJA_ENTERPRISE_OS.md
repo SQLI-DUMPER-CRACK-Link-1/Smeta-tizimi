@@ -220,3 +220,112 @@ Shu sababli, **keyingi qadamlarda (Production'ga o'tish arafasida) barcha ID'lar
 1. **UUIDv4 yoki ULID:** Barcha asosiy jadvallar (Kompaniya, Obyekt, Shartnoma, Tranzaksiya) identifikatorlari BIGINT dan UUID (Universally Unique Identifier) yoki kripotografik tasodifiy string'larga o'tkaziladi. Hech qachon brauzer tarmog'ida yoki URL'da id=1 degan yozuv chiqmasligi kerak (huddi Bitcoin hamyon manzili kabi: id=f47ac10b-58cc-4372-a567-0e02b2c3d479).
 2. **Kriptografik RLS (Row Level Security):** Supabase RLS yordamida har bir so'rovda foydalanuvchining sessiya tokeni (JWT) tekshiriladi. Token ichida uning shifrlangan kompaniya_id (UUID)si bo'ladi va ma'lumotlar bazasi faqat shu UUID ga tegishli qatorlarni qaytaradi. Birovning UUID'sini topib olish ehtimoli nolga teng (2^122 kombinatsiya).
 3. **Imzolangan URL'lar (Signed URLs):** Fayllar, shartnoma nusxalari va PDF aktlar faqatgina vaqtinchalik kriptografik imzolangan havolalar orqali o'qiladi.
+
+---
+
+## 0-A. IKKINCHI TASHQI REJA TAHLILI — "TIZIM_02 GLOBAL CONSTRUCTION OS" (GPT, 2026-08-28)
+
+Foydalanuvchi ChatGPT bilan tuzgan alohida, mustaqil arxitektura hujjatini
+(`GitHub smeta tizimi.pdf`) yubordi va "kerakli jabhalarini ol" dedi —
+ya'ni HAMMASINI emas, faqat asosli qismini qabul qilish so'raldi. Tahlil:
+
+### ✅ Allaqachon MUSTAQIL ravishda shu yo'nalishda qurilgan (ikkala reja bir xil xulosaga kelgan)
+- **Polimorfik rol** ("Company → Project Participation → Role") — bizda
+  `t2_loyiha_qatnashchi` + `sess.kompaniyalar: {kompaniya_id, rol}[]`
+  sifatida ALLAQACHON bor, GPT reja yozilgunicha.
+- **Immutable ID + versiya + optimistik qulf** — `holat`/`versiya`
+  konvensiyasi loyihada kuni bilan bor, GPT rejaning 7-8-bandi bilan so'z
+  ma'nosida bir xil.
+- **Idempotentlik (`operation_id`)** — F2/Fakt/qator qo'shishda allaqachon
+  majburiy.
+- **Invariant "to'smaydi, ogohlantiradi"** — `t2_akt_yarat` shu tarzda
+  ishlaydi (2026-08-28 dan), GPT rejaning "moliyaviy state qattiq
+  qoidalarga bo'ysunadi, lekin production ishni to'xtatib qo'ymaydi"
+  degan ruhiga mos.
+- **AI Agent Tool Model** (band 24: "generic SQL/DELETE agentga
+  berilmaydi, faqat whitelist qilingan tool") — `sb.ts` dagi `so.soro`
+  yo'li (`ai_kontekst`/`ai_umumiy`) ANIQ shu naqsh: qattiq ro'yxat, GET
+  bilan chaqiriladi (Postgres o'zi VOLATILE funksiyani rad etadi — eshik
+  ikki qavatli). Bu band **qo'shimcha ishlov talab qilmaydi**, allaqachon
+  mos.
+- **Fakt→F2→Qoldiq server-side zanjiri** — `t2_qator_holat` orqali bor.
+
+### 🟡 Yangi, HAQIQATAN qimmatli — QABUL QILINDI, keyingi ishga qo'shildi
+1. **"Claude qilmasligi kerak" ro'yxati (band 35/43)** — bu loyihaning
+   o'z `00_BOSH_QONUN.md`/CLAUDE.md qoidalari bilan deyarli so'zma-so'z
+   mos keladi (fake data yo'q, Last-Write-Wins yo'q, generic SQL yo'q,
+   benchmarksiz tezlik va'dasi yo'q). Yangi narsa: **"bir xil business
+   logicni uch joyda yozmaslik"** — bizda bu xavf REAL: F2/Fakt hisobi
+   hozir GAS (`10_Engine.js`), Postgres (`t2_qator_holat`, trigger) va
+   qisman frontendda (ko'zgu ko'rsatish) parallel yashaydi. Bitta joy
+   ("Postgres = haqiqat, GAS = faqat ko'prik") deb ANIQ e'lon qilinishi
+   kerak — hozircha bu YOZILMAGAN qoida, faqat amalda shunday.
+2. **Golden dataset reconciliation metodologiyasi** (band 33/41) —
+   "Amfiteatr 4,937 qator" kabi ANIQ, o'lchanadigan qiyoslash: qator
+   soni, jami summa, F2, Fakt, qoldiq — Tizim_01 vs Tizim_02. Bizda
+   `98_SelfTest.js`/`f2lab` bor, lekin RASMIY "golden dataset + diff
+   report" formatida emas. **Tavsiya**: keyingi katta F2/Fakt
+   o'zgarishidan oldin shu formatda 1 marta ishga tushirilsin.
+3. **Job/Queue uzoq ishlar uchun** (band 35) — katta import, OCR, bank
+   sinxronizatsiyasi so'rov ICHIDA emas, alohida navbatda ishlashi
+   kerak. Bizda `t2_kopruk_navbat` shunga o'xshash narsa ALLAQACHON bor
+   (F2 fon ishi uchun) — GPT reja buni umumiy naqsh sifatida
+   RASMIYLASHTIRISHNI so'raydi: kelajakda Didox/bank/OCR qo'shilsa,
+   YANGI navbat tizimi yozmasdan, MAVJUDINI kengaytirish kerak.
+4. **Semantik material aliaslash** (band 21-22: "M200 = Бетон М200 = М-200") —
+   bizda narxlash markazida qisman bor (`_kw`, `_cfgNorm` — nom
+   normalizatsiyasi), lekin AI darajasida rasmiy "material_aliases"
+   jadvali yo'q. AI konteksti endi Postgres'da hisoblanayotgani uchun
+   (oxirgi commit) — bu jadval keyingi tabiiy qadam.
+
+### ❌ REJECTED / ATAYLAB DEFER QILINDI — sabab bilan
+1. **Butun domenni inglizcha nomlarga o'tkazish** (`companies`,
+   `projects`, `estimate_rows`...) — bu allaqachon bir marta
+   ko'rib chiqilgan va rad etilgan (`core.organizations` taklifi,
+   MULOQOT.md 2026-08-27). Sabab o'zgarmagan: 90+ RPC, butun
+   `sb.ts`/`sb-yoz.ts` oq ro'yxati, barcha frontend chaqiruvlarini qayta
+   yozish — FUNKSIONAL FOYDA YO'Q, faqat regressiya xavfi. `t2_*`
+   (o'zbekcha) nomlash **qoladi**.
+2. **Supabase Auth + JWT + to'liq RLS** (band 6, 31) — allaqachon shu
+   hujjatning 0-bo'limida (band 5-6) batafsil rad etilgan: hamma so'rov
+   `service_role` bilan ketadi, u RLS'ni BYPASS qiladi. RLS policy
+   yozish HOZIRGI arxitekturada funksional foydasiz — haqiqiy himoya
+   (kompaniya a'zoligi tekshiruvi) allaqachon `sb.ts`/`sb-yoz.ts`
+   darajasida qurilgan (2026-08-27/28, "poydevor 1-3 qadam").
+3. **"Bitcoin-level" UUID** (shu hujjatning 0-bo'limi, band 220-221) —
+   ⚠️ **texnik jihatdan noaniq va'da**. UUID o'zi IDOR'dan HIMOYA
+   QILMAYDI — u faqat ID'ni **taxmin qilishni** qiyinlashtiradi
+   (enumeration qarshi ikkinchi darajali himoya). Haqiqiy IDOR himoyasi
+   — SERVER har so'rovda "bu foydalanuvchi shu yozuvga tegishli
+   kompaniyaga a'zomi" deb TEKSHIRISHI (bu ALLAQACHON qurilgan,
+   yuqoridagi "poydevor 1-3 qadam"). `t2_loyiha` uchun UUID taklifi
+   (`01_T2_LOYIHA_MIGRATSIYA.sql`) aynan shu sabab bilan RAD ETILGAN edi
+   (MULOQOT.md, 2026-08-28: "QAROR: bigint qoldi"). GPT rejaning o'zi ham
+   ID formatini (`UUID` yoki `bigint`) MUHIM DEB HISOBLAMAYDI — faqat
+   "immutable" (o'zgarmas) bo'lishini talab qiladi, buni bizda `id`
+   ustunlari allaqachon ta'minlaydi. **Xulosa: UUID GA UMUMIY O'TISH
+   QILINMAYDI** — signed URL (band 3, Cloudflare R2 uchun allaqachon
+   qisman bor) va operation_id kabi joylarda tasodifiy ID foydali,
+   lekin bu PRIMARY KEY formatini almashtirish emas.
+4. **Country Packs / Globalizatsiya** (band 28-29) — bitta davlat
+   (O'zbekiston), bitta valyuta (UZS) bilan ishlayotgan tizim uchun
+   HOZIRCHA mavhum abstraksiya qurish erta — YAGSHI keyinroq, ikkinchi
+   davlat/valyuta HAQIQATAN kerak bo'lganda.
+5. **Multi-currency tarixiy kurs** (band 30) — hozircha faqat UZS
+   ishlatiladi, band amalda foydasiz.
+6. **BIM/Takeoff, to'liq Bank/Didox, Sales/CRM** — bularning ba'zilari
+   (`33017b1 feat(CRM)`) allaqachon FAZA tartibidan OLDIN qurilgan —
+   bu GPT rejaning "farqlar yopilmasdan keyingi critical modulga
+   o'tmaslik" (band 35) qoidasiga zid ketgan holat. Orqaga qaytarilmaydi
+   (ishlayotgan kod), lekin **ogohlantirish**: FAZA 1-3 poydevori
+   (RBAC granular, band 3) hali to'liq emasligi holda yangi modul
+   qo'shishda ehtiyot bo'lish kerak.
+
+### Xulosa (foydalanuvchiga to'g'ridan javob)
+GPT reja bilan bizning yo'nalishimiz **90% bir xil** — chunki ikkalasi
+ham bir xil muammoni (moliyaviy tizimda LWW/fake data/generic SQL
+xavfi) ko'rib, bir xil standart yechimlarga (versiya, audit,
+idempotentlik, whitelist) kelgan. Yagona jiddiy ziddiyat — **UUID/RLS**
+band, va u yuqorida texnik sabab bilan rad etildi. Qolgan farqlar
+kod-darajasida emas, **atash** (naming) darajasida (`estimate_rows` vs
+`t2_qator`) — bu o'zgartirilmaydi.
