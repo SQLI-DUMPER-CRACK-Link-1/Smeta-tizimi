@@ -71,7 +71,7 @@ export default function AdminShell() {
 
   // Avtomatik ochish logikasi
   const eskiIchida = ESKI_TIZIM_MENYU.some((m) => joy.pathname.startsWith(m.yol));
-  const [eskiOchiq, setEskiOchiq] = useState(eskiIchida);
+  const [eskiOchiq, setEskiOchiq] = useState(true);
   
   // Qaysi guruhlar ochiq ekanligini saqlash
   const [ochiqGuruhlar, setOchiqGuruhlar] = useState<Record<string, boolean>>(() => {
@@ -250,8 +250,8 @@ export default function AdminShell() {
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-400 transition-colors"
             >
               <Archive size={14} />
-              <span className="flex-1 text-left">Eski Tizim (Arxiv)</span>
-              {eskiOchiq ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <span className="flex-1 text-left">Barcha Modullar (ERP & Tizim_01)</span>
+              
             </button>
             <div className={`space-y-0.5 pl-2 mt-1 ${eskiOchiq ? 'block' : 'hidden'}`}>
               {ESKI_TIZIM_MENYU.map((m) => (
