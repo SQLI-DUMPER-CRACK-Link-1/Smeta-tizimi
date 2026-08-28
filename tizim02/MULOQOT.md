@@ -2789,7 +2789,7 @@ Ya'ni AI bo'yicha holat:
 **BIRLASHTIRISH BAJARILDI** (Claude, limitdan oldin): `t2-ai.ts` ga
 `aiSorovYig(obyektId, savol)` va `aiUmumiySorovYig(kompaniyaId, savol)`
 qo'shildi. Ular kontekstni olib, `{system, text}` qaytaradi — bu aynan
-`_shared/ai.ts` dagi `aiCall` kutadigan shakl.
+`frontend/functions/_shared/ai.ts` dagi `aiCall` kutadigan shakl.
 
 `AI_KORSATMA` konstantasi ham shu yerda: «raqamni o'zingdan to'qima,
 ogohlantirishlarni albatta ayt». U BIR JOYDA turadi — har sahifa o'zicha
@@ -2803,3 +2803,101 @@ ga uzatish. Boshqa hech narsa kerak emas.
 ⚠️ `ogohlantirish[]` ni ham yuboring — aks holda AI «jami 865 mln» deb
 ishonch bilan aytadi, «lekin 194 qatorda narx yo'q» degan qismini esa
 tushirib qoldiradi.
+
+# ═══════════════════════════════════════════════════════════════════
+# [2026-08-29] CLAUDE -> CODEX · MINDMAP ARXITEKTURA MUAMMOLARI
+# ═══════════════════════════════════════════════════════════════════
+
+Claude limitga yetdi. Foydalanuvchi shikoyati va men topgan ILDIZ
+sabab quyida. Codex, bu SENING ishing (integratsiya + sifat).
+
+## FOYDALANUVCHI SO'ZI
+
+> «mindmap boshqa joylardagi funksiyalar bilan ulanmayapdi. masalan
+>  shartnoma yaratsang u shartnomalar bo'limida chiqmaydi va tahrirlash
+>  imkoniyatlari yo'q... kadr, texnika, sklad, bog'lanish uzish kabi
+>  muammolar judayam ko'p. hali zakazchik loyihachi degan joylariga
+>  o'tmadik»
+
+## ILDIZ SABAB — MEN TOPDIM VA BITTASINI TUZATDIM
+
+Sistematik audit qildim. Naqsh aniq:
+
+| Domen | Ro'yxat kompaniya filtri | Yaratishda kompaniya |
+|---|---|---|
+| sklad / kadr / texnika | ✅ bor | ✅ uzatiladi |
+| kontragent | ✅ bor | ✅ uzatiladi |
+| loyiha | ✅ bor | ✅ uzatiladi |
+| **shartnoma** | ❌ **YO'Q** | ❌ **YO'Q** |
+
+**Shartnoma yagona istisno edi** va foydalanuvchi aynan shuni sezdi.
+
+Zanjir:
+1. `t2-mindmap.ts:216` — `sbT2ShartnomaSaqla({raqam, nom, taraf})`,
+   `kompaniyaId` UZATILMAGAN (boshqa hamma tur uzatadi)
+2. `sbT2ShartnomaSaqla` — imzosida `kompaniyaId` UMUMAN yo'q edi,
+   holbuki RPC `p_kompaniya_id` ni qabul qiladi
+3. `sb-yoz.ts:416` — `p_kompaniya_id` yuborilmasdi
+4. `TestShartnoma.tsx:33` — BARCHA kompaniyalarniki o'qilib, keyin
+   MIJOZ TOMONIDA `filter(s => s.kompaniya_id === joriy.id)`
+
+Ya'ni: yaratishda kompaniya tasodifga qolardi, ko'rsatishda esa mos
+kelmasa **jimgina yo'qolardi**. Bitta kompaniya bo'lgani uchun ba'zan
+ishlardi — shuning uchun «ba'zan chiqadi, ba'zan yo'q» ko'rinardi.
+
+**TUZATDIM (4 fayl):** `kompaniyaId` MAJBURIY qilindi (ixtiyoriy
+bo'lsa chaqiruvchi unutadi), filtr SERVERGA ko'chirildi.
+`tsc` toza, barcha qo'riqchilar o'tdi.
+
+## CODEX UCHUN TOPSHIRIQ (ustuvorlik tartibida)
+
+### 1. 🔴 Qolgan domenlarni SHU NAQSH bo'yicha tekshir
+Men faqat shartnomani tuzatdim. Sen qolganini AUDIT qil:
+```bash
+cd frontend/src/api
+grep -n "jadval: 't2_" -A 2 t2-*.ts | grep -E "jadval|filtr"
+```
+Har ro'yxatda `kompaniya_id=eq.` BO'LISHI SHART (obyekt_id orqali
+bog'langanlardan tashqari). Yo'q bo'lsa — bu tenant teshigi.
+
+Xuddi shunday: har `yozAmali` chaqiruvida kompaniya uzatilyaptimi.
+
+### 2. 🔴 Qo'riqchi test yoz — bu qaytmasin
+`t2_tenant_izolyatsiya.test.cjs` ga qo'sh:
+- har `t2-*.ts` dagi ro'yxat funksiyasida `kompaniya_id=eq.` bor
+- `sb-yoz.ts` dagi har `*_saqla`/`*_yarat` amalida `p_kompaniya_id` bor
+Bu test bo'lmasa, naqsh yana qaytadi (bugun shartnomada aynan shunday
+bo'ldi).
+
+### 3. 🟠 Mindmapda TAHRIRLASH yo'q
+Foydalanuvchi: «tahrirlash imkoniyatlari yo'q». Hozir mindmap faqat
+YARATADI va O'CHIRADI. Tugun ustiga bosilganda tahrir formasi ochilishi
+kerak. Backend RPC lar TAYYOR (`*_saqla` lar `kutilgan_versiya` bilan
+optimistik qulfni qo'llab-quvvatlaydi).
+
+### 4. 🟠 Bog'lanishni UZISH
+`sbMindmapBogOchir(tur, manbaId, maqsadId)` mavjud, lekin foydalanuvchi
+«bog'lanish uzish muammolari» deyapti — UI da sinab ko'r va nima
+ishlamayotganini aniqla.
+
+### 5. 🟡 Zakazchik / Loyihachi rollari
+`t2_loyiha_qatnashchi` jadvali va RPC TAYYOR
+(`sbLoyihaQatnashchiBiriktir`, rollar: zakazchik / bosh_pudratchi /
+subpudratchi / loyihachi / taminotchi). UI qurilmagan — loyiha
+sahifasida qatnashchilar bo'limi kerak.
+
+### 6. 🟡 Notion
+Foydalanuvchi: «agentlararo ishlashda notion ga ulangan edik, hali u
+bo'yicha biror ish qilmadik». Men Notion'ga tegmadim — sen ko'rib chiq
+va agentlar muvofiqlashuvi uchun ishlatish mumkinmi hal qil.
+⚠️ Lekin `MULOQOT.md` ni TASHLAB YUBORMA: u test bilan majburlangan
+(`t2_navbat.test.cjs`), Notion esa emas. Ikkita manba bo'lsa bittasi
+albatta eskiradi.
+
+## ⛔ ESLATMA — TEGMANG
+
+- `t2_akt_qator.qator_id` FK **ON DELETE RESTRICT** bo'lib qolsin
+  (bugun 353 qator Ф2 shu kaskaddan yo'qolgan)
+- `select * from t2_invariant_tekshir()` — ish oxirida chaqir, 7/8 OK
+  bo'lishi kerak (8-si foydalanuvchining bo'sh Ф2 akti)
+- `npm run tekshir` (12 qo'riqchi) — `npm run test` YETARLI EMAS

@@ -215,6 +215,7 @@ export async function sbMindmapTugunYarat(
   }
   if (tur === 'shartnoma') {
     return await sbT2ShartnomaSaqla({
+      kompaniyaId,
       raqam: nom, nom: maydonlar.izoh || nom, taraf: maydonlar.taraf || '',
     });
   }

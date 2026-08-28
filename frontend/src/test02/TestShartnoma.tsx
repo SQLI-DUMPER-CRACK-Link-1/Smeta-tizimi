@@ -30,9 +30,15 @@ export default function TestShartnoma() {
     if (!joriy) return;
     setYuklanmoqda(true);
     try {
-      const res = await sbT2ShartnomalarOl(false); // hammasini oqiymiz
-      // Faqat shu kompaniyanikini filtrlaymiz garchi DB da qilingan bo'lsa ham ishonch uchun
-      setShartnomalar((res.qatorlar || []).filter((s: Shartnoma) => s.kompaniya_id === joriy.id));
+      /* ⚠️ 2026-08-28: avval BARCHA kompaniyalarning shartnomalari
+         o'qilib, keyin MIJOZ TOMONIDA filtrlanardi. Ikki xato:
+         (a) boshqa mijozning ma'lumoti tarmoq orqali kelardi,
+         (b) `kompaniya_id` mos kelmasa shartnoma JIMGINA YO'QOLARDI —
+             foydalanuvchi aynan shundan shikoyat qildi («mindmapda
+             shartnoma yaratsang, shartnomalar bo'limida chiqmaydi»).
+         Endi filtr SERVERDA. */
+      const res = await sbT2ShartnomalarOl(joriy.id, false);
+      setShartnomalar(res.qatorlar || []);
     } catch (e: any) {
       toast(e.message, 'danger');
     } finally {
@@ -55,6 +61,7 @@ export default function TestShartnoma() {
       const jami = sum + ndsSumma;
 
       const res = await sbT2ShartnomaSaqla({
+        kompaniyaId: joriy!.id,
         raqam: formData.raqam,
         nom: formData.nom,
         taraf: formData.taraf,

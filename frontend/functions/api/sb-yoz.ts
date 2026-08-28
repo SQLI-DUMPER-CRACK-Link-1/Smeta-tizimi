@@ -417,7 +417,16 @@ export const onRequestPost: PagesFunction<{
       if (!String(so.raqam || '').trim()) {
         return Response.json({ ok: false, error: 'Shartnoma raqami bo\'sh' });
       }
+      /* ⚠️ 2026-08-28: `kompaniya_id` uzatilmasdi — shartnoma qaysi
+         kompaniyaga tegishli ekani TASODIFGA qolardi. Boshqa hamma
+         domen (sklad/kadr/texnika/kontragent/loyiha) uni uzatadi,
+         faqat shartnoma istisno edi. */
+      const shKomp = Number(so.kompaniya_id);
+      if (!Number.isFinite(shKomp) || shKomp <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
       yuk = {
+        p_kompaniya_id: shKomp,
         p_raqam: String(so.raqam).slice(0, 100),
         p_nom: so.nom ? String(so.nom).slice(0, 500) : null,
         p_taraf: so.taraf ? String(so.taraf).slice(0, 300) : null,

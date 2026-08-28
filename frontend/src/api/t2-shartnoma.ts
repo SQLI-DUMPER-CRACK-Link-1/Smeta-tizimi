@@ -23,10 +23,25 @@ export type Shartnoma = {
   versiya: number; yaratildi: string; yangilandi: string; kim: string | null;
 };
 
-export function sbT2ShartnomalarOl(faqatFaol = true) {
+/* ⚠️ 2026-08-28 (Claude) — TENANT IZOLYATSIYASI TUZATILDI.
+ *
+ * Avval bu funksiya kompaniya bo'yicha UMUMAN filtrlamasdi va BARCHA
+ * kompaniyalarning shartnomalarini o'qirdi. Auditda aniqlandi: sklad,
+ * kadr, texnika, kontragent, loyiha — hammasi `kompaniya_id=eq.N`
+ * bilan filtrlaydi, FAQAT shartnoma istisno edi.
+ *
+ * Bitta kompaniya bo'lgani uchun bu ko'rinmasdi, lekin ikkinchisi
+ * qo'shilishi bilan bir mijoz boshqasining shartnomalarini ko'rardi.
+ *
+ * `kompaniyaId` endi MAJBURIY — ixtiyoriy qilinса, chaqiruvchi uni
+ * berishni unutadi va xato jimgina qaytadi.
+ */
+export function sbT2ShartnomalarOl(kompaniyaId: number, faqatFaol = true) {
+  const filtrlar = ['kompaniya_id=eq.' + kompaniyaId];
+  if (faqatFaol) filtrlar.push('holat=eq.faol');
   return sbOqi<Shartnoma>({
     jadval: 't2_shartnoma',
-    filtr: faqatFaol ? 'holat=eq.faol' : undefined,
+    filtr: filtrlar.join('&'),
     tartib: 'raqam.asc', limit: 5000,
   });
 }
@@ -98,13 +113,24 @@ async function yoz(yuk: Record<string, unknown>): Promise<ShartnomaNatija> {
 }
 
 /** Shartnoma yaratadi yoki (raqam mos kelsa) yangilaydi. `kutilganVersiya` yangilashda kerak. */
+/**
+ * ⚠️ 2026-08-28: `kompaniyaId` qo'shildi va MAJBURIY qilindi.
+ *
+ * Avval u umuman uzatilmasdi. RPC (`t2_shartnoma_saqla`) `p_kompaniya_id`
+ * ni qabul qiladi, lekin frontend hech qachon bermasdi — natijada
+ * shartnoma qaysi kompaniyaga tegishli ekani TASODIFGA qolardi
+ * (bitta kompaniya bo'lgani uchun to'g'ri chiqardi, ikkinchisi
+ * qo'shilishi bilan buzilardi).
+ */
 export function sbT2ShartnomaSaqla(p: {
+  kompaniyaId: number;
   raqam: string; nom?: string; taraf?: string;
   summaBezNds?: number; nds?: number; jamiNdsBilan?: number;
   chelStavka?: number; izoh?: string; kutilganVersiya?: number;
 }): Promise<ShartnomaNatija> {
   return yoz({
-    amal: 'shartnoma_saqla', raqam: p.raqam, nom: p.nom, taraf: p.taraf,
+    amal: 'shartnoma_saqla', kompaniya_id: p.kompaniyaId,
+    raqam: p.raqam, nom: p.nom, taraf: p.taraf,
     summa_bez_nds: p.summaBezNds, nds: p.nds, jami_nds_bilan: p.jamiNdsBilan,
     chel_stavka: p.chelStavka, izoh: p.izoh, kutilgan_versiya: p.kutilganVersiya,
   });

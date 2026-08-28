@@ -1,0 +1,121 @@
+import { tekshir } from '../_shared/auth';
+import { aiCall, aiPublicError } from '../_shared/ai';
+import { AI_KORSATMA, type AiUmumiy } from '../../src/api/t2-ai';
+
+type Env = {
+  SESSIYA_KALIT: string;
+  SUPABASE_URL: string;
+  SUPABASE_KEY: string;
+  GEMINI_API_KEY?: string;
+  GROQ_API_KEY?: string;
+  OPENAI_API_KEY?: string;
+  ANTHROPIC_API_KEY?: string;
+  AI_PRIMARY_PROVIDER?: string;
+  AI_TIMEOUT_MS?: string;
+  AI_MAX_RETRIES?: string;
+  AI_MAX_RETRY_DELAY_MS?: string;
+  GEMINI_MODEL?: string;
+  GROQ_MODEL?: string;
+  OPENAI_MODEL?: string;
+  ANTHROPIC_MODEL?: string;
+};
+
+type Savol = { savol?: unknown; kompaniya_id?: unknown };
+
+const MAX_SAVOL = 2000;
+const MAX_PROMPT = 45000;
+
+function xato(xabar: string, status = 400) {
+  return Response.json({ ok: false, xabar }, { status });
+}
+
+function musbatId(value: unknown): number | null {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+async function oqishRpc<T>(env: Env, id: number): Promise<T> {
+  const rpc = 't2_ai_umumiy';
+  const param = 'p_kompaniya_id';
+  const url = env.SUPABASE_URL.replace(/\/+$/, '') +
+    '/rest/v1/rpc/' + rpc + '?' + new URLSearchParams({ [param]: String(id) });
+  const response = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_KEY,
+      Authorization: 'Bearer ' + env.SUPABASE_KEY,
+    },
+  });
+  if (!response.ok) throw new Error('Kontekst so\'rovi bajarilmadi (' + response.status + ')');
+  return await response.json() as T;
+}
+
+function umumiyMatn(k: AiUmumiy): string {
+  const pul = (n: number | null) => n == null ? 'noma\'lum' : Math.round(n).toLocaleString('ru-RU');
+  const satrlar = k.obyektlar.map((o) =>
+    '• ' + o.nom + ': smeta ' + pul(o.smeta) +
+    (o.toliq ? '' : ' ⚠️ TO\'LIQ EMAS (' + o.narxsiz + ' qatorda narx yo\'q)') +
+    ' · fakt ' + pul(o.fakt) + ' · Ф2 ' + pul(o.f2));
+  return 'OBYEKTLAR HOLATI (tizimdan):\n' + satrlar.join('\n') + '\n\n' + k.izoh;
+}
+
+/**
+ * Jarvis beta: faqat dalilli, kompaniya-doirasidagi o'qish. Bu endpoint
+ * hech qanday yozuvchi RPC chaqirmaydi; zayavka yoki boshqa amal keyingi
+ * bosqichda alohida draft -> tasdiq kontrakti orqali qo'shiladi.
+ */
+export const onRequestPost: PagesFunction<Env> = async (ctx) => {
+  const boshlandi = Date.now();
+  try {
+    const sess = await tekshir(ctx.request.headers.get('Cookie'), ctx.env.SESSIYA_KALIT);
+    if (!sess) return xato('Kirish talab qilinadi', 401);
+    if (!ctx.env.SUPABASE_URL || !ctx.env.SUPABASE_KEY) return xato('Supabase AI konteksti sozlanmagan', 503);
+
+    let body: Savol;
+    try { body = await ctx.request.json<Savol>(); }
+    catch { return xato('Noto\'g\'ri JSON so\'rov'); }
+
+    const savol = String(body.savol || '').trim();
+    if (!savol || savol.length > MAX_SAVOL) return xato('Savol 1–' + MAX_SAVOL + ' belgi bo\'lishi kerak');
+
+    const kompaniyaId = musbatId(body.kompaniya_id);
+    if (!kompaniyaId) return xato('kompaniya_id musbat butun son bo\'lishi kerak');
+
+    if (!Array.isArray(sess.kompaniyalar)) {
+      return xato('Sessiya kompaniya ruxsatini tasdiqlamayapti; qayta kiring', 403);
+    }
+    if (!sess.kompaniyalar.some((a) => a.kompaniya_id === kompaniyaId)) {
+      return xato('Bu kompaniyaga ruxsat yo\'q', 403);
+    }
+
+    const kontekst = await oqishRpc<AiUmumiy>(ctx.env, kompaniyaId);
+    if (!kontekst?.ok) return xato(('xabar' in kontekst && kontekst.xabar) || 'Kontekst olinmadi', 422);
+
+    const dalil = umumiyMatn(kontekst);
+    const text = 'MA\'LUMOT (tizimdan):\n' + dalil + '\n\nSAVOL: ' + savol;
+    if (text.length > MAX_PROMPT) return xato('Kontekst juda katta; aniqroq obyektni tanlang', 422);
+
+    const natija = await aiCall(ctx.env, {
+      system: 'Sening noming Jarvis. ' + AI_KORSATMA +
+        '\n6. Bu beta agent faqat o\'qiydi; hech qanday amal bajarilgan deb aytma.',
+      text,
+      temperature: 0.1,
+      maxOutputTokens: 1000,
+    });
+
+    return Response.json({
+      ok: true,
+      agent: 'Jarvis',
+      javob: natija.text,
+      dalil: { tur: 'kompaniya', id: kompaniyaId, rpc: 't2_ai_umumiy' },
+      requires_approval: false,
+      provider: natija.provider,
+      model: natija.model,
+      usage: natija.usage,
+      ms: Date.now() - boshlandi,
+    });
+  } catch (error) {
+    const ochiqXato = aiPublicError(error);
+    const status = ochiqXato.code === 'request_invalid' ? 400 : 502;
+    return Response.json({ ok: false, xabar: ochiqXato.message, code: ochiqXato.code }, { status });
+  }
+};
