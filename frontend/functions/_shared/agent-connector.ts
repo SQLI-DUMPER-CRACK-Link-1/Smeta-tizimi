@@ -155,6 +155,21 @@ export function positiveIntegerArgument(args: Record<string, unknown>, name: str
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
+/** Mirrors the manifest's `additionalProperties:false` rule at runtime. */
+export function validateAgentToolArguments(tool: AgentToolName, args: Record<string, unknown>):
+  | { ok: true; id: number }
+  | { ok: false; message: string } {
+  const scope = AGENT_TOOLS[tool].scope;
+  const name = scope === 'kompaniya_ids' ? 'kompaniya_id' : 'obyekt_id';
+  if (Object.keys(args).length !== 1 || !Object.prototype.hasOwnProperty.call(args, name)) {
+    return { ok: false, message: 'Tool faqat ' + name + ' argumentini qabul qiladi' };
+  }
+  const id = positiveIntegerArgument(args, name);
+  return id
+    ? { ok: true, id }
+    : { ok: false, message: name + ' musbat butun son bo\'lishi kerak' };
+}
+
 export function toolAllowed(principal: AgentPrincipal, tool: AgentToolName): boolean {
   return principal.tools.includes(tool);
 }
@@ -219,4 +234,3 @@ export async function agentSignatureForTest(input: {
   const payload = [T2_AGENT_API_VERSION, input.agentId, input.timestamp, input.method.toUpperCase(), input.path, await sha256Hex(input.body)].join('\n');
   return hmacHex(input.secret, payload);
 }
-

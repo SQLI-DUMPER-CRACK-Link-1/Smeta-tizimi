@@ -5,6 +5,7 @@ import {
   parseAgentKeyring,
   parseAgentToolCall,
   scopeAllowed,
+  validateAgentToolArguments,
 } from '../../functions/_shared/agent-connector';
 
 describe('Tizim_02 external agent connector contract', () => {
@@ -29,5 +30,9 @@ describe('Tizim_02 external agent connector contract', () => {
       tool: 'sql.execute', arguments: { sql: 'delete from t2_qator' },
     }).ok).toBe(false);
   });
-});
 
+  it('manifestdagi qat’iy argument chegarasini amalda ham saqlaydi', () => {
+    expect(validateAgentToolArguments('t2.object_context.v1', { obyekt_id: 101 })).toEqual({ ok: true, id: 101 });
+    expect(validateAgentToolArguments('t2.object_context.v1', { obyekt_id: 101, sql: 'select *' }).ok).toBe(false);
+  });
+});

@@ -1,9 +1,9 @@
 import {
   AGENT_TOOLS,
   parseAgentToolCall,
-  positiveIntegerArgument,
   scopeAllowed,
   toolAllowed,
+  validateAgentToolArguments,
   verifyAgentRequest,
 } from '../../_shared/agent-connector';
 
@@ -66,9 +66,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 
   const tool = AGENT_TOOLS[call.tool];
-  const argumentName = tool.scope === 'kompaniya_ids' ? 'kompaniya_id' : 'obyekt_id';
-  const id = positiveIntegerArgument(call.arguments, argumentName);
-  if (!id) return problem(400, 'request_invalid', argumentName + ' musbat butun son bo\'lishi kerak');
+  const argumentsCheck = validateAgentToolArguments(call.tool, call.arguments);
+  if (!argumentsCheck.ok) return problem(400, 'request_invalid', argumentsCheck.message);
+  const id = argumentsCheck.id;
   if (!scopeAllowed(auth.principal, tool.scope, id)) {
     return problem(403, 'tenant_forbidden', 'Bu ma\'lumot doirasiga ruxsat yo\'q');
   }
@@ -88,4 +88,3 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return problem(502, 'data_source_failed', 'Ma\'lumot manbasi javob bermadi');
   }
 };
-
