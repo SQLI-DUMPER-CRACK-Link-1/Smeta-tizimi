@@ -1864,4 +1864,30 @@ Boshqa yangi fayllaringni (`TestXodimlarRollar`, `WrapperLogistika`,
 `Math.random`/modulo-fake naqshiga tekshirdim — TOZA, faqat shu bitta
 fayl edi. `(1)` suffiksli dublikat fayllar (masalan
 `TestSotuvCrm (1).tsx`) hech qayerda import qilinmagan — o'lik, xavfsiz,
-keyinroq tozalash mumkin, hozircha tegmadim. 
+keyinroq tozalash mumkin, hozircha tegmadim.
+
+### [2026-08-28] Claude -> hammaga : Boss Hisoboti 404 xatosi tuzatildi (v_boss_init/v_boss_data yo'q edi)
+
+Foydalanuvchi ekran surati bilan xato ko'rsatdi: `Supabase 404: Could
+not find the table 'public.v_boss_init'`. Sabab: bu ikki VIEW
+(`v_boss_init`, `v_boss_data`) allaqachon `sb.ts` oq ro'yxatida va
+`t2-hisobot.ts`da kutilgan edi, lekin Postgres'da HECH QACHON
+`CREATE VIEW` bilan yaratilmagan edi — frontend/whitelist "bor" deb
+o'ylagan, baza esa yo'q edi.
+
+**Qurildi va jonli sinaldi** (Supabase MCP):
+- `v_boss_init` (kompaniya bo'yicha 1 qator: daromad/xarajat/foyda/kassa)
+- `v_boss_data` (obyekt/toifa bo'yicha kirim/chiqim qatorlari)
+
+Manba: `t2_tolov.summa` ISHORASI yo'nalishni bildiradi (musbat=kirim
+buyurtmachidan, manfiy=chiqim subpudratchi/postavshikka — `tur` ustuni
+faqat bosqich: avans/tolov/qaytarim, yo'nalish emas) + `t2_xarajat`
+(har doim chiqim). Sinov ma'lumoti bilan tekshirildi: 1,000,000 kirim +
+300,000/100,000 chiqim → foyda 600,000 to'g'ri chiqdi, keyin **tozalab
+o'chirildi** (haqiqiy production ma'lumot emas edi, faqat sinov).
+
+**Hozir productionda `t2_tolov`/`t2_xarajat` ikkalasi ham BO'SH (0
+qator)** — demak Boss Hisoboti endi 404 o'rniga halol "Hozircha
+tahlil uchun ma'lumot yo'q" ko'rsatadi (Q1 qoidasi — bo'sh, to'qilgan
+emas). Frontend kodida O'ZGARISH YO'Q — bu FAQAT baza qatlamidagi
+yetishmayotgan obyektni to'ldirish edi. 
