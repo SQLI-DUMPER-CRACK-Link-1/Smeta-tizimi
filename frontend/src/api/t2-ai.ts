@@ -201,6 +201,34 @@ export async function t2AiFakturaParse(payload: {
   }
 }
 
+/** Jarvis beta — faqat joriy kompaniyaning dalilli, o'qish konteksti bilan savol-javob. */
+export type T2AiJarvisJavob = {
+  ok: boolean;
+  agent?: 'Jarvis';
+  javob?: string;
+  xabar?: string;
+  code?: string;
+  dalil?: { tur: 'kompaniya'; id: number; rpc: 't2_ai_umumiy' };
+  provider?: string;
+  model?: string;
+  ms?: number;
+};
+
+export async function t2AiJarvisSavol(kompaniyaId: number, savol: string): Promise<T2AiJarvisJavob> {
+  try {
+    const response = await fetch('/api/ai-savol', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kompaniya_id: kompaniyaId, savol }),
+    });
+    const raw = await response.text();
+    try { return JSON.parse(raw) as T2AiJarvisJavob; }
+    catch { return { ok: false, xabar: 'Jarvis serveri JSON qaytarmadi' }; }
+  } catch (error: any) {
+    return { ok: false, xabar: 'Jarvis tarmoq xatosi: ' + (error?.message || String(error)) };
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
  * KONTEKST + SAVOL — model'ga yuboriladigan to'liq so'rov
  * ═══════════════════════════════════════════════════════════════════

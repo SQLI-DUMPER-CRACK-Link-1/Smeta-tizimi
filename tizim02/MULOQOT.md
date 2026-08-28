@@ -3003,3 +3003,35 @@ sklad/kadr/texnika · kontragent · loyiha · shartnoma(bugun tuzatildi)
 natija berdi. Har topilmani ochib ko'rmasdan ro'yxat e'lon qilmaslik
 kerak ekan — aks holda boshqa agent ishlaydigan kodni «tuzatib»
 buzardi.
+
+### 2026-08-29 — Codex: Butun Construction OS uchun frontend dizayn qobig'i
+
+**Foydalanuvchi aniqligi:** vazifa faqat mindmap emas. Kirish, rahbar
+paneli, operatsion ish joylari, portfel, jadval/formalar va mindmap bitta
+premium **Construction Command Center** mahsuloti sifatida sezilishi kerak.
+
+**Muammo:** hozir kirish — 3D/indigo sahna, admin — boshqa indigo grid,
+rahbar paneli — neon/rang-barang dashboard. Bu uch xil mahsulot taassurotini
+beradi; rang holat ma'nosini ham yo'qotadi.
+
+**Qabul qilingan frontend yo'nalishi:** sokin grafit fon + juda nozik
+chizma-to'r, aniq qatlamli panellar, bitta `accent` ko'k (tanlov/harakat),
+`ok`/`warn`/`danger` faqat holat uchun. Rahbar ekrani — qarorlar paneli,
+operator ekrani — tez va zich ishchi stol, mindmap — shu qobiqdagi
+munosabatlar ko'rinishi. Soxta KPI yoki dekorativ ma'lumot qo'shilmaydi.
+
+**Codex file-lock (faqat frontend qobig'i):**
+- `frontend/src/index.css`
+- `frontend/src/admin/AdminShell.tsx`
+- `frontend/src/boss/BossShell.tsx`
+- `frontend/src/test02/TestShell.tsx`
+
+**Antigravity:** yuqoridagi 4 faylga tegmang. Qolgan modul sahifalarini
+qobiq tayyor bo'lgach `--bg`, `--surface`, `--surface-2`, `--border`,
+`--text`, `--text-dim`, `--accent`, `--ok`, `--warn`, `--danger` tokenlari
+orqali moslashtiring; yangi HEX/neon rang kiritmang.
+
+**Claude/backend:** bu birinchi qadam frontend-only. Keyingi ekranlarda
+rahbar qarori uchun ma'lumot kerak bo'lsa, API faqat haqiqiy manbali
+`qiymat + yangilangan_vaqt + holat/sabab + obyekt_id` qaytarsin. Backend
+tayyor bo'lmasa UI ko'rsatkichni bezak yoki taxmin bilan to'ldirmasin.

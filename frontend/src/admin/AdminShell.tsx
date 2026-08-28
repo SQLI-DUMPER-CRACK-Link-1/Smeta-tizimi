@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
-import { AlertTriangle, ChevronDown, ChevronRight, Archive, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Archive, ShieldCheck } from 'lucide-react';
 import { Map, LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
-import Sahna3D from '../kirish/Sahna3DXavfsiz';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 
@@ -70,7 +69,6 @@ const ESKI_TIZIM_MENYU = [
 export default function AdminShell() {
   const sess = useSessiya();
   const joy = useLocation();
-  const [uch_D, setUch_D] = useState(() => localStorage.getItem('uchD') !== 'off');
 
   // Avtomatik ochish logikasi
   const eskiIchida = ESKI_TIZIM_MENYU.some((m) => joy.pathname.startsWith(m.yol));
@@ -98,9 +96,6 @@ export default function AdminShell() {
 
   const barchaYollar = TIZIM_02_GURUHLAR.flatMap(g => g.menyular.map(m => m.yol)).concat(ESKI_TIZIM_MENYU.map(m => m.yol));
   menyuTekshirDev(barchaYollar);
-
-  const OGIR = ['/admin/f2', '/admin/holat', '/admin/ierarxiya', '/admin/narxlar', '/admin/f2-tayyorlash'];
-  const ogirSahifa = OGIR.some(y => joy.pathname.startsWith(y));
 
   useEffect(() => {
     if (sess.isError && sess.error?.message === "Sessiya yo'q") {
@@ -183,21 +178,13 @@ export default function AdminShell() {
   }).filter(g => g.menyular.length > 0);
 
   return (
-    <div className="flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30 bg-[#020617]">
-      {!ogirSahifa && uch_D && (
-        <div className="absolute inset-0 z-0 pointer-events-none">
-           <Sahna3D />
-        </div>
-      )}
-
-      <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] opacity-[0.02] pointer-events-none" />
-      <div className="absolute inset-0 z-0 bg-black/40 pointer-events-none" />
+    <div className="os-app-shell flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30">
 
       {/* Sidebar - custom-scrollbar added for smooth scrolling on small laptops */}
-      <aside className="relative z-10 w-64 xl:w-72 border-r border-white/10 bg-black/40 backdrop-blur-xl flex flex-col shadow-2xl">
+      <aside className="os-sidebar relative z-10 w-64 xl:w-72 border-r backdrop-blur-xl flex flex-col">
         <div className="p-4 border-b border-border flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center shadow-[0_0_15px_rgba(var(--accent-rgb),0.5)]">
-            <FlaskConical className="text-accent" size={18} />
+          <div className="os-brand-mark w-8 h-8 rounded-lg flex items-center justify-center">
+            <FlaskConical className="text-white" size={18} />
           </div>
           <div>
             <h1 className="text-[15px] font-bold text-text leading-tight tracking-wider">SMETA TIZIM 02</h1>
@@ -224,16 +211,15 @@ export default function AdminShell() {
                     key={m.yol}
                     to={m.yol}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-[13.5px] font-medium transition-colors duration-[120ms] cursor-pointer relative ${
+                      `os-nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-[13.5px] font-medium transition-colors duration-[120ms] cursor-pointer relative ${
                         isActive
-                          ? 'bg-accent/15 text-accent shadow-[inset_0_0_0_1px_rgba(var(--accent-rgb),0.2)]'
-                          : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
+                          ? 'os-nav-link--active'
+                          : ''
                       }`
                     }
                   >
                     {({ isActive }) => (
                       <>
-                        {isActive && <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-accent rounded-r-full shadow-[0_0_8px_rgba(var(--accent-rgb),0.8)]" />}
                         <m.Ikonka className="w-[16px] h-[16px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.5} />
                         <span className="truncate">{m.nom}</span>
                       </>
@@ -280,17 +266,6 @@ export default function AdminShell() {
 
         <div className="p-3 border-t border-border space-y-1">
           <button
-            onClick={() => {
-              const newVal = !uch_D;
-              setUch_D(newVal);
-              localStorage.setItem('uchD', newVal ? 'on' : 'off');
-            }}
-            className="flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg text-text-dim hover:text-white hover:bg-white/5 transition-colors"
-          >
-            {uch_D ? <Eye className="w-[18px] h-[18px]" /> : <EyeOff className="w-[18px] h-[18px]" />}
-            <span className="text-sm font-medium">3D Fon: {uch_D ? 'ON' : 'OFF'}</span>
-          </button>
-          <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
           >
@@ -314,7 +289,7 @@ export default function AdminShell() {
         </div>
       )}
 
-      <main className="relative z-10 flex-1 overflow-hidden flex flex-col bg-transparent">
+      <main className="os-workspace relative z-10 flex-1 overflow-hidden flex flex-col">
         <Outlet />
       </main>
 

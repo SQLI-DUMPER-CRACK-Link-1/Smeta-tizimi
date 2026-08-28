@@ -60,16 +60,29 @@ export type NarxMarkaz = {
   farq_koef: number | null;
 };
 
-export function sbT2NarxMarkazOl(p?: {
+/**
+ * ⚠️ 2026-08-28 (Claude, tenant auditi): `kompaniyaId` QO'SHILDI.
+ *
+ * Avval bu funksiya kompaniya bo'yicha UMUMAN filtrlamasdi — narx
+ * markazi BARCHA mijozlarnikini qaytarardi. `t2_narx_markaz`
+ * ko'rinishida `kompaniya_id` ustuni BOR edi, shunchaki ishlatilmasdi.
+ *
+ * Narx — tijorat siri: bir mijoz boshqasining yetkazib beruvchi
+ * narxlarini ko'rishi mumkin edi.
+ *
+ * ⚠️ `kompaniyaId` MAJBURIY: ixtiyoriy bo'lsa chaqiruvchi unutadi va
+ * teshik jimgina qaytadi (shartnomada aynan shunday bo'lgan).
+ */
+export function sbT2NarxMarkazOl(kompaniyaId: number, p?: {
   faqatXavfli?: boolean; kat?: string; qidiruv?: string; limit?: number;
 }): Promise<SbJavob<NarxMarkaz>> {
-  const f: string[] = [];
+  const f: string[] = ['kompaniya_id=eq.' + kompaniyaId];
   if (p?.faqatXavfli) f.push('xavf=is.true');
   if (p?.kat) f.push('kat=eq.' + encodeURIComponent(p.kat));
   if (p?.qidiruv) f.push('nom=ilike.*' + encodeURIComponent(p.qidiruv) + '*');
   return sbOqi<NarxMarkaz>({
     jadval: 't2_narx_markaz',
-    filtr: f.join('&') || undefined,
+    filtr: f.join('&'),
     tartib: 'nom.asc',
     limit: p?.limit ?? 20000,
   });

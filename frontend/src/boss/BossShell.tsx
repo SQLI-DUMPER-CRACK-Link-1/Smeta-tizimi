@@ -3,9 +3,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { gas } from '../api/client';
 import ReactMarkdown from 'react-markdown';
-import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert, Bot, X, Send, Eye, EyeOff } from 'lucide-react';
+import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert, Bot, X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Sahna3D from '../kirish/Sahna3DXavfsiz';
 
 /* ⚠️ 2026-08-17 (audit): bu darcha AVVAL SOXTA MAKET edi — ichida qo'lda
    yozilgan «Toshkent City - Lot 4», «Sement M400: 45 000 000 so'm» kabi
@@ -34,7 +33,6 @@ export default function BossShell() {
   const [aiYuklanmoqda, setAiYuklanmoqda] = useState(false);
   const aiOxiriRef = useRef<HTMLDivElement>(null);
   const sess = useSessiya();
-  const [uch_D, setUch_D] = useState(() => localStorage.getItem('uchD') !== 'off');
 
   useEffect(() => {
     if (isAiOpen) aiOxiriRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -76,45 +74,33 @@ export default function BossShell() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#09090b] text-slate-200 relative">
-      {/* ⚠️ 2026-08-17: fon avval sahifa ichida (`AuroraBackground`) chizilardi
-          va admin qobig'idagi bilan birga IKKI WebGL canvas yashardi — bu
-          «Cannot read properties of null (reading 'alpha')» yiqilishining
-          ildizi edi (batafsil: `Umumiy.tsx` dagi AuroraBackground izohi).
-          Endi fon FAQAT qobiqda, bitta marta va `Sahna3DXavfsiz` orqali:
-          WebGL yiqilsa oddiy gradientga o'tadi, sahifa buzilmaydi. */}
-      {uch_D && (
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <Sahna3D />
-        </div>
-      )}
-      <div className="absolute inset-0 z-0 bg-black/40 pointer-events-none" />
+    <div className="os-app-shell flex h-screen overflow-hidden text-text relative">
 
       {/* LEFT SIDEBAR */}
-      <aside className="w-[260px] flex-shrink-0 flex flex-col bg-[#0c0c0f]/95 border-r border-white/10 backdrop-blur-3xl z-40 relative">
+      <aside className="os-sidebar w-[260px] flex-shrink-0 flex flex-col border-r backdrop-blur-3xl z-40 relative">
         {/* Brand */}
         <div className="h-20 flex items-center gap-3 px-6 border-b border-white/5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+          <div className="os-brand-mark w-10 h-10 rounded-xl flex items-center justify-center">
             <ShieldAlert className="text-white" size={20} />
           </div>
           <div>
-            <h1 className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-tight">SMETA GAS</h1>
-            <div className="text-[10px] text-accent font-bold tracking-[0.2em] uppercase">Boshqaruv</div>
+            <h1 className="text-[15px] font-bold text-text tracking-[.08em]">SMETA TIZIM 02</h1>
+            <div className="os-nav-label text-[10px] text-accent font-bold uppercase">Rahbar ish joyi</div>
           </div>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 flex flex-col gap-2 p-4 overflow-y-auto scrollbar-thin">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2">Asosiy Boshqaruv</div>
+          <div className="os-nav-label text-[10px] font-bold text-text-dim uppercase px-2 mb-2">Boshqaruv</div>
           
           <NavLink
             to="/boss"
             end
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              `os-nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[inset_4px_0_0_#3b82f6]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'os-nav-link--active'
+                  : ''
               }`
             }
           >
@@ -125,10 +111,10 @@ export default function BossShell() {
           <NavLink
             to="/boss/kadrlar"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              `os-nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[inset_4px_0_0_#10b981]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'os-nav-link--active'
+                  : ''
               }`
             }
           >
@@ -139,10 +125,10 @@ export default function BossShell() {
           <NavLink
             to="/boss/texnika"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              `os-nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[inset_4px_0_0_#a855f7]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'os-nav-link--active'
+                  : ''
               }`
             }
           >
@@ -153,10 +139,10 @@ export default function BossShell() {
           <NavLink
             to="/boss/taminot"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              `os-nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 shadow-[inset_4px_0_0_#eab308]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'os-nav-link--active'
+                  : ''
               }`
             }
           >
@@ -167,10 +153,10 @@ export default function BossShell() {
           <NavLink
             to="/boss/sifat"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              `os-nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/20 shadow-[inset_4px_0_0_#ef4444]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'os-nav-link--active'
+                  : ''
               }`
             }
           >
@@ -180,18 +166,7 @@ export default function BossShell() {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/5 space-y-2">
-          <button
-            onClick={() => {
-              const newVal = !uch_D;
-              setUch_D(newVal);
-              localStorage.setItem('uchD', newVal ? 'on' : 'off');
-            }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 border border-transparent transition-all"
-          >
-            {uch_D ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            <span className="font-semibold text-sm">3D Animatsiya: {uch_D ? 'ON' : 'OFF'}</span>
-          </button>
+        <div className="p-4 border-t border-border space-y-2">
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 border border-transparent transition-all"
@@ -203,7 +178,7 @@ export default function BossShell() {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 relative z-0 h-full overflow-hidden bg-transparent">
+      <main className="os-workspace flex-1 relative z-10 h-full overflow-hidden">
         <Outlet />
       </main>
 

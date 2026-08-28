@@ -48,6 +48,63 @@ body {
   font-family: Inter, system-ui, sans-serif;
 }
 
+html, body, #root { min-height: 100%; }
+
+/* Construction Command Center — umumiy qobiq.
+   Bu bezak emas: barcha rollar bir xil makonda ishlashi, holat ranglari
+   esa faqat biznes ma'nosini bildirishi uchun past-kontrastli tayanch. */
+.os-app-shell {
+  isolation: isolate;
+  background:
+    radial-gradient(85% 65% at 100% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 58%),
+    radial-gradient(70% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
+    var(--bg);
+}
+.os-app-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .28;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .55), transparent 76%);
+}
+.os-sidebar {
+  background: color-mix(in srgb, var(--surface) 92%, black);
+  border-color: color-mix(in srgb, var(--border) 80%, white 8%);
+  box-shadow: 18px 0 46px rgba(0, 0, 0, .16);
+}
+.os-workspace {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .012), transparent 34%);
+}
+.os-brand-mark {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 88%, white), var(--accent));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.os-context-bar {
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  border-color: color-mix(in srgb, var(--border) 75%, white 7%);
+}
+.os-nav-label { letter-spacing: .12em; }
+.os-nav-link {
+  border: 1px solid transparent;
+  color: var(--text-dim);
+}
+.os-nav-link:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, .035);
+}
+.os-nav-link--active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 27%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
 /* Base utility for numbers */
 .tabular-nums {
   font-variant-numeric: tabular-nums;

@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bot, X, Send, User, ChevronDown } from 'lucide-react';
-import { gas } from '../../api/client';
-import { useObyektlar } from '../../api/hooks';
+import { Bot, X, Send, User } from 'lucide-react';
+import { t2AiJarvisSavol } from '../../api/t2-ai';
 import ReactMarkdown from 'react-markdown';
 
 type Message = {
@@ -22,16 +21,13 @@ export function AiHelper() {
       role: 'ai',
       text:
         'Salom! Men **Jarvis** — shu tizimning yordamchisiman.\n\n' +
-        'Aniq raqam bilan javob beraman. Masalan:\n\n' +
+        'Joriy kompaniyadagi dalilli ma\'lumot bilan javob beraman. Masalan:\n\n' +
         '- Amfiteatrda bu oy qancha fakt bajarildi?\n' +
         '- Qaysi obyektda F2 orqada qolgan?\n' +
         '- Suniy ko\'lda qoldiq qancha?',
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedObyekt, setSelectedObyekt] = useState<string>('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { data: obyektlar } = useObyektlar();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,14 +35,6 @@ export function AiHelper() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen]);
-
-  // Avtomatik obyekt tanlash
-  // Avtomatik obyekt tanlash o'chirildi - AI o'zi barcha obyektlardan qidiradi
-  // useEffect(() => {
-  //   if (!selectedObyekt && obyektlar?.length) {
-  //     setSelectedObyekt(obyektlar[0].obyekt);
-  //   }
-  // }, [obyektlar, selectedObyekt]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -58,34 +46,18 @@ export function AiHelper() {
     setIsLoading(true);
 
     try {
-      // History format: [{role: 'user', parts: [{text: '...'}]}, {role: 'model', parts: [{text: '...'}]}]
-      const history = messages
-        .filter(m => m.id !== '1') // ilk xabarni olib tashlaymiz
-        .map(m => ({
-          role: m.role === 'ai' ? 'model' : 'user',
-          parts: [{ text: m.text }]
-        }));
-
-      const res = await gas<any>('apiTitanAi', {
-        obyekt: selectedObyekt,
-        text: userText,
-        history: history,
-        mode: 'auto'
-      });
-
-      /* ⚠️ GAS `{intent, text}` qaytaradi — `reply` EMAS. Avval `reply` qidirilgani
-       * uchun topilmay, xom JSON ekranga chiqib qolgan edi («{"intent":"system",…}»
-       * va ko'rinib qolgan `\n` belgilari). Endi to'g'ri maydon o'qiladi. */
-      const aiText =
-        typeof res === 'string'
-          ? res
-          : (res?.text || res?.reply || res?.javob || res?.error || 'Javob bo\'sh keldi');
+      const kompaniyaId = Number(window.localStorage.getItem('t2_kompaniya_id'));
+      if (!Number.isInteger(kompaniyaId) || kompaniyaId <= 0) {
+        throw new Error('Avval Tizim_02 ichida kompaniyani tanlang');
+      }
+      const res = await t2AiJarvisSavol(kompaniyaId, userText);
+      const aiText = res.ok ? (res.javob || 'Jarvis javob bo\'sh qaytardi') : (res.xabar || 'Jarvis javob bera olmadi');
 
       setMessages(prev => [...prev, { 
         id: (Date.now() + 1).toString(), 
         role: 'ai', 
         text: aiText,
-        source: typeof res === 'object' ? res?.source : undefined
+        source: res.dalil ? `${res.dalil.rpc} · kompaniya #${res.dalil.id}` : undefined,
       }]);
     } catch (err: any) {
       setMessages(prev => [...prev, { 
@@ -130,7 +102,7 @@ export function AiHelper() {
               <div>
                 <h3 className="font-semibold text-white text-sm">Jarvis AI</h3>
                 <p className="text-xs text-text-dim flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-ok"></span> Online
+                  <span className="w-1.5 h-1.5 rounded-full bg-ok"></span> Read-only beta
                 </p>
               </div>
             </div>
@@ -142,46 +114,13 @@ export function AiHelper() {
             </button>
           </div>
 
-          {/* Context Selector */}
+          {/* Jarvis beta only receives the selected Tizim_02 company ID.
+              This is intentionally not an object dropdown: an object ID without
+              a server-side tenant check could expose another company's data. */}
           <div className="px-4 py-2 border-b border-border bg-surface flex items-center gap-2 relative">
             <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/10 rounded-md border border-accent/20">
                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></div>
-               <span className="text-[10px] uppercase font-bold text-accent tracking-wider">Mantiqiy Qidiruv:</span>
-            </div>
-            
-            <div className="flex-1 relative">
-              <button 
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full flex items-center justify-between bg-transparent border-none text-sm text-white focus:outline-none cursor-pointer font-medium hover:bg-white/5 px-2 py-1 rounded-md transition-colors text-left"
-              >
-                <span className="truncate pr-2">
-                  {selectedObyekt ? `Aniq: ${selectedObyekt}` : 'Avto-aniqlash (Barcha obyektlar)'}
-                </span>
-                <ChevronDown size={14} className={`text-text-dim transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-                  <div className="absolute top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-[#0B0E14] border border-border/50 rounded-xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 scrollbar-thin">
-                    <button
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${!selectedObyekt ? 'bg-accent text-white font-medium' : 'text-slate-300 hover:bg-white/10'}`}
-                      onClick={() => { setSelectedObyekt(''); setIsDropdownOpen(false); }}
-                    >
-                      Avto-aniqlash (Barcha obyektlar)
-                    </button>
-                    {obyektlar?.map((o: any) => (
-                      <button
-                        key={o.obyekt}
-                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${selectedObyekt === o.obyekt ? 'bg-accent text-white font-medium' : 'text-slate-300 hover:bg-white/10'}`}
-                        onClick={() => { setSelectedObyekt(o.obyekt); setIsDropdownOpen(false); }}
-                      >
-                        {o.obyekt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+               <span className="text-[10px] uppercase font-bold text-accent tracking-wider">Jarvis beta · kompaniya konteksti</span>
             </div>
           </div>
 

@@ -7,10 +7,10 @@ export default function TestShell() {
     <KompaniyaProvider>
       <div className="flex flex-col h-full min-h-0 bg-transparent">
         {/* TIZIM_02 Kompaniya va Obyekt tanlash header'i */}
-        <div className="flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2
-                        bg-black/20 border-b border-border backdrop-blur-sm z-20">
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded
-                           bg-accent/20 text-accent text-[11px] font-bold tracking-wide">
+        <div className="os-context-bar flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2
+                        border-b backdrop-blur-sm z-20">
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md
+                           bg-accent/15 text-accent border border-accent/20 text-[10px] font-bold tracking-[.12em]">
             <FlaskConical size={13} /> SINOV
           </span>
           <KompaniyaTanlagich />
