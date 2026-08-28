@@ -35,6 +35,7 @@ const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
 const TestF2Import  = lazy(() => import('./test02/TestF2Import'));
 const TestF2        = lazy(() => import('./test02/TestF2'));
 const TestSklad     = lazy(() => import('./test02/TestSklad'));
+const TestZayavka   = lazy(() => import('./test02/TestZayavka'));
 const TestBirja     = lazy(() => import('./test02/TestBirja'));
 const TestInvite    = lazy(() => import('./test02/TestInvite'));
 const TestTolov     = lazy(() => import('./test02/TestTolov'));
@@ -133,6 +134,7 @@ export default function App() {
             <Route path="shartnomalar" element={<TestShartnoma />} />
             <Route path="tolov" element={<TestTolov />} />
             <Route path="sklad" element={<TestSklad />} />
+              <Route path="zayavka" element={<TestZayavka />} />
             <Route path="faktura" element={<TestFaktura />} />
             <Route path="erp" element={<TestErp />} />
             <Route path="hisobot" element={<TestHisobot />} />
