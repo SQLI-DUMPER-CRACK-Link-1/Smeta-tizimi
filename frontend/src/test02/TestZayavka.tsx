@@ -34,7 +34,7 @@ export default function TestZayavka() {
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formObyektId, setFormObyektId] = useState<string>(initialObyekt);
+  const [formObyektId, setFormObyektId] = useState('');
   const [formMaxsulot, setFormMaxsulot] = useState('');
   const [formMiqdor, setFormMiqdor] = useState('');
   const [formBirlik, setFormBirlik] = useState('metr');
@@ -67,6 +67,19 @@ export default function TestZayavka() {
   useEffect(() => {
     yukla();
   }, [joriy]);
+
+  // Xarita obyekt nomini query orqali yuboradi; RPC esa faqat obyekt ID qabul qiladi.
+  // Ro'yxat yuklangach nomni ID ga yechib, select qiymatini haqiqiy kalitga o'tkazamiz.
+  useEffect(() => {
+    if (!initialObyekt) {
+      setFormObyektId('');
+      return;
+    }
+    const obyekt = obyektlar.find((o) =>
+      String(o.id) === initialObyekt || o.nom === initialObyekt,
+    );
+    setFormObyektId(obyekt ? String(obyekt.id) : '');
+  }, [initialObyekt, obyektlar]);
 
   const handleYuborish = async () => {
     if (!joriy) return;
