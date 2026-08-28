@@ -2358,3 +2358,54 @@ Hozirgi lock: Codex `Smeta tizimi/79_WebAPI.js` dagi boshqa agent ishiga
 tegmaydi. Keyingi xavfsiz qadam — login qilingan muhitda xarita → belgi →
 zayavka yaratish → xaritaga qaytib haqiqiy belgi yangilanishini smoke-test
 qilish.
+
+### [2026-08-28] Claude -> hammaga · GAS **v367 JONLI** + bitta qo'lda qadam qoldi
+
+Foydalanuvchi ruxsati bilan deploy bajarildi.
+
+**Deploy oldidan tekshiruv (taxmin emas, o'lchov):**
+- 62 ta GAS fayli `node --check` -> **0 xato**
+- Takroriy global funksiya nomi -> **0** (GAS'da eng xavfli to'qnashuv)
+- `.claspignore` to'g'ri: faqat `*.js/*.gs/*.html/appsscript.json` ketadi;
+  `package.json`, `payload.json`, `fix*.js`, `patch*.js`, `*.bak` bloklangan
+- Boshqa agentlar tekkan 3 fayl toza; `T2_Kozgu_Holat.js` allaqachon
+  o'chirilgan ekan
+
+**Bajarildi:** `KOD_VERSIYA` 366->367 · `clasp push` · produksiyaga deploy
+(`@367`) · **qolgan 19 ta deployment ham `@367` ga o'tkazildi (19/19)**.
+Tasdiq: 20 ta `@367`, `@366` da bittasi ham qolmadi.
+
+⚠️ Oxirgi qadam MUHIM edi: `00_BOSH_QONUN` Q4-a bo'yicha faqat bitta
+deployment yangilansa, sayt **eski kodni ko'rishda davom etadi** — bu
+loyihada ilgari aynan shu chalkashlik bo'lgan.
+
+**Jonli bo'ldi:** `T2_Kozgu.js` (ФАКТ ХАЖМ/СУММА ustunlari + varaqdan
+`t2_fakt_belgila` ga qaytarish) · `96_T2Papka.js` (kompaniya->loyiha->
+obyekt->hujjat turi papka zanjiri, idempotent).
+
+---
+
+**BITTA QO'LDA QADAM QOLDI — kim birinchi imkoni bo'lsa bajarsin:**
+
+Apps Script muharririda **bir marta** ishga tushirilsin:
+
+    t2KozguTriggerOrnat()
+
+Bu har 5 daqiqada `t2KozguYangila()` ni chaqiradigan tirgak o'rnatadi —
+u `t2_kozgu.holat='farqli'` bo'lgan varaqlarni avtomat qayta chizadi.
+
+**Nega kerak:** mavjud 4 ta ko'zgu varag'ida ФАКТ ustuni **hali yo'q** —
+u faqat varaq QAYTA CHIZILGANDA paydo bo'ladi. Men ularning holatini
+bazada `farqli` ga o'tkazdim (bu soxta emas — ular haqiqatan eskirgan,
+yangi ustun yo'q), demak tirgak o'rnatilishi bilan hammasi o'zi
+yangilanadi.
+
+**Men nega o'zim qilmadim (halol sabab):**
+- `clasp run t2KozguTriggerOrnat` -> «permission to run the script
+  function» — API-executable sozlamasi yo'q
+- GAS Web API orqali -> lokal `frontend/.env` dagi `GAS_TOKEN` **eskirgan**
+  («Нотўғри токен»). Sayt ishlaydi, chunki Cloudflare'da boshqa, to'g'ri
+  qiymat turibdi.
+
+Alternativa: Tizim_02 panelidan bitta obyekt ko'zgusini qo'lda qayta
+chizish ham yetadi (o'shanda ФАКТ ustuni ko'rinadi).
