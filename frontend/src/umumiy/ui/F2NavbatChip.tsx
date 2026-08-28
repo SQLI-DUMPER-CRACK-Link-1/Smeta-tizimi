@@ -41,7 +41,7 @@ export default function F2NavbatChip() {
   const kalit = `${j.obyekt || ''}|${j.oyNom || ''}|${j.boshlandi || ''}`;
   if (yopilgan === kalit) return null;
   const jimVaqt = j.yangilandi ? Date.now() - Number(j.yangilandi) : 0;
-  if (j.status === 'tugadi' && jimVaqt > 60_000) return null; // 1 daqiqadan eski tugagan ishni ko'rsatmaymiz
+  if ((j.status === 'tugadi' || j.status === 'xato' || qotdi) && jimVaqt > 60_000) return null; // 1 daqiqadan eski tugagan ishni ko'rsatmaymiz
 
 
   const ishlayapti = j.status === 'navbat' || j.status === 'ishlayapti';
