@@ -1980,4 +1980,68 @@ bog'lanishi" ning **sklad qismi**. Loyiha (`t2_loyiha`) ↔ shartnoma
 (`t2_shartnoma.loyiha_id`) ↔ qatnashchi (`t2_loyiha_qatnashchi`, rol
 bilan zakazchik ham kiradi) — bularning HAMMASI ALLAQACHON bor edi
 (oldingi ishlarda). Yetishmayotgan yagona qism aynan shu — sklad/
-snabjeniya obyekt-siloslarini kesib o'tuvchi ko'rinish — endi bor. 
+snabjeniya obyekt-siloslarini kesib o'tuvchi ko'rinish — endi bor.
+
+### [2026-08-28] Claude -> Antigravity : ⚠️ MINDMAP TUBDAN QAYTA QURILDI (TestXarita.tsx)
+
+Foydalanuvchi: *"shartnoma, sklad qo'shish, shartnomalar bilan bog'lash,
+skladlar yaratish kabi narsalar qo'shib bo'lmayapdiku... avtopark qo'shish
+imkoniyati kerak... hamma narsani bog'lash shu mindmapda bo'lishi kerak...
+bog'lanishlar chiziqlar bilan tortib birlashtirilishi kerak. bu juda
+noto'g'ri ishlayapdi"*.
+
+⚠️ **Sening faylingni qayta yozdim** (`TestXarita.tsx`) — odatda
+tegmasdim, lekin foydalanuvchi to'g'ridan-to'g'ri shuni buyurdi va
+muammo arxitekturaviy edi, kosmetik emas. Sabab:
+- Mindmapda HECH NARSA yaratib bo'lmasdi (sklad/shartnoma/texnika/
+  kontragent qo'shish yo'q edi).
+- Obyekt ostidagi **"Sklad (WMS)" va "Shartnomalar" tugunlari DEKORATIV
+  edi** — hech qanday haqiqiy yozuvga bog'lanmagan, shunchaki boshqa
+  sahifaga `navigate()` qiladigan tugma. Ya'ni ekranda "obyektga sklad
+  bog'langan" deb KO'RINARDI, lekin bazada hech qanday bog'lanish
+  yo'q edi. Bu — Q1 qoidasining yumshoq shakli (ko'rsatilgan narsa
+  haqiqatga mos emas).
+
+**BACKEND (yangi, jonli sinalgan):**
+- `t2_mindmap_grafi(kompaniya_id)` — butun graf (8 tur tugun + 8 tur
+  bog'lanish) BITTA `STABLE` RPC'da. `/api/sb` ning `soro` yo'liga
+  qo'shildi (GET-only, Postgres o'zi yozuvchi funksiyani rad etadi).
+- `t2_mindmap_bog(tur, manba, maqsad, rol)` / `_bog_ochir(...)` —
+  yagona darvoza, `tur` QAT'IY oq ro'yxat. ⚠️ Yangi "universal edges"
+  jadvali ATAYLAB yaratilmadi — har bog'lanish o'z tabiiy jadvaliga
+  boradi (`t2_sklad_bog`, `t2_shartnoma_bog`, `t2_loyiha_qatnashchi`…),
+  aks holda mavjud FK/tekshiruvlar chetlab o'tilardi.
+- 7 bog'lanish turi: obyekt↔loyiha, shartnoma↔loyiha, shartnoma↔obyekt,
+  sklad↔obyekt, texnika↔obyekt, kadr↔obyekt, kontragent↔loyiha (rol bilan).
+
+**IKKI JONLI BUG topildi va tuzatildi:**
+1. **`t2_loyiha_yarat` IKKI XIL IMZODA edi** (4 va 5 parametrli) —
+   `CREATE OR REPLACE` parametr qo'shganda eskisini o'chirmaydi.
+   Natijada PostgREST byudjetsiz loyiha yaratmoqchi bo'lsa
+   *"function is not unique"* xatosi berardi — ya'ni **byudjetsiz
+   loyiha yaratish PRODUKSIYADA UMUMAN ISHLAMASDI**. Eskisi
+   `DROP FUNCTION` qilindi. (Bu — 2-marta shu tuzoqqa tushdik, oldingi
+   safar `t2_obyekt_yangila`da; **qoida: RPC parametr sonini
+   o'zgartirsangiz eski imzoni albatta DROP qiling**.)
+2. **`t2_shartnoma_bog` 1:1 edi** (`unique(obyekt_id)` +
+   `on conflict do update`) — bitta obyektga ikkinchi shartnoma
+   bog'lansa BIRINCHISINI JIM ALMASHTIRARDI. Qurilishda esa bitta
+   obyektda bosh shartnoma VA subpudrat shartnomalari birga bo'ladi.
+   M:N ga o'tkazildi (`holat` bilan, soft-unlink).
+
+**FRONTEND:** `t2-mindmap.ts` (yangi) + `TestXarita.tsx` (qayta yozildi):
+5 ustunli tuzilma (Kontragent → Loyiha → Shartnoma → Obyekt → Resurs),
+tugun chetidagi nuqtadan **chiziq tortib bog'lash**, chiziqni bosib
+uzish, 6 turdagi tugunni shu yerda yaratish. Obyekt ATAYLAB bu yerdan
+yaratilmaydi (Drive papka tuzilmasi kerak — yarim obyekt keyin smetada
+sinardi).
+
+⚠️ **Sen bilishing kerak**: `npm run build` bu muhitda OOM bilan
+yiqilyapti — LEKIN bu mening o'zgarishimdan EMAS, `git stash` bilan
+tekshirdim, o'zgarishsiz ham yiqiladi (`Sahna3D` ~1MB chunk + og'ir
+deps). `tsc -b` toza o'tadi. Buni alohida ko'rib chiqish kerak.
+
+Tekshirildi: `tsc` toza, `t2_kompaniya.test.cjs` 23/23,
+`t2_kodlash_yaxlitligi` 171 fayl toza, `t2_tenant_izolyatsiya` 15/15.
+Barcha 7 bog'lanish turi + noto'g'ri tur rad etilishi Supabase MCP
+orqali jonli sinaldi, sinov ma'lumoti tozalandi (0 qoldiq). 

@@ -152,6 +152,9 @@ export const onRequestPost: PagesFunction<{
       const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya'> = {
         ai_kontekst: 'obyekt',
         ai_umumiy: 'kompaniya',
+        /* ⚡ 2026-08-28: mindmap butun grafni (tugunlar + bog'lanishlar)
+           BITTA chaqiruvda oladi — jadval-jadval o'qish o'rniga. */
+        mindmap_grafi: 'kompaniya',
       };
       const tur = OQISH_RPC[so.soro];
       if (!tur) {

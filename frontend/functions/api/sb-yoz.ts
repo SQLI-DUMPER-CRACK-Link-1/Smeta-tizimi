@@ -99,7 +99,10 @@ const AMALLAR = {
   kompaniya_yangila: { rpc: 't2_kompaniya_yangila' },
   /* MATERIAL ALIASLARI — AI semantik qidiruv (2026-08-28). */
   material_alias_yoz: { rpc: 't2_material_alias_yoz' },
-  material_alias_ochir: { rpc: 't2_material_alias_ochir' }
+  material_alias_ochir: { rpc: 't2_material_alias_ochir' },
+  /* MINDMAP — chiziq tortib bog'lash/uzish (2026-08-28) */
+  mindmap_bog: { rpc: 't2_mindmap_bog' },
+  mindmap_bog_ochir: { rpc: 't2_mindmap_bog_ochir' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -1021,6 +1024,33 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
       }
       yuk = { p_id: id };
+
+    /* ══════════ MINDMAP — CHIZIQ TORTIB BOG'LASH ══════════
+       Foydalanuvchi: "bog'lanishlar chiziqlar bilan tortib
+       birlashtirilishi kerak". Bog'lanish turi QAT'IY oq ro'yxatdan —
+       RPC ichida ham qayta tekshiriladi (ikki qatlamli himoya). */
+    } else if (amal === 'mindmap_bog' || amal === 'mindmap_bog_ochir') {
+      const BOG_TURLARI = ['obyekt_loyiha', 'shartnoma_loyiha', 'shartnoma_obyekt',
+                           'sklad_obyekt', 'texnika_obyekt', 'kadr_obyekt', 'qatnashchi'];
+      const tur = String(so.tur || '');
+      const manbaId = Number(so.manba_id);
+      const maqsadId = Number(so.maqsad_id);
+      if (!BOG_TURLARI.includes(tur)) {
+        return Response.json({ ok: false, error: 'noma\'lum bog\'lanish turi: ' + tur });
+      }
+      if (!Number.isFinite(manbaId) || manbaId <= 0 || !Number.isFinite(maqsadId) || maqsadId <= 0) {
+        return Response.json({ ok: false, error: 'manba_id yoki maqsad_id noto\'g\'ri' });
+      }
+      const ROLLAR = ['zakazchik', 'bosh_pudratchi', 'subpudratchi', 'loyihachi', 'taminotchi'];
+      if (amal === 'mindmap_bog') {
+        const rol = so.rol && ROLLAR.includes(String(so.rol)) ? String(so.rol) : null;
+        if (tur === 'qatnashchi' && !rol) {
+          return Response.json({ ok: false, error: 'qatnashchi bog\'lanishida rol majburiy' });
+        }
+        yuk = { p_tur: tur, p_manba_id: manbaId, p_maqsad_id: maqsadId, p_rol: rol };
+      } else {
+        yuk = { p_tur: tur, p_manba_id: manbaId, p_maqsad_id: maqsadId };
+      }
 
     /* ══════════ ФАКТ KIRITISH (bajarilgan ish) ══════════
        Foydalanuvchi: «ikkalasi ham bo'lishi kerak» — prorab kunlik ham,
