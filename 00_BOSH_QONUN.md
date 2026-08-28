@@ -614,3 +614,35 @@ o'chirish man etiladi.*
 # 8-QONUN: BITCOIN-DARAJASIDAGI XAVFSIZLIK (Yangi tahrir)
 Hech qachon tizim URLlarida, API chaqiruvlarida yoki bazaning tashqi qatlamlarida osongina bashorat qilish mumkin bo'lgan inkremental ID'lar (1, 2, 3...) ishlatilmasligi shart.
 Barcha xavfsizlik va ajratish (multi-tenancy) mantig'i Bitcoin kabi ishonchli kriptografiyaga tayanishi kerak. Asosiy jadvallar (Kompaniya, Obyekt, Shartnoma) uchun identifikatorlar UUIDv4 (128-bit) yordamida himoyalanishi, va Supabase RLS siyosatlari shu UUID asnosida qurilishi kerak. Bu har qanday tashqi urinishlar (IDOR) yoki "tahmin qilish" xavfini butunlay yo'q qiladi.
+
+> ⚠️ **MUHARRIR IZOHI (Claude, 2026-08-28) — bu bilan ZIDDIYAT TOPILDI, hal qilinmagan holda qoldirilmoqda (o'zim o'zim g'olib deb e'lon qilmayapman, bu faylning o'z qoidasiga ziddir):**
+>
+> `MASTER_REJA_ENTERPRISE_OS.md` (0-A bo'limi) da shu taklif BATAFSIL
+> texnik sabab bilan RAD ETILGAN va REJADAN OLIB TASHLANGAN edi (bu
+> yozuvdan OLDIN yozilgan bo'lishi kerak, sana bir xil kunga to'g'ri
+> kelgani uchun tartib aniq emas). Qisqacha sabab:
+> 1. UUID o'zi IDOR'dan HIMOYA QILMAYDI — faqat ID'ni **taxmin
+>    qilishni** qiyinlashtiradi. Haqiqiy himoya — SERVER har so'rovda
+>    "bu foydalanuvchi shu yozuvga tegishli kompaniyaga a'zomi" deb
+>    TEKSHIRISHI. Bu ALLAQACHON qurilgan va ishlaydi (`sb.ts`/
+>    `sb-yoz.ts`, "Auth Session -> User -> Tenant -> Role" poydevori,
+>    2026-08-27/28 commitlari) — UUID bo'lmasa ham IDOR yopilgan.
+> 2. "Supabase RLS shu UUID asosida" — bu ARXITEKTURAVIY ISHLAMAYDI:
+>    hamma so'rov `service_role` kaliti bilan ketadi (Cloudflare
+>    Pages Functions orqali), u RLS'ni AVTOMATIK BYPASS qiladi
+>    (Supabase'da BYPASSRLS). RLS policy yozish HOZIRGI arxitekturada
+>    (Supabase Auth ishlatilmaydi, custom HMAC cookie session) hech
+>    qanday HIMOYA QO'SHMAYDI — faqat "himoyalangan" degan noto'g'ri
+>    taassurot beradi.
+> 3. `t2_loyiha`ga aynan shu UUID taklifi (`01_T2_LOYIHA_MIGRATSIYA.sql`)
+>    allaqachon bir marta amalda RAD ETILGAN (`tizim02/MULOQOT.md`,
+>    "QAROR: bigint qoldi" — 2026-08-28), chunki UUID'ga o'tish
+>    RLS policy `request.jwt.claims`ga tayangan, biz esa Supabase
+>    Auth ISHLATMAYMIZ.
+>
+> **Hal qilinmagan savol foydalanuvchiga**: shu 8-QONUN band KUCHDA
+> qoladimi (shunda yangi jadvallar — `t2_kontragent`, `t2_kadr_mustaqil`
+> va h.k. — UUID'ga o'tkazilishi kerak bo'ladi, KATTA qayta yozish) yoki
+> bekor qilinadimi (yuqoridagi texnik sabab bilan)? Ikkala hujjat ham
+> o'zini "eng yuqori" deb hisoblaydi — bu ZIDDIYATNING O'ZI ham
+> muammo: kelajakda ikkita "bosh qonun" fayli bo'lmasligi kerak.
