@@ -10,8 +10,16 @@ import { toast } from '../umumiy/ui/Toast';
 import {
   sbMindmapGrafOl, sbMindmapBog, sbMindmapBogOchir, sbMindmapTugunYarat,
   sbMindmapJoylashuvSaqla, sbMindmapTugunOchir, bogTuriniTop, RUXSAT_BOGLANISH, OCHIRSA_BOLADI,
-  type MindmapGraf, type MindmapTugun, type TugunTur,
+  type MindmapGraf, type MindmapTugun, type TugunTur, type MindmapBelgi,
 } from '../api/t2-mindmap';
+
+/* Belgi turi → tugundagi qisqa yozuv. To'liq matn `title` da ko'rinadi. */
+const BELGI_QISQA: Record<MindmapBelgi['tur'], string> = {
+  zayavka:   'zayavka',
+  narx_yoq:  'narxsiz',
+  kozgu:     'ko\'zgu eski',
+  smeta_yoq: 'smeta yo\'q',
+};
 
 /* ⚡ 2026-08-28 (2-bosqich) — foydalanuvchi shikoyatlari bo'yicha:
  *
@@ -448,13 +456,37 @@ export default function TestXarita() {
                   (nishon ? 'ring-2 ring-sky-400/70' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
                 style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
                 
-                  {/* Bildirishnoma / Zayavka (Tick) */}
-                  {(t.meta?.zayavka || t.meta?.bildirishnoma || (t.tur === 'obyekt' && t.nom.includes('Yangi'))) && (
-                    <div className="absolute -top-2 -left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-[#111827] shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse flex items-center gap-1 z-20">
-                      <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                      {t.meta?.zayavka || t.meta?.bildirishnoma || (t.tur === 'obyekt' && t.nom.includes('Yangi') ? '90m parog (Zayavka)' : '')}
-                    </div>
-                  )}
+                  {/* ⚠️ 2026-08-28 (Claude) — SOXTA BELGI OLIB TASHLANDI.
+                      Avval shart bunday edi:
+                        t.tur === 'obyekt' && t.nom.includes('Yangi')
+                      va ekranga QATTIQ YOZILGAN «90m parog (Zayavka)»
+                      chiqarilardi. Ya'ni nomida «Yangi» bo'lgan har qanday
+                      obyekt hech qanday zayavkasiz ham bildirishnoma
+                      ko'rsatardi — bu loyihaning eng qat'iy qoidasini
+                      (soxta ma'lumot) buzardi.
+
+                      Endi belgilar bazada HAQIQIY manbadan hisoblanadi
+                      (`t2_mindmap_grafi` → `meta.belgi`): kutilayotgan
+                      zayavka, narxsiz qator, eskirgan ko'zgu, yuklanmagan
+                      smeta. Manba bo'sh bo'lsa belgi CHIQMAYDI. */}
+                  {(() => {
+                    const belgilar = (t.meta?.belgi ?? []) as MindmapBelgi[];
+                    if (!belgilar.length) return null;
+                    const ogoh = belgilar.some((b) => b.daraja === 'ogoh');
+                    return (
+                      <div
+                        title={belgilar.map((b) => '• ' + b.matn).join('\n')}
+                        className={'absolute -top-2 -left-2 text-white text-[10px] font-bold ' +
+                          'px-2 py-0.5 rounded-full border-2 border-[#111827] shadow-lg ' +
+                          'flex items-center gap-1 z-20 ' +
+                          (ogoh ? 'bg-amber-500' : 'bg-sky-500')}>
+                        <span className="w-1.5 h-1.5 bg-white rounded-full" />
+                        {belgilar.length === 1
+                          ? (belgilar[0].soni ?? '') + ' ' + BELGI_QISQA[belgilar[0].tur]
+                          : belgilar.length + ' ogohlantirish'}
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex items-center gap-1.5 font-semibold text-[12px] truncate" style={{ color: rang }}>
                   <Ik size={13} className="flex-shrink-0" /><span className="truncate">{t.nom}</span>

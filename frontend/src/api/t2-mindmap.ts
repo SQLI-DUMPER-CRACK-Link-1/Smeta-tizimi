@@ -35,12 +35,54 @@ export type BogTur =
   | 'kadr_obyekt'        // manba=kadr,       maqsad=obyekt
   | 'qatnashchi';        // manba=kontragent, maqsad=loyiha
 
+/* ⚡ 2026-08-28 (Claude) — foydalanuvchi maqsadi (audit hujjatida):
+ * «rahbar mindmapni ochsa butun tashkilot holatini ko'rsin; PTO
+ * Amfiteatrga 90m parapet zayavka qilsa — o'sha obyektda tick/
+ * bildirishnoma paydo bo'lsin».
+ *
+ * Avval tugunda faqat `lat/lng/versiya` bor edi — rahbar NOMLARNI
+ * ko'rardi, AHVOLNI emas. Endi har tugun o'z holatini olib yuradi.
+ *
+ * ⚠️ Belgilar HAQIQIY manbadan hisoblanadi, to'qilmaydi:
+ *     zayavka  → t2_erp_taminot (holat='kutilmoqda')
+ *     narx_yoq → t2_qator (narx IS NULL)
+ *     kozgu    → t2_kozgu (holat='farqli')
+ *     smeta_yoq→ obyektda umuman resurs qatori yo'q
+ * Manba bo'sh bo'lsa belgi CHIQMAYDI (bo'sh massiv), soxta 0 emas. */
+export type BelgiTur = 'zayavka' | 'narx_yoq' | 'kozgu' | 'smeta_yoq';
+
+export type MindmapBelgi = {
+  tur: BelgiTur;
+  /** `info` — e'tibor talab qiladi; `ogoh` — muammo. */
+  daraja: 'info' | 'ogoh';
+  matn: string;
+  soni?: number;
+};
+
+/** Obyekt tuguni metasi — rahbar ko'radigan holat. */
+export type ObyektMeta = {
+  lat: number | null; lng: number | null;
+  versiya: number; loyiha_id: number | null;
+  /** `rz` darajasidan (takror-hisobsiz). Smeta yuklanmagan bo'lsa `null`. */
+  smeta: number | null;
+  resurs_qatori: number;
+  narxsiz: number;
+  /** `false` — jami TO'LIQ EMAS, moliyaviy qaror uchun ishlatilmasin. */
+  toliq: boolean;
+  fakt: number; f2: number;
+  /** Smeta 0/`null` bo'lsa `null` — yolg'on «0%» ko'rsatilmaydi. */
+  fakt_foiz: number | null; f2_foiz: number | null;
+  zayavka: number;
+  kozgu: string | null;
+  belgi: MindmapBelgi[];
+};
+
 export type MindmapTugun = {
   /** "tur:id" ko'rinishida, masalan "obyekt:6" */
   id: string;
   tur: TugunTur;
   nom: string;
-  meta: Record<string, any> | null;
+  meta: (Record<string, any> & Partial<ObyektMeta>) | null;
   /** Saqlangan joylashuv. NULL — hali qo'lda terilmagan, avtomatik joylashtiriladi. */
   x: number | null;
   y: number | null;
@@ -50,7 +92,31 @@ export type MindmapBogich = {
   manba: string; maqsad: string; tur: BogTur; uzsa_boladi: boolean;
 };
 
-export type MindmapGraf = { tugunlar: MindmapTugun[]; bogichlar: MindmapBogich[] };
+/** Butun tashkilot bo'yicha bir qarashda ko'riladigan jamlanma. */
+export type MindmapJamlanma = {
+  obyekt_soni: number;
+  smeta_jami: number | null;
+  fakt_jami: number;
+  f2_jami: number;
+  zayavka_kutilmoqda: number;
+  /** Nechta obyektda narxsiz qator bor — ya'ni jami to'liq emas. */
+  narxsiz_obyekt: number;
+  smetasiz_obyekt: number;
+  kozgu_eskirgan: number;
+};
+
+export type MindmapGraf = {
+  tugunlar: MindmapTugun[];
+  bogichlar: MindmapBogich[];
+  jamlanma?: MindmapJamlanma;
+};
+
+/** Tugundagi eng jiddiy belgi — tugun rangini shu belgilaydi. */
+export function belgiDarajasi(t: MindmapTugun): 'ogoh' | 'info' | null {
+  const b = t.meta?.belgi as MindmapBelgi[] | undefined;
+  if (!b?.length) return null;
+  return b.some((x) => x.daraja === 'ogoh') ? 'ogoh' : 'info';
+}
 
 /** Butun kompaniya grafi — BITTA so'rovda (zero re-fetch). */
 export async function sbMindmapGrafOl(kompaniyaId: number): Promise<

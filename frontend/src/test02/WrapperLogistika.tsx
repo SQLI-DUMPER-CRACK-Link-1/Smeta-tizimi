@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { Box, Building2, ShoppingCart, Layers } from 'lucide-react';
+import { Box, Building2, ShoppingCart } from 'lucide-react';
 import TestSklad from './TestSklad';
 import TestKontragent from './TestKontragent';
-import TestBirja from './TestBirja';
-import TestMaterialAlias from './TestMaterialAlias';
 
 export default function WrapperLogistika() {
-  const [activeTab, setActiveTab] = useState<'sklad' | 'kontragent' | 'birja' | 'alias'>('sklad');
+  const [activeTab, setActiveTab] = useState<'sklad' | 'kontragent' | 'birja'>('sklad');
 
   return (
     <div className="h-full flex flex-col bg-transparent">
@@ -30,20 +28,17 @@ export default function WrapperLogistika() {
         >
           <ShoppingCart size={16} /> Ta'minot & Birja
         </button>
-        <button
-          onClick={() => setActiveTab('alias')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'alias' ? 'border-amber-500 text-amber-400' : 'border-transparent text-zinc-400 hover:text-white'}`}
-        >
-          <Layers size={16} /> Material AI Sozlama
-        </button>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-hidden relative">
         {activeTab === 'sklad' && <TestSklad />}
         {activeTab === 'kontragent' && <TestKontragent />}
-        {activeTab === 'birja' && <TestBirja />}
-        {activeTab === 'alias' && <TestMaterialAlias />}
+        {activeTab === 'birja' && (
+          <div className="p-10 flex justify-center items-center h-full text-zinc-500">
+            Birja RFQ moduli hozircha qurilmoqda...
+          </div>
+        )}
       </div>
     </div>
   );

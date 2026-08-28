@@ -1,7 +1,7 @@
 {
   "_izoh": [
     "KIM NIMANI OLGAN — mashina o'qiydigan holat.",
-    "Ikki agent (Claude va Antigravity) bir vaqtda ishlaydi. Bu fayl",
+    "UCH agent (Claude, Antigravity, Codex) bir vaqtda ishlaydi. Bu fayl",
     "ularning HUDUDINI belgilaydi: bir domenni ikkovi olsa, bir-birining",
     "ishini bosib ketadi.",
     "",
@@ -11,15 +11,33 @@
   "agentlar": {
     "claude": {
       "nom": "Claude (Opus)",
-      "kuchi": "Tizim_01 kodidan qoida arxeologiyasi, moliyaviy invariantlar, migratsiya",
+      "kuchi": "Tizim_01 kodidan qoida arxeologiyasi, moliyaviy invariantlar, SQL/RPC, migratsiya",
       "cheklovi": "Haftalik limit — uzilib qolishi mumkin. Uzilsa ishi MULOQOT.md da yozilgan bo'ladi."
     },
     "antigravity": {
       "nom": "Antigravity",
       "kuchi": "Keng qamrov, UI, CRUD domenlari, uzluksiz ishlash",
       "cheklovi": "Tizim_01 ning nozik moliyaviy qoidalariga tegmaydi (pastdagi TAQIQ ro'yxati)"
+    },
+    "codex": {
+      "nom": "Codex",
+      "kuchi": "Sifat va tozalik: testlar, refaktoring, tiplar, o'lik kod, xato tuzatish, hujjat",
+      "cheklovi": "Yangi DOMEN ochmaydi va sxema o'zgartirmaydi (SQL — Claude'da). Ish natijasi HAR DOIM test bilan tasdiqlanadi.",
+      "_2026_08_28": "Jamoaga yangi qo'shildi — foydalanuvchi qarori."
     }
   },
+  "_2026_08_28_UCHGA_BOLINDI": [
+    "Foydalanuvchi: «codex ham saflaringa qo'shildi, unga ham ish berilishi",
+    "kerak; codex/antigravity/claude o'rtasida ishlarni bo'lib olish kerak».",
+    "",
+    "TAQSIMOT MANTIG'I — domen emas, QATLAM bo'yicha (shunda bir faylni",
+    "ikkovi ochmaydi):",
+    "  claude       → SQL/RPC/migratsiya, moliyaviy invariantlar, ko'prik (GAS)",
+    "  antigravity  → UI sahifalari (.tsx), ekran oqimi, dizayn",
+    "  codex        → testlar, tiplar, refaktoring, o'lik kod, build sifati",
+    "",
+    "UMUMIY FAYLLARDA qoida avvalgidek: faqat O'Z QATORINGNI qo'sh."
+  ],
   "_2026_08_27_PIVOT": [
     "FOYDALANUVCHI TASDIQLADI: hamma kichik feature-ish TO'XTATILDI.",
     "Ikkala agent ham FAQAT haqiqiy multi-tenant poydevoriga (Auth",

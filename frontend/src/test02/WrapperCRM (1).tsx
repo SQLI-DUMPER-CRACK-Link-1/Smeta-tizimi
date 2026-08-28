@@ -2,14 +2,21 @@ import React, { useState } from 'react';
 import { Mail, Building, Users } from 'lucide-react';
 import TestKorrespondensiya from './TestKorrespondensiya';
 import TestSotuvCrm from './TestSotuvCrm';
+import TestInvite from './TestInvite';
 
 export default function WrapperCRM() {
-  const [activeTab, setActiveTab] = useState<'edo' | 'sotuv'>('edo');
+  const [activeTab, setActiveTab] = useState<'edo' | 'sotuv' | 'invite'>('invite');
 
   return (
     <div className="h-full flex flex-col bg-transparent">
       {/* Wrapper Tabs */}
       <div className="flex items-center gap-2 px-6 pt-4 border-b border-white/10 bg-black/20">
+        <button
+          onClick={() => setActiveTab('invite')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'invite' ? 'border-sky-500 text-sky-400' : 'border-transparent text-zinc-400 hover:text-white'}`}
+        >
+          <Users size={16} /> Taklif va Bog'lanish
+        </button>
         <button
           onClick={() => setActiveTab('edo')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'edo' ? 'border-sky-500 text-sky-400' : 'border-transparent text-zinc-400 hover:text-white'}`}
@@ -26,6 +33,7 @@ export default function WrapperCRM() {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden relative">
+        {activeTab === 'invite' && <TestInvite />}
         {activeTab === 'edo' && <TestKorrespondensiya />}
         {activeTab === 'sotuv' && <TestSotuvCrm />}
       </div>
