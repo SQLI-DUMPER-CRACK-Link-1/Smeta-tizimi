@@ -91,6 +91,16 @@ const RUXSAT_JADVALLAR = new Set([
      MASTER_REJA_ENTERPRISE_OS.md "0-A" tahlili). "M200"/"Бетон М200"/
      "М-200" bitta kanonik nom_key'ga ishora qiladi. */
   't2_material_alias_royxat',
+  /* ZAYAVKA (ta'minot) — auditda topilgan bo'shliq yopildi (2026-08-28):
+     `t2_erp_taminot` jadvali bor edi, lekin `t2_erp_amal` RPC bazada
+     UMUMAN yo'q edi → yozish 404 berardi. */
+  't2_zayavka_royxat',
+  /* HODISA LENTASI — rahbar «nima sodir bo'ldi» ni ko'radi.
+     `t2_audit_log` ga endi TRIGGER yozadi; avval 0 qator edi, chunki
+     `t2_audit_yoz` ni hech kim chaqirmasdi (auditda qayd etilgan). */
+  't2_hodisa_lenta',
+  /* PAPKA TUZILMASI — Drive va mindmap AYNI manbadan o'qiydi. */
+  't2_papka_daraxt', 't2_hujjat_turi',
   /* OVERBILLING RADORI (MASTER_REJA FAZA 5, band 50, 2026-08-28):
      F2 faktdan yoki (manfiy bo'lmagan) smetadan oshib ketgan qatorlar —
      FAQAT ko'rish uchun, yozishda bloklanmaydi (foydalanuvchi qarori:

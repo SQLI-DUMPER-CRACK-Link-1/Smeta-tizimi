@@ -1328,7 +1328,12 @@ export const onRequestPost: PagesFunction<{
       yuk = {
         p_kompaniya_id: Number(so.kompaniya_id || 0),
         p_operatsiya: String(so.operatsiya || ''),
-        p_payload: so.payload ? JSON.stringify(so.payload) : JSON.stringify(so)
+        p_payload: so.payload ? JSON.stringify(so.payload) : JSON.stringify(so),
+        /* ⚡ 2026-08-28: audit jurnali «kim» ni ham bilishi kerak.
+           Busiz «nima bo'ldi» ma'lum, «kim qildi» noma'lum qolardi va
+           jurnal javobgarlik uchun yaroqsiz bo'lardi. RPC buni
+           `t2.kim` sozlamasiga yozadi, triggerlar o'shandan o'qiydi. */
+        p_kim: sess.email || null
       };
 
     } else if (amal === 'boss_tahlil_boshla') {
