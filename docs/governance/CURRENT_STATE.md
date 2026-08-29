@@ -5,14 +5,14 @@ the same change that changes the state. Last checked: 2026-08-30.
 
 | Field | Current value |
 |---|---|
-| `main_sha` | `5c78421c36fb567cb0dad6e761cba4701d6ff3fe` |
-| `production_frontend` | Cloudflare Pages, Vite/React app in `frontend/`; deployment health not asserted by this governance change |
+| `main_sha` | `1ef268c5b7ad9b2705bebf0fc0854b0d0628fa8c` |
+| `production_frontend` | Cloudflare Pages `smeta-tizimi.pages.dev`; release hook triggered, serving new asset hash still pending verification |
 | `production_db` | Supabase/Postgres project `tuoyrzadkgoltpqkdiyx`; live catalog is authoritative, repository migration history has known drift |
-| `working` | Governance V2 is being prepared from `main`; production writes and deploys are disabled |
+| `working` | Day-end release commit `1ef268c`; production DB writes remain disabled |
 | `broken` | Disposable Supabase branch is unavailable; live-vs-repository schema/deployment verification remains pending |
-| `active_tasks` | `ops/ACTIVE_TASKS.json` (task-level locks; no domain ownership is inferred) |
-| `branches_not_merged` | `codex/agent-governance-v2`, plus other branches reported by Git; merge status must be checked against `main_sha` before release |
-| `next_release` | Review governance files and run `node ops/governance-check.cjs`; then obtain human approval for any production action |
+| `active_tasks` | No release-scoped task remains active; historical task records are in `ops/ACTIVE_TASKS.json` |
+| `branches_not_merged` | `codex/design-system-v1`, `codex/universal-estimate-engine-v1`; explicitly excluded from this release |
+| `next_release` | Confirm Cloudflare deployment status/asset hash and perform authenticated production smoke test |
 
 ## Evidence boundary
 
