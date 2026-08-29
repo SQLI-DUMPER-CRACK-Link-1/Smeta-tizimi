@@ -10,6 +10,7 @@ import { toast } from '../umumiy/ui/Toast';
 import { pulQisqa } from '../lib/format';
 import { sbObyektHodisalariOl, qachon, MODUL_RANG, type Hodisa } from '../api/t2-hodisa';
 import { onEntityChanged } from '../api/entity-consistency';
+import { mindmapCreateValidation, mindmapEntityNodeId, mindmapRoleValidation } from './mindmap-create-ux';
 import {
   sbMindmapGrafOl, sbMindmapBog, sbMindmapBogOchir, sbMindmapTugunYarat,
   sbMindmapJoylashuvSaqla, sbMindmapTugunOchir, bogTuriniTop, RUXSAT_BOGLANISH, OCHIRSA_BOLADI,
@@ -145,6 +146,12 @@ export default function TestXarita() {
   const [yaratModal, setYaratModal] = useState<TugunTur | null>(null);
   const [maydonlar, setMaydonlar] = useState<Record<string, string>>({});
   const [rolModal, setRolModal] = useState<{ manbaId: number; maqsadId: number } | null>(null);
+  const [rolTanlov, setRolTanlov] = useState('');
+  const [rolSaqlanmoqda, setRolSaqlanmoqda] = useState(false);
+  const [rolXato, setRolXato] = useState('');
+  const [boglanishSaqlanmoqda, setBoglanishSaqlanmoqda] = useState(false);
+  const [yaratSaqlanmoqda, setYaratSaqlanmoqda] = useState(false);
+  const [yaratXato, setYaratXato] = useState('');
   const [tanlangan, setTanlangan] = useState<string | null>(null);
   const [tanlanganBog, setTanlanganBog] = useState<MindmapGraf['bogichlar'][number] | null>(null);
   const [obyektHodisalari, setObyektHodisalari] = useState<Hodisa[]>([]);
@@ -319,7 +326,12 @@ export default function TestXarita() {
       qoida = teskari;
       const v = mId; mId = qId; qId = v;
     }
-    if (qoida.tur === 'qatnashchi') { setRolModal({ manbaId: mId, maqsadId: qId }); return; }
+    if (qoida.tur === 'qatnashchi') {
+      setRolXato('');
+      setRolTanlov('');
+      setRolModal({ manbaId: mId, maqsadId: qId });
+      return;
+    }
 
     const targetNode = graf.tugunlar.find((t) => t.id === qoida!.maqsad + ':' + qId);
     const expectedVersion = Number(targetNode?.meta?.versiya);
@@ -327,23 +339,49 @@ export default function TestXarita() {
       toast('Tugun versiyasi mavjud emas, qayta yuklang', 'danger');
       return;
     }
-    const nat = await sbMindmapBog(aktKomp, qoida.tur, mId, qId, expectedVersion);
-    if (nat.ok) { toast(qoida.nom + ' — bajarildi', 'ok'); yukla(); }
-    else toast(nat.error || 'Bog\'lanmadi', 'danger');
+    if (boglanishSaqlanmoqda) return;
+    setBoglanishSaqlanmoqda(true);
+    try {
+      const nat = await sbMindmapBog(aktKomp, qoida.tur, mId, qId, expectedVersion);
+      if (nat.ok) { toast(qoida.nom + ' — bajarildi', 'ok'); await yukla(); }
+      else toast(nat.error || 'Bog\'lanmadi', 'danger');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'danger');
+    } finally {
+      setBoglanishSaqlanmoqda(false);
+    }
   };
 
-  const rolniTasdiqla = async (rol: string) => {
+  const rolniTasdiqla = async () => {
     if (!rolModal) return;
+    const rolXabari = mindmapRoleValidation(rolTanlov);
+    if (rolXabari) { setRolXato(rolXabari); return; }
     const target = graf.tugunlar.find((t) => t.id === 'loyiha:' + rolModal.maqsadId);
     const expectedVersion = Number(target?.meta?.versiya);
     if (!target || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
       toast('Loyiha versiyasi mavjud emas, qayta yuklang', 'danger');
       return;
     }
-    const r = await sbMindmapBog(aktKomp, 'qatnashchi', rolModal.manbaId, rolModal.maqsadId, expectedVersion, rol);
-    setRolModal(null);
-    if (r.ok) { toast('Qatnashchi biriktirildi', 'ok'); yukla(); }
-    else toast(r.error || 'Bog\'lanmadi', 'danger');
+    if (rolSaqlanmoqda) return;
+    setRolSaqlanmoqda(true);
+    setRolXato('');
+    try {
+      const r = await sbMindmapBog(aktKomp, 'qatnashchi', rolModal.manbaId, rolModal.maqsadId, expectedVersion, rolTanlov);
+      if (r.ok) {
+        setRolModal(null);
+        toast(`Qatnashchi biriktirildi · ${rolTanlov}`, 'ok');
+        await yukla();
+      } else {
+        setRolXato(r.error || 'Bog\'lanmadi');
+        toast(r.error || 'Bog\'lanmadi', 'danger');
+      }
+    } catch (error) {
+      const xabar = error instanceof Error ? error.message : String(error);
+      setRolXato(xabar);
+      toast(xabar, 'danger');
+    } finally {
+      setRolSaqlanmoqda(false);
+    }
   };
 
   const chiziqUz = async (b: MindmapGraf['bogichlar'][number]) => {
@@ -362,9 +400,37 @@ export default function TestXarita() {
 
   const tugunYarat = async () => {
     if (!yaratModal || !aktKomp) return;
-    const r = await sbMindmapTugunYarat(yaratModal, aktKomp, maydonlar);
-    if (r.ok) { toast('Yaratildi', 'ok'); setYaratModal(null); setMaydonlar({}); yukla(); }
-    else toast(r.error || 'Yaratilmadi', 'danger');
+    const maydonlarTarifi = YARATSA_BOLADI.find((y) => y.tur === yaratModal)?.maydonlar || [];
+    const validatsiyaXatosi = mindmapCreateValidation(yaratModal, maydonlarTarifi, maydonlar);
+    if (validatsiyaXatosi) { setYaratXato(validatsiyaXatosi); return; }
+    if (yaratSaqlanmoqda) return;
+    setYaratSaqlanmoqda(true);
+    setYaratXato('');
+    try {
+      const r = await sbMindmapTugunYarat(yaratModal, aktKomp, maydonlar);
+      if (r.ok) {
+        const entityId = mindmapEntityNodeId(yaratModal, r.entity_id);
+        const nom = maydonlar.nom.trim();
+        setYaratModal(null);
+        setMaydonlar({});
+        if (entityId) setTanlangan(entityId);
+        await yukla();
+        const id = entityId?.split(':')[1];
+        const ochish = id && SAHIFA_YOLI[yaratModal]
+          ? { label: 'Bo\'limda ochish', onClick: () => navigate(SAHIFA_YOLI[yaratModal]!(Number(id), nom)) }
+          : undefined;
+        toast(`${TUR_NOM[yaratModal]} #${id || '—'} yaratildi`, 'ok', undefined, 10000, ochish);
+      } else {
+        setYaratXato(r.error || 'Server create so\'rovini rad etdi');
+        toast(r.error || 'Yaratilmadi', 'danger');
+      }
+    } catch (error) {
+      const xabar = error instanceof Error ? error.message : String(error);
+      setYaratXato(xabar);
+      toast(xabar, 'danger');
+    } finally {
+      setYaratSaqlanmoqda(false);
+    }
   };
 
   /** Hammasini ustunlarga qayta terib SAQLAYDI */
@@ -507,7 +573,7 @@ export default function TestXarita() {
           {YARATSA_BOLADI.map((y) => {
             const Ik = TUR_IKONKA[y.tur];
             return (
-              <button key={y.tur} onClick={() => { setYaratModal(y.tur); setMaydonlar({}); }}
+              <button key={y.tur} onClick={() => { setYaratModal(y.tur); setMaydonlar({}); setYaratXato(''); }}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border hover:bg-white/10 transition-colors"
                 style={{ borderColor: TUR_RANG[y.tur] + '55', color: TUR_RANG[y.tur] }}>
                 <Plus size={12} /> <Ik size={12} /> {TUR_NOM[y.tur]}
@@ -948,11 +1014,15 @@ export default function TestXarita() {
 
       {/* YANGI TUGUN */}
       {yaratModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setYaratModal(null)}>
-          <div className="bg-[#111827] border border-white/10 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold" style={{ color: TUR_RANG[yaratModal] }}>Yangi {TUR_NOM[yaratModal]}</h3>
-              <button onClick={() => setYaratModal(null)} className="text-zinc-500 hover:text-white"><X size={18} /></button>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => !yaratSaqlanmoqda && setYaratModal(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="mindmap-create-title" className="cc-panel p-5 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start gap-4 mb-4">
+              <div>
+                <div className="cc-kicker">Yangi yozuv</div>
+                <h3 id="mindmap-create-title" className="font-bold mt-1" style={{ color: TUR_RANG[yaratModal] }}>{TUR_NOM[yaratModal]} yaratish</h3>
+                <p className="text-[11px] text-zinc-400 mt-1">Saqlangandan keyin real ID bilan xaritada paydo bo‘ladi.</p>
+              </div>
+              <button disabled={yaratSaqlanmoqda} onClick={() => setYaratModal(null)} className="text-zinc-500 hover:text-white disabled:opacity-40" aria-label="Yopish"><X size={18} /></button>
             </div>
             <div className="space-y-3">
               {YARATSA_BOLADI.find((y) => y.tur === yaratModal)?.maydonlar.map((m) => (
@@ -962,12 +1032,23 @@ export default function TestXarita() {
                   </label>
                   <input value={maydonlar[m.kalit] || ''}
                     onChange={(e) => setMaydonlar({ ...maydonlar, [m.kalit]: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-sky-500 outline-none" />
+                    autoFocus={m.majburiy}
+                    disabled={yaratSaqlanmoqda}
+                    aria-required={m.majburiy}
+                    className="cc-field w-full px-3 py-2 text-sm outline-none disabled:opacity-60" />
                 </div>
               ))}
             </div>
-            <button onClick={tugunYarat} className="w-full mt-4 bg-sky-600 hover:bg-sky-500 py-2 rounded-lg font-medium text-sm">
-              Yaratish
+            {yaratXato && (
+              <div role="alert" className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
+                <div className="font-semibold">Yaratib bo‘lmadi</div>
+                <div className="mt-1">{yaratXato}</div>
+                <details className="mt-2 text-zinc-400"><summary className="cursor-pointer">Texnik tafsilot</summary><code className="mt-1 block break-words text-[10px]">{yaratXato}</code></details>
+              </div>
+            )}
+            <button onClick={tugunYarat} disabled={yaratSaqlanmoqda} className="w-full mt-4 bg-sky-600 hover:bg-sky-500 py-2 rounded-lg font-medium text-sm disabled:opacity-50 disabled:cursor-wait inline-flex items-center justify-center gap-2">
+              {yaratSaqlanmoqda && <RefreshCcw size={14} className="animate-spin" />}
+              {yaratSaqlanmoqda ? 'Saqlanmoqda…' : 'Yaratish'}
             </button>
           </div>
         </div>
@@ -975,18 +1056,29 @@ export default function TestXarita() {
 
       {/* ROL TANLASH */}
       {rolModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setRolModal(null)}>
-          <div className="bg-[#111827] border border-white/10 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-pink-400 mb-1">Loyihadagi roli</h3>
-            <p className="text-[11px] text-zinc-500 mb-4">Bitta kompaniya turli loyihalarda turli rolda bo'lishi mumkin.</p>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => !rolSaqlanmoqda && setRolModal(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="mindmap-role-title" className="cc-panel p-5 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="cc-kicker">Participant relation</div>
+                <h3 id="mindmap-role-title" className="font-bold text-pink-300 mb-1 mt-1">Loyihadagi rolni tanlang</h3>
+                <p className="text-[11px] text-zinc-400 mb-4">Rol tanlanmaguncha aloqa saqlanmaydi.</p>
+              </div>
+              <button disabled={rolSaqlanmoqda} onClick={() => setRolModal(null)} className="text-zinc-500 hover:text-white disabled:opacity-40" aria-label="Yopish"><X size={18} /></button>
+            </div>
             <div className="space-y-2">
               {ROLLAR.map((r) => (
-                <button key={r.kalit} onClick={() => rolniTasdiqla(r.kalit)}
-                  className="w-full text-left px-3 py-2 rounded-lg bg-black/40 border border-white/10 hover:border-pink-500/50 text-sm">
+                <button key={r.kalit} type="button" aria-pressed={rolTanlov === r.kalit} onClick={() => { setRolTanlov(r.kalit); setRolXato(''); }}
+                  className={'w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors ' + (rolTanlov === r.kalit ? 'border-pink-400/70 bg-pink-500/15 text-white' : 'bg-black/25 border-white/10 hover:border-pink-500/50 text-zinc-300')}>
                   {r.nom}
                 </button>
               ))}
             </div>
+            {rolXato && <div role="alert" className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">{rolXato}</div>}
+            <button type="button" onClick={rolniTasdiqla} disabled={rolSaqlanmoqda} className="w-full mt-4 bg-pink-600 hover:bg-pink-500 py-2 rounded-lg font-medium text-sm disabled:opacity-50 inline-flex items-center justify-center gap-2">
+              {rolSaqlanmoqda && <RefreshCcw size={14} className="animate-spin" />}
+              {rolSaqlanmoqda ? 'Rol saqlanmoqda…' : 'Rolni saqlash'}
+            </button>
           </div>
         </div>
       )}
