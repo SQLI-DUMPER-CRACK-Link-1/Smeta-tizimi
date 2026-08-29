@@ -42,8 +42,13 @@ type ResursMaydonlar = Record<string, string | number | null | undefined>;
 
 /** Mindmap va module tablar uchun bitta canonical mutation adapter. */
 function resursYarat(tur: ResursTur, kompaniyaId: number, maydonlar: ResursMaydonlar) {
+  /* Production bazada V2 resource migration o'rnatilmagan holatda ham
+     create canonical jadvalga yozilishi kerak. Update/delete V2 yo'lida
+     qoladi va migration o'rnatilgach module shu contractga o'tadi. */
+  const amal = tur === 'sklad' ? 'sklad_mustaqil_yarat'
+    : tur === 'kadr' ? 'kadr_mustaqil_yarat' : 'texnika_mustaqil_yarat';
   return trackEntityCommand(tur, kompaniyaId, yozAmali({
-    amal: 'resurs_yarat_v2', kompaniya_id: kompaniyaId, tur, maydonlar,
+    amal, kompaniya_id: kompaniyaId, ...maydonlar,
     operation_id: yangiOperationId(),
   }));
 }
