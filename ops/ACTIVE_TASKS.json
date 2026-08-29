@@ -1,0 +1,54 @@
+{
+  "_schema": "agent-governance-v2",
+  "_izoh": "Task ownership only. This is not domain ownership; each active task locks only its owns paths.",
+  "tasks": [
+    {
+      "id": "AGV2-001",
+      "title": "Canonical agent governance boot chain",
+      "owner": "codex",
+      "branch": "codex/agent-governance-v2",
+      "base_sha": "5c78421c36fb567cb0dad6e761cba4701d6ff3fe",
+      "status": "in_progress",
+      "owns": ["AGENTS.md", "docs/governance/", "ops/ACTIVE_TASKS.json", "ops/governance-check.cjs"],
+      "depends_on": [],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md"],
+      "production_write_allowed": false
+    },
+    {
+      "id": "ENT-001",
+      "title": "Entity and project participant backend contract",
+      "owner": "codex",
+      "branch": "codex/entity-participant-backend",
+      "base_sha": "5c78421c36fb567cb0dad6e761cba4701d6ff3fe",
+      "status": "completed",
+      "owns": ["supabase/migrations/20260830040000_t2_entity_participant_command_contract.sql", "supabase/migrations/20260830041000_t2_participant_canonical_read_model.sql", "supabase/tests/t2_entity_participant_command_contract.sql", "frontend/functions/api/sb-yoz.ts", "docs/architecture/ENTITY_PARTICIPANT_BACKEND_RECONCILIATION.md"],
+      "depends_on": [],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/architecture/"],
+      "production_write_allowed": false
+    },
+    {
+      "id": "EST-001",
+      "title": "Universal estimate engine V1 foundation",
+      "owner": "codex",
+      "branch": "codex/universal-estimate-engine-v1",
+      "base_sha": "5c78421c36fb567cb0dad6e761cba4701d6ff3fe",
+      "status": "completed",
+      "owns": ["frontend/src/estimate-engine/", "docs/architecture/UNIVERSAL_ESTIMATE_ENGINE_V1.md", "docs/architecture/TEXT_TO_SMETA_PIPELINE_V1.md", "docs/architecture/F2_FROM_CANONICAL_ESTIMATE_V1.md"],
+      "depends_on": [],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md"],
+      "production_write_allowed": false
+    },
+    {
+      "id": "MIND-001",
+      "title": "Mindmap create UX integration",
+      "owner": "integration",
+      "branch": "integration/mindmap-create-final",
+      "base_sha": "5c78421c36fb567cb0dad6e761cba4701d6ff3fe",
+      "status": "in_progress",
+      "owns": ["frontend/src/api/supabase.ts", "frontend/src/test02/"],
+      "depends_on": ["ENT-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/architecture/MINDMAP_COMMAND_RPC_V2.md"],
+      "production_write_allowed": false
+    }
+  ]
+}

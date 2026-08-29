@@ -1,5 +1,11 @@
 # AI AGENT SHARTNOMASI — TIZIM_02 ga ko'chirish
 
+> **Governance V2 compatibility note (2026-08-30):** first read the repository
+> root `AGENTS.md`, then `docs/governance/CONSTITUTION.md`,
+> `CURRENT_STATE.md` and `ops/ACTIVE_TASKS.json`. This legacy contract is
+> retained for project detail; `MULOQOT.md` is an append-only historical
+> journal and is not current-state authority.
+
 > Bu faylni **har bir agent ish boshlashdan oldin to'liq o'qiydi.**
 > Claude, Antigravity yoki boshqasi — farqi yo'q. Qoidalar bir xil.
 >
