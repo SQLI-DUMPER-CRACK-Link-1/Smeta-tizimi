@@ -1,5 +1,12 @@
-# Canonical Supabase baseline
+# Baseline and reconciliation records
 
-`supabase/migrations/` is the only forward schema source of truth. `supabase/tests/`
-contains executable invariant checks and this directory records baseline evidence.
-Historical SQL under `tizim02/` must not be used for deployment; it is reference-only.
+This directory is intentionally outside `supabase/migrations/`. It contains
+evidence and proposals used while reconciling a live project that predates its
+canonical migration tree. Nothing below this directory is executable by the
+Supabase migration runner.
+
+After a reviewed `supabase db pull`, place the resulting single baseline in
+`supabase/migrations/` and record its review evidence here. Do not turn old
+ad-hoc SQL into a second baseline or replay it against production.
+
+Pending proposals are under [pending/](pending/README.md).
