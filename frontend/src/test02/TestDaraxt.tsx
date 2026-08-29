@@ -22,8 +22,11 @@ import { FmtN } from '../lib/format';
    GAS/Sheets ga umuman murojaat qilinmaydi. */
 import { sbT2ObyektlarOl, sbT2DaraxtOl, sbT2QatorHolatOl, sbT2TreeQur, type T2Obyekt } from '../api/supabase';
 import type { TreeNode } from '../api/types';
+import { useKompaniya } from './KompaniyaTanlov';
 
 export default function TestDaraxt() {
+  const { joriy } = useKompaniya();
+  const aktKomp = joriy?.id ?? 0;
   const [params, setParams] = useSearchParams();
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [obyekt, setObyekt] = useState(params.get('obyekt') || '');
@@ -38,10 +41,11 @@ export default function TestDaraxt() {
   /* Obyektlar ro'yxati — t2 dan. Nom → id kerak, chunki `t2_daraxt`
      `obyekt_id` bo'yicha filtrlaydi (matn emas, son — indeksli va aniq). */
   useEffect(() => {
-    sbT2ObyektlarOl().then((r) => {
+    if (!aktKomp) { setObyektlar([]); return; }
+    sbT2ObyektlarOl(aktKomp).then((r) => {
       if (r.ok) setObyektlar((r.qatorlar as T2Obyekt[]) || []);
     });
-  }, []);
+  }, [aktKomp]);
 
   const ochish = useCallback(async (nom: string, royxat: T2Obyekt[]) => {
     if (!nom) return;

@@ -139,7 +139,8 @@ export default function TestImport() {
   useEffect(() => { manbaYukla(); }, [manbaYukla]);
 
   const obyektlarYukla = useCallback(() => {
-    sbT2ObyektlarOlKomp(joriy?.id).then((r) => {
+    if (!joriy?.id) { setObyektlar([]); return; }
+    sbT2ObyektlarOlKomp(joriy.id).then((r) => {
       if (r.ok) setObyektlar((r.qatorlar as T2Obyekt[]) || []);
     }).catch(() => {});
   }, [joriy?.id]);
@@ -177,12 +178,12 @@ export default function TestImport() {
   const [holatYuk, setHolatYuk] = useState(false);
 
   const holatYukla = useCallback(async (nom: string) => {
-    if (!nom) { setHolat(null); return; }
+    if (!nom || !joriy?.id) { setHolat(null); return; }
     setHolatYuk(true);
     try {
       const j = await sbOqi<any>({
         jadval: 't2_obyekt_jami',
-        filtr: 'nom=eq.' + encodeURIComponent(nom),
+        filtr: 'kompaniya_id=eq.' + joriy.id + '&nom=eq.' + encodeURIComponent(nom),
         ustunlar: 'id,jami,narxsiz,qator_soni,chel,mash,mat,ob',
         limit: 1,
       });
@@ -203,7 +204,7 @@ export default function TestImport() {
       setHolat({ ...q, varaq_url: url });
     } catch { setHolat(null); }
     finally { setHolatYuk(false); }
-  }, []);
+  }, [joriy?.id]);
 
   const obyektTanla = (nom: string) => {
     setObyekt(nom); setNatija(null); setVaraq(null);

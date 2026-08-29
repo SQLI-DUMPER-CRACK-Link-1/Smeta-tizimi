@@ -56,6 +56,7 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       't2_aosr_yoz', 't2_aosr_bekor', 't2_aosr_bog_saqla', 't2_aosr_bog_ochir', 't2_audit_yoz',
                       't2_obyekt_hujjat_yoz', 't2_obyekt_hujjat_ochir',
                       't2_sklad_yarat', 't2_kadr_yarat', 't2_texnika_yarat',
+                      't2_resurs_yarat_v2', 't2_resurs_yangila_v2', 't2_resurs_bekor_v2',
                       't2_resurs_bog_saqla', 't2_resurs_bog_ochir',
                       't2_loyiha_yarat', 't2_loyiha_yangila', 't2_loyiha_ochir',
                       't2_obyekt_loyihaga_biriktir',
@@ -148,5 +149,4 @@ console.log('\n── 5. HALOLLIK QOIDALARI ──');
 
 console.log(`\n═══ ${ok} o'tdi, ${xato} yiqildi ═══`);
 process.exit(xato ? 1 : 0);
-
 

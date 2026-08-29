@@ -113,6 +113,11 @@ const RUXSAT_JADVALLAR = new Set([
   't2_sklad_konsolidatsiya',
 ]);
 
+/* Bu view obyektlarning pul/smeta jamlanmasini beradi. U hech qachon
+   kompaniya chegarasisiz o'qilmaydi: frontend filtri qulaylik, sessiya
+   a'zoligi esa majburiy himoya. */
+const MAJBURIY_KOMPANIYA_FILTRI = new Set(['t2_obyekt_jami']);
+
 /** PostgREST filtri xavfsizmi — faqat oddiy `ustun=op.qiymat` shakllari. */
 function filtrXavfsizmi(f: string): boolean {
   if (!f) return true;
@@ -165,6 +170,7 @@ export const onRequestPost: PagesFunction<{
         /* ⚡ 2026-08-28: mindmap butun grafni (tugunlar + bog'lanishlar)
            BITTA chaqiruvda oladi — jadval-jadval o'qish o'rniga. */
         mindmap_grafi: 'kompaniya',
+        mindmap_grafi_v2: 'kompaniya',
         hodisa_obyekt_lenta: 'obyekt_kompaniya',
       };
       const tur = OQISH_RPC[so.soro];
@@ -200,6 +206,20 @@ export const onRequestPost: PagesFunction<{
             { ok: false, error: 'Bu kompaniyaga ruxsat yo\'q' }, { status: 403 });
         }
         if (kid != null) q.set('p_kompaniya_id', String(kid));
+      }
+      if (so.soro === 'mindmap_grafi_v2') {
+        const mode = String((so as any).mode || 'overview');
+        if (!['overview', 'taminot', 'obyekt'].includes(mode)) {
+          return Response.json({ ok: false, error: 'mindmap mode noto\'g\'ri' });
+        }
+        q.set('p_mode', mode);
+        if (mode !== 'overview') {
+          const objectId = Number(so.obyekt_id);
+          if (!Number.isInteger(objectId) || objectId <= 0) {
+            return Response.json({ ok: false, error: 'drilldown uchun obyekt_id majburiy' });
+          }
+          q.set('p_obyekt_id', String(objectId));
+        }
       }
       if (so.soro === 'hodisa_obyekt_lenta') {
         const lim = Math.min(100, Math.max(1, Number(so.limit || 20)));
@@ -247,8 +267,12 @@ export const onRequestPost: PagesFunction<{
      * `sess.kompaniyalar === undefined` bo'lsa (eski sessiya) —
      * tekshiruv o'tkazib yuboriladi (12 soat ko'prik, sb-yoz.ts dagi
      * bilan bir xil qoida). */
+    const mos = (so.filtr || '').match(/(?:^|&)kompaniya_id=eq\.(-?\d+)/);
+    if (MAJBURIY_KOMPANIYA_FILTRI.has(jadval) && !mos) {
+      return Response.json({ ok: false,
+        error: 'Bu o\'qish uchun kompaniya_id filtri majburiy' }, { status: 400 });
+    }
     if (Array.isArray(sess.kompaniyalar)) {
-      const mos = (so.filtr || '').match(/(?:^|&)kompaniya_id=eq\.(-?\d+)/);
       if (mos) {
         const soraganKompaniya = Number(mos[1]);
         /* ⚡ 2026-08-27: `kompaniyalar` endi {kompaniya_id, rol}
@@ -422,4 +446,3 @@ export const onRequestPost: PagesFunction<{
     });
   }
 };
-

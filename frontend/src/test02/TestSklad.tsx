@@ -37,7 +37,8 @@ export default function TestSklad() {
   const [formBirligi, setFormBirligi] = useState('dona');
 
   useEffect(() => {
-    sbT2ObyektlarOl().then(r => {
+    if (!aktKomp) { setObyektlar([]); return; }
+    sbT2ObyektlarOl(aktKomp).then(r => {
       if (r.ok && r.qatorlar) {
         setObyektlar(r.qatorlar);
         if (r.qatorlar.length > 0 && !obyektId) {
@@ -184,20 +185,17 @@ export default function TestSklad() {
       {/* TABS */}
         <div className="flex items-center gap-2 mb-4 border-b border-border pb-2 overflow-x-auto">
           <button onClick={() => setActiveTab('konsolidatsiya')} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'konsolidatsiya' ? 'border-accent text-accent' : 'border-transparent text-text-dim hover:text-white'}`}>
-            Jamlangan Ombor (Konsolidatsiya)
+            Jamlangan Ombor
           </button>
           <div className="w-px h-6 bg-border mx-2" />
           <button onClick={() => setActiveTab('qoldiq')} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'qoldiq' ? 'border-accent text-accent' : 'border-transparent text-text-dim hover:text-white'}`}>
             Obyekt Qoldiqlari
           </button>
           <button onClick={() => setActiveTab('kirim')} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'kirim' ? 'border-accent text-accent' : 'border-transparent text-text-dim hover:text-white'}`}>
-            Prixod (Kirim)
-          </button>
-          <button onClick={() => setActiveTab('chiqim')} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'chiqim' ? 'border-accent text-accent' : 'border-transparent text-text-dim hover:text-white'}`}>
-            Rasxod (Chiqim)
+            Tranzaksiyalar Tarixi
           </button>
           <button onClick={() => setActiveTab('m29')} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'm29' ? 'border-accent text-accent' : 'border-transparent text-text-dim hover:text-white'}`}>
-            M-29 Hisobot
+            M-29 Moddiy Hisobot
           </button>
         </div>
 
@@ -391,11 +389,11 @@ export default function TestSklad() {
         </div>
       )}
       
-      {(activeTab === 'kirim' || activeTab === 'chiqim') && (
+      {activeTab === 'kirim' && (
         <div className="bg-[var(--surface-1)] border border-border rounded-xl p-12 text-center shadow-xl mt-6">
-          <h2 className="text-xl font-bold text-white mb-3">Jurnallar Hali Yasalmadi</h2>
+          <h2 className="text-xl font-bold text-white mb-3">Tranzaksiyalar Tarixi Jurnali Hali Yasalmadi</h2>
           <p className="text-text-dim max-w-lg mx-auto mb-8">
-            Bu sahifada {activeTab} jurnali tarixi (tranzaksiyalar) chiqadi. 
+            Bu sahifada barcha kirim va chiqim jurnali tarixi (tranzaksiyalar) chiqadi.
             Jarayonlar hozircha "Qoldiq" orqali shakllanmoqda.
           </p>
         </div>

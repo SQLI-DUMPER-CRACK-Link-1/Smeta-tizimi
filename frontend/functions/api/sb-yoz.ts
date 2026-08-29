@@ -73,6 +73,9 @@ const AMALLAR = {
   sklad_mustaqil_yarat: { rpc: 't2_sklad_yarat' },
   kadr_mustaqil_yarat: { rpc: 't2_kadr_yarat' },
   texnika_mustaqil_yarat: { rpc: 't2_texnika_yarat' },
+  resurs_yarat_v2: { rpc: 't2_resurs_yarat_v2' },
+  resurs_yangila_v2: { rpc: 't2_resurs_yangila_v2' },
+  resurs_bekor_v2: { rpc: 't2_resurs_bekor_v2' },
   resurs_bog_saqla: { rpc: 't2_resurs_bog_saqla' },
   resurs_bog_ochir: { rpc: 't2_resurs_bog_ochir' },
   loyiha_yarat: { rpc: 't2_loyiha_yarat' },
@@ -138,9 +141,10 @@ export const onRequestPost: PagesFunction<{
     }
 
     const MINDMAP_V2 = amal.startsWith('mindmap_');
+    const RESURS_V2 = amal === 'resurs_yarat_v2' || amal === 'resurs_yangila_v2' || amal === 'resurs_bekor_v2';
     const operationId = String(so.operation_id || '');
     const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (MINDMAP_V2) {
+    if (MINDMAP_V2 || RESURS_V2) {
       if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
         return Response.json({ ok: false, error: 'V2 buyruq uchun actor/session identifikatori talab qilinadi' }, { status: 401 });
       }
@@ -152,7 +156,7 @@ export const onRequestPost: PagesFunction<{
       if (!uuidRe.test(operationId)) {
         return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi shart' });
       }
-      if (amal !== 'mindmap_joylashuv_saqla' &&
+      if (amal !== 'mindmap_joylashuv_saqla' && amal !== 'resurs_yarat_v2' &&
           (!Number.isInteger(Number(so.expected_version)) || Number(so.expected_version) < 0)) {
         return Response.json({ ok: false, error: 'expected_version noto\'g\'ri' });
       }
@@ -867,6 +871,37 @@ export const onRequestPost: PagesFunction<{
         p_yoqilgi_mejori: so.yoqilgi_mejori == null ? null : Number(so.yoqilgi_mejori),
       };
 
+    /* V2 resource commands are the only shared mutation boundary for
+       Mindmap and module tabs.  Legacy create RPCs remain reachable for
+       old clients while they are migrated. */
+    } else if (amal === 'resurs_yarat_v2') {
+      const tur = String(so.tur || '');
+      if (!['sklad', 'kadr', 'texnika'].includes(tur) || !so.maydonlar || typeof so.maydonlar !== 'object') {
+        return Response.json({ ok: false, error: 'resource create parametrlari noto\'g\'ri' });
+      }
+      yuk = { p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
+        p_tur: tur, p_maydonlar: so.maydonlar, p_operation_id: operationId,
+        p_actor_label: sess.email || null };
+
+    } else if (amal === 'resurs_yangila_v2') {
+      const tur = String(so.tur || ''); const id = Number(so.id);
+      if (!['sklad', 'kadr', 'texnika'].includes(tur) || !Number.isInteger(id) || id <= 0 || !so.maydonlar || typeof so.maydonlar !== 'object') {
+        return Response.json({ ok: false, error: 'resource update parametrlari noto\'g\'ri' });
+      }
+      yuk = { p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
+        p_tur: tur, p_id: id, p_maydonlar: so.maydonlar,
+        p_kutilgan_versiya: Number(so.expected_version), p_operation_id: operationId,
+        p_actor_label: sess.email || null };
+
+    } else if (amal === 'resurs_bekor_v2') {
+      const tur = String(so.tur || ''); const id = Number(so.id);
+      if (!['sklad', 'kadr', 'texnika'].includes(tur) || !Number.isInteger(id) || id <= 0) {
+        return Response.json({ ok: false, error: 'resource delete parametrlari noto\'g\'ri' });
+      }
+      yuk = { p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
+        p_tur: tur, p_id: id, p_kutilgan_versiya: Number(so.expected_version),
+        p_operation_id: operationId, p_actor_label: sess.email || null };
+
     } else if (amal === 'resurs_bog_saqla' || amal === 'resurs_bog_ochir') {
       const TUR_RUXSAT = ['sklad', 'kadr', 'texnika'];
       const tur = String(so.tur || '');
@@ -1434,4 +1469,3 @@ export const onRequestPost: PagesFunction<{
       ms: Date.now() - t0 });
   }
 };
-

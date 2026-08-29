@@ -271,8 +271,15 @@ export type T2Obyekt = {
   versiya: number; loyiha_id: number | null;
 };
 
-export function sbT2ObyektlarOl() {
-  return sbOqi<T2Obyekt>({ jadval: 't2_obyekt_jami', tartib: 'nom.asc', limit: 5000 });
+export function sbT2ObyektlarOl(kompaniyaId: number) {
+  if (!Number.isInteger(kompaniyaId) || kompaniyaId <= 0) {
+    return Promise.resolve({ ok: false, qatorlar: [] as T2Obyekt[],
+      error: 'kompaniya_id majburiy' });
+  }
+  return sbOqi<T2Obyekt>({
+    jadval: 't2_obyekt_jami', filtr: 'kompaniya_id=eq.' + kompaniyaId,
+    tartib: 'nom.asc', limit: 5000,
+  });
 }
 
 /** `t2_daraxt` — hisoblangan daraxt qatorlari (view). */
@@ -437,12 +444,8 @@ export function sbT2KompaniyalarOl() {
 }
 
 /** Obyektlar — kompaniya berilsa faqat o'shaniki. */
-export function sbT2ObyektlarOlKomp(kompaniyaId?: number | null) {
-  return sbOqi<T2Obyekt>({
-    jadval: 't2_obyekt_jami',
-    filtr: kompaniyaId ? 'kompaniya_id=eq.' + kompaniyaId : undefined,
-    tartib: 'nom.asc', limit: 5000,
-  });
+export function sbT2ObyektlarOlKomp(kompaniyaId: number) {
+  return sbT2ObyektlarOl(kompaniyaId);
 }
 
 /* ── YOZISH ─────────────────────────────────────────────────────── */

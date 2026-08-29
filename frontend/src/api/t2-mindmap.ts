@@ -24,7 +24,7 @@ import { entityIdFromResult, type EntityCommandResult } from './entity-consisten
 
 export type TugunTur =
   | 'kompaniya' | 'loyiha' | 'obyekt' | 'shartnoma'
-  | 'sklad' | 'texnika' | 'kadr' | 'kontragent';
+  | 'sklad' | 'texnika' | 'kadr' | 'kontragent' | 'zayavka';
 
 export type BogTur =
   | 'loyiha_kompaniya'   // tuzilmaviy — uzib bo'lmaydi
@@ -81,6 +81,11 @@ export type ObyektMeta = {
 export type MindmapTugun = {
   /** "tur:id" ko'rinishida, masalan "obyekt:6" */
   id: string;
+  /** Stable graph identity; `id` legacy renderer compatibility uchun qolgan. */
+  node_key?: string;
+  /** Module row ID bilan aynan teng bo'lgan canonical entity identity. */
+  entity_type?: TugunTur;
+  entity_id?: number;
   tur: TugunTur;
   nom: string;
   meta: (Record<string, any> & Partial<ObyektMeta>) | null;
@@ -128,14 +133,16 @@ export function belgiDarajasi(t: MindmapTugun): 'ogoh' | 'info' | null {
 }
 
 /** Butun kompaniya grafi — BITTA so'rovda (zero re-fetch). */
-export async function sbMindmapGrafOl(kompaniyaId: number): Promise<
+export async function sbMindmapGrafOl(kompaniyaId: number, drilldown?: { mode: 'taminot' | 'obyekt'; obyektId: number }): Promise<
   { ok: true; graf: MindmapGraf } | { ok: false; error: string }
 > {
   try {
     const res = await fetch('/api/sb', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ soro: 'mindmap_grafi', kompaniya_id: kompaniyaId }),
+      body: JSON.stringify(drilldown
+        ? { soro: 'mindmap_grafi_v2', kompaniya_id: kompaniyaId, mode: drilldown.mode, obyekt_id: drilldown.obyektId }
+        : { soro: 'mindmap_grafi_v2', kompaniya_id: kompaniyaId, mode: 'overview' }),
     });
     const j = await res.json();
     if (!j.ok) return { ok: false, error: j.error || 'Graf o\'qilmadi' };

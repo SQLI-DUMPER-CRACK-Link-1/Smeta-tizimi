@@ -3069,3 +3069,18 @@ Oldingi 6 ta `(1)` fayl joriy ishchi daraxt va Git indeksida yo'q.
 Tarixda ular `5dd6da7` commitida o'chirilgani ko'rinadi; mazmunni taxmin
 qilib qayta tiklamadim. Tekshiruv: `npm run tekshir` — 12/12 yashil,
 yangi qo'riqchi 389 Gitdagi kod faylini tekshirdi.
+
+### 2026-08-29 — Codex: Tizim_02 cross-view consistency recovery (davom etmoqda)
+
+- `t2_obyekt_jami` frontend va `/api/sb` gateway orqali majburiy
+  `kompaniya_id` filtri bilan o'qiladi; gateway sessiya a'zoligini tekshiradi.
+- Resource create bitta V2 adapterga o'tkazildi; forward migrationda
+  sklad/texnika/kadr uchun actor, `operation_id`, optimistic version,
+  soft-delete va audit contracti bor.
+- Mindmap V2 read contracti Ta'minot/object drilldownida real
+  `zayavka:<id>`, `entity_type`, `entity_id` qaytaradi; boss overview
+  aggregate bo'lib qoladi.
+- Module → Mindmap `?tugun=tur:id` navigatsiyasi tanlangan real node'ni
+  ochadi; entity-mutation eventi mindmapni serverdan qayta o'qitadi.
+- Lokal qo'riqchi testlari yashil. Production migration/push/deploy hali
+  qilinmagan: checkoutda Supabase va Cloudflare deploy credentiali yo'q.

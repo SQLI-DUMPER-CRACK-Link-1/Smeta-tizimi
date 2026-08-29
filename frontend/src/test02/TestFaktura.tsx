@@ -25,7 +25,8 @@ export default function TestFaktura() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    sbT2ObyektlarOl().then(r => {
+    if (!aktKomp) { setObyektlar([]); return; }
+    sbT2ObyektlarOl(aktKomp).then(r => {
       if (r.ok && r.qatorlar) {
         setObyektlar(r.qatorlar);
         if (r.qatorlar.length > 0) setTanlanganObId(r.qatorlar[0].id);

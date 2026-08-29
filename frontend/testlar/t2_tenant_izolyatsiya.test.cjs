@@ -81,6 +81,9 @@ console.log('\n── 4. sb.ts (O\'QISH) HAM KOMPANIYA A\'ZOLIGINI TEKSHIRADIMI 
   T('eski sessiya (kompaniyalar yo\'q) bloklanib qolmaydi',
     /Array\.isArray\(sess\.kompaniyalar\)/.test(s));
   T('rad javobi 403 bilan qaytadi', /zo emassiz[\s\S]{0,80}status:\s*403/.test(s));
+  T('t2_obyekt_jami kompaniya filtrisiz o\'qilmaydi',
+    /MAJBURIY_KOMPANIYA_FILTRI[\s\S]{0,120}t2_obyekt_jami/.test(s) &&
+    /MAJBURIY_KOMPANIYA_FILTRI\.has\(jadval\) && !mos/.test(s));
 }
 
 console.log(`\n═══ ${ok} o'tdi, ${xato} yiqildi ═══`);

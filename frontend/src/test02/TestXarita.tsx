@@ -4,11 +4,12 @@ import {
   Users, Plus, X, ZoomIn, ZoomOut, RefreshCcw, Unlink, Move,
   LayoutGrid, Maximize2, Save, Trash2, ExternalLink, AlertTriangle, Clock, CheckCircle2,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
 import { pulQisqa } from '../lib/format';
 import { sbObyektHodisalariOl, qachon, MODUL_RANG, type Hodisa } from '../api/t2-hodisa';
+import { onEntityChanged } from '../api/entity-consistency';
 import {
   sbMindmapGrafOl, sbMindmapBog, sbMindmapBogOchir, sbMindmapTugunYarat,
   sbMindmapJoylashuvSaqla, sbMindmapTugunOchir, bogTuriniTop, RUXSAT_BOGLANISH, OCHIRSA_BOLADI,
@@ -51,14 +52,17 @@ const KANVAS_H = 4000;
 const TUR_RANG: Record<TugunTur, string> = {
   kompaniya: '#8b5cf6', loyiha: '#0ea5e9', obyekt: '#10b981', shartnoma: '#d946ef',
   sklad: '#f59e0b', texnika: '#fb923c', kadr: '#3b82f6', kontragent: '#f472b6',
+  zayavka: '#fbbf24',
 };
 const TUR_IKONKA: Record<TugunTur, any> = {
   kompaniya: Building2, loyiha: FolderKanban, obyekt: Building2, shartnoma: FileText,
   sklad: Warehouse, texnika: Truck, kadr: HardHat, kontragent: Users,
+  zayavka: FileText,
 };
 const TUR_NOM: Record<TugunTur, string> = {
   kompaniya: 'Kompaniya', loyiha: 'Loyiha', obyekt: 'Obyekt', shartnoma: 'Shartnoma',
   sklad: 'Sklad', texnika: 'Texnika', kadr: 'Xodim', kontragent: 'Kontragent',
+  zayavka: 'Ta’minot zayavkasi',
 };
 
 const BOG_TUR_NOM: Record<string, string> = {
@@ -74,7 +78,7 @@ const BOG_TUR_NOM: Record<string, string> = {
 
 /** Avtomatik joylash ustunlari — FAQAT saqlangan joyi yo'q tugunlar uchun */
 const USTUN_TARTIB: TugunTur[][] = [
-  ['kontragent'], ['kompaniya', 'loyiha'], ['shartnoma'], ['obyekt'], ['sklad', 'texnika', 'kadr'],
+  ['kontragent'], ['kompaniya', 'loyiha'], ['shartnoma'], ['obyekt'], ['zayavka'], ['sklad', 'texnika', 'kadr'],
 ];
 
 const YARATSA_BOLADI: { tur: TugunTur; maydonlar: { kalit: string; nom: string; majburiy?: boolean }[] }[] = [
@@ -103,6 +107,7 @@ const SAHIFA_YOLI: Partial<Record<TugunTur, (id: number, nom: string) => string>
   texnika:    () => '/admin/test/erp?modul=texnika',
   kadr:       () => '/admin/test/erp?modul=kadrlar',
   kontragent: () => '/admin/test/kontragent',
+  zayavka: (id) => '/admin/test/zayavka?id=' + id,
 };
 
 type XY = { x: number; y: number };
@@ -113,6 +118,7 @@ type Rejim =
   | null;
 
 export default function TestXarita() {
+  const [params] = useSearchParams();
   const { joriy } = useKompaniya();
   const aktKomp = joriy?.id ?? 0;
 
@@ -171,7 +177,32 @@ export default function TestXarita() {
     setJoylar(avtoJoylash(r.graf.tugunlar, saqlangan));
   }, [aktKomp, avtoJoylash]);
 
+  const taminotDrilldown = useCallback(async (obyektId: number) => {
+    if (!aktKomp || !Number.isInteger(obyektId) || obyektId <= 0) return;
+    setYuklanmoqda(true); setXato('');
+    const r = await sbMindmapGrafOl(aktKomp, { mode: 'taminot', obyektId });
+    setYuklanmoqda(false);
+    if (!r.ok) { setXato(r.error); return; }
+    setGraf(r.graf); setOxirgiYangilanish(new Date());
+    const saqlangan: Record<string, XY> = {};
+    r.graf.tugunlar.forEach((t) => { if (t.x != null && t.y != null) saqlangan[t.id] = { x: Number(t.x), y: Number(t.y) }; });
+    setJoylar(avtoJoylash(r.graf.tugunlar, saqlangan));
+  }, [aktKomp, avtoJoylash]);
+
   useEffect(() => { yukla(); }, [yukla]);
+
+  /* Module satridagi `?tugun=texnika:44` bevosita o'sha REAL node'ni
+     ochadi; nom yoki vaqtinchalik client ID orqali izlash yo'q. */
+  useEffect(() => {
+    const nodeKey = params.get('tugun');
+    if (nodeKey && graf.tugunlar.some((t) => t.id === nodeKey)) setTanlangan(nodeKey);
+  }, [params, graf.tugunlar]);
+
+  /* Module tabdagi real mutation ham shu grafni qayta o'qitadi.  UI hech
+     qachon vaqtinchalik node'ni authoritative holat deb qabul qilmaydi. */
+  useEffect(() => onEntityChanged((event) => {
+    if (event.detail.kompaniyaId === aktKomp) yukla();
+  }), [aktKomp, yukla]);
 
   /* Faqat frontend polling: rahbar oynasi yangi zayavka/belgilarni
      qo'lda Yangilash tugmasisiz ham ko'rsatsin. */
@@ -419,6 +450,7 @@ export default function TestXarita() {
     if (t.tur === 'texnika') return m.davlat_raqami || 'davlat raqami yo\'q';
     if (t.tur === 'kadr') return m.lavozim || '';
     if (t.tur === 'kontragent') return m.inn ? 'STIR ' + m.inn : 'STIR kiritilmagan';
+    if (t.tur === 'zayavka') return (m.status || '—') + ' · qoldiq: ' + (m.remaining_qty ?? '—');
     return 'Bosh tashkilot';
   };
 
@@ -865,8 +897,12 @@ export default function TestXarita() {
               )}
               {tanlanganTugun.tur === 'obyekt' && (
                 <>
-                  <button type="button" onClick={() => navigate('/admin/test/zayavka?obyekt=' + encodeURIComponent(tanlanganTugun.nom))}
+                  <button type="button" onClick={() => taminotDrilldown(tanlanganTugun.entity_id ?? Number(tanlanganTugun.id.split(':')[1]))}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500/15 py-2 text-[12px] text-amber-200 hover:bg-amber-500/25">
+                    <FileText size={13} /> Mindmapda zayavkalarni ko'rish
+                  </button>
+                  <button type="button" onClick={() => navigate('/admin/test/zayavka?obyekt=' + encodeURIComponent(tanlanganTugun.nom))}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500/15 py-2 text-[12px] text-amber-200 hover:bg-amber-500/25 mt-2">
                     <AlertTriangle size={13} /> Zayavkalarni boshqarish
                   </button>
                   <button type="button" onClick={() => navigate("/admin/test/zayavka?obyekt=" + encodeURIComponent(tanlanganTugun.nom) + "&yarat=1")} className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-500/15 py-2 text-[12px] text-indigo-300 hover:bg-indigo-500/25 mt-2">

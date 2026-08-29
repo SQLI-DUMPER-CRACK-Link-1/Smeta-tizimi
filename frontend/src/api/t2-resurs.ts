@@ -1,4 +1,4 @@
-import { yozAmali, sbOqi } from './supabase';
+import { yozAmali, sbOqi, yangiOperationId } from './supabase';
 import { trackEntityCommand } from './entity-consistency';
 
 /* ⚡ 2026-08-27 (Claude + Antigravity): "32 gektar ichida 40 obyekt, 1
@@ -36,17 +36,38 @@ export function sbTexnikalarOl(kompaniyaId: number) {
   return sbOqi<TexnikaMustaqil>({ jadval: 't2_texnika_royxat', filtr: 'kompaniya_id=eq.' + kompaniyaId, limit: 500 });
 }
 
+export type ResursTur = 'sklad' | 'kadr' | 'texnika';
+
+type ResursMaydonlar = Record<string, string | number | null | undefined>;
+
+/** Mindmap va module tablar uchun bitta canonical mutation adapter. */
+function resursYarat(tur: ResursTur, kompaniyaId: number, maydonlar: ResursMaydonlar) {
+  return trackEntityCommand(tur, kompaniyaId, yozAmali({
+    amal: 'resurs_yarat_v2', kompaniya_id: kompaniyaId, tur, maydonlar,
+    operation_id: yangiOperationId(),
+  }));
+}
+export function sbResursYangila(tur: ResursTur, kompaniyaId: number, id: number, expectedVersion: number, maydonlar: ResursMaydonlar) {
+  return trackEntityCommand(tur, kompaniyaId, yozAmali({
+    amal: 'resurs_yangila_v2', kompaniya_id: kompaniyaId, tur, id, maydonlar,
+    expected_version: expectedVersion, operation_id: yangiOperationId(),
+  }));
+}
+export function sbResursBekor(tur: ResursTur, kompaniyaId: number, id: number, expectedVersion: number) {
+  return trackEntityCommand(tur, kompaniyaId, yozAmali({
+    amal: 'resurs_bekor_v2', kompaniya_id: kompaniyaId, tur, id,
+    expected_version: expectedVersion, operation_id: yangiOperationId(),
+  }));
+}
 export function sbSkladYarat(p: { kompaniyaId: number; nomi: string; manzil?: string; masulShaxs?: string }) {
-  return trackEntityCommand('sklad', p.kompaniyaId, yozAmali({ amal: 'sklad_mustaqil_yarat', kompaniya_id: p.kompaniyaId, nomi: p.nomi, manzil: p.manzil, masul_shaxs: p.masulShaxs }));
+  return resursYarat('sklad', p.kompaniyaId, { nomi: p.nomi, manzil: p.manzil, masul_shaxs: p.masulShaxs });
 }
 export function sbKadrYarat(p: { kompaniyaId: number; ismSharif: string; lavozim: string; oylikMaosh?: number; valyuta?: string }) {
-  return trackEntityCommand('kadr', p.kompaniyaId, yozAmali({ amal: 'kadr_mustaqil_yarat', kompaniya_id: p.kompaniyaId, ism_sharif: p.ismSharif, lavozim: p.lavozim, oylik_maosh: p.oylikMaosh, valyuta: p.valyuta }));
+  return resursYarat('kadr', p.kompaniyaId, { ism_sharif: p.ismSharif, lavozim: p.lavozim, oylik_maosh: p.oylikMaosh, valyuta: p.valyuta });
 }
 export function sbTexnikaYarat(p: { kompaniyaId: number; nomi: string; davlatRaqami?: string; yoqilgiMejori?: number }) {
-  return trackEntityCommand('texnika', p.kompaniyaId, yozAmali({ amal: 'texnika_mustaqil_yarat', kompaniya_id: p.kompaniyaId, nomi: p.nomi, davlat_raqami: p.davlatRaqami, yoqilgi_mejori: p.yoqilgiMejori }));
+  return resursYarat('texnika', p.kompaniyaId, { nomi: p.nomi, davlat_raqami: p.davlatRaqami, yoqilgi_mejori: p.yoqilgiMejori });
 }
-
-export type ResursTur = 'sklad' | 'kadr' | 'texnika';
 
 /** Node-based linking — mindmapda resurs tugunidan obyekt tuguniga chiziq tortish. */
 export function sbResursBogSaqla(tur: ResursTur, resursId: number, obyektId: number) {

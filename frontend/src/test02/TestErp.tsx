@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import { sbKadrlarOl, sbKadrYarat, sbTexnikalarOl, sbTexnikaYarat, type KadrMustaqil, type TexnikaMustaqil } from '../api/t2-resurs';
-import { Users, Truck, Wrench, ShieldCheck, Plus, Search, Building2, MapPin, HardHat, FileText, CheckCircle2, RefreshCw, Save, X } from 'lucide-react';
+import { sbKadrlarOl, sbKadrYarat, sbTexnikalarOl, sbTexnikaYarat, sbResursBekor, type KadrMustaqil, type TexnikaMustaqil } from '../api/t2-resurs';
+import { Users, Truck, Wrench, ShieldCheck, Plus, Search, Building2, MapPin, HardHat, FileText, CheckCircle2, RefreshCw, Save, X, Trash2 } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
 import { onEntityChanged } from '../api/entity-consistency';
@@ -80,6 +80,13 @@ export default function TestErp() {
     } finally {
       setSaqlamoqda(false);
     }
+  };
+
+  const bekorQil = async (tur: 'kadr' | 'texnika', id: number, version: number, nom: string) => {
+    if (!joriy || !confirm('«' + nom + '» bekor qilinsinmi? Tarix saqlanadi.')) return;
+    const r = await sbResursBekor(tur, joriy.id, id, version);
+    if (r.ok) { toast('Bekor qilindi', 'ok'); yukla(); }
+    else toast(r.error || 'Bekor qilinmadi', 'danger');
   };
 
   return (
@@ -228,6 +235,7 @@ export default function TestErp() {
                     <td className="px-6 py-4 text-text-dim">{k.lavozim}</td>
                     <td className="px-6 py-4 text-center">
                       <button onClick={() => navigate('/admin/test/xarita?tugun=kadr:' + k.id)} className="text-[11px] text-sky-400 hover:text-sky-300 mr-2">Mindmap</button>
+                      <button onClick={() => bekorQil('kadr', k.id, k.versiya, k.ism_sharif)} className="text-[11px] text-rose-400 hover:text-rose-300 mr-2" title="Soft delete"><Trash2 size={13} /></button>
                       <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">
                         {k.obyektlar?.length > 0 ? 'Obyektda' : 'Zaxirada'}
                       </span>
@@ -280,6 +288,7 @@ export default function TestErp() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button onClick={() => navigate('/admin/test/xarita?tugun=texnika:' + t.id)} className="text-[11px] text-sky-400 hover:text-sky-300 mr-2">Mindmap</button>
+                      <button onClick={() => bekorQil('texnika', t.id, t.versiya, t.nomi)} className="text-[11px] text-rose-400 hover:text-rose-300 mr-2" title="Soft delete"><Trash2 size={13} /></button>
                       <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">
                         {t.obyektlar?.length > 0 ? 'Ishlamoqda' : 'Garajda'}
                       </span>
