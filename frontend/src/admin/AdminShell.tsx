@@ -8,31 +8,31 @@ import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 
 const TIZIM_02_GURUHLAR = [
   {
-    nom: 'Platforma',
+    nom: 'Boshqaruv',
     Ikonka: LayoutDashboard,
     id: 'asosiy',
     menyular: [
-      { yol: '/admin/test/hisobot', nom: 'Dashboard (Boss)', Ikonka: BarChart },
-      { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
-        { yol: '/admin/test/xarita', nom: 'Mindmap (Xarita)', Ikonka: Map },
-      { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
+      { yol: '/admin/test/hisobot', nom: 'Boshqaruv paneli', Ikonka: BarChart },
+      { yol: '/admin/test/portfel', nom: 'Loyihalar va obyektlar', Ikonka: FolderKanban },
+      { yol: '/admin/test/xarita', nom: 'Command Center', Ikonka: Map },
+      { yol: '/admin/test/crm', nom: 'Kontragentlar va EDO', Ikonka: Users },
     ]
   },
   {
-    nom: 'Operatsion Boshqaruv',
+    nom: 'Smeta va PTO',
     Ikonka: HardHat,
     id: 'operatsion',
     menyular: [
-      { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
-        { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
-      { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
-        { yol: '/admin/test/zayavka', nom: 'Zayavkalar (PTO)', Ikonka: ClipboardList },
-        { yol: '/admin/test/aosr', nom: 'QA/QC (AOSR/APPOK)', Ikonka: ShieldCheck },
-      { yol: '/admin/test/erp', nom: 'Kadrlar, Texnika (ERP)', Ikonka: Users },
+      { yol: '/admin/test/smeta', nom: 'Smeta va F2', Ikonka: FileInput },
+      { yol: '/admin/test/zayavka', nom: 'Zayavkalar', Ikonka: ClipboardList },
+      { yol: '/admin/test/aosr', nom: 'AOSR va sifat nazorati', Ikonka: ShieldCheck },
+      { yol: '/admin/test/logistika', nom: 'Ta\'minot va sklad', Ikonka: Box },
+      { yol: '/admin/test/erp', nom: 'Kadrlar va texnika', Ikonka: Users },
+      { yol: '/admin/test/moliya', nom: 'Moliya va shartnomalar', Ikonka: Briefcase },
     ]
   },
   {
-    nom: 'Tizim',
+    nom: 'Admin va sozlamalar',
     Ikonka: ShieldAlert,
     id: 'tizim',
     menyular: [

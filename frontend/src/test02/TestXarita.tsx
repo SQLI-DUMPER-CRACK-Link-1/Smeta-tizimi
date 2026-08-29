@@ -473,13 +473,14 @@ export default function TestXarita() {
   const tanlanganBogMaqsad = tanlanganBog ? graf.tugunlar.find((t) => t.id === tanlanganBog.maqsad) : null;
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0f1d] text-white overflow-hidden">
+    <div className="cc-mindmap h-full flex flex-col text-white overflow-hidden">
       {/* BOSHQARUV */}
-      <div className="flex-shrink-0 border-b border-white/10 bg-black/40 px-5 py-3">
+      <div className="flex-shrink-0 border-b border-white/10 bg-black/30 px-5 py-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
+            <div className="cc-kicker mb-1">Construction Command Center</div>
             <h1 className="text-lg font-bold flex items-center gap-2">
-              <Move size={18} className="text-sky-400" /> Rahbarning tirik holat xaritasi
+              <Move size={18} className="text-sky-400" /> Tashkilotning operatsion xaritasi
               {saqlanmoqda && <span className="text-[10px] text-amber-400 inline-flex items-center gap-1"><Save size={11} /> saqlanmoqda…</span>}
             </h1>
             <p className="text-[11px] text-zinc-400 mt-0.5">
@@ -637,7 +638,7 @@ export default function TestXarita() {
                 data-tugun={t.id}
                 onPointerDown={(e) => bosildiTugun(e, t.id)}
                 onClick={() => { if (!rejim.current) { setTanlangan(t.id); setTanlanganBog(null); } }}
-                className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg ' +
+                className={'cc-mindmap-node absolute border px-3 py-2 flex flex-col justify-center select-none ' +
                   (nishon && boglashMumkin ? 'ring-2 ring-sky-400/70' : '') + (nishon && !boglashMumkin ? 'opacity-50 ring-2 ring-rose-500/70' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
                 style={{ left: joy.x, top: joy.y, width: NODE_W, height: TUGUN_BALANDLIGI(t.tur), borderColor: rang + '66', cursor: 'move' }}>
                 
@@ -759,7 +760,7 @@ export default function TestXarita() {
 
       {/* TAFSILOT PANELI — tugun bosilganda o'ngda ochiladi */}
       {tanlanganTugun && (
-        <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-[#0d1424] border-l border-white/10 z-30 flex flex-col shadow-2xl">
+        <div className="cc-inspector absolute right-0 top-0 bottom-0 w-[320px] border-l z-30 flex flex-col">
           <div className="p-4 border-b border-white/10 flex justify-between items-start">
             <div className="min-w-0">
               <div className="text-[10px] uppercase tracking-wider" style={{ color: TUR_RANG[tanlanganTugun.tur] }}>

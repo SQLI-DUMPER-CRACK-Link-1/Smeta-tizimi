@@ -20,6 +20,18 @@
 }
 
 :root {
+  /* Construction Command Center — yagona vizual kontrakt. */
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --radius-sm: .375rem;
+  --radius-md: .625rem;
+  --radius-lg: .875rem;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.20);
+  --shadow-2: 0 12px 28px rgba(0,0,0,.20);
   --bg: #0B0E14;
   --surface: #131722;
   --surface-2: #1B2130;
@@ -60,6 +72,33 @@ html, body, #root { min-height: 100%; }
     radial-gradient(70% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
     var(--bg);
 }
+.os-app-shell, .os-workspace { min-width: 0; }
+.os-workspace { min-height: 0; }
+.os-topbar {
+  min-height: 48px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 86%, white 6%);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+.os-page-frame { width: min(100%, 1800px); margin-inline: auto; }
+.cc-surface { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-1); }
+.cc-panel { background: color-mix(in srgb, var(--surface) 92%, black); border: 1px solid color-mix(in srgb, var(--border) 90%, white 5%); border-radius: var(--radius-md); }
+.cc-toolbar { min-height: 44px; background: color-mix(in srgb, var(--surface-2) 75%, transparent); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.cc-kicker { color: var(--text-dim); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.cc-status { display:inline-flex; align-items:center; gap:.35rem; border:1px solid currentColor; border-radius:999px; padding:.15rem .45rem; font-size:10px; font-weight:700; }
+.cc-status--ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.cc-status--warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.cc-status--danger { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.cc-data-grid { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: auto; background: var(--surface); }
+.cc-data-grid table { font-variant-numeric: tabular-nums; }
+.cc-data-grid thead { background: var(--surface-2); }
+.cc-data-grid th { height: 38px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
+.cc-data-grid td { height: 40px; }
+.cc-data-grid tr:hover td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.cc-field { min-height: 38px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); }
+.cc-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+.cc-mindmap { background: #0a101b; }
+.cc-mindmap-node { background: linear-gradient(160deg, rgba(29,38,55,.98), rgba(14,20,31,.98)); border-radius: var(--radius-md); box-shadow: 0 8px 20px rgba(0,0,0,.28); }
+.cc-inspector { background: color-mix(in srgb, var(--surface) 96%, black); border-color: color-mix(in srgb, var(--border) 92%, white 8%); box-shadow: -16px 0 30px rgba(0,0,0,.20); }
 .os-app-shell::before {
   content: '';
   position: absolute;
@@ -136,6 +175,12 @@ html, body, #root { min-height: 100%; }
   border: 1px solid var(--border);
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border-radius: 0.5rem;
+}
+
+/* Katta monitorlarda umumiy masofa saqlanadi, laptopda ish maydoni keng qoladi. */
+@media (max-width: 1440px) {
+  .os-sidebar { width: 15rem; }
+  .os-context-bar { padding-inline: 1rem; }
 }
 
 .input {

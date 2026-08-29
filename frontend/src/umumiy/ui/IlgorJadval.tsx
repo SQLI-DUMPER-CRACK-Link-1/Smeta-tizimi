@@ -105,7 +105,7 @@ export function IlgorJadval<T extends Record<string, any>>({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-between items-center bg-[var(--surface-2)] p-2 px-4 rounded-xl border border-border shadow-md">
+      <div className="cc-toolbar flex justify-between items-center p-2 px-3">
         <div className="text-text-dim text-sm font-medium">
           Jami: <span className="text-white font-bold">{yakuniySatrlar.length}</span> ta qator ko'rsatilmoqda
         </div>
@@ -117,7 +117,7 @@ export function IlgorJadval<T extends Record<string, any>>({
         </button>
       </div>
 
-      <div className="karta overflow-hidden shadow-xl border border-border bg-[var(--surface-1)]">
+      <div className="cc-data-grid">
         <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-[13px] border-collapse relative">
             <thead>
