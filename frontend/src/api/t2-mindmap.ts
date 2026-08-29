@@ -140,9 +140,12 @@ export async function sbMindmapGrafOl(kompaniyaId: number, drilldown?: { mode: '
     const res = await fetch('/api/sb', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      // Productionda V2 migration hali o'rnatilmagan bo'lishi mumkin. Asosiy
+      // xarita mavjud, barqaror RPC bilan ochilishi shart; V2 faqat drilldown
+      // uchun kerak bo'lganda chaqiriladi.
       body: JSON.stringify(drilldown
         ? { soro: 'mindmap_grafi_v2', kompaniya_id: kompaniyaId, mode: drilldown.mode, obyekt_id: drilldown.obyektId }
-        : { soro: 'mindmap_grafi_v2', kompaniya_id: kompaniyaId, mode: 'overview' }),
+        : { soro: 'mindmap_grafi', kompaniya_id: kompaniyaId }),
     });
     const j = await res.json();
     if (!j.ok) return { ok: false, error: j.error || 'Graf o\'qilmadi' };
