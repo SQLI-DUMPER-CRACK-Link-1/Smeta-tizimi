@@ -363,7 +363,8 @@ export default function TestXarita() {
   const tugunYarat = async () => {
     if (!yaratModal || !aktKomp) return;
     const r = await sbMindmapTugunYarat(yaratModal, aktKomp, maydonlar);
-    if (r.ok) { toast('Yaratildi', 'ok'); setYaratModal(null); setMaydonlar({}); yukla(); }
+    if (r.ok && Number.isInteger(r.entity_id) && r.entity_id! > 0) { toast('Yaratildi: #' + r.entity_id, 'ok'); setYaratModal(null); setMaydonlar({}); yukla(); }
+    else if (r.ok) toast("Baza real entity ID qaytarmadi — yaratildi deb ko'rsatilmadi", 'danger');
     else toast(r.error || 'Yaratilmadi', 'danger');
   };
 

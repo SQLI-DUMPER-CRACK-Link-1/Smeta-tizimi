@@ -523,7 +523,11 @@ export async function yozAmali(yuk: Record<string, unknown>): Promise<AktNatija>
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(yuk),
     });
-    const j = (await r.json()) as AktNatija;
+    const matn = await r.text();
+    let j: AktNatija;
+    try { j = JSON.parse(matn) as AktNatija; }
+    catch { return { ok: false, error: `HTTP ${r.status}: ${matn.slice(0, 300) || 'server JSON qaytarmadi'}`, ms: Math.round(performance.now() - t0) }; }
+    if (!r.ok && !j.error) j.error = `HTTP ${r.status}: yozish so'rovi rad etildi`;
     return { ...j, ms: Math.round(performance.now() - t0) };
   } catch (e: any) {
     return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)),
@@ -905,5 +909,4 @@ export function sbKompaniyaYangila(id: number, kutilganVersiya: number, maydonla
     hisob_raqam: maydonlar.hisobRaqam, mfo: maydonlar.mfo, mavqe: maydonlar.mavqe,
   });
 }
-
 
