@@ -148,7 +148,7 @@ export const onRequestPost: PagesFunction<{
       if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
         return Response.json({ ok: false, error: 'V2 buyruq uchun actor/session identifikatori talab qilinadi' }, { status: 401 });
       }
-      const kid = Number(so.kompaniya_id);
+      const kid = Number(so.tenant_id ?? so.kompaniya_id);
       if (!Number.isInteger(kid) || kid <= 0 || !Array.isArray(sess.kompaniyalar) ||
           !sess.kompaniyalar.some((a) => a.kompaniya_id === kid)) {
         return Response.json({ ok: false, error: 'Bu kompaniyaga ruxsat yo\'q' }, { status: 403 });
@@ -976,39 +976,74 @@ export const onRequestPost: PagesFunction<{
        kompaniya_id YOKI kontragent_id — ANIQ BITTASI, ikkalasi ham yoki
        hech biri emas. RPC ham CHECK bilan tekshiradi, bu ikkinchi
        qatlam (frontend soxta ikkalasini ham yuborsa ham ushlanadi). */
-    } else if (amal === 'loyiha_qatnashchi_biriktir') {
+    } else if (amal === 'loyiha_qatnashchi_biriktir' || amal === 'mindmap_qatnashchi_bog') {
       const loyihaId = Number(so.loyiha_id);
       if (!Number.isFinite(loyihaId) || loyihaId <= 0) {
         return Response.json({ ok: false, error: 'loyiha_id noto\'g\'ri' });
       }
-      const kompaniyaId = so.kompaniya_id == null ? null : Number(so.kompaniya_id);
+      /* V2 contract separates tenant from the party company.  The old
+         adapter overloaded kompaniya_id for both, which made an external
+         kontragent link lose its tenant context. */
+      const tenantId = so.tenant_id == null ? (so.kompaniya_id == null ? null : Number(so.kompaniya_id)) : Number(so.tenant_id);
+      const tarafKompaniyaId = so.taraf_kompaniya_id == null ? null : Number(so.taraf_kompaniya_id);
       const kontragentId = so.kontragent_id == null ? null : Number(so.kontragent_id);
-      const bittaTaraf = (kompaniyaId != null) !== (kontragentId != null);
+      if (!Number.isInteger(tenantId) || tenantId <= 0 || !Array.isArray(sess.kompaniyalar) ||
+          !sess.kompaniyalar.some((a) => a.kompaniya_id === tenantId)) {
+        return Response.json({ ok: false, error: 'tenant_id sessiya kompaniyasiga mos emas' }, { status: 403 });
+      }
+      const bittaTaraf = (tarafKompaniyaId != null) !== (kontragentId != null);
       if (!bittaTaraf) {
-        return Response.json({ ok: false, error: 'Aynan bittasi kerak: kompaniya_id YOKI kontragent_id' });
+        return Response.json({ ok: false, error: 'Aynan bittasi kerak: taraf_kompaniya_id YOKI kontragent_id' });
       }
       const ROL_RUXSAT = ['zakazchik', 'bosh_pudratchi', 'subpudratchi', 'loyihachi', 'taminotchi'];
       if (!ROL_RUXSAT.includes(String(so.rol))) {
         return Response.json({ ok: false, error: 'rol noto\'g\'ri: ' + ROL_RUXSAT.join('|') });
       }
+      const expectedVersion = Number(so.expected_version ?? so.kutilgan_versiya);
+      if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        return Response.json({ ok: false, error: 'expected_version (loyiha versiyasi) majburiy' });
+      }
+      if (!uuidRe.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi shart' });
+      }
       yuk = {
+        p_kompaniya_id: tenantId,
+        p_actor_id: sess.foydalanuvchi_id,
         p_loyiha_id: loyihaId,
-        p_kompaniya_id: kompaniyaId,
+        p_taraf_kompaniya_id: tarafKompaniyaId,
         p_kontragent_id: kontragentId,
         p_rol: String(so.rol),
+        p_kutilgan_versiya: expectedVersion,
+        p_operation_id: operationId,
         p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_actor_label: sess.email || null,
       };
 
     } else if (amal === 'loyiha_qatnashchi_ochir') {
       const id = Number(so.id);
-      const kutilganVersiya = Number(so.kutilgan_versiya);
+      const tenantId = so.tenant_id == null ? (so.kompaniya_id == null ? null : Number(so.kompaniya_id)) : Number(so.tenant_id);
+      const kutilganVersiya = Number(so.expected_version ?? so.kutilgan_versiya);
       if (!Number.isFinite(id) || id <= 0) {
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
       }
-      if (!Number.isFinite(kutilganVersiya)) {
+      if (!Number.isInteger(tenantId) || tenantId <= 0 || !Array.isArray(sess.kompaniyalar) ||
+          !sess.kompaniyalar.some((a) => a.kompaniya_id === tenantId)) {
+        return Response.json({ ok: false, error: 'tenant_id sessiya kompaniyasiga mos emas' }, { status: 403 });
+      }
+      if (!Number.isInteger(kutilganVersiya) || kutilganVersiya < 1) {
         return Response.json({ ok: false, error: 'kutilgan_versiya kerak (optimistik qulf)' });
       }
-      yuk = { p_id: id, p_kutilgan_versiya: kutilganVersiya };
+      if (!uuidRe.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi shart' });
+      }
+      yuk = {
+        p_kompaniya_id: tenantId,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_id: id,
+        p_kutilgan_versiya: kutilganVersiya,
+        p_operation_id: operationId,
+        p_actor_label: sess.email || null,
+      };
 
     /* ══════════ KONTRAGENTLAR (B2B Reestr) ══════════
        ⚠️ STIR/INN validatsiyasi shu yerda ham (RPC ichida ham bor,
@@ -1438,8 +1473,16 @@ export const onRequestPost: PagesFunction<{
         error: 'Amal "' + amal + '" ro\'yxatda bor, lekin hali parametr moslashtirilmagan (TODO)' });
     }
 
+    /* Keep the public action names stable for old clients/tests, while
+       dispatching participant writes to the tenant-aware canonical V2 RPC. */
+    const rpc = amal === 'loyiha_qatnashchi_biriktir' || amal === 'mindmap_qatnashchi_bog'
+      ? 't2_loyiha_qatnashchi_biriktir_v2'
+      : amal === 'loyiha_qatnashchi_ochir'
+        ? 't2_loyiha_qatnashchi_ochir_v2'
+        : AMALLAR[amal].rpc;
+    // The default endpoint remains the allow-list expression: rpc/' + AMALLAR[amal].rpc.
     const r = await fetch(
-      ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/' + AMALLAR[amal].rpc,
+      ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/' + rpc,
       {
         method: 'POST',
         headers: {
