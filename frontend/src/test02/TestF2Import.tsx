@@ -187,7 +187,8 @@ export default function TestF2Import() {
 
   // Obyektlarni yuklash
   useEffect(() => {
-    sbT2ObyektlarOlKomp(joriy?.id).then((r) => {
+    if (!joriy?.id) { setObyektlar([]); return; }
+    sbT2ObyektlarOlKomp(joriy.id).then((r) => {
       if (!r.ok) return;
       const o = (r.qatorlar as T2Obyekt[]) || [];
       setObyektlar(o);

@@ -55,7 +55,8 @@ export default function TestNarxlar() {
 
   useEffect(() => {
     if (kompYuk) return;
-    sbT2ObyektlarOlKomp(joriy?.id).then((r) => {
+    if (!joriy?.id) { setObyektlar([]); setObyektId(null); return; }
+    sbT2ObyektlarOlKomp(joriy.id).then((r) => {
       if (!r.ok) return;
       const o = (r.qatorlar as T2Obyekt[]) || [];
       setObyektlar(o);

@@ -35,7 +35,8 @@ export default function TestAosr() {
   const [modalOchiq, setModalOchiq] = useState(false);
 
   useEffect(() => {
-    sbT2ObyektlarOlKomp(joriy?.id).then((r) => {
+    if (!joriy?.id) { setObyektlar([]); return; }
+    sbT2ObyektlarOlKomp(joriy.id).then((r) => {
       if (r.ok && r.qatorlar) {
         setObyektlar(r.qatorlar);
         if (r.qatorlar.length > 0 && !obyektId) setObyektId(r.qatorlar[0].id);
