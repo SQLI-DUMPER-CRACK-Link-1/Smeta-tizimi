@@ -124,7 +124,7 @@ export default function TestObyektlar() {
     if (!joriy?.id) { setQatorlar([]); setMs(0); return; }
     setYuklanmoqda(true); setXato('');
     const r = await sbT2ObyektlarOlKomp(joriy.id);
-    setMs(r.ok ? (r.ms || 0) : 0);
+    setMs('ms' in r ? (r.ms || 0) : 0);
     if (!r.ok) { setXato(r.error || "O'qilmadi"); setQatorlar(null); }
     else setQatorlar((r.qatorlar as Qator[]) || []);
     setYuklanmoqda(false);
