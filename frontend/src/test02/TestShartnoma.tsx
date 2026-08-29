@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { sbT2ShartnomalarOl, sbT2ShartnomaSaqla, type Shartnoma } from '../api/t2-shartnoma';
 import { Briefcase, Plus, FileSignature, AlertCircle, Search, FileText, CheckCircle2, Calculator, PieChart, RefreshCw, Save, X } from 'lucide-react';
 import { FmtN } from '../lib/format';
 import { toast } from '../umumiy/ui/Toast';
 import { useKompaniya } from './KompaniyaTanlov';
+import { EntityFormModal } from '../umumiy/ui/forms/SharedForms';
+import { onEntityChanged } from '../api/entity-consistency';
 
 export default function TestShartnoma() {
+  const navigate = useNavigate();
   const { joriy } = useKompaniya();
+  const aktKomp = joriy?.id ?? 0;
   const [params] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'shartnomalar' | 'dop' | 'kalkulyator' | 'radar'>('shartnomalar');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -49,6 +53,9 @@ export default function TestShartnoma() {
   useEffect(() => {
     yukla();
   }, [joriy]);
+  useEffect(() => onEntityChanged((event) => {
+    if (event.detail.kompaniyaId === aktKomp && event.detail.type === 'shartnoma') yukla();
+  }), [aktKomp]);
 
   const handleSaqlash = async () => {
     if (!formData.raqam || !formData.nom) return toast("Raqam va nomni kiriting!", "warn");
@@ -163,98 +170,44 @@ export default function TestShartnoma() {
 
       {/* WRITE FORM MODAL */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="p-5 border-b border-border flex justify-between items-center bg-bg/50">
-              <h3 className="font-bold text-white flex items-center gap-2">
-                <FileSignature className="text-purple-400"/>
-                Yangi Shartnomani Ro'yxatga Olish
-              </h3>
-              <button onClick={() => setIsFormOpen(false)} className="text-text-dim hover:text-white"><X size={20}/></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-text-dim mb-1">Shartnoma Raqami (№)</label>
-                  <input 
-                    type="text" 
-                    value={formData.raqam}
-                    onChange={e => setFormData({...formData, raqam: e.target.value})}
-                    placeholder="masalan: 24/01"
-                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-dim mb-1">Kontragent (2-Taraf)</label>
-                  <input 
-                    type="text" 
-                    value={formData.taraf}
-                    onChange={e => setFormData({...formData, taraf: e.target.value})}
-                    placeholder="Kompaniya nomi..." 
-                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none" 
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-text-dim mb-1">Shartnoma Nomi (Predmeti)</label>
-                <input 
-                  type="text" 
-                  value={formData.nom}
-                  onChange={e => setFormData({...formData, nom: e.target.value})}
-                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none" 
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
-                <div>
-                  <label className="block text-sm font-medium text-text-dim mb-1">Summa QQS siz (UZS)</label>
-                  <input 
-                    type="number" 
-                    value={formData.summa_bez_nds}
-                    onChange={e => setFormData({...formData, summa_bez_nds: e.target.value})}
-                    placeholder="0.00" 
-                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white font-mono focus:border-purple-500 outline-none" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-dim mb-1">QQS Toifasi</label>
-                  <select 
-                    value={formData.nds}
-                    onChange={e => setFormData({...formData, nds: e.target.value})}
-                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none appearance-none"
-                  >
-                    <option value="12">QQS (12%) bilan</option>
-                    <option value="0">QQS siz (0%)</option>
-                  </select>
-                </div>
-              </div>
+        <EntityFormModal
+          entityType="shartnoma"
+          title="Yangi Shartnomani Ro'yxatga Olish"
+          color="#c084fc" // purple-400
+          onClose={() => setIsFormOpen(false)}
+          isLoading={saqlamoqda}
+          onSubmit={async (data) => {
+            if (!data.raqam || !data.nom) return toast("Raqam va nomni kiriting!", "warn");
+            setSaqlamoqda(true);
+            try {
+              const sum = data.summaBezNds === '' ? undefined : Number(data.summaBezNds);
+              const ndsFoiz = Number(data.nds) || 0;
+              const ndsSumma = sum == null ? undefined : (sum * ndsFoiz) / 100;
+              const jami = sum == null ? undefined : sum + (ndsSumma || 0);
 
-              <div>
-                <label className="block text-sm font-medium text-text-dim mb-1">Izoh</label>
-                <input 
-                  type="text" 
-                  value={formData.izoh}
-                  onChange={e => setFormData({...formData, izoh: e.target.value})}
-                  placeholder="Ixtiyoriy izoh..." 
-                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none" 
-                />
-              </div>
+              const res = await sbT2ShartnomaSaqla({
+                kompaniyaId: joriy!.id,
+                raqam: data.raqam,
+                nom: data.nom,
+                taraf: data.taraf,
+                summaBezNds: sum,
+                nds: ndsSumma,
+                jamiNdsBilan: jami,
+                izoh: data.izoh
+              });
 
-              <div className="pt-4 flex justify-end gap-3 border-t border-border mt-4">
-                <button onClick={() => setIsFormOpen(false)} className="px-4 py-2 text-text-dim hover:text-white transition-colors">Bekor qilish</button>
-                <button 
-                  onClick={handleSaqlash} 
-                  disabled={saqlamoqda}
-                  className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-purple-900/20"
-                >
-                  {saqlamoqda ? <RefreshCw className="animate-spin" size={18}/> : <Save size={18}/>}
-                  Saqlash
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+              if (!res.ok) throw new Error(res.error || "Noma'lum xato");
+
+              toast("Shartnoma muvaffaqiyatli saqlandi!", "ok");
+              setIsFormOpen(false);
+              yukla();
+            } catch (e: any) {
+              toast(e.message, "danger");
+            } finally {
+              setSaqlamoqda(false);
+            }
+          }}
+        />
       )}
 
       {/* CONTENT: SHARTNOMALAR */}
@@ -284,6 +237,7 @@ export default function TestShartnoma() {
                   <th className="px-6 py-4">Kontragent (2-taraf)</th>
                   <th className="px-6 py-4 text-right">Summa (UZS)</th>
                   <th className="px-6 py-4 text-center">Holat</th>
+                  <th className="px-6 py-4 text-right">Amal</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -312,6 +266,14 @@ export default function TestShartnoma() {
                       ) : (
                         <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1"><AlertCircle size={12}/> {s.holat}</span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => navigate(`/admin/test/xarita?tugun=shartnoma:${s.id}`)}
+                        className="text-xs bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 px-2.5 py-1.5 rounded-lg transition-colors border border-sky-500/20"
+                      >
+                        Mindmapda ko'rish
+                      </button>
                     </td>
                   </tr>
                 ))}

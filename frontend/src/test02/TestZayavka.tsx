@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus, Search, Building2, Calendar, AlertTriangle, Send, Warehouse, Trash2, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
 import { sbZayavkalarOl, sbZayavkaYoz, sbZayavkaHolatYoz, type T2Zayavka, type ZayavkaHolat } from '../api/t2-zayavka';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../api/supabase';
+import { onEntityChanged } from '../api/entity-consistency';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,6 +35,7 @@ const HOLAT_NOM: Record<ZayavkaHolat, string> = {
 };
 
 export default function TestZayavka() {
+  const navigate = useNavigate();
   const { joriy } = useKompaniya();
   const [params] = useSearchParams();
   const initialObyekt = params.get('obyekt') || '';
@@ -79,6 +81,9 @@ export default function TestZayavka() {
   useEffect(() => {
     yukla();
   }, [joriy]);
+  useEffect(() => onEntityChanged((event) => {
+    if (joriy && event.detail.kompaniyaId === joriy.id && event.detail.type === 'zayavka') yukla();
+  }), [joriy]);
 
   // Xarita obyekt nomini query orqali yuboradi; RPC esa faqat obyekt ID qabul qiladi.
   // Ro'yxat yuklangach nomni ID ga yechib, select qiymatini haqiqiy kalitga o'tkazamiz.
@@ -232,6 +237,7 @@ export default function TestZayavka() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <button onClick={() => navigate('/admin/test/xarita?tugun=obyekt:' + z.obyektId + '&zayavka_id=' + z.id)} className="text-[11px] text-sky-400 hover:text-sky-300 mr-2">Mindmap</button>
                       {amalId === z.id ? (
                         <span className="text-zinc-500 text-xs animate-pulse">Kuting...</span>
                       ) : (
@@ -355,4 +361,3 @@ export default function TestZayavka() {
     </Sahifa>
   );
 }
-

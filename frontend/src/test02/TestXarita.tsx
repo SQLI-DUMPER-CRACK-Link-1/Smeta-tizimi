@@ -5,8 +5,10 @@ import {
   LayoutGrid, Maximize2, Save, Trash2, ExternalLink, AlertTriangle, Clock, CheckCircle2, Activity,
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
+import { EntityFormModal } from '../umumiy/ui/forms/SharedForms';
 import { pulQisqa } from '../lib/format';
 import { sbObyektHodisalariOl, qachon, MODUL_RANG, type Hodisa } from '../api/t2-hodisa';
 import {
@@ -97,12 +99,12 @@ const ROLLAR = [
 /** Tugun turidan to'liq sahifaga o'tish yo'li (bo'lmasa — tugma ko'rsatilmaydi) */
 const SAHIFA_YOLI: Partial<Record<TugunTur, (id: number, nom: string) => string>> = {
   obyekt:     (_id, nom) => '/admin/test/smeta?obyekt=' + encodeURIComponent(nom),
-  loyiha:     () => '/admin/test/portfel',
-  shartnoma:  () => '/admin/test/moliya',
-  sklad:      () => '/admin/test/logistika',
-  texnika:    () => '/admin/test/erp?modul=texnika',
-  kadr:       () => '/admin/test/erp?modul=kadrlar',
-  kontragent: () => '/admin/test/kontragent',
+  loyiha:     (id) => '/admin/test/portfel?loyiha_id=' + id,
+  shartnoma:  (id) => '/admin/test/moliya?shartnoma_id=' + id,
+  sklad:      (id) => '/admin/test/logistika?sklad_id=' + id,
+  texnika:    (id) => '/admin/test/erp?modul=texnika&texnika_id=' + id,
+  kadr:       (id) => '/admin/test/erp?modul=kadrlar&kadr_id=' + id,
+  kontragent: (id) => '/admin/test/kontragent?kontragent_id=' + id,
 };
 
 type XY = { x: number; y: number };
@@ -142,6 +144,7 @@ export default function TestXarita() {
   const [yaratModal, setYaratModal] = useState<TugunTur | null>(null);
   const [maydonlar, setMaydonlar] = useState<Record<string, string>>({});
   const [rolModal, setRolModal] = useState<{ manbaId: number; maqsadId: number; expectedVersion: number } | null>(null);
+  const queryClient = useQueryClient();
   const [tanlangan, setTanlangan] = useState<string | null>(null);
   const [tanlanganBog, setTanlanganBog] = useState<MindmapGraf['bogichlar'][number] | null>(null);
   const [obyektHodisalari, setObyektHodisalari] = useState<Hodisa[]>([]);
@@ -178,6 +181,25 @@ export default function TestXarita() {
     });
     setJoylar(avtoJoylash(r.graf.tugunlar, saqlangan));
   }, [aktKomp, avtoJoylash]);
+
+  useEffect(() => {
+    const qTugun = params.get('tugun');
+    if (!qTugun || !graf.tugunlar.length || Object.keys(joylar).length === 0) return;
+    if (tanlangan === qTugun) return; // Already selected
+
+    const t = graf.tugunlar.find(x => x.id === qTugun);
+    if (t) {
+      setTanlangan(t.id);
+      const j = joylar[t.id];
+      if (j && wrapRef.current) {
+        const r = wrapRef.current.getBoundingClientRect();
+        setPan({
+          x: r.width / 2 - (j.x + NODE_W / 2) * zoom,
+          y: r.height / 2 - (j.y + NODE_H / 2) * zoom
+        });
+      }
+    }
+  }, [graf, joylar, params, zoom, tanlangan]);
 
   useEffect(() => { yukla(); }, [yukla]);
 
@@ -328,8 +350,17 @@ export default function TestXarita() {
   const tugunYarat = async () => {
     if (!yaratModal || !aktKomp) return;
     const r = await sbMindmapTugunYarat(yaratModal, aktKomp, maydonlar);
-    if (r.ok) { toast('Yaratildi', 'ok'); setYaratModal(null); setMaydonlar({}); yukla(); }
-    else toast(r.error || 'Yaratilmadi', 'danger');
+    if (r.ok) {
+      const qatorId = r.entity_id;
+      const tYol = SAHIFA_YOLI[yaratModal];
+      toast('Yaratildi', 'ok', undefined, 5000,
+        qatorId && tYol ? { label: "Bo'limda ochish", onClick: () => navigate(tYol(qatorId, maydonlar.nom || 'Yangi')) } : undefined
+      );
+      setYaratModal(null); setMaydonlar({}); yukla();
+      queryClient.invalidateQueries();
+    } else {
+      toast(r.error || 'Yaratilmadi', 'danger');
+    }
   };
 
   /** Hammasini ustunlarga qayta terib SAQLAYDI */
@@ -893,29 +924,18 @@ export default function TestXarita() {
 
       {/* YANGI TUGUN */}
       {yaratModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setYaratModal(null)}>
-          <div className="bg-[#111827] border border-white/10 rounded-xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold" style={{ color: TUR_RANG[yaratModal] }}>Yangi {TUR_NOM[yaratModal]}</h3>
-              <button onClick={() => setYaratModal(null)} className="text-zinc-500 hover:text-white"><X size={18} /></button>
-            </div>
-            <div className="space-y-3">
-              {YARATSA_BOLADI.find((y) => y.tur === yaratModal)?.maydonlar.map((m) => (
-                <div key={m.kalit}>
-                  <label className="block text-[11px] text-zinc-400 mb-1">
-                    {m.nom}{m.majburiy && <span className="text-rose-400"> *</span>}
-                  </label>
-                  <input value={maydonlar[m.kalit] || ''}
-                    onChange={(e) => setMaydonlar({ ...maydonlar, [m.kalit]: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-sky-500 outline-none" />
-                </div>
-              ))}
-            </div>
-            <button onClick={tugunYarat} className="w-full mt-4 bg-sky-600 hover:bg-sky-500 py-2 rounded-lg font-medium text-sm">
-              Yaratish
-            </button>
-          </div>
-        </div>
+        <EntityFormModal
+          entityType={yaratModal}
+          title={`Yangi ${TUR_NOM[yaratModal]}`}
+          color={TUR_RANG[yaratModal]}
+          onClose={() => setYaratModal(null)}
+          onSubmit={async (data: Record<string, any>) => {
+            if (!aktKomp) return;
+            const r = await sbMindmapTugunYarat(yaratModal, aktKomp, data);
+            if (r.ok) { toast('Yaratildi', 'ok'); setYaratModal(null); yukla(); queryClient.invalidateQueries(); }
+            else toast(r.error || 'Yaratilmadi', 'danger');
+          }}
+        />
       )}
 
       {/* ROL TANLASH */}
@@ -938,4 +958,3 @@ export default function TestXarita() {
     </div>
   );
 }
-

@@ -1,4 +1,5 @@
 import { yozAmali, sbOqi } from './supabase';
+import { trackEntityCommand } from './entity-consistency';
 
 /* ⚡ 2026-08-27 (Claude, MASTER_REJA_ENTERPRISE_OS.md band 16 — "B2B
  * Kontragentlar Tarmoq Reestri"): bu jadval `t2_kompaniya` (tizim
@@ -31,11 +32,11 @@ export function sbKontragentSaqla(p: {
   mfo?: string; hisobRaqam?: string; qqsTolovchi?: boolean;
   mavqe?: 'buyurtmachi' | 'pudratchi' | 'subpudratchi' | 'loyihachi' | 'taminotchi';
 }) {
-  return yozAmali({
+  return trackEntityCommand('kontragent', p.kompaniyaId, yozAmali({
     amal: 'kontragent_saqla', kompaniya_id: p.kompaniyaId, inn: p.inn, nom: p.nom,
     rahbar: p.rahbar, manzil: p.manzil, mfo: p.mfo, hisob_raqam: p.hisobRaqam,
     qqs_tolovchi: p.qqsTolovchi, mavqe: p.mavqe,
-  });
+  }));
 }
 
 export function sbKontragentOchir(id: number) {

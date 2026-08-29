@@ -1,4 +1,5 @@
 import { yozAmali, sbOqi } from './supabase';
+import { trackEntityCommand } from './entity-consistency';
 
 /* ⚡ 2026-08-27 (Claude + Antigravity): "32 gektar ichida 40 obyekt, 1
  * umumiy sklad" arxitekturasi. Sklad/Kadr/Texnika endi bitta obyektga
@@ -36,13 +37,13 @@ export function sbTexnikalarOl(kompaniyaId: number) {
 }
 
 export function sbSkladYarat(p: { kompaniyaId: number; nomi: string; manzil?: string; masulShaxs?: string }) {
-  return yozAmali({ amal: 'sklad_mustaqil_yarat', kompaniya_id: p.kompaniyaId, nomi: p.nomi, manzil: p.manzil, masul_shaxs: p.masulShaxs });
+  return trackEntityCommand('sklad', p.kompaniyaId, yozAmali({ amal: 'sklad_mustaqil_yarat', kompaniya_id: p.kompaniyaId, nomi: p.nomi, manzil: p.manzil, masul_shaxs: p.masulShaxs }));
 }
 export function sbKadrYarat(p: { kompaniyaId: number; ismSharif: string; lavozim: string; oylikMaosh?: number; valyuta?: string }) {
-  return yozAmali({ amal: 'kadr_mustaqil_yarat', kompaniya_id: p.kompaniyaId, ism_sharif: p.ismSharif, lavozim: p.lavozim, oylik_maosh: p.oylikMaosh, valyuta: p.valyuta });
+  return trackEntityCommand('kadr', p.kompaniyaId, yozAmali({ amal: 'kadr_mustaqil_yarat', kompaniya_id: p.kompaniyaId, ism_sharif: p.ismSharif, lavozim: p.lavozim, oylik_maosh: p.oylikMaosh, valyuta: p.valyuta }));
 }
 export function sbTexnikaYarat(p: { kompaniyaId: number; nomi: string; davlatRaqami?: string; yoqilgiMejori?: number }) {
-  return yozAmali({ amal: 'texnika_mustaqil_yarat', kompaniya_id: p.kompaniyaId, nomi: p.nomi, davlat_raqami: p.davlatRaqami, yoqilgi_mejori: p.yoqilgiMejori });
+  return trackEntityCommand('texnika', p.kompaniyaId, yozAmali({ amal: 'texnika_mustaqil_yarat', kompaniya_id: p.kompaniyaId, nomi: p.nomi, davlat_raqami: p.davlatRaqami, yoqilgi_mejori: p.yoqilgiMejori }));
 }
 
 export type ResursTur = 'sklad' | 'kadr' | 'texnika';

@@ -1,4 +1,5 @@
 import { yozAmali, sbOqi } from './supabase';
+import { trackEntityCommand } from './entity-consistency';
 
 /* ⚡ 2026-08-27 (Claude, MASTER_REJA_ENTERPRISE_OS.md — FAZA-oldi eng
  * ustuvor bo'shliq): to'liq domen iyerarxiyasi
@@ -62,14 +63,14 @@ export function sbT2LoyihaYoz(
   kompaniyaId: number,
   data: { nom: string; hudud?: string | null; izoh?: string | null; byudjet?: number | null },
 ) {
-  return yozAmali({
+  return trackEntityCommand('loyiha', kompaniyaId, yozAmali({
     amal: 'loyiha_yarat',
     kompaniya_id: kompaniyaId,
     nom: data.nom,
     izoh: data.izoh ?? undefined,
     hudud: data.hudud ?? undefined,
     byudjet: data.byudjet ?? undefined,
-  });
+  }));
 }
 export const sbLoyihaYarat = sbT2LoyihaYoz;
 

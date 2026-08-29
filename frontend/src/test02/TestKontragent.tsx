@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Building2, UserCircle, MapPin, CreditCard, CheckCircle2, AlertCircle, Building, Save, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from '../umumiy/ui/Toast';
 import { useKompaniya } from './KompaniyaTanlov';
 import { sbKontragentSaqla, sbKontragentlarOl, sbKontragentOchir, type Kontragent } from '../api/t2-kontragent';
+import { onEntityChanged } from '../api/entity-consistency';
 
 export default function TestKontragent() {
+  const navigate = useNavigate();
   const { joriy } = useKompaniya();
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   const [royxatYuklanmoqda, setRoyxatYuklanmoqda] = useState(false);
@@ -38,6 +41,9 @@ export default function TestKontragent() {
   useEffect(() => {
     royxatniYangila();
   }, [joriy]);
+  useEffect(() => onEntityChanged((event) => {
+    if (joriy && event.detail.kompaniyaId === joriy.id && event.detail.type === 'kontragent') royxatniYangila();
+  }), [joriy]);
 
   const handleFetchINN = async () => {
     // ⚠️ QAT'IY QOIDA: Bu yerda endi mock yo'q!
@@ -282,6 +288,10 @@ export default function TestKontragent() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => navigate('/admin/test/xarita?tugun=kontragent:' + k.id)}
+                              className="text-[11px] text-sky-400 hover:text-sky-300 mr-2"
+                            >Mindmap</button>
                             <button 
                               onClick={() => handleOchir(k.id)}
                               className="text-text-dim hover:text-rose-400 transition-colors p-1.5 opacity-0 group-hover:opacity-100"

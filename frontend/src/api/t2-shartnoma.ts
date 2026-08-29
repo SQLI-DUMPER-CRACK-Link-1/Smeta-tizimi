@@ -12,6 +12,7 @@
  * ⚠️ Alohida faylda — `supabase.ts` umumiy fayl.
  */
 import { sbOqi } from './supabase';
+import { trackEntityCommand } from './entity-consistency';
 
 /* ── Shartnoma ────────────────────────────────────────────────────── */
 export type Shartnoma = {
@@ -128,12 +129,12 @@ export function sbT2ShartnomaSaqla(p: {
   summaBezNds?: number; nds?: number; jamiNdsBilan?: number;
   chelStavka?: number; izoh?: string; kutilganVersiya?: number;
 }): Promise<ShartnomaNatija> {
-  return yoz({
+  return trackEntityCommand('shartnoma', p.kompaniyaId, yoz({
     amal: 'shartnoma_saqla', kompaniya_id: p.kompaniyaId,
     raqam: p.raqam, nom: p.nom, taraf: p.taraf,
     summa_bez_nds: p.summaBezNds, nds: p.nds, jami_nds_bilan: p.jamiNdsBilan,
     chel_stavka: p.chelStavka, izoh: p.izoh, kutilgan_versiya: p.kutilganVersiya,
-  });
+  }));
 }
 
 /** Shartnomani bekor qiladi (o'chirmaydi — tarix saqlanadi). */

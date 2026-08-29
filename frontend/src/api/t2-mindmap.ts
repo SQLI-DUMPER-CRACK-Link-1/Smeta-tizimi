@@ -3,6 +3,7 @@ import { sbSkladYarat, sbKadrYarat, sbTexnikaYarat } from './t2-resurs';
 import { sbT2LoyihaYoz } from './t2-loyiha';
 import { sbKontragentSaqla } from './t2-kontragent';
 import { sbT2ShartnomaSaqla } from './t2-shartnoma';
+import { entityIdFromResult, type EntityCommandResult } from './entity-consistency';
 
 /* ⚡ 2026-08-28 (foydalanuvchi ko'rsatmasi): "shartnoma, sklad qo'shish,
  * shartnomalar bilan bog'lash, skladlar yaratish, avtopark qo'shish —
@@ -204,35 +205,46 @@ export function bogTuriniTop(manba: TugunTur, maqsad: TugunTur) {
 /** Mindmapdan yangi tugun yaratish — har tur o'z mavjud RPC'siga boradi. */
 export async function sbMindmapTugunYarat(
   tur: TugunTur, kompaniyaId: number, maydonlar: Record<string, string>
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<EntityCommandResult> {
   const nom = (maydonlar.nom || '').trim();
   if (!nom) return { ok: false, error: 'Nom bo\'sh bo\'lishi mumkin emas' };
 
   if (tur === 'loyiha') {
-    return await sbT2LoyihaYoz(kompaniyaId, { nom, hudud: maydonlar.hudud || null });
+    const result = await sbT2LoyihaYoz(kompaniyaId, { nom, hudud: maydonlar.hudud || null });
+    const entityId = entityIdFromResult(result, 'loyiha');
+    return { ...(result as EntityCommandResult), entity_id: entityId };
   }
   if (tur === 'sklad') {
-    return await sbSkladYarat({ kompaniyaId, nomi: nom, manzil: maydonlar.manzil, masulShaxs: maydonlar.masul });
+    const result = await sbSkladYarat({ kompaniyaId, nomi: nom, manzil: maydonlar.manzil, masulShaxs: maydonlar.masul });
+    const entityId = entityIdFromResult(result, 'sklad');
+    return { ...(result as EntityCommandResult), entity_id: entityId };
   }
   if (tur === 'texnika') {
-    return await sbTexnikaYarat({ kompaniyaId, nomi: nom, davlatRaqami: maydonlar.davlat_raqami });
+    const result = await sbTexnikaYarat({ kompaniyaId, nomi: nom, davlatRaqami: maydonlar.davlat_raqami });
+    const entityId = entityIdFromResult(result, 'texnika');
+    return { ...(result as EntityCommandResult), entity_id: entityId };
   }
   if (tur === 'kadr') {
     if (!(maydonlar.lavozim || '').trim()) return { ok: false, error: 'Lavozim majburiy' };
-    return await sbKadrYarat({ kompaniyaId, ismSharif: nom, lavozim: maydonlar.lavozim });
+    const result = await sbKadrYarat({ kompaniyaId, ismSharif: nom, lavozim: maydonlar.lavozim });
+    const entityId = entityIdFromResult(result, 'kadr');
+    return { ...(result as EntityCommandResult), entity_id: entityId };
   }
   if (tur === 'kontragent') {
-    return await sbKontragentSaqla({ kompaniyaId, nom, inn: maydonlar.inn || undefined });
+    const result = await sbKontragentSaqla({ kompaniyaId, nom, inn: maydonlar.inn || undefined });
+    const entityId = entityIdFromResult(result, 'kontragent');
+    return { ...(result as EntityCommandResult), entity_id: entityId };
   }
   if (tur === 'shartnoma') {
-    return await sbT2ShartnomaSaqla({
+    const result = await sbT2ShartnomaSaqla({
       kompaniyaId,
       raqam: nom, nom: maydonlar.izoh || nom, taraf: maydonlar.taraf || '',
     });
+    const entityId = entityIdFromResult(result, 'shartnoma');
+    return { ...(result as EntityCommandResult), entity_id: entityId };
   }
   /* Obyekt ATAYLAB bu yerda yaratilmaydi: unga Drive papka tuzilmasi
      ham kerak (`apiT2ObyektPapkaYarat`) — mindmapdan yarim yaratilgan
      obyekt keyin smeta yuklashda sinardi. Obyektlar sahifasidan. */
   return { ok: false, error: tur + ' turini mindmapdan yaratib bo\'lmaydi' };
 }
-

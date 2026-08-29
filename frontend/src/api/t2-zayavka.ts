@@ -1,5 +1,6 @@
 import { sbOqi, yozAmali, type AktNatija, type SbJavob } from './supabase';
 import { yangiOperationId } from './t2-mindmap';
+import { trackEntityCommand } from './entity-consistency';
 
 export type ProcurementStatus = 'draft' | 'submitted' | 'approved' | 'procurement' | 'ordered' | 'partially_delivered' | 'delivered' | 'closed' | 'cancelled';
 export type ZayavkaHolat = ProcurementStatus;
@@ -31,9 +32,8 @@ export async function sbZayavkalarOl(kompaniyaId: number, obyektId?: number): Pr
   return { ...r, qatorlar: (r.qatorlar || []).map(mapRow) };
 }
 export function sbZayavkaYoz(kompaniyaId: number, p: { obyektId: number; itemText: string; requestedQty: number; unit?: string; requiredDate?: string; priority?: string; note?: string; materialId?: number | null }): Promise<ZayavkaNatija> {
-  return yozAmali({ amal: 'erp_amal', kompaniya_id: kompaniyaId, operatsiya: 'zayavka_yarat', payload: { obyekt_id: p.obyektId, material_id: p.materialId ?? null, item_text: p.itemText, requested_qty: p.requestedQty, unit: p.unit ?? null, required_date: p.requiredDate ?? null, priority: p.priority ?? null, note: p.note ?? null, operation_id: yangiOperationId() } }) as Promise<ZayavkaNatija>;
+  return trackEntityCommand('zayavka', kompaniyaId, yozAmali({ amal: 'erp_amal', kompaniya_id: kompaniyaId, operatsiya: 'zayavka_yarat', payload: { obyekt_id: p.obyektId, material_id: p.materialId ?? null, item_text: p.itemText, requested_qty: p.requestedQty, unit: p.unit ?? null, required_date: p.requiredDate ?? null, priority: p.priority ?? null, note: p.note ?? null, operation_id: yangiOperationId() } }) as Promise<ZayavkaNatija>);
 }
 export function sbZayavkaHolatYoz(kompaniyaId: number, request: ProcurementRequest, status: ProcurementStatus, deliveredQty?: number): Promise<ZayavkaNatija> {
   return yozAmali({ amal: 'erp_amal', kompaniya_id: kompaniyaId, operatsiya: 'zayavka_holat', payload: { id: request.id, status, delivered_qty: deliveredQty, expected_version: request.version, kutilgan_versiya: request.version, operation_id: yangiOperationId() } }) as Promise<ZayavkaNatija>;
 }
-

@@ -12,6 +12,7 @@ interface ToastEvent {
   onUndo?: () => void;
   /** Ko'rinib turish vaqti (ms). Berilmasa: undo bilan 10s, aks holda 3s. */
   davomiylik?: number;
+  action?: { label: string; onClick: () => void };
 }
 
 let toastListener: ((toast: ToastEvent) => void) | null = null;
@@ -21,9 +22,10 @@ export const toast = (
   type: ToastType = 'ok',
   onUndo?: () => void,
   davomiylik?: number,
+  action?: { label: string; onClick: () => void },
 ) => {
   if (toastListener) {
-    toastListener({ message, type, onUndo, davomiylik });
+    toastListener({ message, type, onUndo, davomiylik, action });
   }
 };
 
@@ -48,7 +50,7 @@ export function ToastContainer() {
       });
       setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
-      }, t.davomiylik ?? (t.onUndo ? 10000 : 3000));
+      }, t.davomiylik ?? (t.onUndo ? 10000 : (t.action ? 10000 : 3000)));
     };
     return () => {
       toastListener = null;
@@ -78,12 +80,23 @@ export function ToastContainer() {
                 }}
                 className="ml-4 px-2 py-1 text-xs font-medium bg-surface rounded border border-border hover:bg-surface-2 transition-colors text-white"
               >
-                ↩ Bekor qilish
+                ↶ Bekor qilish
+              </button>
+            )}
+            {t.action && (
+              <button
+                onClick={() => {
+                  t.action!.onClick();
+                  setToasts((prev) => prev.filter((toast) => toast.id !== t.id));
+                }}
+                className="ml-4 px-2 py-1 text-xs font-medium bg-sky-500/20 text-sky-300 rounded border border-sky-500/50 hover:bg-sky-500/30 transition-colors"
+              >
+                {t.action.label}
               </button>
             )}
             <button
               onClick={() => setToasts((prev) => prev.filter((toast) => toast.id !== t.id))}
-              className={`${t.onUndo ? 'ml-2' : 'ml-auto'} p-1 rounded hover:bg-white/10 transition-colors text-text-dim hover:text-white`}
+              className={`${(t.onUndo || t.action) ? 'ml-2' : 'ml-auto'} p-1 rounded hover:bg-white/10 transition-colors text-text-dim hover:text-white`}
             >
               <X size={16} />
             </button>
