@@ -89,7 +89,7 @@ export type MindmapTugun = {
 };
 
 export type MindmapBogich = {
-  manba: string; maqsad: string; tur: BogTur; uzsa_boladi: boolean;
+  manba: string; maqsad: string; tur: BogTur; uzsa_boladi: boolean; rol?: string;
 };
 
 /** Butun tashkilot bo'yicha bir qarashda ko'riladigan jamlanma. */
@@ -110,6 +110,14 @@ export type MindmapGraf = {
   bogichlar: MindmapBogich[];
   jamlanma?: MindmapJamlanma;
 };
+
+/** Mutation operation ID is created once by the caller and reused on retry. */
+export function yangiOperationId(): string {
+  if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
+    throw new Error('Secure UUID generator mavjud emas');
+  }
+  return crypto.randomUUID();
+}
 
 /** Tugundagi eng jiddiy belgi — tugun rangini shu belgilaydi. */
 export function belgiDarajasi(t: MindmapTugun): 'ogoh' | 'info' | null {
@@ -148,13 +156,15 @@ export async function sbMindmapGrafOl(kompaniyaId: number): Promise<
 }
 
 /** Chiziq tortilganda — bog'lanish saqlanadi. */
-export function sbMindmapBog(tur: BogTur, manbaId: number, maqsadId: number, rol?: string) {
-  return yozAmali({ amal: 'mindmap_bog', tur, manba_id: manbaId, maqsad_id: maqsadId, rol });
+export function sbMindmapBog(kompaniyaId: number, tur: BogTur, manbaId: number, maqsadId: number, expectedVersion: number, rol?: string) {
+  return yozAmali({ amal: 'mindmap_bog', kompaniya_id: kompaniyaId, tur, manba_id: manbaId, maqsad_id: maqsadId,
+    expected_version: expectedVersion, operation_id: yangiOperationId(), rol });
 }
 
 /** Chiziq o'chirilganda — bog'lanish uziladi (yozuvlar YO'QOLMAYDI). */
-export function sbMindmapBogOchir(tur: BogTur, manbaId: number, maqsadId: number) {
-  return yozAmali({ amal: 'mindmap_bog_ochir', tur, manba_id: manbaId, maqsad_id: maqsadId });
+export function sbMindmapBogOchir(kompaniyaId: number, tur: BogTur, manbaId: number, maqsadId: number, expectedVersion: number, rol?: string) {
+  return yozAmali({ amal: 'mindmap_bog_ochir', kompaniya_id: kompaniyaId, tur, manba_id: manbaId, maqsad_id: maqsadId,
+    expected_version: expectedVersion, operation_id: yangiOperationId(), rol });
 }
 
 /** Sudrab ko'chirilgan tugun(lar) joylashuvini saqlaydi — bir so'rovda ko'pi.
@@ -163,13 +173,14 @@ export function sbMindmapBogOchir(tur: BogTur, manbaId: number, maqsadId: number
 export function sbMindmapJoylashuvSaqla(
   kompaniyaId: number, joylar: { tugun_id: string; x: number; y: number }[]
 ) {
-  return yozAmali({ amal: 'mindmap_joylashuv_saqla', kompaniya_id: kompaniyaId, joylar });
+  return yozAmali({ amal: 'mindmap_joylashuv_saqla', kompaniya_id: kompaniyaId, joylar, operation_id: yangiOperationId() });
 }
 
 /** Tugunni o'chiradi (QATTIQ emas — holat='bekor', tarix saqlanadi).
  *  Obyekt ATAYLAB o'chirilmaydi: unda smeta/F2/pul bor → Korzinka orqali. */
-export function sbMindmapTugunOchir(tur: TugunTur, id: number) {
-  return yozAmali({ amal: 'mindmap_tugun_ochir', tur, id });
+export function sbMindmapTugunOchir(kompaniyaId: number, tur: TugunTur, id: number, expectedVersion: number) {
+  return yozAmali({ amal: 'mindmap_tugun_ochir', kompaniya_id: kompaniyaId, tur, id,
+    expected_version: expectedVersion, operation_id: yangiOperationId() });
 }
 
 /** Mindmapdan o'chirsa bo'ladigan turlar */
@@ -224,3 +235,4 @@ export async function sbMindmapTugunYarat(
      obyekt keyin smeta yuklashda sinardi. Obyektlar sahifasidan. */
   return { ok: false, error: tur + ' turini mindmapdan yaratib bo\'lmaydi' };
 }
+

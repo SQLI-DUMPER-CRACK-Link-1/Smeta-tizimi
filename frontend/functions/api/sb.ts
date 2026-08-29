@@ -159,12 +159,13 @@ export const onRequestPost: PagesFunction<{
      *
      * Rol: `boss`/`rahbar` ham CHAQIRA OLADI — bu faqat o'qish. */
     if (so.soro) {
-      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya'> = {
+      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya'> = {
         ai_kontekst: 'obyekt',
         ai_umumiy: 'kompaniya',
         /* ⚡ 2026-08-28: mindmap butun grafni (tugunlar + bog'lanishlar)
            BITTA chaqiruvda oladi — jadval-jadval o'qish o'rniga. */
         mindmap_grafi: 'kompaniya',
+        hodisa_obyekt_lenta: 'obyekt_kompaniya',
       };
       const tur = OQISH_RPC[so.soro];
       if (!tur) {
@@ -182,13 +183,14 @@ export const onRequestPost: PagesFunction<{
        * cheklovni endi POSTGRESNING O'ZI majburlaydi — yozuvchi funksiya
        * bu yerga qo'shilsa, u GET da umuman ishlamaydi. */
       const q = new URLSearchParams();
-      if (tur === 'obyekt') {
+      if (tur === 'obyekt' || tur === 'obyekt_kompaniya') {
         const id = Number(so.obyekt_id);
         if (!Number.isFinite(id) || id <= 0) {
           return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
         }
         q.set('p_obyekt_id', String(id));
-      } else {
+      }
+      if (tur === 'kompaniya' || tur === 'obyekt_kompaniya') {
         const kid = so.kompaniya_id == null ? null : Number(so.kompaniya_id);
         /* Kompaniya berilsa — sessiya a'zoligida bo'lishi shart
            (sb-yoz.ts dagi bilan bir xil qoida). */
@@ -198,6 +200,10 @@ export const onRequestPost: PagesFunction<{
             { ok: false, error: 'Bu kompaniyaga ruxsat yo\'q' }, { status: 403 });
         }
         if (kid != null) q.set('p_kompaniya_id', String(kid));
+      }
+      if (so.soro === 'hodisa_obyekt_lenta') {
+        const lim = Math.min(100, Math.max(1, Number(so.limit || 20)));
+        q.set('p_limit', String(Number.isFinite(lim) ? lim : 20));
       }
 
       const rr = await fetch(
@@ -416,3 +422,4 @@ export const onRequestPost: PagesFunction<{
     });
   }
 };
+

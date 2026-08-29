@@ -2,9 +2,9 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Building2, Warehouse, FileText, Truck, HardHat, FolderKanban,
   Users, Plus, X, ZoomIn, ZoomOut, RefreshCcw, Unlink, Move,
-  LayoutGrid, Maximize2, Save, Trash2, ExternalLink, AlertTriangle, Clock, CheckCircle2,
+  LayoutGrid, Maximize2, Save, Trash2, ExternalLink, AlertTriangle, Clock, CheckCircle2, Activity,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
 import { pulQisqa } from '../lib/format';
@@ -113,6 +113,10 @@ type Rejim =
   | null;
 
 export default function TestXarita() {
+  const [params] = useSearchParams();
+  const [korinish, setKorinish] = useState<'bosh' | 'qurilish' | 'taminot' | 'moliya' | 'resurs' | 'risk'>('bosh');
+  const initialObyekt = params.get('obyekt');
+
   const { joriy } = useKompaniya();
   const aktKomp = joriy?.id ?? 0;
 
@@ -137,7 +141,7 @@ export default function TestXarita() {
 
   const [yaratModal, setYaratModal] = useState<TugunTur | null>(null);
   const [maydonlar, setMaydonlar] = useState<Record<string, string>>({});
-  const [rolModal, setRolModal] = useState<{ manbaId: number; maqsadId: number } | null>(null);
+  const [rolModal, setRolModal] = useState<{ manbaId: number; maqsadId: number; expectedVersion: number } | null>(null);
   const [tanlangan, setTanlangan] = useState<string | null>(null);
   const [tanlanganBog, setTanlanganBog] = useState<MindmapGraf['bogichlar'][number] | null>(null);
   const [obyektHodisalari, setObyektHodisalari] = useState<Hodisa[]>([]);
@@ -292,16 +296,19 @@ export default function TestXarita() {
       qoida = teskari;
       const v = mId; mId = qId; qId = v;
     }
-    if (qoida.tur === 'qatnashchi') { setRolModal({ manbaId: mId, maqsadId: qId }); return; }
+    const target = qoida.manba === manba.tur ? manba : maqsad;
+    const expectedVersion = Number(target.meta?.versiya);
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 0) { toast('Tugun versiyasi mavjud emas, qayta yuklang', 'danger'); return; }
+    if (qoida.tur === 'qatnashchi') { setRolModal({ manbaId: mId, maqsadId: qId, expectedVersion }); return; }
 
-    const nat = await sbMindmapBog(qoida.tur, mId, qId);
+    const nat = await sbMindmapBog(aktKomp, qoida.tur, mId, qId, expectedVersion);
     if (nat.ok) { toast(qoida.nom + ' — bajarildi', 'ok'); yukla(); }
     else toast(nat.error || 'Bog\'lanmadi', 'danger');
   };
 
   const rolniTasdiqla = async (rol: string) => {
     if (!rolModal) return;
-    const r = await sbMindmapBog('qatnashchi', rolModal.manbaId, rolModal.maqsadId, rol);
+    const r = await sbMindmapBog(aktKomp, 'qatnashchi', rolModal.manbaId, rolModal.maqsadId, rolModal.expectedVersion, rol);
     setRolModal(null);
     if (r.ok) { toast('Qatnashchi biriktirildi', 'ok'); yukla(); }
     else toast(r.error || 'Bog\'lanmadi', 'danger');
@@ -310,7 +317,10 @@ export default function TestXarita() {
   const chiziqUz = async (b: MindmapGraf['bogichlar'][number]) => {
     if (!b.uzsa_boladi) { toast('Bu tuzilmaviy bog\'lanish — uzib bo\'lmaydi', 'danger'); return; }
     if (!confirm('Bog\'lanishni uzasizmi? (Yozuvlarning o\'zi O\'CHMAYDI)')) return;
-    const r = await sbMindmapBogOchir(b.tur, Number(b.manba.split(':')[1]), Number(b.maqsad.split(':')[1]));
+    const target = graf.tugunlar.find((t) => t.id === b.maqsad);
+    const expectedVersion = Number(target?.meta?.versiya);
+    if (!target || !Number.isInteger(expectedVersion) || expectedVersion < 0) { toast('Tugun versiyasi mavjud emas, qayta yuklang', 'danger'); return; }
+    const r = await sbMindmapBogOchir(aktKomp, b.tur, Number(b.manba.split(':')[1]), Number(b.maqsad.split(':')[1]), expectedVersion, b.rol);
     if (r.ok) { setTanlanganBog(null); toast('Bog\'lanish uzildi', 'ok'); yukla(); }
     else toast(r.error || 'Uzilmadi', 'danger');
   };
@@ -364,7 +374,7 @@ export default function TestXarita() {
     let bekor = false;
     setHodisaYuklanmoqda(true);
     setHodisaXato('');
-    sbObyektHodisalariOl(obyektId, 8).then((r) => {
+    sbObyektHodisalariOl(aktKomp, obyektId, 8).then((r) => {
       if (bekor) return;
       if (r.error) { setHodisaXato(r.error); setObyektHodisalari([]); }
       else setObyektHodisalari(r.qatorlar || []);
@@ -375,11 +385,13 @@ export default function TestXarita() {
       setHodisaYuklanmoqda(false);
     });
     return () => { bekor = true; };
-  }, [tanlanganTugun?.id, tanlanganTugun?.tur]);
+  }, [aktKomp, tanlanganTugun?.id, tanlanganTugun?.tur]);
 
   const tugunOchir = async (t: MindmapTugun) => {
     if (!confirm('«' + t.nom + '» o\'chirilsinmi? (Bekor qilinadi, butunlay yo\'qolmaydi)')) return;
-    const r = await sbMindmapTugunOchir(t.tur, Number(t.id.split(':')[1]));
+    const expectedVersion = Number(t.meta?.versiya);
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 0) { toast('Tugun versiyasi mavjud emas, qayta yuklang', 'danger'); return; }
+    const r = await sbMindmapTugunOchir(aktKomp, t.tur, Number(t.id.split(':')[1]), expectedVersion);
     if (r.ok) { toast('O\'chirildi', 'ok'); setTanlangan(null); yukla(); }
     else toast(r.error || 'O\'chirilmadi', 'danger');
   };
@@ -450,7 +462,17 @@ export default function TestXarita() {
             <button onClick={yukla} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><RefreshCcw size={15} className={yuklanmoqda ? 'animate-spin' : ''} /></button>
           </div>
         </div>
-
+        <div className="flex items-center gap-2 mt-3 flex-wrap border-t border-white/5 pt-3">
+          <span className="text-[11px] text-zinc-500 mr-1">Rejim:</span>
+          {['bosh', 'qurilish', 'taminot', 'moliya', 'resurs', 'risk'].map((m) => (
+            <button key={m} onClick={() => setKorinish(m as any)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
+                korinish === m ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'border-transparent text-zinc-400 hover:bg-white/10'
+              }`}>
+              {m === 'bosh' ? 'Bosh panel' : m.charAt(0).toUpperCase() + m.slice(1)}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-2 mt-3 flex-wrap">
           <span className="text-[11px] text-zinc-500 mr-1">Yangi qo'shish:</span>
           {YARATSA_BOLADI.map((y) => {
@@ -535,18 +557,29 @@ export default function TestXarita() {
               const m = joylar[b.manba], q = joylar[b.maqsad];
               if (!m || !q) return null;
               const manbaTur = graf.tugunlar.find((t) => t.id === b.manba)?.tur || 'obyekt';
-              const rang = TUR_RANG[manbaTur];
+              const maqsadTur = graf.tugunlar.find((t) => t.id === b.maqsad)?.tur || 'obyekt';
+              const maxsusBog = ['sklad', 'texnika', 'kadr'].includes(manbaTur) || ['sklad', 'texnika', 'kadr'].includes(maqsadTur);
+              const rang = maxsusBog ? '#facc15' : TUR_RANG[manbaTur];
+              const qalinlik = maxsusBog ? 3 : 2;
+              const bogNomi = RUXSAT_BOGLANISH.find(r => r.tur === b.tur)?.nom || BOG_TUR_NOM[b.tur] || b.tur;
               const d = bezier(m.x + NODE_W, m.y + NODE_H / 2, q.x, q.y + NODE_H / 2);
               const bogTanlangan = tanlanganBog?.manba === b.manba && tanlanganBog?.maqsad === b.maqsad && tanlanganBog?.tur === b.tur;
+              const midX = (m.x + NODE_W + q.x) / 2;
+              const midY = (m.y + NODE_H / 2 + q.y + NODE_H / 2) / 2;
               return (
                 <g key={b.tur + '_' + i} className="pointer-events-auto"
                   style={{ cursor: b.uzsa_boladi ? 'pointer' : 'default' }}
                   onClick={(e) => { e.stopPropagation(); setTanlanganBog(b); setTanlangan(null); }}>
-                  <title>{BOG_TUR_NOM[b.tur] || b.tur} · {b.uzsa_boladi ? 'Tekshirish yoki uzish uchun bosing' : 'Tuzilmaviy bog\'lanish'}</title>
+                  <title>{bogNomi} · {b.uzsa_boladi ? 'Tekshirish yoki uzish uchun bosing' : 'Tuzilmaviy bog\'lanish'}</title>
                   <path d={d} fill="none" stroke="transparent" strokeWidth={16} />
-                  <path d={d} fill="none" stroke={bogTanlangan ? '#f8fafc' : rang} strokeWidth={bogTanlangan ? 4 : 2}
+                  <path d={d} fill="none" stroke={bogTanlangan ? '#f8fafc' : rang} strokeWidth={bogTanlangan ? 4 : qalinlik}
                     strokeOpacity={bogTanlangan ? 1 : (b.uzsa_boladi ? 0.6 : 0.25)}
                     strokeDasharray={b.uzsa_boladi ? 'none' : '4,4'} />
+                  {bogTanlangan && (
+                    <text x={midX} y={midY - 10} fill="#94a3b8" fontSize="10" textAnchor="middle" pointerEvents="none" className="select-none shadow-black drop-shadow-md">
+                      {bogNomi} {b.rol ? `(${b.rol})` : ''}
+                    </text>
+                  )}
                 </g>
               );
             })}
@@ -569,8 +602,9 @@ export default function TestXarita() {
                 data-tugun={t.id}
                 onPointerDown={(e) => bosildiTugun(e, t.id)}
                 onClick={() => { if (!rejim.current) { setTanlangan(t.id); setTanlanganBog(null); } }}
-                className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg ' +
-                  (nishon && boglashMumkin ? 'ring-2 ring-sky-400/70' : '') + (nishon && !boglashMumkin ? 'opacity-40' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
+                className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg transition-opacity duration-300 ' +
+                  (korinish === 'risk' && !((t.meta?.belgi || []) as MindmapBelgi[]).some(b => b.daraja === 'ogoh') ? 'opacity-30 grayscale ' : 'opacity-100 ') +
+                  (nishon && boglashMumkin ? 'ring-2 ring-sky-400/70' : '') + (nishon && !boglashMumkin ? 'opacity-50 ring-2 ring-rose-500/70' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
                 style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
                 
                   {/* ⚠️ 2026-08-28 (Claude) — SOXTA BELGI OLIB TASHLANDI.
@@ -754,7 +788,7 @@ export default function TestXarita() {
                   return (
                     <div key={i} onClick={(e) => { e.stopPropagation(); setTanlanganBog(b); setTanlangan(null); }} className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 cursor-pointer hover:border-sky-400/40">
                       <Ik size={13} style={{ color: TUR_RANG[qt.tur] }} className="flex-shrink-0" />
-                      <span className="min-w-0 flex-1"><span className="block text-[11px] truncate">{qt.nom}</span><span className="block text-[9px] truncate text-zinc-600">{BOG_TUR_NOM[b.tur] || b.tur}</span></span>
+                      <span className="min-w-0 flex-1"><span className="block text-[11px] truncate">{qt.nom}</span><span className="block text-[9px] truncate text-zinc-600">{b.rol ? `${RUXSAT_BOGLANISH.find(r => r.tur === b.tur)?.nom || BOG_TUR_NOM[b.tur] || b.tur} (${b.rol})` : (RUXSAT_BOGLANISH.find(r => r.tur === b.tur)?.nom || BOG_TUR_NOM[b.tur] || b.tur)}</span></span>
                       {b.uzsa_boladi && (
                         <button onClick={() => chiziqUz(b)} title="Bog'lanishni uzish"
                           className="text-zinc-500 hover:text-rose-400 flex-shrink-0"><Unlink size={12} /></button>
@@ -766,11 +800,60 @@ export default function TestXarita() {
             </div>
 
             <div className="space-y-2 pt-2 border-t border-white/10">
+              {tanlanganTugun.tur === 'shartnoma' && (
+                <div className="rounded-xl border border-white/5 bg-black/20 p-3 mb-2">
+                  <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-300"><FileText size={12} /> Shartnoma ma'lumotlari</h4>
+                  <div className="space-y-2 text-[11px]">
+                     <div className="flex justify-between"><span className="text-zinc-400">Taraf:</span><span className="text-white font-bold">{tanlanganTugun.meta?.taraf || '—'}</span></div>
+                     <div className="flex justify-between"><span className="text-zinc-400">Summa:</span><span className="text-white font-bold">{tanlanganTugun.meta?.summa ? pulQisqa(tanlanganTugun.meta.summa) : (tanlanganTugun.meta?.summa_bez_nds ? pulQisqa(tanlanganTugun.meta.summa_bez_nds) : '—')}</span></div>
+                     <div className="flex justify-between"><span className="text-zinc-400">Holat:</span><span className="text-white font-bold">{tanlanganTugun.meta?.holat || '—'}</span></div>
+                     <div className="mt-2 border-t border-white/10 pt-2 text-zinc-400">Loyihalar: <span className="text-white">{tanlanganBoglar.filter(b => b.tur === 'shartnoma_loyiha').map(b => graf.tugunlar.find(t => t.id === (b.manba === tanlanganTugun.id ? b.maqsad : b.manba))?.nom).join(', ') || '—'}</span></div>
+                     <div className="text-zinc-400">Obyektlar: <span className="text-white">{tanlanganBoglar.filter(b => b.tur === 'shartnoma_obyekt').map(b => graf.tugunlar.find(t => t.id === (b.manba === tanlanganTugun.id ? b.maqsad : b.manba))?.nom).join(', ') || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+              {tanlanganTugun.tur === 'kontragent' && (
+                <div className="rounded-xl border border-white/5 bg-black/20 p-3 mb-2">
+                  <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-300"><Users size={12} /> Ishtirok ma'lumotlari</h4>
+                  <div className="space-y-2 text-[11px]">
+                     <div className="flex justify-between"><span className="text-zinc-400">STIR (INN):</span><span className="text-white font-bold">{tanlanganTugun.meta?.inn || '—'}</span></div>
+                     <div className="mt-2 border-t border-white/10 pt-2 text-zinc-400">Loyihalardagi rollari:</div>
+                     {tanlanganBoglar.filter(b => b.tur === 'qatnashchi').length === 0 ? <span className="text-zinc-500">Hali loyihalarga biriktirilmagan</span> : null}
+                     {tanlanganBoglar.filter(b => b.tur === 'qatnashchi').map((b, idx) => {
+                         const l = graf.tugunlar.find(t => t.id === (b.manba === tanlanganTugun.id ? b.maqsad : b.manba));
+                         return <div key={idx} className="flex justify-between"><span className="text-zinc-400 truncate max-w-[150px]">{l?.nom || "Noma'lum"}</span><span className="text-sky-300 font-bold">{b.rol || 'Biriktirilgan'}</span></div>;
+                     })}
+                  </div>
+                </div>
+              )}
               {tanlanganTugun.tur === 'obyekt' && (
-                <button type="button" onClick={() => navigate('/admin/test/zayavka?obyekt=' + encodeURIComponent(tanlanganTugun.nom))}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500/15 py-2 text-[12px] text-amber-200 hover:bg-amber-500/25">
-                  <AlertTriangle size={13} /> Zayavkalarni boshqarish
-                </button>
+                <div className="rounded-xl border border-white/5 bg-black/20 p-3 mb-2 space-y-3">
+                  <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-300">
+                    <Activity size={12} /> Obyekt KPI (Holati)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                     <div className="bg-white/5 p-2 rounded border border-white/5">
+                        <div className="text-zinc-500 mb-0.5">Smeta Hajmi</div>
+                        <div className="font-bold text-sky-300">{tanlanganTugun.meta?.smeta ? pulQisqa(tanlanganTugun.meta.smeta) : 'Kiritilmagan'}</div>
+                     </div>
+                     <div className="bg-white/5 p-2 rounded border border-white/5">
+                        <div className="text-zinc-500 mb-0.5">Fakt (F2)</div>
+                        <div className="font-bold text-emerald-400">{tanlanganTugun.meta?.fakt ? pulQisqa(tanlanganTugun.meta.fakt) : '0'}</div>
+                     </div>
+                     <div className="bg-white/5 p-2 rounded border border-white/5">
+                        <div className="text-zinc-500 mb-0.5">Bajarildi %</div>
+                        <div className="font-bold text-white">{tanlanganTugun.meta?.foiz ? tanlanganTugun.meta.foiz + '%' : '0%'}</div>
+                     </div>
+                     <div className="bg-white/5 p-2 rounded border border-white/5">
+                        <div className="text-zinc-500 mb-0.5">Ochiq Zayavkalar</div>
+                        <div className="font-bold text-amber-400">{tanlanganTugun.meta?.zayavka_soni || 0} ta</div>
+                     </div>
+                  </div>
+                  <button type="button" onClick={() => navigate('/admin/test/zayavka?obyekt=' + encodeURIComponent(tanlanganTugun.nom))}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500/15 py-2 text-[12px] text-amber-200 hover:bg-amber-500/25">
+                    <AlertTriangle size={13} /> Zayavkalarni boshqarish
+                  </button>
+                </div>
               )}
               {SAHIFA_YOLI[tanlanganTugun.tur] && (
                 <button onClick={() => navigate(SAHIFA_YOLI[tanlanganTugun.tur]!(Number(tanlanganTugun.id.split(':')[1]), tanlanganTugun.nom))}
@@ -855,3 +938,4 @@ export default function TestXarita() {
     </div>
   );
 }
+

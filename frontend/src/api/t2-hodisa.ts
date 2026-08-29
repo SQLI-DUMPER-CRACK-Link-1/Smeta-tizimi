@@ -45,12 +45,17 @@ export function sbHodisaLentaOl(kompaniyaId: number, limit = 50) {
 }
 
 /** Bitta obyekt tarixi — mindmapda tugun tanlanganda ko'rsatish uchun. */
-export function sbObyektHodisalariOl(obyektId: number, limit = 20) {
-  return sbOqi<Hodisa>({
-    jadval: 't2_hodisa_lenta',
-    filtr: 'obyekt_id=eq.' + obyektId,
-    limit,
-  });
+export async function sbObyektHodisalariOl(kompaniyaId: number, obyektId: number, limit = 20) {
+  try {
+    const r = await fetch('/api/sb', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ soro: 'hodisa_obyekt_lenta', kompaniya_id: kompaniyaId, obyekt_id: obyektId, limit }) });
+    const j = await r.json();
+    if (!j.ok) return { ok: false, qatorlar: [], error: j.error || 'Hodisa o\'qilmadi' };
+    const qatorlar = Array.isArray(j.natija) ? j.natija as Hodisa[] : [];
+    return { ok: true, qatorlar, soni: qatorlar.length };
+  } catch (e: any) {
+    return { ok: false, qatorlar: [], error: 'Tarmoq: ' + (e?.message || String(e)) };
+  }
 }
 
 /**
@@ -78,3 +83,4 @@ export const MODUL_RANG: Record<string, string> = {
   shartnoma: '#d946ef',   // tijorat
   tolov:     '#10b981',   // pul harakati
 };
+

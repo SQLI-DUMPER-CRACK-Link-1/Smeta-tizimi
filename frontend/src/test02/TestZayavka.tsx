@@ -3,25 +3,34 @@ import { useSearchParams } from 'react-router-dom';
 import { ClipboardList, Plus, Search, Building2, Calendar, AlertTriangle, Send, Warehouse, Trash2, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 import { toast } from '../umumiy/ui/Toast';
-import { sbZayavkalarOl, type T2Zayavka, type ZayavkaHolat } from '../api/t2-zayavka';
-import { yozAmali } from '../api/supabase';
+import { sbZayavkalarOl, sbZayavkaYoz, sbZayavkaHolatYoz, type T2Zayavka, type ZayavkaHolat } from '../api/t2-zayavka';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../api/supabase';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const HOLAT_RANG: Record<ZayavkaHolat, string> = {
-  kutilmoqda: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  tasdiqlandi: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-  yopildi: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  rad: 'bg-red-500/10 text-red-400 border-red-500/20',
+  cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
+  draft: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
+  submitted: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  approved: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+  procurement: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  ordered: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  partially_delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  closed: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
 };
 
 const HOLAT_NOM: Record<ZayavkaHolat, string> = {
-  kutilmoqda: 'Kutilmoqda',
-  tasdiqlandi: 'Tasdiqlandi (Birjada)',
-  yopildi: 'Yopildi (Berildi)',
-  rad: 'Rad etildi',
+  cancelled: 'Bekor qilindi',
+  draft: 'Qoralama',
+  submitted: 'Yuborildi',
+  approved: 'Tasdiqlandi',
+  procurement: 'Xaridda',
+  ordered: 'Buyurtma berildi',
+  partially_delivered: 'Qisman keldi',
+  delivered: 'To\'liq keldi',
+  closed: 'Yopildi'
 };
 
 export default function TestZayavka() {
@@ -38,6 +47,9 @@ export default function TestZayavka() {
   const [formMaxsulot, setFormMaxsulot] = useState('');
   const [formMiqdor, setFormMiqdor] = useState('');
   const [formBirlik, setFormBirlik] = useState('metr');
+  const [formSanaKerak, setFormSanaKerak] = useState('');
+  const [formPrioritet, setFormPrioritet] = useState('normal');
+  const [formIzoh, setFormIzoh] = useState('');
   const [formBuyurtma, setFormBuyurtma] = useState('');
 
   const [amalId, setAmalId] = useState<number | null>(null);
@@ -83,27 +95,14 @@ export default function TestZayavka() {
 
   const handleYuborish = async () => {
     if (!joriy) return;
-    if (!formMaxsulot || !formMiqdor) {
+    if (!formMaxsulot || !formMiqdor || !formObyektId) {
       toast("Maxsulot va miqdorni kiriting", "warn");
       return;
     }
     
     setYuklanmoqda(true);
     try {
-      const payload = {
-        obyekt_id: formObyektId ? parseInt(formObyektId) : null,
-        maxsulot: formMaxsulot,
-        miqdor: parseFloat(formMiqdor),
-        birlik: formBirlik,
-        buyurtma_raqami: formBuyurtma
-      };
-
-      const natija = await yozAmali({
-        amal: 'erp_amal',
-        kompaniya_id: joriy.id,
-        operatsiya: 'zayavka_yarat',
-        payload
-      });
+      const natija = await sbZayavkaYoz(joriy.id, { obyektId: parseInt(formObyektId), itemText: formMaxsulot, requestedQty: parseFloat(formMiqdor), unit: formBirlik, requiredDate: formSanaKerak || undefined, priority: formPrioritet, note: formIzoh });
 
       if (!natija.ok) throw new Error(natija.error || "Xato yuz berdi");
 
@@ -111,7 +110,11 @@ export default function TestZayavka() {
       setIsModalOpen(false);
       setFormMaxsulot('');
       setFormMiqdor('');
+      setFormBirlik('metr');
       setFormBuyurtma('');
+      setFormSanaKerak('');
+      setFormPrioritet('normal');
+      setFormIzoh('');
       yukla();
     } catch (err: any) {
       toast(err.message, "danger");
@@ -120,16 +123,11 @@ export default function TestZayavka() {
     }
   };
 
-  const holatOzgartir = async (id: number, yHolat: ZayavkaHolat) => {
+  const holatOzgartir = async (request: T2Zayavka, yHolat: ZayavkaHolat) => {
     if (!joriy) return;
-    setAmalId(id);
+    setAmalId(request.id);
     try {
-      const natija = await yozAmali({
-        amal: 'erp_amal',
-        kompaniya_id: joriy.id,
-        operatsiya: 'zayavka_holat',
-        payload: { id, holat: yHolat }
-      });
+      const natija = await sbZayavkaHolatYoz(joriy.id, request, yHolat, yHolat === 'delivered' ? request.requestedQty : undefined);
       if (!natija.ok) throw new Error(natija.error || "Xato yuz berdi");
       toast(`Holat o'zgardi: ${HOLAT_NOM[yHolat]}`, "ok");
       yukla();
@@ -140,18 +138,13 @@ export default function TestZayavka() {
     }
   };
 
-  const zayavkaOchir = async (id: number) => {
+  const zayavkaOchir = async (request: T2Zayavka) => {
     if (!joriy) return;
     if (!confirm("Haqiqatan ham rad etasizmi? (O'chiriladi)")) return;
     
-    setAmalId(id);
+    setAmalId(request.id);
     try {
-      const natija = await yozAmali({
-        amal: 'erp_amal',
-        kompaniya_id: joriy.id,
-        operatsiya: 'zayavka_ochir',
-        payload: { id }
-      });
+      const natija = await sbZayavkaHolatYoz(joriy.id, request, 'cancelled');
       if (!natija.ok) throw new Error(natija.error || "Xato yuz berdi");
       toast("Zayavka rad etildi", "ok");
       yukla();
@@ -190,7 +183,9 @@ export default function TestZayavka() {
                 <th className="px-4 py-3 font-medium">Sana</th>
                 <th className="px-4 py-3 font-medium">Obyekt</th>
                 <th className="px-4 py-3 font-medium">Maxsulot</th>
-                <th className="px-4 py-3 font-medium text-right">Miqdor</th>
+                <th className="px-4 py-3 font-medium text-right">So'ralgan</th>
+                <th className="px-4 py-3 font-medium text-right">Kelgan</th>
+                <th className="px-4 py-3 font-medium text-right">Qoldiq</th>
                 <th className="px-4 py-3 font-medium">Holat</th>
                 <th className="px-4 py-3 font-medium text-right">Amallar</th>
               </tr>
@@ -198,7 +193,7 @@ export default function TestZayavka() {
             <tbody className="divide-y divide-white/5 text-white">
               {zayavkalar.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-zinc-500">
                     Hozircha zayavkalar yo'q.
                   </td>
                 </tr>
@@ -206,28 +201,34 @@ export default function TestZayavka() {
                 zayavkalar.map((z) => (
                   <tr key={z.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-zinc-400">
-                      {z.buyurtma_raqami || `#${z.id}`}
+                      {`#${z.id}`}
                     </td>
                     <td className="px-4 py-3 text-zinc-300 text-xs">
-                      {sanaKorsat(z.yaratilgan_vaqt)}
+                      {sanaKorsat(z.createdAt || '')}<br/>
+                      <span className="text-[10px] text-zinc-500">
+                        {z.createdAt ? Math.floor((new Date().getTime() - new Date(z.createdAt).getTime()) / (1000 * 3600 * 24)) : 0} kun oldin
+                      </span>
                     </td>
                     <td className="px-4 py-3 font-medium flex items-center gap-2">
                       <Building2 size={14} className="text-indigo-400" />
-                      {z.obyekt_nomi || "Noma'lum"}
+                      {obyektlar.find(o => o.id === z.obyektId)?.nom || "Noma'lum"}
                     </td>
                     <td className="px-4 py-3 text-sky-300 font-medium">
-                      {z.maxsulot}
+                      {z.itemText}
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-amber-400">
+                      <FmtN val={z.requestedQty} /> {z.unit}
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-emerald-400">
-                      <FmtN val={z.miqdor} /> {z.birlik}
+                      <FmtN val={z.deliveredQty} /> {z.unit}
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-rose-400">
+                      {z.remainingQty == null ? '—' : <><FmtN val={z.remainingQty} /> {z.unit}</>}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${HOLAT_RANG[z.holat]}`}>
-                        {z.holat === 'kutilmoqda' && <Clock size={12} />}
-                        {z.holat === 'tasdiqlandi' && <Send size={12} />}
-                        {z.holat === 'yopildi' && <CheckCircle2 size={12} />}
-                        {z.holat === 'rad' && <XCircle size={12} />}
-                        {HOLAT_NOM[z.holat]}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${HOLAT_RANG[z.status]}`}>
+                        {z.status === 'submitted' && <Send size={12} />}{z.status === 'delivered' && <CheckCircle2 size={12} />}{z.status === 'cancelled' && <XCircle size={12} />}
+                        {HOLAT_NOM[z.status]}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -235,22 +236,37 @@ export default function TestZayavka() {
                         <span className="text-zinc-500 text-xs animate-pulse">Kuting...</span>
                       ) : (
                         <div className="flex items-center justify-end gap-2">
-                          {z.holat === 'kutilmoqda' && (
+                          {(z.status === 'draft' || z.status === 'submitted') && (
                             <>
-                              <button onClick={() => holatOzgartir(z.id, 'tasdiqlandi')} className="px-2 py-1.5 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 rounded-lg text-xs font-medium transition-colors" title="Birjaga yuborish (Tasdiqlash)">
+                              <button onClick={() => holatOzgartir(z, z.status === 'draft' ? 'submitted' : 'approved')} className="px-2 py-1.5 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 rounded-lg text-xs font-medium transition-colors" title="Tasdiqlash">
                                 <Send size={14} />
                               </button>
-                              <button onClick={() => zayavkaOchir(z.id)} className="px-2 py-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-xs font-medium transition-colors" title="Rad etish (O'chirish)">
+                              <button onClick={() => zayavkaOchir(z)} className="px-2 py-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-xs font-medium transition-colors" title="Rad etish">
                                 <Trash2 size={14} />
                               </button>
                             </>
                           )}
-                          {z.holat === 'tasdiqlandi' && (
-                            <button onClick={() => holatOzgartir(z.id, 'yopildi')} className="px-2 py-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg text-xs font-medium transition-colors flex items-center gap-1" title="Skladdan berildi (Yopish)">
-                              <Warehouse size={14} /> Berildi
+                          {z.status === 'approved' && (
+                            <button onClick={() => holatOzgartir(z, 'procurement')} className="px-2 py-1.5 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg text-xs font-medium transition-colors flex items-center gap-1" title="Xaridga yuborish">
+                              <Send size={14} /> Xarid
                             </button>
                           )}
-                          {(z.holat === 'yopildi' || z.holat === 'rad') && (
+                          {z.status === 'procurement' && (
+                            <button onClick={() => holatOzgartir(z, 'ordered')} className="px-2 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg text-xs font-medium transition-colors flex items-center gap-1" title="Buyurtma berish">
+                              <Send size={14} /> Buyurtma
+                            </button>
+                          )}
+                          {(z.status === 'ordered' || z.status === 'partially_delivered') && (
+                            <button onClick={() => holatOzgartir(z, 'delivered')} className="px-2 py-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg text-xs font-medium transition-colors flex items-center gap-1" title="To'liq qabul qilish">
+                              <Warehouse size={14} /> Qabul
+                            </button>
+                          )}
+                          {z.status === 'delivered' && (
+                            <button onClick={() => holatOzgartir(z, 'closed')} className="px-2 py-1.5 bg-zinc-500/10 text-zinc-400 hover:bg-zinc-500/20 rounded-lg text-xs font-medium transition-colors flex items-center gap-1" title="Yopish">
+                              <CheckCircle2 size={14} /> Yopish
+                            </button>
+                          )}
+                          {(z.status === 'closed' || z.status === 'cancelled') && (
                             <span className="text-zinc-600 text-xs">—</span>
                           )}
                         </div>
@@ -305,6 +321,25 @@ export default function TestZayavka() {
                   <label className="block text-xs text-zinc-400 mb-1">Buyurtma Raqami (Majburiy emas)</label>
                   <input type="text" value={formBuyurtma} onChange={e => setFormBuyurtma(e.target.value)} placeholder="Avtomat generatsiya qilinadi" className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-zinc-500 focus:border-indigo-500 outline-none transition-colors" disabled />
                 </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs text-zinc-400 mb-1">Talab qilingan sana</label>
+                    <input type="date" value={formSanaKerak} onChange={e => setFormSanaKerak(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-indigo-500 outline-none transition-colors" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs text-zinc-400 mb-1">Muhimlik (Prioritet)</label>
+                    <select value={formPrioritet} onChange={e => setFormPrioritet(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-indigo-500 outline-none transition-colors">
+                      <option>Past</option>
+                      <option>O'rta</option>
+                      <option>Yuqori</option>
+                      <option>Kritik</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1">Izoh</label>
+                  <textarea value={formIzoh} onChange={e => setFormIzoh(e.target.value)} rows={2} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-indigo-500 outline-none transition-colors"></textarea>
+                </div>
               </div>
 
               <div className="flex gap-3 justify-end mt-6 pt-5 border-t border-white/10">
@@ -320,3 +355,4 @@ export default function TestZayavka() {
     </Sahifa>
   );
 }
+

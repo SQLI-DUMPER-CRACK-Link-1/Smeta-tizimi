@@ -101,10 +101,10 @@ const AMALLAR = {
   material_alias_yoz: { rpc: 't2_material_alias_yoz' },
   material_alias_ochir: { rpc: 't2_material_alias_ochir' },
   /* MINDMAP — chiziq tortib bog'lash/uzish (2026-08-28) */
-  mindmap_bog: { rpc: 't2_mindmap_bog' },
-  mindmap_bog_ochir: { rpc: 't2_mindmap_bog_ochir' },
-  mindmap_joylashuv_saqla: { rpc: 't2_mindmap_joylashuv_saqla' },
-  mindmap_tugun_ochir: { rpc: 't2_mindmap_tugun_ochir' }
+  mindmap_bog: { rpc: 't2_mindmap_bog_v2' },
+  mindmap_bog_ochir: { rpc: 't2_mindmap_bog_ochir_v2' },
+  mindmap_joylashuv_saqla: { rpc: 't2_mindmap_joylashuv_saqla_v2' },
+  mindmap_tugun_ochir: { rpc: 't2_mindmap_tugun_ochir_v2' }
 } as const;
 
 type Amal = keyof typeof AMALLAR;
@@ -135,6 +135,27 @@ export const onRequestPost: PagesFunction<{
     const amal: Amal = (so.amal || 'qator_tahrir') as Amal;
     if (!Object.prototype.hasOwnProperty.call(AMALLAR, amal)) {
       return Response.json({ ok: false, error: 'Noma\'lum amal: ' + String(so.amal) });
+    }
+
+    const MINDMAP_V2 = amal.startsWith('mindmap_');
+    const operationId = String(so.operation_id || '');
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (MINDMAP_V2) {
+      if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
+        return Response.json({ ok: false, error: 'V2 buyruq uchun actor/session identifikatori talab qilinadi' }, { status: 401 });
+      }
+      const kid = Number(so.kompaniya_id);
+      if (!Number.isInteger(kid) || kid <= 0 || !Array.isArray(sess.kompaniyalar) ||
+          !sess.kompaniyalar.some((a) => a.kompaniya_id === kid)) {
+        return Response.json({ ok: false, error: 'Bu kompaniyaga ruxsat yo\'q' }, { status: 403 });
+      }
+      if (!uuidRe.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi shart' });
+      }
+      if (amal !== 'mindmap_joylashuv_saqla' &&
+          (!Number.isInteger(Number(so.expected_version)) || Number(so.expected_version) < 0)) {
+        return Response.json({ ok: false, error: 'expected_version noto\'g\'ri' });
+      }
     }
 
     /* ⚡ 2026-08-27 (Claude, foydalanuvchi tasdig'i — "haqiqiy multi-
@@ -1058,9 +1079,16 @@ export const onRequestPost: PagesFunction<{
         if (tur === 'qatnashchi' && !rol) {
           return Response.json({ ok: false, error: 'qatnashchi bog\'lanishida rol majburiy' });
         }
-        yuk = { p_tur: tur, p_manba_id: manbaId, p_maqsad_id: maqsadId, p_rol: rol };
+        yuk = { p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
+          p_tur: tur, p_manba_id: manbaId, p_maqsad_id: maqsadId, p_rol: rol,
+          p_kutilgan_versiya: Number(so.expected_version), p_operation_id: operationId,
+          p_actor_label: sess.email || null };
       } else {
-        yuk = { p_tur: tur, p_manba_id: manbaId, p_maqsad_id: maqsadId };
+        const rol = so.rol && ROLLAR.includes(String(so.rol)) ? String(so.rol) : null;
+        yuk = { p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
+          p_tur: tur, p_manba_id: manbaId, p_maqsad_id: maqsadId, p_rol: rol,
+          p_kutilgan_versiya: Number(so.expected_version), p_operation_id: operationId,
+          p_actor_label: sess.email || null };
       }
 
     /* Tugun sudrab ko'chirilganda joylashuv saqlanadi — aks holda har
@@ -1081,7 +1109,8 @@ export const onRequestPost: PagesFunction<{
       if (!joylar.length) {
         return Response.json({ ok: false, error: "yaroqli joylashuv yo'q" });
       }
-      yuk = { p_kompaniya_id: kompaniyaId, p_joylar: joylar };
+      yuk = { p_kompaniya_id: kompaniyaId, p_actor_id: sess.foydalanuvchi_id,
+        p_joylar: joylar, p_operation_id: operationId, p_actor_label: sess.email || null };
 
     /* Mindmapdan tugun o'chirish — QATTIQ o'chirmaydi (holat='bekor').
        Obyekt ATAYLAB ro'yxatda yo'q: unda smeta/F2/pul bor, u Korzinka
@@ -1096,7 +1125,9 @@ export const onRequestPost: PagesFunction<{
       if (!Number.isFinite(id) || id <= 0) {
         return Response.json({ ok: false, error: "id noto'g'ri" });
       }
-      yuk = { p_tur: tur, p_id: id };
+      yuk = { p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
+        p_tur: tur, p_id: id, p_kutilgan_versiya: Number(so.expected_version),
+        p_operation_id: operationId, p_actor_label: sess.email || null };
 
     /* ══════════ ФАКТ KIRITISH (bajarilgan ish) ══════════
        Foydalanuvchi: «ikkalasi ham bo'lishi kerak» — prorab kunlik ham,
