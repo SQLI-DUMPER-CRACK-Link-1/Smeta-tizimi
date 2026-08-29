@@ -3084,3 +3084,11 @@ yangi qo'riqchi 389 Gitdagi kod faylini tekshirdi.
   ochadi; entity-mutation eventi mindmapni serverdan qayta o'qitadi.
 - Lokal qo'riqchi testlari yashil. Production migration/push/deploy hali
   qilinmagan: checkoutda Supabase va Cloudflare deploy credentiali yo'q.
+
+### 2026-08-29 — Codex: Universal Estimate / F2 / Text-to-Smeta V1
+
+- Alohida `codex/universal-estimate-engine-v1` branchida, UI va production
+  APIga ulanmagan `frontend/src/estimate-engine/` foundation qurilmoqda.
+- V1 faqat parser, qat'iy birlik konversiyasi, norm adapteri, deterministic
+  resource/F2 hisoblash va ABC4 adapter kontraktini beradi; migration yoki
+  `t2_qator`/`t2_akt_qator` ga yozish yo'q.
