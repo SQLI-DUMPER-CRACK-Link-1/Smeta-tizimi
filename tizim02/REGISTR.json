@@ -1,11 +1,11 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 262,
+    "jami": 263,
     "hisobga": 145,
     "tayyor": 136,
     "qisman": 8,
-    "joyida": 107,
+    "joyida": 108,
     "kerakmas": 10
   },
   "foiz": 97,
@@ -120,12 +120,12 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 19,
+      "jami": 20,
       "tayyor": 0,
       "qisman": 0,
       "kutilmoqda": 0,
       "kerakmas": 0,
-      "joyida": 19,
+      "joyida": 20,
       "funksiyalar": [
         "apiAntigravityExport",
         "apiFaktSinxron",
@@ -138,6 +138,7 @@
         "apiT2DriveHardDelete",
         "apiT2DriveRename",
         "apiT2DriveRestore",
+        "apiT2DriveRootlarOl",
         "apiT2DriveTrash",
         "apiT2HujjatDriveSaqla",
         "apiT2PapkaHammasi",
@@ -766,10 +767,20 @@
       "qopladi": null,
       "izoh": null
     },
+    "apiT2DriveRootlarOl": {
+      "fayl": "06_ObyektPapka.js",
+      "qator": 93,
+      "argSoni": 0,
+      "domen": "kopruk",
+      "qatlam": "GAS",
+      "holat": "joyida",
+      "qopladi": "GAS Drive papka ro'yxati (faqat o'qish)",
+      "izoh": null
+    },
     "apiT2YangiObyektYarat": {
       "fayl": "06_ObyektPapka.js",
-      "qator": 83,
-      "argSoni": 1,
+      "qator": 111,
+      "argSoni": 2,
       "domen": "kopruk",
       "qatlam": "GAS",
       "holat": "joyida",

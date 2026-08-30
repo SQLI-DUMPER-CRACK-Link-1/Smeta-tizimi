@@ -113,6 +113,11 @@
   ],
   "holat": {
     "_izoh": "Tizim_02 da ALLAQACHON qoplangan funksiyalar. `qopladi` — nima bilan.",
+    "apiT2DriveRootlarOl": {
+      "qopladi": "GAS Drive papka ro'yxati (faqat o'qish)",
+      "toliq": true,
+      "qatlam": "GAS"
+    },
     "apiHolatOl": {
       "qopladi": "t2_daraxt + sbT2DaraxtOl + sbT2QatorHolatOl",
       "toliq": true,

@@ -38,6 +38,7 @@ import { useKompaniya } from './KompaniyaTanlov';
 
 type Rol = 'lokalka' | 'svodka';
 type Varaq = { nom: string; qator: number; ustun: number };
+type DriveRoot = { id: string; nom: string; url: string; sozlangan?: boolean };
 
 /** Drive'da allaqachon turgan manba hujjat (bir yuklash = bir qator). */
 type ManbaFayl = {
@@ -107,6 +108,9 @@ export default function TestImport() {
   const [obyekt, setObyekt] = useState('');        // tanlangan/yaratilgan nom
   const [yangiNom, setYangiNom] = useState('');
   const [yaratilmoqda, setYaratilmoqda] = useState(false);
+  const [driveRootlar, setDriveRootlar] = useState<DriveRoot[]>([]);
+  const [driveRootId, setDriveRootId] = useState('');
+  const [driveRootHavola, setDriveRootHavola] = useState('');
 
   /* ── Hujjatlar ── */
   const [hujjatlar, setHujjatlar] = useState<Hujjat[]>([]);
@@ -145,6 +149,14 @@ export default function TestImport() {
     }).catch(() => {});
   }, [joriy?.id]);
   useEffect(() => { obyektlarYukla(); }, [obyektlarYukla]);
+
+  useEffect(() => {
+    gas<any>('apiT2DriveRootlarOl').then((r) => {
+      if (!r.ok) return;
+      setDriveRootlar(r.papkalar || []);
+      setDriveRootId(r.default_root_id || r.papkalar?.[0]?.id || '');
+    }).catch(() => {});
+  }, []);
 
   /* Obyekt tanlanganda uning BAZADAGI hujjatlari tortiladi. */
   const hujjatlarYukla = useCallback(async (nom: string) => {
@@ -220,9 +232,12 @@ export default function TestImport() {
     }
     setYaratilmoqda(true);
     try {
-      const r = await gas<any>('apiT2YangiObyektYarat', nom);
+      const rootTanlov = driveRootHavola.trim() || driveRootId;
+      const r = await gas<any>('apiT2YangiObyektYarat', nom, rootTanlov);
       if (!r.ok) { toast(r.xabar || 'Yaratilmadi', 'danger', undefined, 9000); return; }
-      toast('Obyekt va Drive papkalari yaratildi', 'ok');
+      toast(r.qayta_tiklandi
+        ? 'Mavjud Drive papkasi obyektga bog\'landi'
+        : 'Obyekt va Drive papkalari yaratildi', 'ok');
       setYangiNom(''); obyektlarYukla(); obyektTanla(nom);
     } catch (e: any) {
       toast(e?.message || 'Xato', 'danger', undefined, 9000);
@@ -549,6 +564,23 @@ export default function TestImport() {
                          inline-flex items-center gap-1.5">
               <Plus size={14} /> {yaratilmoqda ? 'Yaratilmoqda…' : 'Yaratish'}
             </button>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 mb-3">
+            <div>
+              <label className="text-[11px] text-text-dim block mb-1">Drive ROOT papka</label>
+              <select value={driveRootId} onChange={(e) => { setDriveRootId(e.target.value); setDriveRootHavola(''); }}
+                className="w-full bg-[var(--surface-2)] border border-border rounded-lg px-3 py-2 text-[13px] text-text outline-none focus:border-accent/50">
+                {!driveRootlar.length && <option value="">Sozlangan ROOT ishlatiladi</option>}
+                {driveRootlar.map((f) => <option key={f.id} value={f.id}>{f.nom}{f.sozlangan ? ' (sozlangan)' : ''}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] text-text-dim block mb-1">yoki Drive papka havolasi / ID</label>
+              <input value={driveRootHavola} onChange={(e) => setDriveRootHavola(e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/..."
+                className="w-full bg-[var(--surface-2)] border border-border rounded-lg px-3 py-2 text-[13px] text-text outline-none focus:border-accent/50" />
+            </div>
           </div>
 
           <div>

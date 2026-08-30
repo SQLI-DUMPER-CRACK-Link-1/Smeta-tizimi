@@ -78,9 +78,37 @@ function _t2ObyektPapkaTuzilmaYarat(folder){
  * qoladi (foydalanuvchi ataylab shunday so'ragan, 2026-08-25).
  *
  * @param {string} nom      Obyekt nomi (papka nomi ham shu bo'ladi)
+ * @param {string=} rootTanlov Drive ROOT IDsi yoki papka havolasi
  * @return {{ok, folderId, folderUrl, obyekt_id, tuzilma}}
  */
-function apiT2YangiObyektYarat(nom){
+function _t2DrivePapkaId(raw){
+  raw = String(raw || '').trim();
+  if(!raw) return '';
+  var m = raw.match(/\/folders\/([A-Za-z0-9_-]+)/);
+  if(m) return m[1];
+  return /^[A-Za-z0-9_-]{10,}$/.test(raw) ? raw : '';
+}
+
+/** Joriy Drive ildizidagi papkalar — UI tanlovi uchun, yozmaydi. */
+function apiT2DriveRootlarOl(){
+  try{
+    var a = sozAsosiy(), out = [], seen = {};
+    var tanlangan = DriveApp.getFolderById(a.rootId);
+    out.push({id:tanlangan.getId(), nom:tanlangan.getName(), url:tanlangan.getUrl(), sozlangan:true});
+    seen[tanlangan.getId()] = true;
+    var it = DriveApp.getRootFolder().getFolders(), n = 0;
+    while(it.hasNext() && n < 100){
+      var f = it.next(); n++;
+      if(seen[f.getId()]) continue;
+      seen[f.getId()] = true;
+      out.push({id:f.getId(), nom:f.getName(), url:f.getUrl(), sozlangan:false});
+    }
+    out.sort(function(x,y){ return x.sozlangan ? -1 : (y.sozlangan ? 1 : x.nom.localeCompare(y.nom)); });
+    return {ok:true, default_root_id:a.rootId, papkalar:out};
+  }catch(e){ return {ok:false, xabar:'Drive ROOT ro\'yxati o\'qilmadi: ' + ((e && e.message) || e)}; }
+}
+
+function apiT2YangiObyektYarat(nom, rootTanlov){
   nom = String(nom || '').trim();
   if(!nom) return {ok:false, xabar:'Obyekt nomi bo\'sh'};
 
@@ -88,16 +116,40 @@ function apiT2YangiObyektYarat(nom){
   try{ a = sozAsosiy(); }
   catch(e){ return {ok:false, xabar:'Sozlamalar xatosi: ' + ((e && e.message) || e)}; }
 
+  var rootId = _t2DrivePapkaId(rootTanlov) || a.rootId;
   var root;
-  try{ root = DriveApp.getFolderById(a.rootId); }
-  catch(e){ return {ok:false, xabar:'ROOT_FOLDER_ID xato: ' + a.rootId}; }
+  try{ root = DriveApp.getFolderById(rootId); }
+  catch(e){ return {ok:false, xabar:'Tanlangan Drive ROOT papka ochilmadi. Havola yoki ID ni tekshiring.'}; }
 
-  /* ⚠️ Bir xil nomli papka ikki marta yaratilmasin — jim duplikat
-     Tizim_01 skaneriga ikkita "bir xil" obyekt sifatida ko'rinardi. */
+  /* Bir xil nomli papka ikki marta yaratilmasin. Oldingi urinishda
+     Drive papka yaralib, Supabase qatori yozilmagan bo'lsa, uni faqat
+     joriy tenant uchun idempotent tiklaymiz. */
   var mavjud = root.getFoldersByName(nom);
   if(mavjud.hasNext()){
-    return {ok:false, xabar:'"' + nom + '" nomli papka ROOT ostida allaqachon bor',
-            sabab: 'duplikat', folderId: mavjud.next().getId()};
+    var mavjudFolder = mavjud.next();
+    try{
+      var komp = _t2KompaniyaId();
+      var boshqaTenant = _t2Get('t2_obyekt?nom=eq.' + encodeURIComponent(nom) +
+        '&kompaniya_id=neq.' + komp + '&select=id,kompaniya_id&limit=1');
+      if(boshqaTenant.length){
+        return {ok:false, sabab:'boshqa_tenant', folderId:mavjudFolder.getId(),
+          xabar:'"' + nom + '" nomli papka boshqa kompaniyaga tegishli. Yangi obyekt uchun boshqa nom bering.'};
+      }
+      var borObyekt = apiT2ObyektTayyorla(nom, mavjudFolder.getId());
+      var borTuzilma = _t2ObyektPapkaTuzilmaYarat(mavjudFolder);
+      return {
+        ok:true, qayta_tiklandi:true, obyekt_id:borObyekt.id, tur:borObyekt.tur,
+        folderId:mavjudFolder.getId(), folderUrl:mavjudFolder.getUrl(),
+        tuzilma:{
+          smeta:borTuzilma.smeta.getUrl(), f2:borTuzilma.f2.getUrl(),
+          loyiha:borTuzilma.loyiha.getUrl(), viborka:borTuzilma.viborka.getUrl()
+        },
+        xabar:'"' + nom + '" uchun mavjud Drive papkasi bazaga bog\'landi.'
+      };
+    }catch(e){
+      return {ok:false, sabab:'tiklash_xatosi', folderId:mavjudFolder.getId(),
+        xabar:'Mavjud papkani obyektga bog\'lashda xato: ' + ((e && e.message) || e)};
+    }
   }
 
   var folder = root.createFolder(nom);
@@ -113,7 +165,7 @@ function apiT2YangiObyektYarat(nom){
      idempotent, T2_Import.js:121). */
   var obyektId = null, obyektTur = null;
   try{
-    var ob = apiT2ObyektTayyorla(nom);
+    var ob = apiT2ObyektTayyorla(nom, folder.getId());
     obyektId = ob.id; obyektTur = ob.tur;
   }catch(e){
     /* Drive papkasi allaqachon yaratildi — buni yashirmaymiz, lekin

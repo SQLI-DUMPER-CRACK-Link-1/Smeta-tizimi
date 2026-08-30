@@ -118,9 +118,10 @@ function _t2Ochir(jadval, filtr){
  * 730 mlrd berardi — haqiqiy 260 mlrd o'rniga. Shuning uchun nom shaklidan
  * turi ANIQLANADI va jamlashda ajratiladi.
  */
-function apiT2ObyektTayyorla(nom){
+function apiT2ObyektTayyorla(nom, driveId){
   nom = String(nom || '').trim();
   if(!nom) throw 'Obyekt nomi kerak';
+  driveId = String(driveId || '').trim();
 
   var tur = 'obyekt';
   if(/^Shartnoma\s*№/i.test(nom) || nom === 'Taqsimlanmagan') tur = 'shartnoma_jamlanma';
@@ -140,12 +141,24 @@ function apiT2ObyektTayyorla(nom){
   var komp = _t2KompaniyaId();
 
   var bor = _t2Get('t2_obyekt?nom=eq.' + encodeURIComponent(nom) +
-                   '&kompaniya_id=eq.' + komp + '&select=id,tur');
-  if(bor.length) return {id: bor[0].id, nom: nom, tur: bor[0].tur,
-                         kompaniya_id: komp, yangi: false};
+                   '&kompaniya_id=eq.' + komp + '&select=id,tur,drive_id');
+  if(bor.length){
+    /* Bor ID hech qachon almashtirilmaydi; faqat hali bo'sh bo'lsa
+       yaratilgan/yetim papkaning ID sini bir marta saqlaymiz. */
+    if(driveId && !bor[0].drive_id){
+      var c = _t2Cfg();
+      var r = UrlFetchApp.fetch(c.url + '/rest/v1/t2_obyekt?id=eq.' + bor[0].id, {
+        method:'patch', headers:_t2Bosh(c, {'Prefer':'return=minimal'}),
+        payload:JSON.stringify({drive_id:driveId}), muteHttpExceptions:true
+      });
+      if(r.getResponseCode() >= 300) throw 'Supabase PATCH t2_obyekt (' + r.getResponseCode() + '): ' + r.getContentText().slice(0,300);
+    }
+    return {id: bor[0].id, nom: nom, tur: bor[0].tur,
+            kompaniya_id: komp, drive_id: bor[0].drive_id || driveId, yangi: false};
+  }
 
   var yaratildi = _t2Post('t2_obyekt',
-    [{nom: nom, tur: tur, kompaniya_id: komp}], true);
+    [{nom: nom, tur: tur, kompaniya_id: komp, drive_id: driveId || null}], true);
   return {id: yaratildi[0].id, nom: nom, tur: tur,
           kompaniya_id: komp, yangi: true};
 }
