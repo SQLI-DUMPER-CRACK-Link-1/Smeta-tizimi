@@ -55,6 +55,12 @@ create table if not exists public.t2_document_registry (
   unique(provider, external_file_id)
 );
 
+alter table public.t2_obyekt add column if not exists storage_status text not null default 'pending'
+  check (storage_status in ('pending','ready','failed'));
+alter table public.t2_obyekt add column if not exists storage_error text;
+alter table public.t2_obyekt add column if not exists operation_id uuid;
+create unique index if not exists t2_obyekt_operation_id_uniq on public.t2_obyekt(operation_id) where operation_id is not null;
+
 alter table public.t2_company_storage_workspace enable row level security;
 alter table public.t2_project_storage_binding enable row level security;
 alter table public.t2_object_storage_binding enable row level security;

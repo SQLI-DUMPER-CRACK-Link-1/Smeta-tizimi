@@ -109,6 +109,42 @@ function apiT2DriveRootlarOl(){
 }
 
 function apiT2YangiObyektYarat(nom, rootTanlov){
+  /* Legacy signature is deliberately rejected for T2. A name or Drive URL
+     cannot establish tenant/project identity. */
+  if(typeof nom !== 'object' || Array.isArray(nom)){
+    return {ok:false, code:'PROJECT_CONTEXT_REQUIRED', xabar:'T2 object create companyId, projectId va operationId bilan chaqiriladi.'};
+  }
+  var cmd = nom;
+  var companyId = Number(cmd.companyId), projectId = Number(cmd.projectId);
+  var objectName = String(cmd.name || '').trim(), operationId = String(cmd.operationId || '').trim();
+  if(!companyId || !projectId || !objectName || !operationId) return {ok:false, code:'PROJECT_CONTEXT_REQUIRED', xabar:'companyId, projectId, name va operationId majburiy.'};
+  var project;
+  try{ project = _t2Get('t2_loyiha?id=eq.'+projectId+'&kompaniya_id=eq.'+companyId+'&select=id,kompaniya_id&limit=1'); }
+  catch(e){ return {ok:false, code:'PROJECT_NOT_FOUND', xabar:String(e)}; }
+  if(project.length !== 1) return {ok:false, code:'PROJECT_COMPANY_MISMATCH', xabar:'Project company contextga tegishli emas.'};
+  var ws = resolveCompanyStorage(companyId); if(!ws.ok) return ws;
+  var pb = resolveProjectStorage(projectId); if(!pb.ok) return pb;
+  if(Number(pb.binding.kompaniya_id)!==companyId || Number(pb.binding.workspace_id)!==Number(ws.workspace.id)) return _t2StorageFail(T2_STORAGE_ERROR.TENANT,'Project/workspace tenant mos emas');
+  var retry = _t2Get('t2_obyekt?operation_id=eq.'+encodeURIComponent(operationId)+'&select=id,kompaniya_id,loyiha_id,storage_status&limit=1');
+  if(retry.length){
+    if(Number(retry[0].kompaniya_id)!==companyId || Number(retry[0].loyiha_id)!==projectId) return _t2StorageFail(T2_STORAGE_ERROR.TENANT,'operationId boshqa tenant/projectga tegishli');
+    var old = resolveObjectStorage(retry[0].id);
+    return old.ok ? {ok:true, obyekt_id:retry[0].id, folderId:old.binding.folder_id, storage_status:'ready', retry:true} : {ok:false, code:'OBJECT_STORAGE_NOT_PROVISIONED', obyekt_id:retry[0].id, storage_status:retry[0].storage_status};
+  }
+  var created;
+  try{ created=_t2Post('t2_obyekt',[{nom:objectName,kompaniya_id:companyId,loyiha_id:projectId,operation_id:operationId,storage_status:'pending'}],true)[0]; }
+  catch(e){ return {ok:false, code:'OBJECT_CREATE_FAILED', xabar:String(e)}; }
+  try{
+    var parent=_t2StorageFolder(pb.binding.project_root_folder_id), folder=parent.createFolder(objectName);
+    _t2Post('t2_object_storage_binding',[{obyekt_id:created.id,kompaniya_id:companyId,loyiha_id:projectId,workspace_id:pb.binding.workspace_id,folder_id:folder.getId(),parent_folder_id:parent.getId(),provisioning_status:'verified',verified_at:new Date().toISOString()}],false);
+    var c=_t2Cfg(); UrlFetchApp.fetch(c.url+'/rest/v1/t2_obyekt?id=eq.'+created.id,{method:'patch',headers:_t2Bosh(c,{'Prefer':'return=minimal'}),payload:JSON.stringify({storage_status:'ready',drive_id:folder.getId()}),muteHttpExceptions:true});
+    return {ok:true,obyekt_id:created.id,folderId:folder.getId(),storage_status:'ready'};
+  }catch(e){
+    try{ var c2=_t2Cfg(); UrlFetchApp.fetch(c2.url+'/rest/v1/t2_obyekt?id=eq.'+created.id,{method:'patch',headers:_t2Bosh(c2),payload:JSON.stringify({storage_status:'failed',storage_error:String(e)}),muteHttpExceptions:true}); }catch(ignore){}
+    return {ok:false,code:'STORAGE_PERMISSION_DENIED',obyekt_id:created.id,storage_status:'failed',xabar:String(e)};
+  }
+/* legacy implementation retained below only for historical review; unreachable. */
+if(false){
   nom = String(nom || '').trim();
   if(!nom) return {ok:false, xabar:'Obyekt nomi bo\'sh'};
 
@@ -193,4 +229,5 @@ function apiT2YangiObyektYarat(nom, rootTanlov){
     },
     xabar: '"' + nom + '" "' + root.getName() + '" ROOT ichida yaratildi: SMETA, F2, Loyihalar va Viborka papkalari bilan.'
   };
+}
 }
