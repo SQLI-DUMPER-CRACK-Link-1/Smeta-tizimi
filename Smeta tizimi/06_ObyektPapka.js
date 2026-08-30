@@ -1,233 +1,35 @@
-/********************************************************************
- * 06_ObyektPapka.js — YANGI OBYEKT PAPKA TUZILMASI
- * ------------------------------------------------------------------
- * Foydalanuvchi (2026-08-25): «obyekt papkalari ideal va kuchli
- * tuzilmada bo'lishi kerak — ichida smeta+F2 yig'ilgan joy, chizma/PDF
- * uchun alohida papka, birinchi qavatda ishchi smeta va viborka».
- *
- * MUAMMO (eski holat):
- *   • ИШЧИ СМЕТА (ko'zgu) BUTUN tizim uchun BITTA umumiy "Tizim_02"
- *     papkasida edi — obyektning o'zidan tashqarida.
- *   • Viborka BUTUN tizim uchun BITTA umumiy jadval edi (obyektga
- *     bog'lanmagan — [[material-mustaqil-tizimlar]]).
- *   • Smeta fayllari va F2 papkasi obyekt ILDIZIDA aralash yotardi.
- *
- * YANGI TUZILMA (faqat YANGI obyektlar uchun — mavjud 4 taga
- * TEGILMAYDI, foydalanuvchi ATAYLAB shunday so'radi):
- *
- *   📁 [OBYEKT NOMI]/                      ← obyekt ildiz papkasi
- *   ├── 📊 [OBYEKT NOMI] — ИШЧИ СМЕТА       ← T2_Kozgu.js shu yerga yozadi
- *   ├── 📁 Смета/                           ← lokalka/svodka fayllari shu yerda
- *   │   └── 📁 F2/                          ← F2 hujjatlari shu yerda
- *   ├── 📁 Лойиҳа ҳужжатлари/               ← chizmalar, PDF
- *   ├── 📁 Виборка/                         ← t2_viborka bilan bog'liq fayllar
- *   └── ⚙️ Tizim Fayllari/                  ← mavjud tizim papkasi (o'zgarmadi)
- *
- * ⚠️ ORQAGA MOSLIK: `_t2ObyektYangiTuzilmaMi(folder)` — "Смета"
- * quyi papkasi bor-yo'qligiga qarab eski/yangi holatni farqlaydi.
- * Kozgu joylashuvi va F2 yuklash funksiyalari shuni tekshirib, ESKI
- * obyektlarda ESKI joyga (o'zgarishsiz), YANGI obyektlarda YANGI
- * joyga yozadi. Hech qanday mavjud fayl ko'chirilmaydi/o'zgartirilmaydi.
- ********************************************************************/
-
-var T2_STRUKTURA = {
-  SMETA:     'SMETA',
-  F2:        'F2',
-  LOYIHA:    'Loyihalar va Chizmalar',
-  VIBORKA:   'Viborka'
-};
-
-/** Papka ichida shu nomdagi quyi papkani topadi yoki yaratadi. */
-function _papkaOlYokiYarat(ota, nom){
-  var it = ota.getFoldersByName(nom);
-  if(it.hasNext()) return it.next();
-  return ota.createFolder(nom);
+/* TIZIM_02 object provisioning boundary. Business identity is DB IDs only. */
+function _t2StorageFolderId(id){
+  if(!id) throw {code:'STORAGE_PERMISSION_DENIED',message:'storage folder id bo\'sh'};
+  try{ var f=DriveApp.getFolderById(String(id)); if(f.isTrashed()) throw 'trashed'; return f; }
+  catch(e){ throw {code:'STORAGE_PERMISSION_DENIED',message:'project storage folder ochilmadi'}; }
 }
-
-/**
- * Obyekt papkasi YANGI tuzilmadami — "Смета" quyi papkasi borligiga
- * qarab aniqlaydi. Bu ORQAGA MOSLIK kaliti: eski 4 obyektda bu papka
- * yo'q, shuning uchun ular avvalgidek ishlayveradi.
- */
-function _t2ObyektYangiTuzilmaMi(folder){
-  try{ return folder.getFoldersByName(T2_STRUKTURA.SMETA).hasNext(); }
-  catch(e){ return false; }
+function _t2StorageProject(companyId,projectId){
+  var p=_t2Get('t2_loyiha?id=eq.'+Number(projectId)+'&kompaniya_id=eq.'+Number(companyId)+'&select=id,kompaniya_id&limit=1');
+  if(p.length!==1) throw {code:'PROJECT_COMPANY_MISMATCH',message:'project companyga tegishli emas'};
+  var w=resolveCompanyStorage(companyId); if(!w.ok) throw w;
+  var b=resolveProjectStorage(projectId); if(!b.ok) throw b;
+  if(Number(b.binding.kompaniya_id)!==Number(companyId)||Number(b.binding.workspace_id)!==Number(w.workspace.id)) throw {code:'STORAGE_TENANT_MISMATCH',message:'storage lineage mos emas'};
+  return {workspace:w.workspace,binding:b.binding};
 }
-
-/**
- * Obyekt papkasi ICHIDA to'liq tuzilmani quradi — IDEMPOTENT
- * (mavjud papkalarga tegmaydi, faqat yetishmayotganini qo'shadi).
- *
- * @return {{smeta, f2, loyiha, viborka, tizim}} papka obyektlari
- */
-function _t2ObyektPapkaTuzilmaYarat(folder){
-  var smeta = _papkaOlYokiYarat(folder, T2_STRUKTURA.SMETA);
-  var f2 = _papkaOlYokiYarat(smeta, T2_STRUKTURA.F2);
-  var loyiha = _papkaOlYokiYarat(folder, T2_STRUKTURA.LOYIHA);
-  var viborka = _papkaOlYokiYarat(folder, T2_STRUKTURA.VIBORKA);
-  var tizim = _getSysFolder(folder);   // 05_Papka.js dagi mavjud funksiya
-  return {smeta: smeta, f2: f2, loyiha: loyiha, viborka: viborka, tizim: tizim};
-}
-
-/**
- * YANGI obyekt yaratadi — Drive papka tuzilmasi + Tizim_02 bazadagi
- * `t2_obyekt` qatori BIR AMALDA.
- *
- * ⚠️ Bu funksiya faqat YANGI obyektlar uchun. Mavjud obyektlarni
- * import qilish uchun ishlatilmaydi — ular o'z eski joylashuvida
- * qoladi (foydalanuvchi ataylab shunday so'ragan, 2026-08-25).
- *
- * @param {string} nom      Obyekt nomi (papka nomi ham shu bo'ladi)
- * @param {string=} rootTanlov Drive ROOT IDsi yoki papka havolasi
- * @return {{ok, folderId, folderUrl, obyekt_id, tuzilma}}
- */
-function _t2DrivePapkaId(raw){
-  raw = String(raw || '').trim();
-  if(!raw) return '';
-  var m = raw.match(/\/folders\/([A-Za-z0-9_-]+)/);
-  if(m) return m[1];
-  return /^[A-Za-z0-9_-]{10,}$/.test(raw) ? raw : '';
-}
-
-/** Joriy Drive ildizidagi papkalar — UI tanlovi uchun, yozmaydi. */
-function apiT2DriveRootlarOl(){
+/** Canonical T2 create. Name-only calls are invalid. */
+function apiT2ObyektYarat(input){
+  if(!input||Array.isArray(input)||typeof input!=='object') return {ok:false,code:'PROJECT_CONTEXT_REQUIRED',xabar:'companyId, projectId, name va operationId majburiy'};
+  var companyId=Number(input.companyId),projectId=Number(input.projectId),name=String(input.name||'').trim(),operationId=String(input.operationId||'').trim();
+  if(!companyId||!projectId||!name||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) return {ok:false,code:'PROJECT_CONTEXT_REQUIRED',xabar:'companyId, projectId, name va UUID operationId majburiy'};
   try{
-    var a = sozAsosiy(), out = [], seen = {};
-    var tanlangan = DriveApp.getFolderById(a.rootId);
-    out.push({id:tanlangan.getId(), nom:tanlangan.getName(), url:tanlangan.getUrl(), sozlangan:true});
-    seen[tanlangan.getId()] = true;
-    var it = DriveApp.getRootFolder().getFolders(), n = 0;
-    while(it.hasNext() && n < 100){
-      var f = it.next(); n++;
-      if(seen[f.getId()]) continue;
-      seen[f.getId()] = true;
-      out.push({id:f.getId(), nom:f.getName(), url:f.getUrl(), sozlangan:false});
-    }
-    out.sort(function(x,y){ return x.sozlangan ? -1 : (y.sozlangan ? 1 : x.nom.localeCompare(y.nom)); });
-    return {ok:true, default_root_id:a.rootId, papkalar:out};
-  }catch(e){ return {ok:false, xabar:'Drive ROOT ro\'yxati o\'qilmadi: ' + ((e && e.message) || e)}; }
+    var storage=_t2StorageProject(companyId,projectId);
+    var existing=_t2Rpc('t2_object_create_v1',{p_kompaniya_id:companyId,p_loyiha_id:projectId,p_nom:name,p_operation_id:operationId,p_expected_version:input.expectedVersion==null?null:Number(input.expectedVersion)});
+    if(!existing||!existing.ok) return existing||{ok:false,code:'OBJECT_CREATE_FAILED'};
+    if(existing.storage_status==='ready') return existing;
+    var parent=_t2StorageFolderId(storage.binding.project_root_folder_id),folder=parent.createFolder(name);
+    var bound=_t2Rpc('t2_object_storage_bind_v1',{p_obyekt_id:existing.obyekt_id,p_kompaniya_id:companyId,p_loyiha_id:projectId,p_workspace_id:storage.workspace.id,p_folder_id:folder.getId(),p_parent_folder_id:parent.getId(),p_operation_id:operationId});
+    if(!bound||!bound.ok) throw {code:'OBJECT_STORAGE_NOT_PROVISIONED',message:'object storage binding yozilmadi'};
+    _t2Rpc('t2_object_create_ready_v1',{p_obyekt_id:existing.obyekt_id,p_operation_id:operationId});
+    return {ok:true,obyekt_id:existing.obyekt_id,folderId:folder.getId(),storage_status:'ready',operationId:operationId};
+  }catch(e){ return {ok:false,code:e.code||'OBJECT_CREATE_FAILED',obyekt_id:e.obyekt_id||null,storage_status:'failed',xabar:e.message||String(e)}; }
 }
-
-function apiT2YangiObyektYarat(nom, rootTanlov){
-  /* Legacy signature is deliberately rejected for T2. A name or Drive URL
-     cannot establish tenant/project identity. */
-  if(typeof nom !== 'object' || Array.isArray(nom)){
-    return {ok:false, code:'PROJECT_CONTEXT_REQUIRED', xabar:'T2 object create companyId, projectId va operationId bilan chaqiriladi.'};
-  }
-  var cmd = nom;
-  var companyId = Number(cmd.companyId), projectId = Number(cmd.projectId);
-  var objectName = String(cmd.name || '').trim(), operationId = String(cmd.operationId || '').trim();
-  if(!companyId || !projectId || !objectName || !operationId) return {ok:false, code:'PROJECT_CONTEXT_REQUIRED', xabar:'companyId, projectId, name va operationId majburiy.'};
-  var project;
-  try{ project = _t2Get('t2_loyiha?id=eq.'+projectId+'&kompaniya_id=eq.'+companyId+'&select=id,kompaniya_id&limit=1'); }
-  catch(e){ return {ok:false, code:'PROJECT_NOT_FOUND', xabar:String(e)}; }
-  if(project.length !== 1) return {ok:false, code:'PROJECT_COMPANY_MISMATCH', xabar:'Project company contextga tegishli emas.'};
-  var ws = resolveCompanyStorage(companyId); if(!ws.ok) return ws;
-  var pb = resolveProjectStorage(projectId); if(!pb.ok) return pb;
-  if(Number(pb.binding.kompaniya_id)!==companyId || Number(pb.binding.workspace_id)!==Number(ws.workspace.id)) return _t2StorageFail(T2_STORAGE_ERROR.TENANT,'Project/workspace tenant mos emas');
-  var retry = _t2Get('t2_obyekt?operation_id=eq.'+encodeURIComponent(operationId)+'&select=id,kompaniya_id,loyiha_id,storage_status&limit=1');
-  if(retry.length){
-    if(Number(retry[0].kompaniya_id)!==companyId || Number(retry[0].loyiha_id)!==projectId) return _t2StorageFail(T2_STORAGE_ERROR.TENANT,'operationId boshqa tenant/projectga tegishli');
-    var old = resolveObjectStorage(retry[0].id);
-    return old.ok ? {ok:true, obyekt_id:retry[0].id, folderId:old.binding.folder_id, storage_status:'ready', retry:true} : {ok:false, code:'OBJECT_STORAGE_NOT_PROVISIONED', obyekt_id:retry[0].id, storage_status:retry[0].storage_status};
-  }
-  var created;
-  try{ created=_t2Post('t2_obyekt',[{nom:objectName,kompaniya_id:companyId,loyiha_id:projectId,operation_id:operationId,storage_status:'pending'}],true)[0]; }
-  catch(e){ return {ok:false, code:'OBJECT_CREATE_FAILED', xabar:String(e)}; }
-  try{
-    var parent=_t2StorageFolder(pb.binding.project_root_folder_id), folder=parent.createFolder(objectName);
-    _t2Post('t2_object_storage_binding',[{obyekt_id:created.id,kompaniya_id:companyId,loyiha_id:projectId,workspace_id:pb.binding.workspace_id,folder_id:folder.getId(),parent_folder_id:parent.getId(),provisioning_status:'verified',verified_at:new Date().toISOString()}],false);
-    var c=_t2Cfg(); UrlFetchApp.fetch(c.url+'/rest/v1/t2_obyekt?id=eq.'+created.id,{method:'patch',headers:_t2Bosh(c,{'Prefer':'return=minimal'}),payload:JSON.stringify({storage_status:'ready',drive_id:folder.getId()}),muteHttpExceptions:true});
-    return {ok:true,obyekt_id:created.id,folderId:folder.getId(),storage_status:'ready'};
-  }catch(e){
-    try{ var c2=_t2Cfg(); UrlFetchApp.fetch(c2.url+'/rest/v1/t2_obyekt?id=eq.'+created.id,{method:'patch',headers:_t2Bosh(c2),payload:JSON.stringify({storage_status:'failed',storage_error:String(e)}),muteHttpExceptions:true}); }catch(ignore){}
-    return {ok:false,code:'STORAGE_PERMISSION_DENIED',obyekt_id:created.id,storage_status:'failed',xabar:String(e)};
-  }
-/* legacy implementation retained below only for historical review; unreachable. */
-if(false){
-  nom = String(nom || '').trim();
-  if(!nom) return {ok:false, xabar:'Obyekt nomi bo\'sh'};
-
-  var a;
-  try{ a = sozAsosiy(); }
-  catch(e){ return {ok:false, xabar:'Sozlamalar xatosi: ' + ((e && e.message) || e)}; }
-
-  /* Custom havola berilgan bo'lsa, uni jim default ROOTga almashtirish
-     mumkin emas: bu boshqa obyekt papkasiga yozib yuborishi mumkin. */
-  var rootXom = String(rootTanlov || '').trim();
-  var tanlanganRootId = _t2DrivePapkaId(rootXom);
-  if(rootXom && !tanlanganRootId){
-    return {ok:false, xabar:'Drive ROOT havolasi yoki ID formati noto\'g\'ri. Papka yaratilmagan.'};
-  }
-  var rootId = tanlanganRootId || a.rootId;
-  var root;
-  try{ root = DriveApp.getFolderById(rootId); }
-  catch(e){ return {ok:false, xabar:'Tanlangan Drive ROOT papka ochilmadi. Havola yoki ID ni tekshiring.'}; }
-
-  /* Bir xil nomli papka ikki marta yaratilmasin. Oldingi urinishda
-     Drive papka yaralib, Supabase qatori yozilmagan bo'lsa, uni faqat
-     joriy tenant uchun idempotent tiklaymiz. */
-  var mavjud = root.getFoldersByName(nom);
-  if(mavjud.hasNext()){
-    var mavjudFolder = mavjud.next();
-    try{
-      var komp = _t2KompaniyaId();
-      var boshqaTenant = _t2Get('t2_obyekt?nom=eq.' + encodeURIComponent(nom) +
-        '&kompaniya_id=neq.' + komp + '&select=id,kompaniya_id&limit=1');
-      if(boshqaTenant.length){
-        return {ok:false, sabab:'boshqa_tenant', folderId:mavjudFolder.getId(),
-          xabar:'"' + nom + '" nomli papka boshqa kompaniyaga tegishli. Yangi obyekt uchun boshqa nom bering.'};
-      }
-      var borObyekt = apiT2ObyektTayyorla(nom, mavjudFolder.getId());
-      var borTuzilma = _t2ObyektPapkaTuzilmaYarat(mavjudFolder);
-      return {
-        ok:true, qayta_tiklandi:true, obyekt_id:borObyekt.id, tur:borObyekt.tur,
-        folderId:mavjudFolder.getId(), folderUrl:mavjudFolder.getUrl(),
-        rootId:root.getId(), rootNom:root.getName(), rootUrl:root.getUrl(),
-        tuzilma:{
-          smeta:borTuzilma.smeta.getUrl(), f2:borTuzilma.f2.getUrl(),
-          loyiha:borTuzilma.loyiha.getUrl(), viborka:borTuzilma.viborka.getUrl()
-        },
-        xabar:'"' + nom + '" uchun mavjud Drive papkasi bazaga bog\'landi.'
-      };
-    }catch(e){
-      return {ok:false, sabab:'tiklash_xatosi', folderId:mavjudFolder.getId(),
-        xabar:'Mavjud papkani obyektga bog\'lashda xato: ' + ((e && e.message) || e)};
-    }
-  }
-
-  var folder = root.createFolder(nom);
-  var tuzilma;
-  try{
-    tuzilma = _t2ObyektPapkaTuzilmaYarat(folder);
-  }catch(e){
-    return {ok:false, xabar:'Papka tuzilmasini qurishda xato: ' + ((e && e.message) || e),
-            folderId: folder.getId()};
-  }
-
-  /* Baza qatori — mavjud bo'lsa xato bermaydi (apiT2ObyektTayyorla
-     idempotent, T2_Import.js:121). */
-  var obyektId = null, obyektTur = null;
-  try{
-    var ob = apiT2ObyektTayyorla(nom, folder.getId());
-    obyektId = ob.id; obyektTur = ob.tur;
-  }catch(e){
-    /* Drive papkasi allaqachon yaratildi — buni yashirmaymiz, lekin
-       baza xatosini ham JIM yutmaymiz. */
-    return {ok:false, xabar:'Papka yaratildi, lekin baza qatorini yozishda xato: ' +
-                             ((e && e.message) || e),
-            folderId: folder.getId(), folderUrl: folder.getUrl()};
-  }
-
-  return {
-    ok: true, obyekt_id: obyektId, tur: obyektTur,
-    folderId: folder.getId(), folderUrl: folder.getUrl(),
-    rootId: root.getId(), rootNom: root.getName(), rootUrl: root.getUrl(),
-    tuzilma: {
-      smeta: tuzilma.smeta.getUrl(), f2: tuzilma.f2.getUrl(),
-      loyiha: tuzilma.loyiha.getUrl(), viborka: tuzilma.viborka.getUrl(),
-    },
-    xabar: '"' + nom + '" "' + root.getName() + '" ROOT ichida yaratildi: SMETA, F2, Loyihalar va Viborka papkalari bilan.'
-  };
-}
-}
+function apiT2YangiObyektYarat(input){return apiT2ObyektYarat(input);}
+function _papkaOlYokiYarat(ota,nom){var it=ota.getFoldersByName(nom);return it.hasNext()?it.next():ota.createFolder(nom);}
+function _t2ObyektYangiTuzilmaMi(folder){try{return folder.getFoldersByName('SMETA').hasNext();}catch(e){return false;}}
+function _t2ObyektPapkaTuzilmaYarat(folder){var s=_papkaOlYokiYarat(folder,'SMETA');return{smeta:s,f2:_papkaOlYokiYarat(s,'F2'),loyiha:_papkaOlYokiYarat(folder,'Loyihalar va Chizmalar'),viborka:_papkaOlYokiYarat(folder,'Viborka'),tizim:_papkaOlYokiYarat(folder,'Tizim Fayllari')};}

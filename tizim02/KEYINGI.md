@@ -4,7 +4,7 @@
 > `node tizim02/registr.gen.cjs` uni qayta yozadi.
 > Tasnifni o'zgartirish uchun `tizim02/tasnif.json` ni tahrirlang.
 
-Umumiy holat: **97%** — 136 tayyor · 8 qisman · 1 boshlanmagan (ko'chiriladigan 145 tadan). 108 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
+Umumiy holat: **96%** — 136 tayyor · 8 qisman · 2 boshlanmagan (ko'chiriladigan 146 tadan). 107 ta GASda qoladi, 10 ta umuman kerakmas — ular foizga KIRMAYDI.
 
 ## Domenlar — qiymat tartibida
 
@@ -25,6 +25,7 @@ Umumiy holat: **97%** — 136 tayyor · 8 qisman · 1 boshlanmagan (ko'chiriladi
 | 13 | **sozlama** | 🟢 antigravity | SUPABASE | 100% | 18 | 0 | 0 |
 | 14 | **kirish** | 🟢 antigravity | SUPABASE | 100% | 1 | 0 | 0 |
 | 15 | **tizim** | 🟢 antigravity | SUPABASE | 100% | 7 | 0 | 0 |
+| 16 | **kopruk** | ⚪ kelishilsin | KOPRIK | 0% | 0 | 0 | 1 |
 
 ## 🔵 claude — keyingi ish: `f2` (SUPABASE, 88%)
 
@@ -43,7 +44,6 @@ Umumiy holat: **97%** — 136 tayyor · 8 qisman · 1 boshlanmagan (ko'chiriladi
 |---|---|---|---|
 | `ai` | 28 | GAS | Drive/Sheets/Excel ga bog'langani uchun GASda QOLADI. Ko'chirilmaydi — qayta yozish yo'qotish demak. |
 | `fayl` | 8 | GAS | Drive/Sheets/Excel ga bog'langani uchun GASda QOLADI. Ko'chirilmaydi — qayta yozish yo'qotish demak. |
-| `kopruk` | 20 | GAS | Drive/Sheets/Excel ga bog'langani uchun GASda QOLADI. Ko'chirilmaydi — qayta yozish yo'qotish demak. |
 | `kesh` | 5 | YOQ | Ko'chirilmaydi: Sheets keshi, diagnostika yoki Tizim_02 da keraksiz bo'lgan narsa. |
 | `dvigatel` | 11 | GAS | Drive/Sheets/Excel ga bog'langani uchun GASda QOLADI. Ko'chirilmaydi — qayta yozish yo'qotish demak. |
 | `navbat` | 7 | GAS | Drive/Sheets/Excel ga bog'langani uchun GASda QOLADI. Ko'chirilmaydi — qayta yozish yo'qotish demak. |

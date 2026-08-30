@@ -75,3 +75,38 @@ select o.id as obyekt_id,o.kompaniya_id,o.loyiha_id,o.nom,o.drive_id as legacy_d
 from public.t2_obyekt o left join public.t2_object_storage_binding b on b.obyekt_id=o.id;
 
 comment on table public.t2_company_storage_workspace is 'Canonical tenant storage workspace; never inferred from ROOT_FOLDER_ID.';
+
+create or replace function public.t2_object_create_v1(p_kompaniya_id bigint,p_loyiha_id bigint,p_nom text,p_operation_id uuid,p_expected_version integer default null)
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
+declare v_obyekt public.t2_obyekt; v_bind public.t2_project_storage_binding;
+begin
+  select * into v_bind from public.t2_project_storage_binding b join public.t2_loyiha l on l.id=b.loyiha_id
+   join public.t2_company_storage_workspace w on w.id=b.workspace_id
+   where b.loyiha_id=p_loyiha_id and b.kompaniya_id=p_kompaniya_id and l.kompaniya_id=p_kompaniya_id
+     and b.provisioning_status='verified' and w.kompaniya_id=p_kompaniya_id and w.status in ('verified','legacy');
+  if not found then return jsonb_build_object('ok',false,'code','PROJECT_STORAGE_NOT_BOUND'); end if;
+  select * into v_obyekt from public.t2_obyekt where operation_id=p_operation_id;
+  if found then
+    if v_obyekt.kompaniya_id<>p_kompaniya_id or v_obyekt.loyiha_id<>p_loyiha_id then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+    return jsonb_build_object('ok',true,'obyekt_id',v_obyekt.id,'storage_status',v_obyekt.storage_status,'retry',true);
+  end if;
+  insert into public.t2_obyekt(nom,tur,kompaniya_id,loyiha_id,operation_id,storage_status)
+    values (btrim(p_nom),'obyekt',p_kompaniya_id,p_loyiha_id,p_operation_id,'pending') returning * into v_obyekt;
+  return jsonb_build_object('ok',true,'obyekt_id',v_obyekt.id,'storage_status','pending');
+exception when unique_violation then
+  select * into v_obyekt from public.t2_obyekt where operation_id=p_operation_id;
+  return jsonb_build_object('ok',true,'obyekt_id',v_obyekt.id,'storage_status',v_obyekt.storage_status,'retry',true);
+end $$;
+
+create or replace function public.t2_object_storage_bind_v1(p_obyekt_id bigint,p_kompaniya_id bigint,p_loyiha_id bigint,p_workspace_id bigint,p_folder_id text,p_parent_folder_id text,p_operation_id uuid)
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
+begin
+  if not exists(select 1 from t2_obyekt o join t2_project_storage_binding b on b.loyiha_id=o.loyiha_id where o.id=p_obyekt_id and o.kompaniya_id=p_kompaniya_id and o.loyiha_id=p_loyiha_id and b.workspace_id=p_workspace_id and b.kompaniya_id=p_kompaniya_id) then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+  insert into t2_object_storage_binding(obyekt_id,kompaniya_id,loyiha_id,workspace_id,folder_id,parent_folder_id,provisioning_status,verified_at) values(p_obyekt_id,p_kompaniya_id,p_loyiha_id,p_workspace_id,btrim(p_folder_id),btrim(p_parent_folder_id),'verified',now()) on conflict(obyekt_id) do update set folder_id=excluded.folder_id,parent_folder_id=excluded.parent_folder_id,provisioning_status='verified',verified_at=now();
+  return jsonb_build_object('ok',true,'obyekt_id',p_obyekt_id,'folder_id',p_folder_id);
+end $$;
+
+create or replace function public.t2_object_create_ready_v1(p_obyekt_id bigint,p_operation_id uuid)
+returns jsonb language sql security definer set search_path=public,pg_temp as $$
+ update t2_obyekt set storage_status='ready',storage_error=null where id=p_obyekt_id and operation_id=p_operation_id and exists(select 1 from t2_object_storage_binding b where b.obyekt_id=p_obyekt_id and b.provisioning_status='verified') returning jsonb_build_object('ok',true,'obyekt_id',id,'storage_status',storage_status);
+$$;
