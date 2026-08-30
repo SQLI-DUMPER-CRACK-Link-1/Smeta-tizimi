@@ -65,9 +65,11 @@ create table if not exists public.t2_document_registry (
   external_file_id text not null, external_parent_id text not null,
   document_type text not null, revision text, checksum text,
   status text not null check (status in ('active','superseded','deleted','failed')),
-  created_by text, created_at timestamptz not null default now(),
+  created_by text, created_at timestamptz not null default now(), operation_id uuid,
   unique(provider, external_file_id)
 );
+alter table public.t2_document_registry add column if not exists operation_id uuid;
+create unique index if not exists t2_document_registry_operation_uq on public.t2_document_registry(kompaniya_id,operation_id) where operation_id is not null;
 
 alter table public.t2_obyekt add column if not exists storage_status text not null default 'pending'
   check (storage_status in ('pending','ready','failed'));
@@ -204,6 +206,30 @@ returns jsonb language sql security definer set search_path=public,pg_temp as $$
  where loyiha_id=p_loyiha_id and operation_id=p_operation_id
  returning jsonb_build_object('ok',true,'project_id',loyiha_id,'provisioning_status',provisioning_status,'storage_error',storage_error);
 $$;
+
+create or replace function public.t2_document_registry_upsert_v1(
+  p_kompaniya_id bigint,p_loyiha_id bigint,p_obyekt_id bigint,p_provider text,
+  p_external_file_id text,p_external_parent_id text,p_document_type text,p_revision text,
+  p_operation_id uuid,p_created_by text)
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
+declare v_row public.t2_document_registry;
+begin
+  if p_operation_id is null or p_external_file_id is null or btrim(p_external_file_id)='' then return jsonb_build_object('ok',false,'code','DOCUMENT_CONTRACT_INVALID'); end if;
+  if not exists(select 1 from t2_obyekt o join t2_loyiha l on l.id=o.loyiha_id and l.kompaniya_id=o.kompaniya_id join t2_object_storage_binding b on b.obyekt_id=o.id and b.loyiha_id=l.id and b.kompaniya_id=l.kompaniya_id join t2_company_storage_workspace w on w.id=b.workspace_id and w.kompaniya_id=l.kompaniya_id where o.id=p_obyekt_id and o.loyiha_id=p_loyiha_id and o.kompaniya_id=p_kompaniya_id and b.provisioning_status='verified' and w.status in ('verified','legacy')) then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+  select * into v_row from t2_document_registry where kompaniya_id=p_kompaniya_id and operation_id=p_operation_id;
+  if found then
+    if v_row.loyiha_id<>p_loyiha_id or v_row.obyekt_id<>p_obyekt_id then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+    return jsonb_build_object('ok',true,'document_id',v_row.id,'external_file_id',v_row.external_file_id,'status',v_row.status,'retry',true);
+  end if;
+  insert into t2_document_registry(kompaniya_id,loyiha_id,obyekt_id,provider,external_file_id,external_parent_id,document_type,revision,status,created_by,operation_id)
+    values(p_kompaniya_id,p_loyiha_id,p_obyekt_id,p_provider,btrim(p_external_file_id),btrim(p_external_parent_id),btrim(p_document_type),p_revision,'active',p_created_by,p_operation_id)
+    returning * into v_row;
+  return jsonb_build_object('ok',true,'document_id',v_row.id,'external_file_id',v_row.external_file_id,'status',v_row.status);
+exception when unique_violation then
+  select * into v_row from t2_document_registry where kompaniya_id=p_kompaniya_id and operation_id=p_operation_id;
+  if found then return jsonb_build_object('ok',true,'document_id',v_row.id,'external_file_id',v_row.external_file_id,'status',v_row.status,'retry',true); end if;
+  return jsonb_build_object('ok',false,'code','DOCUMENT_IDEMPOTENCY_CONFLICT');
+end $$;
 
 create or replace function public.t2_object_create_failed_v1(p_obyekt_id bigint,p_operation_id uuid,p_error text)
 returns jsonb language sql security definer set search_path=public,pg_temp as $$

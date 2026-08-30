@@ -1,14 +1,14 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 265,
-    "hisobga": 148,
+    "jami": 267,
+    "hisobga": 150,
     "tayyor": 136,
     "qisman": 8,
     "joyida": 107,
     "kerakmas": 10
   },
-  "foiz": 95,
+  "foiz": 93,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -121,10 +121,10 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 22,
+      "jami": 24,
       "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 3,
+      "kutilmoqda": 5,
       "kerakmas": 0,
       "joyida": 19,
       "funksiyalar": [
@@ -137,10 +137,12 @@
         "apiSupabaseSozlamaOl",
         "apiSupabaseSozlamaSaqla",
         "apiT2CompanyStorageBind",
+        "apiT2DocumentUpload",
         "apiT2DriveHardDelete",
         "apiT2DriveRename",
         "apiT2DriveRestore",
         "apiT2DriveTrash",
+        "apiT2F2Upload",
         "apiT2HujjatDriveSaqla",
         "apiT2LoyihaStorageProvision",
         "apiT2ObyektYarat",
@@ -1550,9 +1552,19 @@
       "qopladi": null,
       "izoh": "Drive fayl yuklash"
     },
+    "apiT2F2Upload": {
+      "fayl": "30_Panel.js",
+      "qator": 3506,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
     "apiF2VaraklarOl": {
       "fayl": "30_Panel.js",
-      "qator": 3505,
+      "qator": 3512,
       "argSoni": 1,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1562,7 +1574,7 @@
     },
     "apiF2FaylOqi": {
       "fayl": "30_Panel.js",
-      "qator": 3562,
+      "qator": 3569,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1572,7 +1584,7 @@
     },
     "apiF2OySkan": {
       "fayl": "30_Panel.js",
-      "qator": 3783,
+      "qator": 3790,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1582,7 +1594,7 @@
     },
     "apiF2BoglanishBekorQil": {
       "fayl": "30_Panel.js",
-      "qator": 3855,
+      "qator": 3862,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1592,7 +1604,7 @@
     },
     "apiF2OyOchirish": {
       "fayl": "30_Panel.js",
-      "qator": 3901,
+      "qator": 3908,
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1602,7 +1614,7 @@
     },
     "apiF2Qolla": {
       "fayl": "30_Panel.js",
-      "qator": 3999,
+      "qator": 4006,
       "argSoni": 6,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1612,7 +1624,7 @@
     },
     "apiF2TayyorHujjatYarat": {
       "fayl": "30_Panel.js",
-      "qator": 4623,
+      "qator": 4630,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1622,7 +1634,7 @@
     },
     "apiReestrSaqla": {
       "fayl": "30_Panel.js",
-      "qator": 4784,
+      "qator": 4791,
       "argSoni": 1,
       "domen": "smeta",
       "qatlam": "YOQ",
@@ -1632,7 +1644,7 @@
     },
     "apiReestrOl": {
       "fayl": "30_Panel.js",
-      "qator": 4789,
+      "qator": 4796,
       "argSoni": 0,
       "domen": "smeta",
       "qatlam": "YOQ",
@@ -1642,7 +1654,7 @@
     },
     "apiF2QollaProgress": {
       "fayl": "30_Panel.js",
-      "qator": 4795,
+      "qator": 4802,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1652,7 +1664,7 @@
     },
     "apiF2QollaLog": {
       "fayl": "30_Panel.js",
-      "qator": 4802,
+      "qator": 4809,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1662,7 +1674,7 @@
     },
     "apiF2JobHolat": {
       "fayl": "30_Panel.js",
-      "qator": 4891,
+      "qator": 4898,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1672,7 +1684,7 @@
     },
     "apiF2QollaNavbatga": {
       "fayl": "30_Panel.js",
-      "qator": 4924,
+      "qator": 4931,
       "argSoni": 5,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1682,7 +1694,7 @@
     },
     "apiF2EskiFaylOqi": {
       "fayl": "30_Panel.js",
-      "qator": 5076,
+      "qator": 5083,
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1692,7 +1704,7 @@
     },
     "apiSmetaQatorQosh": {
       "fayl": "30_Panel.js",
-      "qator": 5238,
+      "qator": 5245,
       "argSoni": 9,
       "domen": "smeta",
       "qatlam": "SUPABASE",
@@ -1702,7 +1714,7 @@
     },
     "apiHolatOlLokalkalar": {
       "fayl": "30_Panel.js",
-      "qator": 5316,
+      "qator": 5323,
       "argSoni": 3,
       "domen": "smeta",
       "qatlam": "SUPABASE",
@@ -1712,7 +1724,7 @@
     },
     "apiF2LokalkaTaklif": {
       "fayl": "30_Panel.js",
-      "qator": 5369,
+      "qator": 5376,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1722,7 +1734,7 @@
     },
     "apiF2JobTozala": {
       "fayl": "30_Panel.js",
-      "qator": 5440,
+      "qator": 5447,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -3219,6 +3231,16 @@
       "holat": "joyida",
       "qopladi": "GAS qatlamida qoladi (DriveApp) - LEKIN apiT2HujjatDriveSaqla bilan almashtirildi",
       "izoh": "Eski yo'l: faqat 'Loyiha chizmalari'/'Boshqa hujjatlar' ni bilardi. Yangi kod apiT2HujjatDriveSaqla ni ishlatsin."
+    },
+    "apiT2DocumentUpload": {
+      "fayl": "95_ObyektHujjat.js",
+      "qator": 70,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
     },
     "apiT2PapkaTayyorla": {
       "fayl": "96_T2Papka.js",

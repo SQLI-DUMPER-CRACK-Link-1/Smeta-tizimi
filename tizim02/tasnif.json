@@ -84,6 +84,10 @@
   "_30PanelIzoh": "30_Panel.js — 78 funksiya, bitta domen emas. Nom bo'yicha ajratamiz.",
   "nomQoida": [
     [
+      "^apiT2F2Upload",
+      "kopruk"
+    ],
+    [
       "^apiBoss",
       "hisobot"
     ],

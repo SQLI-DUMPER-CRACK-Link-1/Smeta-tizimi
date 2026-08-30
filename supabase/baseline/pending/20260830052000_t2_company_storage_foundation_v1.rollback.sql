@@ -3,6 +3,7 @@
 drop function if exists public.t2_object_create_failed_v1(bigint,uuid,text);
 drop function if exists public.t2_project_storage_failed_v1(bigint,uuid,text);
 drop function if exists public.t2_company_storage_bind_v1(bigint,text,text,text,text,text,uuid,integer,boolean);
+drop function if exists public.t2_document_registry_upsert_v1(bigint,bigint,bigint,text,text,text,text,text,uuid,text);
 drop function if exists public.t2_project_storage_bind_v1(bigint,bigint,bigint,text,uuid);
 drop function if exists public.t2_project_storage_provision_v1(bigint,bigint,uuid,integer);
 drop function if exists public.t2_object_create_ready_v1(bigint,uuid);

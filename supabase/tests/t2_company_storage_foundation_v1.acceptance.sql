@@ -6,6 +6,7 @@ begin
   from (values
     ('t2_company_storage_workspace'),('t2_project_storage_binding'),
     ('t2_object_storage_binding'),('t2_document_registry'),
+    ('t2_document_registry_upsert_v1'),
     ('t2_object_create_v1'),('t2_object_storage_bind_v1'),
     ('t2_object_create_ready_v1'),('t2_object_create_failed_v1'),
     ('t2_project_storage_provision_v1'),('t2_project_storage_bind_v1'),

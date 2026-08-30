@@ -3502,6 +3502,13 @@ function apiF2FaylYukla(obyekt, base64, mimeType, filename, oyNom) {
   }
 }
 
+/** T2-only F2 entrypoint. It deliberately requires canonical DB IDs. */
+function apiT2F2Upload(input){
+  if(!input||typeof input!=='object') return {ok:false,code:'DOCUMENT_CONTEXT_REQUIRED'};
+  input.documentType=input.documentType||'f2';
+  return apiT2DocumentUpload(input);
+}
+
 function apiF2VaraklarOl(fileId) {
    try {
      var ss = SpreadsheetApp.openById(fileId);

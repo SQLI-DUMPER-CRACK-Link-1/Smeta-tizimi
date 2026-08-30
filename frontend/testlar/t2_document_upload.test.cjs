@@ -1,0 +1,17 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const doc=fs.readFileSync(path.join(__dirname,'..','..','Smeta tizimi','95_ObyektHujjat.js'),'utf8');
+const panel=fs.readFileSync(path.join(__dirname,'..','..','Smeta tizimi','30_Panel.js'),'utf8');
+const sql=fs.readFileSync(path.join(__dirname,'..','..','supabase','migrations','20260830052000_t2_company_storage_foundation_v1.sql'),'utf8');
+const yes=(l,r,t)=>{assert(r.test(t),l);console.log('  ✅ '+l);};
+const body=doc.slice(doc.indexOf('function apiT2DocumentUpload'),doc.indexOf('function apiT2DocumentUpload')+2600);
+yes('canonical document upload entrypoint',/function\s+apiT2DocumentUpload\s*\(input\)/,doc);
+yes('explicit object lineage IDs',/input\.companyId[\s\S]*input\.projectId[\s\S]*input\.objectId[\s\S]*input\.operationId/,body);
+yes('object storage resolver',/_t2StorageAssertLineage\(companyId,projectId,objectId\)/,body);
+yes('exact bound folder',/lineage\.object\.folder_id/,body);
+yes('operation-scoped file recovery',/operationId\+'__'/,body);
+yes('registry write RPC',/t2_document_registry_upsert_v1/,body);
+yes('T2 F2 adapter',/function\s+apiT2F2Upload\s*\(input\)/,panel);
+yes('registry operation idempotency',/t2_document_registry_operation_uq/,sql);
+yes('registry lineage guard',/t2_document_registry_upsert_v1[\s\S]*STORAGE_TENANT_MISMATCH/,sql);
+assert(!/ROOT_FOLDER_ID|sozAsosiy\(\)\.rootId|DriveApp\.searchFiles/.test(body));
+console.log('  ✅ document upload global fallback guard');

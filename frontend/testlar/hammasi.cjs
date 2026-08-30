@@ -30,6 +30,7 @@ const TESTLAR = [
   ['T2 object-create vertical slice',  't2_object_create.test.cjs'],
   ['T2 project-storage provisioning', 't2_project_storage.test.cjs'],
   ['T2 company-storage workspace', 't2_company_storage.test.cjs'],
+  ['T2 document upload registry', 't2_document_upload.test.cjs'],
 ];
 
 let yiqildi = 0;
