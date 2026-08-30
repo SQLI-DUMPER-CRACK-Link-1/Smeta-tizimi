@@ -27,6 +27,7 @@ const TESTLAR = [
   ['TIZIM_02 ikki agent hududi',       't2_navbat.test.cjs'],
   ['TIZIM_02 kodlash yaxlitligi',       't2_kodlash_yaxlitligi.test.cjs'],
   ['Git dublikat + apostrof qo\'riqchisi', 't2_git_yaxlitligi.test.cjs'],
+  ['T2 object-create vertical slice',  't2_object_create.test.cjs'],
 ];
 
 let yiqildi = 0;

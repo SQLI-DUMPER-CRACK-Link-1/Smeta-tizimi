@@ -26,6 +26,7 @@
     "apiT2ObyektImport",
     "apiT2ObyektTayyorla",
     "apiT2ObyektYarat",
+    "apiT2ObyektYaratLegacy",
     "apiT2OqishOlchov",
     "apiT2Test",
     "apiT2ToliqZanjir",
@@ -119,7 +120,7 @@
       "kochiriladi": false
     },
     "kopruk": {
-      "qatlam": "KOPRIK",
+      "qatlam": "GAS",
       "jami": 20,
       "tayyor": 0,
       "qisman": 0,
@@ -148,8 +149,8 @@
         "apiWebApiLog",
         "apiWebApiSalom"
       ],
-      "egasi": null,
-      "ish_holati": null,
+      "egasi": "codex",
+      "ish_holati": "ishlanmoqda",
       "foiz": 0,
       "kochiriladi": true
     },
@@ -767,25 +768,25 @@
       "qopladi": null,
       "izoh": null
     },
-    "apiT2ObyektYarat": {
-      "fayl": "06_ObyektPapka.js",
-      "qator": 16,
-      "argSoni": 1,
-      "domen": "kopruk",
-      "qatlam": "KOPRIK",
-      "holat": "kutilmoqda",
-      "qopladi": null,
-      "izoh": null
-    },
     "apiT2YangiObyektYarat": {
       "fayl": "06_ObyektPapka.js",
-      "qator": 32,
+      "qator": 16,
       "argSoni": 1,
       "domen": "kopruk",
       "qatlam": "GAS",
       "holat": "joyida",
       "qopladi": "06_ObyektPapka.js (GAS papka tuzilmasi) + apiT2ObyektTayyorla",
       "izoh": "Yangi (2026-08-25): obyekt Drive papka tuzilmasi (Смета/F2, Лойиха хужжатлари, Виборка) + baza qatorini bitta amalda yaratadi. Mavjud obyektlarga tegmaydi."
+    },
+    "apiT2ObyektYarat": {
+      "fayl": "06_ObyektPapka.js",
+      "qator": 37,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
     },
     "apiT2DriveTrash": {
       "fayl": "09_KorzinkaDrive.js",

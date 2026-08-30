@@ -25,7 +25,7 @@ Umumiy holat: **96%** — 136 tayyor · 8 qisman · 2 boshlanmagan (ko'chiriladi
 | 13 | **sozlama** | 🟢 antigravity | SUPABASE | 100% | 18 | 0 | 0 |
 | 14 | **kirish** | 🟢 antigravity | SUPABASE | 100% | 1 | 0 | 0 |
 | 15 | **tizim** | 🟢 antigravity | SUPABASE | 100% | 7 | 0 | 0 |
-| 16 | **kopruk** | ⚪ kelishilsin | KOPRIK | 0% | 0 | 0 | 1 |
+| 16 | **kopruk** | ⚪ codex ⏳ | GAS | 0% | 0 | 0 | 1 |
 
 ## 🔵 claude — keyingi ish: `f2` (SUPABASE, 88%)
 

@@ -405,6 +405,12 @@ function apiT2ManbaFayllar(){
  * ══════════════════════════════════════════════════════════════════ */
 
 /** Bo'sh obyekt yaratadi (yoki bori qaytariladi). */
+/** Compatibility entrypoint: T2 callers must provide the canonical context object. */
+function apiT2ObyektYarat(input){
+  if(typeof apiT2YangiObyektYarat==='function') return apiT2YangiObyektYarat(input);
+  return {ok:false,code:'PROJECT_CONTEXT_REQUIRED',xabar:'T2 object create contract yuklanmagan'};
+}
+
 function apiT2ObyektYaratLegacy(nom){
   try{
     var ob = apiT2ObyektTayyorla(nom);
