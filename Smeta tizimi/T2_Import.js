@@ -578,6 +578,16 @@ function apiT2Ishla(obyekt){
     natija.jami = _t2Rpc('t2_rollup', {p_obyekt_id: ob.id});
     natija.bosqichlar.push({bosqich:'jamlash', ms: Date.now() - tR, natija: natija.jami});
 
+    /* Import/narxlash/rollup qatorlarni ommaviy o'zgartiradi. SQL trigger
+       bu bosqichlarda har bir qator uchun butun signal modelini qayta
+       hisoblamaydi; yakunda shu obyekt uchun BIR marta yangilanadi. */
+    var tS = Date.now();
+    natija.bosqichlar.push({bosqich:'signal_yangilash', ms: Date.now() - tS,
+      natija: _t2Rpc('t2_signal_refresh_object', {
+        p_kompaniya_id: ob.kompaniya_id,
+        p_obyekt_id: ob.id
+      })});
+
     natija.ms = Date.now() - t0;
     return natija;
 

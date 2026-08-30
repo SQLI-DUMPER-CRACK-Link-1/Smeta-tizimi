@@ -116,7 +116,14 @@ function apiT2YangiObyektYarat(nom, rootTanlov){
   try{ a = sozAsosiy(); }
   catch(e){ return {ok:false, xabar:'Sozlamalar xatosi: ' + ((e && e.message) || e)}; }
 
-  var rootId = _t2DrivePapkaId(rootTanlov) || a.rootId;
+  /* Custom havola berilgan bo'lsa, uni jim default ROOTga almashtirish
+     mumkin emas: bu boshqa obyekt papkasiga yozib yuborishi mumkin. */
+  var rootXom = String(rootTanlov || '').trim();
+  var tanlanganRootId = _t2DrivePapkaId(rootXom);
+  if(rootXom && !tanlanganRootId){
+    return {ok:false, xabar:'Drive ROOT havolasi yoki ID formati noto\'g\'ri. Papka yaratilmagan.'};
+  }
+  var rootId = tanlanganRootId || a.rootId;
   var root;
   try{ root = DriveApp.getFolderById(rootId); }
   catch(e){ return {ok:false, xabar:'Tanlangan Drive ROOT papka ochilmadi. Havola yoki ID ni tekshiring.'}; }
@@ -140,6 +147,7 @@ function apiT2YangiObyektYarat(nom, rootTanlov){
       return {
         ok:true, qayta_tiklandi:true, obyekt_id:borObyekt.id, tur:borObyekt.tur,
         folderId:mavjudFolder.getId(), folderUrl:mavjudFolder.getUrl(),
+        rootId:root.getId(), rootNom:root.getName(), rootUrl:root.getUrl(),
         tuzilma:{
           smeta:borTuzilma.smeta.getUrl(), f2:borTuzilma.f2.getUrl(),
           loyiha:borTuzilma.loyiha.getUrl(), viborka:borTuzilma.viborka.getUrl()
@@ -178,10 +186,11 @@ function apiT2YangiObyektYarat(nom, rootTanlov){
   return {
     ok: true, obyekt_id: obyektId, tur: obyektTur,
     folderId: folder.getId(), folderUrl: folder.getUrl(),
+    rootId: root.getId(), rootNom: root.getName(), rootUrl: root.getUrl(),
     tuzilma: {
       smeta: tuzilma.smeta.getUrl(), f2: tuzilma.f2.getUrl(),
       loyiha: tuzilma.loyiha.getUrl(), viborka: tuzilma.viborka.getUrl(),
     },
-    xabar: '"' + nom + '" yaratildi: SMETA, F2, Loyihalar va Viborka papkalari bilan.'
+    xabar: '"' + nom + '" "' + root.getName() + '" ROOT ichida yaratildi: SMETA, F2, Loyihalar va Viborka papkalari bilan.'
   };
 }
