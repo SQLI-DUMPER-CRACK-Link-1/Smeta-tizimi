@@ -1,14 +1,14 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 263,
-    "hisobga": 146,
+    "jami": 264,
+    "hisobga": 147,
     "tayyor": 136,
     "qisman": 8,
     "joyida": 107,
     "kerakmas": 10
   },
-  "foiz": 96,
+  "foiz": 95,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -121,10 +121,10 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 20,
+      "jami": 21,
       "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 1,
+      "kutilmoqda": 2,
       "kerakmas": 0,
       "joyida": 19,
       "funksiyalar": [
@@ -141,6 +141,7 @@
         "apiT2DriveRestore",
         "apiT2DriveTrash",
         "apiT2HujjatDriveSaqla",
+        "apiT2LoyihaStorageProvision",
         "apiT2ObyektYarat",
         "apiT2PapkaHammasi",
         "apiT2PapkaTayyorla",
@@ -3247,6 +3248,16 @@
       "holat": "joyida",
       "qopladi": "GAS qatlamida qoladi (ommaviy Drive amali)",
       "izoh": "Barcha faol obyektlar uchun papka zanjiri. 6 daqiqa chegarasi uchun 4 daqiqadan keyin to'xtaydi, qolgani keyingi yurishda."
+    },
+    "apiT2LoyihaStorageProvision": {
+      "fayl": "97_T2Storage.js",
+      "qator": 36,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
     },
     "apiTolaDiagnostika": {
       "fayl": "99_Diagnostika.js",

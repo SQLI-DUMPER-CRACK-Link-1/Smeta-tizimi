@@ -32,6 +32,33 @@ function _t2StorageFolder(id){
   try{ var f=DriveApp.getFolderById(id); if(f.isTrashed()) throw 'trashed'; return f; }
   catch(e){ throw {code:T2_STORAGE_ERROR.PERMISSION,message:'Drive folder ochilmadi'}; }
 }
+/** Provision a project's root folder under its verified company workspace. */
+function apiT2LoyihaStorageProvision(input){
+  if(!input||typeof input!=='object'||Array.isArray(input)) return {ok:false,code:'PROJECT_CONTEXT_REQUIRED'};
+  var companyId=Number(input.companyId),projectId=Number(input.projectId),operationId=String(input.operationId||'').trim();
+  if(!companyId||!projectId||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) return {ok:false,code:'PROJECT_CONTEXT_REQUIRED'};
+  var binding=null;
+  try{
+    var r=_t2Rpc('t2_project_storage_provision_v1',{p_kompaniya_id:companyId,p_loyiha_id:projectId,p_operation_id:operationId,p_expected_version:input.expectedVersion==null?null:Number(input.expectedVersion)});
+    if(!r||!r.ok) return r||{ok:false,code:'PROJECT_STORAGE_PROVISION_FAILED'};
+    binding=r;
+    if(r.provisioning_status==='verified'&&r.project_root_folder_id) return {ok:true,project_id:projectId,workspace_id:r.workspace_id,project_root_folder_id:r.project_root_folder_id,provisioning_status:'verified',operationId:operationId,retry:true};
+    var workspace=resolveCompanyStorage(companyId); if(!workspace.ok) throw workspace;
+    var parent=_t2StorageFolder(workspace.workspace.root_folder_id);
+    var project=_t2Get('t2_loyiha?id=eq.'+projectId+'&kompaniya_id=eq.'+companyId+'&select=id,nom&limit=1');
+    if(project.length!==1) throw {code:'PROJECT_COMPANY_MISMATCH',message:'project companyga tegishli emas'};
+    var canonical='T2-PROJECT-'+projectId+' — '+String(project[0].nom||'Project').trim();
+    var it=parent.getFoldersByName(canonical), folder;
+    if(it.hasNext()){ folder=it.next(); if(it.hasNext()) throw {code:'PROJECT_STORAGE_AMBIGUOUS',message:'project folder duplicate'}; }
+    else folder=parent.createFolder(canonical);
+    var done=_t2Rpc('t2_project_storage_bind_v1',{p_kompaniya_id:companyId,p_loyiha_id:projectId,p_workspace_id:workspace.workspace.id,p_project_root_folder_id:folder.getId(),p_operation_id:operationId});
+    if(!done||!done.ok) throw {code:(done&&done.code)||'PROJECT_STORAGE_NOT_BOUND',message:'project storage binding yozilmadi'};
+    return {ok:true,project_id:projectId,workspace_id:workspace.workspace.id,project_root_folder_id:folder.getId(),provisioning_status:'verified',operationId:operationId};
+  }catch(e){
+    if(binding&&binding.project_id){try{_t2Rpc('t2_project_storage_failed_v1',{p_loyiha_id:projectId,p_operation_id:operationId,p_error:e.message||String(e)});}catch(ignore){}}
+    return {ok:false,code:e.code||'PROJECT_STORAGE_PROVISION_FAILED',project_id:projectId,provisioning_status:'failed',xabar:e.message||String(e)};
+  }
+}
 function _t2StorageAssertLineage(companyId, projectId, objectId){
   var c=resolveCompanyStorage(companyId), p=resolveProjectStorage(projectId), o=resolveObjectStorage(objectId);
   if(!c.ok) return c; if(!p.ok) return p; if(!o.ok) return o;

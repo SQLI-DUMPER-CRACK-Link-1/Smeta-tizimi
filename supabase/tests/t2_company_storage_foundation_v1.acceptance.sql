@@ -8,6 +8,8 @@ begin
     ('t2_object_storage_binding'),('t2_document_registry'),
     ('t2_object_create_v1'),('t2_object_storage_bind_v1'),
     ('t2_object_create_ready_v1'),('t2_object_create_failed_v1'),
+    ('t2_project_storage_provision_v1'),('t2_project_storage_bind_v1'),
+    ('t2_project_storage_failed_v1'),
     ('t2_storage_reconciliation_v1')) x(name)
   where not exists (
     select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace

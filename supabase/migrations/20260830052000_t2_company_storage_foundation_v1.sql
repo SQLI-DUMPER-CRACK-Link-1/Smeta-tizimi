@@ -25,11 +25,17 @@ create table if not exists public.t2_project_storage_binding (
   loyiha_id bigint primary key references public.t2_loyiha(id),
   kompaniya_id bigint not null references public.t2_kompaniya(id),
   workspace_id bigint not null references public.t2_company_storage_workspace(id),
-  project_root_folder_id text not null,
+  project_root_folder_id text,
   provisioning_status text not null check (provisioning_status in ('pending','verified','failed')),
   verified_at timestamptz, created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(), versiya integer not null default 1
+  updated_at timestamptz not null default now(), versiya integer not null default 1,
+  operation_id uuid,
+  storage_error text
 );
+alter table public.t2_project_storage_binding alter column project_root_folder_id drop not null;
+alter table public.t2_project_storage_binding add column if not exists operation_id uuid;
+alter table public.t2_project_storage_binding add column if not exists storage_error text;
+create unique index if not exists t2_project_storage_operation_uq on public.t2_project_storage_binding(operation_id) where operation_id is not null;
 
 create table if not exists public.t2_object_storage_binding (
   obyekt_id bigint primary key references public.t2_obyekt(id),
@@ -109,6 +115,54 @@ end $$;
 create or replace function public.t2_object_create_ready_v1(p_obyekt_id bigint,p_operation_id uuid)
 returns jsonb language sql security definer set search_path=public,pg_temp as $$
  update t2_obyekt set storage_status='ready',storage_error=null where id=p_obyekt_id and operation_id=p_operation_id and exists(select 1 from t2_object_storage_binding b where b.obyekt_id=p_obyekt_id and b.provisioning_status='verified') returning jsonb_build_object('ok',true,'obyekt_id',id,'storage_status',storage_status);
+$$;
+
+create or replace function public.t2_project_storage_provision_v1(p_kompaniya_id bigint,p_loyiha_id bigint,p_operation_id uuid,p_expected_version integer default null)
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
+declare v_project public.t2_loyiha; v_workspace public.t2_company_storage_workspace; v_binding public.t2_project_storage_binding;
+begin
+  if p_operation_id is null then return jsonb_build_object('ok',false,'code','OPERATION_ID_REQUIRED'); end if;
+  select * into v_project from public.t2_loyiha where id=p_loyiha_id;
+  if not found then return jsonb_build_object('ok',false,'code','PROJECT_NOT_FOUND'); end if;
+  if v_project.kompaniya_id<>p_kompaniya_id then return jsonb_build_object('ok',false,'code','PROJECT_COMPANY_MISMATCH'); end if;
+  select * into v_workspace from public.t2_company_storage_workspace where kompaniya_id=p_kompaniya_id and primary_workspace and status in ('verified','legacy') order by id limit 1;
+  if not found then return jsonb_build_object('ok',false,'code','STORAGE_WORKSPACE_NOT_CONFIGURED'); end if;
+  select * into v_binding from public.t2_project_storage_binding where operation_id=p_operation_id;
+  if found then
+    if v_binding.loyiha_id<>p_loyiha_id or v_binding.kompaniya_id<>p_kompaniya_id then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+    return jsonb_build_object('ok',true,'project_id',v_binding.loyiha_id,'workspace_id',v_binding.workspace_id,'project_root_folder_id',v_binding.project_root_folder_id,'provisioning_status',v_binding.provisioning_status,'retry',true);
+  end if;
+  select * into v_binding from public.t2_project_storage_binding where loyiha_id=p_loyiha_id;
+  if found then
+    if v_binding.kompaniya_id<>p_kompaniya_id or v_binding.workspace_id<>v_workspace.id then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+    update public.t2_project_storage_binding set operation_id=p_operation_id where loyiha_id=p_loyiha_id and operation_id is null;
+    return jsonb_build_object('ok',true,'project_id',v_binding.loyiha_id,'workspace_id',v_binding.workspace_id,'project_root_folder_id',v_binding.project_root_folder_id,'provisioning_status',v_binding.provisioning_status,'retry',true);
+  end if;
+  insert into public.t2_project_storage_binding(loyiha_id,kompaniya_id,workspace_id,provisioning_status,operation_id)
+    values(p_loyiha_id,p_kompaniya_id,v_workspace.id,'pending',p_operation_id)
+    returning * into v_binding;
+  return jsonb_build_object('ok',true,'project_id',p_loyiha_id,'workspace_id',v_workspace.id,'root_folder_id',v_workspace.root_folder_id,'provisioning_status','pending');
+exception when unique_violation then
+  select * into v_binding from public.t2_project_storage_binding where operation_id=p_operation_id;
+  if found and v_binding.kompaniya_id=p_kompaniya_id and v_binding.loyiha_id=p_loyiha_id then return jsonb_build_object('ok',true,'project_id',v_binding.loyiha_id,'workspace_id',v_binding.workspace_id,'project_root_folder_id',v_binding.project_root_folder_id,'provisioning_status',v_binding.provisioning_status,'retry',true); end if;
+  return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH');
+end $$;
+
+create or replace function public.t2_project_storage_bind_v1(p_kompaniya_id bigint,p_loyiha_id bigint,p_workspace_id bigint,p_project_root_folder_id text,p_operation_id uuid)
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
+declare v_binding public.t2_project_storage_binding;
+begin
+  if not exists(select 1 from t2_loyiha l join t2_company_storage_workspace w on w.kompaniya_id=l.kompaniya_id and w.id=p_workspace_id where l.id=p_loyiha_id and l.kompaniya_id=p_kompaniya_id and w.status in ('verified','legacy') and w.primary_workspace) then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+  update t2_project_storage_binding set project_root_folder_id=btrim(p_project_root_folder_id),provisioning_status='verified',storage_error=null,verified_at=now(),updated_at=now(),operation_id=coalesce(operation_id,p_operation_id),versiya=versiya+1 where loyiha_id=p_loyiha_id and kompaniya_id=p_kompaniya_id and workspace_id=p_workspace_id and (operation_id=p_operation_id or operation_id is null) returning * into v_binding;
+  if not found then return jsonb_build_object('ok',false,'code','PROJECT_STORAGE_NOT_BOUND'); end if;
+  return jsonb_build_object('ok',true,'project_id',v_binding.loyiha_id,'workspace_id',v_binding.workspace_id,'project_root_folder_id',v_binding.project_root_folder_id,'provisioning_status','verified');
+end $$;
+
+create or replace function public.t2_project_storage_failed_v1(p_loyiha_id bigint,p_operation_id uuid,p_error text)
+returns jsonb language sql security definer set search_path=public,pg_temp as $$
+ update t2_project_storage_binding set provisioning_status='failed',storage_error=left(coalesce(p_error,'PROJECT_STORAGE_PROVISION_FAILED'),1000),updated_at=now()
+ where loyiha_id=p_loyiha_id and operation_id=p_operation_id
+ returning jsonb_build_object('ok',true,'project_id',loyiha_id,'provisioning_status',provisioning_status,'storage_error',storage_error);
 $$;
 
 create or replace function public.t2_object_create_failed_v1(p_obyekt_id bigint,p_operation_id uuid,p_error text)
