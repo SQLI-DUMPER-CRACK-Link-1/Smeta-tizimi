@@ -2,6 +2,7 @@
 -- legacy t2_obyekt.drive_id values.
 drop function if exists public.t2_object_create_failed_v1(bigint,uuid,text);
 drop function if exists public.t2_project_storage_failed_v1(bigint,uuid,text);
+drop function if exists public.t2_company_storage_bind_v1(bigint,text,text,text,text,text,uuid,integer,boolean);
 drop function if exists public.t2_project_storage_bind_v1(bigint,bigint,bigint,text,uuid);
 drop function if exists public.t2_project_storage_provision_v1(bigint,bigint,uuid,integer);
 drop function if exists public.t2_object_create_ready_v1(bigint,uuid);
@@ -11,6 +12,7 @@ drop view if exists public.t2_storage_reconciliation_v1;
 drop index if exists public.t2_obyekt_operation_id_uniq;
 drop index if exists public.t2_project_storage_operation_uq;
 drop table if exists public.t2_document_registry;
+drop table if exists public.t2_company_storage_legacy_allowlist;
 drop table if exists public.t2_object_storage_binding;
 drop table if exists public.t2_project_storage_binding;
 drop table if exists public.t2_company_storage_workspace;

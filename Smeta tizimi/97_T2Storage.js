@@ -5,6 +5,10 @@ var T2_STORAGE_ERROR = {
   OBJECT:'OBJECT_STORAGE_NOT_PROVISIONED', PERMISSION:'STORAGE_PERMISSION_DENIED',
   TENANT:'STORAGE_TENANT_MISMATCH'
 };
+function _t2StorageFolderIdFromInput(value){
+  var s=String(value||'').trim(), m=s.match(/(?:folders\/|id=)([A-Za-z0-9_-]{10,})/);
+  return m?m[1]:(/^[A-Za-z0-9_-]{10,}$/.test(s)?s:null);
+}
 function _t2StorageFail(code, xabar){ return {ok:false, code:code, xabar:xabar}; }
 function _t2StorageOne(path, code){
   var r=_t2Get(path+'&limit=2');
@@ -31,6 +35,33 @@ function resolveDocumentStorage(obyektId, tur){
 function _t2StorageFolder(id){
   try{ var f=DriveApp.getFolderById(id); if(f.isTrashed()) throw 'trashed'; return f; }
   catch(e){ throw {code:T2_STORAGE_ERROR.PERMISSION,message:'Drive folder ochilmadi'}; }
+}
+function _t2StorageVerifyRoot(input){
+  var folderId=_t2StorageFolderIdFromInput(input.rootFolderId||input.rootUrl);
+  if(!folderId) throw {code:'STORAGE_ROOT_INVALID',message:'Drive root folder ID/URL noto\'g\'ri'};
+  var folder=_t2StorageFolder(folderId), driveId=null, detected='my_drive';
+  try{
+    if(typeof Drive!=='undefined'&&Drive.Files&&Drive.Files.get){
+      var meta=Drive.Files.get(folderId,{supportsAllDrives:true,fields:'id,mimeType,trashed,driveId,capabilities(canAddChildren)'});
+      if(!meta||meta.mimeType!=='application/vnd.google-apps.folder'||meta.trashed) throw {code:'STORAGE_ROOT_INVALID',message:'Drive root folder emas yoki o\'chirilgan'};
+      driveId=meta.driveId||null; detected=driveId?'shared_drive':'my_drive';
+      if(meta.capabilities&&meta.capabilities.canAddChildren===false) throw {code:'STORAGE_ROOT_NOT_WRITABLE',message:'Drive root yozilmaydi'};
+    }
+    var probe=folder.createFolder('.t2-storage-verify-'+String(input.operationId).slice(0,8));
+    try{probe.setTrashed(true);}catch(ignore){}
+  }catch(e){ if(e.code) throw e; throw {code:'STORAGE_PERMISSION_DENIED',message:'Drive root o\'qish/yozish taqiqlandi'}; }
+  if(input.mode&&input.mode!==detected) throw {code:'STORAGE_MODE_MISMATCH',message:'Drive mode mos emas'};
+  return {folderId:folderId,folderName:folder.getName(),driveId:driveId,mode:detected};
+}
+function apiT2CompanyStorageBind(input){
+  if(!input||typeof input!=='object'||Array.isArray(input)) return {ok:false,code:'STORAGE_ROOT_INVALID'};
+  var companyId=Number(input.companyId),operationId=String(input.operationId||'').trim();
+  if(!companyId||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) return {ok:false,code:'STORAGE_ROOT_INVALID'};
+  try{
+    var verified=_t2StorageVerifyRoot({rootFolderId:input.folderId,rootUrl:input.rootUrl,mode:input.mode,operationId:operationId});
+    var result=_t2Rpc('t2_company_storage_bind_v1',{p_kompaniya_id:companyId,p_root_folder_id:verified.folderId,p_root_folder_name:verified.folderName,p_provider:'google_drive',p_mode:verified.mode,p_drive_id:verified.driveId,p_operation_id:operationId,p_expected_version:input.expectedVersion==null?null:Number(input.expectedVersion),p_legacy:input.legacy===true});
+    return result||{ok:false,code:'STORAGE_ROOT_INVALID'};
+  }catch(e){return {ok:false,code:e.code||'STORAGE_PERMISSION_DENIED',xabar:e.message||String(e)};}
 }
 /** Provision a project's root folder under its verified company workspace. */
 function apiT2LoyihaStorageProvision(input){

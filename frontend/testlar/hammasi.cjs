@@ -29,6 +29,7 @@ const TESTLAR = [
   ['Git dublikat + apostrof qo\'riqchisi', 't2_git_yaxlitligi.test.cjs'],
   ['T2 object-create vertical slice',  't2_object_create.test.cjs'],
   ['T2 project-storage provisioning', 't2_project_storage.test.cjs'],
+  ['T2 company-storage workspace', 't2_company_storage.test.cjs'],
 ];
 
 let yiqildi = 0;

@@ -15,11 +15,19 @@ create table if not exists public.t2_company_storage_workspace (
   verified_at timestamptz,
   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   versiya integer not null default 1,
+  operation_id uuid,
   check ((status in ('verified','legacy')) = (verified_at is not null))
+);
+create table if not exists public.t2_company_storage_legacy_allowlist (
+  kompaniya_id bigint primary key references public.t2_kompaniya(id),
+  created_at timestamptz not null default now(),
+  created_by text
 );
 create unique index if not exists t2_company_storage_one_primary_active
   on public.t2_company_storage_workspace(kompaniya_id)
   where primary_workspace and status in ('verified','legacy');
+alter table public.t2_company_storage_workspace add column if not exists operation_id uuid;
+alter table public.t2_company_storage_workspace add constraint t2_company_storage_legacy_flag_ck check ((status='legacy') = legacy);
 
 create table if not exists public.t2_project_storage_binding (
   loyiha_id bigint primary key references public.t2_loyiha(id),
@@ -68,6 +76,7 @@ alter table public.t2_obyekt add column if not exists operation_id uuid;
 create unique index if not exists t2_obyekt_operation_id_uniq on public.t2_obyekt(operation_id) where operation_id is not null;
 
 alter table public.t2_company_storage_workspace enable row level security;
+alter table public.t2_company_storage_legacy_allowlist enable row level security;
 alter table public.t2_project_storage_binding enable row level security;
 alter table public.t2_object_storage_binding enable row level security;
 alter table public.t2_document_registry enable row level security;
@@ -104,6 +113,36 @@ exception when unique_violation then
   return jsonb_build_object('ok',true,'obyekt_id',v_obyekt.id,'storage_status',v_obyekt.storage_status,'retry',true);
 end $$;
 
+create or replace function public.t2_company_storage_bind_v1(
+  p_kompaniya_id bigint,p_root_folder_id text,p_root_folder_name text,p_provider text,p_mode text,
+  p_drive_id text,p_operation_id uuid,p_expected_version integer default null,p_legacy boolean default false)
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
+declare v_workspace public.t2_company_storage_workspace; v_status text;
+begin
+  if p_kompaniya_id is null or p_root_folder_id is null or btrim(p_root_folder_id)='' or p_operation_id is null then return jsonb_build_object('ok',false,'code','STORAGE_ROOT_INVALID'); end if;
+  if p_provider<>'google_drive' or p_mode not in ('shared_drive','my_drive') then return jsonb_build_object('ok',false,'code','STORAGE_MODE_MISMATCH'); end if;
+  if p_legacy and not exists(select 1 from public.t2_company_storage_legacy_allowlist where kompaniya_id=p_kompaniya_id) then return jsonb_build_object('ok',false,'code','LEGACY_WORKSPACE_FORBIDDEN'); end if;
+  select * into v_workspace from public.t2_company_storage_workspace where operation_id=p_operation_id;
+  if found then
+    if p_expected_version is not null and v_workspace.versiya<>p_expected_version then return jsonb_build_object('ok',false,'code','STALE_VERSION','version',v_workspace.versiya); end if;
+    if v_workspace.kompaniya_id<>p_kompaniya_id or v_workspace.root_folder_id<>p_root_folder_id or v_workspace.mode<>p_mode then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+    return jsonb_build_object('ok',true,'workspace_id',v_workspace.id,'kompaniya_id',v_workspace.kompaniya_id,'status',v_workspace.status,'version',v_workspace.versiya,'retry',true);
+  end if;
+  if p_legacy then v_status:='legacy'; else v_status:='verified'; end if;
+  select * into v_workspace from public.t2_company_storage_workspace where kompaniya_id=p_kompaniya_id and primary_workspace and status in ('verified','legacy') for update;
+  if found then
+    if p_expected_version is null or v_workspace.versiya<>p_expected_version then return jsonb_build_object('ok',false,'code','STALE_VERSION','version',v_workspace.versiya); end if;
+    if v_workspace.legacy and not p_legacy then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+    update public.t2_company_storage_workspace set root_folder_id=btrim(p_root_folder_id),root_folder_name=btrim(p_root_folder_name),provider=p_provider,mode=p_mode,drive_id=p_drive_id,status=v_status,legacy=p_legacy,verified_at=now(),updated_at=now(),versiya=versiya+1,operation_id=p_operation_id where id=v_workspace.id returning * into v_workspace;
+  else
+    if p_expected_version is not null and p_expected_version<>0 then return jsonb_build_object('ok',false,'code','STALE_VERSION','version',0); end if;
+    insert into public.t2_company_storage_workspace(kompaniya_id,provider,mode,drive_id,root_folder_id,root_folder_name,status,primary_workspace,legacy,verified_at,operation_id)
+      values(p_kompaniya_id,p_provider,p_mode,p_drive_id,btrim(p_root_folder_id),btrim(p_root_folder_name),v_status,true,p_legacy,now(),p_operation_id) returning * into v_workspace;
+  end if;
+  return jsonb_build_object('ok',true,'workspace_id',v_workspace.id,'kompaniya_id',v_workspace.kompaniya_id,'status',v_workspace.status,'version',v_workspace.versiya,'root_folder_id',v_workspace.root_folder_id);
+exception when unique_violation then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH');
+end $$;
+
 create or replace function public.t2_object_storage_bind_v1(p_obyekt_id bigint,p_kompaniya_id bigint,p_loyiha_id bigint,p_workspace_id bigint,p_folder_id text,p_parent_folder_id text,p_operation_id uuid)
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
 begin
@@ -130,6 +169,7 @@ begin
   select * into v_binding from public.t2_project_storage_binding where operation_id=p_operation_id;
   if found then
     if v_binding.loyiha_id<>p_loyiha_id or v_binding.kompaniya_id<>p_kompaniya_id then return jsonb_build_object('ok',false,'code','STORAGE_TENANT_MISMATCH'); end if;
+    if p_expected_version is not null and v_binding.versiya<>p_expected_version then return jsonb_build_object('ok',false,'code','STALE_VERSION','version',v_binding.versiya); end if;
     return jsonb_build_object('ok',true,'project_id',v_binding.loyiha_id,'workspace_id',v_binding.workspace_id,'project_root_folder_id',v_binding.project_root_folder_id,'provisioning_status',v_binding.provisioning_status,'retry',true);
   end if;
   select * into v_binding from public.t2_project_storage_binding where loyiha_id=p_loyiha_id;

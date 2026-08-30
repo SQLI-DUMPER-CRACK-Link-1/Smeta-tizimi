@@ -1,8 +1,8 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 264,
-    "hisobga": 147,
+    "jami": 265,
+    "hisobga": 148,
     "tayyor": 136,
     "qisman": 8,
     "joyida": 107,
@@ -121,10 +121,10 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 21,
+      "jami": 22,
       "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 2,
+      "kutilmoqda": 3,
       "kerakmas": 0,
       "joyida": 19,
       "funksiyalar": [
@@ -136,6 +136,7 @@
         "apiSupabaseSinxReset",
         "apiSupabaseSozlamaOl",
         "apiSupabaseSozlamaSaqla",
+        "apiT2CompanyStorageBind",
         "apiT2DriveHardDelete",
         "apiT2DriveRename",
         "apiT2DriveRestore",
@@ -3249,9 +3250,19 @@
       "qopladi": "GAS qatlamida qoladi (ommaviy Drive amali)",
       "izoh": "Barcha faol obyektlar uchun papka zanjiri. 6 daqiqa chegarasi uchun 4 daqiqadan keyin to'xtaydi, qolgani keyingi yurishda."
     },
+    "apiT2CompanyStorageBind": {
+      "fayl": "97_T2Storage.js",
+      "qator": 56,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
     "apiT2LoyihaStorageProvision": {
       "fayl": "97_T2Storage.js",
-      "qator": 36,
+      "qator": 67,
       "argSoni": 1,
       "domen": "kopruk",
       "qatlam": "KOPRIK",
