@@ -405,7 +405,7 @@ function apiT2ManbaFayllar(){
  * ══════════════════════════════════════════════════════════════════ */
 
 /** Bo'sh obyekt yaratadi (yoki bori qaytariladi). */
-function apiT2ObyektYarat(nom){
+function apiT2ObyektYaratLegacy(nom){
   try{
     var ob = apiT2ObyektTayyorla(nom);
     return {ok:true, id: ob.id, nom: String(nom).trim(), tur: ob.tur};
