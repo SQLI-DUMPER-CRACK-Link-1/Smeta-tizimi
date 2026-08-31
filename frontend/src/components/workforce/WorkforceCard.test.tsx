@@ -1,0 +1,1 @@
+import{describe,it,expect}from'vitest';import type{WorkforceRecord}from'./types';describe('workforce identity',()=>it('does not use name as identity',()=>{const x:WorkforceRecord={employeeId:'e1',companyId:'c1',name:'Ali',role:'Engineer',attendanceStatus:'PRESENT'};expect(x.employeeId).not.toBe(x.name)}));

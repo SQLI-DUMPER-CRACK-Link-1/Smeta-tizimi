@@ -1,0 +1,1 @@
+export interface WorkforceRecord{employeeId:string;companyId:string;projectId?:string;attendanceId?:string;equipmentId?:string;name:string;role:string;attendanceStatus:'PRESENT'|'ABSENT'|'ON_LEAVE';equipmentStatus?:'AVAILABLE'|'IN_USE'|'MAINTENANCE'}
