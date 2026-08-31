@@ -1,0 +1,1 @@
+export type DesignReviewStatus='DRAFT'|'IN_REVIEW'|'APPROVED'|'REJECTED'|'SUPERSEDED';export interface DesignReview{reviewId:string;documentId:string;revisionId:string;projectId:string;status:DesignReviewStatus;discipline:string;reviewerId?:string;dueAt?:string;commentsCount:number}

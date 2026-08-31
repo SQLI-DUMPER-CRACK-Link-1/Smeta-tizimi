@@ -1,0 +1,1 @@
+import{describe,it,expect}from'vitest';import type{DesignReview}from'./types';describe('design control IDs',()=>it('keeps document and revision identities separate',()=>{const r:DesignReview={reviewId:'r1',documentId:'d1',revisionId:'v2',projectId:'p1',status:'DRAFT',discipline:'Architecture',commentsCount:0};expect(r.documentId).not.toBe(r.revisionId)}));
