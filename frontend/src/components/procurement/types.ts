@@ -1,0 +1,1 @@
+export type ProcurementStage='MATERIAL_NEED'|'PR'|'RFQ'|'BID'|'AWARD'|'PO'|'GRN'|'ISSUED';export interface ProcurementLineage{requestId:string;companyId:string;projectId?:string;materialId:string;stage:ProcurementStage;quantity:number;unit:string;rfqId?:string;purchaseOrderId?:string;grnId?:string;invoiceId?:string;paymentId?:string}

@@ -1,0 +1,1 @@
+import{describe,it,expect}from'vitest';import type{ProcurementLineage}from'./types';describe('procurement canonical ids',()=>it('requires request and material ids',()=>{const x:ProcurementLineage={requestId:'pr-1',companyId:'c-1',materialId:'m-1',stage:'PR',quantity:1,unit:'kg'};expect(x.requestId).toBe('pr-1')}));
