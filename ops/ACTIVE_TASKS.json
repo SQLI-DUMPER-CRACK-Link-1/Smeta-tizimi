@@ -51,31 +51,26 @@
       "production_write_allowed": false
     },
     {
-      "id": "STOR-001",
-      "title": "Multi-company storage foundation: hardening and release prep",
+      "id": "STOR-001A",
+      "title": "Storage foundation CORE: schema, RPC, RLS, migration, DB tests",
       "owner": "codex",
       "base_sha": "37e5f0ec8c55c510285ff1087406701c4a55271e",
       "base_ref": "origin/main",
       "branch": "codex/company-storage-foundation-v1",
       "status": "active",
+      "lane_of": "STOR-001",
       "owns": [
         "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.sql",
         "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.rollback.sql",
         "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.acceptance.sql",
         "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.reconciliation.sql",
         "supabase/migrations/20260830044354_t2_signal_bulk_import_coalescing.sql",
+        "supabase/tests/t2_company_storage_foundation_v1.sql",
         "Smeta tizimi/97_T2Storage.js",
         "Smeta tizimi/06_ObyektPapka.js",
-        "Smeta tizimi/95_ObyektHujjat.js",
-        "Smeta tizimi/30_Panel.js",
-        "Smeta tizimi/T2_Import.js",
-        "Smeta tizimi/T2_Yuklash.js",
         "frontend/testlar/t2_company_storage.test.cjs",
         "frontend/testlar/t2_project_storage.test.cjs",
-        "frontend/testlar/t2_object_create.test.cjs",
-        "frontend/testlar/t2_document_upload.test.cjs",
-        "frontend/testlar/hammasi.cjs",
-        "ops/releases/STOR-001.md"
+        "frontend/testlar/t2_object_create.test.cjs"
       ],
       "depends_on": [],
       "must_read": [
@@ -83,9 +78,46 @@
         "docs/governance/CONSTITUTION.md",
         "docs/governance/CURRENT_STATE.md",
         "docs/governance/AGENT_COMMS_PROTOCOL.md",
-        "ops/ACTIVE_TASKS.json",
+        "docs/architecture/STORAGE_FOUNDATION_CONTRACT_V1.md",
         "ops/handoff/STOR-001.md",
-        "ops/mailbox/STOR-001/01-claude.md"
+        "ops/mailbox/STOR-001/"
+      ],
+      "production_write_allowed": false
+    },
+    {
+      "id": "STOR-001B",
+      "title": "Storage foundation INTEGRATION: T2 GAS callers -> canonical resolver, global-root removal",
+      "owner": "claude",
+      "base_sha": "999611c",
+      "base_ref": "origin/codex/company-storage-foundation-v1",
+      "branch": "claude/storage-integration-v1",
+      "status": "active",
+      "lane_of": "STOR-001",
+      "owns": [
+        "Smeta tizimi/T2_Kozgu.js",
+        "Smeta tizimi/T2_Yuklash.js",
+        "Smeta tizimi/T2_Import.js",
+        "Smeta tizimi/T2_F2Import.js",
+        "Smeta tizimi/95_ObyektHujjat.js",
+        "Smeta tizimi/76_Hujjatlar_M29.js",
+        "Smeta tizimi/37_F2TezYoz.js",
+        "Smeta tizimi/39_F2Reestr.js",
+        "Smeta tizimi/35_F2Moslash.js",
+        "Smeta tizimi/30_Panel.js",
+        "frontend/testlar/t2_document_upload.test.cjs",
+        "frontend/testlar/t2_storage_integration.test.cjs",
+        "frontend/testlar/t2_no_global_root.test.cjs",
+        "frontend/testlar/hammasi.cjs",
+        "docs/architecture/STORAGE_FOUNDATION_CONTRACT_V1.md",
+        "docs/reviews/STOR-001-release-review.md",
+        "ops/releases/STOR-001.md"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md",
+        "docs/governance/CONSTITUTION.md",
+        "docs/architecture/STORAGE_FOUNDATION_CONTRACT_V1.md",
+        "docs/reviews/STOR-001-release-review.md"
       ],
       "production_write_allowed": false
     }
