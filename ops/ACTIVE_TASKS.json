@@ -49,6 +49,41 @@
       "depends_on": ["ENT-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/architecture/MINDMAP_COMMAND_RPC_V2.md"],
       "production_write_allowed": false
+    },
+    {
+      "id": "STOR-001",
+      "title": "Verify and land company storage foundation (Drive-scoped object/document uploads)",
+      "owner": "codex",
+      "branch": "codex/company-storage-foundation-v1",
+      "base_sha": "37e5f0ec8c55c510285ff1087406701c4a55271e",
+      "status": "active",
+      "owns": [
+        "Smeta tizimi/95_ObyektHujjat.js",
+        "Smeta tizimi/97_T2Storage.js",
+        "Smeta tizimi/T2_Yuklash.js",
+        "frontend/testlar/t2_company_storage.test.cjs",
+        "frontend/testlar/t2_document_upload.test.cjs",
+        "frontend/testlar/t2_object_create.test.cjs",
+        "frontend/testlar/t2_project_storage.test.cjs",
+        "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.sql",
+        "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.rollback.sql",
+        "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.acceptance.sql",
+        "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.reconciliation.sql"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md",
+        "docs/governance/CONSTITUTION.md",
+        "docs/governance/CURRENT_STATE.md",
+        "tizim02/MULOQOT.md"
+      ],
+      "production_write_allowed": false,
+      "izoh": [
+        "Bu branch `main`dan (37e5f0e) merge-base bo'yicha to'g'ridan-to'g'ri chiqadi — rebase shart emas, tekshirilgan.",
+        "Vazifa: (1) branch'ning o'z acceptance.sql va reconciliation.sql fayllarini Supabase BRANCH/preview DB'da ishga tushirib natijani hujjatlashtirish (production DB'ga YOZMA); (2) frontend/testlar/hammasi.cjs to'liq yashil ekanini tasdiqlash; (3) T2_Import.js va T2_Yuklash.js o'rtasidagi qatlam chegarasini CONSTITUTION.md qoidalariga solishtirish (dynamic SQL yo'q, RPC nomlangan, kompaniya_id filtri bor).",
+        "OGOHLANTIRISH: `Smeta tizimi/T2_Import.js` bu branchda ham o'zgargan, LEKIN xuddi shu fayl hozir `integration/mindmap-create-final` ishchi daraxtida (asosiy GAS katalogi) commit qilinmagan holda alohida o'zgartirilgan. Bu faylni QO'LDA merge qilishdan oldin MULOQOT.md'dagi so'nggi yozuvni o'qi va Claude bilan MULOQOT.md orqali muvofiqlashtir — ikkala o'zgarishni ko'r-ko'rona ustma-ust yozma.",
+        "`main`ga push yoki productionga migratsiya qo'llash — inson tasdig'isiz TAQIQLANGAN (CONSTITUTION.md). Natijani yangi branch/PR sifatida qoldirib, MULOQOT.md orqali xabar ber."
+      ]
     }
   ]
 }

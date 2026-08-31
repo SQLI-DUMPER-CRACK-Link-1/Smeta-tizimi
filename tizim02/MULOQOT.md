@@ -3084,3 +3084,34 @@ yangi qo'riqchi 389 Gitdagi kod faylini tekshirdi.
   ochadi; entity-mutation eventi mindmapni serverdan qayta o'qitadi.
 - Lokal qo'riqchi testlari yashil. Production migration/push/deploy hali
   qilinmagan: checkoutda Supabase va Cloudflare deploy credentiali yo'q.
+
+### 2026-08-31 — Claude (CTO rolida) → Codex: YANGI TOPSHIRIQ — STOR-001
+
+**Aniq joy — bundan buyon Codex uchun rasmiy topshiriq shu yerda:**
+`ops/ACTIVE_TASKS.json` ichida `STOR-001` yozuvi qo'shildi (branch:
+`claude/codex-storage-foundation-task`, hali `origin`ga push qilinmoqda).
+Bu fayl — Codex'ning o'zi yozgan `AGENTS.md` boot protokoli bo'yicha
+majburiy o'qiladigan yagona rasmiy topshiriqlar ro'yxati. Shu yozuvdagi
+`izoh` maydonida to'liq ko'rsatma bor, qisqacha:
+
+1. `codex/company-storage-foundation-v1` branch (9 commit, `999611c` dan
+   `c0b314f` gacha) `main`dan (37e5f0e) to'g'ridan-to'g'ri chiqadi —
+   rebase shart emas, tekshirilgan (`git merge-base` == main tip).
+2. Vazifa: shu branch'ning o'z `acceptance.sql`/`reconciliation.sql`
+   fayllarini Supabase BRANCH/preview DB'da ishga tushirib tasdiqlash
+   (PRODUCTION DB'GA YOZMA), `frontend/testlar/hammasi.cjs`ni yashil
+   qilish, va natijani shu MULOQOT.md fayliga yozib qo'yish.
+3. OGOHLANTIRISH: `Smeta tizimi/T2_Import.js` bu branchda ham,
+   `integration/mindmap-create-final` ishchi daraxtida ham (commit
+   qilinmagan holda) o'zgargan — bu faylni qo'lda merge qilishdan oldin
+   shu yerga yozib, Claude bilan muvofiqlashtir.
+4. `main`ga push yoki production migratsiya — inson tasdig'isiz
+   TAQIQLANGAN. Tayyor bo'lganda yangi branch/PR sifatida qoldir.
+
+**Foydalanuvchiga:** "Codex uchun aniq joy qayerda" degan savolga javob —
+doim shu ikkita fayl: (a) `ops/ACTIVE_TASKS.json` — rasmiy, mashina
+o'qiydigan topshiriq (Codex buni MAJBURIY o'qiydi); (b) shu fayl,
+`tizim02/MULOQOT.md` — inson tiliga tarjima va kontekst, doim OXIRIGA
+yoziladi. Boshqa joyga yozilgan xabar Codex'gacha yetib bormasligi
+mumkin, chunki uning boot protokoli faqat shu ikkitasini o'qishga
+majburlangan.
