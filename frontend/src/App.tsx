@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { titleForPath } from './lib/pageTitle';
 import { ToastContainer } from './umumiy/ui/Toast';
 import SahifaTopilmadi from './umumiy/ui/SahifaTopilmadi';
 import KirishSahifa from './kirish/KirishSahifa';
@@ -52,6 +54,12 @@ const TestSpravochnik = lazy(() => import('./test02/TestSpravochnik'));
 const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
 const TestSaqlash   = lazy(() => import('./test02/TestSaqlash'));
 const BossDashboard = lazy(() => import('./admin/sahifalar/BossDashboard'));
+const DocumentsPage = lazy(() => import('./admin/pages/DocumentsPage'));
+const ParticipantsPage = lazy(() => import('./admin/pages/ParticipantsPage'));
+const SystemControlPage = lazy(() => import('./admin/pages/SystemControlPage'));
+const DocumentCenterDemo = lazy(() => import('./admin/document-center/DocumentCenterDemo'));
+const ParticipantNetworkDemo = lazy(() => import('./admin/participants/ParticipantNetworkDemo'));
+const SystemControlDemo = lazy(() => import('./admin/system-control/SystemControlDemo'));
 import TestXodimlarRollar from './test02/TestXodimlarRollar';
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
@@ -74,6 +82,7 @@ const ErpSifat = lazy(() => import('./erp/sahifalar/ErpSifat'));
 export default function App() {
   return (
     <BrowserRouter>
+      <PageIdentity />
       <CommandPalette />
       <AiHelper />
       <Routes>
@@ -117,6 +126,17 @@ export default function App() {
           <Route path="shaxsiy-smeta" element={<ShaxsiySmeta />} />
           <Route path="supabase" element={<SupabaseSozlama />} />
           <Route path="tezlik" element={<TezlikSinovi />} />
+          {/* Canonical product routes; legacy /admin/test/* remains for compatibility.
+              `dashboard` -> BossDashboard (declared above). */}
+          <Route path="storage" element={<TestSaqlash />} />
+          <Route path="mindmap" element={<TestXarita />} />
+          <Route path="documents" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><DocumentsPage /></Suspense>} />
+          <Route path="participants" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><ParticipantsPage /></Suspense>} />
+          <Route path="system-control" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><SystemControlPage /></Suspense>} />
+          {/* Demo harnesses — explicit, never the default route. */}
+          <Route path="_demo/documents" element={<Suspense fallback={null}><DocumentCenterDemo /></Suspense>} />
+          <Route path="_demo/participants" element={<Suspense fallback={null}><ParticipantNetworkDemo /></Suspense>} />
+          <Route path="_demo/system-control" element={<Suspense fallback={null}><SystemControlDemo /></Suspense>} />
 
           {/* ===== TIZIM_02 (SINOV) — alohida bo’lim =====
               Ma’lumot Supabase’dan o’qiladi. Tizim_01 ning bironta
@@ -202,5 +222,5 @@ export default function App() {
   );
 }
 
-
+function PageIdentity() { const { pathname } = useLocation(); useEffect(() => { document.title = titleForPath(pathname); }, [pathname]); return null; }
 
