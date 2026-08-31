@@ -52,26 +52,60 @@
     },
     {
       "id": "STOR-001",
-      "title": "Multi-company storage foundation: hardening and release prep",
-      "owner": "codex",
+      "title": "Multi-company storage foundation + visible slice",
+      "owner": "claude",
       "base_sha": "37e5f0ec8c55c510285ff1087406701c4a55271e",
       "base_ref": "origin/main",
-      "branch": "codex/company-storage-foundation-v1",
-      "status": "review",
+      "branch": "integration/storage-visible-final",
+      "status": "live",
       "owns": [
         "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.sql",
-        "Smeta tizimi/97_T2Storage.js",
-        "Smeta tizimi/06_ObyektPapka.js",
-        "Smeta tizimi/95_ObyektHujjat.js",
-        "Smeta tizimi/T2_Yuklash.js",
-        "frontend/testlar/t2_company_storage.test.cjs",
-        "frontend/testlar/t2_project_storage.test.cjs",
-        "frontend/testlar/t2_object_create.test.cjs",
-        "frontend/testlar/t2_document_upload.test.cjs",
+        "Smeta tizimi/97_T2Storage.js", "Smeta tizimi/96_T2Papka.js",
+        "frontend/src/api/t2-storage.ts", "frontend/src/test02/TestSaqlash.tsx",
+        "frontend/src/components/storage/", "frontend/functions/api/gas.ts",
         "ops/releases/STOR-001.md"
       ],
       "depends_on": [],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/ACTIVE_TASKS.json"],
+      "production_write_allowed": true
+    },
+    {
+      "id": "CTRL-001B",
+      "title": "System Control Center CORE: capability registry, flag precedence, kill-switch, health aggregation, audit, Control Center screen",
+      "owner": "claude",
+      "base_sha": "d1d1315e87a27e05b187820af3990ba91125500f",
+      "base_ref": "origin/main",
+      "branch": "claude/ctrl-capability-registry-v1",
+      "status": "active",
+      "lane_of": "CTRL-001",
+      "owns": [
+        "supabase/migrations/2026090*_t2_capability_registry*.sql",
+        "Smeta tizimi/93_T2Control.js",
+        "frontend/src/api/t2-control.ts",
+        "frontend/src/test02/TestSystemControl.tsx",
+        "frontend/src/App.tsx", "frontend/src/admin/AdminShell.tsx",
+        "docs/architecture/SYSTEM_CONTROL_CENTER_V1.md",
+        "ops/handoff/CTRL-001.md"
+      ],
+      "depends_on": [],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/architecture/SYSTEM_CONTROL_CENTER_V1.md"],
+      "production_write_allowed": false
+    },
+    {
+      "id": "CTRL-001A",
+      "title": "System Control Center UI: reusable tables/cards, health badges, toggles/forms, deterministic CRUD plumbing, tests",
+      "owner": "codex",
+      "base_sha": "d1d1315e87a27e05b187820af3990ba91125500f",
+      "base_ref": "origin/main",
+      "branch": "codex/ctrl-control-center-components-v1",
+      "status": "active",
+      "lane_of": "CTRL-001",
+      "owns": [
+        "frontend/src/components/control/",
+        "frontend/src/components/control/control-components.test.tsx"
+      ],
+      "depends_on": [],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/architecture/SYSTEM_CONTROL_CENTER_V1.md", "ops/handoff/CTRL-001.md"],
       "production_write_allowed": false
     }
   ]
