@@ -1,0 +1,1 @@
+export type QualityStatus='OPEN'|'IN_REVIEW'|'CLOSED'|'OVERDUE';export interface QualityIssue{issueId:string;projectId:string;objectId?:string;inspectionId?:string;title:string;category:'QUALITY'|'SAFETY'|'SUPERVISION';status:QualityStatus;assigneeId?:string;dueAt?:string;correctiveAction?:string}

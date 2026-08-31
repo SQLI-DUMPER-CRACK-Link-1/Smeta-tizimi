@@ -1,0 +1,1 @@
+import{describe,it,expect}from'vitest';import type{QualityIssue}from'./types';describe('quality issue identity',()=>it('uses canonical issue id',()=>{const x:QualityIssue={issueId:'q1',projectId:'p1',title:'Defect',category:'QUALITY',status:'OPEN'};expect(x.issueId).toBe('q1')}));
