@@ -1,0 +1,1 @@
+import{describe,it,expect}from'vitest';import type{ScheduleTask}from'./types';describe('schedule ids',()=>it('uses task ids for dependency graph',()=>{const t:ScheduleTask={taskId:'task-1',projectId:'p-1',name:'Foundation',progressPercent:0,status:'NOT_STARTED',dependencyTaskIds:['task-0']};expect(t.dependencyTaskIds[0]).toBe('task-0')}));

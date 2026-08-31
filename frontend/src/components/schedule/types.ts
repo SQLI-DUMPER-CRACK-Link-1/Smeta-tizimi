@@ -1,0 +1,1 @@
+export type ScheduleTaskStatus='NOT_STARTED'|'IN_PROGRESS'|'BLOCKED'|'DONE';export interface ScheduleTask{taskId:string;projectId:string;name:string;startDate?:string;finishDate?:string;progressPercent:number;status:ScheduleTaskStatus;dependencyTaskIds:string[];assigneeId?:string}
