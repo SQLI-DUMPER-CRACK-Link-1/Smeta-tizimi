@@ -8,7 +8,7 @@
  */
 import { tekshir } from '../_shared/auth';
 
-type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string; R2_ARCHIVE: R2Bucket };
+type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string; R2_CANONICAL: R2Bucket };
 
 async function rpc(env: Env, name: string, args: Record<string, unknown>) {
   const r = await fetch(env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/' + name, {
@@ -41,7 +41,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     }
 
     const row = res.body;
-    const obj = await ctx.env.R2_ARCHIVE.get(row.r2_key);
+    const obj = await ctx.env.R2_CANONICAL.get(row.r2_key);
     if (!obj) {
       // Never fall back to Drive silently.
       return Response.json({ ok: false, code: 'CANONICAL_BINARY_MISSING', document_id: id, r2_key: row.r2_key }, { status: 502 });

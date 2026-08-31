@@ -11,28 +11,38 @@ declare r jsonb; d1 bigint; d2 bigint; log text := '';
   op1 uuid := 'f0000001-0001-4001-8001-000000000001';
   op2 uuid := 'f0000002-0002-4002-8002-000000000002';
 begin
-  -- 1. canonical upload (R2 key + sha) -> registry, drive job enqueued
-  r := public.t2_document_canonical_upsert_v1(co, actor, proj, obj, 'hujjat',
-        'act.pdf', 'application/pdf', 1234, repeat('a',64),
-        'docs/1/4/5/op-'||op1||'/aaaaaaaaaaaa__act.pdf', 'archive', op1, 'v1');
-  if not (r->>'ok')::boolean then raise exception '1 upload failed: %', r; end if;
+  -- 1. two-phase: reserve -> (R2 put happens in the function) -> finalize
+  r := public.t2_document_canonical_reserve_v1(co, actor, proj, obj, 'hujjat',
+        'act.pdf', 'application/pdf', 1234, repeat('a',64), op1, 'v1');
+  if not (r->>'ok')::boolean or r->>'canonical_storage_status' <> 'reserved' then raise exception '1 reserve failed: %', r; end if;
   d1 := (r->>'document_id')::bigint;
+  if r->>'r2_key' <> 'docs/1/4/5/d'||d1||'/r1' then raise exception '1b r2_key not derived from document_id: %', r; end if;
+  r := public.t2_document_canonical_finalize_v1(co, actor, d1, op1, 'docs/1/4/5/d'||d1||'/r1', repeat('a',64), 1234, true, 'server');
+  if not (r->>'ok')::boolean or r->>'sha256_verified' <> 'true' then raise exception '1c finalize failed: %', r; end if;
   if not exists(select 1 from public.t2_replica_sync_job where entity_id=d1 and target='drive' and operation='mirror' and holat='pending')
-    then raise exception '1b drive mirror job not enqueued'; end if;
-  log := log || format('1 upload doc=%s (drive job pending); ', d1);
+    then raise exception '1d drive mirror job not enqueued'; end if;
+  if (select canonical_storage_status from public.t2_document_registry where id=d1) <> 'stored' then raise exception '1e not stored'; end if;
+  log := log || format('1 reserve+finalize doc=%s stored, drive job pending; ', d1);
 
   -- 2. same operation_id -> same doc, retry flag, NO second registry row
-  r := public.t2_document_canonical_upsert_v1(co, actor, proj, obj, 'hujjat',
-        'act.pdf', 'application/pdf', 1234, repeat('a',64),
-        'docs/1/4/5/op-'||op1||'/aaaaaaaaaaaa__act.pdf', 'archive', op1, 'v1');
-  if (r->>'document_id')::bigint <> d1 or (r->>'retry') is distinct from 'true' then raise exception '2 idempotency broke: %', r; end if;
+  r := public.t2_document_canonical_reserve_v1(co, actor, proj, obj, 'hujjat', 'act.pdf', 'application/pdf', 1234, repeat('a',64), op1, 'v1');
+  if (r->>'document_id')::bigint <> d1 or (r->>'retry') is distinct from 'true' then raise exception '2 reserve idempotency broke: %', r; end if;
+  r := public.t2_document_canonical_finalize_v1(co, actor, d1, op1, 'docs/1/4/5/d'||d1||'/r1', repeat('a',64), 1234, true, 'server');
+  if (r->>'retry') is distinct from 'true' then raise exception '2b finalize not idempotent: %', r; end if;
   if (select count(*) from public.t2_document_registry where kompaniya_id=co and operation_id=op1) <> 1
-    then raise exception '2b duplicate registry row'; end if;
-  log := log || '2 operation_id idempotent (1 row); ';
+    then raise exception '2c duplicate registry row'; end if;
+  log := log || '2 operation_id idempotent (1 row, no re-put); ';
 
-  -- 3. cross-company rejected (actor not a member of company 999999)
+  -- 2d. interrupted upload: reserve then reconcile (no R2 binary) -> failed
+  r := public.t2_document_canonical_reserve_v1(co, actor, proj, obj, 'chizma', 'x.dwg', 'image/vnd.dwg', 99, repeat('e',64), op2, null);
+  update public.t2_document_registry set reserved_at = now() - interval '20 minutes' where operation_id=op2;
+  r := public.t2_document_canonical_reconcile_v1((select id from public.t2_document_registry where operation_id=op2), false);
+  if r->>'action' <> 'failed_no_binary' then raise exception '2d reconcile did not fail cleanly: %', r; end if;
+  log := log || '2d interrupted upload -> reconcile failed_no_binary (no orphan); ';
+
+  -- 3. cross-company rejected
   begin
-    r := public.t2_document_canonical_upsert_v1(999999, actor, null, null, 'hujjat','x',null,null,repeat('b',64),'docs/x/op-'||op2||'/x','archive',op2,null);
+    r := public.t2_document_canonical_reserve_v1(999999, actor, null, null, 'hujjat','x',null,null,repeat('b',64), 'f0000009-0009-4009-8009-000000000009', null);
     if r->>'code' not in ('STORAGE_TENANT_MISMATCH','PROJECT_COMPANY_MISMATCH') then raise exception '3 expected reject got %', r; end if;
     log := log || format('3 cross-company -> %s; ', r->>'code');
   exception when others then log := log || format('3 cross-company raised (%s); ', left(sqlerrm,40)); end;

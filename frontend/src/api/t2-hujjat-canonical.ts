@@ -22,11 +22,24 @@ export type UploadNatija =
   | { ok: true; data: CanonicalDoc }
   | { ok: false; code: string; xato?: string; r2_key?: string; sha256?: string };
 
-/** Canonical upload: Browser -> Cloudflare -> R2 -> Supabase. Drive kutilmaydi. */
+/** SHA-256 (hex) of a File — computed in the browser (two-phase commit needs
+ *  it before the bytes are streamed to the private canonical bucket). */
+export async function faylSha256(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const d = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Canonical upload: Browser -> Cloudflare -> PRIVATE R2 -> Supabase.
+ *  Two-phase (reserve -> put -> finalize); Drive kutilmaydi. */
 export async function hujjatYukla(p: {
   file: File; kompaniyaId: number; loyihaId?: number | null; obyektId?: number | null;
   documentType?: string; revision?: string | null; operationId?: string;
 }): Promise<UploadNatija> {
+  let sha: string;
+  try { sha = await faylSha256(p.file); }
+  catch (e: any) { return { ok: false, code: 'HASH_FAILED', xato: 'sha256 hisoblanmadi: ' + (e?.message || String(e)) }; }
+
   const fd = new FormData();
   fd.append('fayl', p.file);
   fd.append('kompaniya_id', String(p.kompaniyaId));
@@ -34,6 +47,8 @@ export async function hujjatYukla(p: {
   if (p.obyektId != null) fd.append('obyekt_id', String(p.obyektId));
   fd.append('turi', p.documentType || 'hujjat');
   if (p.revision != null) fd.append('revision', String(p.revision));
+  fd.append('sha256', sha);
+  fd.append('size', String(p.file.size));
   fd.append('operation_id', p.operationId || yangiOperationId());
   let j: any = null;
   try {

@@ -21,24 +21,51 @@ Drive/Sheets being down = *replica degraded*, canonical system stays UP.
 
 ---
 
-## 1. Existing R2 stack (reused — do not reinvent)
+## 1. R2 buckets — PRIVATE canonical, separate from legacy public archive
 
-- Binding: **`R2_ARCHIVE`** (Cloudflare Pages project binding; not in `wrangler.toml`).
-- Public read domain: `https://r2.qurilish-os.uz/<key>` (bucket custom domain).
-- Current `functions/api/upload.ts`: `R2_ARCHIVE.put(key, file.stream(), {httpMetadata})`.
-  Key scheme today: `kompaniya_id/obyekt_id/{hujjat|loyiha}/<safe_name>` — **name-based, unauthenticated**. Both are fixed here.
-- No download function today (reads hit the public domain directly, no authz).
+- **`R2_CANONICAL`** — NEW, **PRIVATE** binding for canonical construction
+  documents. **No public custom domain.** The browser cannot fetch it directly;
+  every read goes through the authenticated `/api/hujjat-ol` (users) or the
+  secret-authed `/api/hujjat-r2` (replica worker). This is the file truth.
+- **`R2_ARCHIVE`** — existing bucket with the public domain
+  `https://r2.qurilish-os.uz/<key>`. Retained for the legacy public archive
+  (RFQ attachments etc.) only. **Confidential canonical documents are never
+  written to it.** `functions/api/upload.ts` stays as-is for legacy callers.
 - Old model `t2_obyekt_hujjat` (0 rows) is superseded by `t2_document_registry`.
+- Cloudflare Pages project bindings (dashboard): add `R2_CANONICAL` →
+  a new **private** bucket (no custom domain), plus env `REPLICA_SYNC_SECRET`,
+  `CANONICAL_HASH_INLINE_LIMIT` (default 26214400 = 25 MiB),
+  `CANONICAL_MAX_UPLOAD_BYTES` (default 536870912 = 512 MiB).
 
-## 2. Canonical R2 key scheme (ID + content addressed)
+## 2. Canonical R2 key scheme (deterministic from document_id)
 
 ```
-docs/<kompaniya_id>/<loyiha_id>/<obyekt_id|_>/<document_id>/r<revision_seq>/<sha256_12>__<safe_original_name>
+docs/<kompaniya_id>/<loyiha_id|_>/<obyekt_id|_>/d<document_id>/r<revision_seq>
 ```
 
-- Never derived from a display name alone. `safe_original_name` is a label only.
-- A new content revision writes a **new key** (immutable objects). Old keys retained.
-- `_` for `obyekt_id` when the document is project-level.
+- Derived from the **allocated `document_id`** at reserve time — never from a
+  display name, and stable before the bytes are uploaded (two-phase, §4).
+- A new content revision = a new `document_id` + a new key (immutable objects).
+  Old keys retained.
+- `_` for `loyiha_id`/`obyekt_id` when absent.
+
+## 3a. Large-file / streaming behavior (explicit)
+
+- The **browser** computes `sha256` (Web Crypto) before upload — this is what
+  makes the deterministic two-phase key possible and is the integrity anchor.
+- Upload function, per file size:
+  - **≤ `CANONICAL_HASH_INLINE_LIMIT`** (default 25 MiB): the function buffers
+    the file once (bounded), **re-hashes server-side**, verifies it against the
+    client hash, then `R2_CANONICAL.put(key, buffer)`. `sha256_verified=true`,
+    `hash_source='server'`.
+  - **larger**: `R2_CANONICAL.put(key, file.stream())` — a **true stream**, no
+    whole-file RAM buffering. The client hash is trusted and stored
+    `sha256_verified=false`, `hash_source='client'`; the reconcile/verify job
+    may re-hash later out of band. Hard ceiling `CANONICAL_MAX_UPLOAD_BYTES`
+    (default 512 MiB) → HTTP 413.
+- No claim of "streaming SHA-256": Web Crypto has no incremental digest in
+  Workers, so server-side hashing requires buffering and is limited to the
+  inline limit.
 
 ## 3. `t2_document_registry` — canonical vs replica split (additive migration)
 
@@ -62,38 +89,56 @@ docs/<kompaniya_id>/<loyiha_id>/<obyekt_id|_>/<document_id>/r<revision_seq>/<sha
 carry the legacy Drive value during migration; new writes leave them null and
 use `drive_*`. `external_file_id` is NEVER the canonical document identity.
 
-## 4. Canonical upload path
+## 4. Canonical upload path — TWO-PHASE COMMIT (no orphan R2 objects)
 
 ```
-Browser --(multipart, session cookie)--> Cloudflare Pages Function
-  /api/hujjat-yukla
-    1. tekshir(cookie) -> Sess (actor_id, company membership)
-    2. validate company/project/object lineage belongs to the actor's companies
-    3. stream file -> sha256 + size (Web Crypto, streaming)
-    4. R2_ARCHIVE.put(canonical_key, bytes, {httpMetadata, customMetadata:{sha256, document_id?}})
-    5. RPC t2_document_canonical_upsert_v1(actor, company, project, object,
-         doc_type, filename, mime, size, sha256, r2_key, r2_bucket, operation_id, revision?)
-       -> idempotent on (kompaniya_id, operation_id); returns {document_id, revision_seq, versiya}
-       -> enqueues one t2_replica_sync_job(target='drive', operation='mirror', holat='pending')
-    6. return {ok, document_id, r2_key, sha256}  (Drive NOT awaited)
+Browser: sha256 = SHA-256(file)   [Web Crypto]
+Browser --(multipart {fayl, kompaniya_id, loyiha_id?, obyekt_id?, turi,
+           operation_id, sha256, size, revision?}, session cookie)-->
+  Cloudflare Pages Function  /api/hujjat-yukla
+    0. tekshir(cookie) -> actor_id ; enforce size <= CANONICAL_MAX_UPLOAD_BYTES
+    1. PHASE 1  RPC t2_document_canonical_reserve_v1(actor, co, proj, obj,
+         doc_type, filename, mime, expected_size, client_sha256, operation_id, revision?)
+       -> allocates document_id ; canonical_storage_status='reserved' ;
+          r2_key = docs/<co>/<proj|_>/<obj|_>/d<document_id>/r<revision_seq>
+       -> idempotent on (kompaniya_id, operation_id)
+    2. PHASE 2  bytes -> R2_CANONICAL.put(r2_key, ...)   [§3a: buffer+verify if
+          small, true file.stream() if large]
+    3. PHASE 3  RPC t2_document_canonical_finalize_v1(actor, document_id,
+         operation_id, r2_key, sha256, size, sha256_verified, hash_source)
+       -> canonical_storage_status='stored' ; status='active' ;
+          supersede prior active revision ; enqueue t2_replica_sync_job
+          (target='drive', operation='mirror', holat='pending')
+    4. return {ok, document_id, r2_key, sha256, sha256_verified}  (Drive NOT awaited)
 ```
 
-**Idempotency:** same `operation_id` → same `document_id`, no second R2 object
-(the upsert returns the existing row; the function may still PUT the identical
-key — R2 PUT is idempotent for the same key/content, and the key is
-content-addressed so a retry writes the same bytes to the same key).
+**Interruption between phase 2 and 3:** the row stays `reserved`. The reconcile
+worker HEADs R2 for `r2_key`; if the object exists it calls
+`t2_document_canonical_reconcile_v1` → `stored`; if not (after 15 min) → `failed`
+and the key (if any partial) is removed. No ambiguous partial success.
+
+**Idempotency:** same `operation_id` → `reserve` returns the existing row; a
+`stored` row short-circuits (no re-PUT); the key is derived from `document_id`
+so a retry writes to the same key. `finalize` on an already-`stored` row returns
+`retry:true`.
 
 ## 5. Canonical read / download
 
 ```
-UI --> /api/hujjat-ol?id=<document_id>   (session cookie)
-  1. tekshir(cookie)
+UI --> /api/hujjat-ol?id=<document_id>   (session cookie — REQUIRED, 401 otherwise)
+  1. tekshir(cookie) -> actor_id
   2. RPC t2_document_canonical_get_v1(actor, document_id)
-     -> row only if actor is an active member of row.kompaniya_id; else 403
-  3. R2_ARCHIVE.get(row.r2_key) -> stream back with Content-Type row.mime_type,
-     Content-Disposition attachment; filename* = row.original_filename
-  4. If R2 object missing but row.status='active' -> 502 CANONICAL_BINARY_MISSING
-     (never fall back to Drive silently)
+     -> row only if actor is an active member of row.kompaniya_id AND
+        canonical_storage_status='stored'; else 403 / CANONICAL_BINARY_MISSING
+  3. R2_CANONICAL.get(row.r2_key) -> stream back, Content-Type row.mime_type,
+     Content-Disposition attachment; filename* = row.original_filename,
+     X-Canonical-Source: r2
+  4. R2 object missing -> 502 CANONICAL_BINARY_MISSING (never fall back to Drive)
+```
+
+The private `R2_CANONICAL` bucket has **no public domain**, so this endpoint (or
+the secret-authed internal `/api/hujjat-r2` for the replica worker) is the ONLY
+way to a canonical byte.
 ```
 
 Drive file absent → download still works (reads R2).
