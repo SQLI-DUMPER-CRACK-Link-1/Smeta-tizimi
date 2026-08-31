@@ -12,7 +12,7 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: LayoutDashboard,
     id: 'asosiy',
     menyular: [
-      { yol: '/admin/test/hisobot', nom: 'Dashboard (Boss)', Ikonka: BarChart },
+      { yol: '/admin/dashboard', nom: 'Rahbar paneli', Ikonka: BarChart },
       { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
         { yol: '/admin/test/xarita', nom: 'Mindmap (Xarita)', Ikonka: Map },
       { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },

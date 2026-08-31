@@ -51,6 +51,7 @@ const TestGrafik    = lazy(() => import('./test02/TestGrafik'));
 const TestSpravochnik = lazy(() => import('./test02/TestSpravochnik'));
 const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
 const TestSaqlash   = lazy(() => import('./test02/TestSaqlash'));
+const BossDashboard = lazy(() => import('./admin/sahifalar/BossDashboard'));
 import TestXodimlarRollar from './test02/TestXodimlarRollar';
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
@@ -91,7 +92,13 @@ export default function App() {
               O'CHIRILMAGAN — barcha marshrutlari joyida, faqat AdminShell
               sidebar'ida "Eski Tizim (Arxiv)" degan yopiq bo'lim ostiga
               yig'ildi (pastga qara). */}
-          <Route index element={<Navigate to="/admin/test" replace />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          {/* BOSS PANEL P0 — canonical director dashboard (Supabase read model). */}
+          <Route path="dashboard" element={
+            <Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}>
+              <BossDashboard />
+            </Suspense>
+          } />
           <Route path="obyektlar" element={<Obyektlar />} />
           <Route path="holat/:id" element={<Holat />} />
           <Route path="f2" element={<F2Import />} />
@@ -175,7 +182,10 @@ export default function App() {
             <BossShell />
           </Suspense>
         }>
-          <Route index element={<Umumiy />} />
+          {/* BOSS PANEL P0: the legacy GAS/Sheets `Umumiy` dashboard is
+              superseded by the canonical /admin/dashboard read model. */}
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="eski" element={<Umumiy />} />
           <Route path="holat/:id" element={<Holat />} />
           {/* ERP routes for Boss */}
           <Route path="kadrlar" element={<ErpKadrlar />} />
