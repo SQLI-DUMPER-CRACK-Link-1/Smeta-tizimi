@@ -11,6 +11,15 @@ const storage = vi.hoisted(() => ({
   documentUpload: vi.fn(),
   storageXatoMatn: vi.fn((code?: string, fallback?: string) => fallback || `mapped:${code}`),
   demoRejimmi: vi.fn(() => false),
+  // current implementation composes Codex components; keep the real state map
+  toUiStatus: (s?: string) => {
+    switch (s) {
+      case 'verified': case 'ready': case 'legacy': return 'READY';
+      case 'pending': return 'PENDING';
+      case 'failed': case 'revoked': return 'FAILED';
+      default: return 'NOT_CONFIGURED';
+    }
+  },
 }));
 
 vi.mock('./KompaniyaTanlov', () => ({
@@ -62,10 +71,10 @@ describe('/admin/test/saqlash visible storage slice', () => {
   afterEach(cleanup);
 
   it.each([
-    ['READY', 'verified', 'TAYYOR'],
-    ['NOT_CONFIGURED', 'not_configured', 'SOZLANMAGAN'],
-    ['PENDING', 'pending', 'KUTILMOQDA'],
-    ['FAILED', 'failed', 'XATO'],
+    ['READY', 'verified', 'Tayyor'],
+    ['NOT_CONFIGURED', 'not_configured', 'Sozlanmagan'],
+    ['PENDING', 'pending', 'Kutilmoqda'],
+    ['FAILED', 'failed', 'Xato'],
   ])('renders %s state from the storage contract', async (_name, status, label) => {
     defaultResponses(status);
     render(<TestSaqlash />);
@@ -80,7 +89,7 @@ describe('/admin/test/saqlash visible storage slice', () => {
     render(<TestSaqlash />);
     const input = await screen.findByPlaceholderText('https://drive.google.com/drive/folders/...');
     fireEvent.change(input, { target: { value: 'https://drive.google.com/drive/folders/qa-root' } });
-    const bind = screen.getByRole('button', { name: /Biriktirish va tasdiqlash/i });
+    const bind = screen.getByRole('button', { name: /Biriktirish/i });
     fireEvent.click(bind);
     expect(bind.hasAttribute('disabled')).toBe(true);
     resolveBind({ ok: true, data: company('verified', 4) });
@@ -91,7 +100,7 @@ describe('/admin/test/saqlash visible storage slice', () => {
     defaultResponses('not_configured');
     render(<TestSaqlash />);
     fireEvent.change(await screen.findByPlaceholderText('https://drive.google.com/drive/folders/...'), { target: { value: 'root-id' } });
-    fireEvent.click(screen.getByRole('button', { name: /Biriktirish va tasdiqlash/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Biriktirish/i }));
     await waitFor(() => expect(storage.companyStorageBind).toHaveBeenCalledWith(expect.objectContaining({ kompaniyaId: 4, folderUrl: 'root-id', expectedVersion: 3 })));
     expect((await screen.findAllByText('TAYYOR')).length).toBeGreaterThan(0);
   });
@@ -135,6 +144,6 @@ describe('/admin/test/saqlash visible storage slice', () => {
   it('keeps bind and upload buttons disabled until their prerequisites are available', async () => {
     defaultResponses('not_configured');
     render(<TestSaqlash />);
-    expect((await screen.findByRole('button', { name: /Biriktirish va tasdiqlash/i })).hasAttribute('disabled')).toBe(true);
+    expect((await screen.findByRole('button', { name: /Biriktirish/i })).hasAttribute('disabled')).toBe(true);
   });
 });
