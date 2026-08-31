@@ -1,0 +1,32 @@
+CODEX HANDOFF — STOR-001
+
+Repo:     github.com/SQLI-DUMPER-CRACK-Link-1/Smeta-tizimi
+Branch:   codex/company-storage-foundation-v1  (main'dan 9 commit oldinda)
+Base:     origin/main @ 37e5f0e
+Task:     STOR-001
+
+Birinchi o'qi (shu tartibda):
+  AGENTS.md
+  docs/governance/CONSTITUTION.md
+  docs/governance/CURRENT_STATE.md
+  ops/ACTIVE_TASKS.json
+  docs/governance/AGENT_COMMS_PROTOCOL.md
+  ops/handoff/STOR-001.md          <-- to'liq ish paketi shu yerda
+  ops/mailbox/STOR-001/01-claude.md
+
+Objective:
+  Multi-company storage foundation'ni ishlab chiqarishga tayyor holatga
+  yetkaz. Har bir T2 kompaniya/loyiha/obyekt storage'i Postgresda yagona
+  haqiqat; Drive faqat tashqi proyeksiya; global Drive fallback = 0
+  (legacy-only koddan tashqari). Migratsiya + rollback + acceptance +
+  reconciliation + behavioral testlar + ops/releases/STOR-001.md.
+
+Qat'iy taqiq:
+  - prod migratsiya QO'LLAMA
+  - main push/merge QILMA
+  - frontend/src/** TEGMA
+  - .git lock fayllarni O'CHIRMA
+  - dirty user fayllarni (Excel/DOCX/PDF) tozalama
+
+Ishни DONE yoki haqiqiy BLOCKER bo'lguncha davom ettir. Progress va
+savollarni ops/mailbox/STOR-001/NN-codex.md ga yoz.

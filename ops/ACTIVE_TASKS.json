@@ -49,6 +49,45 @@
       "depends_on": ["ENT-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/architecture/MINDMAP_COMMAND_RPC_V2.md"],
       "production_write_allowed": false
+    },
+    {
+      "id": "STOR-001",
+      "title": "Multi-company storage foundation: hardening and release prep",
+      "owner": "codex",
+      "base_sha": "37e5f0ec8c55c510285ff1087406701c4a55271e",
+      "base_ref": "origin/main",
+      "branch": "codex/company-storage-foundation-v1",
+      "status": "active",
+      "owns": [
+        "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.sql",
+        "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.rollback.sql",
+        "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.acceptance.sql",
+        "supabase/migrations/20260830052000_t2_company_storage_foundation_v1.reconciliation.sql",
+        "supabase/migrations/20260830044354_t2_signal_bulk_import_coalescing.sql",
+        "Smeta tizimi/97_T2Storage.js",
+        "Smeta tizimi/06_ObyektPapka.js",
+        "Smeta tizimi/95_ObyektHujjat.js",
+        "Smeta tizimi/30_Panel.js",
+        "Smeta tizimi/T2_Import.js",
+        "Smeta tizimi/T2_Yuklash.js",
+        "frontend/testlar/t2_company_storage.test.cjs",
+        "frontend/testlar/t2_project_storage.test.cjs",
+        "frontend/testlar/t2_object_create.test.cjs",
+        "frontend/testlar/t2_document_upload.test.cjs",
+        "frontend/testlar/hammasi.cjs",
+        "ops/releases/STOR-001.md"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md",
+        "docs/governance/CONSTITUTION.md",
+        "docs/governance/CURRENT_STATE.md",
+        "docs/governance/AGENT_COMMS_PROTOCOL.md",
+        "ops/ACTIVE_TASKS.json",
+        "ops/handoff/STOR-001.md",
+        "ops/mailbox/STOR-001/01-claude.md"
+      ],
+      "production_write_allowed": false
     }
   ]
 }

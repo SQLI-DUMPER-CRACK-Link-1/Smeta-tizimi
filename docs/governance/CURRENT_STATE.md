@@ -1,18 +1,20 @@
 # TIZIM_02 current state
 
 This file is replaceable state, not an append-only journal. Update values in
-the same change that changes the state. Last checked: 2026-08-30.
+the same change that changes the state. Last checked: 2026-08-31.
 
 | Field | Current value |
 |---|---|
-| `main_sha` | `451ae6cef200aa3828d02dcd5672e8587eebed88` |
-| `production_frontend` | Cloudflare Pages `smeta-tizimi.pages.dev`; production deployment `a44a43b1-bb95-4fc8-abd7-0f208be0958c` succeeded for this commit |
-| `production_db` | Supabase/Postgres project `tuoyrzadkgoltpqkdiyx`; live catalog is authoritative, repository migration history has known drift |
-| `working` | Day-end release commit `451ae6c`; production DB writes remain disabled |
-| `broken` | Disposable Supabase branch is unavailable; live-vs-repository schema/deployment verification remains pending |
-| `active_tasks` | No release-scoped task remains active; historical task records are in `ops/ACTIVE_TASKS.json` |
-| `branches_not_merged` | `codex/design-system-v1`, `codex/universal-estimate-engine-v1`; explicitly excluded from this release |
-| `next_release` | Apply participant migrations only after explicit approval; keep Supabase schema reconciliation pending |
+| `main_sha` | `37e5f0ec8c55c510285ff1087406701c4a55271e` (verified remote 2026-08-31; == origin/main) |
+| `active_p0` | `STOR-001` multi-company storage foundation. Work branch `codex/company-storage-foundation-v1` (main +9 / -0). SOURCE READY, not MERGED, not DB APPLIED. |
+| `agent_control_plane` | `docs/governance/AGENT_COMMS_PROTOCOL.md` + `ops/handoff/` + `ops/mailbox/`. Machine task truth: `ops/ACTIVE_TASKS.json`. `tizim02/MULOQOT.md` is history only. |
+| `production_frontend` | Cloudflare Pages `smeta-tizimi.pages.dev`; last recorded prod deploy `a44a43b1-bb95-4fc8-abd7-0f208be0958c` (commit `451ae6c`) |
+| `production_db` | Supabase/Postgres `tuoyrzadkgoltpqkdiyx`; live catalog is authoritative. Participant migrations `20260831171534` + `20260831171605` are APPLIED to production (closed, separate from STOR-001). `t2_company_storage_foundation_v1` is NOT applied. Repo migration history has known drift. |
+| `working` | Governance + participant contract + mindmap create on `main @ 37e5f0e`. Production DB writes remain disabled by policy. |
+| `broken` | Disposable Supabase branch unavailable; full live-vs-repo schema reconciliation pending. |
+| `active_tasks` | `STOR-001` active (codex). See `ops/ACTIVE_TASKS.json`. |
+| `branches_not_merged` | `codex/company-storage-foundation-v1` (STOR-001, active), `codex/design-system-v1`, `codex/universal-estimate-engine-v1`. |
+| `next_release` | STOR-001 storage foundation, one consolidated PROD approval after Claude review. No other P0 opens until STOR-001 closes. |
 
 ## Evidence boundary
 
