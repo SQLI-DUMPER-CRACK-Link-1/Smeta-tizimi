@@ -1,0 +1,1 @@
+export type AgentWriteMode='READ_ONLY'|'PROPOSE'|'APPROVAL_REQUIRED';export interface AgentAction{actionId:string;agentId:string;companyId:string;projectId?:string;tool:string;mode:AgentWriteMode;evidenceRefs:string[];summary:string} 

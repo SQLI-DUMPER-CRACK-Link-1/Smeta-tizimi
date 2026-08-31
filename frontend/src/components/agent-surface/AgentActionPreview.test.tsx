@@ -1,0 +1,1 @@
+import{describe,it,expect}from'vitest';import type{AgentAction}from'./types';describe('agent contract',()=>it('uses action and scope ids',()=>{const a:AgentAction={actionId:'a1',agentId:'agent1',companyId:'c1',tool:'read',mode:'READ_ONLY',evidenceRefs:[],summary:'x'};expect(a.companyId).toBe('c1')}));
