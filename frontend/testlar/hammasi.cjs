@@ -32,6 +32,7 @@ const TESTLAR = [
   ['T2 company-storage workspace', 't2_company_storage.test.cjs'],
   ['T2 document upload registry', 't2_document_upload.test.cjs'],
   ['T2 global-root fallback qo\'riqchisi', 't2_no_global_root.test.cjs'],
+  ['FILE-TRUTH canonical R2 vs Drive replica', 't2_file_truth.test.cjs'],
 ];
 
 let yiqildi = 0;

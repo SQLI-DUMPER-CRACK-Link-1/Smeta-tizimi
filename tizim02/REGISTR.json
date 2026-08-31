@@ -1,14 +1,14 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 271,
-    "hisobga": 154,
+    "jami": 273,
+    "hisobga": 156,
     "tayyor": 136,
     "qisman": 8,
     "joyida": 107,
     "kerakmas": 10
   },
-  "foiz": 91,
+  "foiz": 90,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -124,10 +124,10 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 28,
+      "jami": 30,
       "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 9,
+      "kutilmoqda": 11,
       "kerakmas": 0,
       "joyida": 19,
       "funksiyalar": [
@@ -155,6 +155,8 @@
         "apiT2PapkaHammasi",
         "apiT2PapkaTayyorla",
         "apiT2ProjectStorageRoyxat",
+        "apiT2ReplicaDriveWriteback",
+        "apiT2ReplicaSyncTick",
         "apiT2YangiObyektYarat",
         "apiWebApiFunksiyalar",
         "apiWebApiLog",
@@ -3333,6 +3335,26 @@
       "fayl": "97_T2Storage.js",
       "qator": 133,
       "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
+    "apiT2ReplicaSyncTick": {
+      "fayl": "98_T2ReplicaSync.js",
+      "qator": 35,
+      "argSoni": 0,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
+    "apiT2ReplicaDriveWriteback": {
+      "fayl": "98_T2ReplicaSync.js",
+      "qator": 104,
+      "argSoni": 0,
       "domen": "kopruk",
       "qatlam": "KOPRIK",
       "holat": "kutilmoqda",
