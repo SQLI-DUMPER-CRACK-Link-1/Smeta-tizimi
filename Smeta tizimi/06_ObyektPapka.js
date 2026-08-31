@@ -58,15 +58,22 @@ function apiT2ObjectStorageProvision(input){
     var projectId=Number(prov.loyiha_id);
     var obNom=_t2Get('t2_obyekt?id=eq.'+objectId+'&select=nom&limit=1');
     var name=(obNom.length?String(obNom[0].nom):'Obyekt').split(' - ')[0].trim()||('Obyekt-'+objectId);
+    /* Parent — FAQAT kanonik project_root_folder_id (bazadan). Global ROOT,
+       kompaniya root yoki Drive skan ISHLATILMAYDI. */
     var parent=_t2StorageFolderId(prov.project_root_folder_id);
 
-    /* Idempotent papka: avval bazadagi bog'lanish, keyin nom bo'yicha (aynan
-       bitta mos), oxirida yaratish — retry duplicate papka yasamasin. */
+    /* Idempotent papka rezolyutsiyasi — faqat shu kanonik parent ICHIDA:
+       (a) bazada saqlangan folder_id bo'lsa — o'sha;
+       (b) 0 mos: yangi papka yaratiladi;
+       (c) aynan 1 mos: retry uchun qayta ishlatiladi;
+       (d) >1 mos: FAIL-CLOSED — OBJECT_STORAGE_AMBIGUOUS (jim tanlanmaydi). */
     var folder=null;
     if(prov.existing_folder_id){ try{ folder=DriveApp.getFolderById(String(prov.existing_folder_id)); if(folder.isTrashed()) folder=null; }catch(e){ folder=null; } }
     if(!folder){
-      var it=parent.getFoldersByName(name), first=it.hasNext()?it.next():null;
-      if(first && !it.hasNext()) folder=first;
+      var it=parent.getFoldersByName(name), matches=[];
+      while(it.hasNext() && matches.length<3){ var f=it.next(); if(!f.isTrashed()) matches.push(f); }
+      if(matches.length>1) throw {code:'OBJECT_STORAGE_AMBIGUOUS',message:'Kanonik loyiha papkasida «'+name+'» nomli bir nechta papka — administrator hal qilsin'};
+      if(matches.length===1) folder=matches[0];
     }
     if(!folder) folder=parent.createFolder(name);
 
