@@ -1,0 +1,10 @@
+import { AlertTriangle } from 'lucide-react';
+import { CapabilityToggle, KillSwitchButton, ScopeSelector } from './CapabilityControls';
+import { SystemStatusBadge } from './SystemStatusBadge';
+import type { CapabilityOverride, SystemCapability } from './types';
+
+export function CapabilityTable({ capabilities, onToggle, onScopeChange, onKill }: { capabilities: SystemCapability[]; onToggle?: (override: CapabilityOverride) => void; onScopeChange?: (id: string, scope: SystemCapability['scope']) => void; onKill?: (capability: SystemCapability) => void }) {
+  if (!capabilities.length) return <Empty label="Capability qaydlari mavjud emas." />;
+  return <div className="karta overflow-x-auto"><table className="w-full min-w-[1050px] text-left text-xs"><thead className="bg-surface-2/60 text-text-dim"><tr>{['Module / capability', 'Holat', 'Boshqaruv', 'Scope', 'Versiya', 'Oxirgi muvaffaqiyat', 'Bog‘liqlik', 'Amal'].map((h) => <th className="px-4 py-3 font-medium" key={h}>{h}</th>)}</tr></thead><tbody>{capabilities.map((item) => <tr className="border-t border-border/70 align-top" key={item.id}><td className="px-4 py-3"><p className="font-semibold text-accent">{item.module}</p><p className="mt-1 text-text">{item.capability}</p>{item.lastError && <p className="mt-1 flex gap-1 text-danger"><AlertTriangle size={12} />{item.lastError}</p>}</td><td className="px-4 py-3"><SystemStatusBadge status={item.status} /></td><td className="px-4 py-3"><CapabilityToggle value={item.enabled} onToggle={(state) => onToggle?.({ capabilityId: item.id, scope: item.scope, state })} /></td><td className="px-4 py-3"><ScopeSelector value={item.scope} onChange={(scope) => onScopeChange?.(item.id, scope)} /></td><td className="px-4 py-3 text-text-dim">{item.version || '—'}</td><td className="px-4 py-3 text-text-dim">{item.lastSuccess || '—'}</td><td className="px-4 py-3 text-text-dim">{item.dependency || '—'}</td><td className="px-4 py-3"><KillSwitchButton capability={item} onConfirm={onKill} /></td></tr>)}</tbody></table></div>;
+}
+export function Empty({ label }: { label: string }) { return <div className="karta px-5 py-8 text-sm text-text-dim">{label}</div>; }
