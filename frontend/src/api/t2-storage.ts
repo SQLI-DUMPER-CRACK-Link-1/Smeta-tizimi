@@ -187,10 +187,13 @@ export async function companyStorageBind(p: {
     await pauza();
     return { ok: true, data: { ...demoCompany(p.kompaniyaId), status: 'verified', legacy: !!p.legacy, mode: p.mode, versiya: p.expectedVersion + 1 } };
   }
-  return chaqir<CompanyStorage>('apiT2CompanyStorageBind', {
+  const w = await chaqir<CompanyStorage>('apiT2CompanyStorageBind', {
     companyId: p.kompaniyaId, rootUrl: p.folderUrl, mode: p.mode,
     operationId: yangiOperationId(), expectedVersion: p.expectedVersion, legacy: !!p.legacy,
   });
+  if (!w.ok) return w;
+  // the write returns a partial shape; re-read the canonical row
+  return companyStorageOl(p.kompaniyaId);
 }
 
 export async function projectStorageProvision(p: {

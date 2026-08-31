@@ -46,6 +46,17 @@ export const onRequestPost: PagesFunction<{
       return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' }, { status: 403 });
     }
 
+    /* STOR-001: the actor id is authoritative from the signed session, never
+     * from the client. Storage commands (apiT2*Storage* / apiT2*Obyekt* /
+     * apiT2Document*) resolve their T2 actor from here so a caller cannot
+     * assert someone else's identity. */
+    let safeArgs: unknown[] = args ?? [];
+    if (/^apiT2([A-Za-z0-9]*Storage|YangiObyektYarat|Obyekt(Yarat|Papka)|DocumentUpload|F2Upload|LoyihaStorage)/.test(fn)
+        && sess.foydalanuvchi_id != null
+        && safeArgs.length > 0 && typeof safeArgs[0] === 'object' && safeArgs[0] !== null && !Array.isArray(safeArgs[0])) {
+      safeArgs = [{ ...(safeArgs[0] as Record<string, unknown>), actorId: sess.foydalanuvchi_id }, ...safeArgs.slice(1)];
+    }
+
     if (!ctx.env.GAS_URL) {
       return new Response(JSON.stringify({ ok: false, error: 'Cloudflare muhitida GAS_URL kiritilmagan (Environment Variables)' }), {
         headers: { 'Content-Type': 'application/json' },
@@ -55,7 +66,7 @@ export const onRequestPost: PagesFunction<{
     const r = await fetch(ctx.env.GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ __api: 1, token: ctx.env.GAS_TOKEN, fn, args: args ?? [], kim: sess.email || '' }),
+      body: JSON.stringify({ __api: 1, token: ctx.env.GAS_TOKEN, fn, args: safeArgs, kim: sess.email || '' }),
     });
 
     const text = await r.text();

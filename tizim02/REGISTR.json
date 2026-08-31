@@ -1,14 +1,14 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 267,
-    "hisobga": 150,
+    "jami": 270,
+    "hisobga": 153,
     "tayyor": 136,
     "qisman": 8,
     "joyida": 107,
     "kerakmas": 10
   },
-  "foiz": 93,
+  "foiz": 92,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -124,10 +124,10 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 24,
+      "jami": 27,
       "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 5,
+      "kutilmoqda": 8,
       "kerakmas": 0,
       "joyida": 19,
       "funksiyalar": [
@@ -140,6 +140,7 @@
         "apiSupabaseSozlamaOl",
         "apiSupabaseSozlamaSaqla",
         "apiT2CompanyStorageBind",
+        "apiT2CompanyStorageHolat",
         "apiT2DocumentUpload",
         "apiT2DriveHardDelete",
         "apiT2DriveRename",
@@ -148,9 +149,11 @@
         "apiT2F2Upload",
         "apiT2HujjatDriveSaqla",
         "apiT2LoyihaStorageProvision",
+        "apiT2ObjectStorageRoyxat",
         "apiT2ObyektYarat",
         "apiT2PapkaHammasi",
         "apiT2PapkaTayyorla",
+        "apiT2ProjectStorageRoyxat",
         "apiT2YangiObyektYarat",
         "apiWebApiFunksiyalar",
         "apiWebApiLog",
@@ -3288,6 +3291,36 @@
     "apiT2LoyihaStorageProvision": {
       "fayl": "97_T2Storage.js",
       "qator": 67,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
+    "apiT2CompanyStorageHolat": {
+      "fayl": "97_T2Storage.js",
+      "qator": 108,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
+    "apiT2ProjectStorageRoyxat": {
+      "fayl": "97_T2Storage.js",
+      "qator": 118,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
+    "apiT2ObjectStorageRoyxat": {
+      "fayl": "97_T2Storage.js",
+      "qator": 133,
       "argSoni": 1,
       "domen": "kopruk",
       "qatlam": "KOPRIK",

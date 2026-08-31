@@ -107,12 +107,14 @@ describe('/admin/test/saqlash visible storage slice', () => {
 
   it('verifies a pending project binding and preserves its expectedVersion', async () => {
     defaultResponses('verified');
-    storage.projectStorageRoyxat.mockResolvedValue({ ok: true, data: [project('pending', 6)] });
+    // first list load: pending; after provision the component re-reads: verified
+    storage.projectStorageRoyxat.mockResolvedValueOnce({ ok: true, data: [project('pending', 6)] });
+    storage.projectStorageRoyxat.mockResolvedValue({ ok: true, data: [project('verified', 7)] });
     render(<TestSaqlash />);
     const verify = await screen.findByRole('button', { name: /Papkani tayyorlash/i });
     fireEvent.click(verify);
     await waitFor(() => expect(storage.projectStorageProvision).toHaveBeenCalledWith({ kompaniyaId: 4, loyihaId: 9, expectedVersion: 6 }));
-    expect(screen.queryByRole('button', { name: /Papkani tayyorlash/i })).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Papkani tayyorlash/i })).toBeNull());
   });
 
   it('retries failed object provisioning with its expectedVersion', async () => {

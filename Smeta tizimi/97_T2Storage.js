@@ -96,3 +96,51 @@ function _t2StorageAssertLineage(companyId, projectId, objectId){
   if(p.binding.kompaniya_id!==Number(companyId)||o.binding.kompaniya_id!==Number(companyId)||o.binding.loyiha_id!==Number(projectId)||p.binding.workspace_id!==o.binding.workspace_id) return _t2StorageFail(T2_STORAGE_ERROR.TENANT,'Storage tenant/project lineage mos emas');
   return {ok:true,workspace:c.workspace,project:p.binding,object:o.binding};
 }
+
+/* ─────────── READ endpoints (GAS = service_role, so enforce actor here) ─────────── */
+function _t2StorageActorOk(companyId, actorId){
+  if(!companyId||!actorId) return false;
+  try{ _t2Rpc('t2_actor_kompaniya_azo_tekshir',{p_kompaniya_id:Number(companyId),p_actor_id:Number(actorId)}); return true; }
+  catch(e){ return false; }
+}
+
+/** Kompaniya storage holati (UI: /admin/test/saqlash). */
+function apiT2CompanyStorageHolat(input){
+  input=input||{}; var companyId=Number(input.companyId), actorId=Number(input.actorId);
+  if(!_t2StorageActorOk(companyId,actorId)) return {ok:false,code:'STORAGE_PERMISSION_DENIED'};
+  var rows=_t2Get('t2_company_storage_workspace?kompaniya_id=eq.'+companyId+'&primary_workspace=is.true&order=id.desc&limit=1&select=id,kompaniya_id,provider,mode,drive_id,root_folder_id,root_folder_name,status,legacy,versiya,verified_at');
+  if(!rows.length) return {ok:true,data:{workspace_id:null,kompaniya_id:companyId,provider:null,mode:null,root_folder_id:null,root_folder_name:null,status:'not_configured',legacy:false,versiya:0,verified_at:null}};
+  var w=rows[0];
+  return {ok:true,data:{workspace_id:w.id,kompaniya_id:w.kompaniya_id,provider:w.provider,mode:w.mode,drive_id:w.drive_id,root_folder_id:w.root_folder_id,root_folder_name:w.root_folder_name,status:w.status,legacy:w.legacy,versiya:w.versiya,verified_at:w.verified_at}};
+}
+
+/** Kompaniyaning barcha loyihalari + storage holati. */
+function apiT2ProjectStorageRoyxat(input){
+  input=input||{}; var companyId=Number(input.companyId), actorId=Number(input.actorId);
+  if(!_t2StorageActorOk(companyId,actorId)) return {ok:false,code:'STORAGE_PERMISSION_DENIED'};
+  var loyihalar=_t2Get('t2_loyiha?kompaniya_id=eq.'+companyId+'&holat=eq.faol&order=id.asc&select=id,nom&limit=500');
+  var bind=_t2Get('t2_project_storage_binding?kompaniya_id=eq.'+companyId+'&select=loyiha_id,workspace_id,project_root_folder_id,provisioning_status,storage_error,versiya&limit=1000');
+  var bmap={}; for(var i=0;i<bind.length;i++) bmap[bind[i].loyiha_id]=bind[i];
+  var out=loyihalar.map(function(l){ var b=bmap[l.id];
+    return {loyiha_id:l.id,loyiha_nom:l.nom,workspace_id:b?b.workspace_id:null,
+      project_root_folder_id:b?b.project_root_folder_id:null,
+      provisioning_status:b?b.provisioning_status:'not_configured',
+      storage_error:b?b.storage_error:null, versiya:b?b.versiya:0}; });
+  return {ok:true,data:out};
+}
+
+/** Loyihaning obyektlari + storage holati. */
+function apiT2ObjectStorageRoyxat(input){
+  input=input||{}; var companyId=Number(input.companyId), actorId=Number(input.actorId), projectId=Number(input.projectId);
+  if(!_t2StorageActorOk(companyId,actorId)) return {ok:false,code:'STORAGE_PERMISSION_DENIED'};
+  if(!projectId) return {ok:false,code:'PROJECT_CONTEXT_REQUIRED'};
+  var obs=_t2Get('t2_obyekt?kompaniya_id=eq.'+companyId+'&loyiha_id=eq.'+projectId+'&order=id.asc&select=id,nom,loyiha_id,storage_status,storage_error,versiya&limit=1000');
+  var bind=_t2Get('t2_object_storage_binding?kompaniya_id=eq.'+companyId+'&loyiha_id=eq.'+projectId+'&select=obyekt_id,folder_id,parent_folder_id,provisioning_status,versiya&limit=2000');
+  var bmap={}; for(var i=0;i<bind.length;i++) bmap[bind[i].obyekt_id]=bind[i];
+  var out=obs.map(function(o){ var b=bmap[o.id];
+    return {obyekt_id:o.id,obyekt_nom:o.nom,loyiha_id:o.loyiha_id,
+      folder_id:b?b.folder_id:null, parent_folder_id:b?b.parent_folder_id:null,
+      storage_status:o.storage_status||(b?'ready':'not_provisioned'),
+      storage_error:o.storage_error||null, versiya:o.versiya||1}; });
+  return {ok:true,data:out};
+}

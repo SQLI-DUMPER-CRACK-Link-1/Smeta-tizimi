@@ -55,17 +55,17 @@ describe('storage transport contract', () => {
     transport.gas.mockResolvedValue({ ok: true, data: {} });
 
     await companyStorageBind({ kompaniyaId: 7, folderUrl: 'https://drive.google.com/folder/abc', mode: 'shared_drive', expectedVersion: 3 });
-    expect(transport.gas).toHaveBeenLastCalledWith('apiT2CompanyStorageBind', expect.objectContaining({
+    expect(transport.gas).toHaveBeenCalledWith('apiT2CompanyStorageBind', expect.objectContaining({
       companyId: 7, expectedVersion: 3, operationId: '11111111-1111-4111-8111-111111111111',
     }));
 
     await projectStorageProvision({ kompaniyaId: 7, loyihaId: 9, expectedVersion: 4 });
-    expect(transport.gas).toHaveBeenLastCalledWith('apiT2LoyihaStorageProvision', expect.objectContaining({
+    expect(transport.gas).toHaveBeenCalledWith('apiT2LoyihaStorageProvision', expect.objectContaining({
       companyId: 7, projectId: 9, expectedVersion: 4, operationId: '11111111-1111-4111-8111-111111111111',
     }));
 
     await objectStorageRetry({ kompaniyaId: 7, loyihaId: 9, obyektId: 11, obyektNom: 'Blok A', expectedVersion: 5 });
-    expect(transport.gas).toHaveBeenLastCalledWith('apiT2YangiObyektYarat', expect.objectContaining({
+    expect(transport.gas).toHaveBeenCalledWith('apiT2YangiObyektYarat', expect.objectContaining({
       companyId: 7, projectId: 9, expectedVersion: 5, operationId: '11111111-1111-4111-8111-111111111111',
     }));
   });

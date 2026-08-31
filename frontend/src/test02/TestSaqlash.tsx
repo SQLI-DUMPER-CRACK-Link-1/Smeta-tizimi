@@ -87,11 +87,14 @@ export default function TestSaqlash() {
   const provision = async (loyihaId: number, versiya: number) => {
     setIsh('provision:' + loyihaId);
     const r = await projectStorageProvision({ kompaniyaId, loyihaId, expectedVersion: versiya });
+    if (r.ok) {
+      const fresh = await projectStorageRoyxat(kompaniyaId);
+      if (fresh.ok) setProjects(fresh.data);
+    } else {
+      setProjects((prev) => prev.map((p) => p.loyiha_id === loyihaId
+        ? { ...p, provisioning_status: 'failed', storage_error: storageXatoMatn(r.code, r.xabar) } : p));
+    }
     setIsh(null);
-    setProjects((prev) => prev.map((p) => p.loyiha_id === loyihaId
-      ? (r.ok ? { ...p, ...r.data }
-              : { ...p, provisioning_status: 'failed', storage_error: storageXatoMatn(r.code, r.xabar) })
-      : p));
   };
 
   const retryObject = async (o: ObjectStorage) => {
@@ -101,11 +104,14 @@ export default function TestSaqlash() {
       kompaniyaId, loyihaId: tanlanganLoyiha, obyektId: o.obyekt_id,
       obyektNom: o.obyekt_nom, expectedVersion: o.versiya,
     });
+    if (r.ok) {
+      const fresh = await objectStorageRoyxat(kompaniyaId, tanlanganLoyiha);
+      if (fresh.ok) setObjects(fresh.data);
+    } else {
+      setObjects((prev) => prev.map((x) => x.obyekt_id === o.obyekt_id
+        ? { ...x, storage_status: 'failed', storage_error: storageXatoMatn(r.code, r.xabar) } : x));
+    }
     setIsh(null);
-    setObjects((prev) => prev.map((x) => x.obyekt_id === o.obyekt_id
-      ? (r.ok ? { ...x, ...r.data }
-              : { ...x, storage_status: 'failed', storage_error: storageXatoMatn(r.code, r.xabar) })
-      : x));
   };
 
   const companyTayyor = company?.status === 'verified' || company?.status === 'legacy';
