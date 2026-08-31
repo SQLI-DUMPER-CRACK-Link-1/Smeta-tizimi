@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { titleForPath } from './lib/pageTitle';
 import { ToastContainer } from './umumiy/ui/Toast';
 import SahifaTopilmadi from './umumiy/ui/SahifaTopilmadi';
 import KirishSahifa from './kirish/KirishSahifa';
@@ -73,6 +75,7 @@ const ErpSifat = lazy(() => import('./erp/sahifalar/ErpSifat'));
 export default function App() {
   return (
     <BrowserRouter>
+      <PageIdentity />
       <CommandPalette />
       <AiHelper />
       <Routes>
@@ -110,6 +113,10 @@ export default function App() {
           <Route path="shaxsiy-smeta" element={<ShaxsiySmeta />} />
           <Route path="supabase" element={<SupabaseSozlama />} />
           <Route path="tezlik" element={<TezlikSinovi />} />
+          {/* Canonical product routes; legacy /admin/test/* remains for compatibility. */}
+          <Route path="dashboard" element={<TestHisobot />} />
+          <Route path="storage" element={<TestSaqlash />} />
+          <Route path="mindmap" element={<TestXarita />} />
 
           {/* ===== TIZIM_02 (SINOV) — alohida bo’lim =====
               Ma’lumot Supabase’dan o’qiladi. Tizim_01 ning bironta
@@ -192,5 +199,5 @@ export default function App() {
   );
 }
 
-
+function PageIdentity() { const { pathname } = useLocation(); useEffect(() => { document.title = titleForPath(pathname); }, [pathname]); return null; }
 
