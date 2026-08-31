@@ -1,0 +1,1 @@
+import{describe,it,expect}from'vitest';import type{CompanySummary}from'./types';describe('company identity contract',()=>{it('requires canonical company id',()=>{const c:CompanySummary={companyId:'company-01',name:'Demo',membershipRole:'owner',memberCount:1,pendingInvitationCount:0};expect(c.companyId).toBe('company-01')})});

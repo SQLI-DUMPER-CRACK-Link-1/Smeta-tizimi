@@ -1,0 +1,5 @@
+export type MembershipRole='director'|'owner'|'admin'|'member'; export type MembershipStatus='ACTIVE'|'PENDING'|'SUSPENDED';
+export interface CompanySummary{companyId:string;name:string;directorName?:string;membershipRole:MembershipRole;memberCount:number;pendingInvitationCount:number}
+export interface CompanyMembership{membershipId:string;companyId:string;actorId:string;displayName:string;role:MembershipRole;status:MembershipStatus;joinedAt?:string}
+export interface CompanyInvitation{invitationId:string;companyId:string;email:string;role:MembershipRole;status:'PENDING'|'EXPIRED'|'ACCEPTED';expiresAt?:string}
+export interface CompanyCenterProps{company:CompanySummary;memberships:CompanyMembership[];invitations?:CompanyInvitation[];loading?:boolean;error?:string;onSwitchCompany?:(companyId:string)=>void;onInvite?:(input:{companyId:string;email:string;role:MembershipRole})=>void;onChangeRole?:(membershipId:string,role:MembershipRole)=>void;onResendInvitation?:(invitationId:string)=>void}
