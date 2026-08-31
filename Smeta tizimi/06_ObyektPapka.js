@@ -15,21 +15,22 @@ function _t2StorageProject(companyId,projectId){
 /** Canonical T2 create. Name-only calls are invalid. */
 function apiT2YangiObyektYarat(input){
   if(!input||Array.isArray(input)||typeof input!=='object') return {ok:false,code:'PROJECT_CONTEXT_REQUIRED',xabar:'companyId, projectId, name va operationId majburiy'};
-  var companyId=Number(input.companyId),projectId=Number(input.projectId),name=String(input.name||'').trim(),operationId=String(input.operationId||'').trim();
-  if(!companyId||!projectId||!name||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) return {ok:false,code:'PROJECT_CONTEXT_REQUIRED',xabar:'companyId, projectId, name va UUID operationId majburiy'};
+  var companyId=Number(input.companyId),actorId=Number(input.actorId),projectId=Number(input.projectId),name=String(input.name||'').trim(),operationId=String(input.operationId||'').trim();
+  if(!companyId||!actorId||!projectId||!name||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) return {ok:false,code:'PROJECT_CONTEXT_REQUIRED',xabar:'companyId, actorId, projectId, name va UUID operationId majburiy'};
   try{
     var storage=_t2StorageProject(companyId,projectId);
-    var existing=_t2Rpc('t2_object_create_v1',{p_kompaniya_id:companyId,p_loyiha_id:projectId,p_nom:name,p_operation_id:operationId,p_expected_version:input.expectedVersion==null?null:Number(input.expectedVersion)});
+    var existing=_t2Rpc('t2_object_create_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_loyiha_id:projectId,p_nom:name,p_operation_id:operationId,p_expected_version:input.expectedVersion==null?null:Number(input.expectedVersion)});
     if(!existing||!existing.ok) return existing||{ok:false,code:'OBJECT_CREATE_FAILED'};
     if(existing.storage_status==='ready') return existing;
     var parent=_t2StorageFolderId(storage.binding.project_root_folder_id),folder=parent.createFolder(name);
-    var bound=_t2Rpc('t2_object_storage_bind_v1',{p_obyekt_id:existing.obyekt_id,p_kompaniya_id:companyId,p_loyiha_id:projectId,p_workspace_id:storage.workspace.id,p_folder_id:folder.getId(),p_parent_folder_id:parent.getId(),p_operation_id:operationId});
+    var bound=_t2Rpc('t2_object_storage_bind_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_obyekt_id:existing.obyekt_id,p_loyiha_id:projectId,p_workspace_id:storage.workspace.id,p_folder_id:folder.getId(),p_parent_folder_id:parent.getId(),p_operation_id:operationId,p_expected_version:null});
     if(!bound||!bound.ok) throw {code:'OBJECT_STORAGE_NOT_PROVISIONED',message:'object storage binding yozilmadi'};
-    _t2Rpc('t2_object_create_ready_v1',{p_obyekt_id:existing.obyekt_id,p_operation_id:operationId});
+    var ready=_t2Rpc('t2_object_create_ready_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_obyekt_id:existing.obyekt_id,p_operation_id:operationId,p_expected_version:existing.version==null?null:Number(existing.version)});
+    if(!ready||!ready.ok) throw {code:(ready&&ready.code)||'OBJECT_STORAGE_NOT_PROVISIONED',message:'object storage ready yozilmadi'};
     return {ok:true,obyekt_id:existing.obyekt_id,folderId:folder.getId(),storage_status:'ready',operationId:operationId};
   }catch(e){
     if(typeof existing!=='undefined'&&existing&&existing.obyekt_id){
-      try{_t2Rpc('t2_object_create_failed_v1',{p_obyekt_id:existing.obyekt_id,p_operation_id:operationId,p_error:e.message||String(e)});}catch(ignore){}
+      try{_t2Rpc('t2_object_create_failed_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_obyekt_id:existing.obyekt_id,p_operation_id:operationId,p_error:e.message||String(e)});}catch(ignore){}
     }
     return {ok:false,code:e.code||'OBJECT_CREATE_FAILED',obyekt_id:(typeof existing!=='undefined'&&existing&&existing.obyekt_id)||e.obyekt_id||null,storage_status:'failed',xabar:e.message||String(e)};
   }

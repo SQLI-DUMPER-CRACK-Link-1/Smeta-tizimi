@@ -16,4 +16,25 @@ must('failure state RPC', /t2_object_create_failed_v1/);
 mustNot('no ROOT_FOLDER_ID fallback', /ROOT_FOLDER_ID/);
 mustNot('no global root search', /DriveApp\.searchFiles/);
 mustNot('no object-name root lookup', /getFoldersByName\(name\)/);
+
+// Behavioral boundary: run the real GAS entrypoint with a tenant-mismatched
+// project resolver. A Drive folder must never be created after a failed
+// canonical lineage lookup.
+const vm = require('vm');
+let folderCreates = 0;
+const context = {
+  _t2Get: () => [],
+  resolveCompanyStorage: () => ({ok:true, workspace:{id:11}}),
+  resolveProjectStorage: () => ({ok:true, binding:{kompaniya_id:2,workspace_id:11,project_root_folder_id:'p'}}),
+  _t2Rpc: () => ({ok:true}),
+  DriveApp: { getFolderById: () => ({isTrashed:() => false, createFolder:() => {folderCreates++;}}) },
+  String, Number, Array, Object, RegExp
+};
+vm.createContext(context);
+vm.runInContext(src, context);
+const denied = context.apiT2YangiObyektYarat({companyId:1,actorId:9,projectId:4,name:'x',operationId:'11111111-1111-4111-8111-111111111111'});
+assert.strictEqual(denied.ok, false, 'tenant mismatch must fail');
+assert.strictEqual(denied.code, 'PROJECT_COMPANY_MISMATCH');
+assert.strictEqual(folderCreates, 0, 'failed lineage must not create a Drive folder');
+console.log('  ✅ behavioral tenant mismatch is fail-closed before Drive write');
 console.log('  ✅ object-create static contract');

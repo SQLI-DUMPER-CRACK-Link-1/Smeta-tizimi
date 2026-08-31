@@ -69,16 +69,16 @@ function _ohNamedSubfolder(parent, nomi) {
 /** Canonical T2 document/F2 upload: storage is resolved only from DB lineage. */
 function apiT2DocumentUpload(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return {ok:false,code:'DOCUMENT_CONTEXT_REQUIRED'};
-  var companyId=Number(input.companyId), projectId=Number(input.projectId), objectId=Number(input.objectId);
+  var companyId=Number(input.companyId), actorId=Number(input.actorId), projectId=Number(input.projectId), objectId=Number(input.objectId);
   var operationId=String(input.operationId||'').trim(), documentType=String(input.documentType||'document').trim();
-  if(!companyId||!projectId||!objectId||!input.base64||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) return {ok:false,code:'DOCUMENT_CONTEXT_REQUIRED'};
+  if(!companyId||!actorId||!projectId||!objectId||!input.base64||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) return {ok:false,code:'DOCUMENT_CONTEXT_REQUIRED'};
   try{
     var lineage=_t2StorageAssertLineage(companyId,projectId,objectId); if(!lineage.ok) return lineage;
     var folder=_t2StorageFolder(lineage.object.folder_id), fileName=String(input.fileName||'document').trim()||'document';
     var safeName=operationId+'__'+fileName, existing=folder.getFilesByName(safeName), file=null;
     if(existing.hasNext()){file=existing.next(); if(existing.hasNext()) return {ok:false,code:'DOCUMENT_STORAGE_AMBIGUOUS'};}
     if(!file){file=folder.createFile(Utilities.newBlob(Utilities.base64Decode(input.base64),input.mimeType||'application/octet-stream',safeName));}
-    var row=_t2Rpc('t2_document_registry_upsert_v1',{p_kompaniya_id:companyId,p_loyiha_id:projectId,p_obyekt_id:objectId,p_provider:'google_drive',p_external_file_id:file.getId(),p_external_parent_id:folder.getId(),p_document_type:documentType,p_revision:input.revision==null?null:String(input.revision),p_operation_id:operationId,p_created_by:String(input.createdBy||'t2')});
+    var row=_t2Rpc('t2_document_registry_upsert_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_loyiha_id:projectId,p_obyekt_id:objectId,p_provider:'google_drive',p_external_file_id:file.getId(),p_external_parent_id:folder.getId(),p_document_type:documentType,p_revision:input.revision==null?null:String(input.revision),p_operation_id:operationId,p_created_by:String(input.createdBy||'t2')});
     if(!row||!row.ok) return {ok:false,code:(row&&row.code)||'DOCUMENT_REGISTRY_FAILED',external_file_id:file.getId()};
     return {ok:true,document_id:row.document_id,external_file_id:row.external_file_id,external_parent_id:folder.getId(),status:row.status,operationId:operationId};
   }catch(e){return {ok:false,code:e.code||'DOCUMENT_UPLOAD_FAILED',xabar:e.message||String(e)};}

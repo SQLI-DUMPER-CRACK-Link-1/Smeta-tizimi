@@ -21,6 +21,9 @@
     "apiT2KompaniyaHolat",
     "apiT2KompaniyaTanla",
     "apiT2KozguYangila",
+    "apiT2LegacyFaylYukla",
+    "apiT2LegacyManbaFayllar",
+    "apiT2LegacyYuklanganImport",
     "apiT2ManbaFayllar",
     "apiT2ObyektHujjatlar",
     "apiT2ObyektImport",
@@ -784,7 +787,7 @@
     },
     "apiT2ObyektYarat": {
       "fayl": "06_ObyektPapka.js",
-      "qator": 37,
+      "qator": 38,
       "argSoni": 1,
       "domen": "kopruk",
       "qatlam": "KOPRIK",
