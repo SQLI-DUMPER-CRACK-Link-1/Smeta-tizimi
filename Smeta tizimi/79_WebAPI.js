@@ -39,7 +39,7 @@ var WAPI_LOG_KEY   = 'WEB_API_LOG';
  * ⚠️ QO'LDA YANGILANADI: har `clasp version` dan keyin shu raqam
  * o'sha versiya raqamiga tenglashtiriladi.
  * ================================================================== */
-var KOD_VERSIYA = 369;
+var KOD_VERSIYA = 376;   // STOR-001 storage foundation + control-plane; all deployments redeployed 2026-09-01
 
 /** Yengil probe: hech qanday jadval o'qimaydi, darhol javob beradi. */
 function apiKodVersiya(){
