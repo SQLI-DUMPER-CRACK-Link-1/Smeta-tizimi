@@ -13,8 +13,11 @@
  *   3) ACCEPTANCE = BAZELINE bo'sh (barcha qiymatlar 0) -> STOR-001 storage
  *      integratsiya lane yopiladi.
  *
- * Istisno: `/* LEGACY-STORAGE-ALLOW *\/` izohi bilan belgilangan qator —
- * faqat aniq legacy-only kod uchun (t2_company_storage_legacy_allowlist).
+ * Istisnolar (faqat aniq legacy-only kod, t2_company_storage_legacy_allowlist):
+ *   - `/* LEGACY-STORAGE-ALLOW *\/` izohi bilan belgilangan qator yoki undan
+ *     oldingi qator;
+ *   - nomida `Legacy` bo'lgan funksiya ichidagi qator (masalan
+ *     `apiT2LegacyFaylYukla`) yoki `_t2Manba*` legacy helperlari.
  */
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -40,11 +43,16 @@ const PATTERNLAR = [
  * Har ko'chirishdan keyin mos qiymat kamaytiriladi; 0 ga yetganda olib tashlanadi.
  * Yangi fayl yoki oshgan son -> test YIQILADI. */
 const BAZELINE = {
-  'T2_Kozgu.js': 2,        // 1x .rootId + 1x 'Tizim_02' (ishchi smeta papkasi)
-  'T2_Yuklash.js': 3,      // 1x .rootId + 1x 'Tizim_02' + 1x '_MANBA'
-  '95_ObyektHujjat.js': 1, // 1x .rootId (obyekt hujjat papkasi)
-  '96_T2Papka.js': 1,      // 1x .rootId (T2 papka helper)
+  // STOR-001B qolgan ish (follow-up increment, Codex bilan kesishmaydi):
+  'T2_Kozgu.js': 2,        // ishchi-smeta mirror -> global 'Tizim_02' (apiT2VaraqYarat)
+  // Codex-adjacent (95 Codex tomonidan ham tahrirlangan) — integratsiyadan keyin:
+  '95_ObyektHujjat.js': 1, // apiObyektHujjatDriveSaqla: R2->Drive best-effort, nom bo'yicha ROOT skan
 };
+
+/* Legacy-only funksiya konteksti — bu funksiyalar ichidagi global-root
+ * ATAYLAB qoldirilgan (yangi T2 kod ularga kira olmaydi). */
+const LEGACY_FUNC = /function\s+(?:apiT2Legacy[A-Za-z0-9_]*|_t2Manba[A-Za-z0-9_]*)\s*\(/;
+const FUNC_BOSH = /^\s*function\s+([A-Za-z0-9_$]+)\s*\(/;
 
 function gitTracked(nisbiy) {
   try {
@@ -67,8 +75,12 @@ for (const fayl of T2_FAYLLAR) {
   const mutlaq = path.join(GAS, fayl);
   if (!fs.existsSync(mutlaq) || !gitTracked(nisbiy)) continue;
   const qatorlar = fs.readFileSync(mutlaq, 'utf8').split(/\r?\n/);
+  let legacyCtx = false;
   for (let i = 0; i < qatorlar.length; i++) {
     const q = qatorlar[i];
+    const fb = q.match(FUNC_BOSH);
+    if (fb) legacyCtx = LEGACY_FUNC.test(q);   // yangi funksiya boshlandi
+    if (legacyCtx) continue;
     if (/LEGACY-STORAGE-ALLOW/.test(q) || /LEGACY-STORAGE-ALLOW/.test(qatorlar[i - 1] || '')) continue;
     for (const p of PATTERNLAR) {
       if (p.re.test(q)) {
