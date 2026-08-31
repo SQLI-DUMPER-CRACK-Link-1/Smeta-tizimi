@@ -31,6 +31,7 @@ const TESTLAR = [
   ['T2 project-storage provisioning', 't2_project_storage.test.cjs'],
   ['T2 company-storage workspace', 't2_company_storage.test.cjs'],
   ['T2 document upload registry', 't2_document_upload.test.cjs'],
+  ['T2 global-root fallback qo\'riqchisi', 't2_no_global_root.test.cjs'],
 ];
 
 let yiqildi = 0;
