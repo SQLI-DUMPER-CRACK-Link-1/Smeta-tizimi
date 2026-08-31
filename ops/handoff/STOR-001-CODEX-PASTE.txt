@@ -1,32 +1,58 @@
-CODEX HANDOFF — STOR-001
+CODEX HANDOFF — STOR-001  (multi-company storage foundation)
 
-Repo:     github.com/SQLI-DUMPER-CRACK-Link-1/Smeta-tizimi
-Branch:   codex/company-storage-foundation-v1  (main'dan 9 commit oldinda)
-Base:     origin/main @ 37e5f0e
-Task:     STOR-001
+Repo: github.com/SQLI-DUMPER-CRACK-Link-1/Smeta-tizimi
 
-Birinchi o'qi (shu tartibda):
-  AGENTS.md
-  docs/governance/CONSTITUTION.md
-  docs/governance/CURRENT_STATE.md
-  ops/ACTIVE_TASKS.json
-  docs/governance/AGENT_COMMS_PROTOCOL.md
-  ops/handoff/STOR-001.md          <-- to'liq ish paketi shu yerda
-  ops/mailbox/STOR-001/01-claude.md
+STEP 0 — fetch (muvaffaqiyatli bo'lishini tasdiqla, fail bo'lsa davom etma):
+    git fetch --all --prune
 
-Objective:
-  Multi-company storage foundation'ni ishlab chiqarishga tayyor holatga
-  yetkaz. Har bir T2 kompaniya/loyiha/obyekt storage'i Postgresda yagona
-  haqiqat; Drive faqat tashqi proyeksiya; global Drive fallback = 0
-  (legacy-only koddan tashqari). Migratsiya + rollback + acceptance +
-  reconciliation + behavioral testlar + ops/releases/STOR-001.md.
+STEP 1 — handoff hujjatlarini o'qi (hozircha main'da EMAS, alohida ref'da):
+    git show origin/codex/agent-comms-protocol-v1:ops/handoff/STOR-001.md
+    git show origin/codex/agent-comms-protocol-v1:ops/mailbox/STOR-001/01-claude.md
+    git show origin/codex/agent-comms-protocol-v1:docs/governance/AGENT_COMMS_PROTOCOL.md
+    git show origin/codex/agent-comms-protocol-v1:ops/ACTIVE_TASKS.json
+  (agar bu ref main'ga merge qilingan bo'lsa — ish daraxtidan to'g'ridan o'qi)
 
-Qat'iy taqiq:
-  - prod migratsiya QO'LLAMA
-  - main push/merge QILMA
-  - frontend/src/** TEGMA
-  - .git lock fayllarni O'CHIRMA
-  - dirty user fayllarni (Excel/DOCX/PDF) tozalama
+STEP 2 — governance boot (main'dan):
+    git show origin/main:AGENTS.md
+    git show origin/main:docs/governance/CONSTITUTION.md
+    git show origin/main:docs/governance/CURRENT_STATE.md
 
-Ishни DONE yoki haqiqiy BLOCKER bo'lguncha davom ettir. Progress va
-savollarni ops/mailbox/STOR-001/NN-codex.md ga yoz.
+STEP 3 — ish branch:
+    git checkout codex/company-storage-foundation-v1
+    git rebase origin/main
+  EXACT WORK BRANCH: codex/company-storage-foundation-v1
+  BASE: origin/main @ 37e5f0ec8c55c510285ff1087406701c4a55271e  (hozir main +9 / -0)
+
+TASK ID:   STOR-001      OWNER: codex      production_write_allowed: false
+OBJECTIVE: Multi-company storage foundation ishlab chiqarishga tayyor holatga.
+           Storage yagona haqiqat = Postgres; Drive = tashqi proyeksiya;
+           global Drive fallback = 0 (legacy-only koddan tashqari).
+           Migratsiya + rollback + acceptance + reconciliation + behavioral
+           testlar + ops/releases/STOR-001.md.
+
+OWNED PATHS / BOSQICHLAR / INVARIANTLAR / ERROR CODES:
+   -> to'liq ro'yxat ops/handoff/STOR-001.md ichida (STEP 1).
+
+PROD DRIFT (verified 2026-08-31, Supabase tuoyrzadkgoltpqkdiyx):
+   - PRODDA BOR:  20260830044354 t2_signal_bulk_import_coalescing
+   - PRODDA BOR:  20260830040816 t2_signal_trigger_keep_object_create_fast
+                  (repo nomi ...050000...; mazmun bir xilligini tekshir)
+   - PRODDA YO'Q: t2_company_storage_foundation_v1   <-- asosiy yetkazma
+   Migratsiya idempotent (if not exists) bo'lsin — prod katalogiga urilmasin.
+
+QAT'IY TAQIQ:
+   - prod migratsiya QO'LLAMA          - main push / merge QILMA
+   - frontend/src/** TEGMA             - .git lock fayllarni O'CHIRMA
+   - git reset --hard / git clean / dirty user fayllarni (Excel/DOCX/PDF) tozalama
+   - yangi arxitektura kontrakti Claude tasdig'isiz YARATMA
+
+PROGRESS / SAVOL / BLOCKER:
+   ops/mailbox/STOR-001/NN-codex.md (append-only, raqamli). Boshida "ACK" yoz.
+
+TUGAGACH:
+   1. codex/company-storage-foundation-v1 rebased + pushed
+   2. ops/mailbox/STOR-001/NN-codex.md: DONE + git diff --stat + test loglari
+      + drift reconciliation xulosasi
+   3. ops/releases/STOR-001.md to'ldirilgan
+   Ishni DONE yoki haqiqiy BLOCKER bo'lguncha davom ettir. "Yana ish qoldi"
+   bloker EMAS.
