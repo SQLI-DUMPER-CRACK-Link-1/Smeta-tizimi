@@ -1,14 +1,14 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 270,
-    "hisobga": 153,
+    "jami": 271,
+    "hisobga": 154,
     "tayyor": 136,
     "qisman": 8,
     "joyida": 107,
     "kerakmas": 10
   },
-  "foiz": 92,
+  "foiz": 91,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -124,10 +124,10 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 27,
+      "jami": 28,
       "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 8,
+      "kutilmoqda": 9,
       "kerakmas": 0,
       "joyida": 19,
       "funksiyalar": [
@@ -149,6 +149,7 @@
         "apiT2F2Upload",
         "apiT2HujjatDriveSaqla",
         "apiT2LoyihaStorageProvision",
+        "apiT2ObjectStorageProvision",
         "apiT2ObjectStorageRoyxat",
         "apiT2ObyektYarat",
         "apiT2PapkaHammasi",
@@ -791,6 +792,16 @@
     "apiT2ObyektYarat": {
       "fayl": "06_ObyektPapka.js",
       "qator": 38,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
+    "apiT2ObjectStorageProvision": {
+      "fayl": "06_ObyektPapka.js",
+      "qator": 48,
       "argSoni": 1,
       "domen": "kopruk",
       "qatlam": "KOPRIK",

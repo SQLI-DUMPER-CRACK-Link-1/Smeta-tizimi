@@ -15,7 +15,11 @@ must('object binding RPC', /t2_object_storage_bind_v1/);
 must('failure state RPC', /t2_object_create_failed_v1/);
 mustNot('no ROOT_FOLDER_ID fallback', /ROOT_FOLDER_ID/);
 mustNot('no global root search', /DriveApp\.searchFiles/);
-mustNot('no object-name root lookup', /getFoldersByName\(name\)/);
+mustNot('no config-root or My-Drive-root folder lookup', /sozAsosiy\(\)|getRootFolder\(\)\s*\.\s*getFoldersByName/);
+// Idempotent child-folder reuse is allowed ONLY within the DB-provided
+// canonical parent (project_root_folder_id -> _t2StorageFolderId(...)).
+must('existing-object storage provision entrypoint', /function\s+apiT2ObjectStorageProvision\s*\(input\)/);
+must('provision resolves canonical parent from project_root_folder_id', /_t2StorageFolderId\(prov\.project_root_folder_id\)/);
 
 // Behavioral boundary: run the real GAS entrypoint with a tenant-mismatched
 // project resolver. A Drive folder must never be created after a failed

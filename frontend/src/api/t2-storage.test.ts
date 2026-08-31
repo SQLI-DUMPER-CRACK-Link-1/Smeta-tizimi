@@ -64,9 +64,11 @@ describe('storage transport contract', () => {
       companyId: 7, projectId: 9, expectedVersion: 4, operationId: '11111111-1111-4111-8111-111111111111',
     }));
 
+    // Existing-object storage provisioning: dedicated command, idempotent on
+    // objectId, no optimistic-lock gate (expectedVersion null) -> no STALE_VERSION.
     await objectStorageRetry({ kompaniyaId: 7, loyihaId: 9, obyektId: 11, obyektNom: 'Blok A', expectedVersion: 5 });
-    expect(transport.gas).toHaveBeenCalledWith('apiT2YangiObyektYarat', expect.objectContaining({
-      companyId: 7, projectId: 9, expectedVersion: 5, operationId: '11111111-1111-4111-8111-111111111111',
+    expect(transport.gas).toHaveBeenCalledWith('apiT2ObjectStorageProvision', expect.objectContaining({
+      companyId: 7, objectId: 11, expectedVersion: null, operationId: '11111111-1111-4111-8111-111111111111',
     }));
   });
 

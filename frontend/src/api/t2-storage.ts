@@ -218,10 +218,24 @@ export async function objectStorageRetry(p: {
     return { ok: true, data: { obyekt_id: p.obyektId, obyekt_nom: p.obyektNom, loyiha_id: p.loyihaId,
       folder_id: '1obj_' + p.obyektId + '_ready_0000', parent_folder_id: '1proj_' + p.loyihaId + '_root', storage_status: 'ready', storage_error: null, versiya: p.expectedVersion + 1 } };
   }
-  return chaqir<ObjectStorage>('apiT2YangiObyektYarat', {
-    companyId: p.kompaniyaId, projectId: p.loyihaId, name: p.obyektNom,
-    operationId: yangiOperationId(), expectedVersion: p.expectedVersion,
+  // Provision storage for an EXISTING object. Idempotent on objectId (server +
+  // Drive folder), so a fresh operation_id per attempt is fine and no
+  // optimistic-lock gate is applied — this is an explicit per-object action,
+  // not a concurrent edit. No STALE_VERSION, no retry loop, no duplicate.
+  const r = await chaqir<ObjectStorage>('apiT2ObjectStorageProvision', {
+    companyId: p.kompaniyaId, objectId: p.obyektId,
+    operationId: yangiOperationId(), expectedVersion: null,
   });
+  if (r.ok) return r;
+  // Legacy: if the object was never storage-tracked and the server still asks
+  // for a version, re-read the row and retry once with its real version.
+  if (r.code === 'STALE_VERSION' && typeof r.version === 'number') {
+    return chaqir<ObjectStorage>('apiT2ObjectStorageProvision', {
+      companyId: p.kompaniyaId, objectId: p.obyektId,
+      operationId: yangiOperationId(), expectedVersion: r.version,
+    });
+  }
+  return r;
 }
 
 export type UploadNatija = { ok: true; document_id: number; external_file_id: string; status: string }

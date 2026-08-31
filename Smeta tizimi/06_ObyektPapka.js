@@ -36,6 +36,52 @@ function apiT2YangiObyektYarat(input){
   }
 }
 function apiT2ObyektYarat(input){return apiT2YangiObyektYarat(input);}
+
+/**
+ * EXISTING obyekt uchun Drive storage papkasini tayyorlaydi (retry-safe).
+ * apiT2YangiObyektYarat YANGI obyekt yaratadi; bu funksiya esa allaqachon
+ * mavjud obyektning (mindmap / eski oqim) papkasini provizatsiya qiladi —
+ * yangi qator/papka YARATMAYDI, optimistik qulf obyektning HAQIQIY versiyasi
+ * bo'yicha.
+ * @param {{companyId, actorId, objectId, operationId, expectedVersion?}} input
+ */
+function apiT2ObjectStorageProvision(input){
+  if(!input||Array.isArray(input)||typeof input!=='object') return {ok:false,code:'PROJECT_CONTEXT_REQUIRED'};
+  var companyId=Number(input.companyId),actorId=Number(input.actorId),objectId=Number(input.objectId),operationId=String(input.operationId||'').trim();
+  if(!companyId||!actorId||!objectId||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) return {ok:false,code:'PROJECT_CONTEXT_REQUIRED',xabar:'companyId, actorId, objectId va UUID operationId majburiy'};
+  var prov=null;
+  try{
+    prov=_t2Rpc('t2_object_storage_provision_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_obyekt_id:objectId,p_operation_id:operationId,p_expected_version:input.expectedVersion==null?null:Number(input.expectedVersion)});
+    if(!prov||!prov.ok) return prov||{ok:false,code:'OBJECT_STORAGE_NOT_PROVISIONED'};
+    if(prov.storage_status==='ready') return {ok:true,obyekt_id:prov.obyekt_id,folderId:prov.folder_id||null,storage_status:'ready',operationId:operationId,retry:true};
+
+    var projectId=Number(prov.loyiha_id);
+    var obNom=_t2Get('t2_obyekt?id=eq.'+objectId+'&select=nom&limit=1');
+    var name=(obNom.length?String(obNom[0].nom):'Obyekt').split(' - ')[0].trim()||('Obyekt-'+objectId);
+    var parent=_t2StorageFolderId(prov.project_root_folder_id);
+
+    /* Idempotent papka: avval bazadagi bog'lanish, keyin nom bo'yicha (aynan
+       bitta mos), oxirida yaratish — retry duplicate papka yasamasin. */
+    var folder=null;
+    if(prov.existing_folder_id){ try{ folder=DriveApp.getFolderById(String(prov.existing_folder_id)); if(folder.isTrashed()) folder=null; }catch(e){ folder=null; } }
+    if(!folder){
+      var it=parent.getFoldersByName(name), first=it.hasNext()?it.next():null;
+      if(first && !it.hasNext()) folder=first;
+    }
+    if(!folder) folder=parent.createFolder(name);
+
+    var bound=_t2Rpc('t2_object_storage_bind_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_obyekt_id:objectId,p_loyiha_id:projectId,p_workspace_id:prov.workspace_id,p_folder_id:folder.getId(),p_parent_folder_id:parent.getId(),p_operation_id:operationId,p_expected_version:null});
+    if(!bound||!bound.ok) throw {code:(bound&&bound.code)||'OBJECT_STORAGE_NOT_PROVISIONED',message:'object storage binding yozilmadi'};
+
+    var ready=_t2Rpc('t2_object_create_ready_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_obyekt_id:objectId,p_operation_id:operationId,p_expected_version:null});
+    if(!ready||!ready.ok) throw {code:(ready&&ready.code)||'OBJECT_STORAGE_NOT_PROVISIONED',message:'object storage ready yozilmadi'};
+
+    return {ok:true,obyekt_id:objectId,folderId:folder.getId(),storage_status:'ready',operationId:operationId};
+  }catch(e){
+    try{_t2Rpc('t2_object_create_failed_v1',{p_kompaniya_id:companyId,p_actor_id:actorId,p_obyekt_id:objectId,p_operation_id:operationId,p_error:e.message||String(e)});}catch(ignore){}
+    return {ok:false,code:e.code||'OBJECT_STORAGE_NOT_PROVISIONED',obyekt_id:objectId,storage_status:'failed',xabar:e.message||String(e)};
+  }
+}
 function _papkaOlYokiYarat(ota,nom){var it=ota.getFoldersByName(nom);return it.hasNext()?it.next():ota.createFolder(nom);}
 function _t2ObyektYangiTuzilmaMi(folder){try{return folder.getFoldersByName('SMETA').hasNext();}catch(e){return false;}}
 function _t2ObyektPapkaTuzilmaYarat(folder){var s=_papkaOlYokiYarat(folder,'SMETA');return{smeta:s,f2:_papkaOlYokiYarat(s,'F2'),loyiha:_papkaOlYokiYarat(folder,'Loyihalar va Chizmalar'),viborka:_papkaOlYokiYarat(folder,'Viborka'),tizim:_papkaOlYokiYarat(folder,'Tizim Fayllari')};}
