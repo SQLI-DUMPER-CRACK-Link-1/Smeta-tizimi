@@ -55,18 +55,29 @@ function apiT2PapkaTayyorla(obyektId){
 
     var yaratildi = 0, natija = {};
 
-    /* ── 1) KOMPANIYA papkasi ────────────────────────────────────────
-       Ildiz — Tizim_01 ning mavjud ROOT papkasi. Kompaniya papkasi
-       o'sha ildiz ichida ochiladi. */
-    var a = sozAsosiy(), root;
-    try{ root = DriveApp.getFolderById(a.rootId); }
-    catch(e){ return {ok:false, xabar:'ROOT papka ochilmadi: ' + e}; }
+    /* ── 1) KOMPANIYA papkasi — KANONIK STORAGE WORKSPACE ILDIZIDAN ──
+       STOR-001B / STORAGE_FOUNDATION_CONTRACT_V1 §7: global config root
+       ISHLATILMAYDI. Ildiz — kompaniyaning tekshirilgan (verified/legacy)
+       storage workspace root_folder_id (resolveCompanyStorage). Workspace
+       yo'q va kompaniya papkasi ham bazada qayd etilmagan -> fail-closed. */
+    var komp = reja.kompaniya, kompFolder, root = null;
+    var ws = (typeof resolveCompanyStorage === 'function')
+      ? resolveCompanyStorage(komp.id) : {ok:false};
+    if(ws.ok){
+      try{ root = DriveApp.getFolderById(ws.workspace.root_folder_id); }
+      catch(e){ return {ok:false, code:'STORAGE_PERMISSION_DENIED',
+        xabar:'Kompaniya storage workspace ildizi ochilmadi: ' + e}; }
+    } else if(!komp.drive_id){
+      return {ok:false, code:'STORAGE_WORKSPACE_NOT_CONFIGURED',
+        xabar:'Kompaniya uchun tekshirilgan Drive storage workspace sozlanmagan'};
+    }
 
-    var komp = reja.kompaniya, kompFolder;
     if(komp.drive_id){
       kompFolder = _t2PapkaOch(komp.drive_id);
     }
     if(!kompFolder){
+      if(!root) return {ok:false, code:'STORAGE_WORKSPACE_NOT_CONFIGURED',
+        xabar:'Kompaniya papka drive_id yaroqsiz va storage workspace yo\'q'};
       kompFolder = _t2PapkaTop(root, komp.nom);
       if(!kompFolder){ kompFolder = root.createFolder(komp.nom); yaratildi++; }
       _t2Rpc('t2_papka_qayd', {

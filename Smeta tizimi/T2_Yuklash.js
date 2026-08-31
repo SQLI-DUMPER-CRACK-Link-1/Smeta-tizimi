@@ -24,6 +24,14 @@
  * tushadi, eski skan ham, LRV_PLUS ham o'zgarmaydi.
  */
 
+/* STOR-001: positional, root-scoped upload/import is retained below under
+ * explicit apiT2Legacy* names only.  A new T2 caller cannot accidentally fall
+ * back to ROOT_FOLDER_ID; it must enter through the canonical object-bound
+ * document/F2 commands in 95_ObyektHujjat.js and 30_Panel.js. */
+function apiT2FaylYukla(nom, b64, mime){ return {ok:false,code:'LEGACY_WORKSPACE_FORBIDDEN',xabar:'T2 upload uchun companyId, projectId va objectId bilan canonical document API ishlating'}; }
+function apiT2YuklanganImport(obyektNom, hujjatlar){ return {ok:false,code:'LEGACY_WORKSPACE_FORBIDDEN',xabar:'Root-scoped T2 import legacy-only; object storage binding talab qilinadi'}; }
+function apiT2ManbaFayllar(){ return {ok:false,code:'LEGACY_WORKSPACE_FORBIDDEN',xabar:'Root-scoped manba ro‘yxati legacy-only'}; }
+
 /** Tizim_02 ning MANBA papkasi (yuklangan asl fayllar shu yerda). */
 function _t2ManbaPapka(){
   var a = sozAsosiy();
@@ -44,7 +52,9 @@ function _t2ManbaPapka(){
  * @param {string} mime    MIME turi (brauzer beradi)
  * @return {Object} {ok, fayl_id, nom, varaqlar:[...], konvert}
  */
-function apiT2FaylYukla(nom, b64, mime){
+/* Explicit legacy-only adapter. New T2 code must use apiT2DocumentUpload /
+ * apiT2F2Upload with company/project/object IDs. */
+function apiT2LegacyFaylYukla(nom, b64, mime){
   var t0 = Date.now();
   try{
     nom = String(nom || '').trim();
@@ -206,7 +216,7 @@ function apiT2FaylYukla(nom, b64, mime){
  * @param {string} obyektNom  yangi obyekt nomi
  * @param {Array}  hujjatlar  [{fayl_id, rol, varaqlar:[{nom, olinsin}]}]
  */
-function apiT2YuklanganImport(obyektNom, hujjatlar){
+function apiT2LegacyYuklanganImport(obyektNom, hujjatlar){
   var t0 = Date.now();
   try{
     obyektNom = String(obyektNom || '').trim();
@@ -326,7 +336,7 @@ function apiT2YuklanganImport(obyektNom, hujjatlar){
 }
 
 /** Tizim_02 ga yuklangan manba fayllar ro'yxati. */
-function apiT2ManbaFayllar(){
+function apiT2LegacyManbaFayllar(){
   try{
     var papka = _t2ManbaPapka();
 
@@ -405,7 +415,13 @@ function apiT2ManbaFayllar(){
  * ══════════════════════════════════════════════════════════════════ */
 
 /** Bo'sh obyekt yaratadi (yoki bori qaytariladi). */
-function apiT2ObyektYarat(nom){
+/** Compatibility entrypoint: T2 callers must provide the canonical context object. */
+function apiT2ObyektYarat(input){
+  if(typeof apiT2YangiObyektYarat==='function') return apiT2YangiObyektYarat(input);
+  return {ok:false,code:'PROJECT_CONTEXT_REQUIRED',xabar:'T2 object create contract yuklanmagan'};
+}
+
+function apiT2ObyektYaratLegacy(nom){
   try{
     var ob = apiT2ObyektTayyorla(nom);
     return {ok:true, id: ob.id, nom: String(nom).trim(), tur: ob.tur};

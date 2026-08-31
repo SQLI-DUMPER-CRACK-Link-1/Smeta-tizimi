@@ -235,9 +235,11 @@ export default function TestImport() {
       const rootTanlov = driveRootHavola.trim() || driveRootId;
       const r = await gas<any>('apiT2YangiObyektYarat', nom, rootTanlov);
       if (!r.ok) { toast(r.xabar || 'Yaratilmadi', 'danger', undefined, 9000); return; }
-      toast(r.qayta_tiklandi
+      /* Server tasdiqlagan ROOT nomi success xabarida ko'rinadi. Shunda
+         foydalanuvchi papka qayerda yaratilganini taxmin qilmaydi. */
+      toast(r.xabar || (r.qayta_tiklandi
         ? 'Mavjud Drive papkasi obyektga bog\'landi'
-        : 'Obyekt va Drive papkalari yaratildi', 'ok');
+        : 'Obyekt va Drive papkalari yaratildi'), 'ok');
       setYangiNom(''); obyektlarYukla(); obyektTanla(nom);
     } catch (e: any) {
       toast(e?.message || 'Xato', 'danger', undefined, 9000);

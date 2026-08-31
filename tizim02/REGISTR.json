@@ -1,14 +1,14 @@
 {
   "versiya": 1,
   "manba": {
-    "jami": 263,
-    "hisobga": 145,
+    "jami": 267,
+    "hisobga": 150,
     "tayyor": 136,
     "qisman": 8,
-    "joyida": 108,
+    "joyida": 107,
     "kerakmas": 10
   },
-  "foiz": 97,
+  "foiz": 93,
   "tizim02Funksiyalari": [
     "apiT2F2Import",
     "apiT2F2Korish",
@@ -21,11 +21,15 @@
     "apiT2KompaniyaHolat",
     "apiT2KompaniyaTanla",
     "apiT2KozguYangila",
+    "apiT2LegacyFaylYukla",
+    "apiT2LegacyManbaFayllar",
+    "apiT2LegacyYuklanganImport",
     "apiT2ManbaFayllar",
     "apiT2ObyektHujjatlar",
     "apiT2ObyektImport",
     "apiT2ObyektTayyorla",
     "apiT2ObyektYarat",
+    "apiT2ObyektYaratLegacy",
     "apiT2OqishOlchov",
     "apiT2Test",
     "apiT2ToliqZanjir",
@@ -120,12 +124,12 @@
     },
     "kopruk": {
       "qatlam": "GAS",
-      "jami": 20,
+      "jami": 24,
       "tayyor": 0,
       "qisman": 0,
-      "kutilmoqda": 0,
+      "kutilmoqda": 5,
       "kerakmas": 0,
-      "joyida": 20,
+      "joyida": 19,
       "funksiyalar": [
         "apiAntigravityExport",
         "apiFaktSinxron",
@@ -135,12 +139,16 @@
         "apiSupabaseSinxReset",
         "apiSupabaseSozlamaOl",
         "apiSupabaseSozlamaSaqla",
+        "apiT2CompanyStorageBind",
+        "apiT2DocumentUpload",
         "apiT2DriveHardDelete",
         "apiT2DriveRename",
         "apiT2DriveRestore",
-        "apiT2DriveRootlarOl",
         "apiT2DriveTrash",
+        "apiT2F2Upload",
         "apiT2HujjatDriveSaqla",
+        "apiT2LoyihaStorageProvision",
+        "apiT2ObyektYarat",
         "apiT2PapkaHammasi",
         "apiT2PapkaTayyorla",
         "apiT2YangiObyektYarat",
@@ -148,10 +156,10 @@
         "apiWebApiLog",
         "apiWebApiSalom"
       ],
-      "egasi": null,
-      "ish_holati": null,
-      "foiz": null,
-      "kochiriladi": false
+      "egasi": "codex",
+      "ish_holati": "ishlanmoqda",
+      "foiz": 0,
+      "kochiriladi": true
     },
     "spravochnik": {
       "qatlam": "SUPABASE",
@@ -767,25 +775,25 @@
       "qopladi": null,
       "izoh": null
     },
-    "apiT2DriveRootlarOl": {
-      "fayl": "06_ObyektPapka.js",
-      "qator": 93,
-      "argSoni": 0,
-      "domen": "kopruk",
-      "qatlam": "GAS",
-      "holat": "joyida",
-      "qopladi": "GAS Drive papka ro'yxati (faqat o'qish)",
-      "izoh": null
-    },
     "apiT2YangiObyektYarat": {
       "fayl": "06_ObyektPapka.js",
-      "qator": 111,
-      "argSoni": 2,
+      "qator": 16,
+      "argSoni": 1,
       "domen": "kopruk",
       "qatlam": "GAS",
       "holat": "joyida",
       "qopladi": "06_ObyektPapka.js (GAS papka tuzilmasi) + apiT2ObyektTayyorla",
       "izoh": "Yangi (2026-08-25): obyekt Drive papka tuzilmasi (Смета/F2, Лойиха хужжатлари, Виборка) + baza qatorini bitta amalda yaratadi. Mavjud obyektlarga tegmaydi."
+    },
+    "apiT2ObyektYarat": {
+      "fayl": "06_ObyektPapka.js",
+      "qator": 38,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
     },
     "apiT2DriveTrash": {
       "fayl": "09_KorzinkaDrive.js",
@@ -1547,9 +1555,19 @@
       "qopladi": null,
       "izoh": "Drive fayl yuklash"
     },
+    "apiT2F2Upload": {
+      "fayl": "30_Panel.js",
+      "qator": 3506,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
     "apiF2VaraklarOl": {
       "fayl": "30_Panel.js",
-      "qator": 3505,
+      "qator": 3512,
       "argSoni": 1,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1559,7 +1577,7 @@
     },
     "apiF2FaylOqi": {
       "fayl": "30_Panel.js",
-      "qator": 3562,
+      "qator": 3569,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1569,7 +1587,7 @@
     },
     "apiF2OySkan": {
       "fayl": "30_Panel.js",
-      "qator": 3783,
+      "qator": 3790,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1579,7 +1597,7 @@
     },
     "apiF2BoglanishBekorQil": {
       "fayl": "30_Panel.js",
-      "qator": 3855,
+      "qator": 3862,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1589,7 +1607,7 @@
     },
     "apiF2OyOchirish": {
       "fayl": "30_Panel.js",
-      "qator": 3901,
+      "qator": 3908,
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1599,7 +1617,7 @@
     },
     "apiF2Qolla": {
       "fayl": "30_Panel.js",
-      "qator": 3999,
+      "qator": 4006,
       "argSoni": 6,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1609,7 +1627,7 @@
     },
     "apiF2TayyorHujjatYarat": {
       "fayl": "30_Panel.js",
-      "qator": 4623,
+      "qator": 4630,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1619,7 +1637,7 @@
     },
     "apiReestrSaqla": {
       "fayl": "30_Panel.js",
-      "qator": 4784,
+      "qator": 4791,
       "argSoni": 1,
       "domen": "smeta",
       "qatlam": "YOQ",
@@ -1629,7 +1647,7 @@
     },
     "apiReestrOl": {
       "fayl": "30_Panel.js",
-      "qator": 4789,
+      "qator": 4796,
       "argSoni": 0,
       "domen": "smeta",
       "qatlam": "YOQ",
@@ -1639,7 +1657,7 @@
     },
     "apiF2QollaProgress": {
       "fayl": "30_Panel.js",
-      "qator": 4795,
+      "qator": 4802,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1649,7 +1667,7 @@
     },
     "apiF2QollaLog": {
       "fayl": "30_Panel.js",
-      "qator": 4802,
+      "qator": 4809,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1659,7 +1677,7 @@
     },
     "apiF2JobHolat": {
       "fayl": "30_Panel.js",
-      "qator": 4891,
+      "qator": 4898,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1669,7 +1687,7 @@
     },
     "apiF2QollaNavbatga": {
       "fayl": "30_Panel.js",
-      "qator": 4924,
+      "qator": 4931,
       "argSoni": 5,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1679,7 +1697,7 @@
     },
     "apiF2EskiFaylOqi": {
       "fayl": "30_Panel.js",
-      "qator": 5076,
+      "qator": 5083,
       "argSoni": 2,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1689,7 +1707,7 @@
     },
     "apiSmetaQatorQosh": {
       "fayl": "30_Panel.js",
-      "qator": 5238,
+      "qator": 5245,
       "argSoni": 9,
       "domen": "smeta",
       "qatlam": "SUPABASE",
@@ -1699,7 +1717,7 @@
     },
     "apiHolatOlLokalkalar": {
       "fayl": "30_Panel.js",
-      "qator": 5316,
+      "qator": 5323,
       "argSoni": 3,
       "domen": "smeta",
       "qatlam": "SUPABASE",
@@ -1709,7 +1727,7 @@
     },
     "apiF2LokalkaTaklif": {
       "fayl": "30_Panel.js",
-      "qator": 5369,
+      "qator": 5376,
       "argSoni": 3,
       "domen": "f2",
       "qatlam": "GAS",
@@ -1719,7 +1737,7 @@
     },
     "apiF2JobTozala": {
       "fayl": "30_Panel.js",
-      "qator": 5440,
+      "qator": 5447,
       "argSoni": 0,
       "domen": "f2",
       "qatlam": "GAS",
@@ -3217,6 +3235,16 @@
       "qopladi": "GAS qatlamida qoladi (DriveApp) - LEKIN apiT2HujjatDriveSaqla bilan almashtirildi",
       "izoh": "Eski yo'l: faqat 'Loyiha chizmalari'/'Boshqa hujjatlar' ni bilardi. Yangi kod apiT2HujjatDriveSaqla ni ishlatsin."
     },
+    "apiT2DocumentUpload": {
+      "fayl": "95_ObyektHujjat.js",
+      "qator": 70,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
     "apiT2PapkaTayyorla": {
       "fayl": "96_T2Papka.js",
       "qator": 48,
@@ -3229,7 +3257,7 @@
     },
     "apiT2HujjatDriveSaqla": {
       "fayl": "96_T2Papka.js",
-      "qator": 184,
+      "qator": 195,
       "argSoni": 5,
       "domen": "kopruk",
       "qatlam": "GAS",
@@ -3239,13 +3267,33 @@
     },
     "apiT2PapkaHammasi": {
       "fayl": "96_T2Papka.js",
-      "qator": 219,
+      "qator": 230,
       "argSoni": 0,
       "domen": "kopruk",
       "qatlam": "GAS",
       "holat": "joyida",
       "qopladi": "GAS qatlamida qoladi (ommaviy Drive amali)",
       "izoh": "Barcha faol obyektlar uchun papka zanjiri. 6 daqiqa chegarasi uchun 4 daqiqadan keyin to'xtaydi, qolgani keyingi yurishda."
+    },
+    "apiT2CompanyStorageBind": {
+      "fayl": "97_T2Storage.js",
+      "qator": 56,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
+    },
+    "apiT2LoyihaStorageProvision": {
+      "fayl": "97_T2Storage.js",
+      "qator": 67,
+      "argSoni": 1,
+      "domen": "kopruk",
+      "qatlam": "KOPRIK",
+      "holat": "kutilmoqda",
+      "qopladi": null,
+      "izoh": null
     },
     "apiTolaDiagnostika": {
       "fayl": "99_Diagnostika.js",

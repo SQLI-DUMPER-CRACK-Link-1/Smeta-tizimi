@@ -27,6 +27,11 @@ const TESTLAR = [
   ['TIZIM_02 ikki agent hududi',       't2_navbat.test.cjs'],
   ['TIZIM_02 kodlash yaxlitligi',       't2_kodlash_yaxlitligi.test.cjs'],
   ['Git dublikat + apostrof qo\'riqchisi', 't2_git_yaxlitligi.test.cjs'],
+  ['T2 object-create vertical slice',  't2_object_create.test.cjs'],
+  ['T2 project-storage provisioning', 't2_project_storage.test.cjs'],
+  ['T2 company-storage workspace', 't2_company_storage.test.cjs'],
+  ['T2 document upload registry', 't2_document_upload.test.cjs'],
+  ['T2 global-root fallback qo\'riqchisi', 't2_no_global_root.test.cjs'],
 ];
 
 let yiqildi = 0;
