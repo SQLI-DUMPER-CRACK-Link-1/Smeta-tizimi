@@ -96,6 +96,26 @@ export function storageXatoMatn(code: string | undefined | null, zaxira?: string
   return code ? 'Kutilmagan xato: ' + code : 'Kutilmagan xato.';
 }
 
+/** DB holat qiymatlari → Codex ko'rinish enum (StorageStatusBadge / StorageHealthCard). */
+export type UiStorageStatus = 'READY' | 'PENDING' | 'FAILED' | 'NOT_CONFIGURED' | 'VERIFYING';
+export function toUiStatus(
+  s: WorkspaceStatus | ProvisioningStatus | ObjectStorageStatus | null | undefined,
+): UiStorageStatus {
+  switch (s) {
+    case 'verified':
+    case 'ready':
+    case 'legacy':
+      return 'READY';
+    case 'pending':
+      return 'PENDING';
+    case 'failed':
+    case 'revoked':
+      return 'FAILED';
+    default:
+      return 'NOT_CONFIGURED';
+  }
+}
+
 /* ─────────────────────────── DEMO REJIM ─────────────────────────── */
 
 export function demoRejimmi(): boolean {
