@@ -71,6 +71,33 @@
       "_izoh": "Storage migration + GAS deploy completed 2026-09-01 under explicit product-owner OPTION-(b) approval; flag reset to false for future edits."
     },
     {
+      "id": "NREL-001",
+      "title": "NEXT-MAIN-RELEASE-V1: Boss panel P0 repair + FILE-TRUTH deploy prep + Codex UI integration + governance/branch/roadmap reconciliation + production runbook",
+      "owner": "claude",
+      "base_sha": "b6db686329a4f3c7e5f49aca24d2872695e81402",
+      "base_ref": "origin/main",
+      "branch": "integration/next-main-release-v1",
+      "status": "ready_for_owner_approval",
+      "owns": [
+        "supabase/migrations/20260903120000_t2_boss_dashboard_read_model_v1.sql",
+        "frontend/functions/api/boss-dashboard.ts",
+        "frontend/src/api/t2-boss.ts",
+        "frontend/src/admin/sahifalar/BossDashboard.tsx",
+        "frontend/src/admin/pages/",
+        "frontend/src/App.tsx", "frontend/src/admin/AdminShell.tsx",
+        "frontend/testlar/t2_boss_panel.test.cjs",
+        "docs/architecture/CONSTRUCTION_OS_MASTER_ROADMAP.md",
+        "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/BRANCH_RECONCILIATION_NEXT_RELEASE.md",
+        "ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md",
+        "ops/releases/NEXT_MAIN_RELEASE_V1.md"
+      ],
+      "depends_on": ["STOR-001", "FILE-TRUTH-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/releases/NEXT_MAIN_RELEASE_V1.md", "ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md"],
+      "production_write_allowed": false,
+      "_izoh": "READY_FOR_OWNER_APPROVAL. No main push, no prod migration/deploy, no R2/Cloudflare/GAS mutation performed. Awaiting ONE consolidated production approval (see runbook)."
+    },
+    {
       "id": "CTRL-001B",
       "title": "System Control Center CORE: capability registry, flag precedence, kill-switch, health aggregation, audit, Control Center screen",
       "owner": "claude",
