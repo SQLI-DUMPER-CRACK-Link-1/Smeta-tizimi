@@ -67,7 +67,8 @@
       ],
       "depends_on": [],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/ACTIVE_TASKS.json"],
-      "production_write_allowed": true
+      "production_write_allowed": false,
+      "_izoh": "Storage migration + GAS deploy completed 2026-09-01 under explicit product-owner OPTION-(b) approval; flag reset to false for future edits."
     },
     {
       "id": "CTRL-001B",
