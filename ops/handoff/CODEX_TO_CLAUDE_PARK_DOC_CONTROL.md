@@ -76,8 +76,10 @@ supplied.
 
 ## Verification
 
-- PARK Vitest engine suite: 6 tests passed.
+- PARK focused Vitest engine suite: 6 tests passed.
 - `node frontend/testlar/t2_park_document_control.test.cjs`: 8 guards passed.
 - `npx tsc -b`: passed after PARK sources were added.
-- Full build/lint/full suite must be rerun by the release integration branch;
-  no claim is made here for checks not completed in this checkpoint.
+- `npm run build`: passed.
+- `npm run tekshir`: passed, including the PARK guard.
+- A full repository Vitest run did not complete within the local execution
+  window; release integration must run it in a clean CI/disposable environment.
