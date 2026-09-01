@@ -1,9 +1,9 @@
 # NEXT-MAIN-RELEASE-V1 — production runbook
 
-Status: **READY_FOR_OWNER_APPROVAL.** PRODUCTION: NOT APPLIED. MAIN: NOT PUSHED.
+Status: **READY_FOR_OWNER_APPROVAL_V2.** PRODUCTION: NOT APPLIED. MAIN: NOT PUSHED.
 
 - Current main: `b6db686`
-- Release candidate: `integration/next-main-release-v1 @ f7a35eb`
+- Release candidate: `integration/next-main-release-v1 @ 6a6f0d1` (16 ahead / 0 behind main)
 - Supabase project: `tuoyrzadkgoltpqkdiyx`
 - Frontend: Cloudflare Pages `smeta-tizimi.pages.dev` (git-integration auto-build on `main`)
 - GAS: script `1fcGIysm…`; 20 versioned deployments + 1 HEAD
@@ -13,41 +13,56 @@ Status: **READY_FOR_OWNER_APPROVAL.** PRODUCTION: NOT APPLIED. MAIN: NOT PUSHED.
 | Area | Change | Deploy gate |
 |---|---|---|
 | Boss panel (P0) | `t2_boss_dashboard_v1` canonical read model; `/admin/dashboard`; `/boss` + `/admin` index redirect there; legacy `Umumiy` at `/boss/eski` | migration + frontend |
-| FILE-TRUTH-001 | private `R2_CANONICAL`, two-phase reserve/finalize/reconcile, `/api/hujjat-yukla|ol|r2`, `t2_document_registry` canonical cols, `t2_replica_sync_job`, `98_T2ReplicaSync.js` | migration + R2 binding + Cloudflare + GAS |
+| CTRL-001 (real) | capability registry + precedence resolver + kill-switch + jobs + deploy-state + `t2_system_control_v1` aggregate; `/api/system-control`; `/admin/system-control` wired to real data | migration + frontend |
+| COMPANY/AUTH/DIRECTOR (P0) | multi-tenant fix (no auto-join-all); `t2_kompaniya_yarat_v1`, `t2_men_v1`, director-guarded `t2_azolik_*_v1`, `t2_royxat_sorov_qabul_v2`; `/api/company`; `/admin/kompaniya` | migration + frontend |
+| FILE-TRUTH-001 | private `R2_CANONICAL`, two-phase reserve/finalize/reconcile, `/api/hujjat-yukla\|ol\|r2`, `t2_document_registry` canonical cols, `t2_replica_sync_job`, `98_T2ReplicaSync.js` (+ Drive **managed-move** write-back) | migration + R2 binding + Cloudflare + GAS |
+| Document Center (real) | `t2_document_registry_v1` read model; `/api/hujjat-royxat`; `/admin/documents` renders real Codex `DocumentCenter`; download → private R2 | migration + frontend |
+| Sheets write-back reference | `t2_document_sheets_writeback_v1` (stable id + base_version + operation_id); `99_T2SheetsReplica.js` reference worker | migration + GAS (optional) |
+| SECURITY P0 | hardcoded `ZAXIRA` session-key fallback removed; `_shared/auth.ts` fails closed; login → 503 when `SESSIYA_KALIT` unset | frontend — **gated on SESSIYA_KALIT confirmed set** |
 | App identity | favicon.svg, manifest.webmanifest, `<PageIdentity/>` per-route titles, canonical routes, `/admin/_demo/*` | frontend |
 | Participants | `/admin/participants` real read from `t2_loyiha_qatnashchilar_royxat` | frontend |
-| Document Center / Control Center | honest "not applied / DEFERRED-P1" pages + demo harnesses | frontend |
-| Storage screen | (relabel Drive as replica — see PHASE G note; small follow-up commit if not in `f7a35eb`) | frontend |
 
 ## Ordered production plan
 
 ### 0. PRECHECK
 - `git fetch --all --prune`; confirm `origin/main` unchanged from `b6db686`.
-- Confirm `f7a35eb` builds: `cd frontend && npm ci && npm run build && npx tsc -b`.
-- Snapshot: note current GAS live deployment version; Supabase point-in-time
-  recovery is enabled (Supabase default) — no manual DB backup needed for
-  additive migrations, but record the pre-migration `list_migrations` tail.
-- **Stop condition:** any build/typecheck failure.
+- Confirm the candidate builds: `cd frontend && npm ci && npm run build && npx tsc -b && npm run test && npm run tekshir`.
+- **SECURITY GATE:** confirm `SESSIYA_KALIT` is set in Cloudflare Pages for BOTH
+  Production and Preview (check `/api/sessiya` → `zaxira_kalit: false`). The
+  auth fail-closed change locks everyone out if it is unset.
+- Snapshot: note current GAS live deployment version; record the pre-migration
+  `list_migrations` tail (Supabase PITR is on — additive migrations, no manual backup).
+- **Stop condition:** any build/typecheck/test failure, or `zaxira_kalit: true`.
 
-### 1. Supabase migrations (in filename order)
-Apply via `apply_migration`:
+### 1. Supabase migrations (in filename order, via `apply_migration`)
 1. `20260902120000_t2_file_truth_r2_canonical_v1.sql`
 2. `20260903120000_t2_boss_dashboard_read_model_v1.sql`
+3. `20260904120000_t2_capability_registry_v1.sql`
+4. `20260905120000_t2_company_onboarding_v1.sql`
+5. `20260906120000_t2_document_registry_read_v1.sql`
+6. `20260907120000_t2_document_replica_move_v1.sql`
+7. `20260908120000_t2_sheets_writeback_reference_v1.sql`
 - **Expected:** `{"success":true}` for each.
-- **Verify:** `list_migrations` tail shows both; `get_advisors security` shows no
-  new critical (a WARN on `t2_storage_actor_company_access_v1`-style RLS helpers
-  is expected/acceptable).
-- **Rollback:** run the paired `*.rollback.sql` in reverse order (additive-only;
-  no data loss).
+- **Verify:** `list_migrations` tail shows all seven; `get_advisors security` shows
+  no new CRITICAL (WARN on `SECURITY DEFINER` RLS helpers is expected/acceptable).
+- **Rollback:** run the paired `*.rollback.sql` in **reverse** order (7→1). All
+  additive; `20260905120000.rollback.sql` restores the original
+  `t2_kirish_royxatga_ol` body verbatim. No business-data loss.
 - **Stop condition:** migration error, or advisor CRITICAL introduced.
 
-### 2. SQL acceptance (rolled-back transaction — writes nothing)
-- Run `supabase/migrations/20260902120000_t2_file_truth_r2_canonical_v1.acceptance.sql`
-  (substitute a real company/actor/project/object). Expect it to raise
-  `FILE_TRUTH_ACCEPTANCE_PASS`.
-- Run `select public.t2_boss_dashboard_v1(<co>, <actor>);` — expect `ok:true`
-  with real project/finance/F2/signal sections.
-- **Stop condition:** any acceptance step raises other than the PASS sentinel.
+### 2. SQL acceptance (each inside a rolled-back transaction — writes nothing)
+Run each `*.acceptance.sql` (substitute real company/actor/project/object ids);
+each must raise its PASS sentinel:
+- `20260902120000…acceptance.sql` → `FILE_TRUTH_ACCEPTANCE_PASS`
+- `20260904120000…acceptance.sql` → `CTRL_ACCEPTANCE_PASS`
+- `20260905120000…acceptance.sql` → `ONBOARDING_ACCEPTANCE_PASS`
+- `20260906120000…acceptance.sql` → `DOCUMENT_REGISTRY_ACCEPTANCE_PASS`
+- `20260907120000…acceptance.sql` → `REPLICA_MOVE_ACCEPTANCE_PASS`
+- `20260908120000…acceptance.sql` → `SHEETS_WRITEBACK_ACCEPTANCE_PASS`
+- `select public.t2_boss_dashboard_v1(<co>,<actor>);` → `ok:true` with real sections
+- `select public.t2_system_control_v1(<co>,<actor>,null);` → `ok:true`, capabilities non-empty
+- **Stop condition:** any step raises anything other than its PASS sentinel.
+- (These 8 were all run green against prod on 2026-09-01 inside `BEGIN … ROLLBACK`.)
 
 ### 3. Private canonical R2 (Cloudflare dashboard — MANUAL, owner or admin)
 - Create a **new R2 bucket** (e.g. `smeta-canonical`), **no public access, no
@@ -97,8 +112,11 @@ Run `ops/releases/NEXT_MAIN_RELEASE_V1.md` §"Owner morning smoke" below.
 ### 8. Rollback criteria (abort the release if ANY)
 - Migration error or new advisor CRITICAL.
 - `/admin/dashboard` blank or `/api/boss-dashboard` 5xx for a real session.
+- `/api/system-control` or `/api/company?me=1` 5xx for a real session.
+- A brand-new login lands with memberships it should not have (multi-tenant regression).
 - Canonical upload leaves a `reserved` row that reconcile cannot resolve.
 - Any anonymous path can read a canonical R2 object.
+- `zaxira_kalit: true` after deploy (auth key not actually set → everyone locked out).
 - Existing routes (`/admin/test/*`, storage, mindmap) regress.
 
 ## Owner morning smoke (exact)
@@ -114,14 +132,32 @@ Run `ops/releases/NEXT_MAIN_RELEASE_V1.md` §"Owner morning smoke" below.
 7. Drive replica row PENDING→SYNCED (or honest FAILED) — canonical unaffected.
 8. Simulate Drive failure (revoke folder) → the file still downloads from R2.
 9. `/admin/participants` → real project parties from `t2_loyiha_qatnashchilar_royxat`.
-10. `/admin/system-control` → real Supabase/Cloudflare probes; separate
-    core-vs-replica health language.
-11. Browser tab title changes per route (`… | SMETA TIZIM 02`); favicon present.
-12. `/admin/test/saqlash` still works (compatibility); `/boss` redirects to
-    `/admin/dashboard`.
-13. Large file: > `CANONICAL_MAX_UPLOAD_BYTES` → deterministic 413 with a clear
-    message.
+10. `/admin/system-control` → real capability list; toggle a non-kill-switch
+    capability off at company scope, confirm the audit row + effective state;
+    toggle back. Kill-switch a kill-switchable capability, confirm hard-stop, release it.
+11. `/admin/kompaniya` → your real memberships with the director crown; the
+    "onboarding" banner is absent (you are a member). Do NOT create a throwaway
+    company on prod unless you want it.
+12. `/admin/documents` → real registry list (or the honest "not applied" banner
+    if migrations were skipped); a doc with a failed Drive replica still shows
+    `CANONICAL READY` + a replica-only warning.
+13. Browser tab title changes per route (`… | SMETA TIZIM 02`); favicon present.
+14. `/admin/test/saqlash` still works (compatibility); `/boss` → `/admin/dashboard`.
+15. Large file: > `CANONICAL_MAX_UPLOAD_BYTES` → deterministic 413.
+16. Log out, hit `/api/sessiya` → `zaxira_kalit: false`.
 
 ## Consolidated production approval request
 
-See the session final report for the exact one-paragraph approval text.
+> **APPROVED?** Apply, in filename order, migrations `20260902120000` …
+> `20260908120000` to Supabase `tuoyrzadkgoltpqkdiyx` (all additive; paired
+> rollbacks ready; all 8 acceptance scripts already passed on prod inside
+> rolled-back transactions). In Cloudflare Pages: create a **new private** R2
+> bucket + `R2_CANONICAL` binding, add `REPLICA_SYNC_SECRET`,
+> `CANONICAL_HASH_INLINE_LIMIT=26214400`, `CANONICAL_MAX_UPLOAD_BYTES=536870912`,
+> and confirm `SESSIYA_KALIT` is set for **Production AND Preview**. Merge
+> `integration/next-main-release-v1` → `main` (`--no-ff`, no force) and let Pages
+> auto-deploy. Optionally deploy the GAS replica workers (`98_T2ReplicaSync.js`
+> + `99_T2SheetsReplica.js`) with their triggers. After each step run the §8
+> rollback checks; ANY trip → roll that step back and report the exact cause.
+> This approval covers the NEXT-MAIN-RELEASE-V1 scope only. Do NOT run the Drive
+> backfill pilot yet (separate approval).

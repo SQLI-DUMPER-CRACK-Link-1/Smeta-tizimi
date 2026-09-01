@@ -1,7 +1,8 @@
 # TIZIM_02 — Construction OS Master Roadmap
 
 Authoritative domain map so nothing disappears between sessions.
-Last reconciled: 2026-09-01 · main `b6db686` · release candidate `f7a35eb`.
+Last reconciled: 2026-09-01 · main `b6db686` · release candidate `6a6f0d1`
+(READY_FOR_OWNER_APPROVAL_V2).
 
 Status legend: **LIVE** (in production) · **SOURCE_READY** (code on a branch/main,
 not deployed) · **PARTIAL** · **MISSING** · **BLOCKED** · **DEFERRED-P1/P2/P3**.
@@ -18,21 +19,22 @@ GAS = bridge.
 |---|---|---|---|---|---|
 | Auth / session | **LIVE** | User, Sess | Cloudflare `functions/api/sessiya` + cookie | Fail-closed secret audit (SEC H1) | — |
 | Company / tenant | **LIVE** | `t2_kompaniya`, `t2_azolik` | Supabase | Company create/onboarding flow audit; company settings surface | Auth |
-| Director / owner model | **PARTIAL** | `t2_azolik.rol` | Supabase | Canonical `company_owner`/`director` role not distinct from creator; explicit membership model slice | Company |
-| Membership / roles / permissions | **PARTIAL** | `t2_azolik` | Supabase + RLS + command guards | Role vocabulary + server-side scope enforcement audit; revocation semantics | Company |
-| Subscription / billing / entitlements / quotas | **MISSING** | Subscription, Plan, Entitlement | — | Backlog contract only; `codex/storage-quota-ui-v1` waits here | Company |
+| Director / owner model | **SOURCE_READY** | `t2_azolik.rol='boss'` = director | Supabase (`20260905120000`) | `t2_kompaniya_yarat_v1` makes the creator a `boss`; `t2_men_v1.is_director`. Distinct `director` vs `boss` label deferred-P2 | Company |
+| Membership / roles / permissions | **SOURCE_READY** | `t2_azolik` | Supabase + RLS + command guards (`20260905120000`) | Director-guarded `t2_azolik_qosh_v1`/`_rol_ozgartir_v1`/`_ochir_v1`; superadmin never grantable; last-director protected; soft-cancel. Invite-code flow deferred-P1 | Company |
+| Subscription / billing / entitlements / quotas | **MISSING** | Subscription, Plan, Entitlement | — | Backlog contract only; `codex/storage-quota-ui-v1` waits here. NOT in this release (no fake payment) | Company |
+| Onboarding (multi-tenant safety) | **SOURCE_READY** | `t2_kirish_royxatga_ol` | Supabase (`20260905120000`) | **P0 fixed**: new user no longer auto-joins every active company; `t2_royxat_sorov_qabul_v2` provisions company+director atomically | Auth, Company |
 | Company settings / profile | **MISSING** | — | — | Minimal settings page | Company |
 | Projects | **LIVE** | `t2_loyiha` | Supabase (`t2_loyiha_royxat`) | — | Company |
 | Participants / project network | **PARTIAL→wired** | `t2_loyiha_qatnashchi` | Supabase (`t2_loyiha_qatnashchilar_royxat`) | `/admin/participants` reads real data (this release); invite/accept + email state = DEFERRED-P1 | Projects, ENT contract |
 | Objects | **LIVE** | `t2_obyekt` | Supabase | — | Projects |
 | PBS / WBS | **PARTIAL** | `t2_obyekt` + skeleton migration | Supabase | Object not overloaded; real PBS/WBS entities | Objects |
 | Storage (canonical folders) | **LIVE** | `t2_company_storage_workspace` / `_project_storage_binding` / `_object_storage_binding` | Supabase + GAS bridge → Drive | Storage screen relabel: Drive = replica, not "asosiy storage" (PHASE G, in this release note) | — |
-| File truth (documents) | **SOURCE_READY** | `t2_document_registry` (canonical R2 cols), `t2_replica_sync_job` | private R2 + Supabase (after migration) | Apply migration + private `R2_CANONICAL` bucket + Cloudflare deploy (runbook); Document Center real wiring | Storage |
-| Document Center UI | **SOURCE_READY** | — | Codex `components/document-center` | `/admin/documents` shows honest "not applied" until file-truth deployed | File truth |
-| Drive replica worker + write-back | **SOURCE_READY** | `t2_replica_sync_job` + `98_T2ReplicaSync.js` | — | GAS trigger + `REPLICA_SYNC_SECRET` / `R2_INTERNAL_URL`; content write-back R2 copy-in = DEFERRED-P1 | File truth |
-| Sheets replica / write-back | **DEFERRED-P1** | `sheets_entity_id`, `base_version` (contract) | — | Reusable contract exists in FILE_TRUTH doc §8; one reference impl | File truth |
+| File truth (documents) | **SOURCE_READY** | `t2_document_registry` (canonical R2 cols), `t2_replica_sync_job` | private R2 + Supabase (after migration) | Apply `20260902/06/07/08120000` + private `R2_CANONICAL` bucket + Cloudflare deploy (runbook) | Storage |
+| Document Center UI | **SOURCE_READY** (wired) | `t2_document_registry_v1` | Supabase + Codex `DocumentCenter` | `/admin/documents` renders the real registry (or honest "not applied" until migrations ship); download → private R2 | File truth |
+| Drive replica worker + write-back | **SOURCE_READY** | `t2_replica_sync_job` + `98_T2ReplicaSync.js` | — | rename/**move**/delete write-back done (move = managed re-bind to KNOWN binding, else conflict+review); GAS trigger + `REPLICA_SYNC_SECRET`; content write-back R2 copy-in = DEFERRED-P1 | File truth |
+| Sheets replica / write-back | **SOURCE_READY (reference)** | `sheets_entity_id`, `base_version`, `operation_id` | Supabase (`20260908120000`) + `99_T2SheetsReplica.js` | `t2_document_sheets_writeback_v1` = the reusable template (row number never identity). Legacy per-sheet write-backs DEFERRED-P1 | File truth |
 | Boss / director panel | **SOURCE_READY** (was FAIL) | `t2_boss_dashboard_v1` read model | Supabase views | Apply migration; wire more cards as domains canonicalize | many read models |
-| Control Center (CTRL-001) | **DEFERRED-P1** | `t2_capability`, `t2_capability_override` (contract only) | — | Capability registry migration + `93_T2Control.js` + wire Codex `SystemControlCenter`; `/admin/system-control` shows real probes today | — |
+| Control Center (CTRL-001) | **SOURCE_READY** (was DEFERRED-P1) | `t2_capability`, `t2_capability_override`, `t2_job`, `t2_integration_health`, `t2_deploy_state` | Supabase (`20260904120000`) | Real registry + `t2_capability_effective_v1` precedence + kill-switch + audited commands + `t2_system_control_v1`; `/api/system-control` + `/admin/system-control` wired to real data | — |
 | Contracts / commercial | **PARTIAL** | `t2_shartnoma`, `t2_shartnoma_bog` | Supabase (`t2_bux_dashboard`) | Single contract truth; retention/advance/change-order entities | Projects |
 | Change orders / claims / RFI | **MISSING** | — | — | P2 | Contracts |
 | Design / document control | **MISSING** | DesignPackage, Drawing, Revision, Transmittal | — | P2; sits on file truth | File truth |
@@ -59,22 +61,26 @@ GAS = bridge.
 | Localization / country packs | **MISSING** | — | — | P3 | Estimate engine |
 | Observability | **PARTIAL** | Control Center | — | DEFERRED-P1 with CTRL-001 | CTRL-001 |
 | Performance | **ENFORCED** | — | static/behavior guards | keep guards; no Drive/Sheets/GAS on interactive reads | — |
-| Security | **PARTIAL** | — | RLS + command guards + this release SEC gate | H1 secret audit, H2 service-role negative tests, H3 private R2, H4 input validation, H5 audit | — |
+| Security | **PARTIAL→hardened** | — | RLS + command guards + `t2_security_p0.test.cjs` | H1 auth-secret fail-closed **DONE** (ZAXIRA removed); H3 private R2 DONE; H4 upload validation/path-safety DONE; H2 service-role negative tests + H5 audit coverage guarded by tests. Full pen-style review still P1 | — |
 
 ---
 
 ## Immediate sequence (next 2–3 releases)
 
-1. **This release** (`f7a35eb` → main after approval): FILE-TRUTH deploy,
-   Boss panel canonical, App identity, participants real-read, storage relabel.
-2. **P1-A**: CTRL-001 capability registry + Control Center real wiring.
-3. **P1-B**: Drive replica worker deploy + backfill pilot; Document Center real.
-4. **P1-C**: company onboarding + director model + invitation flow + notifications.
-5. **P1-D**: Sheets replica reference implementation.
-6. **P2**: contracts single-truth, procurement lineage, warehouse consolidation,
+1. **This release** (`6a6f0d1` → main after approval): FILE-TRUTH deploy + Boss
+   panel + **CTRL-001 real** + **company/auth/director P0** + **Document Center
+   real** + **Drive move write-back** + **Sheets reference** + **SECURITY P0
+   (auth fail-closed)** + App identity + participants real-read.
+2. **P1-A**: Drive replica worker + Sheets worker GAS deploy + triggers;
+   controlled Drive backfill pilot (separate approval).
+3. **P1-B**: content write-back R2 copy-in (Drive→R2 new revision, currently a
+   review job); invite-code onboarding flow + notifications.
+4. **P1-C**: full security review (H2 service-role negative tests at the DB,
+   H5 audit completeness, session rotation).
+5. **P2**: contracts single-truth, procurement lineage, warehouse consolidation,
    finance lineage, schedule, design control, quality/safety.
-7. **P3**: Universal Estimate Engine, design system, AI assistants, country packs,
-   subscription commercialization.
+6. **P3**: Universal Estimate Engine, design system, AI assistants, country packs,
+   subscription commercialization (no fake payment until then).
 
 ## Do-not-lose backlog branches
 
