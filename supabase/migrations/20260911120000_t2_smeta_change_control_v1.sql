@@ -425,6 +425,8 @@ begin
   select kompaniya_id into v_komp from public.t2_obyekt where id = p_obyekt_id;
   if v_komp is null then return jsonb_build_object('ok',false,'code','OBYEKT_NOT_FOUND'); end if;
   v_rol := public.t2_actor_kompaniya_azo_tekshir(v_komp, p_actor_id);
+  -- bound the list first (subquery), THEN aggregate — an aggregate in the
+  -- select list cannot share a FROM with an outer ORDER BY / LIMIT on o.*.
   select coalesce(jsonb_agg(jsonb_build_object(
            'id', o.id, 'raqam', o.raqam, 'tur', o.tur, 'kind', o.kind, 'sabab', o.sabab, 'holat', o.holat,
            'effective_oy', o.effective_oy, 'evidence_hujjat_id', o.evidence_hujjat_id, 'evidence_izoh', o.evidence_izoh,
@@ -441,10 +443,12 @@ begin
                         from public.t2_smeta_ozgarish_qator z where z.ozgarish_id = o.id)
          ) order by o.yaratildi desc), '[]'::jsonb)
     into v_rows
-  from public.t2_smeta_ozgarish o
-  where o.obyekt_id = p_obyekt_id
-  order by o.yaratildi desc
-  limit least(greatest(coalesce(p_limit,200),1),500);
+  from (
+    select * from public.t2_smeta_ozgarish
+    where obyekt_id = p_obyekt_id
+    order by yaratildi desc
+    limit least(greatest(coalesce(p_limit,200),1),500)
+  ) o;
   return jsonb_build_object('ok',true,'obyekt_id',p_obyekt_id,'ozgarishlar',v_rows,
     'jami', jsonb_build_object(
       'ochiq', (select count(*) from public.t2_smeta_ozgarish where obyekt_id=p_obyekt_id and holat='qoralama'),

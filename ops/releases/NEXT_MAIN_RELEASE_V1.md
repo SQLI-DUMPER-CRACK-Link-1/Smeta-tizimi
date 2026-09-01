@@ -46,11 +46,14 @@ template study for the Sheets projection. All local release gates are green (see
 5. `20260906120000_t2_document_registry_read_v1.sql`
 6. `20260907120000_t2_document_replica_move_v1.sql`
 7. `20260908120000_t2_sheets_writeback_reference_v1.sql`
-8. `20260910120000_t2_f2_baseline_price_v1.sql`
-9. `20260911120000_t2_smeta_change_control_v1.sql` (depends on 8)
-10. `20260912120000_t2_forma3_closeout_v1.sql` (depends on 8 + 9)
+8. `20260910120000_t2_f2_baseline_price_v1.sql` — **APPLIED 2026-09-02** (`{"success":true}`)
+9. `20260911120000_t2_smeta_change_control_v1.sql` (depends on 8) — **APPLIED 2026-09-02**
+10. `20260912120000_t2_forma3_closeout_v1.sql` (depends on 8 + 9) — **APPLIED 2026-09-02**
+11. `20260913120000_t2_smeta_ozgarish_royxat_fix.sql` (hotfix: bound-then-aggregate in
+    `t2_smeta_ozgarish_royxat_v1`; found by live smoke) — **APPLIED 2026-09-02**
+- Migrations 1–7 (`20260902…`–`20260908…`) still **NOT applied** — owner-run.
 - **Expected:** `{"success":true}` for each.
-- **Verify:** `list_migrations` tail shows all ten; `get_advisors security` shows
+- **Verify:** `list_migrations` tail shows all; `get_advisors security` shows
   no new CRITICAL (WARN on `SECURITY DEFINER` RLS helpers is expected/acceptable).
 - **Rollback:** run the paired `*.rollback.sql` in **reverse** order (10→1). All
   additive; `20260905120000.rollback.sql` restores the original
@@ -70,9 +73,12 @@ each must raise its PASS sentinel:
 - `20260906120000…acceptance.sql` → `DOCUMENT_REGISTRY_ACCEPTANCE_PASS`
 - `20260907120000…acceptance.sql` → `REPLICA_MOVE_ACCEPTANCE_PASS`
 - `20260908120000…acceptance.sql` → `SHEETS_WRITEBACK_ACCEPTANCE_PASS`
-- `20260910120000…acceptance.sql` → `PARK_F2_BASELINE_ACCEPTANCE_PASS`
-- `20260911120000…acceptance.sql` → `SMETA_CHANGE_CONTROL_ACCEPTANCE_PASS`
-- `20260912120000…acceptance.sql` → `FORMA3_CLOSEOUT_WORKBENCH_ACCEPTANCE_PASS`
+- `20260910120000…acceptance.sql` → `PARK_F2_BASELINE_ACCEPTANCE_PASS` (verified 09-02 pre-apply)
+- `20260911120000…acceptance.sql` → `SMETA_CHANGE_CONTROL_ACCEPTANCE_PASS` (verified 09-02)
+- `20260912120000…acceptance.sql` → `FORMA3_CLOSEOUT_WORKBENCH_ACCEPTANCE_PASS` (verified 09-02)
+- Post-apply live smoke (09-02): `t2_workbench_v1` / `t2_obyekt_yakunlash_v1` /
+  `t2_nakopitelniy_v1` / `t2_smeta_baseline_asl_v1` / `t2_smeta_ozgarish_royxat_v1` /
+  `t2_forma3_royxat_v1` on object 8 all `ok:true`; 0 rows written to the new business tables.
 - `select public.t2_boss_dashboard_v1(<co>,<actor>);` → `ok:true` with real sections
 - `select public.t2_system_control_v1(<co>,<actor>,null);` → `ok:true`, capabilities non-empty
 - **Stop condition:** any step raises anything other than its PASS sentinel.

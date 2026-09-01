@@ -5,11 +5,13 @@ Context-survival record. If a session ends mid-task, resume from here.
 ## Exact position
 
 - Branch: `integration/next-main-release-v1`
-- HEAD: `640b6c3` (26 ahead / 0 behind `origin/main` @ `b6db686`, pushed)
 - Worktree: `C:\Users\anvar\.claude\worktrees\next-release`
-- Status: **RELEASE_BLOCKED_WITH_EXACT_CONTINUATION** (all local gates green; blockers all owner-only)
-- Production: NOTHING applied. No `main` push. No Supabase migration applied.
-  No R2 / Cloudflare / GAS mutation. `production_write_allowed = false`.
+- Status: **RELEASE_BLOCKED_WITH_EXACT_CONTINUATION on SESSIYA_KALIT** (all local gates green)
+- Production: **SMETA/F2/NAKOPITELNIY DB layer APPLIED** (4 migrations, 2026-09-02,
+  additive, acceptance-verified, live-smoked, advisors clean). NREL-001 migrations
+  (`20260902`–`20260908`) NOT applied. **No `main` push. No Cloudflare/GAS/R2 mutation.**
+- Next concrete step is the owner confirming `SESSIYA_KALIT` in Cloudflare
+  Production + Preview, then the `main` merge (auto-deploys Cloudflare).
 
 ## Completed (this + prior session)
 

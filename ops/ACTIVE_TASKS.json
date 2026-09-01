@@ -89,6 +89,11 @@
         "supabase/migrations/20260910120000_t2_f2_baseline_price_v1.sql",
         "supabase/migrations/20260911120000_t2_smeta_change_control_v1.sql",
         "supabase/migrations/20260912120000_t2_forma3_closeout_v1.sql",
+        "supabase/migrations/20260913120000_t2_smeta_ozgarish_royxat_fix.sql",
+        "frontend/functions/api/hujjat-nazorat.ts",
+        "frontend/src/api/t2-document-control.ts",
+        "frontend/src/api/t2-document-control.test.ts",
+        "frontend/src/admin/pages/HujjatNazoratPage.tsx",
         "frontend/testlar/t2_smeta_f2_nakopitelniy.test.cjs",
         "frontend/src/lib/construction-document-control/",
         "frontend/src/lib/park-document-control/",
@@ -115,7 +120,7 @@
       "depends_on": ["STOR-001", "FILE-TRUTH-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/releases/NEXT_MAIN_RELEASE_V1.md", "ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md"],
       "production_write_allowed": false,
-      "_izoh": "RELEASE_BLOCKED_WITH_EXACT_CONTINUATION @ 640b6c3 (pushed). 10 additive migrations, all 11 acceptance PASS on prod inside rolled-back tx (SMETA/F2/NAKOPITELNIY units A/B/C verified 2026-09-02). Codex work integrated (3 branches merged, uncommitted worktree checkpointed as 87b2b31, engine O(n2) fixed). Local gates all green: git diff --check, tsc -b, npm run build, vitest 85/85, hammasi.cjs, governance-check, generateParkLegacyCompatibilityReport (BUG_FOUND:0). No main push, no prod migration/deploy, no R2/Cloudflare/GAS mutation. BLOCKERS (owner-only): SESSIYA_KALIT confirmation in Cloudflare Production+Preview, Cloudflare Pages deploy, authenticated smoke tests, real Drive Forma-2/Smeta template study for Sheets projection. SMETA/F2 workbench route + adapters + api functions are the next build step (not blocking the migration release)."
+      "_izoh": "RELEASE_BLOCKED_WITH_EXACT_CONTINUATION on SESSIYA_KALIT. DONE this session: SMETA/F2/NAKOPITELNIY DB layer (4 migrations: t2_f2_baseline_price_v1 / t2_smeta_change_control_v1 / t2_forma3_closeout_v1 / t2_smeta_ozgarish_royxat_fix) APPLIED to prod 2026-09-02 (additive, acceptance-verified pre-apply, live-smoked: all 6 read RPCs ok:true on object 8, 0 rows written, advisors clean — only INFO rls_enabled_no_policy on the 6 new tables). Visible workbench SOURCE_READY: /api/hujjat-nazorat gateway + t2-document-control.ts (4 ports + normalization) + /admin/hujjat-nazorat page + route/nav/title/allowlist. Codex integrated (3 branches, 87b2b31 checkpointed, engine O(n2) fixed 3.35s->35ms). Local gates green: tsc -b, npm run build, vitest 88/88, hammasi.cjs (74-check SMETA suite), governance-check, generateParkLegacyCompatibilityReport BUG_FOUND:0. NOT DONE (blocked): main merge + Cloudflare deploy — the branch bundles SECURITY-P0 fail-closed auth; merging main auto-deploys it and locks everyone out if SESSIYA_KALIT is unset in Cloudflare (verification attempted: anon /api/sessiya gives no signal, no CF API token/wrangler, login prohibited; git history 81cf5ad shows key enforcement previously broke login). NREL-001 migrations 20260902-20260908 still not applied (owner-run). Drive Forma-2/Smeta template study still blocked (no Drive access)."
     },
     {
       "id": "CTRL-001B",
