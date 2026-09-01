@@ -148,6 +148,28 @@ console.log('\n── Migration 3 rollback correctness ──');
 must('rollback 3 is PRE-USE ONLY and REFUSES once a Forma-3 certificate exists',
   /PRE-USE SCHEMA ROLLBACK/.test(m3r) && /Pre-use rollback refused|holat=.?bekor/i.test(m3r));
 
+console.log('\n── Vertical slice: canonical boundary is wired (no Drive/Sheets/GAS) ──');
+const fn = R('frontend', 'functions', 'api', 'hujjat-nazorat.ts');
+const adapter = R('frontend', 'src', 'api', 't2-document-control.ts');
+const page = R('frontend', 'src', 'admin', 'pages', 'HujjatNazoratPage.tsx');
+const app = R('frontend', 'src', 'App.tsx');
+const shell = R('frontend', 'src', 'admin', 'AdminShell.tsx');
+const routes = R('frontend', 'src', 'umumiy', 'marshrutTekshir.ts');
+must('Cloudflare fn resolves actor from session + forwards to canonical RPCs only',
+  /from '\.\.\/_shared\/auth'/.test(fn) && /t2_workbench_v1/.test(fn) && /t2_smeta_ozgarish_tasdiqlash_v1/.test(fn) && /t2_forma3_yarat_v1/.test(fn));
+must('Cloudflare fn does NOT touch Drive/Sheets/GAS', !/DriveApp|SpreadsheetApp|\/api\/gas|clasp/i.test(fn));
+must('Cloudflare fn surfaces "not applied" as 501 (migration missing)', /not applied|PGRST202|does not exist/.test(fn) && /501/.test(fn));
+must('adapter normalizes SQL nulls out of optional CertifiedLine fields (unknown stays unknown)',
+  /dropNulls/.test(adapter) && /f2ValuationPrice: x\.f2ValuationPrice/.test(adapter));
+must('adapter maps requirement/doc vocabulary (forma3 -> payment_certification, forma3_unresolved -> payment_rule_unresolved)',
+  /forma3: 'payment_certification'/.test(adapter) && /'payment_rule_unresolved'/.test(adapter));
+must('adapter binds the 4 generic ports + deterministic engine page builder',
+  /constructionDocumentControlPort/.test(adapter) && /progressValuationReadPort/.test(adapter) && /changeControlCommandPort/.test(adapter) && /projectCloseoutPort/.test(adapter) && /calculateProgressValuation/.test(adapter));
+must('admin page renders the generic ConstructionDocumentWorkbench with loading/error/empty states',
+  /ConstructionDocumentWorkbench/.test(page) && /q\.isLoading/.test(page) && /notApplied/.test(page) && /noPerm|noPermission/.test(page));
+must('route + nav + title + route-allowlist all wired for /admin/hujjat-nazorat',
+  /path="hujjat-nazorat"/.test(app) && /\/admin\/hujjat-nazorat/.test(shell) && /hujjat-nazorat/.test(R('frontend','src','lib','pageTitle.ts')) && /'hujjat-nazorat'/.test(routes));
+
 console.log('\n── Acceptance sentinels + AI safety ──');
 must('m1 acceptance raises PARK_F2_BASELINE_ACCEPTANCE_PASS', /PARK_F2_BASELINE_ACCEPTANCE_PASS/.test(m1a));
 must('m2 acceptance raises SMETA_CHANGE_CONTROL_ACCEPTANCE_PASS', /SMETA_CHANGE_CONTROL_ACCEPTANCE_PASS/.test(m2a));

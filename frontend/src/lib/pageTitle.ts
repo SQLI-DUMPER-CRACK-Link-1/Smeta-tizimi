@@ -4,6 +4,7 @@ const titles: Array<[RegExp, string]> = [
   [/^\/admin\/mindmap(?:\/|$)/, 'Mindmap'], [/^\/admin\/(?:test\/)?xarita(?:\/|$)/, 'Mindmap'],
   [/^\/admin\/participants(?:\/|$)/, 'Loyiha ishtirokchilari'], [/^\/admin\/(?:system-control|control)(?:\/|$)/, 'Tizim boshqaruv markazi'],
   [/^\/admin\/documents(?:\/|$)/, 'Hujjatlar'], [/^\/admin\/dashboard(?:\/|$)/, 'Rahbar paneli'],
+  [/^\/admin\/hujjat-nazorat(?:\/|$)/, 'Hujjat nazorati'],
   [/^\/admin\/kompaniya(?:\/|$)/, 'Kompaniya va a\'zolik'],
   [/^\/admin(?:\/|$)/, 'Rahbar paneli'],
 ];
