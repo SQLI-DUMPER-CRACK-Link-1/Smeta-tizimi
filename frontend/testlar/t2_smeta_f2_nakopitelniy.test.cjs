@@ -16,10 +16,13 @@ const m1a = R('supabase', 'migrations', '20260910120000_t2_f2_baseline_price_v1.
 const m2 = R('supabase', 'migrations', '20260911120000_t2_smeta_change_control_v1.sql');    const m2n = N(m2);
 const m2r = R('supabase', 'migrations', '20260911120000_t2_smeta_change_control_v1.rollback.sql');
 const m2a = R('supabase', 'migrations', '20260911120000_t2_smeta_change_control_v1.acceptance.sql');
+const m3 = R('supabase', 'migrations', '20260912120000_t2_forma3_closeout_v1.sql');           const m3n = N(m3);
+const m3r = R('supabase', 'migrations', '20260912120000_t2_forma3_closeout_v1.rollback.sql');
+const m3a = R('supabase', 'migrations', '20260912120000_t2_forma3_closeout_v1.acceptance.sql');
 const doc = R('docs', 'architecture', 'SMETA_F2_NAKOPITELNIY_CHANGE_CONTROL_V1.md');
 
 console.log('\n── Naming: PARK is not a canonical boundary ──');
-for (const [n, s] of [['migration 1', m1], ['migration 2', m2], ['rollback 1', m1r], ['rollback 2', m2r]]) {
+for (const [n, s] of [['migration 1', m1], ['migration 2', m2], ['migration 3', m3], ['rollback 1', m1r], ['rollback 2', m2r], ['rollback 3', m3r]]) {
   must(n + ': no t2_park_* / park_* canonical entity', !/\bt2_park_|\bpark_project_id\b|create (table|function)[^;]*\bpark\b/i.test(s));
 }
 must('generic entity names (t2_smeta_revision / t2_smeta_ozgarish / t2_nakopitelniy_v1)',
@@ -104,11 +107,53 @@ must('rollback 2 refuses to delete change/revision lineage while mutations remai
 must('rollback docs point to t2_smeta_ozgarish_qaytar_v1 / compensating migration for post-use',
   /t2_smeta_ozgarish_qaytar_v1|forward-repair|forward repair/i.test(m2r));
 
+console.log('\n── Forma-3 stays UNRESOLVED (correction: no invented legal rule) ──');
+must('t2_forma3 has NO markup / tax / payment-due / legal-total column',
+  !/legal_total|payment_due|tax_summa|ustama_summa|jami_qonuniy|nds_summa/i.test(m3n));
+must('bajarilgan_f2_summa is the ONLY numeric field (a FACT, Σ approved F2 line sums)',
+  /bajarilgan_f2_summa numeric not null/.test(m3) && /the ONLY numeric field/i.test(m3));
+must('qoida_holat guard defaults to FORMA3_RULE_UNRESOLVED', /qoida_holat[\s\S]{0,80}default 'FORMA3_RULE_UNRESOLVED'/.test(m3n));
+must('t2_forma3_yarat_v1 links ONLY approved F2 (tur=f2, holat=tasdiqlangan) in scope + period',
+  /a\.tur <> 'f2' or a\.holat <> 'tasdiqlangan'/.test(m3n) && /FORMA3_AKT_INVALID/.test(m3));
+must('rule guard lifts only with a verified evidence reference — still adds NO formula',
+  /FORMA3_EVIDENCE_REQUIRED/.test(m3) && /Qonuniy hisob-kitob hali qo|adds no legal formula/i.test(m3));
+must('acceptance proves forma3 emits no legal/payment total + no such column',
+  /forma3 emitted a legal\/payment total/.test(m3a) && /t2_forma3 has a legal\/markup\/tax column/.test(m3a));
+
+console.log('\n── Closeout requirement pack is DATA-driven ──');
+must('t2_yakunlash_talab is config/data driven (project override > company > global)',
+  /t2_yakunlash_talab/.test(m3) && /project override > company > global/i.test(m3));
+must('no park-specific legal requirement hard-coded as a universal rule',
+  !/\bpark\b/i.test((m3.match(/insert into public\.t2_yakunlash_talab[\s\S]*?on conflict/) || [''])[0]));
+must('t2_obyekt_yakunlash_v1 returns requirements / documents / exportPeriods',
+  /'requirements', v_reqs/.test(m3) && /'documents', v_docs/.test(m3) && /'exportPeriods', v_periods/.test(m3));
+must('forma3 requirement carries evidenceRule forma3_unresolved',
+  /'forma3_unresolved'/.test(m3n));
+
+console.log('\n── Workbench aggregate feeds the pure engine (generic read model) ──');
+must('t2_workbench_v1 is STABLE + bounded (limit clamp), no temp table', (() => {
+  const body = (m3.match(/create or replace function public\.t2_workbench_v1[\s\S]*?\$\$;/) || [''])[0];
+  return /language plpgsql stable/i.test(body) && !/create temp table/i.test(body) &&
+    /least\(greatest\(coalesce\(p_limit,800\),1\),3000\)/.test(N(body));
+})());
+must('workbench emits ConstructionDocumentControlReadModel shape (valuation.lines/changes/periods + revisions)',
+  /'valuation', jsonb_build_object/.test(m3) && /'lines',[\s\S]{0,120}jsonb_array_elements\(v_lines\)/.test(m3n) && /'revisions', v_revisions/.test(m3));
+must('lines carry baselineReferencePrice separately from any F2 / actual price',
+  /'baselineReferencePrice', coalesce\(q\.narx,0\)/.test(m3n));
+must('periods carry f2ValuationPrice + actualProcurementPrice (never collapsed)',
+  /'f2ValuationPrice', aq\.narx/.test(m3n) && /'actualProcurementPrice', aq\.actual_narx/.test(m3n));
+must('membership-checked + service_role only', /t2_actor_kompaniya_azo_tekshir/.test(m3n) && /revoke all on function public\.t2_workbench_v1/.test(m3));
+
+console.log('\n── Migration 3 rollback correctness ──');
+must('rollback 3 is PRE-USE ONLY and REFUSES once a Forma-3 certificate exists',
+  /PRE-USE SCHEMA ROLLBACK/.test(m3r) && /Pre-use rollback refused|holat=.?bekor/i.test(m3r));
+
 console.log('\n── Acceptance sentinels + AI safety ──');
 must('m1 acceptance raises PARK_F2_BASELINE_ACCEPTANCE_PASS', /PARK_F2_BASELINE_ACCEPTANCE_PASS/.test(m1a));
 must('m2 acceptance raises SMETA_CHANGE_CONTROL_ACCEPTANCE_PASS', /SMETA_CHANGE_CONTROL_ACCEPTANCE_PASS/.test(m2a));
+must('m3 acceptance raises FORMA3_CLOSEOUT_WORKBENCH_ACCEPTANCE_PASS', /FORMA3_CLOSEOUT_WORKBENCH_ACCEPTANCE_PASS/.test(m3a));
 must('no AI / Drive / Sheets / GAS anywhere in the valuation or change path',
-  !/openai|gemini|groq|aiCall|DriveApp|SpreadsheetApp|\/api\/gas/i.test(m1 + m2));
+  !/openai|gemini|groq|aiCall|DriveApp|SpreadsheetApp|\/api\/gas/i.test(m1 + m2 + m3));
 
 console.log('\n── Architecture doc ──');
 must('doc is evidence-grounded (real objects + existing RPCs named)',
