@@ -38,6 +38,7 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: ShieldAlert,
     id: 'tizim',
     menyular: [
+      { yol: '/admin/kompaniya', nom: 'Kompaniya va a\'zolik', Ikonka: Building2 },
       { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
       { yol: '/admin/storage', nom: 'Fayl saqlash (Storage)', Ikonka: HardHat },
       { yol: '/admin/system-control', nom: 'Tizim boshqaruv markazi', Ikonka: ShieldAlert },
