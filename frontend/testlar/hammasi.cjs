@@ -36,6 +36,7 @@ const TESTLAR = [
   ['BOSS PANEL canonical read model', 't2_boss_panel.test.cjs'],
   ['CTRL-001 System Control real backend', 't2_control.test.cjs'],
   ['COMPANY / AUTH / DIRECTOR onboarding', 't2_company_onboarding.test.cjs'],
+  ['DOCUMENT CENTER real FILE-TRUTH wiring', 't2_document_center.test.cjs'],
 ];
 
 let yiqildi = 0;
