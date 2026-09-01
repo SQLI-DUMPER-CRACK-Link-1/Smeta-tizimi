@@ -77,8 +77,8 @@
       "base_sha": "b6db686329a4f3c7e5f49aca24d2872695e81402",
       "base_ref": "origin/main",
       "branch": "integration/next-main-release-v1",
-      "head": "6a6f0d1",
-      "status": "ready_for_owner_approval_v2",
+      "head": "640b6c3",
+      "status": "release_blocked_with_exact_continuation",
       "owns": [
         "supabase/migrations/20260903120000_t2_boss_dashboard_read_model_v1.sql",
         "supabase/migrations/20260904120000_t2_capability_registry_v1.sql",
@@ -86,6 +86,15 @@
         "supabase/migrations/20260906120000_t2_document_registry_read_v1.sql",
         "supabase/migrations/20260907120000_t2_document_replica_move_v1.sql",
         "supabase/migrations/20260908120000_t2_sheets_writeback_reference_v1.sql",
+        "supabase/migrations/20260910120000_t2_f2_baseline_price_v1.sql",
+        "supabase/migrations/20260911120000_t2_smeta_change_control_v1.sql",
+        "supabase/migrations/20260912120000_t2_forma3_closeout_v1.sql",
+        "frontend/testlar/t2_smeta_f2_nakopitelniy.test.cjs",
+        "frontend/src/lib/construction-document-control/",
+        "frontend/src/lib/park-document-control/",
+        "frontend/src/lib/park-closeout/",
+        "frontend/src/components/construction-document-control/",
+        "docs/architecture/SMETA_F2_NAKOPITELNIY_CHANGE_CONTROL_V1.md",
         "frontend/functions/api/boss-dashboard.ts", "frontend/functions/api/system-control.ts",
         "frontend/functions/api/company.ts", "frontend/functions/api/hujjat-royxat.ts",
         "frontend/functions/_shared/auth.ts", "frontend/functions/api/kirish.ts",
@@ -106,7 +115,7 @@
       "depends_on": ["STOR-001", "FILE-TRUTH-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/releases/NEXT_MAIN_RELEASE_V1.md", "ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md"],
       "production_write_allowed": false,
-      "_izoh": "READY_FOR_OWNER_APPROVAL_V2. 7 additive migrations, all acceptance PASS on prod inside rolled-back tx. No main push, no prod migration/deploy, no R2/Cloudflare/GAS mutation. Auth fail-closed change gated on SESSIYA_KALIT confirmed set. Awaiting ONE consolidated production approval (runbook)."
+      "_izoh": "RELEASE_BLOCKED_WITH_EXACT_CONTINUATION @ 640b6c3 (pushed). 10 additive migrations, all 11 acceptance PASS on prod inside rolled-back tx (SMETA/F2/NAKOPITELNIY units A/B/C verified 2026-09-02). Codex work integrated (3 branches merged, uncommitted worktree checkpointed as 87b2b31, engine O(n2) fixed). Local gates all green: git diff --check, tsc -b, npm run build, vitest 85/85, hammasi.cjs, governance-check, generateParkLegacyCompatibilityReport (BUG_FOUND:0). No main push, no prod migration/deploy, no R2/Cloudflare/GAS mutation. BLOCKERS (owner-only): SESSIYA_KALIT confirmation in Cloudflare Production+Preview, Cloudflare Pages deploy, authenticated smoke tests, real Drive Forma-2/Smeta template study for Sheets projection. SMETA/F2 workbench route + adapters + api functions are the next build step (not blocking the migration release)."
     },
     {
       "id": "CTRL-001B",
