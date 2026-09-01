@@ -1,0 +1,21 @@
+export type Id = string;
+export type ChangeStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+export type ChangeKind = 'substitution' | 'additional_work' | 'removal' | 'quantity_increase' | 'quantity_decrease' | 'new_section' | 'new_item' | 'resource_replacement';
+export type ExceptionCode = 'PRICE_VARIANCE' | 'OVER_CERTIFICATION' | 'MISSING_PRICE_SOURCE' | 'MISSING_EVIDENCE' | 'PENDING_CHANGE' | 'REVISION_MISMATCH' | 'HISTORICAL_MUTATION' | 'NAKOPITELNIY_MISMATCH' | 'DOCUMENT_MISSING' | 'DOCUMENT_SUPERSEDED' | 'FORMA3_RULE_UNRESOLVED';
+export type Severity = 'info' | 'warning' | 'error';
+export interface ProgressLine { lineId: Id; sectionId: Id; description: string; unit: string; baselineQuantity: number; baselineReferencePrice: number; }
+export interface ApprovedChange { changeId: Id; kind: ChangeKind; status: ChangeStatus; lineId: Id; revisionId: Id; effectivePeriodIndex: number; quantityDelta: number; valuationPrice?: number; reason: string; evidenceIds: readonly Id[]; actorId?: Id; occurredAt?: string; }
+export interface CertifiedLine { lineId: Id; quantity: number; f2ValuationPrice?: number; actualProcurementPrice?: number; referencePriceSourceId?: Id; actualPriceSourceId?: Id; }
+export interface CertifiedPeriod { periodId: Id; label: string; revisionId: Id; frozen: true; lines: readonly CertifiedLine[]; documentIds: readonly Id[]; }
+export interface ProgressValuationInput { projectId: Id; objectId: Id; contractId?: Id; estimateRevisionId: Id; currency: string; throughPeriod: number; lines: readonly ProgressLine[]; changes: readonly ApprovedChange[]; periods: readonly CertifiedPeriod[]; }
+export interface ProgressLineResult { lineId: Id; sectionId: Id; description: string; unit: string; baselineQuantity: number; baselineReferencePrice: number; approvedChangeQuantity: number; approvedEntitlementQuantity: number; previousQuantity: number; currentQuantity: number; cumulativeQuantity: number; remainingQuantity: number; previousValue: number; currentValue: number; cumulativeValue: number; remainingValue: number; f2ValuationValue: number | null; actualValue: number | null; variance: number | null; revisionIds: Id[]; warnings: ExceptionCode[]; }
+export interface ProgressValuationResult { input: ProgressValuationInput; rows: ProgressLineResult[]; totals: { previousQuantity: number; currentQuantity: number; cumulativeQuantity: number; remainingQuantity: number; previousValue: number; currentValue: number; cumulativeValue: number; remainingValue: number; }; }
+export interface WorkbenchException { code: ExceptionCode; severity: Severity; entityId: Id; objectId: Id; periodId?: Id; reason: string; blocking: boolean; suggestedAction: string; }
+export interface RevisionEvent { revisionId: Id; kind: 'baseline' | 'change' | 'certification'; status: ChangeStatus | 'certified'; actorId?: Id; occurredAt?: string; reason: string; evidenceIds: readonly Id[]; immutable: boolean; }
+export interface ProgressValuationPage { rows: readonly ProgressLineResult[]; totalCount: number; query: { offset: number; limit: number; search?: string; sectionId?: Id; includeDraft?: boolean; }; }
+export type CloseoutStatus = 'required' | 'present' | 'pending' | 'approved' | 'rejected' | 'superseded' | 'missing' | 'unresolved';
+export type DocumentType = 'contract' | 'f2' | 'cumulative_statement' | 'aosr' | 'act' | 'invoice' | 'handover' | 'change_evidence' | 'payment_certification';
+export interface DocumentMetadata { documentId: Id; objectId: Id; type: DocumentType; status: Exclude<CloseoutStatus, 'required' | 'missing' | 'unresolved'>; periodId?: Id; revisionId?: Id; evidenceIds?: readonly Id[]; }
+export interface RequirementPackItem { requirementId: Id; type: DocumentType; label: string; required: boolean; periodId?: Id; requiresApproved: boolean; rule?: 'verified' | 'payment_rule_unresolved'; }
+export interface CloseoutReportRow { objectId: Id; requirement: Id; status: CloseoutStatus; blocking: boolean; evidenceIds: Id[]; reason: string; }
+export interface ConstructionDocumentControlReadModel { projectId: Id; objectId: Id; projectName: string; objectName: string; contractId?: Id; currentPeriodId?: Id; valuation: ProgressValuationInput; requirements: readonly RequirementPackItem[]; documents: readonly DocumentMetadata[]; revisions: readonly RevisionEvent[]; }
