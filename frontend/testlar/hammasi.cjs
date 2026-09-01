@@ -34,6 +34,7 @@ const TESTLAR = [
   ['T2 global-root fallback qo\'riqchisi', 't2_no_global_root.test.cjs'],
   ['FILE-TRUTH canonical R2 vs Drive replica', 't2_file_truth.test.cjs'],
   ['Construction hard-domain V3', 't2_construction_domain_v3.test.cjs'],
+  ['PARK F2 / nakopitelniy document control', 't2_park_document_control.test.cjs'],
 ];
 
 let yiqildi = 0;

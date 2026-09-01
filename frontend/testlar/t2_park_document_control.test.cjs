@@ -1,0 +1,17 @@
+const fs = require('node:fs');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const engine = read('src/lib/park-document-control/calculation.ts');
+const types = read('src/lib/park-document-control/types.ts');
+const ui = read('src/components/park-document-control/ParkF2ControlPanel.tsx');
+assert.match(engine, /Pure and idempotent/);
+assert.match(engine, /estimateUnitPrice/);
+assert.match(engine, /actualUnitPrice/);
+assert.match(engine, /change\.status === status/);
+assert.match(engine, /OVER_CERTIFIED/);
+assert.match(types, /frozen: true/);
+assert.match(types, /FORMA3_RULE_UNRESOLVED/);
+assert.doesNotMatch(engine + ui, /api\/gas|DriveApp|SpreadsheetApp/);
+console.log('PARK document-control guards: 8 checks passed');
