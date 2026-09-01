@@ -53,7 +53,48 @@ Context-survival record. If a session ends mid-task, resume from here.
 10. Governance: `CURRENT_STATE.md`, `CONSTRUCTION_OS_MASTER_ROADMAP.md`,
     `NEXT_MAIN_RELEASE_V1.md` runbook (10 migrations, security gate), this file,
     `ops/ACTIVE_TASKS.json` (NREL-001).
-11. **SMETA/F2/NAKOPITELNIY (3 migrations, acceptance-verified on prod 2026-09-02):**
+### AUTONOMOUS-PRIORITY 1–10 status (the older continuation goal)
+
+Priorities 1–5 were **completed in prior sessions** and are on this branch — not
+re-done this session (they are finished, not "not started"):
+- **1 CTRL-001 real backend** — `20260904120000_t2_capability_registry_v1` (registry
+  + `t2_capability_effective_v1` precedence project>company>global>default +
+  kill-switch + `t2_job`/`t2_integration_health`/`t2_deploy_state` +
+  `t2_system_control_v1`), `/api/system-control`, `/admin/system-control` real.
+  Acceptance `CTRL_ACCEPTANCE_PASS`. Commit `9c94799`.
+- **2 Company/Auth/Director** — `20260905120000_t2_company_onboarding_v1` (fixes the
+  auto-join-all bug; `t2_kompaniya_yarat_v1` creator=director, `t2_men_v1`,
+  director-guarded `t2_azolik_*_v1`, `t2_royxat_sorov_qabul_v2`), `/api/company`,
+  `/admin/kompaniya`. `ONBOARDING_ACCEPTANCE_PASS`. Commit `7efca66`.
+- **3 Document Center** — `20260906120000_t2_document_registry_read_v1`,
+  `/api/hujjat-royxat`, `/admin/documents` real; canonical R2 up/download
+  (`/api/hujjat-yukla|ol|r2`); Drive failure never a canonical failure. `899ac09`.
+- **4 Drive replica write-back SOURCE** — `20260907120000_t2_document_replica_move_v1`
+  (managed move, base_version, no global scan), `98_T2ReplicaSync.js` MOVE branch.
+  `REPLICA_MOVE_ACCEPTANCE_PASS`. `d337466`.
+- **5 Sheets write-back reference** — `20260908120000_t2_sheets_writeback_reference_v1`
+  (stable `t2_entity_id` + base_version + operation_id, row number rejected),
+  `99_T2SheetsReplica.js`. `SHEETS_WRITEBACK_ACCEPTANCE_PASS`. `d337466`.
+  Remaining legacy Sheets migration is P1.
+- **6 Security P0** — `_shared/auth.ts` `ZAXIRA` fallback removed, fails closed;
+  `api/kirish.ts` 503 CONFIG. `t2_security_p0.test.cjs` (41). `6a6f0d1`. Broader
+  service-role RPC guard/audit sweep across the whole schema is P1-C.
+- **7 Performance** — SMETA/F2 engine O(n²) fixed this session (`640b6c3`);
+  `t2_nakopitelniy_v1`/`t2_workbench_v1` bounded STABLE, no correlated rescans.
+- **8 Reconcile vs main** — branch is 0 behind `origin/main`; Boss Panel fix +
+  routes + identity + participants + file-truth all preserved.
+- **9 Full verification** — this session: `tsc -b`, `npm run build`, `vitest 88/88`,
+  `node testlar/hammasi.cjs`, `npm run lint` (0 errors; warnings pre-existing,
+  none in new files), `node ops/governance-check.cjs`, `node tizim02/registr.gen.cjs`
+  (274 fns, no diff), `git diff --check` clean. **Migration/rollback review**: the
+  reverse-order rollback chain (`20260912`→`11`→`10`) was executed against the LIVE
+  applied schema inside `BEGIN…ROLLBACK` — raised `ROLLBACK_CHAIN_CLEAN` (all
+  pre-use guards pass at 0 business rows, schema returns to pre-migration shape,
+  `t2_akt_yarat` restored). `20260913120000` hotfix has no standalone rollback —
+  subsumed by rollback 11 dropping `t2_smeta_ozgarish_royxat_v1`.
+- **10 Truth updated** — CURRENT_STATE / ACTIVE_TASKS / runbook / this file.
+
+11. **SMETA/F2/NAKOPITELNIY (4 migrations — APPLIED to prod 2026-09-02):**
     - `20260910120000_t2_f2_baseline_price_v1.sql` (+rollback PRE-USE +acceptance
       `PARK_F2_BASELINE_ACCEPTANCE_PASS`): price facts A/B/C/D never collapsed;
       `t2_smeta_revision` seq-0 original baseline (lazy-sealed, never drifts);
