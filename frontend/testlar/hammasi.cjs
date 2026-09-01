@@ -40,6 +40,7 @@ const TESTLAR = [
   ['DRIVE REPLICA worker + write-back', 't2_drive_replica.test.cjs'],
   ['SHEETS write-back reference', 't2_sheets_writeback.test.cjs'],
   ['SECURITY P0 cross-cutting guards', 't2_security_p0.test.cjs'],
+  ['SMETA/F2/NAKOPITELNIY + change control', 't2_smeta_f2_nakopitelniy.test.cjs'],
 ];
 
 let yiqildi = 0;
