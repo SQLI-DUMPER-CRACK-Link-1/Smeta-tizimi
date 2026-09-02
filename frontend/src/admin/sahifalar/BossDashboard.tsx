@@ -11,7 +11,8 @@ import {
   RefreshCw, TrendingUp, Wallet, FileText, FileSignature, Boxes, FolderKanban,
   AlertTriangle, HardDrive, Layers,
 } from 'lucide-react';
-import { useKompaniya } from '../../test02/KompaniyaTanlov';
+import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
+import { KompaniyaKerak } from '../../umumiy/kontekst/KompaniyaKerak';
 import { useBossDashboard } from '../../api/t2-boss';
 
 const nf = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 });
@@ -47,6 +48,8 @@ export default function BossDashboard() {
   const { joriy } = useKompaniya();
   const q = useBossDashboard(joriy?.id);
 
+  if (!joriy?.id) return <KompaniyaKerak nima="Rahbar paneli" />;
+
   return (
     <div className="p-6 bg-bg min-h-screen text-text overflow-y-auto">
       <div className="flex items-start justify-between mb-5">
@@ -64,7 +67,6 @@ export default function BossDashboard() {
         </button>
       </div>
 
-      {!joriy?.id && <div className="text-text-dim text-sm">Avval yuqoridan kompaniya tanlang.</div>}
       {q.isLoading && <div className="text-text-dim text-sm">Yuklanmoqda…</div>}
       {q.isError && (
         <div className="rounded-lg bg-rose-500/8 border border-rose-500/25 px-4 py-3 text-[13px] text-rose-200 flex items-center gap-2">

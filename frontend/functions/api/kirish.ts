@@ -1,5 +1,11 @@
-import { imzola, Rol } from '../_shared/auth';
+import { imzola, type Rol } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
+
+type Env = {
+  GAS_URL: string; GAS_TOKEN: string;
+  SUPABASE_URL?: string; SUPABASE_KEY?: string;
+  SESSIYA_KALIT: string;
+};
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   let req: { login?: string; parol?: string; isBoss?: boolean; isSuperadmin?: boolean } = {};

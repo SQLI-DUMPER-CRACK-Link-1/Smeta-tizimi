@@ -45,6 +45,24 @@ const TESTLAR = [
 ];
 
 let yiqildi = 0;
+
+/* Cloudflare Pages Functions REAL type gate — asosiy `tsc -b` frontend/functions/**
+ * ni ko'rmaydi (tsconfig.app.json faqat src). `ctx.env.env.*` kabi regressiyalar
+ * shu bo'shliqdan o'tib ketgan edi. Endi har `npm run tekshir` da tekshiriladi. */
+console.log('\n══════════════════════════════════════════════');
+console.log('  Cloudflare Functions type gate   (tsc -p tsconfig.functions.json)');
+console.log('══════════════════════════════════════════════');
+try {
+  execFileSync(process.execPath, [path.join(__dirname, '..', 'node_modules', 'typescript', 'bin', 'tsc'),
+    '-p', path.join(__dirname, '..', 'tsconfig.functions.json')], { encoding: 'utf8', stdio: 'pipe' });
+  console.log('  ✅ frontend/functions/** type-check toza');
+} catch (e) {
+  yiqildi++;
+  if (e.stdout) process.stdout.write(e.stdout);
+  if (e.stderr) process.stderr.write(e.stderr);
+  console.log('  ⛔ YIQILDI');
+}
+
 for (const [nom, fayl] of TESTLAR) {
   console.log('\n══════════════════════════════════════════════');
   console.log('  ' + nom + '   (' + fayl + ')');

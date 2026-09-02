@@ -977,7 +977,7 @@ export const onRequestPost: PagesFunction<{
        kompaniya_id YOKI kontragent_id — ANIQ BITTASI, ikkalasi ham yoki
        hech biri emas. RPC ham CHECK bilan tekshiradi, bu ikkinchi
        qatlam (frontend soxta ikkalasini ham yuborsa ham ushlanadi). */
-    } else if (amal === 'loyiha_qatnashchi_biriktir' || amal === 'mindmap_qatnashchi_bog') {
+    } else if (amal === 'loyiha_qatnashchi_biriktir') {
       const loyihaId = Number(so.loyiha_id);
       if (!Number.isFinite(loyihaId) || loyihaId <= 0) {
         return Response.json({ ok: false, error: 'loyiha_id noto\'g\'ri' });
@@ -988,7 +988,7 @@ export const onRequestPost: PagesFunction<{
       const tenantId = so.tenant_id == null ? (so.kompaniya_id == null ? null : Number(so.kompaniya_id)) : Number(so.tenant_id);
       const tarafKompaniyaId = so.taraf_kompaniya_id == null ? null : Number(so.taraf_kompaniya_id);
       const kontragentId = so.kontragent_id == null ? null : Number(so.kontragent_id);
-      if (!Number.isInteger(tenantId) || tenantId <= 0 || !Array.isArray(sess.kompaniyalar) ||
+      if (tenantId == null || !Number.isInteger(tenantId) || tenantId <= 0 || !Array.isArray(sess.kompaniyalar) ||
           !sess.kompaniyalar.some((a) => a.kompaniya_id === tenantId)) {
         return Response.json({ ok: false, error: 'tenant_id sessiya kompaniyasiga mos emas' }, { status: 403 });
       }
@@ -1027,7 +1027,7 @@ export const onRequestPost: PagesFunction<{
       if (!Number.isFinite(id) || id <= 0) {
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
       }
-      if (!Number.isInteger(tenantId) || tenantId <= 0 || !Array.isArray(sess.kompaniyalar) ||
+      if (tenantId == null || !Number.isInteger(tenantId) || tenantId <= 0 || !Array.isArray(sess.kompaniyalar) ||
           !sess.kompaniyalar.some((a) => a.kompaniya_id === tenantId)) {
         return Response.json({ ok: false, error: 'tenant_id sessiya kompaniyasiga mos emas' }, { status: 403 });
       }
@@ -1476,7 +1476,7 @@ export const onRequestPost: PagesFunction<{
 
     /* Keep the public action names stable for old clients/tests, while
        dispatching participant writes to the tenant-aware canonical V2 RPC. */
-    const rpc = amal === 'loyiha_qatnashchi_biriktir' || amal === 'mindmap_qatnashchi_bog'
+    const rpc = amal === 'loyiha_qatnashchi_biriktir'
       ? 't2_loyiha_qatnashchi_biriktir_v2'
       : amal === 'loyiha_qatnashchi_ochir'
         ? 't2_loyiha_qatnashchi_ochir_v2'

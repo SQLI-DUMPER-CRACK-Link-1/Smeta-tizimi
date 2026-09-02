@@ -1,3 +1,5 @@
+type Env = { GAS_URL: string; GAS_TOKEN: string };
+
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   try {
     const req = await ctx.request.json<{ manba: string, xabar: string, url?: string, line?: number }>();

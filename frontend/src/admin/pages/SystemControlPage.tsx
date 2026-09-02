@@ -10,7 +10,8 @@ import { Link } from 'react-router-dom';
 import { ServerCog, Info, ArrowRight } from 'lucide-react';
 import { SystemControlCenter } from '../system-control/SystemControlCenter';
 import type { SystemControlData } from '../../components/system-control';
-import { useKompaniya } from '../../test02/KompaniyaTanlov';
+import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
+import { KompaniyaKerak } from '../../umumiy/kontekst/KompaniyaKerak';
 import { useSystemControl, useControlCommands } from '../../api/t2-control';
 
 const EMPTY: SystemControlData = {
@@ -35,9 +36,9 @@ export default function SystemControlPage() {
 
   if (!joriy?.id) {
     return (
-      <div className="p-6 bg-bg min-h-screen text-text">
-        <h1 className="text-2xl font-bold flex items-center gap-2"><ServerCog className="text-accent" /> Tizim boshqaruv markazi</h1>
-        <p className="mt-3 text-sm text-text-dim">Kompaniya konteksti tanlanmagan. Yuqoridagi selektor orqali kompaniyani tanlang.</p>
+      <div className="bg-bg min-h-screen text-text">
+        <h1 className="text-2xl font-bold flex items-center gap-2 px-6 pt-6"><ServerCog className="text-accent" /> Tizim boshqaruv markazi</h1>
+        <KompaniyaKerak nima="Tizim boshqaruv markazi" />
       </div>
     );
   }
@@ -47,10 +48,7 @@ export default function SystemControlPage() {
       {q.isLoading && <div className="px-6 py-4 text-sm text-text-dim">Nazorat ma'lumotlari yuklanmoqda…</div>}
       {q.isError && (
         <div className="mx-6 mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-100">
-          Nazorat ma'lumotini o'qib bo'lmadi: {(q.error as any)?.code || 'xato'}.{' '}
-          {(q.error as any)?.code === 'SYSTEM_CONTROL_FAILED'
-            ? 'CTRL-001 migratsiyasi (20260904120000_t2_capability_registry_v1) hali productionga qo’llanmagan bo’lishi mumkin.'
-            : ''}
+          Nazorat ma'lumotini o'qib bo'lmadi: {(q.error as any)?.code || 'xato'}.
         </div>
       )}
 

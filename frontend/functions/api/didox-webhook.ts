@@ -1,7 +1,7 @@
 ﻿export const onRequestPost: PagesFunction<any> = async (ctx) => {
   try {
-    const data = await ctx.request.json();
-    
+    const data = await ctx.request.json<{ action?: string }>();
+
     if (data.action === 'sinxron_boshla') {
       // Didox API bilan haqiqiy integratsiya simulyatsiyasi
       const didoxRes = await fetch('https://api.didox.uz/v1/documents', {

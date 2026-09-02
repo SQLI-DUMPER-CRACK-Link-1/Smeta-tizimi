@@ -5,6 +5,7 @@ import { gas } from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import { LogOut, LayoutDashboard, HardHat, Truck, ShoppingCart, ShieldAlert, Bot, X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { tizimdanChiq } from '../umumiy/kontekst/chiqish';
 
 /* ⚠️ 2026-08-17 (audit): bu darcha AVVAL SOXTA MAKET edi — ichida qo'lda
    yozilgan «Toshkent City - Lot 4», «Sement M400: 45 000 000 so'm» kabi
@@ -68,10 +69,7 @@ export default function BossShell() {
     }
   }, [sess.isError, sess.error, navigate]);
 
-  const handleLogout = () => {
-    document.cookie = 'sess=; Max-Age=0; path=/';
-    window.location.href = '/';
-  };
+  const handleLogout = tizimdanChiq;
 
   return (
     <div className="os-app-shell flex h-screen overflow-hidden text-text relative">
