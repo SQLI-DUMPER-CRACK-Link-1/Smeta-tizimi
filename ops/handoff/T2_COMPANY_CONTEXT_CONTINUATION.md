@@ -75,6 +75,37 @@ permission-denied. `/api/sb` (table reads) still works → CRM partially opens.
   authorised.** No-op for the current single-company reality; apply with the
   fix release after the owner smoke passes.
 
+## Pipeline verified as service_role (what the fixed key will do)
+
+Simulated `set local role service_role` on prod (exactly how Cloudflare
+Functions call PostgREST once `SUPABASE_KEY` is the service_role secret),
+with the owner's real user (id 7, "Anvar", superadmin):
+
+| RPC | Result |
+|---|---|
+| `t2_kirish_royxatga_ol('Anvar','superadmin')` | `ok:true, foydalanuvchi_id:7, azoliklar:1` |
+| `t2_men_v1(7)` | `ok:true, azoliklar:1, onboarding_kerak:false` |
+| `t2_boss_dashboard_v1(1,7)` | `ok:true` |
+| `t2_system_control_v1(1,7)` | `ok:true` |
+| `t2_workbench_v1(8,7)` / `t2_nakopitelniy_v1(8,7)` | `ok:true` |
+| `t2_obyekt_yakunlash_v1(8,7)` / `t2_smeta_ozgarish_royxat_v1(8,7)` | `ok:true` |
+| `t2_document_registry_v1(7,1)` | returns |
+
+→ The entire canonical app works the moment the key is fixed. No further
+code change required.
+
+## Migration static review (20260914120000_t2_platforma_superadmin_context_v1)
+
+- `t2_platforma_superadmin(bigint)` — `sql stable security definer`, reads
+  `t2_azolik` directly, no recursion into `t2_actor_kompaniya_azo_tekshir`.
+- `t2_actor_kompaniya_azo_tekshir` — CREATE OR REPLACE keeps the exact
+  original signature / param checks / `for share` lock; the new branch is
+  read-only (a company-existence `exists()`); normal-user behaviour is
+  byte-identical (membership found → role; none + not superadmin → 42501).
+- Rollback restores the verbatim original body, then drops the resolver
+  (only caller already replaced). Additive, runnable any time, no data
+  touched. **PASS.**
+
 ## Next steps (after the owner sets SUPABASE_KEY)
 
 1. Owner redeploys Preview; `GET /api/soglik` must show `service_role`.
