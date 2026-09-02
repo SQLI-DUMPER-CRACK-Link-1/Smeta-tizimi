@@ -6,3 +6,10 @@ pages_build_output_dir = "dist"
 # API key ishlatilmaydi: ruxsat Pages project binding orqali beriladi.
 [ai]
 binding = "AI"
+
+# FILE-TRUTH-001: private canonical R2 bucket (binary truth). No public
+# access, no custom domain. Dashboard "+Add" is blocked once a project's
+# bindings are wrangler.toml-managed — this is the only way to add it.
+[[r2_buckets]]
+binding = "R2_CANONICAL"
+bucket_name = "smeta-tizimi-canonical"
