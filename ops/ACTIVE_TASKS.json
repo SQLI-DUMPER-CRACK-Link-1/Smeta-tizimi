@@ -77,7 +77,7 @@
       "base_sha": "b6db686329a4f3c7e5f49aca24d2872695e81402",
       "base_ref": "origin/main",
       "branch": "integration/next-main-release-v1",
-      "head": "640b6c3",
+      "head": "2a7e5f1",
       "status": "release_blocked_with_exact_continuation",
       "owns": [
         "supabase/migrations/20260903120000_t2_boss_dashboard_read_model_v1.sql",
@@ -120,7 +120,7 @@
       "depends_on": ["STOR-001", "FILE-TRUTH-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/releases/NEXT_MAIN_RELEASE_V1.md", "ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md"],
       "production_write_allowed": false,
-      "_izoh": "RELEASE_BLOCKED_WITH_EXACT_CONTINUATION on SESSIYA_KALIT. DONE this session: SMETA/F2/NAKOPITELNIY DB layer (4 migrations: t2_f2_baseline_price_v1 / t2_smeta_change_control_v1 / t2_forma3_closeout_v1 / t2_smeta_ozgarish_royxat_fix) APPLIED to prod 2026-09-02 (additive, acceptance-verified pre-apply, live-smoked: all 6 read RPCs ok:true on object 8, 0 rows written, advisors clean — only INFO rls_enabled_no_policy on the 6 new tables). Visible workbench SOURCE_READY: /api/hujjat-nazorat gateway + t2-document-control.ts (4 ports + normalization) + /admin/hujjat-nazorat page + route/nav/title/allowlist. Codex integrated (3 branches, 87b2b31 checkpointed, engine O(n2) fixed 3.35s->35ms). Local gates green: tsc -b, npm run build, vitest 88/88, hammasi.cjs (74-check SMETA suite), governance-check, generateParkLegacyCompatibilityReport BUG_FOUND:0. NOT DONE (blocked): main merge + Cloudflare deploy — the branch bundles SECURITY-P0 fail-closed auth; merging main auto-deploys it and locks everyone out if SESSIYA_KALIT is unset in Cloudflare (verification attempted: anon /api/sessiya gives no signal, no CF API token/wrangler, login prohibited; git history 81cf5ad shows key enforcement previously broke login). NREL-001 migrations 20260902-20260908 still not applied (owner-run). Drive Forma-2/Smeta template study still blocked (no Drive access)."
+      "_izoh": "RELEASE_BLOCKED_WITH_EXACT_CONTINUATION — 2026-09-02 evening checkpoint, see ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md (rewritten, full detail). DONE this session (head=2a7e5f1): Codex document-fidelity-release-v1 + pre-main-release-qa-v1 merged; F2 positional-mapping P0 fixed (forceMapBlChildren removed, applyEngineBinds); R2_CANONICAL binding added to wrangler.toml (owner created private bucket); 7 pending Supabase migrations (20260902-20260908) applied to prod, acceptance-verified, 2 additive constraint-vocab hotfixes found+closed; Preview GAS_TOKEN mismatch diagnosed+closed (owner fixed the Cloudflare value, no token rotated); Preview PGRST125 (SUPABASE_URL already containing /rest/v1) diagnosed+closed in code (supabaseBaseUrl() normalizer, 15 files) — Cloudflare's SUPABASE_URL value is still technically wrong but code now tolerates it. All local gates green (tsc -b, build, vitest 112/112, lint, tekshir 107 checks, governance-check). NOT DONE (blocked): the owner-only authenticated Preview click-through smoke (login + Loyihalar/Obyektlar/Fakt/Mind Map/AOSR/F2 all load) was requested before an owner shutdown and had not been confirmed when the session ended — get that confirmation first. Temp diagnostic endpoint frontend/functions/api/kirish-diag.ts MUST be removed before main. Main/production untouched (main=b6db686)."
     },
     {
       "id": "CTRL-001B",
