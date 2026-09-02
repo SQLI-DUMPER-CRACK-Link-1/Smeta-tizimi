@@ -41,6 +41,7 @@ const TESTLAR = [
   ['SHEETS write-back reference', 't2_sheets_writeback.test.cjs'],
   ['SECURITY P0 cross-cutting guards', 't2_security_p0.test.cjs'],
   ['SMETA/F2/NAKOPITELNIY + change control', 't2_smeta_f2_nakopitelniy.test.cjs'],
+  ['PRE-MAIN adversarial release contracts', 'pre_main_release_qa.test.cjs'],
 ];
 
 let yiqildi = 0;
