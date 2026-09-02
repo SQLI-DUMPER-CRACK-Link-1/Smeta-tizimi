@@ -57,8 +57,16 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     if (a instanceof Response) return a;
     const { r, j, text } = await callRpc(ctx.env, RPC.me, { p_actor_id: a.id });
     if (!r.ok || !j || j.ok !== true) {
-      const code = (j && j.code) || 'ME_FAILED';
-      return xavfsizXato(code === 'ME_FAILED' ? 'UPSTREAM' : code, statusFor(code, text), text);
+      const domCode = j && typeof j === 'object' && 'code' in j ? String((j as any).code) : '';
+      // Domen javobi (ACTOR_NOT_FOUND / AUTH_REQUIRED) — xavfsiz, frontendga o'tkazamiz.
+      if (domCode === 'ACTOR_NOT_FOUND' || domCode === 'AUTH_REQUIRED') {
+        return Response.json({ ok: false, code: domCode }, { status: statusFor(domCode, text) });
+      }
+      // HTTP / PGRST xatosi (kalit roli, funksiya ruxsati, URL) — SERVER CONFIG.
+      console.error('[company me] t2_men_v1', r.status, text.slice(0, 300));
+      return Response.json({ ok: false, code: 'CONFIG',
+        xato: 'Kompaniya ma’lumoti serveri sozlamasida nosozlik. Administrator bilan bog‘laning.' },
+        { status: 502 });
     }
     return Response.json(j);
   } catch (err: any) {

@@ -5,6 +5,7 @@
  */
 import { Building2, Globe, ChevronDown, RefreshCw } from 'lucide-react';
 import { useKompaniya, type KompaniyaMavqe } from './KompaniyaKontekst';
+import { tizimdanChiq } from './chiqish';
 
 const MAVQE_BELGI: Record<string, { nom: string; rang: string }> = {
   zakazchik: { nom: 'Zakazchik', rang: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
@@ -33,7 +34,9 @@ export function KompaniyaTanlagich() {
     return (
       <span className="text-[11px] text-danger inline-flex items-center gap-2">
         {k.xato}
-        <button onClick={k.qayta} className="underline hover:no-underline">qayta</button>
+        {k.authXato
+          ? <button onClick={tizimdanChiq} className="underline hover:no-underline">chiqib, qayta kirish</button>
+          : <button onClick={k.qayta} className="underline hover:no-underline">qayta</button>}
       </span>
     );
   }

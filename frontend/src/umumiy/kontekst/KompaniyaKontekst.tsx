@@ -84,16 +84,19 @@ function yozLS(k: string, v: string | null) {
 function kompaniyaXatoMatni(e: any): { matn: string; auth: boolean } {
   const code = String(e?.code || '');
   const msg = String(e?.message || e || '');
-  if (code === 'AUTH_REQUIRED' || /401|sessiya|kiring/i.test(code + msg)) {
-    return { matn: 'Sessiya muddati tugagan. Chiqib, qaytadan kiring.', auth: true };
+  if (code === 'AUTH_REQUIRED' || /foydalanuvchi yo|401|sessiya|qayta kiring/i.test(code + msg)) {
+    return { matn: 'Sessiyani yangilash kerak. Chiqing va qaytadan kiring.', auth: true };
   }
-  if (code === 'ME_FAILED' || code === 'CONFIG') {
-    return { matn: 'Kompaniya ma’lumotini olishda server nosozligi. Birozdan so‘ng qayta urinib ko‘ring.', auth: false };
+  if (code === 'ACTOR_RESOLVE_FAILED') {
+    return { matn: 'Kanonik foydalanuvchi yozuvi olinmadi. Chiqib, qaytadan kiring; takrorlansa administratorga ayting.', auth: true };
+  }
+  if (code === 'CONFIG' || code === 'ME_FAILED') {
+    return { matn: 'Kompaniya ma’lumoti serveri sozlamasida nosozlik. Administrator bilan bog‘laning.', auth: false };
   }
   if (code === 'ACTOR_NOT_FOUND') {
-    return { matn: 'Foydalanuvchi topilmadi. Administrator bilan bog‘laning.', auth: false };
+    return { matn: 'Foydalanuvchi yozuvi topilmadi. Chiqib, qaytadan kiring.', auth: true };
   }
-  return { matn: 'Kompaniya ma’lumotini o‘qib bo‘lmadi.', auth: false };
+  return { matn: 'Kompaniya ma’lumotini o‘qib bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.', auth: false };
 }
 
 export function KompaniyaProvider({ children }: { children: ReactNode }) {

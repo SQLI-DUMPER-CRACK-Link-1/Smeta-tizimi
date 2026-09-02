@@ -10,8 +10,9 @@
  * EGALIK: Claude (integration lane).
  */
 import { useMemo, useState } from 'react';
-import { Building2, Crown, UserPlus, ShieldCheck, Loader2, AlertTriangle, Trash2, Users } from 'lucide-react';
+import { Building2, Crown, UserPlus, ShieldCheck, Loader2, AlertTriangle, Trash2, Users, LogOut } from 'lucide-react';
 import { useMen, useOnboardingCommands, useKompaniyaAzolari, type Azolik } from '../../api/t2-men';
+import { tizimdanChiq } from '../../umumiy/kontekst/chiqish';
 
 const AZO_ROLLAR = ['boss', 'rahbar', 'bugalter', 'pto', 'prorab', 'buyurtmachi', 'pudratchi', 'kuzatuvchi'] as const;
 
@@ -97,13 +98,20 @@ export default function KompaniyaPage() {
 
   if (q.isLoading) return <div className="p-6 text-sm text-text-dim flex items-center gap-2"><Loader2 className="animate-spin" size={16} /> Yuklanmoqda…</div>;
   if (q.isError) {
+    const c = (q.error as any)?.code;
+    const auth = c === 'AUTH_REQUIRED' || c === 'ACTOR_NOT_FOUND' || c === 'ACTOR_RESOLVE_FAILED';
+    const matn = auth ? 'Sessiyani yangilash kerak. Chiqing va qaytadan kiring.'
+      : c === 'CONFIG' || c === 'ME_FAILED' ? 'Kompaniya ma‘lumoti serveri sozlamasida nosozlik. Administrator bilan bog‘laning.'
+      : 'Kompaniya ma‘lumotini o‘qib bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.';
     return (
       <div className="p-6 text-sm">
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-100">
-          Ma‘lumotni o‘qib bo‘lmadi.{' '}
-          {(q.error as any)?.code === 'AUTH_REQUIRED'
-            ? <button onClick={() => (window.location.href = '/')} className="underline">Kirish sahifasi</button>
-            : <button onClick={() => q.refetch()} className="underline">Qayta urinish</button>}
+          <div className="flex items-start gap-2"><AlertTriangle size={16} className="mt-0.5 shrink-0" /><span>{matn}</span></div>
+          <div className="mt-3">
+            {auth
+              ? <button onClick={tizimdanChiq} className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/20 hover:bg-rose-500/30 px-3 py-1.5 font-medium"><LogOut size={13} /> Chiqib, qayta kirish</button>
+              : <button onClick={() => q.refetch()} className="underline">Qayta urinish</button>}
+          </div>
         </div>
       </div>
     );

@@ -3,8 +3,9 @@
  * Xom "Avval yuqoridan kompaniya tanlang" o'rniga: nima qilish kerakligini
  * aniq aytadi va superadmin Global rejimda bo'lsa buni tushuntiradi.
  */
-import { Building2, Globe, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Building2, Globe, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { useKompaniya } from './KompaniyaKontekst';
+import { tizimdanChiq } from './chiqish';
 
 export function KompaniyaKerak({ nima }: { nima?: string }) {
   const k = useKompaniya();
@@ -21,13 +22,12 @@ export function KompaniyaKerak({ nima }: { nima?: string }) {
   if (k.xato) {
     return (
       <div className="p-8 max-w-lg">
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-100 flex items-start gap-2">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-          <div>
-            {k.xato}
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-100">
+          <div className="flex items-start gap-2"><AlertTriangle size={16} className="mt-0.5 shrink-0" /><span>{k.xato}</span></div>
+          <div className="mt-3">
             {k.authXato
-              ? <button onClick={() => (window.location.href = '/')} className="ml-2 underline hover:no-underline">Kirish sahifasi</button>
-              : <button onClick={k.qayta} className="ml-2 underline hover:no-underline">Qayta urinish</button>}
+              ? <button onClick={tizimdanChiq} className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/20 hover:bg-rose-500/30 px-3 py-1.5 font-medium"><LogOut size={13} /> Chiqib, qayta kirish</button>
+              : <button onClick={k.qayta} className="inline-flex items-center gap-1.5 rounded-md bg-white/10 hover:bg-white/15 px-3 py-1.5 font-medium"><RefreshCw size={13} /> Qayta urinish</button>}
           </div>
         </div>
       </div>
