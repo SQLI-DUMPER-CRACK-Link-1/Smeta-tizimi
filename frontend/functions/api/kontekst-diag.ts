@@ -77,6 +77,15 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
       out.men_probe_category = r.ok && j && j.ok === true ? 'MEN_OK'
         : r.ok ? 'MEN_RETURNED_NOT_OK'
         : 'MEN_HTTP_ERROR';
+      // t2_men_v1 faqat service_role ga grant qilingan. anon/publishable kalit
+      // -> 401/403/PGRST301 -> butun kanonik /api/* buziladi.
+      if (r.status === 401 || r.status === 403 || (out.men_probe_code && /PGRST(301|302|000)/.test(String(out.men_probe_code)))) {
+        out.tashxis = 'SUPABASE_KEY_ANON — Cloudflare Pages env dagi SUPABASE_KEY '
+          + 'service_role kaliti EMAS (anon/publishable). t2_men_v1 va boshqa '
+          + 'kanonik RPC lar faqat service_role ga ochiq. Cloudflare Pages -> '
+          + 'Settings -> Environment variables -> SUPABASE_KEY ni service_role '
+          + 'kalitiga o\'zgartiring (Production VA Preview), keyin qayta deploy.';
+      }
     } catch {
       out.men_probe_category = 'MEN_INVALID_JSON';
       out.men_probe_body_head = body.slice(0, 200);
