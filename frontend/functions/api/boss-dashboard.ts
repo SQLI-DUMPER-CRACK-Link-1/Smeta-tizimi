@@ -5,6 +5,7 @@
  *   GET /api/boss-dashboard?kompaniya_id=<n>   (session cookie)
  */
 import { tekshir } from '../_shared/auth';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string };
 
@@ -19,7 +20,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     const kompaniyaId = Number(new URL(ctx.request.url).searchParams.get('kompaniya_id'));
     if (!kompaniyaId) return Response.json({ ok: false, code: 'COMPANY_CONTEXT_REQUIRED' }, { status: 400 });
 
-    const r = await fetch(ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/t2_boss_dashboard_v1', {
+    const r = await fetch(supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/t2_boss_dashboard_v1', {
       method: 'POST',
       headers: { apikey: ctx.env.SUPABASE_KEY, Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_kompaniya_id: kompaniyaId, p_actor_id: actorId }),

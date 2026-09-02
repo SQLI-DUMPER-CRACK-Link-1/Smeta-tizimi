@@ -15,6 +15,7 @@
  * deb YOLG'ON aytardi va hech narsa saqlamasdi. Odam kutardi, operator
  * esa hech qachon xabar olmasdi.
  */
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 type Env = {
   SUPABASE_URL: string;
@@ -69,7 +70,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   try {
     const r = await fetch(
-      ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/t2_royxat_sorov_yoz',
+      supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/t2_royxat_sorov_yoz',
       {
         method: 'POST',
         headers: {

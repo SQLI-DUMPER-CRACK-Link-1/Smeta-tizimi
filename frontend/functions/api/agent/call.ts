@@ -6,6 +6,7 @@ import {
   validateAgentToolArguments,
   verifyAgentRequest,
 } from '../../_shared/agent-connector';
+import { supabaseBaseUrl } from '../../_shared/supabase-url';
 
 type Env = {
   T2_AGENT_KEYS_JSON?: string;
@@ -24,7 +25,7 @@ function problem(status: number, code: string, message: string) {
 }
 
 async function readRpc(env: Env, rpc: string, parameter: string, id: number): Promise<unknown> {
-  const url = env.SUPABASE_URL.replace(/\/+$/, '') +
+  const url = supabaseBaseUrl(env.SUPABASE_URL) +
     '/rest/v1/rpc/' + rpc + '?' + new URLSearchParams({ [parameter]: String(id) });
   const response = await fetch(url, {
     headers: { apikey: env.SUPABASE_KEY, Authorization: 'Bearer ' + env.SUPABASE_KEY },

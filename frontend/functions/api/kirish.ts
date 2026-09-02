@@ -1,4 +1,5 @@
 import { imzola, Rol } from '../_shared/auth';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   let req: { login?: string; parol?: string; isBoss?: boolean; isSuperadmin?: boolean } = {};
@@ -79,7 +80,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   try {
     if (ctx.env.SUPABASE_URL && ctx.env.SUPABASE_KEY) {
       const r = await fetch(
-        ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/t2_kirish_royxatga_ol',
+        supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/t2_kirish_royxatga_ol',
         {
           method: 'POST',
           headers: {

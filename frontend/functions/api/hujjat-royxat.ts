@@ -8,6 +8,7 @@
  * document failure.
  */
 import { tekshir } from '../_shared/auth';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string };
 
@@ -26,7 +27,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     const obyektId = u.searchParams.get('obyekt_id') ? Number(u.searchParams.get('obyekt_id')) : null;
     const limit = u.searchParams.get('limit') ? Number(u.searchParams.get('limit')) : 200;
 
-    const r = await fetch(ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/t2_document_registry_v1', {
+    const r = await fetch(supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/t2_document_registry_v1', {
       method: 'POST',
       headers: { apikey: ctx.env.SUPABASE_KEY, Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_actor_id: actorId, p_kompaniya_id: kompaniyaId, p_loyiha_id: loyihaId, p_obyekt_id: obyektId, p_limit: limit }),

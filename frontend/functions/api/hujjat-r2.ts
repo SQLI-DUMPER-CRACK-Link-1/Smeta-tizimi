@@ -10,6 +10,8 @@
  *
  * Used only by the canonical -> Drive mirror job. Never exposed to browsers.
  */
+import { supabaseBaseUrl } from '../_shared/supabase-url';
+
 type Env = {
   SUPABASE_URL: string; SUPABASE_KEY: string; REPLICA_SYNC_SECRET: string;
   R2_CANONICAL: R2Bucket;
@@ -26,7 +28,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     const kompaniyaId = Number(u.searchParams.get('kompaniya_id'));
     if (!documentId || !kompaniyaId) return Response.json({ ok: false, code: 'BAD_REQUEST' }, { status: 400 });
 
-    const r = await fetch(ctx.env.SUPABASE_URL.replace(/\/+$/, '') +
+    const r = await fetch(supabaseBaseUrl(ctx.env.SUPABASE_URL) +
       '/rest/v1/t2_document_registry?id=eq.' + documentId + '&kompaniya_id=eq.' + kompaniyaId +
       '&canonical_storage_status=eq.stored&select=r2_key,mime_type,original_filename,sha256,size_bytes&limit=1', {
       headers: { apikey: ctx.env.SUPABASE_KEY, Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY },

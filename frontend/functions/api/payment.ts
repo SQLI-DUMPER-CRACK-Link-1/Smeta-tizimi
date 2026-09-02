@@ -1,4 +1,5 @@
-﻿export const onRequestPost: PagesFunction<any> = async (ctx) => {
+import { supabaseBaseUrl } from '../_shared/supabase-url';
+export const onRequestPost: PagesFunction<any> = async (ctx) => {
   try {
     const data = await ctx.request.json();
     
@@ -8,7 +9,7 @@
     
     // Supabase orqali to'lovni tasdiqlash
     const r = await fetch(
-      ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/t2_tolov_tasdiqla',
+      supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/t2_tolov_tasdiqla',
       {
         method: 'POST',
         headers: {
