@@ -3,10 +3,10 @@ import { ArrowLeft, FlaskConical } from 'lucide-react';
 
 /**
  * TestShell — TIZIM_02 (SINOV) sahnasi.
- * Kompaniya konteksti endi AdminShell'da (bitta joyda). Bu yerda ALOHIDA
- * `KompaniyaProvider` yoki tanlagich YO'Q — aks holda ikkita alohida
- * kompaniya tanlovi bo'lib, foydalanuvchi qaysi biriga qarab turganini
- * bilmasdi.
+ * Kompaniya konteksti endi AdminShell'da (bitta joyda). Bu qobiq o'z
+ * kontekst-provideri yoki tanlagichini yaratmaydi — aks holda ikkita
+ * alohida kompaniya tanlovi bo'lib, foydalanuvchi qaysi biriga qarab
+ * turganini bilmasdi (Codex audit §5).
  */
 export default function TestShell() {
   return (

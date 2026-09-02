@@ -1,0 +1,32 @@
+{
+  "schema": "t2-company-context-adversarial-v1",
+  "purpose": "Claude P0 fixidan keyin authenticated API/E2E runner bajaradigan evidence contract.",
+  "cases": [
+    {"id":"SUPERADMIN_NO_COMPANY_GLOBAL","level":"e2e","actor":"superadmin","state":"GLOBAL","action":"open global companies and system routes","expected":"200/visible global UI; no company-scoped query"},
+    {"id":"SUPERADMIN_NO_COMPANY_SCOPED","level":"component","actor":"superadmin","state":"GLOBAL","action":"open dashboard/documents/participants/mindmap/workbench","expected":"context-required selection surface; no raw error; no company data request"},
+    {"id":"SUPERADMIN_SELECT_COMPANY_A","level":"api+e2e","actor":"superadmin","state":"GLOBAL","action":"select A","expected":"explicit privileged server authorization; A projects/objects/documents only"},
+    {"id":"SUPERADMIN_SWITCH_A_TO_B","level":"component+e2e","actor":"superadmin","state":"COMPANY_A","action":"switch B while A request delayed","expected":"A response discarded; B request/data only"},
+    {"id":"SUPERADMIN_WITHOUT_MEMBERSHIP","level":"api","actor":"superadmin-no-membership","state":"GLOBAL","action":"request company A","expected":"explicit privileged path plus audit actor/context; no synthetic membership"},
+    {"id":"NORMAL_ONE_MEMBERSHIP","level":"api+e2e","actor":"member-A","state":"LOGIN","action":"load selector","expected":"only A visible; visible automatic A context allowed"},
+    {"id":"NORMAL_MULTI_MEMBERSHIP","level":"api+e2e","actor":"member-A-B","state":"LOGIN","action":"load and switch selector","expected":"A/B only; cache isolation"},
+    {"id":"NORMAL_NO_MEMBERSHIP","level":"e2e","actor":"no-member","state":"LOGIN","action":"open admin","expected":"onboarding/join/create state; no tenant data"},
+    {"id":"FORGED_COMPANY_ID","level":"api","actor":"member-A","state":"COMPANY_A","action":"request B by query/body","expected":"403/domain denial; no B rows"},
+    {"id":"PERSIST_COMPANY_REFRESH","level":"component+e2e","actor":"member-A","state":"COMPANY_A","action":"navigate then refresh","expected":"A restored only after authorization"},
+    {"id":"PERSIST_PROJECT_OBJECT_REFRESH","level":"e2e","actor":"member-A","state":"OBJECT_A1","action":"refresh F2/workbench","expected":"company/project/object lineage restored or safely reselected"},
+    {"id":"LOGOUT_CONTEXT_CLEANUP","level":"component+e2e","actor":"member-A","state":"COMPANY_A","action":"logout then login member-B","expected":"A local context/cache never inherited"},
+    {"id":"DIRECT_DASHBOARD_NO_CONTEXT","level":"component","actor":"member-A","state":"GLOBAL","action":"/admin/dashboard","expected":"no crash/no raw error/no unauthorized query"},
+    {"id":"DIRECT_DOCUMENTS_NO_CONTEXT","level":"component","actor":"member-A","state":"GLOBAL","action":"/admin/documents","expected":"context selection state"},
+    {"id":"DIRECT_PARTICIPANTS_NO_CONTEXT","level":"component","actor":"member-A","state":"GLOBAL","action":"/admin/participants","expected":"context selection state"},
+    {"id":"DIRECT_MINDMAP_NO_CONTEXT","level":"component","actor":"member-A","state":"GLOBAL","action":"/admin/mindmap","expected":"context selection state"},
+    {"id":"DIRECT_WORKBENCH_NO_CONTEXT","level":"component","actor":"member-A","state":"GLOBAL","action":"/admin/hujjat-nazorat","expected":"context selection state"},
+    {"id":"STALE_A_RESPONSE_AFTER_B","level":"component","actor":"member-A-B","state":"COMPANY_A","action":"delay A response then select B","expected":"A1 never renders as B authoritative UI"},
+    {"id":"BACK_BUTTON_CONTEXT","level":"e2e","actor":"member-A-B","state":"COMPANY_B","action":"browser back","expected":"restored context re-authorized before render"},
+    {"id":"ACCESS_REVOKED","level":"api+e2e","actor":"member-A","state":"COMPANY_A","action":"revoke membership during session","expected":"next request denied; context cleared; safe message"},
+    {"id":"RAW_404","level":"component","actor":"member-A","state":"COMPANY_A","action":"mock 404","expected":"professional message; no PGRST/JSON/raw body"},
+    {"id":"RAW_RPC_FAILURE","level":"component","actor":"member-A","state":"COMPANY_A","action":"mock RPC error","expected":"stable public code/message only"},
+    {"id":"EXPIRED_SESSION","level":"e2e","actor":"member-A","state":"COMPANY_A","action":"expire cookie","expected":"login state; context/cache cleared"},
+    {"id":"COMPANY_MEMBERSHIP_SETTINGS_IA","level":"structural+e2e","actor":"director-A","state":"COMPANY_A","action":"visit company/settings/member routes","expected":"one canonical company/member CRUD owner"},
+    {"id":"SELECTOR_SERVER_FILTER","level":"api","actor":"member-A","state":"LOGIN","action":"read company choices","expected":"server returns A only; client filtering not accepted"},
+    {"id":"FUNCTIONS_TYPECHECK","level":"ci","actor":"system","state":"N/A","action":"run dedicated tsc","expected":"frontend/functions/**/*.ts checked"}
+  ]
+}

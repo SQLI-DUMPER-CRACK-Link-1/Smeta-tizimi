@@ -1,5 +1,5 @@
 {
-  "//": "Cloudflare Pages Functions (frontend/functions/**) uchun REAL type gate. Asosiy tsconfig.app.json faqat src ni qamraydi — shu sabab ctx.env.env.* kabi regressiyalar deploy bo'lib ketgan edi. `npm run typecheck:functions` yoki `npm run build` shuni tekshiradi.",
+  "//": "Cloudflare Pages Functions (frontend/functions ostidagi .ts fayllar) uchun REAL type gate. Asosiy tsconfig.app.json faqat src ni qamraydi — shu sabab ctx.env.env kabi regressiyalar deploy bolib ketgan edi. npm run typecheck:functions yoki npm run build shuni tekshiradi.",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.functions.tsbuildinfo",
     "target": "es2022",
