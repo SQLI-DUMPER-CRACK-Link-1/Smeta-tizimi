@@ -24,6 +24,7 @@
  *   revision      string (optional)
  */
 import { tekshir } from '../_shared/auth';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 type Env = {
   SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string;
@@ -38,7 +39,7 @@ const DEFAULT_INLINE_LIMIT = 25 * 1024 * 1024;
 const DEFAULT_MAX_BYTES = 512 * 1024 * 1024;
 
 async function rpc(env: Env, name: string, args: Record<string, unknown>) {
-  const r = await fetch(env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/' + name, {
+  const r = await fetch(supabaseBaseUrl(env.SUPABASE_URL) + '/rest/v1/rpc/' + name, {
     method: 'POST',
     headers: { apikey: env.SUPABASE_KEY, Authorization: 'Bearer ' + env.SUPABASE_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify(args),

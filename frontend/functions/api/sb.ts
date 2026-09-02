@@ -26,6 +26,7 @@
  *   { ok: false, error: "..." }
  */
 import { tekshir } from '../_shared/auth';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 /* Faqat shu jadvallar o'qiladi. Yangi jadval kerak bo'lsa SHU YERGA
    qo'shiladi — «hamma jadval ochiq» holatiga hech qachon o'tmaymiz. */
@@ -227,7 +228,7 @@ export const onRequestPost: PagesFunction<{
       }
 
       const rr = await fetch(
-        ctx.env.SUPABASE_URL.replace(/\/+$/, '') +
+        supabaseBaseUrl(ctx.env.SUPABASE_URL) +
           '/rest/v1/rpc/t2_' + so.soro + '?' + q.toString(),
         {
           headers: {
@@ -334,7 +335,7 @@ export const onRequestPost: PagesFunction<{
        Eng katta obyekt hozir ~5000 qator, ya'ni zaxira 4 barobar. */
     const MAX_SORO = 20;
 
-    const baza = ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/' + jadval;
+    const baza = supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/' + jadval;
     const boshHeaders = {
       apikey: ctx.env.SUPABASE_KEY,
       Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY,

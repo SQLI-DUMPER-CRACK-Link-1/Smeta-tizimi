@@ -1,6 +1,7 @@
 import { tekshir } from '../_shared/auth';
 import { aiCall, aiPublicError } from '../_shared/ai';
 import { AI_KORSATMA, type AiUmumiy } from '../../src/api/t2-ai';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 type Env = {
   SESSIYA_KALIT: string;
@@ -45,7 +46,7 @@ function musbatId(value: unknown): number | null {
 async function oqishRpc<T>(env: Env, id: number): Promise<T> {
   const rpc = 't2_ai_umumiy';
   const param = 'p_kompaniya_id';
-  const url = env.SUPABASE_URL.replace(/\/+$/, '') +
+  const url = supabaseBaseUrl(env.SUPABASE_URL) +
     '/rest/v1/rpc/' + rpc + '?' + new URLSearchParams({ [param]: String(id) });
   const response = await fetch(url, {
     headers: {

@@ -61,6 +61,34 @@ export async function hujjatYukla(p: {
   return { ok: false, code: (j && j.code) || 'UPLOAD_FAILED', xato: j && j.xato, r2_key: j && j.r2_key, sha256: j && j.sha256 };
 }
 
+// ── Canonical registry read model (DOCUMENT CENTER list) ────────────────────
+// The RPC shape matches the Codex Document Center contract exactly.
+import type { CenterDocument, DocumentHealth } from '../components/document-center';
+export type { CenterDocument, DocumentHealth } from '../components/document-center';
+
+export type DocRegistry = {
+  ok: true; generated_at: string; rol: string;
+  kompaniya_id: number; loyiha_id: number | null; obyekt_id: number | null;
+  documents: CenterDocument[]; health: DocumentHealth[]; jami: number; drive_replica_failed: number;
+};
+
+export async function hujjatRoyxatOl(p: {
+  kompaniyaId: number; loyihaId?: number | null; obyektId?: number | null; limit?: number;
+}): Promise<DocRegistry> {
+  const qs = new URLSearchParams({ kompaniya_id: String(Number(p.kompaniyaId)) });
+  if (p.loyihaId) qs.set('loyiha_id', String(Number(p.loyihaId)));
+  if (p.obyektId) qs.set('obyekt_id', String(Number(p.obyektId)));
+  if (p.limit) qs.set('limit', String(Number(p.limit)));
+  const r = await fetch('/api/hujjat-royxat?' + qs.toString());
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || j.ok !== true) {
+    const err: any = new Error((j && (j.xato || j.code)) || ('HTTP ' + r.status));
+    err.code = (j && j.code) || ('HTTP_' + r.status);
+    throw err;
+  }
+  return j as DocRegistry;
+}
+
 /** Canonical download URL — reads R2 via Cloudflare with authorization. Drive EMAS. */
 export function hujjatYuklabOlishUrl(documentId: number): string {
   return '/api/hujjat-ol?id=' + Number(documentId);

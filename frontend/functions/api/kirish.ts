@@ -1,4 +1,5 @@
 import { imzola, Rol } from '../_shared/auth';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   let req: { login?: string; parol?: string; isBoss?: boolean; isSuperadmin?: boolean } = {};
@@ -79,7 +80,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   try {
     if (ctx.env.SUPABASE_URL && ctx.env.SUPABASE_KEY) {
       const r = await fetch(
-        ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/t2_kirish_royxatga_ol',
+        supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/t2_kirish_royxatga_ol',
         {
           method: 'POST',
           headers: {
@@ -102,7 +103,19 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 
   const secret = ctx.env.SESSIYA_KALIT;
-  const token = await imzola({ rol, email: login, foydalanuvchi_id: foydalanuvchiId, kompaniyalar }, secret);
+  let token: string;
+  try {
+    // SECURITY P0: imzola() fails closed if SESSIYA_KALIT is unset/short.
+    // Never mint a cookie signed with a guessable key on a public repo.
+    token = await imzola({ rol, email: login, foydalanuvchi_id: foydalanuvchiId, kompaniyalar }, secret);
+  } catch (err: any) {
+    if (err?.code === 'SESSIYA_KALIT_YOQ') {
+      return Response.json({ ok: false, code: 'CONFIG',
+        xato: 'Server sozlanmagan: SESSIYA_KALIT yo‘q. Cloudflare Pages → Environment variables → SESSIYA_KALIT (Production + Preview), keyin qayta deploy.' },
+        { status: 503 });
+    }
+    throw err;
+  }
   return new Response(JSON.stringify({ ok: true, rol }), {
     headers: {
       'Content-Type': 'application/json',

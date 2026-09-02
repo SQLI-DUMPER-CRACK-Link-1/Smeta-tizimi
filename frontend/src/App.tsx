@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { titleForPath } from './lib/pageTitle';
 import { ToastContainer } from './umumiy/ui/Toast';
 import SahifaTopilmadi from './umumiy/ui/SahifaTopilmadi';
 import KirishSahifa from './kirish/KirishSahifa';
@@ -51,6 +53,15 @@ const TestGrafik    = lazy(() => import('./test02/TestGrafik'));
 const TestSpravochnik = lazy(() => import('./test02/TestSpravochnik'));
 const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
 const TestSaqlash   = lazy(() => import('./test02/TestSaqlash'));
+const BossDashboard = lazy(() => import('./admin/sahifalar/BossDashboard'));
+const DocumentsPage = lazy(() => import('./admin/pages/DocumentsPage'));
+const HujjatNazoratPage = lazy(() => import('./admin/pages/HujjatNazoratPage'));
+const ParticipantsPage = lazy(() => import('./admin/pages/ParticipantsPage'));
+const SystemControlPage = lazy(() => import('./admin/pages/SystemControlPage'));
+const KompaniyaPage = lazy(() => import('./admin/pages/KompaniyaPage'));
+const DocumentCenterDemo = lazy(() => import('./admin/document-center/DocumentCenterDemo'));
+const ParticipantNetworkDemo = lazy(() => import('./admin/participants/ParticipantNetworkDemo'));
+const SystemControlDemo = lazy(() => import('./admin/system-control/SystemControlDemo'));
 import TestXodimlarRollar from './test02/TestXodimlarRollar';
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
@@ -73,6 +84,7 @@ const ErpSifat = lazy(() => import('./erp/sahifalar/ErpSifat'));
 export default function App() {
   return (
     <BrowserRouter>
+      <PageIdentity />
       <CommandPalette />
       <AiHelper />
       <Routes>
@@ -91,7 +103,13 @@ export default function App() {
               O'CHIRILMAGAN — barcha marshrutlari joyida, faqat AdminShell
               sidebar'ida "Eski Tizim (Arxiv)" degan yopiq bo'lim ostiga
               yig'ildi (pastga qara). */}
-          <Route index element={<Navigate to="/admin/test" replace />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          {/* BOSS PANEL P0 — canonical director dashboard (Supabase read model). */}
+          <Route path="dashboard" element={
+            <Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}>
+              <BossDashboard />
+            </Suspense>
+          } />
           <Route path="obyektlar" element={<Obyektlar />} />
           <Route path="holat/:id" element={<Holat />} />
           <Route path="f2" element={<F2Import />} />
@@ -110,6 +128,19 @@ export default function App() {
           <Route path="shaxsiy-smeta" element={<ShaxsiySmeta />} />
           <Route path="supabase" element={<SupabaseSozlama />} />
           <Route path="tezlik" element={<TezlikSinovi />} />
+          {/* Canonical product routes; legacy /admin/test/* remains for compatibility.
+              `dashboard` -> BossDashboard (declared above). */}
+          <Route path="storage" element={<TestSaqlash />} />
+          <Route path="mindmap" element={<TestXarita />} />
+          <Route path="documents" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><DocumentsPage /></Suspense>} />
+          <Route path="hujjat-nazorat" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><HujjatNazoratPage /></Suspense>} />
+          <Route path="participants" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><ParticipantsPage /></Suspense>} />
+          <Route path="system-control" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><SystemControlPage /></Suspense>} />
+          <Route path="kompaniya" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><KompaniyaPage /></Suspense>} />
+          {/* Demo harnesses — explicit, never the default route. */}
+          <Route path="_demo/documents" element={<Suspense fallback={null}><DocumentCenterDemo /></Suspense>} />
+          <Route path="_demo/participants" element={<Suspense fallback={null}><ParticipantNetworkDemo /></Suspense>} />
+          <Route path="_demo/system-control" element={<Suspense fallback={null}><SystemControlDemo /></Suspense>} />
 
           {/* ===== TIZIM_02 (SINOV) — alohida bo’lim =====
               Ma’lumot Supabase’dan o’qiladi. Tizim_01 ning bironta
@@ -175,7 +206,10 @@ export default function App() {
             <BossShell />
           </Suspense>
         }>
-          <Route index element={<Umumiy />} />
+          {/* BOSS PANEL P0: the legacy GAS/Sheets `Umumiy` dashboard is
+              superseded by the canonical /admin/dashboard read model. */}
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="eski" element={<Umumiy />} />
           <Route path="holat/:id" element={<Holat />} />
           {/* ERP routes for Boss */}
           <Route path="kadrlar" element={<ErpKadrlar />} />
@@ -192,5 +226,5 @@ export default function App() {
   );
 }
 
-
+function PageIdentity() { const { pathname } = useLocation(); useEffect(() => { document.title = titleForPath(pathname); }, [pathname]); return null; }
 

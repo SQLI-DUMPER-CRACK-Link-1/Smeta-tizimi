@@ -105,7 +105,7 @@ function apiT2ReplicaDriveWriteback(){
   var t0 = Date.now(), tekshirildi = 0, ozgargan = 0;
   var docs = _t2Get('t2_document_registry?drive_file_id=not.is.null&drive_sync_status=eq.synced'+
     '&canonical_storage_status=eq.stored&status=eq.active'+
-    '&select=id,kompaniya_id,obyekt_id,original_filename,sha256,size_bytes,versiya,drive_file_id,drive_revision&limit=200');
+    '&select=id,kompaniya_id,obyekt_id,original_filename,sha256,size_bytes,versiya,drive_file_id,drive_parent_id,drive_revision&limit=200');
   for(var i=0;i<docs.length;i++){
     if(Date.now()-t0 > T2RS_MAX_MS) break;
     var d = docs[i], f;
@@ -126,6 +126,20 @@ function apiT2ReplicaDriveWriteback(){
         {p_kompaniya_id:d.kompaniya_id, p_actor_id:_t2rsActorId, p_document_id:d.id,
          p_drive_file_id:d.drive_file_id, p_new_name:nom, p_drive_revision:''}); ozgargan++; }catch(ignore){}
     }
+
+    // MOVE — Drive fayl boshqa papkaga ko'chirilgan. GLOBAL SCAN EMAS: faqat shu
+    // faylning joriy ota-papkasi olinadi va RPC uni KNOWN binding bilan solishtiradi
+    // (mos kelsa managed re-bind, aks holda conflict+review). Canonical R2 tegilmaydi.
+    try{
+      var parents = f.getParents(), newParent = parents.hasNext() ? String(parents.next().getId()) : '';
+      if(newParent && newParent !== String(d.drive_parent_id || '')){
+        _t2rsActor(d.kompaniya_id);
+        _t2Rpc('t2_document_replica_move_v1',
+          {p_kompaniya_id:d.kompaniya_id, p_actor_id:_t2rsActorId, p_document_id:d.id,
+           p_drive_file_id:d.drive_file_id, p_new_parent_id:newParent, p_base_version:d.versiya});
+        ozgargan++;
+      }
+    }catch(ignore){}
 
     // CONTENT CHANGE — Drive revizyasi o'zgargan -> yangi canonical R2 revizya
     var curRev = '';

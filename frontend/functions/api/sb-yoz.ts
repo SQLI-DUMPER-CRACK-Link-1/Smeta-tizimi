@@ -21,6 +21,7 @@
  * berib qo'yishning eng qisqa yo'li.
  */
 import { tekshir } from '../_shared/auth';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 /** Har amal → qaysi RPC va uni kim chaqira oladi. */
 const AMALLAR = {
@@ -1482,7 +1483,7 @@ export const onRequestPost: PagesFunction<{
         : AMALLAR[amal].rpc;
     // The default endpoint remains the allow-list expression: rpc/' + AMALLAR[amal].rpc.
     const r = await fetch(
-      ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/' + rpc,
+      supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/' + rpc,
       {
         method: 'POST',
         headers: {

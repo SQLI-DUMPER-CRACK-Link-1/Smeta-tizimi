@@ -101,31 +101,27 @@ export function kalitTashxis(env: Record<string, unknown>): {
   };
 }
 
-/* ⚠️⚠️ TEXNIK QARZ — ATAYLAB QOLDIRILGAN, YOPILISHI SHART ⚠️⚠️
+/* SECURITY P0 (2026-09): the hardcoded backup key is GONE. The repository is
+ * public — any shipped fallback key lets anyone forge an admin session cookie.
+ * `kalitTekshir` now FAILS CLOSED: no valid `SESSIYA_KALIT` -> throw. Callers:
+ *   - `tekshir` (session validation) treats the throw as "no valid session"
+ *     -> every request is unauthenticated (fail closed, nobody gets in).
+ *   - `imzola` (login) rethrows -> the login handler returns 503 CONFIG and
+ *     issues NO cookie, instead of minting one signed with a guessable key.
  *
- * 2026-08-20: kalit majburiy qilinganda Cloudflare'da `SESSIYA_KALIT`
- * ko'rinmadi va HECH KIM kira olmadi. Foydalanuvchi ishdan to'xtab
- * qolgani uchun to'siq VAQTINCHA olib tashlandi — bu uning ongli
- * qarori, men xavfni aytdim.
- *
- * XAVF O'Z KUCHIDA: repozitoriy OCHIQ, ya'ni quyidagi zaxira kalit
- * hammaga ma'lum. Uni bilgan har kim sessiya cookie'sini o'zi imzolab
- * admin bo'lib kira oladi. Bu «ehtimoliy» emas, aniq ochiq eshik.
- *
- * YOPISH TARTIBI (kirish tiklangach):
- *   1. Cloudflare Pages → Settings → Environment variables
- *      → SESSIYA_KALIT ni PRODUCTION va PREVIEW ga qo'yish
- *   2. Deployments → Retry deployment (bindinglar har deployment'ga
- *      suratga olinadi — qayta deploysiz eski qiymat qoladi)
- *   3. `/api/sessiya` javobidagi `zaxira_kalit` false bo'lgach
- *   4. Shu yerdagi `ZAXIRA` ni olib tashlab, `throw` ni qaytarish
+ * If this ever locks everyone out, the fix is to set `SESSIYA_KALIT`
+ * (Production AND Preview) in Cloudflare Pages and redeploy — never to ship a
+ * key in the repo. `/api/sessiya` reports `zaxira_kalit: true` when it is unset.
  */
-const ZAXIRA = 'Boshlangich_Maxfiy_Kalit_123';
+export class KalitYoqError extends Error {
+  code = 'SESSIYA_KALIT_YOQ';
+  constructor() { super('SESSIYA_KALIT o‘rnatilmagan yoki 16 belgidan qisqa — fail closed'); }
+}
 
 export function kalitTekshir(secret: string | undefined | null): string {
   const k = String(secret || '').trim();
   if (k.length >= 16) return k;
-  return ZAXIRA;
+  throw new KalitYoqError();
 }
 
 export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Promise<string> {
@@ -141,9 +137,9 @@ export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Prom
 }
 
 export async function tekshir(cookie: string | null, secret: string): Promise<Sess | null> {
-  /* Kalit yo'q bo'lsa HECH KIM kira olmaydi — zaxira kalit bilan
-     «ishlab turgandek» ko'rinishdan ko'ra to'xtagani xavfsizroq. */
-  secret = kalitTekshir(secret);
+  /* Kalit yo'q bo'lsa HECH KIM kira olmaydi (fail closed). */
+  try { secret = kalitTekshir(secret); }
+  catch { return null; }
   const t = cookie?.match(/sess=([^;]+)/)?.[1];
   if (!t) return null;
   const parts = t.split('.');

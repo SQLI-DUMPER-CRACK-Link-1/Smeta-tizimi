@@ -12,9 +12,12 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: LayoutDashboard,
     id: 'asosiy',
     menyular: [
-      { yol: '/admin/test/hisobot', nom: 'Dashboard (Boss)', Ikonka: BarChart },
+      { yol: '/admin/dashboard', nom: 'Rahbar paneli', Ikonka: BarChart },
       { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
-        { yol: '/admin/test/xarita', nom: 'Mindmap (Xarita)', Ikonka: Map },
+      { yol: '/admin/participants', nom: 'Loyiha ishtirokchilari', Ikonka: Users },
+      { yol: '/admin/documents', nom: 'Hujjatlar', Ikonka: FileStack },
+      { yol: '/admin/hujjat-nazorat', nom: 'Hujjat nazorati (F2/Nakopitelniy)', Ikonka: FileOutput },
+        { yol: '/admin/mindmap', nom: 'Mindmap (Xarita)', Ikonka: Map },
       { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
     ]
   },
@@ -36,8 +39,10 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: ShieldAlert,
     id: 'tizim',
     menyular: [
+      { yol: '/admin/kompaniya', nom: 'Kompaniya va a\'zolik', Ikonka: Building2 },
       { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
-      { yol: '/admin/test/saqlash', nom: 'Fayl saqlash (Storage)', Ikonka: HardHat },
+      { yol: '/admin/storage', nom: 'Fayl saqlash (Storage)', Ikonka: HardHat },
+      { yol: '/admin/system-control', nom: 'Tizim boshqaruv markazi', Ikonka: ShieldAlert },
       { yol: '/admin/test/xodimlar', nom: 'Xodimlar va Rollar', Ikonka: ShieldCheck },
       { yol: '/admin/test/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
     ]
