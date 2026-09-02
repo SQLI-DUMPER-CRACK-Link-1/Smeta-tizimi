@@ -4,20 +4,32 @@
 --
 -- Requires: an active t2_azolik actor (non-null actor id) in a company, and a
 -- project in that company. Substitute :co / :actor / :proj / :obj.
+--
+-- ENVIRONMENT NOTE (found running this against live prod 2026-09-02): the
+-- fixture (:co, :proj, :obj) may already own real 'hujjat' documents from
+-- before FILE-TRUTH-001 (legacy Drive-era rows). revision_seq is therefore
+-- NOT assumed to start at 1 — it is read back from the reserve response and
+-- the expected r2_key is derived from that, never hardcoded to r1/d<n>. This
+-- test must never assume a pristine project; it must coexist with real
+-- business data and touch none of it.
 
 do $$
 declare r jsonb; d1 bigint; d2 bigint; log text := '';
   co bigint := 1; actor bigint := 4; proj bigint := 4; obj bigint := 5;
   op1 uuid := 'f0000001-0001-4001-8001-000000000001';
   op2 uuid := 'f0000002-0002-4002-8002-000000000002';
+  v_key text;
 begin
   -- 1. two-phase: reserve -> (R2 put happens in the function) -> finalize
   r := public.t2_document_canonical_reserve_v1(co, actor, proj, obj, 'hujjat',
         'act.pdf', 'application/pdf', 1234, repeat('a',64), op1, 'v1');
   if not (r->>'ok')::boolean or r->>'canonical_storage_status' <> 'reserved' then raise exception '1 reserve failed: %', r; end if;
   d1 := (r->>'document_id')::bigint;
-  if r->>'r2_key' <> 'docs/1/4/5/d'||d1||'/r1' then raise exception '1b r2_key not derived from document_id: %', r; end if;
-  r := public.t2_document_canonical_finalize_v1(co, actor, d1, op1, 'docs/1/4/5/d'||d1||'/r1', repeat('a',64), 1234, true, 'server');
+  v_key := r->>'r2_key';
+  if v_key <> format('docs/%s/%s/%s/d%s/r%s', co, proj, obj, d1, r->>'revision_seq') then
+    raise exception '1b r2_key not derived from document_id: %', r;
+  end if;
+  r := public.t2_document_canonical_finalize_v1(co, actor, d1, op1, v_key, repeat('a',64), 1234, true, 'server');
   if not (r->>'ok')::boolean or r->>'sha256_verified' <> 'true' then raise exception '1c finalize failed: %', r; end if;
   if not exists(select 1 from public.t2_replica_sync_job where entity_id=d1 and target='drive' and operation='mirror' and holat='pending')
     then raise exception '1d drive mirror job not enqueued'; end if;
@@ -27,7 +39,7 @@ begin
   -- 2. same operation_id -> same doc, retry flag, NO second registry row
   r := public.t2_document_canonical_reserve_v1(co, actor, proj, obj, 'hujjat', 'act.pdf', 'application/pdf', 1234, repeat('a',64), op1, 'v1');
   if (r->>'document_id')::bigint <> d1 or (r->>'retry') is distinct from 'true' then raise exception '2 reserve idempotency broke: %', r; end if;
-  r := public.t2_document_canonical_finalize_v1(co, actor, d1, op1, 'docs/1/4/5/d'||d1||'/r1', repeat('a',64), 1234, true, 'server');
+  r := public.t2_document_canonical_finalize_v1(co, actor, d1, op1, v_key, repeat('a',64), 1234, true, 'server');
   if (r->>'retry') is distinct from 'true' then raise exception '2b finalize not idempotent: %', r; end if;
   if (select count(*) from public.t2_document_registry where kompaniya_id=co and operation_id=op1) <> 1
     then raise exception '2c duplicate registry row'; end if;
