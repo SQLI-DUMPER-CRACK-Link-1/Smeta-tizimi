@@ -6,6 +6,7 @@ Context-survival record. If a session ends, resume from here.
 
 - Branch: `fix/company-context-p0`
 - **HEAD (local == origin): `2472686`** (verified via `git ls-remote`)
+- **HEAD: `241bd37`** (later than the `574e246` referenced below in older sections)
 - Base: `origin/main @ b54f686` (NEXT-MAIN-RELEASE-V1 shipped state). NOT merged.
 - Preview (stable alias, reusable for every push to this branch):
   **`https://fix-company-context-p0.smeta-tizimi.pages.dev`**
@@ -120,15 +121,31 @@ code change required.
 4. If still FAIL: read the `/api/kontekst-diag` JSON and continue from the
    exact `men_probe` category.
 
-## Codex audit P1 items still open (code-only, in scope, not yet done)
+## Codex adversarial oracle — INTEGRATED (commit 241bd37)
 
-- `/api/sb` partial tenant enforcement (only exact `kompaniya_id=eq.N` filter
-  shape is checked) — `frontend/functions/api/sb.ts`.
-- `frontend/src/api/t2-xodim.ts` (old `/api/sb-yoz` member CRUD) — the page is
-  redirected but the client module + its `sb-yoz` `azolik_*` actions remain.
-- actor-namespaced `localStorage` key for the active company.
+`codex/t2-company-context-adversarial-tests` (e3b5649) merged as additive
+harness, file-path assumptions adapted to the relocated `umumiy/kontekst`
+module (assertions unchanged). Both now GREEN and in `hammasi.cjs`:
+- `t2_company_context_adversarial.test.cjs` — **20/20** (baseline 6/14)
+- `t2_functions_typecheck_gate.test.cjs` — **5/5** (baseline 1/2)
+- `frontend/testlar/fixtures/company-context-adversarial-cases.json` — 26 machine-readable API/E2E scenarios (for the post-smoke re-audit)
+
+## Codex audit P1 — done this session / still open
+
+DONE (241bd37):
+- `/api/sb` old-session bypass → **fail closed** for company-scoped `t2_*`
+  (`SESSION_STALE` 401). No valid session predates the feature by now.
+- `/api/sb` `obyekt_id=eq.N` filtered `t2_*` reads → object's `kompaniya_id`
+  verified against membership server-side (one `t2_obyekt` lookup).
+- actor-namespaced `localStorage` (`t2_kompaniya_kontekst {uid,id,global}`).
+- dead `TestXodimlarRollar.tsx` + `api/t2-xodim.ts` removed (`4585271`).
+
+STILL OPEN (needs a full frontend `sbOqi` audit + tests before shipping):
+- `/api/sb` — make a tenant anchor (`kompaniya_id` or `obyekt_id`) MANDATORY
+  for anchor-less company-scoped `t2_*` reads (currently they pass through).
+  `T2_GLOBAL_JADVALLAR` allowlist in `sb.ts` may need widening once every
+  caller is audited.
 - `/admin/system-control` true company-less global view (needs
   `t2_system_control_v1` to accept null `kompaniya_id` for superadmin).
-- `sb.ts` / `kirish.ts` old-session (`foydalanuvchi_id` undefined) enforcement
-  waiver — `kirish.ts` is now fixed for NEW logins; old cookies still bypass
-  `sb.ts` checks until they expire (12h).
+- Real disposable-DB / API tests for the 26-scenario fixture (needs seeded
+  A/B tenants — Codex §11/§P0_NOT_AUTOMATABLE).
