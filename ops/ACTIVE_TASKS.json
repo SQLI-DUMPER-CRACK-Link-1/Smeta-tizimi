@@ -160,6 +160,19 @@
       "depends_on": [],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/architecture/SYSTEM_CONTROL_CENTER_V1.md", "ops/handoff/CTRL-001.md"],
       "production_write_allowed": false
+    },
+    {
+      "id": "T2-GAS-EXIT-001",
+      "title": "Core TIZIM_02 GAS dependency inventory + exit (F2 interactive path)",
+      "owner": "unassigned",
+      "branch": null,
+      "base_sha": null,
+      "status": "planned",
+      "owns": [],
+      "depends_on": ["NREL-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_GAS_EXIT_001.md"],
+      "production_write_allowed": false,
+      "_izoh": "Owner correction 2026-09-02: current core F2 interactive path (canonical /admin/f2 -> F2Import, useF2* hooks, apiT2F2Korish, T2_F2Import.js) still runs through GAS -- an INCOMPLETE migration, not the intended final architecture (Supabase/Postgres=truth, R2=binary truth, Cloudflare=API+deterministic execution, GAS=Drive/Sheets bridge only). Do NOT start this migration inside NREL-001; do NOT build a second weaker matcher -- port the mature f2MoslashEngine (Smeta tizimi/35_F2Moslash.js) into one shared deterministic engine executed behind Cloudflare/Supabase. Full scope + inventory start in ops/handoff/T2_GAS_EXIT_001.md."
     }
   ]
 }

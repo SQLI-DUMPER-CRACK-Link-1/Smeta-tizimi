@@ -37,6 +37,7 @@ import {
 } from '../api/supabase';
 import type { TreeNode } from '../api/types';
 import { useKompaniya } from './KompaniyaTanlov';
+import { applyEngineBinds } from './f2-import-bind';
 
 type ManbaFayl = { fayl_id: string; nom: string; sana: string; oqiladi: boolean };
 
@@ -663,63 +664,33 @@ export default function TestF2Import() {
    * birlik mos kelmasa moslik BEKOR qilinadi va sabab yoziladi.
    * Shuning uchun qaror GASda qabul qilinadi, bu yer faqat OYNA.
    * (Xotira: «og'ir mantiq GAS da, frontend oyna».)
+   *
+   * ⚠️ P0 (2026-09): shu yerda oldin `forceMapBlChildren` bor edi — u
+   * allaqachon bog'langan bl-blok ichidagi qolgan (moslashmagan) bolalarni
+   * FAQAT MASSIV INDEKSI bo'yicha, hech qanday nom/kod/birlik tekshiruvisiz
+   * bog'lardi, va bu `dvigatelniQolla(true)` orqali HAR BIR fayl ochilishida
+   * jimgina ishga tushardi. Ikki bog'liq bo'lmagan resurs faqat bir xil
+   * pozitsiyada turgani uchun bog'lanib qolishi mumkin edi — dalilsiz.
+   * Bu funksiya BUTUNLAY OLIB TASHLANDI. Endi FAQAT dvigatel aniq
+   * `holat==='moslandi'` deb belgilagan qatorlar bog'lanadi
+   * (`applyEngineBinds`, sinovlar: f2-import-bind.test.ts). Dvigatel
+   * moslamagan yoki rad etgan qator BOG'LANMAGAN holicha qoladi — uni
+   * faqat inson qo'lda (drag-and-drop) bog'lay oladi.
    */
-  const forceMapBlChildren = (baseMap: Record<string, number>): Record<string, number> => {
-    if (!korish?.tree || !smetaTree) return baseMap;
-    const nextMap = { ...baseMap };
-    const allBoundSmeta = new Set<number>();
-    Object.values(nextMap).forEach(v => allBoundSmeta.add(v));
-    Object.values(qolBog).forEach(v => allBoundSmeta.add(v));
-
-    const processF2Node = (n: any) => {
-      if (n.type === 'bl' && (nextMap[n.uid] || qolBog[n.uid])) {
-        const smetaId = (nextMap[n.uid] || qolBog[n.uid]) as number;
-        const sn = findSmetaNode(smetaTree, smetaId);
-        if (sn && sn.type === 'bl' && n.children && sn.children) {
-          const unmatchedF2 = n.children.filter((fc: any) => !nextMap[fc.uid] && qolBog[fc.uid] === undefined);
-          const unmatchedSmeta = sn.children.filter((sc: any) => !allBoundSmeta.has(sc.id) && sc.type !== 'rz');
-          
-          unmatchedF2.forEach((fc: any, idx: number) => {
-            if (idx < unmatchedSmeta.length) {
-              const targetId = unmatchedSmeta[idx].id as number;
-              nextMap[fc.uid] = targetId;
-              allBoundSmeta.add(targetId);
-            }
-          });
-        }
-      }
-      if (n.children) n.children.forEach(processF2Node);
-    };
-
-    korish.tree.forEach(processF2Node);
-    return nextMap;
-  };
-
   const dvigatelniQolla = (jim = false) => {
     const mos = korish?.moslash;
     if (!mos || !mos.qatorlar) {
       if (!jim) toast('Moslashtirish natijasi yo\'q — faylni qayta o\'qing', 'warn');
       return 0;
     }
-    const band = new Set<number>(Object.values(qolBog));
-    const yangiBog: Record<string, number> = {};
-    let count = 0;
-
-    for (const q of mos.qatorlar) {
-      if (q.holat !== 'moslandi' || q.qator_id == null || !q.uid) continue;
-      if (qolBog[q.uid] !== undefined) continue;   // odam qo'lda bog'lagan — tegmaymiz
-      if (band.has(q.qator_id)) continue;          // smeta qatori allaqachon band
-      yangiBog[q.uid] = q.qator_id as number;
-      band.add(q.qator_id as number);
-      count++;
-    }
+    const yangiBog = applyEngineBinds(mos.qatorlar, qolBog);
+    const count = Object.keys(yangiBog).length;
 
     if (!count && !jim) {
       toast('Yangi moslik yo\'q — hammasi allaqachon bog\'langan', 'warn');
     }
-    const yakuniyBog = forceMapBlChildren(yangiBog);
     setUndoStack((prev) => [...prev.slice(-29), qolBog]);
-    setQolBog((prev) => ({ ...prev, ...yakuniyBog }));
+    setQolBog((prev) => ({ ...prev, ...yangiBog }));
     if (!jim) {
       const s = mos.stat || {};
       toast(
