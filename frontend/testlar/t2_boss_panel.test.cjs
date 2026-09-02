@@ -35,7 +35,7 @@ must('RPC is service_role only', /revoke all on function public\.t2_boss_dashboa
 console.log('\n── Honest product states, canonical route ──');
 must('no fake numbers: honest "not connected" placeholder', /Ma.?lumot modeli hali ulanmagan/.test(comp));
 must('unconnected domains listed, not faked', /ulanmagan_modullar/.test(comp) && /ulanmagan_modullar/.test(mig));
-must('loading / error / no-company states', /q\.isLoading/.test(comp) && /q\.isError/.test(comp) && /Avval yuqoridan kompaniya tanlang/.test(comp));
+must('loading / error / no-company states', /q\.isLoading/.test(comp) && /q\.isError/.test(comp) && /KompaniyaKerak/.test(comp));
 must('canonical route /admin/dashboard registered', /path="dashboard" element=/.test(app));
 must('/boss index redirects to canonical dashboard', /Route index element=\{<Navigate to="\/admin\/dashboard" replace/.test(app));
 must('admin index redirects to canonical dashboard', /Route index element=\{<Navigate to="\/admin\/dashboard" replace/.test(app));

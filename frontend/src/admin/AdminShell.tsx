@@ -11,7 +11,18 @@ import { tizimdanChiq } from '../umumiy/kontekst/chiqish';
 
 const TIZIM_02_GURUHLAR = [
   {
-    nom: 'Platforma',
+    // GLOBAL — kompaniya tanlash SHART EMAS
+    nom: 'Global',
+    Ikonka: ShieldAlert,
+    id: 'global',
+    menyular: [
+      { yol: '/admin/kompaniya', nom: 'Kompaniya', Ikonka: Building2 },
+      { yol: '/admin/system-control', nom: 'Tizim boshqaruv markazi', Ikonka: ShieldAlert },
+    ]
+  },
+  {
+    // KOMPANIYA KONTEKSTI — tanlangan kompaniyaga tegishli
+    nom: 'Kompaniya ishi',
     Ikonka: LayoutDashboard,
     id: 'asosiy',
     menyular: [
@@ -38,15 +49,12 @@ const TIZIM_02_GURUHLAR = [
     ]
   },
   {
-    nom: 'Tizim',
-    Ikonka: ShieldAlert,
+    nom: 'Sozlama',
+    Ikonka: Settings,
     id: 'tizim',
     menyular: [
-      { yol: '/admin/kompaniya', nom: 'Kompaniya va a\'zolik', Ikonka: Building2 },
       { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
       { yol: '/admin/storage', nom: 'Fayl saqlash (Storage)', Ikonka: HardHat },
-      { yol: '/admin/system-control', nom: 'Tizim boshqaruv markazi', Ikonka: ShieldAlert },
-      { yol: '/admin/test/xodimlar', nom: 'Xodimlar va Rollar', Ikonka: ShieldCheck },
       { yol: '/admin/test/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
     ]
   }

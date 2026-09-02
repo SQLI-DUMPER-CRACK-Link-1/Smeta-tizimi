@@ -75,10 +75,13 @@ const KEY_ID = 't2_active_kompaniya';
 const KEY_GLOBAL = 't2_global_rejim';
 
 function olLS(k: string): string | null { try { return localStorage.getItem(k); } catch { return null; } }
-function yozLS(k: string, v: string | null) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* private mode */ } }
+function yozLS(k: string, v: string | null) {
+  try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); }
+  catch { /* private mode */ }
+}
 
-/** Xom server xatosini foydalanuvchi tiliga o'giradi. */
-export function kompaniyaXatoMatni(e: any): { matn: string; auth: boolean } {
+/** Xom server xatosini foydalanuvchi tiliga o'giradi (ichki). */
+function kompaniyaXatoMatni(e: any): { matn: string; auth: boolean } {
   const code = String(e?.code || '');
   const msg = String(e?.message || e || '');
   if (code === 'AUTH_REQUIRED' || /401|sessiya|kiring/i.test(code + msg)) {

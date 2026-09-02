@@ -12,7 +12,6 @@
 export {
   KompaniyaProvider,
   useKompaniya,
-  kompaniyaXatoMatni,
 } from '../umumiy/kontekst/KompaniyaKontekst';
 
 export type { KompaniyaQisqa } from '../umumiy/kontekst/KompaniyaKontekst';

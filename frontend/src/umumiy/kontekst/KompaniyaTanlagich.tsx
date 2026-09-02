@@ -73,7 +73,7 @@ export function KompaniyaTanlagich() {
       <span className="relative inline-flex items-center">
         <select
           value={joriyQiymat}
-          onChange={(e) => { const v = e.target.value; v === 'global' ? k.globalGa() : k.tanla(Number(v)); }}
+          onChange={(e) => { const v = e.target.value; if (v === 'global') k.globalGa(); else k.tanla(Number(v)); }}
           className="appearance-none bg-[var(--surface-2)] border border-border rounded pl-2 pr-6 py-0.5
                      text-[11px] font-medium text-text outline-none focus:border-accent/50 cursor-pointer"
         >

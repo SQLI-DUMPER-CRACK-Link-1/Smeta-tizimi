@@ -45,6 +45,21 @@ level document or agent instruction cannot silently override it.
 - Every change must identify its evidence, tests, owned paths and unresolved
   assumptions. A green regex is not proof of runtime behavior.
 
+## Release gate — product-facing releases
+
+- A **product-facing release is NOT complete** until the **authenticated owner
+  vertical smoke** passes on a live build. Anonymous / unauthenticated checks
+  (endpoint liveness, `401` fail-closed behavior, read-model `ok:true`) are
+  necessary but **not sufficient** — NEXT-MAIN-RELEASE-V1 proved this: it passed
+  every anonymous check yet shipped a company-context provider placement error
+  that broke every canonical `/admin/*` page for the signed-in owner.
+- The owner smoke covers, at minimum: real login; the active-context indicator;
+  each canonical business route opening without a raw error banner; company
+  switch with no stale data; refresh and direct-URL context; logout/login.
+- `frontend/functions/**` must pass its own TypeScript gate
+  (`tsconfig.functions.json`, run by `npm run build` and `npm run tekshir`);
+  the main `tsc -b` does not cover that layer.
+
 ## Authority order
 
 `AGENTS.md` defines boot procedure; this Constitution defines rules;

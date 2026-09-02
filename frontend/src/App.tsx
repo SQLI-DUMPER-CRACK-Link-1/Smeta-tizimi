@@ -62,7 +62,6 @@ const KompaniyaPage = lazy(() => import('./admin/pages/KompaniyaPage'));
 const DocumentCenterDemo = lazy(() => import('./admin/document-center/DocumentCenterDemo'));
 const ParticipantNetworkDemo = lazy(() => import('./admin/participants/ParticipantNetworkDemo'));
 const SystemControlDemo = lazy(() => import('./admin/system-control/SystemControlDemo'));
-import TestXodimlarRollar from './test02/TestXodimlarRollar';
  import { F2Import } from './admin/sahifalar/F2Import';
 import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
 import { Narxlar } from './admin/sahifalar/Narxlar';
@@ -155,7 +154,9 @@ export default function App() {
             <Route path="crm" element={<WrapperCRM />} />
 
             <Route path="sozlama" element={<TestSozlama />} />
-            <Route path="xodimlar" element={<TestXodimlarRollar />} />
+            {/* IA consolidation (T2-COMPANY-CONTEXT-P0-FIX-001): a'zolar boshqaruvi
+                endi bitta joyda — /admin/kompaniya. Eski manzil yo'naltiriladi. */}
+            <Route path="xodimlar" element={<Navigate to="/admin/kompaniya" replace />} />
             <Route path="loyiha" element={<TestLoyiha />} />
             <Route path="korzinka" element={<TestKorzinka />} />
             <Route path="xarita" element={<TestXarita />} />
