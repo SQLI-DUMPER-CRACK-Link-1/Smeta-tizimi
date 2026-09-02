@@ -1,12 +1,17 @@
 # NEXT-MAIN-RELEASE-V1 — production runbook
 
-Status: **RELEASE_BLOCKED_WITH_EXACT_CONTINUATION.** PRODUCTION: NOT APPLIED. MAIN: NOT PUSHED.
-Blockers (all owner-only): SESSIYA_KALIT confirmation in Cloudflare Production+Preview,
-Cloudflare Pages deploy, authenticated post-deploy smoke tests, real Drive Forma-2/Smeta
-template study for the Sheets projection. All local release gates are green (see §0).
+Status: **RELEASED 2026-09-02 evening.** MAIN: `b6db686` → `9462a36` (`--no-ff`).
+PRODUCTION DB: all NREL-001 migrations applied (prior session; live-catalog verified).
+CLOUDFLARE: deploy `9462a36` = "Deploy successful". SESSIYA_KALIT confirmed set on
+Production (`POST /api/kirish` → 401, not 503). GAS: not deployed (not required —
+`gas.ts` unchanged, no new `fn` calls). Non-destructive anonymous prod smoke green.
+Authenticated deep click-through still owner-only (non-blocking).
+Deferred P1: real Drive Forma-2/Smeta template study + F2 doc-fidelity acceptance A–L;
+GAS replica worker deploy + triggers + Drive backfill pilot; T2-GAS-EXIT-001;
+`SUPABASE_URL` raw-value cleanup in Cloudflare; `tsconfig.functions.json` type gate.
 
-- Current main: `b6db686`
-- Release candidate: `integration/next-main-release-v1 @ 640b6c3` (26 ahead / 0 behind main, pushed)
+- Final main: `9462a361fb249da36aab8141428cc95c17e8a0d6`
+- Merged from: `integration/next-main-release-v1 @ 3af5afa` (temp `kirish-diag.ts` removed)
 - Supabase project: `tuoyrzadkgoltpqkdiyx`
 - Frontend: Cloudflare Pages `smeta-tizimi.pages.dev` (git-integration auto-build on `main`)
 - GAS: script `1fcGIysm…`; 20 versioned deployments + 1 HEAD

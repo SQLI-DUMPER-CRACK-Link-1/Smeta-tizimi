@@ -77,8 +77,8 @@
       "base_sha": "b6db686329a4f3c7e5f49aca24d2872695e81402",
       "base_ref": "origin/main",
       "branch": "integration/next-main-release-v1",
-      "head": "2a7e5f1",
-      "status": "release_blocked_with_exact_continuation",
+      "head": "9462a36",
+      "status": "released",
       "owns": [
         "supabase/migrations/20260903120000_t2_boss_dashboard_read_model_v1.sql",
         "supabase/migrations/20260904120000_t2_capability_registry_v1.sql",
@@ -120,7 +120,7 @@
       "depends_on": ["STOR-001", "FILE-TRUTH-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/releases/NEXT_MAIN_RELEASE_V1.md", "ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md"],
       "production_write_allowed": false,
-      "_izoh": "RELEASE_BLOCKED_WITH_EXACT_CONTINUATION — 2026-09-02 evening checkpoint, see ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md (rewritten, full detail). DONE this session (head=2a7e5f1): Codex document-fidelity-release-v1 + pre-main-release-qa-v1 merged; F2 positional-mapping P0 fixed (forceMapBlChildren removed, applyEngineBinds); R2_CANONICAL binding added to wrangler.toml (owner created private bucket); 7 pending Supabase migrations (20260902-20260908) applied to prod, acceptance-verified, 2 additive constraint-vocab hotfixes found+closed; Preview GAS_TOKEN mismatch diagnosed+closed (owner fixed the Cloudflare value, no token rotated); Preview PGRST125 (SUPABASE_URL already containing /rest/v1) diagnosed+closed in code (supabaseBaseUrl() normalizer, 15 files) — Cloudflare's SUPABASE_URL value is still technically wrong but code now tolerates it. All local gates green (tsc -b, build, vitest 112/112, lint, tekshir 107 checks, governance-check). NOT DONE (blocked): the owner-only authenticated Preview click-through smoke (login + Loyihalar/Obyektlar/Fakt/Mind Map/AOSR/F2 all load) was requested before an owner shutdown and had not been confirmed when the session ended — get that confirmation first. Temp diagnostic endpoint frontend/functions/api/kirish-diag.ts MUST be removed before main. Main/production untouched (main=b6db686)."
+      "_izoh": "RELEASED 2026-09-02 evening. main b6db686 -> 9462a36 (--no-ff merge of integration @ 3af5afa). Cloudflare Pages deploy 9462a36 = 'Deploy successful'. Prior session (head 2a7e5f1) had already applied ALL NREL-001 Supabase migrations to prod (SMETA/F2/NAKOPITELNIY + FILE-TRUTH + boss-dashboard + capability-registry + company-onboarding + document-registry-read + replica-move + sheets-writeback + constraint-vocab hotfixes) — verified via live catalog this session (list_migrations + pg_proc + to_regclass, all present; t2_kirish_royxatga_ol = ok_no_autojoin). This session: removed temp kirish-diag.ts (3af5afa), re-ran all gates green (git diff --check, tsc -b, npm run build, vitest 112/112, lint 0 errors, tekshir all pass, governance-check 9 tasks, regression oracle BUG_FOUND=0), verified Codex document-fidelity-release-v1 (bc4248e) + pre-main-release-qa-v1 (4125ef6) already merged, merged integration -> main, pushed, watched deploy success. Non-destructive prod smoke: POST /api/kirish junk -> 401 (SESSIYA_KALIT confirmed set on Production, NOT 503); all /api/* endpoints 401 AUTH_REQUIRED (fail-closed, no 5xx); kirish-diag route removed (200 SPA fallback); prod RPCs t2_workbench_v1/t2_nakopitelniy_v1/t2_obyekt_yakunlash_v1/t2_smeta_ozgarish_royxat_v1/t2_boss_dashboard_v1/t2_system_control_v1/t2_men_v1 all ok:true. GAS NOT deployed (not required — gas.ts unchanged, no new fn calls). STILL OWNER-ONLY / NON-BLOCKING: authenticated deep click-through (login -> dashboard -> upload PDF -> download). DEFERRED P1: T2-GAS-EXIT-001, GAS replica worker deploy + triggers + Drive backfill pilot, real Drive Forma-2/Smeta template study + F2 doc-fidelity acceptance A-L, SUPABASE_URL raw-value cleanup, tsconfig.functions.json gate."
     },
     {
       "id": "CTRL-001B",
