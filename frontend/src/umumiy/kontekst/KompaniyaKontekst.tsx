@@ -71,12 +71,23 @@ const BOSH: Holat = {
 const Kontekst = createContext<Holat>(BOSH);
 export const useKompaniya = () => useContext(Kontekst);
 
-const KEY_ID = 't2_active_kompaniya';
-const KEY_GLOBAL = 't2_global_rejim';
+/* Kontekst tanlovi ACTOR-ga bog'langan holda saqlanadi (Codex audit P1):
+ * bir brauzerni bo'lishgan ikki foydalanuvchi bir-birining tanlovini
+ * ko'rmasin. Bitta JSON kalit: { uid, id, global }. */
+const KEY = 't2_kompaniya_kontekst';
+type Saqlangan = { uid: number; id: number | null; global: boolean };
 
-function olLS(k: string): string | null { try { return localStorage.getItem(k); } catch { return null; } }
-function yozLS(k: string, v: string | null) {
-  try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); }
+function olSaqlangan(): Saqlangan | null {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (p && typeof p.uid === 'number') return { uid: p.uid, id: typeof p.id === 'number' ? p.id : null, global: !!p.global };
+  } catch { /* ignore */ }
+  return null;
+}
+function yozSaqlangan(s: Saqlangan | null) {
+  try { if (s == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, JSON.stringify(s)); }
   catch { /* private mode */ }
 }
 
@@ -105,10 +116,8 @@ export function KompaniyaProvider({ children }: { children: ReactNode }) {
   const [yuklanmoqda, setYuk] = useState(true);
   const [xato, setXato] = useState('');
   const [authXato, setAuthXato] = useState(false);
-  const [joriyId, setJoriyId] = useState<number | null>(() => {
-    const n = Number(olLS(KEY_ID) || 0); return Number.isFinite(n) && n > 0 ? n : null;
-  });
-  const [globalRejim, setGlobalRejim] = useState<boolean>(() => olLS(KEY_GLOBAL) === '1');
+  const [joriyId, setJoriyId] = useState<number | null>(null);
+  const [globalRejim, setGlobalRejim] = useState<boolean>(false);
 
   const load = useCallback(() => {
     setYuk(true); setXato(''); setAuthXato(false);
@@ -117,6 +126,11 @@ export function KompaniyaProvider({ children }: { children: ReactNode }) {
       .catch((e: any) => { const x = kompaniyaXatoMatni(e); setXato(x.matn); setAuthXato(x.auth); setYuk(false); });
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  const uid = men?.foydalanuvchi?.id ?? null;
+  const yoz = useCallback((id: number | null, global: boolean) => {
+    if (uid != null) yozSaqlangan({ uid, id, global });
+  }, [uid]);
 
   const kompaniyalar = useMemo<KompaniyaQisqa[]>(
     () => (men?.azoliklar ?? [])
@@ -129,21 +143,21 @@ export function KompaniyaProvider({ children }: { children: ReactNode }) {
     [men],
   );
 
-  /* Saqlangan tanlovni a'zoliklar bilan solishtirish (bir marta, men kelgach). */
+  /* men kelgach: SHU actor uchun saqlangan tanlovni tiklash + a'zoliklar
+   * bilan solishtirish (bir marta). Boshqa actor tanlovi (uid mos kelmasa)
+   * e'tiborga olinmaydi. */
   useEffect(() => {
     if (!men) return;
-    const valid = kompaniyalar.find((k) => k.id === joriyId);
-    if (globalRejim && superadmin) return;                // global rejim saqlanadi
-    if (valid) return;                                    // to'g'ri tanlov saqlanadi
-    if (kompaniyalar.length === 1) {                      // yagona a'zolik — avtomatik
-      setJoriyId(kompaniyalar[0].id); yozLS(KEY_ID, String(kompaniyalar[0].id));
-      return;
-    }
-    if (kompaniyalar.length === 0 && superadmin) {        // superadmin, a'zolik yo'q -> global
-      setGlobalRejim(true); yozLS(KEY_GLOBAL, '1');
-      return;
-    }
-    if (joriyId != null) { setJoriyId(null); yozLS(KEY_ID, null); } // ko'p kompaniya, tanlov yo'q
+    const s = olSaqlangan();
+    const wantId = s && s.uid === men.foydalanuvchi.id ? s.id : null;
+    const wantGlobal = !!(s && s.uid === men.foydalanuvchi.id && s.global);
+
+    if (wantGlobal && superadmin) { setGlobalRejim(true); yoz(null, true); return; }
+    const valid = kompaniyalar.find((k) => k.id === wantId);
+    if (valid) { setJoriyId(valid.id); setGlobalRejim(false); yoz(valid.id, false); return; }
+    if (kompaniyalar.length === 1) { setJoriyId(kompaniyalar[0].id); setGlobalRejim(false); yoz(kompaniyalar[0].id, false); return; }
+    if (kompaniyalar.length === 0 && superadmin) { setGlobalRejim(true); yoz(null, true); return; }
+    setJoriyId(null); setGlobalRejim(false); yoz(null, false); // ko'p kompaniya, tanlov yo'q -> selector
   }, [men]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const joriy = useMemo(
@@ -154,15 +168,15 @@ export function KompaniyaProvider({ children }: { children: ReactNode }) {
   const tanla = useCallback((id: number) => {
     if (!kompaniyalar.some((k) => k.id === id)) return;
     setJoriyId(id); setGlobalRejim(false);
-    yozLS(KEY_ID, String(id)); yozLS(KEY_GLOBAL, '0');
+    yoz(id, false);
     qc.clear();                                           // eski kompaniya keshini o'chirish
-  }, [kompaniyalar, qc]);
+  }, [kompaniyalar, qc, yoz]);
 
   const globalGa = useCallback(() => {
     if (!superadmin) return;
-    setGlobalRejim(true); yozLS(KEY_GLOBAL, '1');
+    setGlobalRejim(true); setJoriyId(null); yoz(null, true);
     qc.clear();
-  }, [superadmin, qc]);
+  }, [superadmin, qc, yoz]);
 
   const qiymat: Holat = {
     kompaniyalar, joriy, joriyId: joriy?.id ?? null, tanla,

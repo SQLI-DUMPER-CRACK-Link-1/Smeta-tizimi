@@ -34,11 +34,12 @@ must('kontekst BARCHA-kompaniya sbT2KompaniyalarOl ni ISHLATMAYDI', !/sbT2Kompan
 must('kompaniyalar ro\'yxati faqat azoliklar dan quriladi', /men\?\.azoliklar/.test(kontekst));
 must('superadmin faqat FAOL azolik roli superadmin bo\'lsa', /a\.rol === 'superadmin'/.test(kontekst));
 
-console.log('\n── P0-3: kontekst holati (persist / switch / logout / revoke) ──');
-must('joriy tanlov localStorage da (t2_active_kompaniya)', /t2_active_kompaniya/.test(kontekst));
+console.log('\n── P0-3: kontekst holati (persist / switch / logout / revoke / actor-namespace) ──');
+must('joriy tanlov actor-namespaced localStorage da (uid bilan)', /t2_kompaniya_kontekst/.test(kontekst) && /uid: p\.uid|typeof p\.uid === 'number'/.test(kontekst));
+must('boshqa actor tanlovi (uid mos kelmasa) e\'tiborga olinmaydi', /s\.uid === men\.foydalanuvchi\.id/.test(kontekst));
 must('kompaniya almashilganda react-query keshi tozalanadi', /qc\.clear\(\)/.test(kontekst));
-must('saqlangan tanlov azoliklar bilan solishtiriladi (revoke -> tozalanadi)', /const valid = kompaniyalar\.find/.test(kontekst));
-must('logout kontekstni tozalaydi (chiqish.ts)', /t2_active_kompaniya/.test(chiqish) && /t2_global_rejim/.test(chiqish) && /removeItem/.test(chiqish));
+must('saqlangan tanlov azoliklar bilan solishtiriladi (revoke -> tozalanadi)', /const valid = kompaniyalar\.find\(\(k\) => k\.id === wantId\)/.test(kontekst));
+must('logout kontekstni tozalaydi (chiqish.ts)', /t2_kompaniya_kontekst/.test(chiqish) && /removeItem/.test(chiqish));
 must('AdminShell va BossShell YAGONA tizimdanChiq ni ishlatadi', /tizimdanChiq/.test(adminShell) && /tizimdanChiq/.test(bossShell));
 
 console.log('\n── P0-4: route scope klassifikatsiyasi ──');
