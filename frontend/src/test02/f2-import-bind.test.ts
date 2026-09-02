@@ -58,3 +58,63 @@ describe('F2 import binding — P0: no positional auto-mapping', () => {
     expect(result).toEqual({ 'f2-a': 30 });
   });
 });
+
+// Named cases from the Codex final-release audit (checked against a
+// pre-fix SHA, 9c943e4 — the fix above already lands at 2450ece; these
+// cases are added for direct 1:1 traceability against that audit report).
+describe('F2 import binding — audit cases (Cement/Armatura swap etc.)', () => {
+  it('CASE 1: two unmatched children with SWAPPED counterpart order never bind positionally', () => {
+    // F2 unmatched children: [Cement, Armatura]; Smeta unmatched children in
+    // the opposite order: [Armatura, Cement]. The old forceMapBlChildren
+    // would have paired index 0<->0 (Cement<->Armatura) and 1<->1
+    // (Armatura<->Cement) — both wrong. The engine did not match either.
+    const qatorlar: MoslashQator[] = [
+      { uid: 'f2-cement', qator_id: null, holat: 'nomos' },
+      { uid: 'f2-armatura', qator_id: null, holat: 'nomos' },
+    ];
+    const result = applyEngineBinds(qatorlar, {});
+    expect(result).toEqual({});
+  });
+
+  it('CASE 2: same child count, completely different names/codes/units — no binding', () => {
+    const qatorlar: MoslashQator[] = [
+      { uid: 'f2-cement-500kg', qator_id: null, holat: 'nomos' },
+      { uid: 'f2-armatura-a500-12mm', qator_id: null, holat: 'nomos' },
+    ];
+    const result = applyEngineBinds(qatorlar, {});
+    expect(result).toEqual({});
+  });
+
+  it('CASE 3: reordering the input between calls does not change canonical mappings (keyed by uid, not position)', () => {
+    const forward: MoslashQator[] = [
+      { uid: 'f2-cement', qator_id: 71, holat: 'moslandi' },
+      { uid: 'f2-armatura', qator_id: 72, holat: 'moslandi' },
+    ];
+    const reversed: MoslashQator[] = [...forward].reverse();
+    expect(applyEngineBinds(forward, {})).toEqual(applyEngineBinds(reversed, {}));
+    expect(applyEngineBinds(reversed, {})).toEqual({ 'f2-cement': 71, 'f2-armatura': 72 });
+  });
+
+  it('CASE 4: silent initial load creates zero positional bindings (only engine matches)', () => {
+    const qatorlar: MoslashQator[] = [
+      { uid: 'f2-matched', qator_id: 90, holat: 'moslandi' },
+      { uid: 'f2-cement', qator_id: null, holat: 'nomos' },
+      { uid: 'f2-armatura', qator_id: null, holat: 'nomos' },
+    ];
+    // jim=true (silent load) and jim=false use the identical code path —
+    // there is no separate "silent" branch that supplements with positional
+    // guesses, so a single call is sufficient to prove this.
+    const result = applyEngineBinds(qatorlar, {});
+    expect(result).toEqual({ 'f2-matched': 90 });
+  });
+
+  it('CASE 5: an explicit manual user mapping (stable uid -> qator_id) remains valid and is never touched', () => {
+    const manual = { 'f2-cement': 55 };
+    const qatorlar: MoslashQator[] = [
+      { uid: 'f2-cement', qator_id: 999, holat: 'moslandi' }, // engine now also thinks it knows better
+      { uid: 'f2-armatura', qator_id: 56, holat: 'moslandi' },
+    ];
+    const result = applyEngineBinds(qatorlar, manual);
+    expect(result).toEqual({ 'f2-armatura': 56 }); // cement's manual bind is left alone, not overridden
+  });
+});

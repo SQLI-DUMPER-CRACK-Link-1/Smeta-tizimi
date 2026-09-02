@@ -101,6 +101,125 @@ via `dvigatelniQolla(true)`. Removed entirely; binding now flows only through
 iff the deterministic engine marked it `holat==='moslandi'`. Regression tests:
 `frontend/src/test02/f2-import-bind.test.ts`.
 
+## Owner P0 escalation (2026-09-02, same day as inventory above)
+
+The owner reviewed this document and escalated: for real projects with
+**50,000-row estimates and hours of manual F2 work**, a GAS 6-minute timeout
+must never lose or restart that work — this makes full GAS independence for
+the F2 core path a **release-blocking P0**, not deferred debt. The owner then
+separately agreed (see decision below) to decouple NREL-001 (unrelated to the
+F2/GAS execution path) from this work rather than block it. The detailed
+requirements below are the owner's own words, kept verbatim/near-verbatim so
+no requirement gets lost between sessions — do not start coding against this
+without first re-reading [[f2lab-deploysiz-sinov-stendi]] and testing every
+matcher change in the F2 LAB sandbox first, per that memory's own rule.
+
+**Decision (2026-09-02): NREL-001 ships independently.** It does not touch or
+worsen the F2/GAS execution path, so it was not held back for this work. This
+document is the standalone scope for the dedicated follow-up effort.
+
+### 1. Architecture law (restated, non-negotiable)
+- Supabase/Postgres = canonical business truth **+ durable jobs/drafts/checkpoints**.
+- Cloudflare = API + deterministic execution.
+- R2 = canonical file bytes.
+- GAS = ONLY Google Drive / Google Sheets asynchronous replica bridge.
+- No core interactive TIZIM_02 workflow may require GAS.
+
+### 2. Inventory targets (do this exhaustively before writing code)
+Audit every active TIZIM_02 route/hook, especially: `/admin/f2`, `F2Import`,
+`TestF2Import`, `useF2*`, `apiT2F2Korish`, `apiT2F2Import`, `apiF2FaylOqi`,
+`apiF2VaraklarOl`, `f2MoslashEngine`, `apiHolatOl*`, `apiF2LokalkaTaklif`, T2
+smeta/F2 writes, long-running recalculation flows. Classify each as:
+**A. CORE — must migrate now**, **B. REPLICA BRIDGE — GAS may remain**,
+**C. LEGACY TIZIM_01 — not part of TIZIM_02 runtime**. "Data lives in
+Supabase" is not the same claim as "execution is independent of GAS" — check
+execution, not just storage.
+
+### 3. Port the mature F2 engine — do not rewrite it weaker
+Preserve every one of these TIZIM_01 matching semantics when porting
+`f2MoslashEngine` (`Smeta tizimi/35_F2Moslash.js`) into one shared
+deterministic TypeScript engine (pure domain logic, usable by both Cloudflare
+and tests — no second independent matcher, ever):
+unit shield · code canonicalization · grade/dimension distinction ·
+razdel/group scope · ambiguity rejection · orphan handling · no invented
+match · no invented price · unmatched-reason diagnostics. TIZIM_02 must stop
+calling GAS to execute this engine.
+
+### 4. F2 file parsing must exit GAS
+Port the useful behavior of `apiF2FaylOqi` (workbook/sheet detection,
+supported-template detection, column detection, newline/header
+normalization, F/E quantity rules, total/header row filtering, safe XLSX
+value reads — see [[xlsx-ref-faqat-qiymat]], explicit ambiguous-column
+configuration) into TIZIM_02. Canonical upload path becomes
+**Browser → Cloudflare → R2**; no base64 whole-file upload through GAS.
+
+### 5. 50k-row resumable job model (do NOT solve with one huge sync request)
+Durable Supabase job state, minimum fields: `job_id`, company/project/object,
+`operation_id`, `source_document_id`, `status`, `cursor`/chunk,
+`total_rows`, `processed_rows`, `matched_rows`, `unmatched_rows`,
+`started_at`, `updated_at`, `last_error`, `base_version`. Processing must be
+bounded, checkpointed, retryable, idempotent, resumable — a failure at row
+32,000 resumes near the checkpoint, never restarts from row 1. No GAS
+6-minute dependency; no Cloudflare giant-single-request dependency either.
+
+### 6. User work must be durable
+Manual F2 matching/corrections are real business work — never rely on
+`localStorage` alone. Persist working draft/mapping state into Supabase with
+stable IDs, `base_version`, `operation_id`, optimistic locking, incremental
+autosave. After a page refresh, PC restart, browser crash, network loss, or a
+failed worker step, the user must recover the same draft. `localStorage` may
+remain only as a secondary convenience cache.
+
+### 7. Positional auto-mapping (already fixed in NREL-001, restated here as the standing rule)
+`forceMapBlChildren`'s `unmatchedF2[index] -> unmatchedSmeta[index]` binding
+without deterministic evidence is permanently disallowed, including on silent
+initial load. Only a deterministic-matcher result or explicit manual user
+binding may bind a row; see `frontend/src/test02/f2-import-bind.ts` +
+`.test.ts` for the current enforcement and regression coverage — any future
+engine port must preserve this contract, not reintroduce a positional
+fallback.
+
+### 8. F2 financial invariants (already law project-wide, restated for this task)
+`certified amount = certified quantity × certified unit price`. Keep
+baseline/reference price, certified F2 price, actual procurement price, and
+approved change price strictly separate (see
+`docs/architecture/SMETA_F2_NAKOPITELNIY_CHANGE_CONTROL_V1.md`, already
+shipped in NREL-001). Historical approved F2 stays frozen. No invented price,
+ever. No pending/rejected change may enter an approved cumulative.
+
+### 9. Performance
+Test realistic datasets at 10k and 50k rows; measure parse / normalize /
+match / projection / validation separately. No O(n²) matcher step (see
+[[f2-daraxt-tezlik-qoidalari]] for the prior 8-cause slowness table on this
+exact codebase). Interactive UI must never block on Drive/Sheets/GAS.
+
+### 10. Legacy TIZIM_01
+Do not delete it — it stays as reference/archive/regression oracle. Behavior
+may be ported; the runtime dependency must disappear from TIZIM_02.
+
+### 11. Where GAS may still remain
+Drive secondary replica, Sheets secondary replica, managed rename/move/
+content detection, replica sync worker — all asynchronous. A GAS outage may
+degrade Drive/Sheets sync; canonical TIZIM_02 must stay healthy regardless.
+
+### 12. Release acceptance for THIS task (when it ships)
+Prove: disabling/making GAS unavailable does NOT break TIZIM_02 F2 import,
+F2 matching, Smeta canonical read, F2 draft recovery, F2 finalization,
+Workbench, or Nakopitelniy — a GAS outage affects only replica sync. A 50k
+test completes or resumes safely. Manual mappings survive a simulated
+refresh/restart. The positional-mapping regression test fails closed.
+`BUG_FOUND=0`.
+
+### 13. Agent coordination
+Codex may act as an independent auditor/test owner where useful, but the two
+agents must not independently modify the same engine implementation at the
+same time — Claude remains release/integration owner for this task same as
+NREL-001.
+
+### 14. Final success shape for this task
+Not "SOURCE_READY". The bar is **`T2_CORE_GAS_INDEPENDENT`**, reported
+alongside (or ahead of) any subsequent main/production release it unblocks.
+
 ## Suggested next task shape (for whoever picks this up)
 
 - New branch, e.g. `claude/t2-gas-exit-001` or `codex/t2-gas-exit-001`.
