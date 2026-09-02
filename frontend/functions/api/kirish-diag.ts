@@ -1,4 +1,5 @@
 import { kalitTashxis } from '../_shared/auth';
+import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 /**
  * VAQTINCHALIK diagnostika endpoint — 2026-09-02 Preview login smoke
@@ -30,7 +31,10 @@ export const onRequestGet: PagesFunction<{
   // printing SUPABASE_URL/SUPABASE_KEY.
   if (ctx.env.SUPABASE_URL && ctx.env.SUPABASE_KEY) {
     try {
-      const sUrl = ctx.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/t2_kompaniya?select=id&limit=1';
+      // Uses the SAME normalizer real endpoints (sb.ts, kirish.ts, etc.) now
+      // use — this proves whether the code-level fix actually works against
+      // live config, not just the raw (unfixed) shape.
+      const sUrl = supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/t2_kompaniya?select=id&limit=1';
       const sr = await fetch(sUrl, {
         headers: { apikey: ctx.env.SUPABASE_KEY, Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY },
       });
