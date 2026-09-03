@@ -10,15 +10,19 @@
  * uchalasining o'z kodi teginilmagan holda qoladi.
  */
 import { useState } from 'react';
-import { Upload, TrendingUp, FileInput } from 'lucide-react';
+import { Upload, TrendingUp, FileInput, ShieldAlert } from 'lucide-react';
 import TestImport from './TestImport';
 import TestF2 from './TestF2';
 import TestF2Import from './TestF2Import';
+import TestNarxNazorati from './TestNarxNazorati';
 
 const ICHKI_TAB = [
   { kalit: 'yuklash', nom: 'Smeta yuklash', Ikonka: Upload, Komponent: TestImport },
   { kalit: 'f2fakt',  nom: 'F2 / Fakt',     Ikonka: TrendingUp, Komponent: TestF2 },
   { kalit: 'import',  nom: 'F2 import',     Ikonka: FileInput, Komponent: TestF2Import },
+  /* T2-REAL-PARK-LRV-VERTICAL-SLICE-004: real Price Control panel, wired
+     to t2_price_control_v1 (source-only, not yet applied) via /api/sb. */
+  { kalit: 'narx',    nom: 'Narx nazorati', Ikonka: ShieldAlert, Komponent: TestNarxNazorati },
 ] as const;
 
 export default function TestSmetaBirlashgan() {

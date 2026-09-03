@@ -162,7 +162,7 @@ export const onRequestPost: PagesFunction<{
     const so = await ctx.request.json<{
       jadval?: string; filtr?: string; ustunlar?: string;
       tartib?: string; limit?: number;
-      soro?: string; obyekt_id?: number; kompaniya_id?: number;
+      soro?: string; obyekt_id?: number; kompaniya_id?: number; akt_id?: number;
     }>();
 
     /* ══════════ O'QISH-RPC (AI konteksti) ══════════════════════════════
@@ -177,7 +177,7 @@ export const onRequestPost: PagesFunction<{
      *
      * Rol: `boss`/`rahbar` ham CHAQIRA OLADI — bu faqat o'qish. */
     if (so.soro) {
-      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya'> = {
+      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya' | 'obyekt_actor' | 'akt_actor'> = {
         ai_kontekst: 'obyekt',
         ai_umumiy: 'kompaniya',
         /* ⚡ 2026-08-28: mindmap butun grafni (tugunlar + bog'lanishlar)
@@ -185,6 +185,12 @@ export const onRequestPost: PagesFunction<{
         mindmap_grafi: 'kompaniya',
         mindmap_grafi_v2: 'kompaniya',
         hodisa_obyekt_lenta: 'obyekt_kompaniya',
+        /* T2-REAL-PARK-LRV-VERTICAL-SLICE-004: Price Control + exact-F2
+           read models. p_actor_id ALWAYS from the verified session --
+           the RPC itself checks company membership (t2_actor_kompaniya_azo_tekshir),
+           it is never client-supplied. */
+        price_control_v1: 'obyekt_actor',
+        f2_exact_qatorlar_v1: 'akt_actor',
       };
       const tur = OQISH_RPC[so.soro];
       if (!tur) {
@@ -202,12 +208,25 @@ export const onRequestPost: PagesFunction<{
        * cheklovni endi POSTGRESNING O'ZI majburlaydi — yozuvchi funksiya
        * bu yerga qo'shilsa, u GET da umuman ishlamaydi. */
       const q = new URLSearchParams();
-      if (tur === 'obyekt' || tur === 'obyekt_kompaniya') {
+      if (tur === 'obyekt' || tur === 'obyekt_kompaniya' || tur === 'obyekt_actor') {
         const id = Number(so.obyekt_id);
         if (!Number.isFinite(id) || id <= 0) {
           return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
         }
         q.set('p_obyekt_id', String(id));
+      }
+      if (tur === 'akt_actor') {
+        const id = Number(so.akt_id);
+        if (!Number.isFinite(id) || id <= 0) {
+          return Response.json({ ok: false, error: 'akt_id noto\'g\'ri' });
+        }
+        q.set('p_akt_id', String(id));
+      }
+      if (tur === 'obyekt_actor' || tur === 'akt_actor') {
+        if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
+          return Response.json({ ok: false, error: 'Sessiyada foydalanuvchi yo\'q' }, { status: 401 });
+        }
+        q.set('p_actor_id', String(sess.foydalanuvchi_id));
       }
       if (tur === 'kompaniya' || tur === 'obyekt_kompaniya') {
         const kid = so.kompaniya_id == null ? null : Number(so.kompaniya_id);

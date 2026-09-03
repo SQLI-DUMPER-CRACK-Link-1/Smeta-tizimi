@@ -28,6 +28,15 @@ const AMALLAR = {
   qator_tahrir:   { rpc: 't2_qator_tahrir' },
   qator_qosh:     { rpc: 't2_qator_qosh' },
   akt_yarat:      { rpc: 't2_akt_yarat' },
+  /* T2-REAL-PARK-LRV-VERTICAL-SLICE-004: exact-source F2 write path.
+     No smeta-price fallback exists anywhere in t2_akt_yarat_v2 -- a
+     missing certified_unit_price/certified_amount REJECTS the batch
+     (MISSING_CERTIFIED_PRICE/MISSING_CERTIFIED_AMOUNT) instead of
+     silently substituting the smeta price like legacy akt_yarat can.
+     Legacy akt_yarat above is UNCHANGED -- GAS (Smeta tizimi/
+     T2_F2Import.js) still uses it directly, not through this gateway. */
+  akt_yarat_v2:   { rpc: 't2_akt_yarat_v2' },
+  price_basis_yarat: { rpc: 't2_price_basis_yarat_v1' },
   akt_tasdiqlash: { rpc: 't2_akt_tasdiqlash' },
   akt_bekor:      { rpc: 't2_akt_bekor' },
   narx_belgila:   { rpc: 't2_narx_belgila' },
@@ -309,6 +318,81 @@ export const onRequestPost: PagesFunction<{
         p_manba: 'frontend',
         p_kim: sess.email || '',
         p_majburiy: majburiy,
+      };
+
+    /* ══════════ F2 YARATISH — EXACT SOURCE (v2) ══════════
+     * T2-REAL-PARK-LRV-VERTICAL-SLICE-004. Har qator certified_quantity
+     * MAJBURIY; certified_unit_price/certified_amount ham MAJBURIY,
+     * FAQAT price_intentionally_absent=true bo'lsa bo'sh qoldirish
+     * mumkin. Bu yerda smeta narxiga HECH QANDAY fallback yo'q -- narx
+     * bo'lmasa DB darajasida MISSING_CERTIFIED_PRICE bilan butun partiya
+     * rad etiladi. */
+    } else if (amal === 'akt_yarat_v2') {
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(so.oy || ''))) {
+        return Response.json({ ok: false, error: 'oy YYYY-MM-DD ko\'rinishida bo\'lishi kerak' });
+      }
+      if (!Array.isArray(so.qatorlar) || so.qatorlar.length === 0) {
+        return Response.json({ ok: false, error: 'Hujjatda bironta qator yo\'q' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false, error: 'operation_id (UUID) majburiy' });
+      }
+      const v2Qatorlar = so.qatorlar.map((q: any) => ({
+        qator_id: Number(q.qator_id),
+        certified_quantity: q.certified_quantity,
+        certified_unit_price: q.price_intentionally_absent === true ? null : q.certified_unit_price,
+        certified_amount: q.price_intentionally_absent === true ? null : q.certified_amount,
+        price_intentionally_absent: q.price_intentionally_absent === true,
+        certified_source_hash: q.certified_source_hash ? String(q.certified_source_hash).slice(0, 200) : null,
+        raw_snapshot: q.raw_snapshot ?? null,
+        izoh: q.izoh ? String(q.izoh).slice(0, 500) : null,
+      }));
+      if (v2Qatorlar.some((q: any) => !Number.isFinite(q.qator_id) || q.qator_id <= 0)) {
+        return Response.json({ ok: false, error: 'Ba\'zi qatorlarda qator_id noto\'g\'ri' });
+      }
+      yuk = {
+        p_obyekt_id: obyektId,
+        p_oy: so.oy,
+        p_qatorlar: v2Qatorlar,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_raqam: so.raqam ? String(so.raqam).slice(0, 100) : null,
+        p_operation_id: so.operation_id,
+        p_manba: 'frontend_v2',
+      };
+
+    /* ══════════ NARX BASIS (Протокол согласования цены va h.k.) ══════════ */
+    } else if (amal === 'price_basis_yarat') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      if (!Array.isArray(sess.kompaniyalar) || !sess.kompaniyalar.some((a) => a.kompaniya_id === kompaniyaId)) {
+        return Response.json({ ok: false, error: 'Bu kompaniyaga a\'zo emassiz' }, { status: 403 });
+      }
+      const BASIS_TURLAR = ['PRICE_AGREEMENT_PROTOCOL', 'APPROVED_CHANGE', 'ADDITIONAL_AGREEMENT', 'OTHER_APPROVED_PRICE_BASIS'];
+      if (!BASIS_TURLAR.includes(String(so.basis_type))) {
+        return Response.json({ ok: false, error: 'basis_type noto\'g\'ri' });
+      }
+      if (!Array.isArray(so.lines) || so.lines.length === 0) {
+        return Response.json({ ok: false, error: 'Bironta qator ko\'rsatilmagan' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false, error: 'operation_id (UUID) majburiy' });
+      }
+      yuk = {
+        p_actor_id: sess.foydalanuvchi_id,
+        p_kompaniya_id: kompaniyaId,
+        p_basis_type: so.basis_type,
+        p_lines: so.lines.map((l: any) => ({
+          qator_id: Number(l.qator_id), approved_price: l.approved_price,
+          valid_from: l.valid_from || null, valid_to: l.valid_to || null,
+        })),
+        p_document_id: so.document_id ? Number(so.document_id) : null,
+        p_operation_id: so.operation_id,
       };
 
     /* ══════════ SMETAGA QATOR QO'SHISH ══════════ */

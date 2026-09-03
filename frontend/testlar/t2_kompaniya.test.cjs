@@ -67,7 +67,12 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       't2_kompaniya_yangila',
                       't2_material_alias_yoz', 't2_material_alias_ochir',
                       't2_mindmap_bog_v2', 't2_mindmap_bog_ochir_v2',
-                      't2_mindmap_joylashuv_saqla_v2', 't2_mindmap_tugun_ochir_v2'].sort();
+                      't2_mindmap_joylashuv_saqla_v2', 't2_mindmap_tugun_ochir_v2',
+                      /* 2026-09-03, T2-REAL-PARK-LRV-VERTICAL-SLICE-004 (Claude):
+                         exact-source F2 write path (no smeta-price fallback --
+                         see t2_akt_yarat_v2's own migration) + price-basis
+                         (protocol/change/agreement) recording. */
+                      't2_akt_yarat_v2', 't2_price_basis_yarat_v1'].sort();
     T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));
