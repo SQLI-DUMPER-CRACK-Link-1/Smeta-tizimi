@@ -5,8 +5,8 @@ Context-survival record. If a session ends, resume from here.
 ## Exact position
 
 - Branch: `fix/company-context-p0`
-- **HEAD (local == origin): `2472686`** (verified via `git ls-remote`)
-- **HEAD: `241bd37`** (later than the `574e246` referenced below in older sections)
+- **HEAD (local == origin): `e14993f`** (verified via `git ls-remote`)
+- Recent: `e14993f` rollback round-trip note · `fbaa03b` handoff · `241bd37` Codex oracle + sb.ts tenant gaps
 - Base: `origin/main @ b54f686` (NEXT-MAIN-RELEASE-V1 shipped state). NOT merged.
 - Preview (stable alias, reusable for every push to this branch):
   **`https://fix-company-context-p0.smeta-tizimi.pages.dev`**
