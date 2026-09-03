@@ -109,6 +109,14 @@ function _t2KozguPapka(){
  */
 function apiT2VaraqYarat(obyekt){
   var t0 = Date.now();
+  /* ⚡ T2-REAL-PARK-LRV-CLOSURE-005 (Section 17): o'zgarish-navbatini
+     YOPISH chegarasi shu YERDA, MA'LUMOT O'QISHDAN OLDIN qayd etiladi.
+     Eski kod navbatni FUNKSIYA OXIRIDA, "hozir false bo'lgan HAMMASI"
+     deb yopardi -- agar shu ikki nuqta orasida (katta obyektda bir necha
+     soniya) YANGI o'zgarish kirsa, u HECH QACHON varaqqa yozilmagan
+     holda "yozildi" deb belgilanardi (jim ma'lumot yo'qolishi). Endi
+     faqat SHU chegaradan OLDINGI (haqiqatan o'qilgan) qatorlar yopiladi. */
+  var _syncChegara = new Date().toISOString();
   try{
     var ob = _t2ObyektOl(obyekt);
     if(!ob) return {ok:false, xabar:'Obyekt bazada topilmadi: ' + obyekt};
@@ -645,8 +653,9 @@ function apiT2VaraqYarat(obyekt){
       holat: 'sinxron', xato: null
     }], false, 'obyekt_id');
 
-    /* Ko'prik navbati yopiladi — bu o'zgarishlar endi varaqda bor */
-    _t2KopriknavbatYop(ob.id);
+    /* Ko'prik navbati yopiladi — FAQAT o'qish boshlanishidan OLDINGI
+       o'zgarishlar (yuqoridagi _syncChegara). */
+    _t2KopriknavbatYop(ob.id, _syncChegara);
 
     /* AVTOMATIK SINXRON: varaq tahrirlanganda o'zi bazaga yozsin.
        Natija ochiq qaytariladi — o'rnatilmagan bo'lsa panel buni
@@ -687,18 +696,78 @@ function apiT2VaraqYarat(obyekt){
   }
 }
 
-/** Ko'zguga yetkazilgan o'zgarishlarni navbatdan chiqaradi. */
-function _t2KopriknavbatYop(obyektId){
+/**
+ * Ko'zguga yetkazilgan o'zgarishlarni navbatdan chiqaradi.
+ *
+ * T2-REAL-PARK-LRV-CLOSURE-005 (Section 17) tuzatishlari, mavjud
+ * sxemadan tashqariga chiqmasdan (yangi jadval kerak emas -- shu
+ * sabab GAS DEPLOY qilinmasa ham, migratsiya kutmasdan ishlaydi):
+ *
+ *   1. BLANKET → CHEGARALI: eski kod "hozir false bo'lgan HAMMASI"ni
+ *      yopardi (race condition -- yuqoriga, apiT2VaraqYarat'ga qara).
+ *      Endi FAQAT `vaqt <= chegaraVaqt` (o'qish boshlanishidan oldingi)
+ *      qatorlar yopiladi -- `t2_ozgarish.vaqt` mavjud ustun.
+ *   2. BO'SH catch(e){} → HAQIQIY xato ko'rinadi: Logger.log +
+ *      PropertiesService'da DURABLE "oxirgi xato" belgisi (keyingi
+ *      ishga tushirish buni o'qib RETRY/ALERT qilishi mumkin -- avval
+ *      xato izsiz yo'qolardi).
+ *   3. Muvaffaqiyat holida shu belgi TOZALANADI -- "hali ham stuck"
+ *      holatini "vaqtinchalik muammo, o'zi tuzaldi"dan ajratish uchun.
+ *
+ * Hali YO'Q (keyingi bosqich, yangi jadval talab qiladi -- source-only
+ * `20260920140000_t2_lrv_sync_envelope_v1.sql`da tayyor): to'liq
+ * event_id/operation_id/entity_version/projection_hash konvert,
+ * dead-letter jadvali, conflict holati. Bu funksiya ularsiz ham eng
+ * jiddiy ikkita nuqson (blanket + jim yutish)ni yopadi.
+ */
+function _t2KopriknavbatYop(obyektId, chegaraVaqt){
+  var xatoKaliti = 'T2_KOPRIK_XATO_' + obyektId;
   try{
     var c = _t2Cfg();
-    UrlFetchApp.fetch(c.url + '/rest/v1/t2_ozgarish?obyekt_id=eq.' + obyektId +
-                      '&kozguga_yozildi=is.false', {
+    var filtr = 'obyekt_id=eq.' + obyektId + '&kozguga_yozildi=is.false';
+    if(chegaraVaqt) filtr += '&vaqt=lte.' + encodeURIComponent(chegaraVaqt);
+    var r = UrlFetchApp.fetch(c.url + '/rest/v1/t2_ozgarish?' + filtr, {
       method: 'patch',
       headers: _t2Bosh(c, {'Prefer':'return=minimal'}),
       payload: JSON.stringify({kozguga_yozildi: true}),
       muteHttpExceptions: true
     });
-  }catch(e){}
+    var kod = r.getResponseCode();
+    if(kod >= 300){
+      var matn = 'HTTP ' + kod + ': ' + r.getContentText().slice(0, 300);
+      Logger.log('_t2KopriknavbatYop(' + obyektId + '): ' + matn);
+      try{ PropertiesService.getScriptProperties().setProperty(xatoKaliti,
+        JSON.stringify({vaqt: new Date().toISOString(), xato: matn})); }catch(eP){}
+      return {ok:false, xabar:matn};
+    }
+    /* Muvaffaqiyat -- oldingi "stuck" belgisi bo'lsa tozalanadi. */
+    try{ PropertiesService.getScriptProperties().deleteProperty(xatoKaliti); }catch(eP2){}
+    return {ok:true};
+  }catch(e){
+    var xabar = String((e && e.message) || e);
+    Logger.log('_t2KopriknavbatYop(' + obyektId + '): ' + xabar);
+    try{ PropertiesService.getScriptProperties().setProperty(xatoKaliti,
+      JSON.stringify({vaqt: new Date().toISOString(), xato: xabar})); }catch(eP3){}
+    return {ok:false, xabar:xabar};
+  }
+}
+
+/**
+ * Barcha obyektlarda "stuck" (oxirgi urinish xato bilan tugagan)
+ * ko'prik-navbat holatini qaytaradi -- monitoring/panel uchun.
+ * Avval bu ma'lumot UMUMAN yo'q edi (xato jim yutilardi).
+ */
+function apiT2KoprikXatolarOl(){
+  var props = PropertiesService.getScriptProperties().getProperties();
+  var natija = [];
+  for(var kalit in props){
+    if(kalit.indexOf('T2_KOPRIK_XATO_') !== 0) continue;
+    try{
+      var v = JSON.parse(props[kalit]);
+      natija.push({obyekt_id: kalit.replace('T2_KOPRIK_XATO_', ''), vaqt: v.vaqt, xato: v.xato});
+    }catch(eJ){}
+  }
+  return {ok:true, xatolar: natija};
 }
 
 
@@ -1117,6 +1186,7 @@ function t2VaraqSinxFon(){
      yiqitmaydi (u asosiy ish, tirgak esa qulaylik). */
   try{ t2KozguTriggerOrnat(); }catch(eKT){}
 
+  var retryKaliti = 'T2_SINX_RETRY_' + ssId;
   try{
     var qay = _t2Get('t2_kozgu?fayl_id=eq.' + encodeURIComponent(ssId) + '&select=obyekt_id');
     if(!qay.length){ Logger.log('t2VaraqSinxFon: varaq bazada qayd etilmagan'); return; }
@@ -1126,7 +1196,28 @@ function t2VaraqSinxFon(){
     var n = apiT2VaraqQaytar(ob[0].nom);
     Logger.log('T2 avto-sinx «' + ob[0].nom + '»: yozildi=' + (n && n.ozgardi) +
                ' ziddiyat=' + (n && n.ziddiyat ? n.ziddiyat.length : 0));
-  }catch(e){ Logger.log('t2VaraqSinxFon: ' + e); }
+    try{ p.deleteProperty(retryKaliti); }catch(eR){}
+  }catch(e){
+    /* ⚡ T2-REAL-PARK-LRV-CLOSURE-005 (Section 17): avval bu yerda
+       "Logger.log va tamom" edi -- xato IZSIZ yo'qolardi, keyingi
+       urinish faqat YANGI onEdit bo'lsagina bo'lardi. Endi: DURABLE
+       retry-count (PropertiesService, exec'lar orasida saqlanadi) +
+       cheklangan (3 marta) avtomatik qayta rejalashtirish. */
+    var xabar = String((e && e.message) || e);
+    Logger.log('t2VaraqSinxFon: ' + xabar);
+    var son = 0;
+    try{ son = Number(p.getProperty(retryKaliti) || '0'); }catch(eG){}
+    if(son < 3){
+      try{
+        p.setProperty(retryKaliti, String(son + 1));
+        p.setProperty(T2_SINX_KUTMOQDA, ssId);
+        _t2SinxRejalashtir();
+      }catch(eS){}
+    }else{
+      Logger.log('t2VaraqSinxFon: 3 marta urinildi, hali ham xato -- qo\'lda «Bazaga qaytarish» kerak: ' + ssId);
+      try{ p.deleteProperty(retryKaliti); }catch(eD){}
+    }
+  }
 }
 
 /**

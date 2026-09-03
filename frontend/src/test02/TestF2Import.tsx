@@ -30,6 +30,7 @@ import {
   sbT2DaraxtOl, sbT2QatorHolatOl,
   sbT2TreeQur,
   sbT2AktYarat,
+  sbT2AktYaratV2,
   sbT2QatorQosh,
   yangiOperationId,
   type T2Obyekt,
@@ -1336,29 +1337,39 @@ export default function TestF2Import() {
   const farq = aktJami - boglanganJami;
   const constOk = Math.abs(farq) < 0.01;
 
-  // Final document save/create RPC calling sbT2AktYarat
+  // Final document save/create RPC. F2 -> exact-source v2 (certified_*,
+  // T2-REAL-PARK-LRV-CLOSURE-005). Fakt -> legacy v1 unchanged (draft,
+  // "certified" semantics don't apply per the LRV Control law).
   const yozish = async () => {
     if (!korish?.obyekt_id) return;
-    
-    // Compile bindings
-    const map = new Map<number, { qator_id: number; hajm: number; narx?: number }>();
+
+    // Compile bindings — hajm VA summa har ikkalasi ham F2 faylning O'ZIDAN
+    // (n.summa — Excel'ning H/СУММА ustuni, `_cellNum` bilan alohida
+    // o'qilgan, `apiF2FaylOqi`da "TAYYOR summa (statik ko'chiriladi)"
+    // deb izohlangan — hajm*narx dan HECH QACHON hosil qilinmaydi).
+    const map = new Map<number, { qator_id: number; hajm: number; narx?: number; summa: number; summaBor: boolean }>();
     aktBarglar.forEach((n) => {
       const smetaId = getSmetaId(n.uid);
       if (smetaId) {
         const h = Number(n.hajm) || 0;
+        const s = Number(n.summa) || 0;
         const existing = map.get(smetaId);
         if (existing) {
           existing.hajm += h;
+          existing.summa += s;
+          if (s) existing.summaBor = true;
         } else {
           map.set(smetaId, {
             qator_id: smetaId,
             hajm: h,
-            narx: n.narx > 0 ? n.narx : undefined
+            narx: n.narx > 0 ? n.narx : undefined,
+            summa: s,
+            summaBor: !!s,
           });
         }
       }
     });
-    
+
     const rows = Array.from(map.values());
     if (!rows.length) { toast('Bironta bog\'langan qator mavjud emas', 'warn'); return; }
 
@@ -1377,17 +1388,46 @@ export default function TestF2Import() {
     // Agar hammasi bog'langan bo'lsa — narx bir xil manbadan (F2 summa)
     // bo'lgani uchun farq 0 bo'ladi, constOk tekshiruvi shart emas.
 
+    // F2 (certified) uchun: narxi bor-yu summasi yo'q qatorlar — AMBIGUOUS.
+    // qty*narx bilan summa TO'QILMAYDI (Section 3, NEEDS_REVIEW qoidasi) —
+    // buning o'rniga foydalanuvchiga ochiq aytiladi, yozish TO'XTATILADI.
+    if (tur === 'f2') {
+      const noaniq = rows.filter((r) => r.narx != null && !r.summaBor);
+      if (noaniq.length > 0) {
+        toast(
+          `${noaniq.length} ta qatorda narx bor, lekin F2 faylning o'z summasi (SUMMA ustuni) yo'q — ` +
+          `summa qty×narx dan TO'QILMAYDI. Faylni tekshiring yoki shu qatorlarni qo'lda ko'rib chiqing.`,
+          'danger', undefined, 15000,
+        );
+        return;
+      }
+    }
+
     setYozilmoqda(true); setNatija(null);
     try {
-      const r = await sbT2AktYarat({
-        obyektId: korish.obyekt_id,
-        tur,
-        oy: oy + '-01',
-        qatorlar: rows,
-        operationId: opId,
-        raqam: raqam.trim() || undefined,
-        majburiy: majburiy
-      });
+      const r = tur === 'f2'
+        ? await sbT2AktYaratV2({
+            obyektId: korish.obyekt_id,
+            oy: oy + '-01',
+            qatorlar: rows.map((row) => ({
+              qatorId: row.qator_id,
+              certifiedQuantity: row.hajm,
+              certifiedUnitPrice: row.narx,
+              certifiedAmount: row.summaBor ? row.summa : undefined,
+              priceIntentionallyAbsent: row.narx == null,
+            })),
+            operationId: opId,
+            raqam: raqam.trim() || undefined,
+          })
+        : await sbT2AktYarat({
+            obyektId: korish.obyekt_id,
+            tur,
+            oy: oy + '-01',
+            qatorlar: rows,
+            operationId: opId,
+            raqam: raqam.trim() || undefined,
+            majburiy: majburiy
+          });
       setNatija(r);
       if (r.ok) {
         toast(r.takror ? 'Hujjat allaqachon yaratilgan' : 'Hujjat muvaffaqiyatli yaratildi', 'ok');

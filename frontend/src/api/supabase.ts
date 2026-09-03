@@ -556,6 +556,45 @@ export function sbT2AktYarat(p: {
 }
 
 /**
+ * T2-REAL-PARK-LRV-CLOSURE-005: F2 hujjatini EXACT SOURCE bilan yaratadi
+ * (`t2_akt_yarat_v2`). FAQAT F2 uchun (`fakt` — draft, "certified" emas,
+ * eski `sbT2AktYarat`da qoladi).
+ *
+ * Har qatorda `certified_quantity` MAJBURIY; `certified_unit_price` VA
+ * `certified_amount` — F2 HUJJATINING O'ZIDAN (masalan Excel'ning
+ * H/СУММА ustuni), HECH QACHON `hajm*narx`dan hisoblanmaydi. Narx
+ * hujjatda yo'q bo'lsa — `priceIntentionallyAbsent: true` (`narx_yoq`
+ * o'rnini bosadi); aks holda backend `MISSING_CERTIFIED_PRICE`/
+ * `MISSING_CERTIFIED_AMOUNT` bilan BUTUN partiyani rad etadi — smeta
+ * narxiga jim qaytish YO'Q.
+ */
+export function sbT2AktYaratV2(p: {
+  obyektId: number; oy: string;
+  qatorlar: Array<{
+    qatorId: number; certifiedQuantity: number;
+    certifiedUnitPrice?: number; certifiedAmount?: number;
+    priceIntentionallyAbsent?: boolean;
+    certifiedSourceHash?: string; rawSnapshot?: unknown; izoh?: string;
+  }>;
+  operationId: string; raqam?: string;
+}): Promise<AktNatija> {
+  return yozAmali({
+    amal: 'akt_yarat_v2', obyekt_id: p.obyektId, oy: p.oy,
+    qatorlar: p.qatorlar.map((q) => ({
+      qator_id: q.qatorId,
+      certified_quantity: q.certifiedQuantity,
+      certified_unit_price: q.certifiedUnitPrice,
+      certified_amount: q.certifiedAmount,
+      price_intentionally_absent: q.priceIntentionallyAbsent === true,
+      certified_source_hash: q.certifiedSourceHash,
+      raw_snapshot: q.rawSnapshot,
+      izoh: q.izoh,
+    })),
+    operation_id: p.operationId, raqam: p.raqam,
+  });
+}
+
+/**
  * Smetaga yangi qator qo'shadi (`t2_qator_qosh`).
  *
  * Tizim_01 dagi `apiRzQosh` / `apiBlQosh` / `apiRsQosh` ning o'rnini

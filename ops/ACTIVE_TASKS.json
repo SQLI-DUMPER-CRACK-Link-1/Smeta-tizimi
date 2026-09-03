@@ -226,7 +226,7 @@
       "branch": "integration/next-main-release-v1",
       "base_sha": "c52ba4f",
       "base_ref": "origin/main",
-      "status": "real_park_vertical_slice_partial",
+      "status": "closure_005_frontend_v2_plus_bridge_source_fix_isolated_db_blocked",
       "owns": [
         "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md",
         "ops/handoff/T2_CONSTRUCTION_CATALOG_001.md",

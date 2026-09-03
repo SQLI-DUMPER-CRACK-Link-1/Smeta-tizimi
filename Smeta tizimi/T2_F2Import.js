@@ -315,11 +315,11 @@ function _t2F2Moslashtir(obyektId, aktTree){
     if(m){
       moslandi++;
       qatorlar.push({holat:'moslandi', uid: h.uid, nom: h.nom, birlik: h.birlik,
-                     hajm: h.hajm, narx: h.narx, qator_id: m.row});
+                     hajm: h.hajm, narx: h.narx, summa: h.summa, qator_id: m.row});
     }else{
       topilmadi++;
       qatorlar.push({holat:'topilmadi', uid: h.uid, nom: h.nom, birlik: h.birlik,
-                     hajm: h.hajm, narx: h.narx, qator_id: null,
+                     hajm: h.hajm, narx: h.narx, summa: h.summa, qator_id: null,
                      /* Dvigatel NEGA topmaganini aytadi — jim qoldirmaymiz */
                      sabab: (r.sabablar && r.sabablar[h.uid]) || ''});
     }
@@ -358,6 +358,14 @@ function _t2F2Tekisla(daraxt){
              tushadi (`narx_yoq`) — smetadan TO'LDIRILMAYDI.
              0 ham yozilmaydi: 0 «bepul» degani, bo'sh esa «noma'lum». */
           narx: (Number(tugun.narx) > 0) ? Number(tugun.narx) : undefined,
+          /* ⚡ T2-REAL-PARK-LRV-CLOSURE-005: SUMMA HAM faylning o'zidan —
+             `apiF2FaylOqi` (30_Panel.js) H/СУММА ustunini alohida o'qiydi
+             ("TAYYOR summa, statik ko'chiriladi"), lekin bu funksiya avval
+             uni TASHLAB YUBORARDI, faqat hajm+narx forward qilardi — ya'ni
+             `t2_akt_yarat`ning GENERATED summa (hajm*narx) ustuniga
+             tayanardi, hujjatning HAQIQIY summasiga emas. Endi
+             saqlanadi va apiT2F2Import orqali t2_akt_yarat_v2ga boradi. */
+          summa: (Number(tugun.summa) > 0) ? Number(tugun.summa) : undefined,
           kod: tugun.kod || undefined,
           ota_kod: otaKod || undefined,
           ota_nom: otaNom || undefined
@@ -373,6 +381,32 @@ function _t2F2Tekisla(daraxt){
 
   for(var r = 0; r < (daraxt || []).length; r++) yur(daraxt[r], null, null);
   return chiqish;
+}
+
+/**
+ * T2-REAL-PARK-LRV-CLOSURE-005: `t2_akt_yarat_v2` uchun actor_id
+ * (bigint) kerak — `t2_akt_yarat` (legacy)ga farqli o'laroq, u
+ * `t2_actor_kompaniya_azo_tekshir` bilan HAQIQIY vakolatni tekshiradi.
+ * GAS session Google email beradi — shuni `t2_foydalanuvchi.email`
+ * bilan moslaymiz. Topilmasa YOZILMAYDI (fail-closed), sinab ko'rilgan
+ * `Session.getActiveUser()` naqshi (30_Panel.js) bilan bir xil.
+ */
+function _t2ActorIdOl(){
+  var email = '';
+  try{ email = Session.getActiveUser().getEmail(); }catch(e){}
+  if(!email){
+    return {ok:false, xabar:'GAS session email aniqlanmadi -- actor_id kerak (t2_akt_yarat_v2 authorization uchun)'};
+  }
+  var qatorlar;
+  try{
+    qatorlar = _t2Get('t2_foydalanuvchi?email=eq.' + encodeURIComponent(email) + '&holat=eq.faol&select=id&limit=1');
+  }catch(e){
+    return {ok:false, xabar:'Foydalanuvchi qidirishda xato: ' + String((e && e.message) || e)};
+  }
+  if(!qatorlar || !qatorlar.length){
+    return {ok:false, xabar:'«' + email + '» uchun faol t2_foydalanuvchi topilmadi -- avval tizimga to\'g\'ri kirganingizni tekshiring'};
+  }
+  return {ok:true, actorId: qatorlar[0].id};
 }
 
 /**
@@ -455,37 +489,98 @@ function apiT2F2Import(obyektNom, faylId, varaq, oy, tur, raqam, operationId, co
               moslash: mos};
     }
 
-    /* Faqat MOSLANGAN qatorlar hujjatga. Topilmaganlar tashlanmaydi —
-       javobda to'liq qaytadi va ekranda ko'rsatiladi. */
-    var yuk = [], narxsiz = 0;
+    /* ⚡ T2-REAL-PARK-LRV-CLOSURE-005: F2 (tur='f2') endi EXACT-SOURCE
+       t2_akt_yarat_v2 orqali yoziladi — hujjatning o'z SUMMASI (endi
+       _t2F2Tekisla/_t2F2Moslashtir orqali saqlanadi, yuqoriga qarang)
+       certified_amount sifatida boradi, hajm*narxdan HECH QACHON
+       hisoblanmaydi. FAKT (tur='fakt') — o'zgarishsiz, legacy
+       t2_akt_yarat (fakt "certified" tushunchasiga kirmaydi — draft). */
+    if(tur === 'fakt'){
+      var yukFakt = [], narxsizFakt = 0;
+      for(var fi = 0; fi < mos.qatorlar.length; fi++){
+        var qf = mos.qatorlar[fi];
+        if(qf.holat !== 'moslandi') continue;
+        var qatorF = {qator_id: qf.qator_id, hajm: qf.hajm};
+        if(qf.narx != null){ qatorF.narx = qf.narx; }
+        else { qatorF.narx_yoq = true; narxsizFakt++; }
+        yukFakt.push(qatorF);
+      }
+      var aktFakt = _t2Rpc('t2_akt_yarat', {
+        p_obyekt_id: ob.id, p_tur: 'fakt', p_oy: oy, p_qatorlar: yukFakt,
+        p_raqam: raqam || null, p_operation_id: operationId,
+        p_manba: 'import', p_kim: null
+      });
+      var hujjatgaFakt = (aktFakt && aktFakt.ok) ? (Number(aktFakt.qator_soni) || 0) : 0;
+      return {ok: !!(aktFakt && aktFakt.ok), obyekt: obyektNom,
+              fayl_qator: mos.kirgan, akt: aktFakt, moslash: mos,
+              kafolat: {kirgan: mos.kirgan, hujjatga_kirdi: hujjatgaFakt,
+                        topilmadi: mos.topilmadi,
+                        togri: mos.kirgan === hujjatgaFakt + mos.topilmadi},
+              narxsiz: narxsizFakt, ms: Date.now() - t0};
+    }
+
+    /* Aggregatsiya qator_id bo'yicha — t2_akt_yarat_v2 bitta partiyada
+       BIR XIL qator_id ni ikki marta ko'rsa DUPLICATE_F2_SOURCE_LINE
+       bilan rad etadi (legacy yo'l esa buni jim qabul qilardi). Bir
+       nechta F2 manba qatori bitta smeta qatoriga bog'langan bo'lsa,
+       hajm VA summa QO'SHILADI (F2 faylning o'zidan), narx birinchi
+       topilgan qiymatdan olinadi. */
+    var guruh = {}, tartib = [], narxsiz = 0;
     for(var i = 0; i < mos.qatorlar.length; i++){
       var q = mos.qatorlar[i];
       if(q.holat !== 'moslandi') continue;
-      var qator = {qator_id: q.qator_id, hajm: q.hajm};
-      if(q.narx != null){
-        qator.narx = q.narx;
-      }else{
-        /* ⚠️ NARX O'ZIDAN TO'QILMAYDI.
-           `t2_akt_yarat` odatda narx berilmasa SMETA narxini oladi —
-           qo'lda akt yasashda to'g'ri. Lekin bu hujjat TASHQI: unda
-           narx yo'q bo'lsa, smetadan olish hujjatda YO'Q raqamni
-           yozish bo'lardi. `narx_yoq` shu fallbackni o'chiradi:
-           narx NULL, summa NULL, hujjat «JAMI TO'LIQ EMAS». */
-        qator.narx_yoq = true;
-        narxsiz++;
+      var kalit = String(q.qator_id);
+      if(!guruh[kalit]){
+        guruh[kalit] = {qator_id: q.qator_id, hajm: 0, narx: undefined, summa: 0, summaBor: false};
+        tartib.push(kalit);
       }
-      yuk.push(qator);
+      var g = guruh[kalit];
+      g.hajm += Number(q.hajm) || 0;
+      if(g.narx == null && q.narx != null) g.narx = q.narx;
+      if(q.summa != null){ g.summa += Number(q.summa) || 0; g.summaBor = true; }
     }
 
-    var akt = _t2Rpc('t2_akt_yarat', {
+    /* Narxi bor-yu summasi yo'q qator — AMBIGUOUS (Section 3,
+       NEEDS_REVIEW). qty*narx bilan TO'QILMAYDI — hujjat rad etiladi,
+       odam faylni tekshirsin. */
+    var noaniq = [];
+    for(var ti = 0; ti < tartib.length; ti++){
+      var gg = guruh[tartib[ti]];
+      if(gg.narx != null && !gg.summaBor) noaniq.push(gg.qator_id);
+    }
+    if(noaniq.length){
+      return {ok:false, xabar:'NEEDS_REVIEW: ' + noaniq.length + ' ta qatorda narx bor, ' +
+                              'lekin faylning o\'z summasi (SUMMA ustuni) yo\'q -- qty*narx ' +
+                              'bilan summa to\'qilmaydi. Faylni tekshiring.',
+              qatorlar: noaniq, moslash: mos, ms: Date.now() - t0};
+    }
+
+    var actorRes = _t2ActorIdOl();
+    if(!actorRes.ok){
+      return {ok:false, xabar: actorRes.xabar, moslash: mos, ms: Date.now() - t0};
+    }
+
+    var yukV2 = [];
+    for(var ti2 = 0; ti2 < tartib.length; ti2++){
+      var g2 = guruh[tartib[ti2]];
+      if(g2.narx == null){ narxsiz++; }
+      yukV2.push({
+        qator_id: g2.qator_id,
+        certified_quantity: g2.hajm,
+        certified_unit_price: g2.narx,
+        certified_amount: g2.summaBor ? g2.summa : null,
+        price_intentionally_absent: g2.narx == null
+      });
+    }
+
+    var akt = _t2Rpc('t2_akt_yarat_v2', {
       p_obyekt_id: ob.id,
-      p_tur: (tur === 'fakt') ? 'fakt' : 'f2',
       p_oy: oy,
-      p_qatorlar: yuk,
+      p_qatorlar: yukV2,
+      p_actor_id: actorRes.actorId,
       p_raqam: raqam || null,
       p_operation_id: operationId,
-      p_manba: 'import',
-      p_kim: null
+      p_manba: 'import_v2'
     });
 
     var hujjatga = (akt && akt.ok) ? (Number(akt.qator_soni) || 0) : 0;
