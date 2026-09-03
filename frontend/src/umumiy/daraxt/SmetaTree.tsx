@@ -4,7 +4,7 @@ import type { TreeNode } from '../../api/types';
 import { flattenTree, getAllKeys } from './utils';
 import { FmtN } from '../../lib/format';
 import { Badge } from '../ui/Badge';
-import { ChevronRight, ChevronDown, RefreshCcw, Plus } from 'lucide-react';
+import { ChevronRight, ChevronDown, RefreshCcw, Plus, Search, X, Layers, Package, Pickaxe, Box } from 'lucide-react';
 
 interface SmetaTreeProps {
   data: TreeNode[];
@@ -15,11 +15,23 @@ interface SmetaTreeProps {
   onNodeDrop?: (source: TreeNode, target?: TreeNode) => void;
 }
 
+function TreeTypeIcon({ type }: { type: TreeNode['type'] }) {
+  if (type === 'rz') return <Layers size={14} aria-hidden="true" />;
+  if (type === 'mat') return <Package size={14} aria-hidden="true" />;
+  if (type === 'ob') return <Box size={14} aria-hidden="true" />;
+  return <Pickaxe size={14} aria-hidden="true" />;
+}
+
 export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
   const [qidiruv, setQidiruv] = useState('');
+  const [density, setDensity] = useState<'compact' | 'comfort'>(() =>
+    localStorage.getItem('t2-smeta-tree-density') === 'comfort' ? 'comfort' : 'compact');
+  const [preset, setPreset] = useState<'ASOSIY' | 'F2' | 'NARX' | 'TOLIQ'>('ASOSIY');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'f2' | 'qosh' | 'zamena' | 'bl' | 'mat'>('all');
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
 
   /* ⚠️ 2026-08-17 (audit): «Qidiruv…» maydoni hech narsaga ULANMAGAN edi —
@@ -30,21 +42,26 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
      bolalari ham qoladi. */
   const filtrlangan = useMemo(() => {
     const s = qidiruv.trim().toLowerCase();
-    if (!s) return data;
     const mos = (n: TreeNode) =>
-      String(n.nom || '').toLowerCase().includes(s) ||
+      !s || String(n.nom || '').toLowerCase().includes(s) ||
       String((n as any).kod || '').toLowerCase().includes(s);
+    const tezMos = (n: TreeNode) => quickFilter === 'all'
+      || (quickFilter === 'f2' && Number(n.f2mum) > 0)
+      || (quickFilter === 'qosh' && !!n.isQosh)
+      || (quickFilter === 'zamena' && !!n.isZamena)
+      || (quickFilter === 'bl' && n.type === 'bl')
+      || (quickFilter === 'mat' && n.type === 'mat');
     const suz = (nodes: TreeNode[]): TreeNode[] => {
       const chiq: TreeNode[] = [];
       for (const n of nodes) {
         const bolalar = n.children ? suz(n.children) : [];
-        if (mos(n)) chiq.push(n);            // o'zi mos — butun shoxi bilan
+        if (mos(n) && tezMos(n)) chiq.push(n); // o'zi mos — butun shoxi bilan
         else if (bolalar.length) chiq.push({ ...n, children: bolalar });
       }
       return chiq;
     };
-    return suz(data);
-  }, [data, qidiruv]);
+    return quickFilter === 'all' && !s ? data : suz(data);
+  }, [data, qidiruv, quickFilter]);
 
   /* Qidiruvda hamma shox ochiq bo'lishi kerak, aks holda mos kelgan
      ichkaridagi qator ko'rinmay qoladi. */
@@ -65,7 +82,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
       const row = flatNodes[idx];
       const key = `${row.node.varaq}#${row.node.row}`;
       if (expandedDetailId === key) return 250;
-      return 36;
+      return density === 'compact' ? 34 : 44;
     },
     overscan: 20,
   });
@@ -82,19 +99,28 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   };
 
   const collapseAll = () => setExpandedMap({});
+  const changeDensity = (next: 'compact' | 'comfort') => {
+    setDensity(next); localStorage.setItem('t2-smeta-tree-density', next);
+  };
+  const showMoney = preset === 'TOLIQ' || preset === 'NARX';
+  const selected = flatNodes.find((row) => `${row.node.varaq}#${row.node.row}` === selectedKey);
 
   return (
-    <div className="flex flex-col h-full bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
-      <div className="h-14 border-b border-border bg-surface-2/50 flex items-center px-4 justify-between sticky top-0 z-10 flex-shrink-0">
+    <div className={`relative flex flex-col h-full bg-surface border border-border rounded-xl shadow-sm overflow-hidden ${density === 'compact' ? 'text-xs' : 'text-sm'}`}>
+      <div className="border-b border-border bg-surface-2/50 px-4 py-2 sticky top-0 z-30 flex-shrink-0">
         <div className="flex items-center gap-2">
+          <div className="relative">
+          <Search size={14} className="absolute left-2 top-2 text-text-mute" />
           <input
             type="text"
             value={qidiruv}
             onChange={(e) => setQidiruv(e.target.value)}
             placeholder="Qidiruv..."
             aria-label="Daraxtdan qidirish"
-            className="bg-bg border border-border rounded-md px-3 py-1.5 text-sm w-64 focus:outline-none focus:border-accent"
+            className="bg-bg border border-border rounded-md pl-7 pr-7 py-1.5 text-sm w-64 focus:outline-none focus:border-accent"
           />
+          {qidiruv && <button onClick={() => setQidiruv('')} className="absolute right-2 top-2 text-text-mute"><X size={14}/></button>}
+          </div>
           {!!qidiruv.trim() && (
             <span className="text-[11px] text-text-mute whitespace-nowrap">
               {flatNodes.length} qator
@@ -104,12 +130,23 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
           )}
         </div>
         <div className="flex items-center gap-2">
+          <select value={preset} onChange={(e) => setPreset(e.target.value as any)} className="px-2 py-1.5 bg-surface border border-border rounded-md" aria-label="Ustun preset">
+            <option value="ASOSIY">Asosiy</option><option value="F2">F2</option><option value="NARX">Narx nazorati</option><option value="TOLIQ">To'liq</option>
+          </select>
+          <button onClick={() => changeDensity(density === 'compact' ? 'comfort' : 'compact')} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">{density === 'compact' ? 'Comfort' : 'Compact'}</button>
           <button onClick={expandAll} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">Hammasini yoyish</button>
           <button onClick={collapseAll} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">Yig'ish</button>
         </div>
+        <div className="mt-2 flex gap-1 overflow-x-auto">
+          {([['all','Hammasi'],['f2','F2 olish mumkin'],['qosh','Qo\'shimcha'],['zamena','Zamena'],['bl','Faqat BL'],['mat','Materiallar']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>)}
+          <span className="px-2 py-1 text-[11px] text-text-mute">Muzlagan / Xavf / Protokolsiz — ma'lumot kutilmoqda</span>
+        </div>
       </div>
 
-      <div className="h-8 border-b border-white/5 bg-black/40 flex items-center px-4 sticky top-14 z-10 flex-shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider backdrop-blur-md">
+      <div className="min-w-[930px] h-5 border-b border-white/5 bg-black/40 flex items-center px-4 sticky top-[76px] z-20 flex-shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="flex-1 sticky left-0 z-20 bg-black/40">ISH</div><div className="w-20 text-center">SMETA</div><div className="w-24 text-center">FAKT</div><div className="w-24 text-center">F2</div><div className="w-24 text-center">NAZORAT</div><div className="w-20 text-center">HOLAT</div>{showMoney && <div className="w-[390px] text-center">QIYMATLAR</div>}
+      </div>
+      <div className="min-w-[930px] h-8 border-b border-white/5 bg-black/40 flex items-center px-4 sticky top-[96px] z-20 flex-shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider backdrop-blur-md">
         <div className="flex-1">Nom / Birlik</div>
         <div className="flex items-center h-full pr-4 flex-shrink-0 gap-4">
           <div className="w-20 text-right text-blue-400/70" title="Smeta Hajm">Sm. Vol</div>
@@ -117,14 +154,15 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
           <div className="w-24 text-right text-purple-400/70" title="Jami F2 Hajm">F2 Vol</div>
           <div className="w-24 text-right text-cyan-400/70" title="F2 Olish Mumkin (Fakt - F2)">F2 Mum.</div>
           <div className="w-20 text-right text-amber-400/70" title="Qoldiq Hajm">Qoldiq</div>
+          <div className="w-20 text-left text-text-mute" title="Narx nazorati holati">Holat</div>
           
-          <div className="w-4 border-r border-white/10 h-full mx-2"></div>
+          {showMoney && <div className="w-4 border-r border-white/10 h-full mx-2"></div>}
           
-          <div className="w-24 text-right text-blue-400" title="Smeta Summa">Sm. Sum</div>
+          {showMoney && <><div className="w-24 text-right text-blue-400" title="Smeta Summa">Sm. Sum</div>
           <div className="w-24 text-right text-emerald-400" title="Fakt Summa (Nakrutka)">Fk. Sum</div>
           <div className="w-24 text-right text-purple-400" title="F2 Summa (Nakrutka)">F2 Sum</div>
           <div className="w-24 text-right text-cyan-400" title="F2 Olish Mumkin Summa (Nakrutka)">F2 M. Sum</div>
-          <div className="w-24 text-right text-amber-400" title="Qoldiq Summa (Nakrutka)">Ost. Sum</div>
+          <div className="w-24 text-right text-amber-400" title="Qoldiq Summa (Nakrutka)">Ost. Sum</div></>}
         </div>
       </div>
 
@@ -157,6 +195,10 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
             const isEdited = !!edits[key];
             const currentFakt = edits[key]?.edit.fakt ?? node.fakt ?? 0;
             const isOverLimit = currentFakt > (node.smetaHajm || 0);
+            const nazoratHolati = (node as any).basisMissing ? '❌ Basis'
+              : (node as any).atRisk ? '⚠ Xavf'
+              : (node as any).arithmeticMismatch ? '⚠ Farq'
+              : '—';
             
             return (
               <div
@@ -179,29 +221,30 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                   if (onNodeDrop) onNodeDrop(draggedNode, node);
                   setDraggedNode(null);
                 }}
-                className={`absolute top-0 left-0 w-full flex items-center border-b border-border/50 hover:bg-surface-2/30 transition-colors text-sm group ${isEdited ? 'shadow-[inset_3px_0_0_var(--warn)] bg-warn/5' : ''}`}
+                className={`absolute top-0 left-0 min-w-[930px] w-full flex items-center border-b border-border/50 hover:bg-surface-2/30 transition-colors text-sm group ${isEdited ? 'shadow-[inset_3px_0_0_var(--warn)] bg-warn/5' : ''} ${selectedKey === key ? 'bg-accent/10' : ''}`}
                 style={{
                   height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start}px)`,
                   cursor: (row.hasChildren || (isEditMode && (node.type === 'bl' || node.type === 'rs'))) ? 'pointer' : 'default'
                 }}
                 onClick={() => {
+                  setSelectedKey(key);
                   if (row.hasChildren) toggleExpand(key);
                   if ((node.type === 'bl' || node.type === 'rs') && isEditMode) {
                     setExpandedDetailId(prev => prev === key ? null : key);
                   }
                 }}
               >
-                {/* Fixed Indent Guide lines would go here based on row.depth */}
+                {row.depth > 0 && <span aria-hidden="true" className="absolute top-0 bottom-0 border-l border-border/70" style={{ left: `${row.depth * 24 + 23}px` }} />}
                 <div 
-                  className="flex items-center h-9 px-4 flex-1 min-w-0"
+                  className="sticky left-0 z-10 bg-inherit flex items-center h-full px-4 flex-1 min-w-0"
                   style={{ paddingLeft: `${row.depth * 24 + 16}px` }}
                 >
                   <div className="flex items-center gap-2 w-full">
                     {/* Expand/Collapse Chevron */}
                     <div className="w-5 flex items-center justify-center flex-shrink-0">
                       {row.hasChildren ? (
-                        <button onClick={() => toggleExpand(`${node.varaq}#${node.row}`)} className="p-0.5 hover:bg-surface-2 rounded text-text-dim hover:text-white">
+                        <button aria-label="Shoxni ochish yoki yopish" onClick={(e) => { e.stopPropagation(); toggleExpand(`${node.varaq}#${node.row}`); }} className="p-0.5 hover:bg-surface-2 rounded text-text-dim hover:text-white">
                           {row.isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                         </button>
                       ) : (
@@ -213,6 +256,8 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                     {node.isZamena && <RefreshCcw size={14} className="text-[#a855f7] flex-shrink-0" />}
                     {node.isQosh && <Plus size={14} className="text-ok flex-shrink-0" />}
                     
+                    <span className="text-text-dim flex-shrink-0" title={`Qator turi: ${node.type}`}><TreeTypeIcon type={node.type} /></span>
+
                     {/* Type Badge */}
                     <Badge variant={node.type as any} className="flex-shrink-0 w-8 justify-center uppercase">{node.type}</Badge>
                     
@@ -264,22 +309,24 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                   <div className="w-24 text-right">
                       <FmtN val={node.f2ol || 0} cl="text-purple-400" />
                   </div>
+                  <div className="w-24 text-right text-cyan-300"><FmtN val={node.f2mum || 0} /></div>
                   
                   <div className="w-20 text-right text-amber-300/80"><FmtN val={node.qoldiq} /></div>
+                  <div className="w-20 text-left text-text-mute truncate" title={nazoratHolati}>{nazoratHolati}</div>
 
-                  <div className="w-4 border-r border-white/10 h-full mx-2 flex items-center justify-center">
+                  {showMoney && <div className="w-4 border-r border-white/10 h-full mx-2 flex items-center justify-center">
                     {/* Tiny visual progress bar for Fakt */}
                     <div className="w-full h-8 flex flex-col justify-end bg-black/30 rounded-sm overflow-hidden" title={`Fakt: ${Math.round((node.fakt / (node.smetaHajm || 1)) * 100)}%`}>
                       <div className="w-full bg-emerald-500/50" style={{ height: `${Math.min((node.fakt / (node.smetaHajm || 1)) * 100, 100)}%` }} />
                     </div>
-                  </div>
+                  </div>}
 
                   {/* SUMMAS (Nakrutka) */}
-                  <div className="w-24 text-right text-blue-200"><FmtN val={node.smeta} /></div>
+                  {showMoney && <><div className="w-24 text-right text-blue-200"><FmtN val={node.smeta} /></div>
                   <div className="w-24 text-right text-emerald-300 font-bold"><FmtN val={node.stFakt ?? (node.fakt * (node.narx || 0))} /></div>
                   <div className="w-24 text-right text-purple-300 font-bold"><FmtN val={node.stF2 || 0} /></div>
                   <div className="w-24 text-right text-cyan-300"><FmtN val={node.stOst ?? (node.f2mum * (node.narx || 0))} /></div>
-                  <div className="w-24 text-right text-amber-300"><FmtN val={(node.smeta || 0) - (node.stFakt ?? (node.fakt * (node.narx || 0)))} /></div>
+                  <div className="w-24 text-right text-amber-300"><FmtN val={(node.smeta || 0) - (node.stFakt ?? (node.fakt * (node.narx || 0)))} /></div></>}
                 </div>
 
                 {/* Expanded RowDetailPanel for F2 Monthly Editing */}
@@ -352,6 +399,23 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
           })}
         </div>
       </div>
+      {selected && !isEditMode && (
+        <aside className="absolute inset-y-0 right-0 z-40 w-[min(460px,90vw)] overflow-auto border-l border-border bg-surface p-4 shadow-2xl" aria-label="Qator tafsilotlari">
+          <button onClick={() => setSelectedKey(null)} className="float-right text-text-dim"><X size={18}/></button>
+          <p className="pr-8 text-xs text-text-mute">{selected.lineage.join(' › ')}</p>
+          <h3 className="mt-2 font-semibold">{selected.node.nom || 'Nomsiz'}</h3>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+            {[
+              ['Asosiy', 'Kod, birlik va hajmlar'],
+              ['F2 tarixi', oylar.length ? `${oylar.length} oy — obyom/narx/summa` : 'Ma\'lumot yo\'q'],
+              ['Narx nazorati', 'Backend ma\'lumoti kutilmoqda'],
+              ['Resurslar', 'Ma\'lumot yo\'q'],
+              ['Hujjatlar', 'Ma\'lumot yo\'q'],
+              ['O\'zgarishlar', selected.node.isZamena ? 'Zamena aloqasi mavjud' : 'Ma\'lumot yo\'q'],
+            ].map(([title, value]) => <div key={title} className="rounded border border-border p-3"><b>{title}</b><p className="mt-1 text-text-dim">{value}</p></div>)}
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
