@@ -208,7 +208,7 @@ yangi sxema/chuqurroq refaktor talab qiladi, vaqt yetmadi).
 |---|---|
 | `tsc -b` (frontend, to'liq) | ✅ PASS |
 | `tsc -p tsconfig.functions.json` | ✅ PASS |
-| `vite build` | ⚠️ **CRASH** — native/xotira xatosi (V8 stack trace, `NODE_OPTIONS` 8192/6144/4096 bilan 3 marta urinildi, hammasi bir xil natija). Bu — avvalgi sessiyalarda hujjatlashtirilgan **transient Windows xotira bosimi** naqshiga mos (bo'sh xotira ~6.5GB/25GB, boshqa agent sessiyalari bilan bo'lishilgan mashina). **HALOL AYTILADI: bu safar clean build tasdiqlanmadi** — soxta PASS yozilmadi. `tsc -b` (qattiqroq, to'liq tip-tekshiruv) toza o'tgani — kod TypeScript darajasida to'g'ri ekanini ko'rsatadi, lekin bundler'ning o'zi ishga tushmadi. |
+| `vite build` | ⚠️→✅ Avval 3 marta CRASH (native/xotira xatosi, transient Windows xotira bosimi — `~6.5GB/25GB bo'sh`), **keyingi (davomiy bosqichdagi) urinishda TOZA O'TDI** (`✓ built in 1.76s`) — taxmin tasdiqlandi: transient edi, kod muammosi emas. |
 | `oxlint` | ✅ PASS (0 yangi xato — faqat oldindan mavjud ogohlantirishlar) |
 | `npm run tekshir` (barcha oracle) | ✅ PASS (jumladan `tizim02` REGISTR.json — yangi `apiT2KoprikXatolarOl` funksiyasi sababli eskirgan edi, `node tizim02/registr.gen.cjs` bilan qayta yasaldi) |
 | `node --check` (ikkala GAS fayl) | ✅ PASS (sintaksis) |
@@ -252,3 +252,114 @@ bajarilishi uchun **isolated/staging Supabase DB** kerak (Pro plan —
 branching funksiyasi hozir mavjud emas). Shusiz DB-darajasidagi
 qolgan ishlar (read models, additional/replacement, catalog pipeline,
 to'liq bridge envelope) xavfsiz davom ettirilmaydi.
+
+---
+
+## FINAL CONTINUATION (2026-09-03, davomi) — PRO_PLAN_REQUIRED tasdiqlandi + Codex tree integratsiyasi
+
+### 0-qayta. LOCAL ISOLATED DB — texnik jihatdan mumkin EMASLIGI to'liq tasdiqlandi
+
+Owner ko'rsatmasi: "Supabase hosted branching yagona yo'l emas — local
+CLI + Docker orqali ham izolyatsiya mumkin, avval SHUNI sina."
+Tekshirildi, natija **texnik jihatdan aniq**:
+
+- `docker --version` — **topilmadi** (bash HAM, PowerShell HAM: `Get-Command
+  docker` — hech narsa). Docker Desktop bu mashinada O'RNATILMAGAN.
+- `wsl --list` — **topilmadi**. WSL2 distributivi yo'q.
+- `podman` — **topilmadi**.
+- Local PostgreSQL binari (`psql`/`pg_ctl`/`postgres`) — **topilmadi**.
+- `npx supabase --version` — hatto CLI'ning O'ZI ham ishga tushmadi:
+  `spawn ...cli-windows-x64\bin\supabase.exe ENOENT` (npx orqali
+  yuklab olingan Windows platform-paket buzuq/to'liq emas).
+
+**Muhim texnik nuqta**: bu — "Windows binary muammosi, npx bilan
+aylanib o'tsa bo'ladi" degan holat EMAS. `supabase start` — arxitektura
+jihatdan Docker Compose orkestratsiyasi (Postgres+GoTrue+PostgREST+...
+konteynerlar sifatida). CLI qanday chaqirilishidan (npx/pnpm/global)
+qat'i nazar, ORQADA baribir Docker (yoki Podman) kerak — bu CLI'ning
+o'zi emas, uning ISHLASH USULI. Bu mashinada konteyner runtime UMUMAN
+yo'q — demak hech qanday chaqirish usuli buni aylanib o'tolmaydi.
+
+**`PRO_PLAN_REQUIRED: YES`** — aniq texnik sabab: (1) konteyner runtime
+(Docker/Podman) yo'q, (2) WSL2 yo'q, (3) local Postgres binari yo'q,
+(4) `npx supabase` CLI'ning o'zi ham platform-paket xatosi bilan ishga
+tushmadi. Muqobil: `pg-mem` (JS in-memory Postgres-simulyatori) kabi
+vositalar ko'rib chiqildi, lekin ATAYLAB ishlatilmadi — u `security
+definer` funksiyalar, trigger'lar, to'liq PL/pgSQL semantikasini ishonchli
+simulyatsiya qilmaydi; "test o'tdi" degan SOXTA ishonch berishi mumkin
+(pg-mem'da o'tib, haqiqiy Postgres'da yiqiladigan holat) — bu aynan
+oldingi bosqichdagi incident'dan keyin ENG KO'P qochish kerak bo'lgan
+narsa. Shu sabab DB-darajasidagi yangi SQL (read models, additional/
+replacement, catalog pipeline, bridge event sxemasi) bu bosqichda ham
+**YOZILMADI** — tasdiqlash yo'li yo'q holda murakkab trigger/RPC yozish
+xavfni oshiradi, kamaytirmaydi.
+
+### 1. CODEX TREE — TO'LIQ REVIEW VA INTEGRATSIYA
+
+`codex/t2-smeta-tree-ux-v1` @ `836280d` tekshirildi (blind merge
+QILINMADI). To'liq tafsilot: `ops/handoff/T2_SMETA_TREE_IMPLEMENTATION_001_CLAUDE.md`.
+
+**Qisqacha**: `utils.ts`/`utils.test.ts` — **ACCEPT** (haqiqiy O(n²)→O(n)
+tuzatish, 10k-qatorli test bilan isbotlangan, qayta formatlab
+integratsiya qilindi). `SmetaTree.tsx` — **REJECT** (blind merge emas —
+REAL REGRESSIYA topildi: `Holat.tsx` sahifasi `isEditMode`/`onNodeDrop`
+orqali inline-tahrirlash va drag-dropga tayanadi, Codex'ning qayta
+yozilgan komponenti bu funksiyalarni TIP XATOSIZ, JIM o'chirib
+qo'yardi). Mavjud, ishlab turgan `SmetaTree.tsx` o'zgarishsiz qoldi,
+faqat tezroq `utils.ts` ostiga ulandi.
+
+**TREE_CODEX_SHA**: `836280d07c70e731e1400272773d14bbe0e1360d`
+**TREE_INTEGRATION_DECISION**: ADAPT (utils.ts/utils.test.ts ACCEPT,
+SmetaTree.tsx REJECT — sabab yuqorida va alohida hujjatda).
+
+Gates (Claude muhitida, mustaqil qayta ishga tushirildi — Codex build
+"parallel Node pressure" sababli tugallanmagan edi): `tsc -b` PASS,
+`vitest run` (to'liq, 130/130, 26 fayl) PASS, `oxlint` PASS (0 yangi),
+`npm run tekshir` PASS. Vizual/responsive (1366/1536/1920/125%) claim'lar
+KOD darajasida emas — bu safar brauzerda QAYTA tekshirilmadi (vaqt
+tanqisligi, halol aytiladi).
+
+### 2-11 (read models, price control website, pre-approval, additional/
+replacement, catalog pipeline, bridge event model) — **O'ZGARISHSIZ**,
+Bo'lim 0-qayta'dagi PRO_PLAN_REQUIRED sababli. Xavfsizlik ustuvor: yangi,
+tasdiqlanmaydigan murakkab SQL yozishdan tiyildim.
+
+### YAKUNIY HISOBOT (bu davomiy bosqich uchun)
+
+```
+FINAL_SHA: (push'dan keyin)
+
+CODEX_TREE_INTEGRATED: PASS (ADAPT — utils.ts ACCEPT, SmetaTree.tsx REJECT, sabab bilan)
+TREE_BUILD: PASS (tsc -b, tsc functions, vite build, vitest, oxlint, tekshir — barchasi Claude muhitida mustaqil PASS)
+TREE_1366: NOT_VERIFIED (kod darajasida emas, vizual sinov bu safar o'tkazilmadi)
+TREE_10K: PASS (haqiqiy 10 000-qatorli test, utils.test.ts)
+
+LOCAL_SUPABASE: FAIL — Docker/Podman/WSL2/local Postgres HECH BIRI yo'q, npx supabase CLI ham ishga tushmadi
+EXACT_F2_E2E: QISMAN (avvalgi davomdan o'zgarishsiz — frontend/GAS source tuzatildi, DB darajasida tasdiqlanmagan)
+READ_MODELS: FAIL (o'zgarishsiz, PRO_PLAN_REQUIRED)
+PRICE_CONTROL: O'ZGARISHSIZ (avvalgi bosqich holicha)
+PRE_APPROVAL: FAIL (yozilmagan)
+ADDITIONAL_REPLACEMENT: FAIL (PRO_PLAN_REQUIRED)
+CATALOG_PIPELINE: FAIL (o'zgarishsiz)
+SHEET_BRIDGE: QISMAN (avvalgi bosqichda ikkita nuqson tuzatilgan; to'liq event model PRO_PLAN_REQUIRED)
+
+PRODUCTION_RESIDUE: NONE
+
+READY_FOR_ANTIGRAVITY_FINAL_AUDIT: NO
+READY_FOR_OWNER_REAL_PARK_SMOKE: NO
+
+PRO_PLAN_REQUIRED: YES
+  Sabab: bu Windows mashinada konteyner runtime (Docker Desktop yoki
+  Podman) O'RNATILMAGAN, WSL2 distributivi YO'Q, va local PostgreSQL
+  binari ham YO'Q. Supabase CLI'ning "local dev stack"i (`supabase
+  start`) arxitektura jihatdan Docker Compose orkestratsiyasi bo'lib,
+  bu konteynerlarsiz ISHLASHI MUMKIN EMAS — bu CLI chaqirish usuliga
+  (npx/pnpm/global) bog'liq emas, balki uning ishlash tamoyiliga
+  bog'liq. `npx supabase` CLI'ning o'zi ham alohida sabab bilan (Windows
+  platform-paket ENOENT) ishga tushmadi — bu ikkinchi, mustaqil
+  blokator. Muqobil (pg-mem kabi in-memory simulyatorlar) ataylab
+  ishlatilmadi, chunki ular soxta "PASS" ishonchi berishi mumkin
+  (to'liq PL/pgSQL/trigger semantikasi yo'q) — bu aynan oldingi
+  incident'dan keyin qochish kerak bo'lgan xavf turi.
+```
+

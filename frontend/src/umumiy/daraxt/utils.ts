@@ -2,47 +2,61 @@ import type { TreeNode } from '../../api/types';
 
 export type FlatNode = {
   node: TreeNode;
+  key: string;
   depth: number;
-  isExpanded: boolean;
   hasChildren: boolean;
-  path: string[];
+  isExpanded: boolean;
+  /** Ildizdan shu tugunGACHA (o'zi bilan) — breadcrumb/drawer uchun. */
+  lineage: string[];
 };
 
-export function flattenTree(
-  nodes: TreeNode[], 
-  expandedMap: Record<string, boolean>, 
-  depth = 0,
-  path: string[] = []
-): FlatNode[] {
-  let result: FlatNode[] = [];
-  
-  for (const node of nodes) {
-    const key = `${node.varaq}#${node.row}`;
-    const currentPath = [...path, key];
-    const hasChildren = !!(node.children && node.children.length > 0);
-    const isExpanded = !!expandedMap[key];
-    
-    result.push({
-      node,
-      depth,
-      isExpanded,
-      hasChildren,
-      path: currentPath
-    });
-    
-    if (hasChildren && isExpanded) {
-      result = result.concat(flattenTree(node.children!, expandedMap, depth + 1, currentPath));
+/** Bitta joyda — `flattenTree`/`getAllKeys` ikkalasi ham SHUNI ishlatadi,
+ *  ilgari ikki joyda mustaqil takrorlanardi. */
+export const nodeKey = (n: TreeNode) => `${n.varaq}#${n.row}`;
+
+/**
+ * T2-REAL-PARK-LRV-CLOSURE-005 (Codex tree lane, `codex/t2-smeta-tree-ux-v1`
+ * @ 836280d, ACCEPT_CODEX): ITERATIV stek bilan — avvalgi versiya har
+ * ochiq shoxda `result.concat(flattenTree(...))` chaqirardi, ya'ni har
+ * daraja YANGI massiv yaratardi (chuqur/keng daraxtda O(n²) ga yaqin
+ * xulq). 10 000 qatorli sinov (`utils.test.ts`) buni tasdiqlaydi.
+ */
+export function flattenTree(nodes: TreeNode[], expanded: Record<string, boolean>): FlatNode[] {
+  const out: FlatNode[] = [];
+  const stack = [...nodes].reverse().map((n) => ({ n, depth: 0, lineage: [] as string[] }));
+  while (stack.length) {
+    const c = stack.pop()!;
+    const key = nodeKey(c.n);
+    const kids = c.n.children || [];
+    const open = !!expanded[key];
+    const lineage = [...c.lineage, c.n.nom || 'Nomsiz'];
+    out.push({ node: c.n, key, depth: c.depth, hasChildren: kids.length > 0, isExpanded: open, lineage });
+    if (open) {
+      // Teskari tartibda push — pop qilinganda asl (chapdan o'ngga) tartib saqlanadi.
+      for (let i = kids.length - 1; i >= 0; i--) {
+        stack.push({ n: kids[i], depth: c.depth + 1, lineage });
+      }
     }
   }
-  
-  return result;
+  return out;
 }
 
+/**
+ * FAQAT bolasi bor tugunlar kaliti — "hammasini yoyish" uchun barglarga
+ * `expanded[key]=true` yozishning HOJATI yo'q (ular hech qachon
+ * `hasChildren` bo'lmaydi, demak holati ishlatilmaydi ham). Avvalgi
+ * versiya HAR bir tugunni (barglarni ham) qaytarardi — funksional farq
+ * yo'q, lekin xotirada keraksiz kalitlar yig'ilardi.
+ */
 export function getAllKeys(nodes: TreeNode[]): string[] {
-  let keys: string[] = [];
-  for (const node of nodes) {
-    keys.push(`${node.varaq}#${node.row}`);
-    if (node.children) keys = keys.concat(getAllKeys(node.children));
+  const out: string[] = [];
+  const stack = [...nodes];
+  while (stack.length) {
+    const n = stack.pop()!;
+    if (n.children?.length) {
+      out.push(nodeKey(n));
+      stack.push(...n.children);
+    }
   }
-  return keys;
+  return out;
 }
