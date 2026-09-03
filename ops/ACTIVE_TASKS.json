@@ -129,7 +129,7 @@
       "base_sha": "d1d1315e87a27e05b187820af3990ba91125500f",
       "base_ref": "origin/main",
       "branch": "claude/ctrl-capability-registry-v1",
-      "status": "active",
+      "status": "completed",
       "lane_of": "CTRL-001",
       "owns": [
         "supabase/migrations/2026090*_t2_capability_registry*.sql",
@@ -173,6 +173,28 @@
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_GAS_EXIT_001.md"],
       "production_write_allowed": false,
       "_izoh": "Owner correction 2026-09-02: current core F2 interactive path (canonical /admin/f2 -> F2Import, useF2* hooks, apiT2F2Korish, T2_F2Import.js) still runs through GAS -- an INCOMPLETE migration, not the intended final architecture (Supabase/Postgres=truth, R2=binary truth, Cloudflare=API+deterministic execution, GAS=Drive/Sheets bridge only). Do NOT start this migration inside NREL-001; do NOT build a second weaker matcher -- port the mature f2MoslashEngine (Smeta tizimi/35_F2Moslash.js) into one shared deterministic engine executed behind Cloudflare/Supabase. Full scope + inventory start in ops/handoff/T2_GAS_EXIT_001.md."
+    },
+    {
+      "id": "T2-COMPANY-CONTROL-FOUNDATION-001",
+      "title": "Company Control Center foundation: canonical company profile/members/roles/capabilities/audit, superadmin global vs company-scoped nav, System Control global/company split",
+      "owner": "claude",
+      "branch": "integration/next-main-release-v1",
+      "base_sha": "ccd5423e017cbea1f4aac9cf372d59c9ced2ac6a",
+      "base_ref": "origin/main",
+      "status": "active",
+      "owns": [
+        "ops/handoff/T2_COMPANY_CONTROL_FOUNDATION_001_CONTRACT.md",
+        "ops/handoff/T2_COMPANY_CONTROL_SECURITY_INCIDENT_2026-09-03.md",
+        "supabase/migrations/2026091*_t2_kompaniya_yangila_v1*.sql",
+        "supabase/migrations/2026091*_t2_system_control_split_v1*.sql",
+        "frontend/functions/api/company.ts", "frontend/functions/api/system-control.ts",
+        "frontend/src/api/t2-men.ts", "frontend/src/api/t2-control.ts",
+        "frontend/src/umumiy/kontekst/"
+      ],
+      "depends_on": ["NREL-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_COMPANY_CONTROL_FOUNDATION_001_CONTRACT.md"],
+      "production_write_allowed": false,
+      "_izoh": "PRODUCTION FREEZE ACTIVE (re-engaged 2026-09-03 after the 25006 + legacy-RPC security hotfixes) -- source/preview only, no migration apply, no main push, no Cloudflare/GAS/R2 production mutation without fresh explicit owner approval. Reconciles fix/company-context-p0's already-built umumiy/kontekst/ module (KompaniyaKontekst/KompaniyaTanlagich/KompaniyaKerak/routeScope -- fast-forward ancestor of current main, do not rebuild) as the canonical foundation. File ownership split across Claude (backend+integration)/Codex (effective authorization engine, new lane files under umumiy/kontekst/, adversarial tests)/Antigravity (Company Control Center UI + UX audit, no core logic) -- see contract Section 2. Full sequencing + release gates in the contract doc."
     }
   ]
 }
