@@ -267,13 +267,22 @@ export const onRequestPost: PagesFunction<{
           error: 'operation_id (UUID) majburiy — usiz takroriy so\'rov ikkinchi hujjat yaratadi' });
       }
       /* Faqat kerakli maydonlar o'tkaziladi — klient qo'shimcha
-         kalit yuborsa ham u bazaga bormaydi. */
+         kalit yuborsa ham u bazaga bormaydi.
+         ⚠️ T2-BRIDGE-CALLER-AUDIT-003 (2026-09-03): `narx_yoq` avval bu
+         yerda STRIP qilinardi — hatto chaqiruvchi uni yuborsa ham,
+         `t2_akt_yarat`ning "narx yo'q → smeta narxiga qaytma" himoyasi
+         HECH QACHON ishlamas edi (faqat GAS `_t2Rpc` to'g'ridan-to'g'ri
+         chaqirganda ishlardi, bu gateway orqali EMAS). Endi o'tkaziladi —
+         hozircha buni yuboradigan frontend caller yo'q, shu sabab bu
+         mavjud xatti-harakatni O'ZGARTIRMAYDI, faqat kelajakdagi xavfsiz
+         foydalanishni ochadi. */
       const qatorlar = so.qatorlar.map((q: any) => {
         const chiqish: Record<string, unknown> = {
           qator_id: Number(q.qator_id),
           hajm: q.hajm,
         };
         if (q.narx != null && q.narx !== '') chiqish.narx = q.narx;
+        if (q.narx_yoq === true) chiqish.narx_yoq = true;
         if (q.izoh) chiqish.izoh = String(q.izoh).slice(0, 500);
         return chiqish;
       });

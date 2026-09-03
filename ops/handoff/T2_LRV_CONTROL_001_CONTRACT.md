@@ -28,89 +28,86 @@ mustahkamlash.
 
 ---
 
-## 1. F2 EXACT SOURCE LAW
+## 1. F2 EXACT SOURCE LAW — TUZATILDI (T2-LRV-EXACT-F2-INTEGRATION-003, 2026-09-03)
 
-**HOLAT: MAVJUD, formallashtirilmoqda.**
+**HOLAT: P0 XATO TOPILDI, TUZATISH LOYIHASI YOZILDI (source-only).**
 
-`t2_akt_qator` (F2 qator — jadval, `r`) ustunlari aynan uchta muzlatilgan
-truthni saqlaydi:
+> ⚠️ **KONTRAKT TUZATISHI.** Ushbu bo'limning avvalgi versiyasi (foundation
+> bosqichida yozilgan) XATO xulosaga kelgan edi: "`t2_akt_qator.summa`
+> GENERATED ustuni (`hajm*narx`) — bu o'zi qonunbuzarlik emas, faqat
+> `narx`ning qayerdan kelishi xavfli" deb yozilgan edi. Bu qaror TO'G'RI
+> EMAS — pastda tuzatildi.
 
-| Talab qilingan nom | Haqiqiy ustun | Turi |
-|---|---|---|
-| `certified_quantity` | `t2_akt_qator.hajm` | numeric |
-| `certified_unit_price` | `t2_akt_qator.narx` | numeric |
-| `certified_amount` | `t2_akt_qator.summa` | numeric |
+### Nega GENERATED `summa` — P0 FAIL
 
-Qo'shimcha (Tizim_02'da allaqachon bor, ammo talabda tilga olinmagan, LAW'ni
-KUCHAYTIRUVCHI ustunlar): `baseline_narx`, `baseline_summa` (smeta narxi
-F2 yozilgan payt — snapshot), `actual_narx` (haqiqiy to'langan narx, F2
-narxidan farqli bo'lishi mumkin), `narx_manba` + `narx_manba_id` (narx
-qayerdan kelgan — provenance), `variance_summa` (farq, hisoblanadi —
-**QAYTA YOZILMAYDI**), `narx_izoh`.
+Talab: uch qiymat — `certified_quantity`, `certified_unit_price`,
+`certified_amount` — HAR BIRI mustaqil SOURCE DOCUMENT qiymati, hatto
+ular o'zaro arifmetik mos kelmasa ham.
 
-### QAT'IY QONUN (kod bilan tasdiqlanishi kerak, keyingi bosqichda)
+Misol: F2 hujjatida `qty=10`, `price=123.45`, `amount=1234.49` yozilgan
+bo'lsa (dumaloqlash/chegirma sababli — `10 × 123.45 = 1234.50`, lekin
+HUJJATNING O'ZIDA `1234.49` yozilgan) — canonical `certified_amount`
+ham aynan `1234.49` bo'lishi SHART.
+
+**Joriy sxema buni FIZIK JIHATDAN IMKONSIZ qiladi**:
+`t2_akt_qator.summa generated always as (hajm*narx) stored` — Postgres
+har doim `1234.50`ni majburlaydi, hujjatda nima yozilganidan qat'i
+nazar. Bu — "narx noto'g'ri manbadan kelishi mumkin" darajasidagi xavf
+emas, balki **"summa umuman document'dan emas, har doim formuladan"**
+— aynan `certified_amount = quantity * price` TAQIQLANGAN naqshning
+o'zi, DB SXEMASI DARAJASIDA.
+
+### TUZATILGAN QONUN
 
 ```
-certified_amount  ≠  certified_quantity * smeta_price      (TAQIQ)
-certified_unit_price  ≠  baseline/procurement/current market price   (TAQIQ)
-approved F2 revision bilan qayta hisoblash   (TAQIQ)
+certified_quantity     — SOURCE DOCUMENT qiymati, mustaqil ustun
+certified_unit_price   — SOURCE DOCUMENT qiymati, mustaqil ustun
+certified_amount       — SOURCE DOCUMENT qiymati, MUSTAQIL ustun
+                          (GENERATED EMAS — oddiy, to'g'ridan-to'g'ri yoziladigan ustun)
+
+calculated_amount      — OPTIONAL, faqat analytical validation:
+                          certified_quantity * certified_unit_price
+                          (GENERATED bo'lishi mumkin — bu faqat tekshirish
+                          uchun, canonical truth EMAS)
+
+calculated_amount != certified_amount  →  F2_ARITHMETIC_MISMATCH flag
+certified_amount HECH QACHON shu farq asosida qayta yozilmaydi.
 ```
 
-`t2_akt_qator.hajm/narx/summa` — F2 HUJJATINING O'ZIDAN import qilinadi
-(import yo'li: `t2_manba` → `t2_xom` → parse → `t2_akt_qator`, quyida
-Bo'lim 2/3). Bu yozuvlar keyinchalik yangi smeta revision chiqsa ham
-QAYTA HISOBLANMAYDI — `t2_smeta_revision` (mavjud, `smeta_f2_nakopitelniy`
-davridan) original-baseline ledger sifatida ishlaydi, tarixiy F2 qatorini
-EMAS.
+### Mavjud sxemaga MINIMAL ADDITIVE moslashuv (parallel truth EMAS)
 
-### TASDIQLANGAN TOPILMA (live schema tekshiruvi, 2026-09-03) — MISMATCH flag emas, NARX PROVENANCE xavfi
+`t2_akt_qator.summa`ni GENERATED-ligidan darhol mahrum qilish xavfli —
+mavjud `t2_qator_holat`/`t2_lrv` VIEW'lari va `t2_f2_kat_oy`/
+`t2_f2_tafsilot` shu ustunga SUM/JOIN qiladi; production freeze ostida
+buni ko'r-ko'rona o'zgartirish yangi regressiya yaratishi mumkin.
+**Tanlangan yechim — ADDITIVE, eskisini buzmaydi**:
 
-Live sxemani tekshirganda (`pg_attribute`/`pg_get_functiondef`) aniqlandi:
-`t2_akt_qator.summa` — Postgres **GENERATED ALWAYS AS STORED** ustun:
+1. `t2_akt_qator`ga YANGI, oddiy (GENERATED EMAS) ustunlar:
+   `certified_quantity`, `certified_unit_price`, `certified_amount`,
+   `certified_source_hash`, `provenance_status`
+   (`'source_certified' | 'unknown_provenance' | 'needs_reconciliation'`).
+2. Eski `hajm`/`narx`/`summa` (GENERATED) — **compatibility field**
+   sifatida QOLADI, hech narsa o'chirilmaydi/qayta nomlanmaydi.
+3. YANGI write yo'li (`t2_akt_yarat_v2`) — `certified_*` ustunlarga
+   TO'G'RIDAN-TO'G'RI, hisoblanmagan holda yozadi; `hajm`/`narx` ham
+   parallel to'ldiriladi (compatibility uchun). Canonical READ MODEL
+   endi `certified_amount`ni ishlatishi SHART, `summa`ni EMAS.
+4. **Tarixiy qatorlar** (`certified_*` bo'sh): `qty*price`dan "asl summa
+   shunday edi" deb BACKFILL QILINMAYDI (soxta provenance bo'lardi).
+   `provenance_status = 'unknown_provenance'` bilan QOLADI.
 
-```sql
-summa = CASE WHEN narx IS NULL THEN NULL ELSE hajm * narx END
-```
+To'liq reja, Codex `t2-lrv-canonical-core-v1` bilan reconciliation va
+migratsiya: **`ops/handoff/T2_LRV_EXACT_F2_INTEGRATION_003.md`**.
 
-Bu **o'zi qonunbuzarlik EMAS** — `certified_amount = certified_quantity ×
-certified_unit_price` bir xil HUJJATNING ikkala qiymatidan hisoblansa,
-bu aynan kutilgan. Muammo — `narx` ustunining O'ZI qayerdan kelishi.
+### NARX FALLBACK — CALLER AUDIT (P0, endi TAXMIN emas, isbotlangan)
 
-Yozuvchi funksiya `t2_akt_yarat` (live, `public.t2_akt_yarat`) INSERT
-ifodasi:
-
-```sql
-case when k.narx_yoq then null
-     else coalesce(k.narx_kir, q.narx)   -- q.narx = SMETA narxi!
-end
-```
-
-Ya'ni: agar chaqiruvchi (frontend/import) F2 qatori uchun `narx_yoq=true`ni
-ANIQ yubormasa VA `narx_kir` (hujjatdagi narx) bo'sh bo'lsa — funksiya
-JIMGINA smeta narxiga (`q.narx`) qaytadi. Bu — aynan Section 1'da
-TAQIQLANGAN naqsh (`certified_unit_price = baseline/smeta price`), lekin
-DB darajasida emas, **chaqiruvchi intizomiga bog'liq** holda.
-
-Bu — YANGI kashfiyot emas: loyiha xotirasida allaqachon qayd etilgan
-(`narx-oz-idan-toqilmaydi.md`: "F2 da narx yo'q bo'lsa BO'SH qoladi;
-smeta narxidan to'ldirish = soxta hujjat") — va aynan shu sabab bilan
-`narx_yoq` bayrog'i mavjud (UI'ning bu qoidani qo'lda ta'minlashi kutiladi).
-**Ammo qoida hozircha faqat UI intizomida, DB CHECK constraint darajasida
-EMAS** — frontend biror joyda `narx_yoq`ni to'g'ri yubormasa, jim buziladi.
-
-**BU KONTRAKTDA HAL QILINMAYDI.** Sabab: `t2_akt_yarat` — joriy productionda
-ishlab turgan F2 yozish yo'li; uning fallback xatti-harakatini o'zgartirish
-frontend chaqiruvchi kodini (F2 import UI) to'liq audit qilishni talab
-qiladi — "hozir har doim `narx_yoq`ni to'g'ri yuboradimi?" javobsiz savol.
-Schema'ni ko'r-ko'rona o'zgartirish yangi regressiya yaratishi mumkin.
-
-**OCHIQ TOPILMA — keyingi implementatsiya bosqichi uchun**: `t2_akt_yarat`
-chaqiruvchisini (F2 import frontend/RPC) audit qilib, `narx_yoq` HAR DOIM
-to'g'ri uzatilishini tasdiqlash, keyin DB darajasida qattiqroq qoida
-(masalan: `narx_kir` bo'sh va `narx_yoq` false bo'lsa RAD ETISH, jim
-smeta-narxga qaytmaslik) qo'shish kerak. Bu ushbu taskning SOURCE-ONLY
-doirasidan tashqarida — chunki xavfsiz tuzatish uchun avval chaqiruvchi
-tomonni tekshirish shart, faraz asosida schema o'zgartirilmaydi.
+Barcha chaqiruvchilar audit qilindi (kod o'qilib, taxmin qilinmadi):
+GAS tomon (`Smeta tizimi/T2_F2Import.js`) XAVFSIZ — `narx_yoq`ni to'g'ri
+yuboradi. Ikkita Tizim_02 frontend yo'li XAVFLI: `TestF2Import.tsx`
+(narx=0/bo'sh bo'lsa `narx: undefined` — jim tushirib qoladi) va
+`TestF2.tsx` (narxni umuman yubormaydi); ularning gateway'i
+(`sb-yoz.ts`) `narx_yoq`ni hatto kelsa ham STRIP qiladi. To'liq dalil,
+qator raqamlari bilan: **`ops/handoff/T2_BRIDGE_CALLER_AUDIT_003.md`**.
 
 ---
 
@@ -281,15 +278,21 @@ batafsil) bilan bir xil qonun — takrorlanmaydi, faqat qayd etiladi:
 
 LRV CONTROL — Tizim_02'da YANGI mahsulot EMAS, balki **allaqachon ishlab
 turgan `t2_qator` + `t2_akt_qator` + `t2_qator_holat` (VIEW) + `t2_lrv`
-(VIEW) zanjirining rasmiy qonuni**. Ushbu bosqichda qilingan ish:
+(VIEW) zanjirining rasmiy qonuni**. Foundation bosqichida qilingan ish:
 - Qonunni yozma shaklda mustahkamlash (bu hujjat);
-- **Live tekshiruv orqali real topilma**: `t2_akt_yarat`'ning narx
-  fallback xatti-harakati (yuqoriga qarang) — hal qilinmadi, ataylab
-  ochiq holda hujjatlashtirildi (chaqiruvchi tomon auditisiz xavfsiz
-  tuzatib bo'lmaydi);
 - `replaces_line_id`/`change_type` strukturaviy ustunlarini kontrakt
   sifatida belgilash (implementatsiya keyingi bosqichda).
 
-Hech qanday parallel LRV jadvali/servisi YARATILMAYDI. Bu bosqichda
+**T2-LRV-EXACT-F2-INTEGRATION-003 bosqichida TUZATILDI** (Section 1):
+foundation bosqichidagi "`summa` GENERATED — bu o'zi muammo emas" xulosasi
+XATO edi. Endi tasdiqlangan: `certified_quantity`/`unit_price`/`amount`
+UCHALASI ham mustaqil, GENERATED BO'LMAGAN ustunlar bo'lishi SHART —
+to'liq reja `T2_LRV_EXACT_F2_INTEGRATION_003.md`da. Narx-fallback caller
+audit ham YAKUNLANDI (taxmin emas, kod o'qilib isbotlandi) —
+`T2_BRIDGE_CALLER_AUDIT_003.md`.
+
+Hech qanday parallel LRV jadvali/servisi YARATILMAYDI. Bu bosqichgacha
 `t2_akt_qator`/`t2_akt_yarat`ga HECH QANDAY schema/kod o'zgartirish
-QILINMADI — faqat o'qish orqali tekshirildi.
+QILINMAGAN edi — endi source-only (production'ga qo'llanilmagan)
+additive migratsiya + yangi `t2_akt_yarat_v2` RPC loyihasi yozildi,
+tafsilot yuqoridagi ikkita hujjatda.

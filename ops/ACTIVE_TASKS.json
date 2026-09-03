@@ -226,17 +226,23 @@
       "branch": "integration/next-main-release-v1",
       "base_sha": "c52ba4f",
       "base_ref": "origin/main",
-      "status": "foundation_contracts_drafted",
+      "status": "exact_f2_integration_drafted",
       "owns": [
         "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md",
         "ops/handoff/T2_CONSTRUCTION_CATALOG_001.md",
         "ops/handoff/T2_SHEETS_SUPABASE_BRIDGE_001.md",
-        "supabase/migrations/20260919120000_t2_construction_catalog_observation_v1*.sql"
+        "ops/handoff/T2_LRV_EXACT_F2_INTEGRATION_003.md",
+        "ops/handoff/T2_BRIDGE_CALLER_AUDIT_003.md",
+        "supabase/migrations/20260919120000_t2_construction_catalog_observation_v1*.sql",
+        "supabase/migrations/20260920120000_t2_akt_qator_certified_v1*.sql",
+        "supabase/migrations/20260920130000_t2_akt_yarat_v2*.sql",
+        "supabase/migrations/20260920140000_t2_lrv_sync_envelope_v1*.sql",
+        "frontend/functions/api/sb-yoz.ts", "frontend/src/api/supabase.ts"
       ],
       "depends_on": ["T2-COMPANY-CONTROL-FOUNDATION-001"],
-      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md", "ops/handoff/T2_CONSTRUCTION_CATALOG_001.md", "ops/handoff/T2_SHEETS_SUPABASE_BRIDGE_001.md"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md", "ops/handoff/T2_LRV_EXACT_F2_INTEGRATION_003.md", "ops/handoff/T2_BRIDGE_CALLER_AUDIT_003.md"],
       "production_write_allowed": false,
-      "_izoh": "PRODUCTION FREEZE ACTIVE -- source/contract only in this pass, nothing applied. Foundation grounded in a live schema audit (not invented from scratch): t2_qator/t2_akt_qator/t2_qator_holat(view)/t2_lrv(view) ALREADY implement most of the LRV Control law; the one new additive migration is a construction-catalog observation layer (t2_work_type_observation/t2_resource_observation/t2_work_resource_observation/t2_catalog_match_candidate), live-verified via BEGIN/ROLLBACK. TWO real findings surfaced and deliberately left OPEN rather than guess-fixed: (1) t2_akt_qator.summa is a Postgres GENERATED column (hajm*narx) and t2_akt_yarat falls back to smeta price when the caller doesn't set narx_yoq -- a real F2-exact-source-law risk that needs a frontend-caller audit before any schema fix (see LRV contract Section 1); (2) the Sheets/Supabase bridge (t2_ozgarish/t2_kozgu/t2_kopruk_navbat) is missing operation_id/sync-cursor/retry -- additive fixable, but not touched without first reading the GAS-side writer code (see bridge contract Section 0/3). NEXT: hand off to Antigravity/Codex per the contracts' open items, or continue implementation once the owner reviews these three contracts."
+      "_izoh": "PRODUCTION FREEZE ACTIVE -- source/contract only, nothing applied. T2-LRV-EXACT-F2-INTEGRATION-003 (2026-09-03) corrected a wrong call from the foundation pass: t2_akt_qator.summa being a Postgres GENERATED column (hajm*narx) IS a P0 -- it makes it physically impossible to store a certified F2 amount that differs from qty*price (the owner's own qty=10/price=123.45/amount=1234.49 example). Fixed additively: new plain (non-generated) certified_quantity/unit_price/amount columns on t2_akt_qator (20260920120000, legacy hajm/narx/summa untouched for compat) + a new parallel t2_akt_yarat_v2 RPC (20260920130000) that has NO smeta-price fallback at all (MISSING_CERTIFIED_PRICE/MISSING_CERTIFIED_AMOUNT reject the batch instead) -- legacy t2_akt_yarat unchanged, still used by Smeta tizimi/T2_F2Import.js. Caller audit (not guessed, code-cited): GAS T2_F2Import.js sets narx_yoq correctly (safe); both Tizim_02 frontend paths (TestF2Import.tsx, TestF2.tsx) never send it and sb-yoz.ts stripped it even if they did (frontend fix: sb-yoz.ts/supabase.ts now pass narx_yoq through, zero behavior change until a caller opts in) -- see T2_BRIDGE_CALLER_AUDIT_003.md Part A. codex/t2-lrv-canonical-core-v1 (bbf55c8) reconciled: semantics ACCEPTED in full, but its 11 new t2_lrv_* tables were parallel-truth REJECTed as tables and ADAPTed onto t2_qator/t2_akt_qator/t2_ish_turi instead (T2_LRV_EXACT_F2_INTEGRATION_003.md Section 3) -- its sync-event/conflict envelope became 20260920140000 (generic entity_table+entity_id, schema only, GAS writer not touched). GAS bridge writer (T2_Kozgu.js) audited with line citations (Part B): blanket un-correlated PATCH closing the outbox queue, silently swallowed errors, 60s time-window echo suppression instead of event-id -- confirmed gaps, NOT fixed (GAS deploy is out of scope under the freeze). All 3 new migrations live BEGIN/ROLLBACK verified together against real data (T2_LRV_EXACT_F2_INTEGRATION_003_ACCEPTANCE_PASS)."
     }
   ]
 }

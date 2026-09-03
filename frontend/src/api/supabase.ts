@@ -545,7 +545,7 @@ export async function yozAmali(yuk: Record<string, unknown>): Promise<AktNatija>
  */
 export function sbT2AktYarat(p: {
   obyektId: number; tur: 'fakt' | 'f2'; oy: string;
-  qatorlar: Array<{ qator_id: number; hajm: number | string; narx?: number; izoh?: string }>;
+  qatorlar: Array<{ qator_id: number; hajm: number | string; narx?: number; narx_yoq?: boolean; izoh?: string }>;
   operationId: string; raqam?: string; majburiy?: boolean;
 }): Promise<AktNatija> {
   return yozAmali({
