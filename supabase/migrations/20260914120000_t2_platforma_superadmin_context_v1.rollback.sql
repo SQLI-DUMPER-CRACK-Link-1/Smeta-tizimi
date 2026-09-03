@@ -2,6 +2,12 @@
 -- Additive + idempotent — restores the pre-fix t2_actor_kompaniya_azo_tekshir
 -- body verbatim and drops the resolver. Safe at any time (the superadmin
 -- branch leaves no data behind).
+--
+-- Round-trip verified on prod inside BEGIN..ROLLBACK 2026-09-02
+-- (MIGRATION_20260914120000_ROUNDTRIP_PASS): after forward + this rollback,
+-- pg_get_functiondef(t2_actor_kompaniya_azo_tekshir) is BYTE-IDENTICAL to the
+-- pre-migration definition, the resolver is gone, and a normal membership
+-- check (actor 3 / company 1 -> 'boss') still returns correctly.
 begin;
 
 create or replace function public.t2_actor_kompaniya_azo_tekshir(p_kompaniya_id bigint, p_actor_id bigint)
