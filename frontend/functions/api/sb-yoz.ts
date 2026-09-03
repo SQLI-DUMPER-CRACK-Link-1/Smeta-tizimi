@@ -89,9 +89,18 @@ const AMALLAR = {
   kontragent_ochir: { rpc: 't2_kontragent_ochir' },
   fakt_yoz: { rpc: 't2_fakt_yoz' },
   fakt_belgila: { rpc: 't2_fakt_belgila' },
-  azolik_qosh: { rpc: 't2_azolik_qosh' },
-  azolik_rol_ozgartir: { rpc: 't2_azolik_rol_ozgartir' },
-  azolik_ochir: { rpc: 't2_azolik_ochir' },
+  /* ⚠️ P0 SECURITY (2026-09-03): bu uchtasi avval to'g'ridan-to'g'ri
+   * un-versioned RPC'ga (t2_azolik_qosh/_rol_ozgartir/_ochir) borardi —
+   * o'sha RPC'lar bazada HECH QANDAY actor/direktor tekshiruvisiz edi
+   * va bu blokning o'zi ham faqat shakl (rol nomi to'g'rimi) tekshirardi,
+   * kim so'rayotganini emas. Har qanday tizimga kirgan foydalanuvchi
+   * o'zini istalgan kompaniyaga 'boss' qilib qo'sha olardi. Endi
+   * to'g'ri, direktor-tekshiruvli _v1 RPC'larga o'tkazildi (p_actor_id
+   * SESSIYADAN, hech qachon so'rov tanasidan). Eski un-versioned
+   * RPC'lar bazada anon/authenticated/public'dan revoke qilindi. */
+  azolik_qosh: { rpc: 't2_azolik_qosh_v1' },
+  azolik_rol_ozgartir: { rpc: 't2_azolik_rol_ozgartir_v1' },
+  azolik_ochir: { rpc: 't2_azolik_ochir_v1' },
   /* ⚠️ 2026-08-28: `kompaniya_yangila` bir marta (2026-08-27) qo'shilgan
    * edi, lekin keyingi merge'da (`f9a9d04`) YO'QOLIB QOLGAN — DB
    * funksiyasi (`t2_kompaniya_yangila`) va frontend chaqiruvi
@@ -1085,11 +1094,23 @@ export const onRequestPost: PagesFunction<{
 
     /* ══════════ KOMPANIYA (o'z tashkilot profili) ══════════
        ⚠️ 2026-08-28: bu blok bir marta yozilgan, keyingi merge'da
-       yo'qolib qolgan edi — tiklandi (yuqoridagi izohga qarang). */
+       yo'qolib qolgan edi — tiklandi (yuqoridagi izohga qarang).
+       ⚠️ P0 SECURITY (2026-09-03): bu yerda `id` (target kompaniya)
+       chaqiruvchining sessiyadagi a'zoligiga qarshi HECH tekshirilmasdi
+       — har qanday tizimga kirgan foydalanuvchi istalgan kompaniyaning
+       nomi/STIR/bank rekvizitlarini o'zgartira olardi. Endi: chaqiruvchi
+       shu kompaniyaning faol boss/superadmin a'zosi bo'lishi shart
+       (bazadagi t2_kompaniya_yangila o'zi ham endi anon/authenticated'dan
+       revoke qilingan — bu ikkinchi, mustaqil qatlam). */
     } else if (amal === 'kompaniya_yangila') {
       const id = Number(so.id);
       if (!Number.isFinite(id) || id <= 0) {
         return Response.json({ ok: false, error: 'id noto\'g\'ri' });
+      }
+      if (!Array.isArray(sess.kompaniyalar) ||
+          !sess.kompaniyalar.some((a) => a.kompaniya_id === id && (a.rol === 'boss' || a.rol === 'superadmin'))) {
+        return Response.json({ ok: false, error: 'Bu kompaniyani faqat uning direktori (boss) tahrirlashi mumkin' },
+          { status: 403 });
       }
       if (so.kutilgan_versiya == null) {
         return Response.json({ ok: false, error: 'kutilgan_versiya majburiy' });
@@ -1255,16 +1276,18 @@ export const onRequestPost: PagesFunction<{
       if (!String(so.login || '').trim()) {
         return Response.json({ ok: false, error: 'login bo\'sh bo\'lishi mumkin emas' });
       }
-      const ROL_RUXSAT = ['superadmin', 'admin', 'boss', 'rahbar', 'bugalter', 'pto', 'prorab'];
+      const ROL_RUXSAT = ['boss', 'rahbar', 'bugalter', 'pto', 'prorab', 'buyurtmachi', 'pudratchi', 'kuzatuvchi'];
       if (!ROL_RUXSAT.includes(String(so.rol))) {
         return Response.json({ ok: false, error: 'rol noto\'g\'ri: ' + ROL_RUXSAT.join('|') });
       }
       yuk = {
+        p_actor_id: sess.foydalanuvchi_id,
         p_kompaniya_id: kompaniyaId,
         p_login: String(so.login).trim().slice(0, 100),
         p_rol: String(so.rol),
         p_email: so.email ? String(so.email).slice(0, 200) : null,
         p_ism: so.ism ? String(so.ism).slice(0, 200) : null,
+        p_operation_id: crypto.randomUUID(),
       };
 
     } else if (amal === 'azolik_rol_ozgartir') {
@@ -1272,18 +1295,21 @@ export const onRequestPost: PagesFunction<{
       if (!Number.isFinite(azolikId) || azolikId <= 0) {
         return Response.json({ ok: false, error: 'azolik_id noto\'g\'ri' });
       }
-      const ROL_RUXSAT = ['superadmin', 'admin', 'boss', 'rahbar', 'bugalter', 'pto', 'prorab'];
+      const ROL_RUXSAT = ['boss', 'rahbar', 'bugalter', 'pto', 'prorab', 'buyurtmachi', 'pudratchi', 'kuzatuvchi'];
       if (!ROL_RUXSAT.includes(String(so.yangi_rol))) {
         return Response.json({ ok: false, error: 'yangi_rol noto\'g\'ri: ' + ROL_RUXSAT.join('|') });
       }
-      yuk = { p_azolik_id: azolikId, p_yangi_rol: String(so.yangi_rol) };
+      yuk = {
+        p_actor_id: sess.foydalanuvchi_id, p_azolik_id: azolikId,
+        p_yangi_rol: String(so.yangi_rol), p_operation_id: crypto.randomUUID(),
+      };
 
     } else if (amal === 'azolik_ochir') {
       const azolikId = Number(so.azolik_id);
       if (!Number.isFinite(azolikId) || azolikId <= 0) {
         return Response.json({ ok: false, error: 'azolik_id noto\'g\'ri' });
       }
-      yuk = { p_azolik_id: azolikId };
+      yuk = { p_actor_id: sess.foydalanuvchi_id, p_azolik_id: azolikId, p_operation_id: crypto.randomUUID() };
 
     /* ══════════ KORZINKA ══════════
        ⚠️ `p_jadval` FAQAT bazadagi RPC'ning o'zi ichida tekshiriladigan
