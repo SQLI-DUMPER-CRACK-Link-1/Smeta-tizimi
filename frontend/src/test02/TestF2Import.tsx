@@ -39,6 +39,7 @@ import {
 import type { TreeNode } from '../api/types';
 import { useKompaniya } from './KompaniyaTanlov';
 import { applyEngineBinds } from './f2-import-bind';
+import { f2AggregatsiyaQator, f2ExactPayloadQur } from './f2-exact-payload';
 
 type ManbaFayl = { fayl_id: string; nom: string; sana: string; oqiladi: boolean };
 
@@ -1346,31 +1347,10 @@ export default function TestF2Import() {
     // Compile bindings — hajm VA summa har ikkalasi ham F2 faylning O'ZIDAN
     // (n.summa — Excel'ning H/СУММА ustuni, `_cellNum` bilan alohida
     // o'qilgan, `apiF2FaylOqi`da "TAYYOR summa (statik ko'chiriladi)"
-    // deb izohlangan — hajm*narx dan HECH QACHON hosil qilinmaydi).
-    const map = new Map<number, { qator_id: number; hajm: number; narx?: number; summa: number; summaBor: boolean }>();
-    aktBarglar.forEach((n) => {
-      const smetaId = getSmetaId(n.uid);
-      if (smetaId) {
-        const h = Number(n.hajm) || 0;
-        const s = Number(n.summa) || 0;
-        const existing = map.get(smetaId);
-        if (existing) {
-          existing.hajm += h;
-          existing.summa += s;
-          if (s) existing.summaBor = true;
-        } else {
-          map.set(smetaId, {
-            qator_id: smetaId,
-            hajm: h,
-            narx: n.narx > 0 ? n.narx : undefined,
-            summa: s,
-            summaBor: !!s,
-          });
-        }
-      }
-    });
-
-    const rows = Array.from(map.values());
+    // deb izohlangan — hajm*narx dan HECH QACHON hosil qilinmaydi). Pure
+    // aggregatsiya mantig'i `f2-exact-payload.ts`ga chiqarilgan — vitest
+    // bilan bazasiz tekshiriladi (T2-LRV-CLOSURE-006 Section 3).
+    const rows = f2AggregatsiyaQator(aktBarglar, (uid) => getSmetaId(uid));
     if (!rows.length) { toast('Bironta bog\'langan qator mavjud emas', 'warn'); return; }
 
     // Bog'lanmagan qatorlar soni
@@ -1391,11 +1371,12 @@ export default function TestF2Import() {
     // F2 (certified) uchun: narxi bor-yu summasi yo'q qatorlar — AMBIGUOUS.
     // qty*narx bilan summa TO'QILMAYDI (Section 3, NEEDS_REVIEW qoidasi) —
     // buning o'rniga foydalanuvchiga ochiq aytiladi, yozish TO'XTATILADI.
+    let f2Payload: ReturnType<typeof f2ExactPayloadQur> | null = null;
     if (tur === 'f2') {
-      const noaniq = rows.filter((r) => r.narx != null && !r.summaBor);
-      if (noaniq.length > 0) {
+      f2Payload = f2ExactPayloadQur(rows);
+      if (!f2Payload.ok) {
         toast(
-          `${noaniq.length} ta qatorda narx bor, lekin F2 faylning o'z summasi (SUMMA ustuni) yo'q — ` +
+          `${f2Payload.noaniqSoni} ta qatorda narx bor, lekin F2 faylning o'z summasi (SUMMA ustuni) yo'q — ` +
           `summa qty×narx dan TO'QILMAYDI. Faylni tekshiring yoki shu qatorlarni qo'lda ko'rib chiqing.`,
           'danger', undefined, 15000,
         );
@@ -1405,17 +1386,11 @@ export default function TestF2Import() {
 
     setYozilmoqda(true); setNatija(null);
     try {
-      const r = tur === 'f2'
+      const r = tur === 'f2' && f2Payload?.ok
         ? await sbT2AktYaratV2({
             obyektId: korish.obyekt_id,
             oy: oy + '-01',
-            qatorlar: rows.map((row) => ({
-              qatorId: row.qator_id,
-              certifiedQuantity: row.hajm,
-              certifiedUnitPrice: row.narx,
-              certifiedAmount: row.summaBor ? row.summa : undefined,
-              priceIntentionallyAbsent: row.narx == null,
-            })),
+            qatorlar: f2Payload.qatorlar,
             operationId: opId,
             raqam: raqam.trim() || undefined,
           })

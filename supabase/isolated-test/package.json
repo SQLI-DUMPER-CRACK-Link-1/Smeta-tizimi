@@ -1,0 +1,13 @@
+{
+  "name": "t2-isolated-db-acceptance",
+  "private": true,
+  "version": "1.0.0",
+  "description": "T2-LRV-CLOSURE-006 Section 2: repeatable isolated Postgres acceptance workflow. NOT part of the frontend build -- standalone Node/pg tool, deliberately decoupled so it is never bundled and never shares the frontend's dependency graph.",
+  "scripts": {
+    "guard": "node env-guard.cjs",
+    "acceptance": "node run.cjs"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}
