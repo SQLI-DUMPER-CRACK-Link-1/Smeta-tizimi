@@ -1,0 +1,7 @@
+export type PriceState = 'NORMAL'|'BELOW_REFERENCE'|'ABOVE_REFERENCE_JUSTIFIED'|'ABOVE_REFERENCE_MISSING_BASIS'|'ABOVE_APPROVED_BASIS';
+export type Reference = Readonly<{ price:number|null; source:'approved_basis'|'baseline'|'unknown'; basisPrice?:number|null }>;
+export function effectiveReferencePrice(basis:number|null, baseline:number|null): Reference { return basis !== null ? {price:basis,source:'approved_basis',basisPrice:basis} : baseline !== null ? {price:baseline,source:'baseline'} : {price:null,source:'unknown'}; }
+export function classifyCertifiedPrice(certified:number|null, reference:Reference): PriceState { if(certified===null||reference.price===null) return 'ABOVE_REFERENCE_MISSING_BASIS'; if(certified<reference.price)return 'BELOW_REFERENCE'; if(certified===reference.price)return 'NORMAL'; if(reference.source==='approved_basis') return certified>reference.price ? 'ABOVE_APPROVED_BASIS':'ABOVE_REFERENCE_JUSTIFIED'; return 'ABOVE_REFERENCE_MISSING_BASIS'; }
+export function calculateFrozenAmount(q:number, certified:number, reference:number, approved:boolean){return approved ? Math.max(reference-certified,0)*q:0;}
+export function calculateAtRiskAmount(q:number, certified:number|null, reference:number|null, approved:boolean){return approved||certified===null||reference===null?0:Math.max(certified-reference,0)*q;}
+export function validatePriceBasis(additional:boolean, r:Reference){return !additional||r.source==='approved_basis' ? {ok:true as const}:{ok:false as const,code:'PRICE_BASIS_REQUIRED'};}
