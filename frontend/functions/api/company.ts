@@ -2,9 +2,16 @@
  * company.ts — COMPANY / AUTH / DIRECTOR canonical transport.
  * session -> actor -> Supabase RPC. Actor id ALWAYS from the verified session.
  *
- *   GET  /api/company?me=1                     -> t2_men_v1 (identity + memberships)
- *   POST /api/company { action, ... }          -> audited onboarding command
- *        action: create | member_add | member_role | member_remove
+ *   GET  /api/company?me=1                      -> t2_men_v1 (identity + memberships)
+ *   GET  /api/company?profile=<kompaniya_id>     -> t2_kompaniya profile row (membership-checked)
+ *   GET  /api/company?authorize=1&permission=P
+ *        [&kompaniya_id=&loyiha_id=&obyekt_id=]  -> t2_effective_authorization_v1 passthrough
+ *        (T2-COMPANY-CONTROL-CLOSEOUT: Direct URL guard — the frontend calls
+ *        this before rendering a protected route, so a forged/stale company
+ *        context or a revoked membership is rejected server-side, not just
+ *        hidden from the menu.)
+ *   POST /api/company { action, ... }           -> audited onboarding command
+ *        action: create | member_add | member_role | member_remove | profile_update
  *
  * No Drive/Sheets/GAS. No fake subscription/payment.
  */
@@ -20,7 +27,15 @@ const RPC = {
   member_add: 't2_azolik_qosh_v1',
   member_role: 't2_azolik_rol_ozgartir_v1',
   member_remove: 't2_azolik_ochir_v1',
+  profile_update: 't2_kompaniya_yangila_v1',
 } as const;
+
+const AUTHZ_PERMISSIONS = new Set([
+  'company.read', 'company.profile.update', 'company.member.manage',
+  'control.company.read', 'control.company.write', 'control.global.read', 'control.global.write',
+  'project.read', 'project.write', 'object.read', 'object.write',
+  'document.read', 'document.write', 'financial.read', 'financial.write',
+]);
 
 async function callRpc(env: Env, name: string, body: unknown) {
   const r = await fetch(supabaseBaseUrl(env.SUPABASE_URL) + '/rest/v1/rpc/' + name, {
@@ -36,9 +51,9 @@ async function callRpc(env: Env, name: string, body: unknown) {
 
 function statusFor(code: string, raw: string): number {
   if (code === 'ACTOR_NOT_FOUND' || code === 'COMPANY_NOT_FOUND' || code === 'MEMBERSHIP_NOT_FOUND' || code === 'REQUEST_NOT_FOUND') return 404;
-  if (/42501|direktor|a'zo|azo|membership|PERMISSION/i.test(code + raw)) return 403;
+  if (code === 'AUTHORIZATION_DENIED' || /42501|direktor|a'zo|azo|membership|PERMISSION/i.test(code + raw)) return 403;
   if (code === 'OPERATION_ID_REQUIRED' || /INVALID|REQUIRED/.test(code)) return 400;
-  if (code === 'ALREADY_MEMBER' || code === 'LAST_DIRECTOR') return 409;
+  if (code === 'ALREADY_MEMBER' || code === 'LAST_DIRECTOR' || code === 'STALE_VERSION') return 409;
   return 502;
 }
 
@@ -55,6 +70,57 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   try {
     const a = await actor(ctx);
     if (a instanceof Response) return a;
+    const url = new URL(ctx.request.url);
+
+    // ── Direct URL guard: server-verified effective authorization ──
+    if (url.searchParams.get('authorize') === '1') {
+      const permission = url.searchParams.get('permission') || '';
+      if (!AUTHZ_PERMISSIONS.has(permission)) {
+        return Response.json({ ok: false, code: 'PERMISSION_UNKNOWN' }, { status: 400 });
+      }
+      const kompaniyaId = url.searchParams.get('kompaniya_id');
+      const loyihaId = url.searchParams.get('loyiha_id');
+      const obyektId = url.searchParams.get('obyekt_id');
+      const { r, j, text } = await callRpc(ctx.env, 't2_effective_authorization_v1', {
+        p_actor_id: a.id,
+        p_kompaniya_id: kompaniyaId ? Number(kompaniyaId) : null,
+        p_loyiha_id: loyihaId ? Number(loyihaId) : null,
+        p_obyekt_id: obyektId ? Number(obyektId) : null,
+        p_permission: permission,
+        p_capability_kod: null,
+      });
+      if (!r.ok || !j) {
+        console.error('[company authorize] t2_effective_authorization_v1', r.status, text.slice(0, 300));
+        return Response.json({ ok: false, code: 'CONFIG' }, { status: 502 });
+      }
+      return Response.json(j);
+    }
+
+    // ── Company profile (Control Center "Profil" tab) — membership-checked read ──
+    const profileId = url.searchParams.get('profile');
+    if (profileId) {
+      const kompaniyaId = Number(profileId);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, code: 'REQUEST_INVALID' }, { status: 400 });
+      }
+      const authRes = await callRpc(ctx.env, 't2_effective_authorization_v1', {
+        p_actor_id: a.id, p_kompaniya_id: kompaniyaId, p_loyiha_id: null, p_obyekt_id: null,
+        p_permission: 'company.read', p_capability_kod: null,
+      });
+      if (!authRes.r.ok || !authRes.j || authRes.j.allowed !== true) {
+        return Response.json({ ok: false, code: 'AUTHORIZATION_DENIED', reason: authRes.j?.reason },
+          { status: 403 });
+      }
+      const r2 = await fetch(
+        supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/t2_kompaniya?id=eq.' + kompaniyaId +
+          '&select=id,nom,kod,toliq_nom,inn,manzil,rahbar,telefon,bank,hisob_raqam,mfo,mavqe,versiya&limit=1',
+        { headers: { apikey: ctx.env.SUPABASE_KEY, Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY } });
+      const rows = r2.ok ? await r2.json().catch(() => []) : [];
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (!row) return Response.json({ ok: false, code: 'COMPANY_NOT_FOUND' }, { status: 404 });
+      return Response.json({ ok: true, profil: row });
+    }
+
     const { r, j, text } = await callRpc(ctx.env, RPC.me, { p_actor_id: a.id });
     if (!r.ok || !j || j.ok !== true) {
       const domCode = j && typeof j === 'object' && 'code' in j ? String((j as any).code) : '';
@@ -92,6 +158,14 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       body = { p_actor_id: a.id, p_kompaniya_id: Number(b.kompaniya_id), p_login: String(b.login ?? ''), p_rol: String(b.rol ?? ''), p_email: b.email == null ? null : String(b.email), p_ism: b.ism == null ? null : String(b.ism), p_operation_id: opId };
     } else if (action === 'member_role') {
       body = { p_actor_id: a.id, p_azolik_id: Number(b.azolik_id), p_yangi_rol: String(b.rol ?? ''), p_operation_id: opId };
+    } else if (action === 'profile_update') {
+      const s = (v: unknown) => (v == null || v === '' ? null : String(v));
+      body = {
+        p_actor_id: a.id, p_kompaniya_id: Number(b.kompaniya_id), p_expected_version: Number(b.expected_version),
+        p_toliq_nom: s(b.toliq_nom), p_inn: s(b.inn), p_manzil: s(b.manzil), p_rahbar: s(b.rahbar),
+        p_telefon: s(b.telefon), p_bank: s(b.bank), p_hisob_raqam: s(b.hisob_raqam), p_mfo: s(b.mfo),
+        p_mavqe: s(b.mavqe), p_operation_id: opId,
+      };
     } else { // member_remove
       body = { p_actor_id: a.id, p_azolik_id: Number(b.azolik_id), p_operation_id: opId };
     }
@@ -101,7 +175,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       const code = (j && j.code) || 'COMPANY_COMMAND_FAILED';
       // Domen xato kodlari (LAST_DIRECTOR, ALREADY_MEMBER, ROLE_INVALID, ...) frontendga kerak — ular xavfsiz.
       const known = code && code !== 'COMPANY_COMMAND_FAILED';
-      if (known) return Response.json({ ok: false, code }, { status: statusFor(code, text) });
+      if (known) return Response.json({ ok: false, code, reason: j?.reason, versiya: j?.versiya, xato: j?.xato }, { status: statusFor(code, text) });
       return xavfsizXato('UPSTREAM', statusFor(code, text), text);
     }
     return Response.json({ ...j, operation_id: opId });

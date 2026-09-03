@@ -12,7 +12,7 @@ import { SystemControlCenter } from '../system-control/SystemControlCenter';
 import type { SystemControlData } from '../../components/system-control';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { KompaniyaKerak } from '../../umumiy/kontekst/KompaniyaKerak';
-import { useSystemControl, useControlCommands } from '../../api/t2-control';
+import { useSystemControl, useGlobalSystemControl, useControlCommands } from '../../api/t2-control';
 
 const EMPTY: SystemControlData = {
   health: [], capabilities: [], integrations: [], jobs: [], incidents: [], auditEvents: [],
@@ -20,8 +20,13 @@ const EMPTY: SystemControlData = {
 };
 
 export default function SystemControlPage() {
-  const { joriy } = useKompaniya();
-  const q = useSystemControl(joriy?.id);
+  const { joriy, globalRejim } = useKompaniya();
+  // T2-COMPANY-CONTROL-CLOSEOUT split: superadmin in Global rejim (no
+  // company selected) sees the platform-wide view, gated server-side by
+  // t2_system_control_global_v1 — never the company-scoped RPC.
+  const qCompany = useSystemControl(joriy?.id);
+  const qGlobal = useGlobalSystemControl(globalRejim && !joriy?.id);
+  const q = globalRejim && !joriy?.id ? qGlobal : qCompany;
   const cmd = useControlCommands(joriy?.id);
 
   const data: SystemControlData = useMemo(() => {
@@ -34,11 +39,23 @@ export default function SystemControlPage() {
     };
   }, [q.data]);
 
-  if (!joriy?.id) {
+  if (!joriy?.id && !globalRejim) {
     return (
       <div className="bg-bg min-h-screen text-text">
         <h1 className="text-2xl font-bold flex items-center gap-2 px-6 pt-6"><ServerCog className="text-accent" /> Tizim boshqaruv markazi</h1>
         <KompaniyaKerak nima="Tizim boshqaruv markazi" />
+      </div>
+    );
+  }
+
+  if (!joriy?.id && globalRejim && q.isError && (q.error as any)?.code === 'AUTHORIZATION_DENIED') {
+    return (
+      <div className="bg-bg min-h-screen text-text">
+        <h1 className="text-2xl font-bold flex items-center gap-2 px-6 pt-6"><ServerCog className="text-accent" /> Tizim boshqaruv markazi</h1>
+        <div className="mx-6 mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-100 max-w-lg">
+          Platforma darajasidagi boshqaruv markaziga ruxsatingiz yo‘q. Bu — platforma-darajasidagi
+          "kill switch"; kompaniya bossi buni boshqara olmaydi.
+        </div>
       </div>
     );
   }
@@ -59,7 +76,7 @@ export default function SystemControlPage() {
           const cap = data.capabilities.find((c) => c.id === o.capabilityId);
           cmd.overrideSet.mutate({
             kod: o.capabilityId, scope: o.scope,
-            scope_id: o.scope === 'company' ? joriy.id : o.scope === 'project' ? Number(o.projectId) : null,
+            scope_id: o.scope === 'company' ? (joriy?.id ?? null) : o.scope === 'project' ? Number(o.projectId) : null,
             holat: o.state === 'on' ? 'on' : 'off',
             sabab: 'Control Center', expected_version: cap ? Number(cap.version) : null,
           });

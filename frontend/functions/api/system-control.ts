@@ -2,7 +2,11 @@
  * system-control.ts — CTRL-001 System Control Center canonical transport.
  * session -> actor -> Supabase RPC. No Drive/Sheets/GAS on this path.
  *
- *   GET  /api/system-control?kompaniya_id=<n>[&loyiha_id=<n>]     read model
+ *   GET  /api/system-control                                      GLOBAL read model
+ *        (T2-COMPANY-CONTROL-CLOSEOUT split: t2_system_control_global_v1,
+ *        platform-role gated — a company boss with no platform role is
+ *        denied. "Company boss: platform-wide kill switch boshqara OLMASIN.")
+ *   GET  /api/system-control?kompaniya_id=<n>[&loyiha_id=<n>]     COMPANY read model (unchanged)
  *   POST /api/system-control   { action, ... }                    audited command
  *
  * actorId ALWAYS comes from the verified session — never from the request body.
@@ -13,13 +17,28 @@ import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string };
 
+const READ_RPC = { company: 't2_system_control_v1', global: 't2_system_control_global_v1' } as const;
+const GLOBAL_WRITE_GUARD_RPC = 't2_control_global_write_guard_v1';
+
+/** POST action -> RPC. Deliberately separate from READ_RPC so a request
+ *  can never address the global-read or write-guard RPCs by action name. */
 const RPC = {
-  read: 't2_system_control_v1',
   capability_override_set: 't2_capability_override_set_v1',
   capability_killswitch: 't2_capability_killswitch_v1',
   job_control: 't2_job_control_v1',
   deploy_state_set: 't2_deploy_state_set_v1',
 } as const;
+
+/** job_control / deploy_state_set / capability_killswitch are always
+ *  global-scope commands (a kill switch stops a capability everywhere, not
+ *  per-company). capability_override_set carries an explicit scope field.
+ *  Used for the defense-in-depth guard below (T2-COMPANY-CONTROL-CLOSEOUT
+ *  §Phase A — "Company boss: platform-wide kill switch boshqara OLMASIN"). */
+function isGlobalScopeWrite(action: string, bodyIn: any): boolean {
+  if (action === 'job_control' || action === 'deploy_state_set' || action === 'capability_killswitch') return true;
+  if (action === 'capability_override_set') return String(bodyIn?.scope) === 'global';
+  return false;
+}
 
 async function callRpc(env: Env, name: string, body: unknown) {
   const r = await fetch(supabaseBaseUrl(env.SUPABASE_URL) + '/rest/v1/rpc/' + name, {
@@ -35,7 +54,7 @@ async function callRpc(env: Env, name: string, body: unknown) {
 
 function httpStatusFor(code: string, raw: string): number {
   if (code === 'COMPANY_NOT_FOUND' || code === 'CAPABILITY_NOT_FOUND') return 404;
-  if (/actor|a'zo|azo|membership|PERMISSION_DENIED/i.test(code + raw)) return 403;
+  if (code === 'AUTHORIZATION_DENIED' || /actor|a'zo|azo|membership|PERMISSION_DENIED/i.test(code + raw)) return 403;
   if (code === 'STALE_VERSION') return 409;
   if (code === 'OPERATION_ID_REQUIRED' || code === 'CONTROL_SCOPE_INVALID') return 400;
   if (code === 'KILLSWITCH_ACTIVE' || code === 'JOB_NOT_PAUSABLE') return 422;
@@ -56,12 +75,27 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     const a = await actorFromSession(ctx);
     if (a instanceof Response) return a;
     const url = new URL(ctx.request.url);
-    const kompaniyaId = Number(url.searchParams.get('kompaniya_id'));
+    const kompRaw = url.searchParams.get('kompaniya_id');
+
+    // No kompaniya_id -> GLOBAL read (platform-role gated at the DB layer;
+    // a company boss with no platform role gets AUTHORIZATION_DENIED, not
+    // the company-scoped data). "/admin/system-control" without a company
+    // selected is exactly this call.
+    if (!kompRaw) {
+      const { r, j, text } = await callRpc(ctx.env, READ_RPC.global, { p_actor_id: a.actorId });
+      if (!r.ok || !j || j.ok !== true) {
+        const code = (j && j.code) || 'SYSTEM_CONTROL_FAILED';
+        return Response.json({ ok: false, code, reason: j?.reason, xato: (j && j.message) || text.slice(0, 200) }, { status: httpStatusFor(code, text) });
+      }
+      return Response.json(j);
+    }
+
+    const kompaniyaId = Number(kompRaw);
     if (!kompaniyaId) return Response.json({ ok: false, code: 'COMPANY_CONTEXT_REQUIRED' }, { status: 400 });
     const loyihaRaw = url.searchParams.get('loyiha_id');
     const loyihaId = loyihaRaw ? Number(loyihaRaw) : null;
 
-    const { r, j, text } = await callRpc(ctx.env, RPC.read, { p_kompaniya_id: kompaniyaId, p_actor_id: a.actorId, p_loyiha_id: loyihaId });
+    const { r, j, text } = await callRpc(ctx.env, READ_RPC.company, { p_kompaniya_id: kompaniyaId, p_actor_id: a.actorId, p_loyiha_id: loyihaId });
     if (!r.ok || !j || j.ok !== true) {
       const code = (j && j.code) || 'SYSTEM_CONTROL_FAILED';
       return Response.json({ ok: false, code, xato: (j && j.message) || text.slice(0, 200) }, { status: httpStatusFor(code, text) });
@@ -81,6 +115,17 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     if (!action || !(action in RPC) || action === 'read') {
       return Response.json({ ok: false, code: 'CONTROL_ACTION_INVALID' }, { status: 400 });
     }
+    // Defense in depth: global-scope writes are re-checked against the
+    // shared authorization core BEFORE reaching the existing command RPC
+    // (which also checks, independently). The owner's law, enforced twice:
+    // "Company boss: platform-wide kill switch boshqara OLMASIN."
+    if (isGlobalScopeWrite(action, bodyIn)) {
+      const guard = await callRpc(ctx.env, GLOBAL_WRITE_GUARD_RPC, { p_actor_id: a.actorId });
+      if (!guard.r.ok || !guard.j || guard.j.allowed !== true) {
+        return Response.json({ ok: false, code: 'AUTHORIZATION_DENIED', reason: guard.j?.reason }, { status: 403 });
+      }
+    }
+
     // operation_id: accept a client-supplied uuid for idempotency, else mint one
     const opId: string = typeof bodyIn.operation_id === 'string' && bodyIn.operation_id ? bodyIn.operation_id : crypto.randomUUID();
 

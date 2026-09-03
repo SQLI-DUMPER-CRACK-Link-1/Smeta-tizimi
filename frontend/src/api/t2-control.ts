@@ -42,6 +42,26 @@ export function useSystemControl(kompaniyaId: number | null | undefined, loyihaI
   });
 }
 
+/** GLOBAL (no-company) read model — T2-COMPANY-CONTROL-CLOSEOUT split.
+ * Platform-role gated server-side (t2_system_control_global_v1): a company
+ * boss with no platform role gets AUTHORIZATION_DENIED here, not data. */
+export async function systemControlGlobalOl(): Promise<ControlReadEnvelope> {
+  const r = await fetch('/api/system-control');
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || j.ok !== true) throw toErr(j, r.status);
+  return j as ControlReadEnvelope;
+}
+
+export function useGlobalSystemControl(enabled: boolean) {
+  return useQuery({
+    queryKey: ['systemControl', 'global'],
+    queryFn: systemControlGlobalOl,
+    enabled,
+    staleTime: 30 * 1000,
+    retry: (n, e: any) => e?.code !== 'AUTH_REQUIRED' && e?.code !== 'AUTHORIZATION_DENIED' && n < 2,
+  });
+}
+
 // ── audited commands ────────────────────────────────────────────────────────
 export type OverrideSetInput = {
   kod: string; scope: 'global' | 'company' | 'project'; scope_id?: number | null;
@@ -71,7 +91,13 @@ export const deployStateSet = (i: DeployStateInput) => post('deploy_state_set', 
 /** Mutations that invalidate the read model on success. */
 export function useControlCommands(kompaniyaId: number | null | undefined, loyihaId?: number | null) {
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['systemControl', kompaniyaId, loyihaId ?? null] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['systemControl', kompaniyaId, loyihaId ?? null] });
+    // job_control/deploy_state_set/global killswitch/global override writes
+    // can affect the GLOBAL view too (e.g. superadmin in Global rejim) —
+    // cheap to invalidate both, avoids a stale global read after a write.
+    qc.invalidateQueries({ queryKey: ['systemControl', 'global'] });
+  };
   return {
     overrideSet: useMutation({ mutationFn: capabilityOverrideSet, onSuccess: invalidate }),
     killswitch: useMutation({ mutationFn: capabilityKillswitch, onSuccess: invalidate }),

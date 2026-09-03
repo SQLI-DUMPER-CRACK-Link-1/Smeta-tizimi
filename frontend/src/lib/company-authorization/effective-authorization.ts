@@ -79,7 +79,10 @@ export function resolveAuthorizationContext(input: AuthorizationContext): Author
   };
 }
 
-const ROLE_PERMISSIONS: Record<CompanyMembershipRole, PermissionCode[]> = {
+/** Exported so the Company Control Center's "Rollar va Ruxsatlar" tab can
+ * render this SAME table instead of a hand-maintained duplicate — one
+ * source of truth, never a parallel one (T2-COMPANY-CONTROL-CLOSEOUT). */
+export const ROLE_PERMISSIONS: Record<CompanyMembershipRole, PermissionCode[]> = {
   superadmin: [...PERMISSIONS.filter((p) => !p.startsWith('control.global'))],
   admin: [...PERMISSIONS.filter((p) => !p.startsWith('control.global'))],
   boss: [...PERMISSIONS.filter((p) => !p.startsWith('control.global'))],

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle, ChevronDown, ChevronRight, Archive, ShieldCheck } from 'lucide-react';
 import { Map, LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
-import { KompaniyaProvider } from '../umumiy/kontekst/KompaniyaKontekst';
+import { KompaniyaProvider, useKompaniya } from '../umumiy/kontekst/KompaniyaKontekst';
 import { KompaniyaTanlagich } from '../umumiy/kontekst/KompaniyaTanlagich';
+import { RuxsatGuard } from '../umumiy/kontekst/RuxsatGuard';
 import { tizimdanChiq } from '../umumiy/kontekst/chiqish';
 
 const TIZIM_02_GURUHLAR = [
@@ -84,8 +85,28 @@ const ESKI_TIZIM_MENYU = [
 ];
 
 export default function AdminShell() {
+  return (
+    <KompaniyaProvider>
+      <AdminShellInner />
+    </KompaniyaProvider>
+  );
+}
+
+/** T2-COMPANY-CONTROL-CLOSEOUT Phase A P0 #1/#2: the sidebar and the role
+ * badge used to read `sess.data?.rol` — ONE global role from /api/sessiya,
+ * ignoring which company is active. A user who is "boss" in company A and
+ * "pto" in company B saw the SAME (wrong) menu after switching. This inner
+ * component sits INSIDE <KompaniyaProvider/> so it can read the per-company
+ * effective role (`joriy.rol`, re-derived from t2_men_v1 on every company
+ * switch) instead. */
+function AdminShellInner() {
   const sess = useSessiya();
+  const k = useKompaniya();
   const joy = useLocation();
+  // Effective role for THIS render: the active company's own membership
+  // role, or a platform-level label when no company is selected. Never the
+  // stale global session role.
+  const effektivRol: string = k.globalRejim ? 'superadmin' : (k.joriy?.rol ?? '');
 
   // Avtomatik ochish logikasi
   const eskiIchida = ESKI_TIZIM_MENYU.some((m) => joy.pathname.startsWith(m.yol));
@@ -165,34 +186,46 @@ export default function AdminShell() {
     );
   }
 
-  // Master Plan 4. ROLLAR VA WORKSPACE
+  // Master Plan 4. ROLLAR VA WORKSPACE — endi JORIY KOMPANIYADAGI effektiv
+  // roldan (`effektivRol`), sessiyadagi bitta global roldan EMAS. Shu tufayli
+  // A kompaniyada boss / B kompaniyada pto bo'lgan foydalanuvchi kompaniya
+  // almashtirganda menyu HAM almashadi (Antigravity FINAL-AUDIT-002 P0 #1/#2).
+  //
+  // 'global' (Kompaniya, Tizim boshqaruv markazi) va 'tizim' (Sozlama)
+  // guruhlari HAR DOIM ko'rinadi — /admin/kompaniya har bir a'zoning o'z
+  // profili/kompaniyasini boshqaradigan universal markazi, rolga bog'liq
+  // emas. Faqat kompaniya-ish ('asosiy'/'operatsion') roldan kelib chiqib
+  // filtrlanadi. Server tomon (RuxsatGuard, RPC ichidagi tekshiruv) yakuniy
+  // qo'riqchi — bu yerdagi filtr faqat menyu tuzilishi, xavfsizlik chegarasi
+  // EMAS.
   const filtrKilinganGuruhlar = TIZIM_02_GURUHLAR.map(g => {
+    if (g.id === 'global' || g.id === 'tizim') return g;
     let allowedMenus = g.menyular;
-    if (sess.data?.rol === 'prorab') {
+    if (effektivRol === 'prorab') {
       // Prorab faqat Logistika (Sklad) va Loyihalar(Fakt) ko'radi
       if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
       else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('logistika'));
-      else allowedMenus = [];
-    } else if (sess.data?.rol === 'pto') {
+    } else if (effektivRol === 'pto') {
       // PTO Portfel va Moliya(Smeta/F2)
       if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
       else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya') || m.yol.includes('smeta'));
-      else allowedMenus = [];
-    } else if (sess.data?.rol === 'bugalter') {
+    } else if (effektivRol === 'bugalter') {
       // Bugalter Moliya, CRM
       if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('crm'));
       else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya') || m.yol.includes('smeta'));
-      else allowedMenus = [];
-    } else if (sess.data?.rol === 'rahbar' || sess.data?.rol === 'boss' || sess.data?.rol === 'admin' || sess.data?.rol === 'superadmin') {
+    } else if (effektivRol === 'rahbar' || effektivRol === 'boss' || effektivRol === 'admin' || effektivRol === 'superadmin') {
       // Ruxsat hammasiga
+    } else if (effektivRol === 'buyurtmachi' || effektivRol === 'pudratchi' || effektivRol === 'kuzatuvchi') {
+      // Faqat portfel (o'qish uchun) — yozuv ruxsati alohida serverda tekshiriladi
+      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
+      else allowedMenus = [];
     } else {
-      allowedMenus = []; // Noma'lum rol bo'lsa yashirish
+      allowedMenus = []; // Kompaniya hali tanlanmagan yoki noma'lum rol
     }
     return { ...g, menyular: allowedMenus };
   }).filter(g => g.menyular.length > 0);
 
   return (
-   <KompaniyaProvider>
     <div className="os-app-shell flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30">
 
       {/* Sidebar - custom-scrollbar added for smooth scrolling on small laptops */}
@@ -203,7 +236,9 @@ export default function AdminShell() {
           </div>
           <div>
             <h1 className="text-[15px] font-bold text-text leading-tight tracking-wider">SMETA TIZIM 02</h1>
-            <p className="text-[11px] text-text-dim uppercase tracking-wider font-medium mt-0.5 text-accent/80">👑 {sess.data?.rol ? sess.data.rol : 'Admin'}</p>
+            <p className="text-[11px] text-text-dim uppercase tracking-wider font-medium mt-0.5 text-accent/80">
+              👑 {k.globalRejim ? 'Global (superadmin)' : (k.joriy?.rol || (k.yuklanmoqda ? '…' : 'Kompaniya tanlanmagan'))}
+            </p>
           </div>
         </div>
 
@@ -310,12 +345,11 @@ export default function AdminShell() {
         )}
 
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          <Outlet />
+          <RuxsatGuard />
         </div>
       </main>
 
       <F2NavbatChip />
     </div>
-   </KompaniyaProvider>
   );
 }

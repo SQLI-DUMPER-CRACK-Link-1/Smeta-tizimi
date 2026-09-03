@@ -22,7 +22,7 @@ export const ROUTE_SCOPE: Record<string, RouteScope> = {
 
   // GLOBAL — kompaniya tanlamasdan ishlaydi
   '/admin/kompaniya': 'GLOBAL',                 // identity + a'zoliklar + registry (t2_men_v1)
-  '/admin/system-control': 'GLOBAL',            // maqsad: global; hozircha kompaniya tanlansa to'liq ishlaydi (SPLIT — REMAINING)
+  '/admin/system-control': 'GLOBAL',            // T2-COMPANY-CONTROL-CLOSEOUT: split done — no kompaniya_id -> t2_system_control_global_v1 (platform-role gated); kompaniya_id present -> unchanged company-scoped t2_system_control_v1
 
   // COMPANY_SCOPED
   '/admin/dashboard': 'COMPANY_SCOPED',
