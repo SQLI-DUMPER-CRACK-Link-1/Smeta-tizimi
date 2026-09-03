@@ -5,7 +5,7 @@
 - Base: `ccd5423e017cbea1f4aac9cf372d59c9ced2ac6a`
 - Branch: `codex/t2-company-control-auth-core-v2`
 - Old checkpoint: `f463b769fab85637bbde1da1bfa35b9bfcadd514`
-- Ushbu handoff yozilgan paytda yangi commit hali yaratilmagan; final SHA commitdan keyin beriladi.
+- Reconciliation implementation commit: `547dd4214c4a9fb7d677a1106f8ba4e4046c6326`.
 
 ## Claude kontrakti bilan reconciliation
 
