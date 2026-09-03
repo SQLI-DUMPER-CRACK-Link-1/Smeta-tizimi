@@ -5,10 +5,24 @@ import { AlertTriangle, ChevronDown, ChevronRight, Archive, ShieldCheck } from '
 import { Map, LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
+import { KompaniyaProvider } from '../umumiy/kontekst/KompaniyaKontekst';
+import { KompaniyaTanlagich } from '../umumiy/kontekst/KompaniyaTanlagich';
+import { tizimdanChiq } from '../umumiy/kontekst/chiqish';
 
 const TIZIM_02_GURUHLAR = [
   {
-    nom: 'Platforma',
+    // GLOBAL — kompaniya tanlash SHART EMAS
+    nom: 'Global',
+    Ikonka: ShieldAlert,
+    id: 'global',
+    menyular: [
+      { yol: '/admin/kompaniya', nom: 'Kompaniya', Ikonka: Building2 },
+      { yol: '/admin/system-control', nom: 'Tizim boshqaruv markazi', Ikonka: ShieldAlert },
+    ]
+  },
+  {
+    // KOMPANIYA KONTEKSTI — tanlangan kompaniyaga tegishli
+    nom: 'Kompaniya ishi',
     Ikonka: LayoutDashboard,
     id: 'asosiy',
     menyular: [
@@ -35,15 +49,12 @@ const TIZIM_02_GURUHLAR = [
     ]
   },
   {
-    nom: 'Tizim',
-    Ikonka: ShieldAlert,
+    nom: 'Sozlama',
+    Ikonka: Settings,
     id: 'tizim',
     menyular: [
-      { yol: '/admin/kompaniya', nom: 'Kompaniya va a\'zolik', Ikonka: Building2 },
       { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
       { yol: '/admin/storage', nom: 'Fayl saqlash (Storage)', Ikonka: HardHat },
-      { yol: '/admin/system-control', nom: 'Tizim boshqaruv markazi', Ikonka: ShieldAlert },
-      { yol: '/admin/test/xodimlar', nom: 'Xodimlar va Rollar', Ikonka: ShieldCheck },
       { yol: '/admin/test/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
     ]
   }
@@ -109,10 +120,7 @@ export default function AdminShell() {
     }
   }, [sess.isError, sess.error]);
 
-  const handleLogout = () => {
-    document.cookie = 'sess=; Max-Age=0; path=/';
-    window.location.href = '/';
-  };
+  const handleLogout = tizimdanChiq;
 
   if (sess.isLoading) {
     return (
@@ -184,6 +192,7 @@ export default function AdminShell() {
   }).filter(g => g.menyular.length > 0);
 
   return (
+   <KompaniyaProvider>
     <div className="os-app-shell flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30">
 
       {/* Sidebar - custom-scrollbar added for smooth scrolling on small laptops */}
@@ -281,25 +290,32 @@ export default function AdminShell() {
         </div>
       </aside>
 
-      {/* Main Content */}
-      {sess.data && !sess.data.yozaOladi && (
-        <div className="absolute top-0 left-64 xl:left-72 right-0 z-30 bg-warn/15 border-b border-warn/30 px-4 py-2 flex items-center gap-2 text-sm text-text backdrop-blur-sm">
-          <AlertTriangle size={16} className="text-warn flex-shrink-0" />
-          <span className="flex-1">
-            Siz <strong>{sess.data.rol}</strong> rolida kirgansiz — bu rolda <strong>yozish mumkin emas</strong>.
-            Admin bo'lib qayta kiring.
-          </span>
-          <button onClick={handleLogout} className="h-7 px-3 rounded-lg bg-warn/20 hover:bg-warn/30 text-text text-xs font-medium cursor-pointer">
-            Chiqish
-          </button>
-        </div>
-      )}
-
       <main className="os-workspace relative z-10 flex-1 overflow-hidden flex flex-col">
-        <Outlet />
+        {/* YAGONA kompaniya konteksti — barcha /admin/* sahifalari shuni ishlatadi */}
+        <div className="os-context-bar flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2 border-b backdrop-blur-sm z-20">
+          <KompaniyaTanlagich />
+        </div>
+
+        {sess.data && !sess.data.yozaOladi && (
+          <div className="flex-shrink-0 z-20 bg-warn/15 border-b border-warn/30 px-6 py-2 flex items-center gap-2 text-sm text-text backdrop-blur-sm">
+            <AlertTriangle size={16} className="text-warn flex-shrink-0" />
+            <span className="flex-1">
+              Siz <strong>{sess.data.rol}</strong> rolida kirgansiz — bu rolda <strong>yozish mumkin emas</strong>.
+              Admin bo'lib qayta kiring.
+            </span>
+            <button onClick={handleLogout} className="h-7 px-3 rounded-lg bg-warn/20 hover:bg-warn/30 text-text text-xs font-medium cursor-pointer">
+              Chiqish
+            </button>
+          </div>
+        )}
+
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <Outlet />
+        </div>
       </main>
 
       <F2NavbatChip />
     </div>
+   </KompaniyaProvider>
   );
 }

@@ -9,7 +9,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Info } from 'lucide-react';
 import { ConstructionDocumentWorkbench } from '../../components/construction-document-control';
-import { useKompaniya } from '../../test02/KompaniyaTanlov';
+import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
+import { KompaniyaKerak } from '../../umumiy/kontekst/KompaniyaKerak';
 import { sbT2LoyihalarOl, type Loyiha } from '../../api/t2-loyiha';
 import { useHujjatNazoratModel, progressValuationPage } from '../../api/t2-document-control';
 
@@ -34,13 +35,13 @@ export default function HujjatNazoratPage() {
   const q = useHujjatNazoratModel(obyektId);
   const model = q.data;
   const page = useMemo(() => (model ? progressValuationPage(model, { limit: 300 }) : null), [model]);
-  const notApplied = ['WORKBENCH_FAILED', 'HTTP_501'].includes((q.error as any)?.code);
+  const notApplied = (q.error as any)?.code === 'HTTP_501';
   const noPerm = (q.error as any)?.code === 'HTTP_403';
+
+  if (!joriy?.id) return <KompaniyaKerak nima="Hujjat nazorati (F2/Nakopitelniy)" />;
 
   return (
     <div className="p-6 bg-bg min-h-screen text-text space-y-4">
-      {!joriy?.id && <p className="text-sm text-text-dim">Avval yuqoridan kompaniya tanlang.</p>}
-
       {joriy?.id && (
         <div className="flex flex-wrap gap-3">
           <label className="text-[13px]">
@@ -65,12 +66,7 @@ export default function HujjatNazoratPage() {
       {notApplied && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100 flex items-start gap-2 max-w-3xl">
           <Info size={16} className="mt-0.5 shrink-0" />
-          <div>
-            SMETA/F2/NAKOPITELNIY backend’i <b>source-ready</b> va acceptance-verified,
-            lekin productionga hali qo‘llanmagan (migratsiyalar <code>20260910120000</code>,
-            <code>20260911120000</code>, <code>20260912120000</code> —
-            <code>ops/releases/NEXT_MAIN_RELEASE_V1.md</code>).
-          </div>
+          <div>Hujjat nazorati bu obyekt uchun hozircha mavjud emas.</div>
         </div>
       )}
 

@@ -10,6 +10,7 @@
  */
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
+import { xavfsizXato } from '../_shared/xato';
 
 type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string };
 
@@ -56,12 +57,20 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     if (a instanceof Response) return a;
     const { r, j, text } = await callRpc(ctx.env, RPC.me, { p_actor_id: a.id });
     if (!r.ok || !j || j.ok !== true) {
-      const code = (j && j.code) || 'ME_FAILED';
-      return Response.json({ ok: false, code, xato: (j && j.xato) || text.slice(0, 200) }, { status: statusFor(code, text) });
+      const domCode = j && typeof j === 'object' && 'code' in j ? String((j as any).code) : '';
+      // Domen javobi (ACTOR_NOT_FOUND / AUTH_REQUIRED) — xavfsiz, frontendga o'tkazamiz.
+      if (domCode === 'ACTOR_NOT_FOUND' || domCode === 'AUTH_REQUIRED') {
+        return Response.json({ ok: false, code: domCode }, { status: statusFor(domCode, text) });
+      }
+      // HTTP / PGRST xatosi (kalit roli, funksiya ruxsati, URL) — SERVER CONFIG.
+      console.error('[company me] t2_men_v1', r.status, text.slice(0, 300));
+      return Response.json({ ok: false, code: 'CONFIG',
+        xato: 'Kompaniya ma’lumoti serveri sozlamasida nosozlik. Administrator bilan bog‘laning.' },
+        { status: 502 });
     }
     return Response.json(j);
   } catch (err: any) {
-    return Response.json({ ok: false, code: 'ME_FAILED', xato: String(err?.message || err) }, { status: 500 });
+    return xavfsizXato('UPSTREAM', 500, err?.message || String(err));
   }
 };
 
@@ -90,10 +99,13 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     const { r, j, text } = await callRpc(ctx.env, (RPC as any)[action], body);
     if (!r.ok || !j || j.ok !== true) {
       const code = (j && j.code) || 'COMPANY_COMMAND_FAILED';
-      return Response.json({ ok: false, code, xato: (j && j.xato) || (j && j.message) || text.slice(0, 200) }, { status: statusFor(code, text) });
+      // Domen xato kodlari (LAST_DIRECTOR, ALREADY_MEMBER, ROLE_INVALID, ...) frontendga kerak — ular xavfsiz.
+      const known = code && code !== 'COMPANY_COMMAND_FAILED';
+      if (known) return Response.json({ ok: false, code }, { status: statusFor(code, text) });
+      return xavfsizXato('UPSTREAM', statusFor(code, text), text);
     }
     return Response.json({ ...j, operation_id: opId });
   } catch (err: any) {
-    return Response.json({ ok: false, code: 'COMPANY_COMMAND_FAILED', xato: String(err?.message || err) }, { status: 500 });
+    return xavfsizXato('UPSTREAM', 500, err?.message || String(err));
   }
 };

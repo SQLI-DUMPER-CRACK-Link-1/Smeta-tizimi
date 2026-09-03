@@ -42,9 +42,30 @@ const TESTLAR = [
   ['SECURITY P0 cross-cutting guards', 't2_security_p0.test.cjs'],
   ['SMETA/F2/NAKOPITELNIY + change control', 't2_smeta_f2_nakopitelniy.test.cjs'],
   ['PRE-MAIN adversarial release contracts', 'pre_main_release_qa.test.cjs'],
+  ['COMPANY CONTEXT P0 (provider/scope/superadmin)', 't2_company_context.test.cjs'],
+  ['COMPANY CONTEXT adversarial oracle (Codex)', 't2_company_context_adversarial.test.cjs'],
+  ['Cloudflare Functions TS gate oracle (Codex)', 't2_functions_typecheck_gate.test.cjs'],
 ];
 
 let yiqildi = 0;
+
+/* Cloudflare Pages Functions REAL type gate — asosiy `tsc -b` frontend/functions/**
+ * ni ko'rmaydi (tsconfig.app.json faqat src). `ctx.env.env.*` kabi regressiyalar
+ * shu bo'shliqdan o'tib ketgan edi. Endi har `npm run tekshir` da tekshiriladi. */
+console.log('\n══════════════════════════════════════════════');
+console.log('  Cloudflare Functions type gate   (tsc -p tsconfig.functions.json)');
+console.log('══════════════════════════════════════════════');
+try {
+  execFileSync(process.execPath, [path.join(__dirname, '..', 'node_modules', 'typescript', 'bin', 'tsc'),
+    '-p', path.join(__dirname, '..', 'tsconfig.functions.json')], { encoding: 'utf8', stdio: 'pipe' });
+  console.log('  ✅ frontend/functions/** type-check toza');
+} catch (e) {
+  yiqildi++;
+  if (e.stdout) process.stdout.write(e.stdout);
+  if (e.stderr) process.stderr.write(e.stderr);
+  console.log('  ⛔ YIQILDI');
+}
+
 for (const [nom, fayl] of TESTLAR) {
   console.log('\n══════════════════════════════════════════════');
   console.log('  ' + nom + '   (' + fayl + ')');

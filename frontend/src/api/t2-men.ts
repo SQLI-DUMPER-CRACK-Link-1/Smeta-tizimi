@@ -50,6 +50,29 @@ async function post(action: string, payload: Record<string, unknown>) {
   return j;
 }
 
+/** Bitta kompaniya a'zolari (list) — kanonik o'qish (t2_azolik_royxat, a'zolik-tekshirilgan). */
+export type KompaniyaAzo = {
+  azolik_id: number; kompaniya_id: number; rol: string; holat: string;
+  foydalanuvchi_id: number; login: string; email: string | null; ism: string | null;
+};
+export async function kompaniyaAzolariOl(kompaniyaId: number): Promise<KompaniyaAzo[]> {
+  const r = await fetch('/api/sb', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jadval: 't2_azolik_royxat', filtr: 'kompaniya_id=eq.' + kompaniyaId, tartib: 'login.asc', limit: 500 }),
+  });
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || j.ok !== true) throw toErr(j, r.status);
+  return (j.qatorlar as KompaniyaAzo[]) || [];
+}
+export function useKompaniyaAzolari(kompaniyaId: number | null | undefined) {
+  return useQuery({
+    queryKey: ['kompaniyaAzolari', kompaniyaId],
+    queryFn: () => kompaniyaAzolariOl(kompaniyaId as number),
+    enabled: !!kompaniyaId,
+    staleTime: 30_000,
+  });
+}
+
 export type KompaniyaYaratInput = { nom: string; inn?: string; telefon?: string; operation_id?: string };
 export type MemberAddInput = { kompaniya_id: number; login: string; rol: string; email?: string; ism?: string; operation_id?: string };
 export type MemberRoleInput = { azolik_id: number; rol: string; operation_id?: string };
@@ -62,7 +85,10 @@ export const azoOchir = (i: MemberRemoveInput) => post('member_remove', i);
 
 export function useOnboardingCommands() {
   const qc = useQueryClient();
-  const done = () => { qc.invalidateQueries({ queryKey: ['men'] }); };
+  const done = () => {
+    qc.invalidateQueries({ queryKey: ['men'] });
+    qc.invalidateQueries({ queryKey: ['kompaniyaAzolari'] });
+  };
   return {
     yarat: useMutation({ mutationFn: kompaniyaYarat, onSuccess: done }),
     azoQosh: useMutation({ mutationFn: azoQosh, onSuccess: done }),

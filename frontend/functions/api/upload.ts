@@ -1,8 +1,8 @@
 export const onRequestPost: PagesFunction<any> = async (ctx) => {
   try {
     const formData = await ctx.request.formData();
-    const file = formData.get('fayl') as File;
-    const rfqId = formData.get('rfq_id') as string;
+    const file = formData.get('fayl') as unknown as File | null;
+    const rfqId = (formData.get('rfq_id') ?? '') as string;
     /* ⚡ 2026-08-27 (Claude, foydalanuvchi ko'rsatmasi — "DUAL-STORAGE"):
      * obyekt hujjatlari uchun R2 ichida ANIQ manzil:
      *   Kompaniya_ID / Obyekt_ID / Hujjat_turi / Haqiqiy_fayl_nomi.ext

@@ -1,8 +1,8 @@
 import { supabaseBaseUrl } from '../_shared/supabase-url';
 export const onRequestPost: PagesFunction<any> = async (ctx) => {
   try {
-    const data = await ctx.request.json();
-    
+    const data = await ctx.request.json<{ transaction_id?: string; amount?: number }>();
+
     // Asosiy to'lov gateway callback mantig'i
     const tolov_id = data.transaction_id;
     const summa = data.amount;

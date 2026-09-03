@@ -7,7 +7,8 @@
 import { useEffect, useState } from 'react';
 import { ParticipantNetworkPage } from '../participants/ParticipantNetworkPage';
 import type { ProjectParticipant } from '../../components/participants';
-import { useKompaniya } from '../../test02/KompaniyaTanlov';
+import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
+import { KompaniyaKerak } from '../../umumiy/kontekst/KompaniyaKerak';
 import { sbT2LoyihalarOl, sbLoyihaQatnashchilarOl, type Loyiha, type LoyihaRol } from '../../api/t2-loyiha';
 
 const ROL_MAP: Record<string, ProjectParticipant['role']> = {
@@ -55,9 +56,7 @@ export default function ParticipantsPage() {
     });
   }, [loyihaId]);
 
-  if (!joriy?.id) {
-    return <div className="p-6 text-text-dim text-sm">Avval yuqoridan kompaniya tanlang.</div>;
-  }
+  if (!joriy?.id) return <KompaniyaKerak nima="Loyiha ishtirokchilari" />;
 
   return (
     <div>

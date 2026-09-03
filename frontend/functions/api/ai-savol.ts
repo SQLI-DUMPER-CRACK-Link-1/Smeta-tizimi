@@ -132,7 +132,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     }
 
     const kontekst = await oqishRpc<AiUmumiy>(ctx.env, kompaniyaId);
-    if (!kontekst?.ok) return xato(('xabar' in kontekst && kontekst.xabar) || 'Kontekst olinmadi', 422);
+    if (!kontekst?.ok) return xato(String((kontekst && 'xabar' in kontekst && (kontekst as { xabar?: string }).xabar) || 'Kontekst olinmadi'), 422);
 
     const dalil = umumiyMatn(kontekst);
     const text = 'MA\'LUMOT (tizimdan):\n' + dalil + '\n\nSAVOL: ' + savol;

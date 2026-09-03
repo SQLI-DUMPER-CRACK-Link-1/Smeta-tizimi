@@ -1,5 +1,11 @@
-import { imzola, Rol } from '../_shared/auth';
+import { imzola, type Rol } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
+
+type Env = {
+  GAS_URL: string; GAS_TOKEN: string;
+  SUPABASE_URL?: string; SUPABASE_KEY?: string;
+  SESSIYA_KALIT: string;
+};
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   let req: { login?: string; parol?: string; isBoss?: boolean; isSuperadmin?: boolean } = {};
@@ -63,44 +69,70 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return Response.json({ ok: false, xato: 'Логин ёки парол нотўғри' }, { status: 401 });
   }
 
-  /* ⚡ 2026-08-27 (Claude, foydalanuvchi tasdig'i — "Auth Session ->
-   * User -> Tenant -> Role" poydevori): GAS login/parolni tasdiqlagach
-   * (yuqorida, o'zgarmagan), endi Postgres'da real foydalanuvchi/
-   * a'zolik yozuvi yaratiladi/topiladi va sessiya shu bilan boyitiladi.
-   * BEST-EFFORT: Supabase o'chib qolsa ham kirish BLOKLANMAYDI (eski
-   * xatti-harakat saqlanadi) — faqat `foydalanuvchi_id`/`kompaniyalar`
-   * sessiyada bo'lmay qoladi, sb.ts/sb-yoz.ts buni "eski sessiya" deb
-   * ko'radi va yangi tekshiruvni o'tkazib yuboradi. */
+  /* ⚡ 2026-09-02 (T2-COMPANY-CONTEXT-P0-FIX-001) — KANONIK LOGIN.
+   *
+   * AVVAL "BEST-EFFORT" edi: Supabase o'chib qolsa ham kirish davom
+   * etardi, faqat `foydalanuvchi_id` sessiyada bo'lmay qolardi. Bu
+   * SPLIT-BRAIN auth yaratardi: login "muvaffaqiyatli", lekin butun
+   * kanonik ilova (`/api/company?me=1` -> `t2_men_v1`, KompaniyaProvider,
+   * barcha /admin/* sahifalar) `foydalanuvchi_id` majburiy talab qiladi
+   * -> hech narsa ishlamaydi.
+   *
+   * ENDI: kanonik login = GAS parol tasdig'i VA kanonik actor
+   * resolution — IKKALASI muvaffaqiyatli bo'lmaguncha sessiya
+   * BERILMAYDI. `t2_kirish_royxatga_ol` faqat upsert qiladi (login
+   * bo'yicha), tabiatan barqaror; nosozlik = tarmoq/config, retry
+   * bilan yopiladi. */
   let foydalanuvchiId: number | undefined;
-  /* ⚡ 2026-08-27: avval faqat ID'larga tekislangan edi (`.map(a =>
-   * a.kompaniya_id)`) — RPC allaqachon har a'zolikning ROLINI ham
-   * qaytaradi, uni tashlab yuborish "polimorfik rol" ma'lumotini yo'q
-   * qilardi. Endi to'liq {kompaniya_id, rol} juftligi saqlanadi. */
   let kompaniyalar: { kompaniya_id: number; rol: string }[] | undefined;
-  try {
-    if (ctx.env.SUPABASE_URL && ctx.env.SUPABASE_KEY) {
+
+  if (!ctx.env.SUPABASE_URL || !ctx.env.SUPABASE_KEY) {
+    return Response.json({ ok: false, code: 'CONFIG',
+      xato: 'Server sozlanmagan: Supabase (SUPABASE_URL / SUPABASE_KEY). Administrator bilan bog‘laning.' },
+      { status: 503 });
+  }
+
+  async function actorResolve(): Promise<{ id?: number; az?: { kompaniya_id: number; rol: string }[]; xato?: string }> {
+    try {
       const r = await fetch(
-        supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/t2_kirish_royxatga_ol',
+        supabaseBaseUrl(ctx.env.SUPABASE_URL!) + '/rest/v1/rpc/t2_kirish_royxatga_ol',
         {
           method: 'POST',
           headers: {
-            apikey: ctx.env.SUPABASE_KEY,
-            Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY,
+            apikey: ctx.env.SUPABASE_KEY!,
+            Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY!,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ p_login: login, p_rol: rol }),
         });
-      if (r.ok) {
-        const natija = await r.json<{ ok: boolean; foydalanuvchi_id?: number; azoliklar?: { kompaniya_id: number; rol: string }[] }>();
-        if (natija.ok) {
-          foydalanuvchiId = natija.foydalanuvchi_id;
-          kompaniyalar = natija.azoliklar || [];
-        }
+      const text = await r.text();
+      if (!r.ok) {
+        console.error('[kirish] t2_kirish_royxatga_ol HTTP', r.status, text.slice(0, 300));
+        return { xato: 'HTTP_' + r.status };
       }
+      let natija: any = null;
+      try { natija = JSON.parse(text); } catch { return { xato: 'INVALID_JSON' }; }
+      if (!natija || natija.ok !== true || natija.foydalanuvchi_id == null) {
+        console.error('[kirish] t2_kirish_royxatga_ol javob:', text.slice(0, 300));
+        return { xato: 'NO_ACTOR' };
+      }
+      return { id: natija.foydalanuvchi_id, az: natija.azoliklar || [] };
+    } catch (err) {
+      console.error('[kirish] t2_kirish_royxatga_ol transport:', err);
+      return { xato: 'TRANSPORT' };
     }
-  } catch (err) {
-    console.error('t2_kirish_royxatga_ol xatosi (kirish baribir davom etadi):', err);
   }
+
+  let res = await actorResolve();
+  if (res.xato) { await new Promise((r) => setTimeout(r, 400)); res = await actorResolve(); }
+  if (res.xato || res.id == null) {
+    return Response.json({ ok: false, code: 'ACTOR_RESOLVE_FAILED',
+      xato: 'Kirish tasdiqlandi, lekin kanonik foydalanuvchi yozuvini olishning iloji bo‘lmadi. '
+        + 'Birozdan so‘ng qayta urinib ko‘ring; takrorlansa administratorga ayting.' },
+      { status: 502 });
+  }
+  foydalanuvchiId = res.id;
+  kompaniyalar = res.az;
 
   const secret = ctx.env.SESSIYA_KALIT;
   let token: string;

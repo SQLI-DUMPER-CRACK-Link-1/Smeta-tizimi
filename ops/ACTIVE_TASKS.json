@@ -175,6 +175,22 @@
       "_izoh": "Owner correction 2026-09-02: current core F2 interactive path (canonical /admin/f2 -> F2Import, useF2* hooks, apiT2F2Korish, T2_F2Import.js) still runs through GAS -- an INCOMPLETE migration, not the intended final architecture (Supabase/Postgres=truth, R2=binary truth, Cloudflare=API+deterministic execution, GAS=Drive/Sheets bridge only). Do NOT start this migration inside NREL-001; do NOT build a second weaker matcher -- port the mature f2MoslashEngine (Smeta tizimi/35_F2Moslash.js) into one shared deterministic engine executed behind Cloudflare/Supabase. Full scope + inventory start in ops/handoff/T2_GAS_EXIT_001.md."
     },
     {
+      "id": "T2-COMPANY-CONTEXT-P0-FIX-001",
+      "title": "Company/tenant context foundation: unified provider, membership-scoped list, superadmin path, route scopes, raw-error UX, functions type gate, IA cleanup",
+      "owner": "claude",
+      "base_sha": "b54f68636a5ae38f6f73435a6f06df48c241e2f5",
+      "base_ref": "origin/main",
+      "branch": "fix/company-context-p0",
+      "head": "71cc123",
+      "status": "superseded",
+      "owns": [],
+      "depends_on": ["NREL-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_COMPANY_CONTEXT_UX_AUDIT_001_CODEX.md"],
+      "production_write_allowed": false,
+      "_izoh": "SUPERSEDED by T2-COMPANY-CONTROL-FOUNDATION-001 (2026-09-03) -- this branch's umumiy/kontekst/ module, tsconfig.functions.json, xato.ts, /api/soglik, and P1 IA cleanup were reconciled/merged into integration/next-main-release-v1 as part of that task. Its platform-role migration (20260914120000_t2_platforma_superadmin_context_v1, superadmin derived from t2_azolik.rol='superadmin') was NOT integrated -- owner-decided final model is Codex's separate t2_platforma_rol truth instead (see T2_COMPANY_CONTROL_FOUNDATION_001_CONTRACT.md Section 2 / CONTRACT_CONFLICT resolution). Root-cause finding (SUPABASE_KEY = anon not service_role) remains valid and tracked as its own docs/governance/CURRENT_STATE.md row (supabase_key_role) -- still owner-only, still blocking any main merge.",
+      "_izoh_prev": "BLOCKED_CLOUDFLARE_ENV_SUPABASE_KEY @ 71cc123 (kept for history). Owner authenticated Preview smoke (2026-09-02) FAIL -- barcha kanonik /admin/* sahifada 'Kompaniya ma'lumotini o'qib bo'lmadi'. ROOT CAUSE PROVEN: Cloudflare Pages SUPABASE_KEY = anon/publishable kalit, service_role EMAS. Gates yashil edi: tsc -b, tsc -p tsconfig.functions.json, npm run build, vitest 112/112, lint 0 error, npm run tekshir (t2_company_context 37 check)."
+    },
+    {
       "id": "T2-COMPANY-CONTROL-FOUNDATION-001",
       "title": "Company Control Center foundation: canonical company profile/members/roles/capabilities/audit, superadmin global vs company-scoped nav, System Control global/company split",
       "owner": "claude",
@@ -189,12 +205,19 @@
         "supabase/migrations/2026091*_t2_system_control_split_v1*.sql",
         "frontend/functions/api/company.ts", "frontend/functions/api/system-control.ts",
         "frontend/src/api/t2-men.ts", "frontend/src/api/t2-control.ts",
-        "frontend/src/umumiy/kontekst/"
+        "frontend/src/umumiy/kontekst/",
+        "frontend/src/test02/KompaniyaTanlov.tsx",
+        "frontend/src/admin/AdminShell.tsx", "frontend/src/boss/BossShell.tsx",
+        "frontend/src/test02/TestShell.tsx", "frontend/src/main.tsx",
+        "frontend/src/admin/pages/", "frontend/functions/_shared/xato.ts",
+        "frontend/functions/api/xato.ts", "frontend/tsconfig.functions.json",
+        "frontend/functions/api/kirish.ts", "frontend/functions/api/sb-yoz.ts",
+        "frontend/testlar/t2_company_context.test.cjs"
       ],
       "depends_on": ["NREL-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_COMPANY_CONTROL_FOUNDATION_001_CONTRACT.md"],
       "production_write_allowed": false,
-      "_izoh": "PRODUCTION FREEZE ACTIVE (re-engaged 2026-09-03 after the 25006 + legacy-RPC security hotfixes) -- source/preview only, no migration apply, no main push, no Cloudflare/GAS/R2 production mutation without fresh explicit owner approval. Reconciles fix/company-context-p0's already-built umumiy/kontekst/ module (KompaniyaKontekst/KompaniyaTanlagich/KompaniyaKerak/routeScope -- fast-forward ancestor of current main, do not rebuild) as the canonical foundation. File ownership split across Claude (backend+integration)/Codex (effective authorization engine, new lane files under umumiy/kontekst/, adversarial tests)/Antigravity (Company Control Center UI + UX audit, no core logic) -- see contract Section 2. Full sequencing + release gates in the contract doc."
+      "_izoh": "PRODUCTION FREEZE ACTIVE (re-engaged 2026-09-03 after the 25006 + legacy-RPC security hotfixes) -- source/integration/preview only, no migration apply, no main push, no Cloudflare/GAS/R2 production mutation without fresh explicit owner approval. Reconciles fix/company-context-p0 (superseded, see above) as the canonical foundation, plus codex/t2-company-control-auth-core-v1 (f463b76, merged) as the final platform-role/effective-authorization model. File ownership split across Claude (backend+integration)/Codex (effective authorization engine, adversarial tests)/Antigravity (Company Control Center UI + UX audit, no core logic) -- see contract Section 2. Full sequencing + release gates in the contract doc."
     }
   ]
 }

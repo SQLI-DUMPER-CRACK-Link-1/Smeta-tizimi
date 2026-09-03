@@ -82,52 +82,21 @@ export default function TestSozlama() {
             <div className="bg-zinc-950 border border-zinc-800/60 rounded-lg p-6 shadow-xl max-w-3xl">
               
               {activeTab === 'umumiy' && (
-                <div className="space-y-5 animate-in fade-in">
-                  <h2 className="text-lg font-medium text-white mb-4 border-b border-zinc-800/60 pb-2">Tashkilot Ma'lumotlari</h2>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Kompaniya Nomi</label>
-                      <input 
-                        value={data?.kompaniya_nomi || ''} 
-                        onChange={e => setData({...data, kompaniya_nomi: e.target.value})} 
-                        className="w-full bg-zinc-900 border border-zinc-800 p-2 text-sm rounded focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition-all" 
-                        placeholder="Masalan: Oltin Vodiy MChJ"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">STIR (INN)</label>
-                      <input 
-                        value={data?.stir || ''} 
-                        onChange={e => setData({...data, stir: e.target.value})} 
-                        className="w-full bg-zinc-900 border border-zinc-800 p-2 text-sm font-mono rounded focus:outline-none focus:border-slate-500 transition-all" 
-                        placeholder="305123456"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Yuridik Manzil</label>
-                    <input 
-                      value={data?.manzil || ''} 
-                      onChange={e => setData({...data, manzil: e.target.value})} 
-                      className="w-full bg-zinc-900 border border-zinc-800 p-2 text-sm rounded focus:outline-none focus:border-slate-500 transition-all" 
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Tizimdagi Roli</label>
-                    <select 
-                      value={data?.rol || 'pudratchi'} 
-                      onChange={e => setData({...data, rol: e.target.value})} 
-                      className="w-full bg-zinc-900 border border-zinc-800 p-2 text-sm rounded focus:outline-none focus:border-slate-500"
-                    >
-                      <option value="zakazchik">Zakazchik (Buyurtmachi)</option>
-                      <option value="pudratchi">Bosh Pudratchi</option>
-                      <option value="loyihachi">Loyiha Instituti</option>
-                    </select>
-                    <p className="text-xs text-zinc-500 mt-2">Rol o'zgarishi menyu tuzilishi va huquqlarni avtomatik o'zgartiradi.</p>
-                  </div>
+                <div className="space-y-4 animate-in fade-in">
+                  <h2 className="text-lg font-medium text-white mb-2 border-b border-zinc-800/60 pb-2">Tashkilot Ma'lumotlari</h2>
+                  <p className="text-sm text-zinc-400">
+                    Kompaniya rekvizitlari (nom, STIR, manzil, tizimdagi roli) endi
+                    <b className="text-zinc-200"> bitta joyda</b> boshqariladi — ikkita alohida
+                    CRUD oynasi va jim ajralib ketadigan nusxa yo'q.
+                  </p>
+                  <Link to="/admin/kompaniya"
+                    className="group inline-flex items-center gap-2 rounded-md bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 text-sm font-medium transition-colors">
+                    <Building2 size={16} /> Kompaniya sahifasiga o'tish <ChevronRight size={15} className="opacity-70 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                  <p className="text-xs text-zinc-500">
+                    Bu sahifada faqat haqiqiy ilova/foydalanuvchi sozlamalari qoladi:
+                    valyuta, qat'iy nazorat, integratsiyalar, audit.
+                  </p>
                 </div>
               )}
 
