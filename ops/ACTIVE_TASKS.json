@@ -197,14 +197,14 @@
       "branch": "integration/next-main-release-v1",
       "base_sha": "ccd5423e017cbea1f4aac9cf372d59c9ced2ac6a",
       "base_ref": "origin/main",
-      "status": "active",
+      "status": "phase_a_closed",
       "owns": [
         "ops/handoff/T2_COMPANY_CONTROL_FOUNDATION_001_CONTRACT.md",
         "ops/handoff/T2_COMPANY_CONTROL_SECURITY_INCIDENT_2026-09-03.md",
         "supabase/migrations/2026091*_t2_kompaniya_yangila_v1*.sql",
         "supabase/migrations/2026091*_t2_system_control_split_v1*.sql",
         "frontend/functions/api/company.ts", "frontend/functions/api/system-control.ts",
-        "frontend/src/api/t2-men.ts", "frontend/src/api/t2-control.ts",
+        "frontend/src/api/t2-men.ts", "frontend/src/api/t2-control.ts", "frontend/src/api/t2-authz.ts",
         "frontend/src/umumiy/kontekst/",
         "frontend/src/test02/KompaniyaTanlov.tsx",
         "frontend/src/admin/AdminShell.tsx", "frontend/src/boss/BossShell.tsx",
@@ -217,7 +217,26 @@
       "depends_on": ["NREL-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_COMPANY_CONTROL_FOUNDATION_001_CONTRACT.md"],
       "production_write_allowed": false,
-      "_izoh": "PRODUCTION FREEZE ACTIVE (re-engaged 2026-09-03 after the 25006 + legacy-RPC security hotfixes) -- source/integration/preview only, no migration apply, no main push, no Cloudflare/GAS/R2 production mutation without fresh explicit owner approval. Reconciles fix/company-context-p0 (superseded, see above) as the canonical foundation, plus codex/t2-company-control-auth-core-v1 (f463b76, merged) as the final platform-role/effective-authorization model. File ownership split across Claude (backend+integration)/Codex (effective authorization engine, adversarial tests)/Antigravity (Company Control Center UI + UX audit, no core logic) -- see contract Section 2. Full sequencing + release gates in the contract doc."
+      "_izoh": "PRODUCTION FREEZE ACTIVE -- source/integration/preview only. PHASE A CLOSED (c52ba4f, 2026-09-03): platform-role model FINAL is codex/t2-company-control-auth-core-v2 (2849d9b) -- v1's separate t2_platforma_rol table (referenced in the original _izoh below) is SUPERSEDED per explicit owner directive ('Stale V1 modelga qaytma'); platform signal now derives live from any active t2_azolik row with rol in (superadmin, admin), no parallel truth. Antigravity FINAL-AUDIT-002's 3 confirmed P0s closed: AdminShell per-company role (not global sess.rol), RuxsatGuard direct-URL server-side re-auth, 7-tab Company Control Center. Gates green (tsc -b, functions tsc, build, oxlint, tekshir 63 checks, vitest 128/128). NEXT: Antigravity re-audit against c52ba4f; owner authenticated Preview smoke + SUPABASE_KEY=service_role fix (owner-only) before any main merge."
+    },
+    {
+      "id": "T2-GAS-EXIT-LRV-CONTROL-001",
+      "title": "LRV Control foundation: exact-source F2 law, construction catalog observation layer, Sheets/Supabase bridge contract -- per Section 16, the only next major scope after Company Control Foundation",
+      "owner": "claude",
+      "branch": "integration/next-main-release-v1",
+      "base_sha": "c52ba4f",
+      "base_ref": "origin/main",
+      "status": "foundation_contracts_drafted",
+      "owns": [
+        "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md",
+        "ops/handoff/T2_CONSTRUCTION_CATALOG_001.md",
+        "ops/handoff/T2_SHEETS_SUPABASE_BRIDGE_001.md",
+        "supabase/migrations/20260919120000_t2_construction_catalog_observation_v1*.sql"
+      ],
+      "depends_on": ["T2-COMPANY-CONTROL-FOUNDATION-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md", "ops/handoff/T2_CONSTRUCTION_CATALOG_001.md", "ops/handoff/T2_SHEETS_SUPABASE_BRIDGE_001.md"],
+      "production_write_allowed": false,
+      "_izoh": "PRODUCTION FREEZE ACTIVE -- source/contract only in this pass, nothing applied. Foundation grounded in a live schema audit (not invented from scratch): t2_qator/t2_akt_qator/t2_qator_holat(view)/t2_lrv(view) ALREADY implement most of the LRV Control law; the one new additive migration is a construction-catalog observation layer (t2_work_type_observation/t2_resource_observation/t2_work_resource_observation/t2_catalog_match_candidate), live-verified via BEGIN/ROLLBACK. TWO real findings surfaced and deliberately left OPEN rather than guess-fixed: (1) t2_akt_qator.summa is a Postgres GENERATED column (hajm*narx) and t2_akt_yarat falls back to smeta price when the caller doesn't set narx_yoq -- a real F2-exact-source-law risk that needs a frontend-caller audit before any schema fix (see LRV contract Section 1); (2) the Sheets/Supabase bridge (t2_ozgarish/t2_kozgu/t2_kopruk_navbat) is missing operation_id/sync-cursor/retry -- additive fixable, but not touched without first reading the GAS-side writer code (see bridge contract Section 0/3). NEXT: hand off to Antigravity/Codex per the contracts' open items, or continue implementation once the owner reviews these three contracts."
     }
   ]
 }
