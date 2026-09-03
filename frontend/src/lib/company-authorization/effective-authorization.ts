@@ -15,11 +15,16 @@ export const PERMISSIONS = [
 export type PermissionCode = typeof PERMISSIONS[number];
 
 export const MEMBERSHIP_ROLES = [
-  'boss', 'rahbar', 'bugalter', 'pto', 'prorab',
+  'superadmin', 'admin', 'boss', 'rahbar', 'bugalter', 'pto', 'prorab',
   'buyurtmachi', 'pudratchi', 'kuzatuvchi',
 ] as const;
 export type CompanyMembershipRole = typeof MEMBERSHIP_ROLES[number];
-export type PlatformRole = 'platform_superadmin' | 'platform_operator' | 'none';
+/**
+ * Claude kontrakti bo‘yicha platform roli yangi jadval emas: u joriy,
+ * faol `t2_azolik`lardagi superadmin/admin rolidan DBda qayta hisoblanadi.
+ * Shu bilan birga active company membership roli mustaqil output bo‘lib qoladi.
+ */
+export type PlatformRole = 'superadmin' | 'admin' | 'none';
 export type ScopeLevel = 'none' | 'read' | 'write' | 'manage';
 
 export type AuthorizationReason =
@@ -40,7 +45,7 @@ export type AuthorizationFacts = {
   platformRole: PlatformRole;
   /** Faqat DBdan olingan, joriy kompaniyadagi faol a'zolik roli. */
   membershipRole: string | null;
-  /** Platform role uchun target kompaniyaga aniq berilgan context. */
+  /** Platform superadmin target kompaniyani serverda explicit context sifatida tekshirgan. */
   platformCompanyContext?: boolean;
   /** Resolver natijasi: capability bo'lmasa undefined, off bo'lsa false. */
   capabilities?: Record<string, boolean>;
@@ -62,7 +67,21 @@ export type EffectiveAuthorization = {
   objectId: number | null;
 };
 
+/** Server sessioni va DBdan olingan targetlar bilan qurilgan yagona context. */
+export function resolveAuthorizationContext(input: AuthorizationContext): AuthorizationContext {
+  return {
+    actorId: input.actorId,
+    companyId: input.companyId,
+    projectId: input.projectId ?? null,
+    objectId: input.objectId ?? null,
+    permission: input.permission,
+    capability: input.capability ?? null,
+  };
+}
+
 const ROLE_PERMISSIONS: Record<CompanyMembershipRole, PermissionCode[]> = {
+  superadmin: [...PERMISSIONS.filter((p) => !p.startsWith('control.global'))],
+  admin: [...PERMISSIONS.filter((p) => !p.startsWith('control.global'))],
   boss: [...PERMISSIONS.filter((p) => !p.startsWith('control.global'))],
   rahbar: ['company.read', 'control.company.read', 'project.read', 'object.read', 'document.read', 'financial.read'],
   bugalter: ['company.read', 'financial.read', 'financial.write', 'document.read'],
@@ -74,8 +93,8 @@ const ROLE_PERMISSIONS: Record<CompanyMembershipRole, PermissionCode[]> = {
 };
 
 const PLATFORM_PERMISSIONS: Record<Exclude<PlatformRole, 'none'>, PermissionCode[]> = {
-  platform_superadmin: [...PERMISSIONS],
-  platform_operator: ['control.global.read'],
+  superadmin: [...PERMISSIONS],
+  admin: ['control.global.read'],
 };
 
 const LEVEL: Record<ScopeLevel, number> = { none: 0, read: 1, write: 2, manage: 3 };
@@ -111,9 +130,11 @@ export function effectiveAuthorization(ctx: AuthorizationContext, facts: Authori
       companyId: null, projectId: ctx.projectId ?? null, objectId: ctx.objectId ?? null };
   }
 
-  const platformInCompany = facts.platformRole === 'platform_superadmin' && facts.platformCompanyContext === true;
+  // Synthetic membership yaratilmaydi: superadmin explicit server context bilan
+  // company operationni bajarishi mumkin; domain command esa actor+targetni audit qiladi.
+  const platformInCompany = facts.platformRole === 'superadmin' && facts.platformCompanyContext === true;
   if (!membership && !platformInCompany) return denied(ctx, facts, 'COMPANY_MEMBERSHIP_REQUIRED');
-  const permissions = platformInCompany ? PLATFORM_PERMISSIONS.platform_superadmin : ROLE_PERMISSIONS[membership!];
+  const permissions = platformInCompany ? PLATFORM_PERMISSIONS.superadmin : ROLE_PERMISSIONS[membership!];
   if (!permissions.includes(ctx.permission)) return denied(ctx, facts, 'COMPANY_MEMBERSHIP_REQUIRED', membership ?? null);
   if (ctx.capability && facts.capabilities?.[ctx.capability] === false) return denied(ctx, facts, 'CAPABILITY_DISABLED', membership ?? null);
 
@@ -132,10 +153,27 @@ export function effectiveAuthorization(ctx: AuthorizationContext, facts: Authori
     companyId: ctx.companyId, projectId: ctx.projectId ?? null, objectId: ctx.objectId ?? null };
 }
 
+/** UI faqat affordance uchun ishlatadi; server qarori o‘rnini bosa olmaydi. */
+export function authorize(ctx: AuthorizationContext, facts: AuthorizationFacts): EffectiveAuthorization {
+  return effectiveAuthorization(resolveAuthorizationContext(ctx), facts);
+}
+
+export function hasCapability(facts: AuthorizationFacts, capability: string): boolean {
+  return facts.capabilities?.[capability] === true;
+}
+
+export function canAccessProject(ctx: Omit<AuthorizationContext, 'permission'>, facts: AuthorizationFacts, write = false): EffectiveAuthorization {
+  return authorize({ ...ctx, permission: write ? 'project.write' : 'project.read' }, facts);
+}
+
+export function canAccessObject(ctx: Omit<AuthorizationContext, 'permission'>, facts: AuthorizationFacts, write = false): EffectiveAuthorization {
+  return authorize({ ...ctx, permission: write ? 'object.write' : 'object.read' }, facts);
+}
+
 export type CompanyChoice = { kind: 'static' | 'selector' | 'onboarding' | 'global'; companyId: number | null };
 export function companyChoice(companyIds: number[], savedCompanyId: number | null, platformRole: PlatformRole): CompanyChoice {
   const unique = [...new Set(companyIds.filter((id) => Number.isInteger(id) && id > 0))];
-  if (unique.length === 0) return platformRole === 'platform_superadmin' ? { kind: 'global', companyId: null } : { kind: 'onboarding', companyId: null };
+  if (unique.length === 0) return platformRole === 'superadmin' ? { kind: 'global', companyId: null } : { kind: 'onboarding', companyId: null };
   if (unique.length === 1) return { kind: 'static', companyId: unique[0] };
   return { kind: 'selector', companyId: unique.includes(savedCompanyId ?? -1) ? savedCompanyId : null };
 }

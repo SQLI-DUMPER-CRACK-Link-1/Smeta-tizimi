@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { companyChoice, effectiveAuthorization, type AuthorizationContext, type AuthorizationFacts } from './effective-authorization';
+import { authorize, canAccessObject, canAccessProject, companyChoice, effectiveAuthorization, hasCapability, type AuthorizationContext, type AuthorizationFacts } from './effective-authorization';
 
 const ctx = (permission: AuthorizationContext['permission'], patch: Partial<AuthorizationContext> = {}): AuthorizationContext =>
   ({ actorId: 17, companyId: 10, projectId: 100, objectId: 1000, permission, ...patch });
@@ -47,13 +47,20 @@ describe('T2 Company Control effective authorization', () => {
     expect(companyChoice([10, 20], 20, 'none')).toEqual({ kind: 'selector', companyId: 20 });
   });
   it('platform superadmin global control yozuviga ega', () => {
-    expect(effectiveAuthorization(ctx('control.global.write', { companyId: null }), facts({ platformRole: 'platform_superadmin', membershipRole: null })).allowed).toBe(true);
+    expect(effectiveAuthorization(ctx('control.global.write', { companyId: null }), facts({ platformRole: 'superadmin', membershipRole: null })).allowed).toBe(true);
+    expect(effectiveAuthorization(ctx('control.global.write', { companyId: null }), facts({ membershipRole: 'boss' })).allowed).toBe(false);
   });
   it('platform superadmin company contexti explicit bo‘lmasa rad etiladi', () => {
-    expect(effectiveAuthorization(ctx('company.read'), facts({ platformRole: 'platform_superadmin', membershipRole: null, platformCompanyContext: false })).allowed).toBe(false);
-    expect(effectiveAuthorization(ctx('company.read'), facts({ platformRole: 'platform_superadmin', membershipRole: null, platformCompanyContext: true })).allowed).toBe(true);
+    expect(effectiveAuthorization(ctx('company.read'), facts({ platformRole: 'superadmin', membershipRole: null, platformCompanyContext: false })).allowed).toBe(false);
+    expect(effectiveAuthorization(ctx('company.read'), facts({ platformRole: 'superadmin', membershipRole: null, platformCompanyContext: true })).allowed).toBe(true);
   });
   it('unknown membership role fail-closed', () => {
     expect(effectiveAuthorization(ctx('company.read'), facts({ membershipRole: 'invented-role' })).reason).toBe('UNKNOWN_ROLE');
+  });
+  it('shared helpers server va direct-URL affordance uchun bir xil qaror qaytaradi', () => {
+    expect(authorize(ctx('project.read'), facts()).allowed).toBe(true);
+    expect(canAccessProject(ctx('company.read'), facts()).allowed).toBe(true);
+    expect(canAccessObject(ctx('company.read'), facts()).allowed).toBe(true);
+    expect(hasCapability(facts({ capabilities: { 'documents.read': true } }), 'documents.read')).toBe(true);
   });
 });
