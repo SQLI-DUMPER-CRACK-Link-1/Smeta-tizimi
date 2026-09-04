@@ -373,28 +373,50 @@ anywhere in the live app yet — `admin/sahifalar/F2Import.tsx` and
 
 ## Remaining (not done — real scope, do not understate it)
 
-1. **File parsing off GAS** (owner requirement §4) — **PARTIALLY DONE
-   2026-09-04.** The pure tree-building/column-detection core of
-   `apiF2FaylOqi`/`_f2UstunAniqla` (`Smeta tizimi/30_Panel.js`) is ported to
-   `frontend/src/lib/f2-import-parse/` (10 tests, tsc/lint clean, full suite
-   142/142). **Real-data confirmation:** this session located a real
-   production F2 act (`Амфитеатр.xlsx`, Февраль, via Google Drive —
-   `SEARCH: title contains 'gas' → GAS folder → _f2lab → "Для ф2" → Февраль`)
-   and confirmed the column layout (kod=1,nom=2,bir=3,norma=4,obyom=5,narx=6,
-   sum=7) and the marker column (index 8, literal `rz`/`bl`/`rs` strings)
-   exactly against real rows the port never saw while being written — two
-   real rows (№378 `bl` + №378.1 `rs`) and a real `ИТОГО ПРЯМЫЕ ЗАТРАТЫ`
-   totals row are now regression tests in `treeBuild.test.ts`. **Still NOT
-   done:** reading the actual `.xlsx` BYTES into a 2D grid without GAS —
-   Drive's file-content tool returns an already-flattened CSV-like text, not
-   raw workbook bytes, so the binary/ZIP/XML parsing step (`_f2lab/xlsx.js`
-   is the GAS-side reference, but it shells out to PowerShell and can't run
-   in a Cloudflare Worker) is still unwritten and unproven. Whoever picks
-   this up next should look for more real files under the "Для ф2" Drive
-   tree (multiple month folders exist: Февраль/Декабрь/Август/Июнь and
-   others) before writing that part, and should still not invent workbook
-   quirks (merged cells, hidden sheets, template variants) without a real
-   file exhibiting them.
+1. **File parsing off GAS** (owner requirement §4) — **DONE 2026-09-04,
+   including the byte-level read.** Two pieces, both in
+   `frontend/src/lib/f2-import-parse/`:
+   - `treeBuild.ts`/`columnDetect.ts` — the pure tree-building/column-
+     detection core of `apiF2FaylOqi`/`_f2UstunAniqla`.
+   - `xlsxReader.ts` — **new**, the piece previously marked blocked. A
+     dependency-free `.xlsx` reader using only `ArrayBuffer` +
+     `DecompressionStream('deflate-raw')` + `TextDecoder` (Cloudflare
+     Worker / browser / Node ≥18 — no `fs`, no `child_process`, no
+     PowerShell, no npm package). `_f2lab/xlsx.js` (the GAS-side reference)
+     does the same job by shelling out to `powershell Expand-Archive`,
+     which cannot run in a Worker; this reads the ZIP central directory and
+     inflates DEFLATE entries directly instead. The XML/sharedStrings
+     regex parsing itself was already platform-agnostic and is ported
+     directly from `_f2lab/xlsx.js`.
+   **Real-data confirmation (this session, evidence, not claimed):**
+   located a real production F2 act (`Амфитеатр.xlsx`, Февраль, 526KB, via
+   Google Drive — `search: title contains 'gas'` → `GAS` folder → `_f2lab`
+   → sibling `"Для ф2"` folder → `Февраль`), downloaded its raw bytes, and
+   ran the **full pipeline end-to-end**: `readXlsx` (real ZIP + real
+   DEFLATE, via `DecompressionStream`) → 2998 real rows → `f2FaylOqiCore`
+   (marker path, since this file carries literal `rz`/`bl`/`rs` markers) →
+   **11 rz sections, 36 bl, 392 rs, zero exceptions**; the known real row
+   pair (№378 `bl`, kod `E6-1-26-4`, hajm `0.00525`, 17 children; №378.1
+   `rs`, kod `000001`, hajm `8.23935`, summa `202009.91...`) came out of the
+   tree exactly as it appears in the source file. **The real file itself
+   was NOT committed** (this repo is public; real F2 acts carry real
+   contract/pricing data) — `xlsxReader.test.ts` instead builds a complete,
+   valid, minimal `.xlsx` byte-for-byte in memory (real ZIP central
+   directory/local headers/EOCD, real OOXML parts, shared strings, inline
+   strings, merged cells, XML entity decoding) so the committed suite needs
+   no external fixture. `treeBuild.test.ts` separately carries two rows
+   transcribed verbatim from the real file (see previous commit) as
+   real-world regression fixtures.
+   **What's left is wiring, not missing capability:** `f2-moslash.ts` (the
+   draft Cloudflare Function) still takes pre-parsed `aktTree`/`lrvTree` in
+   the request body — extending it to accept a raw upload
+   (`Browser → Cloudflare → R2`, per owner requirement §4's canonical path)
+   and call `readXlsx` + `f2FaylOqiCore` itself is the next concrete step,
+   still gated on the resumable job model (§5) for anything beyond small
+   files. More real files exist under the same Drive tree (other month
+   folders: Декабрь/Август/Июнь and others) if more template variety needs
+   confirming later (e.g. a `mat`-typed row was not observed in this
+   particular file).
 2. **50k-row resumable job model** (owner requirement §5) — **DRAFTED, UNAPPLIED,
    UNREVIEWED, UNEXECUTED** 2026-09-04:
    `supabase/migrations/20260914120000_t2_f2_import_job_v1.{sql,rollback.sql,acceptance.sql}`.
