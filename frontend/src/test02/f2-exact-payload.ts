@@ -106,3 +106,57 @@ export function f2ExactPayloadQur(rows: F2ExactQator[]): F2ExactPayloadNatija {
     })),
   };
 }
+
+// ── Pre-approval audit — istisnolarni aniqlash (T2-LRV-CLOSURE-006 Section 3) ──
+//
+// LRV Control qonuni: F2 pre-approval audit ko'rinishi FAQAT istisnolarni
+// ko'rsatishi kerak (yuzlab qatorni qo'lda ko'rib chiqishga majburlamasdan).
+// Bu yerdagi funksiya HAR BIR qatorni tekshiradi va faqat e'tibor talab
+// qiladigan qatorlarni qaytaradi. `ARITHMETIC_MISMATCH` — analitik-FAQAT
+// signal (F2_ARITHMETIC_MISMATCH, LRV Control qonuni Section 3): hajm*narx
+// bilan hujjatning o'z summasi mos kelmasa xabar beradi, lekin
+// `certified_amount`ning O'ZINI HECH QACHON qayta yozmaydi/tuzatmaydi —
+// faqat ko'rib chiqish uchun belgi.
+
+/**
+ * Faqat floating-point shovqinini (masalan `10*123.45 - 1234.49` JS'da
+ * `0.009999999999990905` beradi, matematik jihatdan 0.01) yutish uchun --
+ * YARIM tiyindan kichik. QAT'IY 0.01 (bir butun tiyin) ATAYLAB yutilmaydi:
+ * bu — egasining o'z misoli (qty=10, narx=123.45, summa=1234.49) aynan shu
+ * xil haqiqiy 1-tiyinlik farqni ANIQLASHI kerak.
+ */
+const ARITMETIK_TOLERANS = 0.005;
+
+export type F2Exception =
+  /** Narxi bor-yu F2 faylning o'z summasi yo'q -- yozish TO'XTAYDI (f2ExactPayloadQur bilan bir xil qoida). */
+  | { turi: 'NEEDS_REVIEW'; qatorId: number }
+  /** hajm*narx hujjatning o'z summasidan farq qiladi -- YOZISHNI TO'XTATMAYDI, faqat ko'rib chiqish uchun. */
+  | { turi: 'ARITHMETIC_MISMATCH'; qatorId: number; hisoblangan: number; hujjatdagi: number; farq: number }
+  /** Manfiy hajm -- pererraschyot/qaytarilgan ish bo'lishi mumkin, alohida ko'rib chiqiladi. */
+  | { turi: 'NEGATIVE_HAJM'; qatorId: number; hajm: number };
+
+/**
+ * Aggregatsiyalangan qatorlardan FAQAT istisnolarni chiqaradi -- toza
+ * qatorlar (narx/summa mos, hajm manfiy emas) natijaga umuman kirmaydi.
+ * Pre-approval audit UI shu ro'yxatni ko'rsatadi, butun jadvalni emas.
+ */
+export function f2IstisnolarniAniqla(rows: F2ExactQator[]): F2Exception[] {
+  const out: F2Exception[] = [];
+  for (const row of rows) {
+    if (row.narx != null && !row.summaBor) {
+      out.push({ turi: 'NEEDS_REVIEW', qatorId: row.qator_id });
+      continue; // summa yo'q -- arifmetika solishtirib bo'lmaydi, keyingi tekshiruvlar ma'nosiz
+    }
+    if (row.narx != null && row.summaBor) {
+      const hisoblangan = row.hajm * row.narx;
+      const farq = hisoblangan - row.summa;
+      if (Math.abs(farq) > ARITMETIK_TOLERANS) {
+        out.push({ turi: 'ARITHMETIC_MISMATCH', qatorId: row.qator_id, hisoblangan, hujjatdagi: row.summa, farq });
+      }
+    }
+    if (row.hajm < 0) {
+      out.push({ turi: 'NEGATIVE_HAJM', qatorId: row.qator_id, hajm: row.hajm });
+    }
+  }
+  return out;
+}
