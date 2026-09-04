@@ -373,18 +373,28 @@ anywhere in the live app yet — `admin/sahifalar/F2Import.tsx` and
 
 ## Remaining (not done — real scope, do not understate it)
 
-1. **File parsing off GAS** (owner requirement §4): port the useful behavior
-   of `apiF2FaylOqi` (workbook/sheet detection, template detection, column
-   detection, F/E quantity rules, safe XLSX value reads). `_f2lab/xlsx.js`
-   ("tashqi paketsiz .xlsx o'quvchi") already exists as a dependency-free
-   reader and is the natural starting point — but it and the real test
-   fixtures (`_f2lab/README.md` §"Test ma'lumotlari") live only on the
-   owner's local Windows machine (`C:\Users\PC\Desktop\Для ф2\...`, real LRV
-   files and F2 acts), not in this repo checkout. Porting the parser
-   correctly, and proving it against real files, needs that machine — do
-   not attempt a blind reimplementation without those fixtures; that would
-   be exactly the "no invented behavior without evidence" violation this
-   project's Constitution forbids.
+1. **File parsing off GAS** (owner requirement §4) — **PARTIALLY DONE
+   2026-09-04.** The pure tree-building/column-detection core of
+   `apiF2FaylOqi`/`_f2UstunAniqla` (`Smeta tizimi/30_Panel.js`) is ported to
+   `frontend/src/lib/f2-import-parse/` (10 tests, tsc/lint clean, full suite
+   142/142). **Real-data confirmation:** this session located a real
+   production F2 act (`Амфитеатр.xlsx`, Февраль, via Google Drive —
+   `SEARCH: title contains 'gas' → GAS folder → _f2lab → "Для ф2" → Февраль`)
+   and confirmed the column layout (kod=1,nom=2,bir=3,norma=4,obyom=5,narx=6,
+   sum=7) and the marker column (index 8, literal `rz`/`bl`/`rs` strings)
+   exactly against real rows the port never saw while being written — two
+   real rows (№378 `bl` + №378.1 `rs`) and a real `ИТОГО ПРЯМЫЕ ЗАТРАТЫ`
+   totals row are now regression tests in `treeBuild.test.ts`. **Still NOT
+   done:** reading the actual `.xlsx` BYTES into a 2D grid without GAS —
+   Drive's file-content tool returns an already-flattened CSV-like text, not
+   raw workbook bytes, so the binary/ZIP/XML parsing step (`_f2lab/xlsx.js`
+   is the GAS-side reference, but it shells out to PowerShell and can't run
+   in a Cloudflare Worker) is still unwritten and unproven. Whoever picks
+   this up next should look for more real files under the "Для ф2" Drive
+   tree (multiple month folders exist: Февраль/Декабрь/Август/Июнь and
+   others) before writing that part, and should still not invent workbook
+   quirks (merged cells, hidden sheets, template variants) without a real
+   file exhibiting them.
 2. **50k-row resumable job model** (owner requirement §5) — **DRAFTED, UNAPPLIED,
    UNREVIEWED, UNEXECUTED** 2026-09-04:
    `supabase/migrations/20260914120000_t2_f2_import_job_v1.{sql,rollback.sql,acceptance.sql}`.

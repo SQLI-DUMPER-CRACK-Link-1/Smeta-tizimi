@@ -62,6 +62,54 @@ describe('f2FaylOqiCore — preview mode (no colConfig)', () => {
   });
 });
 
+describe('f2FaylOqiCore — real production data (Amfiteatr F2 act, Февраль, read from Drive)', () => {
+  // Rows transcribed verbatim (only re-typed from CSV, values unchanged) from
+  // a real production F2 act — "Амфитеатр.xlsx", НАВОИЙ ШАХАР "ЯНГИ УЗБЕКИСТОН
+  // БОГИ" object, СВОДНАЯ ЛОКАЛЬНАЯ РЕСУРСНАЯ ВЕДОМОСТЬ, section
+  // "СЕРДЕЧНИКИ,ПЕРЕМЫЧКИ,ПОЯСА (ЛИСТ КР-51)" — read via Google Drive. This
+  // is the first real-world confirmation available to this port (the
+  // _f2lab fixtures themselves are Windows-local and out of reach here):
+  // it independently confirms the column layout (kod=1,nom=2,bir=3,
+  // norma=4,obyom=5,narx=6,sum=7) AND the marker column (index 8, literal
+  // "rz"/"bl"/"rs" strings) against a file this port never saw while being
+  // written.
+  test('real "rz" row: section title lives in column A (№№), not the name column — the aTxt/bTxt/cTxt fallback this was ported for', () => {
+    const data: SheetGrid = [
+      ['РАЗДЕЛ: СЕРДЕЧНИКИ,ПЕРЕМЫЧКИ,ПОЯСА (ЛИСТ КР-51)', '', '', '', '', '', '', '', 'rz'],
+      // a bare rz with zero children is filtered from the final tree (matches
+      // the GAS source's own "drop empty razdel" rule) — one real leaf row
+      // keeps this test about the rz-naming fallback, not that filter.
+      ['378', 'E6-1-26-4', 'УСТРОЙСТВО ЖЕЛЕЗОБЕТОННЫХ КОЛОНН', '100М3', 0.01, '', '', 719814.02, 'bl'],
+    ];
+    const r = f2FaylOqiCore(data, TEMPLATE1_COLS);
+    if (!('tree' in r)) throw new Error('expected a tree result');
+    expect(r.tree).toHaveLength(1);
+    expect(r.tree[0].nom).toContain('СЕРДЕЧНИКИ');
+  });
+
+  test('real "bl" + "rs" pair (rows №378/№378.1): bl hajm from E (own quantity), rs child hajm from F (actual consumed quantity)', () => {
+    const data: SheetGrid = [
+      ['СЕРДЕЧНИКИ', '', '', '', '', '', '', '', 'rz'],
+      ['378', 'E6-1-26-4', 'УСТРОЙСТВО ЖЕЛЕЗОБЕТОННЫХ КОЛОНН В ДЕРЕВЯННОЙ ОПАЛУБКЕ ВЫСОТОЙ ДО 4 М, ПЕРИМЕТРОМ ДО 2 М', '100М3', 0.01, '', '', 719814.02, 'bl'],
+      ['378.1', '000001', 'ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ', 'ЧЕЛ-Ч', 1569.40, 8.24, 24517.70, 202009.91, 'rs'],
+      // real totals row from the same file — must still be skipped
+      ['', '', 'ИТОГО ПРЯМЫЕ ЗАТРАТЫ', 'СУМ', '', '', 1740485218.98, '', ''],
+    ];
+    const r = f2FaylOqiCore(data, TEMPLATE1_COLS);
+    if (!('tree' in r)) throw new Error('expected a tree result');
+    const bl = r.tree[0].children?.[0];
+    expect(bl?.kod).toBe('E6-1-26-4');
+    expect(bl?.hajm).toBe(0.01); // marker='bl', F empty -> volume from E
+    const rs = bl?.children?.[0];
+    expect(rs?.kod).toBe('000001');
+    expect(rs?.hajm).toBe(8.24); // marker='rs', F filled -> volume from F
+    expect(rs?.summa).toBe(202009.91);
+    // the real totals row never entered the tree
+    const allNoms = [r.tree[0].nom, bl?.nom, rs?.nom];
+    expect(allNoms).not.toContain('ИТОГО ПРЯМЫЕ ЗАТРАТЫ');
+  });
+});
+
 describe('f2FaylOqiCore — tree build (colConfig given)', () => {
   test('rz auto-detected from an otherwise-empty row with text in the name column; bl/rs classified by the F-or-E rule; totals and numbering rows skipped; a standalone mat (nothing meaningful follows it) is a razdel sibling, not a bl child', () => {
     // NOTE ON FIXTURE DESIGN: the GAS source's own lookahead ("does the next
