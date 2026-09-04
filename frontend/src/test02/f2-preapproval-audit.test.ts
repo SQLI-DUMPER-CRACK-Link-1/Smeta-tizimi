@@ -13,7 +13,12 @@ describe('F2 pre-approval istisno guruhlari', () => {
     expect(result.NEGATIVE_HAJM).toHaveLength(1);
   });
 
-  it('toza batch uchun bo\'sh uchta guruh qaytaradi', () => {
-    expect(f2IstisnolarniGuruhla([])).toEqual({ NEEDS_REVIEW: [], ARITHMETIC_MISMATCH: [], NEGATIVE_HAJM: [] });
+  it('toza batch uchun bo\'sh to\'rtta guruh qaytaradi', () => {
+    expect(f2IstisnolarniGuruhla([])).toEqual({ NEEDS_REVIEW: [], ARITHMETIC_MISMATCH: [], NEGATIVE_HAJM: [], CONFLICTING_PRICES: [] });
+  });
+
+  it('CONFLICTING_PRICES ham o\'z guruhiga tushadi (Claude tomonidan qo\'shilgan istisno turi)', () => {
+    const result = f2IstisnolarniGuruhla([{ turi: 'CONFLICTING_PRICES', qatorId: 13, narxlar: [100, 150] }]);
+    expect(result.CONFLICTING_PRICES).toHaveLength(1);
   });
 });

@@ -8,6 +8,7 @@ export function f2IstisnolarniGuruhla(istisnolar: F2Exception[]): F2IstisnoGuruh
     NEEDS_REVIEW: [],
     ARITHMETIC_MISMATCH: [],
     NEGATIVE_HAJM: [],
+    CONFLICTING_PRICES: [],
   };
   for (const istisno of istisnolar) guruhlar[istisno.turi].push(istisno);
   return guruhlar;

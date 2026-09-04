@@ -18,6 +18,7 @@ const sarlavha: Record<F2Exception['turi'], string> = {
   NEEDS_REVIEW: 'Yozishdan oldin ko\'rib chiqish kerak',
   ARITHMETIC_MISMATCH: 'Arifmetik farq',
   NEGATIVE_HAJM: 'Manfiy hajm',
+  CONFLICTING_PRICES: 'Ikki xil narx bir qatorga birlashdi',
 };
 
 function IstisnoMatni({ istisno }: { istisno: F2Exception }) {
@@ -26,6 +27,9 @@ function IstisnoMatni({ istisno }: { istisno: F2Exception }) {
   }
   if (istisno.turi === 'ARITHMETIC_MISMATCH') {
     return <><FmtN val={istisno.hisoblangan} /> ≠ <FmtN val={istisno.hujjatdagi} /> (farq <FmtN val={istisno.farq} />) — hujjat summasi saqlanadi, tuzatilmaydi.</>;
+  }
+  if (istisno.turi === 'CONFLICTING_PRICES') {
+    return <>Bu qatorga birlashgan manba qatorlarida turli narx uchradi: {istisno.narxlar.map((n, i) => <span key={n}>{i > 0 ? ', ' : ''}<FmtN val={n} /></span>)} — birinchisi ({istisno.narxlar[0]}) ishlatiladi, qolganlari e'tibordan chetda qolmasin.</>;
   }
   return <>Manfiy hajm (<FmtN val={istisno.hajm} />) — pererraschyot yoki qaytarilgan ish bo'lishi mumkin, tekshiring.</>;
 }

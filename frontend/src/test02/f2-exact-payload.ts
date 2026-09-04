@@ -31,6 +31,14 @@ export type F2ExactQator = {
   summa: number;
   /** F2 faylda haqiqatan SUMMA yozilganmi (0 ham "bor" bo'lishi mumkin — shuning uchun alohida flag) */
   summaBor: boolean;
+  /**
+   * Shu qatorga birlashgan barcha manba tugunlarida uchragan (nol/manfiy
+   * bo'lmagan) narxlar, birinchi ko'rilgan tartibda, TAKRORLANMAY. Odatda
+   * bitta element (F2'da bir qator uchun narx bitta bo'ladi). Bir nechtasi
+   * bo'lsa -- `CONFLICTING_PRICES` istisnosi (`narx` maydoni hamon
+   * BIRINCHISINI saqlaydi, orqaga qarab moslik uchun).
+   */
+  barchaNarxlar: number[];
 };
 
 /**
@@ -49,18 +57,23 @@ export function f2AggregatsiyaQator(
     if (!smetaId) return;
     const h = Number(n.hajm) || 0;
     const s = Number(n.summa) || 0;
+    const yangiNarx = n.narx != null && n.narx > 0 ? n.narx : undefined;
     const existing = map.get(smetaId);
     if (existing) {
       existing.hajm += h;
       existing.summa += s;
       if (s) existing.summaBor = true;
+      if (yangiNarx != null && !existing.barchaNarxlar.includes(yangiNarx)) {
+        existing.barchaNarxlar.push(yangiNarx);
+      }
     } else {
       map.set(smetaId, {
         qator_id: smetaId,
         hajm: h,
-        narx: n.narx != null && n.narx > 0 ? n.narx : undefined,
+        narx: yangiNarx,
         summa: s,
         summaBor: !!s,
+        barchaNarxlar: yangiNarx != null ? [yangiNarx] : [],
       });
     }
   });
@@ -133,7 +146,16 @@ export type F2Exception =
   /** hajm*narx hujjatning o'z summasidan farq qiladi -- YOZISHNI TO'XTATMAYDI, faqat ko'rib chiqish uchun. */
   | { turi: 'ARITHMETIC_MISMATCH'; qatorId: number; hisoblangan: number; hujjatdagi: number; farq: number }
   /** Manfiy hajm -- pererraschyot/qaytarilgan ish bo'lishi mumkin, alohida ko'rib chiqiladi. */
-  | { turi: 'NEGATIVE_HAJM'; qatorId: number; hajm: number };
+  | { turi: 'NEGATIVE_HAJM'; qatorId: number; hajm: number }
+  /**
+   * Bir xil smeta qatoriga birlashgan F2 manba tugunlarida IKKI XIL narx
+   * uchradi (masalan hujjat ichida narx o'rtada o'zgargan yoki kiritish
+   * xatosi). Aggregatsiya faqat BIRINCHISINI ishlatadi (`row.narx`) --
+   * bu ko'pincha ARITHMETIC_MISMATCH sifatida ham ko'rinadi, lekin
+   * CONFLICTING_PRICES aynan SABABNI ko'rsatadi (Antigravity'ning
+   * T2-LRV-CLOSURE-006-ANTIGRAVITY-MERGE-AUDIT topilmasi asosida qo'shildi).
+   */
+  | { turi: 'CONFLICTING_PRICES'; qatorId: number; narxlar: number[] };
 
 /**
  * Aggregatsiyalangan qatorlardan FAQAT istisnolarni chiqaradi -- toza
@@ -143,6 +165,9 @@ export type F2Exception =
 export function f2IstisnolarniAniqla(rows: F2ExactQator[]): F2Exception[] {
   const out: F2Exception[] = [];
   for (const row of rows) {
+    if (row.barchaNarxlar.length > 1) {
+      out.push({ turi: 'CONFLICTING_PRICES', qatorId: row.qator_id, narxlar: row.barchaNarxlar });
+    }
     if (row.narx != null && !row.summaBor) {
       out.push({ turi: 'NEEDS_REVIEW', qatorId: row.qator_id });
       continue; // summa yo'q -- arifmetika solishtirib bo'lmaydi, keyingi tekshiruvlar ma'nosiz

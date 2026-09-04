@@ -43,6 +43,24 @@ describe('F2 exact-source aggregation — merge by qator_id', () => {
     const rows = f2AggregatsiyaQator(nodes, () => 1);
     expect(rows[0].narx).toBeUndefined();
   });
+
+  it('tracks every distinct price seen when merged nodes disagree, but keeps the FIRST as the certified narx', () => {
+    const nodes: F2ExactManbaTugun[] = [
+      { uid: 'a', hajm: 5, narx: 100, summa: 500 },
+      { uid: 'b', hajm: 5, narx: 150, summa: 750 }, // same qator, different price mid-document
+    ];
+    const rows = f2AggregatsiyaQator(nodes, () => 2);
+    expect(rows[0]).toMatchObject({ narx: 100, barchaNarxlar: [100, 150] });
+  });
+
+  it('a repeated identical price across merged nodes does not duplicate in barchaNarxlar', () => {
+    const nodes: F2ExactManbaTugun[] = [
+      { uid: 'a', hajm: 5, narx: 100, summa: 500 },
+      { uid: 'b', hajm: 5, narx: 100, summa: 500 },
+    ];
+    const rows = f2AggregatsiyaQator(nodes, () => 3);
+    expect(rows[0].barchaNarxlar).toEqual([100]);
+  });
 });
 
 describe('F2 exact payload — NEEDS_REVIEW ambiguity guard (never fabricates qty*narx)', () => {
@@ -116,20 +134,20 @@ describe('F2 exact payload — NEEDS_REVIEW ambiguity guard (never fabricates qt
 });
 
 describe('F2 pre-approval audit — exceptions-only (LRV Control law, Section 3)', () => {
-  const clean: F2ExactQator = { qator_id: 1, hajm: 10, narx: 100, summa: 1000, summaBor: true };
+  const clean: F2ExactQator = { qator_id: 1, hajm: 10, narx: 100, summa: 1000, summaBor: true, barchaNarxlar: [100] };
 
   it('a fully clean row (qty*price == source amount, hajm >= 0) produces zero exceptions', () => {
     expect(f2IstisnolarniAniqla([clean])).toEqual([]);
   });
 
   it('a sub-tiyin rounding difference is NOT flagged as a mismatch', () => {
-    const rows: F2ExactQator[] = [{ ...clean, qator_id: 2, hajm: 3, narx: 33.33, summa: 99.99 }]; // 3*33.33=99.99 exact
+    const rows: F2ExactQator[] = [{ ...clean, qator_id: 2, hajm: 3, narx: 33.33, summa: 99.99, barchaNarxlar: [33.33] }]; // 3*33.33=99.99 exact
     expect(f2IstisnolarniAniqla(rows)).toEqual([]);
   });
 
   it('ARITHMETIC_MISMATCH: qty*price disagrees with the source amount beyond tolerance -- flagged, not blocking', () => {
     // 10 * 123.45 = 1234.50, but the source document says 1234.49 (the owner's own worked example).
-    const rows: F2ExactQator[] = [{ qator_id: 3, hajm: 10, narx: 123.45, summa: 1234.49, summaBor: true }];
+    const rows: F2ExactQator[] = [{ qator_id: 3, hajm: 10, narx: 123.45, summa: 1234.49, summaBor: true, barchaNarxlar: [123.45] }];
     const exceptions = f2IstisnolarniAniqla(rows);
     expect(exceptions).toHaveLength(1);
     expect(exceptions[0]).toMatchObject({ turi: 'ARITHMETIC_MISMATCH', qatorId: 3, hisoblangan: 1234.5, hujjatdagi: 1234.49 });
@@ -139,29 +157,41 @@ describe('F2 pre-approval audit — exceptions-only (LRV Control law, Section 3)
   });
 
   it('NEEDS_REVIEW also surfaces in the exception list (price present, no source amount)', () => {
-    const rows: F2ExactQator[] = [{ qator_id: 4, hajm: 5, narx: 50, summa: 0, summaBor: false }];
+    const rows: F2ExactQator[] = [{ qator_id: 4, hajm: 5, narx: 50, summa: 0, summaBor: false, barchaNarxlar: [50] }];
     expect(f2IstisnolarniAniqla(rows)).toEqual([{ turi: 'NEEDS_REVIEW', qatorId: 4 }]);
   });
 
   it('NEEDS_REVIEW rows are not also arithmetic-checked (no summa to compare against)', () => {
-    const rows: F2ExactQator[] = [{ qator_id: 5, hajm: 5, narx: 50, summa: 0, summaBor: false }];
+    const rows: F2ExactQator[] = [{ qator_id: 5, hajm: 5, narx: 50, summa: 0, summaBor: false, barchaNarxlar: [50] }];
     const exceptions = f2IstisnolarniAniqla(rows);
     expect(exceptions.filter((e) => e.turi === 'ARITHMETIC_MISMATCH')).toHaveLength(0);
   });
 
   it('NEGATIVE_HAJM is flagged independently of price/amount correctness', () => {
-    const rows: F2ExactQator[] = [{ qator_id: 6, hajm: -3, narx: 100, summa: -300, summaBor: true }];
+    const rows: F2ExactQator[] = [{ qator_id: 6, hajm: -3, narx: 100, summa: -300, summaBor: true, barchaNarxlar: [100] }];
     expect(f2IstisnolarniAniqla(rows)).toEqual([{ turi: 'NEGATIVE_HAJM', qatorId: 6, hajm: -3 }]);
   });
 
   it('a row with no price at all produces zero exceptions (price_intentionally_absent is a normal state)', () => {
-    const rows: F2ExactQator[] = [{ qator_id: 7, hajm: 10, summa: 0, summaBor: false }];
+    const rows: F2ExactQator[] = [{ qator_id: 7, hajm: 10, summa: 0, summaBor: false, barchaNarxlar: [] }];
     expect(f2IstisnolarniAniqla(rows)).toEqual([]);
+  });
+
+  it('CONFLICTING_PRICES: two different source prices merged into the same qator are flagged with both values', () => {
+    // The aggregation itself keeps only the FIRST price (narx: 100), but both prices are tracked.
+    const rows: F2ExactQator[] = [{ qator_id: 8, hajm: 10, narx: 100, summa: 1500, summaBor: true, barchaNarxlar: [100, 150] }];
+    const exceptions = f2IstisnolarniAniqla(rows);
+    expect(exceptions.find((e) => e.turi === 'CONFLICTING_PRICES')).toMatchObject({ turi: 'CONFLICTING_PRICES', qatorId: 8, narxlar: [100, 150] });
+  });
+
+  it('a single repeated price across merged nodes is NOT a conflict', () => {
+    const rows: F2ExactQator[] = [{ qator_id: 9, hajm: 10, narx: 100, summa: 1000, summaBor: true, barchaNarxlar: [100] }];
+    expect(f2IstisnolarniAniqla(rows).filter((e) => e.turi === 'CONFLICTING_PRICES')).toHaveLength(0);
   });
 
   it('a large batch of clean rows produces an empty exception list -- the whole point of "exceptions only"', () => {
     const rows: F2ExactQator[] = Array.from({ length: 500 }, (_, i) => ({
-      qator_id: i + 1, hajm: 1, narx: 10, summa: 10, summaBor: true,
+      qator_id: i + 1, hajm: 1, narx: 10, summa: 10, summaBor: true, barchaNarxlar: [10],
     }));
     expect(f2IstisnolarniAniqla(rows)).toEqual([]);
   });
