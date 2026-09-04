@@ -164,15 +164,18 @@
     {
       "id": "T2-GAS-EXIT-001",
       "title": "Core TIZIM_02 GAS dependency inventory + exit (F2 interactive path)",
-      "owner": "unassigned",
-      "branch": null,
+      "owner": "claude",
+      "branch": "claude/t2-gas-exit-001",
       "base_sha": null,
-      "status": "planned",
-      "owns": [],
+      "status": "active",
+      "owns": [
+        "ops/handoff/T2_GAS_EXIT_001.md",
+        "frontend/src/lib/f2-match-engine/"
+      ],
       "depends_on": ["NREL-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_GAS_EXIT_001.md"],
       "production_write_allowed": false,
-      "_izoh": "Owner correction 2026-09-02: current core F2 interactive path (canonical /admin/f2 -> F2Import, useF2* hooks, apiT2F2Korish, T2_F2Import.js) still runs through GAS -- an INCOMPLETE migration, not the intended final architecture (Supabase/Postgres=truth, R2=binary truth, Cloudflare=API+deterministic execution, GAS=Drive/Sheets bridge only). Do NOT start this migration inside NREL-001; do NOT build a second weaker matcher -- port the mature f2MoslashEngine (Smeta tizimi/35_F2Moslash.js) into one shared deterministic engine executed behind Cloudflare/Supabase. Full scope + inventory start in ops/handoff/T2_GAS_EXIT_001.md."
+      "_izoh": "2026-09-04 (this session): Step 1 (gas()/apiT2* inventory + A/B/C classification) and Step 2 (design doc for the ported engine's home/interface) done, written into ops/handoff/T2_GAS_EXIT_001.md. Step 3 core matcher port DONE and verified: frontend/src/lib/f2-match-engine/{types,engine,index,engine.test,engine.perf.test}.ts is a line-by-line port of f2MoslashEngine (Smeta tizimi/35_F2Moslash.js) preserving every guard (unit shield, grade-mismatch, strict-mode, code-canon, section-scope, orphan-rescue). Verified this session: 18/18 parity tests (ported directly from f2MoslashSelfTest's own cases) pass, tsc -b exit 0, oxlint 0 issues, full frontend suite 132/132 (was 112/112, +18/0 broken), perf test ~52,800 synthetic rows in ~2s (linear scaling, ~180x headroom under GAS's 6-min ceiling). NOT done, do not report as T2_CORE_GAS_INDEPENDENT: file parsing off GAS (needs owner's local _f2lab fixtures, not in repo), 50k-row resumable job model (not designed/migrated), draft durability, the actual Cloudflare Function wiring (frontend/functions/api/f2-moslash.ts sketched but not created), and cutover/retiring the navbat/kuzatuv F2 queue usage. Full detail in ops/handoff/T2_GAS_EXIT_001.md §Step 3 / §Remaining. Session had no repo push access (classifier-blocked); work is committed locally only pending owner pull or explicit push authorization."
     }
   ]
 }
