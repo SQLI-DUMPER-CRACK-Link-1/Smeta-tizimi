@@ -226,7 +226,7 @@
       "branch": "integration/next-main-release-v1",
       "base_sha": "c52ba4f",
       "base_ref": "origin/main",
-      "status": "closure_005_frontend_v2_plus_bridge_source_fix_isolated_db_blocked",
+      "status": "closure_006_tree_v2_and_dbindep_merged_isolated_runtime_still_blocked",
       "owns": [
         "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md",
         "ops/handoff/T2_CONSTRUCTION_CATALOG_001.md",
@@ -243,8 +243,11 @@
         "frontend/src/test02/TestSmetaBirlashgan.tsx", "ops/handoff/T2_REAL_PARK_LRV_VERTICAL_SLICE_004.md",
         "ops/handoff/T2_SMETA_TREE_IMPLEMENTATION_001_CLAUDE.md",
         "ops/handoff/T2_LRV_CLOSURE_006_CLAUDE.md",
+        "ops/handoff/T2_LRV_CLOSURE_006_CLAUDE_INTEGRATION_REVIEW.md",
         "frontend/src/test02/f2-exact-payload.ts", "frontend/src/test02/f2-exact-payload.test.ts",
-        "frontend/src/test02/TestF2Import.tsx",
+        "frontend/src/test02/TestF2Import.tsx", "frontend/src/test02/TestDaraxt.tsx",
+        "frontend/src/umumiy/daraxt/", "frontend/src/api/t2-additional-replacement.ts",
+        "frontend/src/lib/catalog-ingest/",
         "supabase/isolated-test/", "supabase/baseline/"
       ],
       "depends_on": ["T2-COMPANY-CONTROL-FOUNDATION-001"],
@@ -257,9 +260,10 @@
       "title": "Smeta/LRV tree UX redesign V2 (re-adapt density/preset/quick-filter/drawer shell without dropping isEditMode/onNodeDrop)",
       "owner": "codex",
       "branch": "codex/t2-smeta-tree-ux-v2",
-      "base_sha": null,
+      "base_sha": "4c3ab4b22ebda81ae743b5ae73cdda10dee5acc6",
+      "head": "9cbd869fb1f72d6cda0290fb4414313a4b93d45a",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "active",
+      "status": "merged",
       "lane_of": "T2-GAS-EXIT-LRV-CONTROL-001",
       "owns": [
         "frontend/src/umumiy/daraxt/"
@@ -270,16 +274,17 @@
         "ops/handoff/T2_SMETA_TREE_IMPLEMENTATION_001_CLAUDE.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "Registers the already-in-flight V2 branch in the task ledger (was previously coordinated ad hoc via chat, not tracked here). V1 (836280d) was REJECTed on integration -- see T2_SMETA_TREE_IMPLEMENTATION_001_CLAUDE.md: it silently dropped Holat.tsx's isEditMode/edits/setEdits/onNodeDrop (props kept in the TS interface so no compile error, but never read in the component body), plus COLUMN_PRESETS/quick-filter pills were cosmetic-only and NAZORAT column had no backend field to read. V2 must re-wire edit-mode/drag-drop into the new shell, make preset/quick-filter actually filter/show columns, and wire NAZORAT to t2_price_control_v1. Blocking Section 0 of T2-GAS-EXIT-LRV-CONTROL-001's closure -- push when ready, Claude will review component-by-component (no blind merge) against Holat.tsx and TestDaraxt.tsx as the real consumers."
+      "_izoh": "MERGED into integration/next-main-release-v1 2026-09-04 -- reviewed component-by-component (not blind), see ops/handoff/T2_LRV_CLOSURE_006_CLAUDE_INTEGRATION_REVIEW.md: isEditMode/edits/setEdits/onNodeDrop confirmed preserved (drag/drop handler bodies byte-unchanged from the pre-V1 baseline, only surrounding layout changed), preset/quick-filter confirmed to actually gate rendered columns/rows (not cosmetic), NAZORAT column confirmed wired to a real existing PriceControlLine type. Gates independently re-run in a separate worktree (not Codex's own report): tsc -b clean, vitest 143/143 (then 150/150 once merged with dbindep), oxlint 0 new warnings, vite build clean. Visual/responsive claims (1366/1536/1920/125%) NOT independently re-verified in-browser this round (Codex itself disclosed the same limitation; preview_start is bound to the user's own working directory, not a disposable review worktree, and touching it is out of bounds) -- honest gap, not claimed as PASS. Claude then wired frontend/src/test02/TestDaraxt.tsx (the actual Tizim_02-native SmetaTree consumer, numeric t2_obyekt.id) to pass priceControlLines -- Holat.tsx (legacy GAS-identity admin page) was correctly NOT wired, no GAS<->t2_obyekt id bridge exists."
     },
     {
       "id": "T2-LRV-CLOSURE-006-CODEX-DBINDEP",
       "title": "Additional/Replacement client contract + catalog ingestion adapter (pure, DB-independent, parallel to Tree V2)",
       "owner": "codex",
       "branch": "codex/t2-lrv-dbindep-v1",
-      "base_sha": null,
+      "base_sha": "4c3ab4b22ebda81ae743b5ae73cdda10dee5acc6",
+      "head": "199a57268bf73a582f48788046c9d4e58c1d7509",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "active",
+      "status": "merged",
       "lane_of": "T2-GAS-EXIT-LRV-CONTROL-001",
       "owns": [
         "frontend/src/api/t2-additional-replacement.ts",
@@ -293,7 +298,7 @@
         "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "New lane opened 2026-09-04 so Codex has DB-independent work while Tree V2 (separate lane, separate paths) and isolated-DB/baseline (Claude) are both in flight. Scope is deliberately pure/type-and-test only -- no backend RPC yet (needs isolated DB), no writes to frontend/src/umumiy/daraxt/** or any file this Claude round touched (f2-exact-payload.*, supabase/isolated-test/**, supabase/baseline/**). Full brief: T2_LRV_CLOSURE_006_CODEX_DBINDEP.md."
+      "_izoh": "MERGED into integration/next-main-release-v1 2026-09-04 -- reviewed, see T2_LRV_CLOSURE_006_CLAUDE_INTEGRATION_REVIEW.md. Confirmed: sb-yoz.ts AMALLAR whitelist untouched (client wrappers genuinely don't work yet, as claimed), catalog-ingest's matchCatalogObservations() enforces companyId equality (no cross-company price leak) and exact normalized code+name+unit only (no fuzzy auto-merge), tests are real behavioral assertions (mocked fetch body shape, cross-company contamination case) not tautological. Additive-only diff, zero merge conflicts. Gates independently re-run: tsc -b clean, vitest 145/145 (then 150/150 merged), oxlint 0 new warnings."
     },
     {
       "id": "T2-LRV-CLOSURE-006-ANTIGRAVITY-PREAUDIT",

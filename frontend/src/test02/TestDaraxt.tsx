@@ -23,6 +23,7 @@ import { FmtN } from '../lib/format';
 import { sbT2ObyektlarOl, sbT2DaraxtOl, sbT2QatorHolatOl, sbT2TreeQur, type T2Obyekt } from '../api/supabase';
 import type { TreeNode } from '../api/types';
 import { useKompaniya } from './KompaniyaTanlov';
+import { priceControlOl, type PriceControlLine } from '../api/t2-price-control';
 
 export default function TestDaraxt() {
   const { joriy } = useKompaniya();
@@ -31,6 +32,11 @@ export default function TestDaraxt() {
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [obyekt, setObyekt] = useState(params.get('obyekt') || '');
   const [tree, setTree] = useState<TreeNode[] | null>(null);
+  /* T2-LRV-CLOSURE-006: NAZORAT ustuni (SmetaTree V2, Codex) uchun --
+     t2_price_control_v1 natijasi qator_id bo'yicha. Xato bo'lsa yoki hali
+     yo'q bo'lsa bo'sh massiv -- daraxt shu bilan ham to'liq ishlaydi,
+     faqat NAZORAT ustuni "ulanmagan" holatda qoladi (soxta ma'lumot yo'q). */
+  const [priceControlLines, setPriceControlLines] = useState<PriceControlLine[]>([]);
   const [xato, setXato] = useState('');
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   const [olcham, setOlcham] = useState<{
@@ -49,7 +55,7 @@ export default function TestDaraxt() {
 
   const ochish = useCallback(async (nom: string, royxat: T2Obyekt[]) => {
     if (!nom) return;
-    setYuklanmoqda(true); setXato(''); setTree(null); setOlcham(null);
+    setYuklanmoqda(true); setXato(''); setTree(null); setOlcham(null); setPriceControlLines([]);
 
     const ob = royxat.find((x) => x.nom === nom);
     if (!ob) {
@@ -59,6 +65,10 @@ export default function TestDaraxt() {
       setYuklanmoqda(false);
       return;
     }
+
+    /* Narx nazorati — qo'shimcha ma'lumot, asosiy daraxtni bloklamaydi.
+       Xato bo'lsa jim bo'sh qoladi (SmetaTree buni "ulanmagan" deb ko'rsatadi). */
+    priceControlOl(ob.id).then((pc) => setPriceControlLines(pc.ok ? pc.qatorlar : []));
 
     const [r, h] = await Promise.all([sbT2DaraxtOl(ob.id), sbT2QatorHolatOl(ob.id)]);
     if (!r.ok) {
@@ -184,7 +194,7 @@ export default function TestDaraxt() {
               </span>
             </div>
             <div className="flex-1 min-h-0">
-              <SmetaTree data={tree} />
+              <SmetaTree data={tree} priceControlLines={priceControlLines} />
             </div>
           </>
         )}
