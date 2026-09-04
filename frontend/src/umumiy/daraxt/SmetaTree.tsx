@@ -5,6 +5,7 @@ import { flattenTree, getAllKeys } from './utils';
 import { FmtN } from '../../lib/format';
 import { Badge } from '../ui/Badge';
 import { ChevronRight, ChevronDown, RefreshCcw, Plus, Search, X, Layers, Package, Pickaxe, Box } from 'lucide-react';
+import { PRICE_STATE_BADGE, type PriceControlLine } from '../../api/t2-price-control';
 
 interface SmetaTreeProps {
   data: TreeNode[];
@@ -13,6 +14,8 @@ interface SmetaTreeProps {
   edits?: Record<string, any>;
   setEdits?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   onNodeDrop?: (source: TreeNode, target?: TreeNode) => void;
+  /** `t2_price_control_v1` read-modelining aynan shu object uchun natijasi. */
+  priceControlLines?: readonly PriceControlLine[];
 }
 
 function TreeTypeIcon({ type }: { type: TreeNode['type'] }) {
@@ -22,7 +25,7 @@ function TreeTypeIcon({ type }: { type: TreeNode['type'] }) {
   return <Pickaxe size={14} aria-hidden="true" />;
 }
 
-export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, setEdits, onNodeDrop }: SmetaTreeProps) {
+export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, setEdits, onNodeDrop, priceControlLines }: SmetaTreeProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
@@ -30,9 +33,13 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   const [density, setDensity] = useState<'compact' | 'comfort'>(() =>
     localStorage.getItem('t2-smeta-tree-density') === 'comfort' ? 'comfort' : 'compact');
   const [preset, setPreset] = useState<'ASOSIY' | 'F2' | 'NARX' | 'TOLIQ'>('ASOSIY');
-  const [quickFilter, setQuickFilter] = useState<'all' | 'f2' | 'qosh' | 'zamena' | 'bl' | 'mat'>('all');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'f2' | 'qosh' | 'zamena' | 'bl' | 'mat' | 'frozen' | 'risk' | 'basis'>('all');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
+  const priceControlByQatorId = useMemo(
+    () => new Map((priceControlLines || []).map((line) => [line.qator_id, line])),
+    [priceControlLines],
+  );
 
   /* ⚠️ 2026-08-17 (audit): «Qidiruv…» maydoni hech narsaga ULANMAGAN edi —
      yozish mumkin, lekin daraxt o'zgarmasdi. Minglab qatorli smetada bu
@@ -50,7 +57,10 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
       || (quickFilter === 'qosh' && !!n.isQosh)
       || (quickFilter === 'zamena' && !!n.isZamena)
       || (quickFilter === 'bl' && n.type === 'bl')
-      || (quickFilter === 'mat' && n.type === 'mat');
+      || (quickFilter === 'mat' && n.type === 'mat')
+      || (quickFilter === 'frozen' && (priceControlByQatorId.get(n.id || -1)?.frozen_amount || 0) > 0)
+      || (quickFilter === 'risk' && (priceControlByQatorId.get(n.id || -1)?.at_risk_amount || 0) > 0)
+      || (quickFilter === 'basis' && priceControlByQatorId.get(n.id || -1)?.price_state === 'ABOVE_REFERENCE_MISSING_BASIS');
     const suz = (nodes: TreeNode[]): TreeNode[] => {
       const chiq: TreeNode[] = [];
       for (const n of nodes) {
@@ -61,7 +71,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
       return chiq;
     };
     return quickFilter === 'all' && !s ? data : suz(data);
-  }, [data, qidiruv, quickFilter]);
+  }, [data, qidiruv, quickFilter, priceControlByQatorId]);
 
   /* Qidiruvda hamma shox ochiq bo'lishi kerak, aks holda mos kelgan
      ichkaridagi qator ko'rinmay qoladi. */
@@ -103,6 +113,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
     setDensity(next); localStorage.setItem('t2-smeta-tree-density', next);
   };
   const showMoney = preset === 'TOLIQ' || preset === 'NARX';
+  const showSmetaAndFakt = preset !== 'F2';
   const selected = flatNodes.find((row) => `${row.node.varaq}#${row.node.row}` === selectedKey);
 
   return (
@@ -139,7 +150,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
         </div>
         <div className="mt-2 flex gap-1 overflow-x-auto">
           {([['all','Hammasi'],['f2','F2 olish mumkin'],['qosh','Qo\'shimcha'],['zamena','Zamena'],['bl','Faqat BL'],['mat','Materiallar']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>)}
-          <span className="px-2 py-1 text-[11px] text-text-mute">Muzlagan / Xavf / Protokolsiz — ma'lumot kutilmoqda</span>
+          {priceControlLines ? ([['frozen','Muzlagan'],['risk','Xavf ostida'],['basis','Protokolsiz']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>) : <span className="px-2 py-1 text-[11px] text-text-mute">Narx nazorati ma'lumoti ulanmagan</span>}
         </div>
       </div>
 
@@ -149,8 +160,8 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
       <div className="min-w-[930px] h-8 border-b border-white/5 bg-black/40 flex items-center px-4 sticky top-[96px] z-20 flex-shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider backdrop-blur-md">
         <div className="flex-1">Nom / Birlik</div>
         <div className="flex items-center h-full pr-4 flex-shrink-0 gap-4">
-          <div className="w-20 text-right text-blue-400/70" title="Smeta Hajm">Sm. Vol</div>
-          <div className="w-24 text-right text-emerald-400/70" title="Fakt Hajm">Fakt Vol</div>
+          {showSmetaAndFakt && <div className="w-20 text-right text-blue-400/70" title="Smeta Hajm">Sm. Vol</div>}
+          {showSmetaAndFakt && <div className="w-24 text-right text-emerald-400/70" title="Fakt Hajm">Fakt Vol</div>}
           <div className="w-24 text-right text-purple-400/70" title="Jami F2 Hajm">F2 Vol</div>
           <div className="w-24 text-right text-cyan-400/70" title="F2 Olish Mumkin (Fakt - F2)">F2 Mum.</div>
           <div className="w-20 text-right text-amber-400/70" title="Qoldiq Hajm">Qoldiq</div>
@@ -195,10 +206,8 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
             const isEdited = !!edits[key];
             const currentFakt = edits[key]?.edit.fakt ?? node.fakt ?? 0;
             const isOverLimit = currentFakt > (node.smetaHajm || 0);
-            const nazoratHolati = (node as any).basisMissing ? '❌ Basis'
-              : (node as any).atRisk ? '⚠ Xavf'
-              : (node as any).arithmeticMismatch ? '⚠ Farq'
-              : '—';
+            const priceControl = node.id == null ? undefined : priceControlByQatorId.get(node.id);
+            const nazoratHolati = priceControl ? PRICE_STATE_BADGE[priceControl.price_state] : undefined;
             
             return (
               <div
@@ -277,8 +286,8 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                 {/* Data Columns with Gantt/Progress Visual */}
                 <div className="flex items-center h-full pr-4 flex-shrink-0 font-medium tabular-nums text-[11px] gap-4">
                   {/* VOLUMES */}
-                  <div className="w-20 text-right text-blue-300/80"><FmtN val={node.smetaHajm} /></div>
-                  <div className="w-24 text-right">
+                  {showSmetaAndFakt && <div className="w-20 text-right text-blue-300/80"><FmtN val={node.smetaHajm} /></div>}
+                  {showSmetaAndFakt && <div className="w-24 text-right">
                     {isEditMode && node.type !== 'rz' ? (
                       <input
                         type="text"
@@ -304,7 +313,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                     ) : (
                       <FmtN val={node.fakt} cl={isOverLimit ? 'text-red-400' : 'text-emerald-400'} />
                     )}
-                  </div>
+                  </div>}
                   
                   <div className="w-24 text-right">
                       <FmtN val={node.f2ol || 0} cl="text-purple-400" />
@@ -312,7 +321,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                   <div className="w-24 text-right text-cyan-300"><FmtN val={node.f2mum || 0} /></div>
                   
                   <div className="w-20 text-right text-amber-300/80"><FmtN val={node.qoldiq} /></div>
-                  <div className="w-20 text-left text-text-mute truncate" title={nazoratHolati}>{nazoratHolati}</div>
+                  <div className={nazoratHolati ? `w-20 text-left truncate ${nazoratHolati.className}` : 'w-20 text-left text-text-mute'} title={nazoratHolati?.label || 'Narx nazorati ma\'lumoti ulanmagan'}>{nazoratHolati ? `${nazoratHolati.emoji} ${nazoratHolati.label}` : '—'}</div>
 
                   {showMoney && <div className="w-4 border-r border-white/10 h-full mx-2 flex items-center justify-center">
                     {/* Tiny visual progress bar for Fakt */}
@@ -408,7 +417,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
             {[
               ['Asosiy', 'Kod, birlik va hajmlar'],
               ['F2 tarixi', oylar.length ? `${oylar.length} oy — obyom/narx/summa` : 'Ma\'lumot yo\'q'],
-              ['Narx nazorati', 'Backend ma\'lumoti kutilmoqda'],
+              ['Narx nazorati', selected.node.id != null && priceControlByQatorId.get(selected.node.id) ? PRICE_STATE_BADGE[priceControlByQatorId.get(selected.node.id)!.price_state].label : 'Ma\'lumot ulanmagan'],
               ['Resurslar', 'Ma\'lumot yo\'q'],
               ['Hujjatlar', 'Ma\'lumot yo\'q'],
               ['O\'zgarishlar', selected.node.isZamena ? 'Zamena aloqasi mavjud' : 'Ma\'lumot yo\'q'],
