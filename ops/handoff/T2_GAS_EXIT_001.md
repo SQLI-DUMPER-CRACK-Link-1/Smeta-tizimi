@@ -451,15 +451,27 @@ anywhere in the live app yet — `admin/sahifalar/F2Import.tsx` and
    item 5), no R2 persistence of the uploaded file, no job-model wiring
    (item 1's job model is drafted but unapplied, so this endpoint enforces
    placeholder size ceilings instead of resuming).
-5. **Cutover + retiring `navbat.ts`/`kuzatuv.ts`'s F2-specific queue usage,
-   and wiring a real `useF2*` hook to call `f2-moslash.ts`** — only once
-   1-4 are proven in production per owner requirement §12's acceptance bar
-   (disabling GAS must not break F2 import/matching). This is the one
-   remaining step with real user-facing effect — it changes what the F2
-   screen actually calls — so it needs its own careful design pass (which
-   hooks change, whether the legacy path stays as an instant fallback, how
-   a `test02`-style parallel route might de-risk the switch) rather than a
-   rushed edit.
+5. **A live, clickable page exists — `/admin/test/f2native`
+   (`frontend/src/test02/TestF2Native.tsx`) — DONE 2026-09-04.** Upload an
+   `.xlsx`, it calls `/api/f2-moslash` (real Cloudflare, zero GAS), shows
+   the parsed tree's node counts, and can run the matcher against a
+   hand-pasted LRV tree. This is the first genuinely clickable proof that
+   T2-GAS-EXIT-001's ported pipeline works end-to-end for a real user
+   action, not just in tests. `npx tsc -b` exit 0, `npm run build` succeeds
+   (new chunk `TestF2Native-*.js` present), full suite still 150/150 — nothing
+   else changed. **Still NOT the production cutover**: the canonical
+   `/admin/f2` route (`F2Import.tsx`) is completely untouched and still
+   100% GAS-backed; `TestF2Native` is an additive, parallel `test02` page,
+   same pattern as `TestF2Import`/`TestSaqlash`. Retiring
+   `navbat.ts`/`kuzatuv.ts`'s F2 queue usage and actually switching the
+   canonical route's `useF2*` hooks to this pipeline is real user-facing
+   surgery — it needs its own design pass (fallback strategy, staged
+   rollout) per owner requirement §12's acceptance bar (disabling GAS must
+   not break F2 import/matching), not a rushed edit. LRV sourcing in
+   `TestF2Native` is still manual JSON paste — wiring it to the existing
+   `useHolat` (GAS-backed smeta tree) hook, or eventually a canonical
+   Supabase read model, is the natural next increment before this can be a
+   real day-to-day tool.
 
 None of 1-5 should be attempted as a rushed single pass — each carries real
 financial-correctness or data-durability risk, and the Constitution's
