@@ -407,16 +407,24 @@ anywhere in the live app yet — `admin/sahifalar/F2Import.tsx` and
    no external fixture. `treeBuild.test.ts` separately carries two rows
    transcribed verbatim from the real file (see previous commit) as
    real-world regression fixtures.
-   **What's left is wiring, not missing capability:** `f2-moslash.ts` (the
-   draft Cloudflare Function) still takes pre-parsed `aktTree`/`lrvTree` in
-   the request body — extending it to accept a raw upload
-   (`Browser → Cloudflare → R2`, per owner requirement §4's canonical path)
-   and call `readXlsx` + `f2FaylOqiCore` itself is the next concrete step,
-   still gated on the resumable job model (§5) for anything beyond small
-   files. More real files exist under the same Drive tree (other month
-   folders: Декабрь/Август/Июнь and others) if more template variety needs
-   confirming later (e.g. a `mat`-typed row was not observed in this
-   particular file).
+   **Wiring — DONE 2026-09-04.** `frontend/functions/api/f2-moslash.ts` now
+   accepts a real request: `{amal:'fayl_oqi', fileBase64, varaqNom?, colConfig?}`
+   decodes the upload, calls `readXlsx` + `f2FaylOqiCore`, and returns the
+   same dual-mode shape `apiF2FaylOqi` does (column-preview or built tree);
+   `{amal:'moslash', aktTree, lrvTree, opts?}` runs the matcher (unchanged
+   from Step 3). 8 tests (`f2-moslash.test.ts`, testing the exported
+   handlers directly — the session/auth wrapper reuses the already-covered
+   `tekshir()` pattern, not re-tested here). Size guards are explicit
+   placeholders (15MB file / 20k LRV leaves) pending real capacity data, not
+   measured limits. **Still NOT R2/canonical persistence** — the uploaded
+   file is read in memory and discarded, which is fine for read/match but
+   not for the eventual canonical-upload path (FILE-TRUTH-001's
+   `Browser → Cloudflare → R2`) — that remains separate, undesigned work.
+   No `useF2*` hook or page calls this route yet — see §Wiring/cutover below.
+   More real files exist under the same Drive tree (other month folders:
+   Декабрь/Август/Июнь and others) if more template variety needs
+   confirming later (e.g. a `mat`-typed row was not observed in the one
+   file checked so far).
 2. **50k-row resumable job model** (owner requirement §5) — **DRAFTED, UNAPPLIED,
    UNREVIEWED, UNEXECUTED** 2026-09-04:
    `supabase/migrations/20260914120000_t2_f2_import_job_v1.{sql,rollback.sql,acceptance.sql}`.
@@ -436,11 +444,22 @@ anywhere in the live app yet — `admin/sahifalar/F2Import.tsx` and
 3. **Durable draft/mapping persistence** (owner requirement §6) — **schema
    drafted** as part of the same migration above (`t2_f2_import_draft_qator`);
    not wired to any UI yet (no autosave call site exists).
-4. **The actual Cloudflare Function + wiring** (`frontend/functions/api/f2-moslash.ts`
-   sketched in §Step 2) — does not exist yet.
-5. **Cutover + retiring `navbat.ts`/`kuzatuv.ts`'s F2-specific queue usage**
-   — only once 1-4 are proven in production per owner requirement §12's
-   acceptance bar (disabling GAS must not break F2 import/matching).
+4. **The Cloudflare Function endpoint** — **DONE 2026-09-04.**
+   `frontend/functions/api/f2-moslash.ts` accepts a real file upload
+   (`fayl_oqi`) and runs the matcher (`moslash`), both fully off GAS,
+   8 tests passing. **Still open:** no `useF2*` hook or page calls it (see
+   item 5), no R2 persistence of the uploaded file, no job-model wiring
+   (item 1's job model is drafted but unapplied, so this endpoint enforces
+   placeholder size ceilings instead of resuming).
+5. **Cutover + retiring `navbat.ts`/`kuzatuv.ts`'s F2-specific queue usage,
+   and wiring a real `useF2*` hook to call `f2-moslash.ts`** — only once
+   1-4 are proven in production per owner requirement §12's acceptance bar
+   (disabling GAS must not break F2 import/matching). This is the one
+   remaining step with real user-facing effect — it changes what the F2
+   screen actually calls — so it needs its own careful design pass (which
+   hooks change, whether the legacy path stays as an instant fallback, how
+   a `test02`-style parallel route might de-risk the switch) rather than a
+   rushed edit.
 
 None of 1-5 should be attempted as a rushed single pass — each carries real
 financial-correctness or data-durability risk, and the Constitution's
