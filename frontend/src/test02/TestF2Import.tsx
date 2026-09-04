@@ -40,6 +40,7 @@ import type { TreeNode } from '../api/types';
 import { useKompaniya } from './KompaniyaTanlov';
 import { applyEngineBinds } from './f2-import-bind';
 import { f2AggregatsiyaQator, f2ExactPayloadQur } from './f2-exact-payload';
+import { F2PreapprovalAudit } from './F2PreapprovalAudit';
 
 type ManbaFayl = { fayl_id: string; nom: string; sana: string; oqiladi: boolean };
 
@@ -1744,6 +1745,8 @@ export default function TestF2Import() {
               </div>
             </div>
 
+            {tur === 'f2' && <F2PreapprovalAudit aktBarglar={aktBarglar} getSmetaId={getSmetaId} />}
+
             {/* ⭐ INTERAKTIV IKKI PANEL: chapda F2 Excel, o'ngda Supabase Smeta */}
             <IkkiPanel
               chapSarlavha={
@@ -2108,7 +2111,6 @@ export default function TestF2Import() {
     </Sahifa>
   );
 }
-
 
 
 
