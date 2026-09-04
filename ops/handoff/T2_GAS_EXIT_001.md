@@ -385,15 +385,25 @@ anywhere in the live app yet — `admin/sahifalar/F2Import.tsx` and
    not attempt a blind reimplementation without those fixtures; that would
    be exactly the "no invented behavior without evidence" violation this
    project's Constitution forbids.
-2. **50k-row resumable job model** (owner requirement §5): durable Supabase
-   job state (`job_id`, company/project/object, `operation_id`,
-   `source_document_id`, `status`, `cursor`/chunk, `total_rows`,
-   `processed_rows`, `matched_rows`, `unmatched_rows`, timestamps,
-   `last_error`, `base_version`) — **not designed or migrated yet**. Needs a
-   design pass with the same rigor as `SMETA_F2_NAKOPITELNIY_CHANGE_CONTROL_V1.md`
-   before any migration file is written.
-3. **Durable draft/mapping persistence** (owner requirement §6) — manual F2
-   corrections must survive refresh/restart; not `localStorage`-only.
+2. **50k-row resumable job model** (owner requirement §5) — **DRAFTED, UNAPPLIED,
+   UNREVIEWED, UNEXECUTED** 2026-09-04:
+   `supabase/migrations/20260914120000_t2_f2_import_job_v1.{sql,rollback.sql,acceptance.sql}`.
+   `t2_f2_import_job` (job_id/status/cursor/total|processed|matched|unmatched_rows/
+   operation_id/versiya) + `t2_f2_import_draft_qator` (per-uid durable mapping,
+   §3 below) + 4 RPCs (`_yarat_v1` idempotent create, `_holat_v1` poll,
+   `_ilgarilash_v1` optimistic-locked progress update, `_saqla_v1` per-row draft
+   upsert). **This session confirmed the connected Supabase MCP project is the
+   real production project (`Smet-01` / `tuoyrzadkgoltpqkdiyx`, matches
+   `CURRENT_STATE.md`) — no branch was created and nothing was applied; the
+   owner explicitly declined a disposable-branch verification this round
+   ("hali tizimga muhim nimadir yuklanmagan" — nothing important loaded yet).**
+   The `.acceptance.sql` file is proposed criteria only — it has NOT been run
+   against any database. Whoever picks this up next must actually run it
+   (disposable branch or otherwise) before treating the design as proven, per
+   the Constitution's "a green regex is not proof of runtime behavior."
+3. **Durable draft/mapping persistence** (owner requirement §6) — **schema
+   drafted** as part of the same migration above (`t2_f2_import_draft_qator`);
+   not wired to any UI yet (no autosave call site exists).
 4. **The actual Cloudflare Function + wiring** (`frontend/functions/api/f2-moslash.ts`
    sketched in §Step 2) — does not exist yet.
 5. **Cutover + retiring `navbat.ts`/`kuzatuv.ts`'s F2-specific queue usage**
