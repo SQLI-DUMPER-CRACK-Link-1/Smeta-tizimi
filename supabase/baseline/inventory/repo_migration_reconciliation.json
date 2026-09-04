@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-04T11:36:54.109Z",
+  "generated_at": "2026-09-04T13:41:06.857Z",
   "summary": {
-    "APPLIED_NAME_MATCH_VERSION_DRIFT": 22,
+    "APPLIED_NAME_MATCH_VERSION_DRIFT": 27,
     "APPLIED_EXACT_VERSION_MATCH": 3,
-    "NOT_YET_APPLIED_OR_UNRECONCILED": 12
+    "NOT_YET_APPLIED_OR_UNRECONCILED": 7
   },
   "reconciliation": [
     {
@@ -202,31 +202,31 @@
       "file": "20260919120000_t2_construction_catalog_observation_v1.sql",
       "version": "20260919120000",
       "name": "t2_construction_catalog_observation_v1",
-      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
     },
     {
       "file": "20260920120000_t2_akt_qator_certified_v1.sql",
       "version": "20260920120000",
       "name": "t2_akt_qator_certified_v1",
-      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
     },
     {
       "file": "20260920130000_t2_akt_yarat_v2.sql",
       "version": "20260920130000",
       "name": "t2_akt_yarat_v2",
-      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
     },
     {
       "file": "20260920140000_t2_lrv_sync_envelope_v1.sql",
       "version": "20260920140000",
       "name": "t2_lrv_sync_envelope_v1",
-      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
     },
     {
       "file": "20260921120000_t2_price_control_v1.sql",
       "version": "20260921120000",
       "name": "t2_price_control_v1",
-      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
     }
   ]
 }

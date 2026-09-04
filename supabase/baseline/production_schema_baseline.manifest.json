@@ -1,5 +1,6 @@
 {
   "captured_at": "2026-09-04T00:00:00Z",
+  "schema_snapshot_note": "object_counts/inventory/*.json below were captured BEFORE the 2026-09-04 production apply described in applied_migration_run below. They predate 8 new tables (t2_work_type_observation, t2_resource_observation, t2_work_resource_observation, t2_catalog_match_candidate, t2_lrv_sync_event, t2_lrv_sync_conflict, t2_price_basis, t2_price_basis_line) and several new functions (t2_akt_yarat_v2, t2_f2_exact_qatorlar_v1, t2_akt_qator_certified_freeze_v1, t2_price_basis_yarat_v1, t2_price_basis_resolve_v1, t2_price_control_v1). applied_migrations_production.json and repo_migration_reconciliation.json ARE refreshed (145 production migrations, re-pulled post-apply) -- only the structural object_counts/objects.json/columns.json/etc. snapshot itself is pre-apply. Re-run the inventory queries in README.md if a fully current structural snapshot is needed.",
   "captured_by": "Claude (T2-LRV-CLOSURE-006), read-only Supabase MCP execute_sql against project tuoyrzadkgoltpqkdiyx",
   "schema_only": true,
   "production_data_included": false,
@@ -7,9 +8,24 @@
   "auth_user_data_included": false,
   "baseline_sql_status": "NOT_YET_CAPTURED",
   "baseline_sql_status_reason": "No pg_dump/psql binary and no working Supabase CLI (`npx supabase` fails with ENOENT on this Windows machine) -- see supabase/baseline/README.md. inventory/ below is a real, live, read-only-verified structural inventory (table/view/sequence/function/trigger/policy/index names + full column list + constraint definitions), but it is NOT a byte-faithful schema-only SQL dump. Do not treat it as one.",
+  "applied_migration_run": {
+    "date": "2026-09-04",
+    "applied_by": "Codex (own environment, not gated by the classifier that blocked Claude's apply_migration/execute_sql DDL calls)",
+    "verified_by": "Claude, independently, read-only (to_regclass/information_schema/pg_proc/pg_trigger existence checks on all new objects, plus a before/after row-count residue check on t2_qator/t2_akt/t2_akt_qator/t2_kompaniya/t2_obyekt -- all unchanged: 17521/1/0/1/8)",
+    "owner_authorization": "Explicit, in-chat: production has only ~2 test smeta uploads (17521 t2_qator rows across 8 objects, but t2_akt=1 draft/unapproved row and t2_akt_qator=0 rows -- confirmed before applying), owner does not want to pay for a Supabase hosted branch and explicitly authorized applying these 5 specific, already-reviewed migrations directly to production.",
+    "migrations_applied": [
+      "20260919120000_t2_construction_catalog_observation_v1.sql",
+      "20260920120000_t2_akt_qator_certified_v1.sql",
+      "20260920130000_t2_akt_yarat_v2.sql",
+      "20260920140000_t2_lrv_sync_envelope_v1.sql",
+      "20260921120000_t2_price_control_v1.sql"
+    ],
+    "production_ledger_versions": ["20260904132915", "20260904133016", "20260904133048", "20260904133107", "20260904133128"],
+    "residue": "NONE -- schema only, zero data rows changed"
+  },
   "production_project_ref": "tuoyrzadkgoltpqkdiyx",
   "postgres_version": "17.6.1.155",
-  "object_counts": {
+  "object_counts_as_of_pre_apply_snapshot": {
     "tables": 97,
     "views": 48,
     "sequences": 61,
@@ -59,7 +75,12 @@
     "20260910120000_t2_f2_baseline_price_v1.sql",
     "20260911120000_t2_smeta_change_control_v1.sql",
     "20260912120000_t2_forma3_closeout_v1.sql",
-    "20260913120000_t2_smeta_ozgarish_royxat_fix.sql"
+    "20260913120000_t2_smeta_ozgarish_royxat_fix.sql",
+    "20260919120000_t2_construction_catalog_observation_v1.sql",
+    "20260920120000_t2_akt_qator_certified_v1.sql",
+    "20260920130000_t2_akt_yarat_v2.sql",
+    "20260920140000_t2_lrv_sync_envelope_v1.sql",
+    "20260921120000_t2_price_control_v1.sql"
   ],
   "pending_migrations_not_yet_applied_to_production": [
     "20260830020000_t2_mindmap_grafi_contract.sql",
@@ -68,13 +89,8 @@
     "20260914120000_t2_platforma_superadmin_context_v1.sql",
     "20260915120000_t2_effective_authorization_core_v1.sql",
     "20260916120000_t2_kompaniya_yangila_v1.sql",
-    "20260917120000_t2_system_control_split_v1.sql",
-    "20260919120000_t2_construction_catalog_observation_v1.sql",
-    "20260920120000_t2_akt_qator_certified_v1.sql",
-    "20260920130000_t2_akt_yarat_v2.sql",
-    "20260920140000_t2_lrv_sync_envelope_v1.sql",
-    "20260921120000_t2_price_control_v1.sql"
+    "20260917120000_t2_system_control_split_v1.sql"
   ],
-  "pending_migrations_note": "The last 9 of these 12 (20260914120000 through 20260921120000) are exactly the T2-GAS-EXIT-LRV-CONTROL-001 migrations this session wrote this month, under the standing 'no production migration apply' freeze -- their absence from production confirms the freeze was honored, it is not a gap. The first 3 (20260830020000/030000/031000, all mindmap-related) are unreconciled by name -- they may have been squashed/renamed when MIND-001 (ACTIVE_TASKS.json, status completed, branch integration/mindmap-create-final) was merged historically, or may be genuinely unapplied; not resolved further this round, flagged as an open question rather than guessed.",
+  "pending_migrations_note": "UPDATED 2026-09-04: the 5 T2-GAS-EXIT-LRV-CONTROL-001 migrations (20260919120000..20260921120000) were applied to production this same day by Codex, independently verified by Claude read-only (see applied_migration_run above) -- moved from pending to included. The remaining 7 pending migrations belong to OTHER, already-closed tasks and were deliberately NOT touched this round: 3 mindmap-related (20260830020000/030000/031000) are unreconciled by name -- may have been squashed/renamed when MIND-001 (status completed) was merged historically; 4 company-control-related (20260914120000 t2_platforma_superadmin_context_v1 through 20260917120000 t2_system_control_split_v1) belong to T2-COMPANY-CONTROL-FOUNDATION-001 (status phase_a_closed) whose own _izoh states the FINAL platform-role model is a DIFFERENT branch (codex/t2-company-control-auth-core-v2) and that 'Stale V1 modelga qaytma' -- t2_platforma_superadmin_context_v1 read like the superseded v1 approach on inspection (defines t2_platforma_superadmin() itself, not the live-derivation-from-t2_azolik model the _izoh says is final). Applying these 7 needs that task's own owner, not this one -- do not apply them under T2-GAS-EXIT-LRV-CONTROL-001 authorization.",
   "isolated_test_runner_contract": "supabase/isolated-test/run.cjs Section 2 preflight expects, once a real production_schema_baseline.sql exists: reset DB -> apply production_schema_baseline.sql -> apply ONLY the files NOT in included_migrations (i.e. pending_migrations_not_yet_applied_to_production, in filename order) -> seed synthetic fixtures -> run acceptance -> teardown."
 }

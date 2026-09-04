@@ -558,5 +558,25 @@
   {
     "version": "20260903043552",
     "name": "t2_legacy_azolik_royxat_sorov_lock_down_p0"
+  },
+  {
+    "version": "20260904132915",
+    "name": "t2_construction_catalog_observation_v1"
+  },
+  {
+    "version": "20260904133016",
+    "name": "t2_akt_qator_certified_v1"
+  },
+  {
+    "version": "20260904133048",
+    "name": "t2_akt_yarat_v2"
+  },
+  {
+    "version": "20260904133107",
+    "name": "t2_lrv_sync_envelope_v1"
+  },
+  {
+    "version": "20260904133128",
+    "name": "t2_price_control_v1"
   }
 ]
