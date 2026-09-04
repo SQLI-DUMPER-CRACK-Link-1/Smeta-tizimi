@@ -1,0 +1,232 @@
+{
+  "generated_at": "2026-09-04T11:36:54.109Z",
+  "summary": {
+    "APPLIED_NAME_MATCH_VERSION_DRIFT": 22,
+    "APPLIED_EXACT_VERSION_MATCH": 3,
+    "NOT_YET_APPLIED_OR_UNRECONCILED": 12
+  },
+  "reconciliation": [
+    {
+      "file": "20260829050000_t2_signal_engine.sql",
+      "version": "20260829050000",
+      "name": "t2_signal_engine",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260829051300_t2_procurement_request_contract_v1.sql",
+      "version": "20260829051300",
+      "name": "t2_procurement_request_contract_v1",
+      "status": "APPLIED_EXACT_VERSION_MATCH"
+    },
+    {
+      "file": "20260829051320_t2_mindmap_command_contract_hardening.sql",
+      "version": "20260829051320",
+      "name": "t2_mindmap_command_contract_hardening",
+      "status": "APPLIED_EXACT_VERSION_MATCH"
+    },
+    {
+      "file": "20260830010000_t2_signal_read_model.sql",
+      "version": "20260830010000",
+      "name": "t2_signal_read_model",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260830020000_t2_mindmap_grafi_contract.sql",
+      "version": "20260830020000",
+      "name": "t2_mindmap_grafi_contract",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260830030000_t2_resource_command_v2.sql",
+      "version": "20260830030000",
+      "name": "t2_resource_command_v2",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260830031000_t2_mindmap_request_identity_v2.sql",
+      "version": "20260830031000",
+      "name": "t2_mindmap_request_identity_v2",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260830040000_t2_entity_participant_command_contract.sql",
+      "version": "20260830040000",
+      "name": "t2_entity_participant_command_contract",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260830041000_t2_participant_canonical_read_model.sql",
+      "version": "20260830041000",
+      "name": "t2_participant_canonical_read_model",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260830044354_t2_signal_bulk_import_coalescing.sql",
+      "version": "20260830044354",
+      "name": "t2_signal_bulk_import_coalescing",
+      "status": "APPLIED_EXACT_VERSION_MATCH"
+    },
+    {
+      "file": "20260830050000_t2_signal_trigger_keep_object_create_fast.sql",
+      "version": "20260830050000",
+      "name": "t2_signal_trigger_keep_object_create_fast",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260830052000_t2_company_storage_foundation_v1.sql",
+      "version": "20260830052000",
+      "name": "t2_company_storage_foundation_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260831190000_t2_storage_legacy_write_policy_v1.sql",
+      "version": "20260831190000",
+      "name": "t2_storage_legacy_write_policy_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260831191000_t2_storage_reconciliation_v2.sql",
+      "version": "20260831191000",
+      "name": "t2_storage_reconciliation_v2",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260901120000_t2_object_storage_provision_v1.sql",
+      "version": "20260901120000",
+      "name": "t2_object_storage_provision_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260902120000_t2_file_truth_r2_canonical_v1.sql",
+      "version": "20260902120000",
+      "name": "t2_file_truth_r2_canonical_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260902130000_t2_file_truth_constraint_vocab_fix_v1.sql",
+      "version": "20260902130000",
+      "name": "t2_file_truth_constraint_vocab_fix_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260903050000_t2_actor_azo_tekshir_remove_for_share_p0.sql",
+      "version": "20260903050000",
+      "name": "t2_actor_azo_tekshir_remove_for_share_p0",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260903120000_t2_boss_dashboard_read_model_v1.sql",
+      "version": "20260903120000",
+      "name": "t2_boss_dashboard_read_model_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260904120000_t2_capability_registry_v1.sql",
+      "version": "20260904120000",
+      "name": "t2_capability_registry_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260905120000_t2_company_onboarding_v1.sql",
+      "version": "20260905120000",
+      "name": "t2_company_onboarding_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260906120000_t2_document_registry_read_v1.sql",
+      "version": "20260906120000",
+      "name": "t2_document_registry_read_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260907120000_t2_document_replica_move_v1.sql",
+      "version": "20260907120000",
+      "name": "t2_document_replica_move_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260908120000_t2_sheets_writeback_reference_v1.sql",
+      "version": "20260908120000",
+      "name": "t2_sheets_writeback_reference_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260910120000_t2_f2_baseline_price_v1.sql",
+      "version": "20260910120000",
+      "name": "t2_f2_baseline_price_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260911120000_t2_smeta_change_control_v1.sql",
+      "version": "20260911120000",
+      "name": "t2_smeta_change_control_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260912120000_t2_forma3_closeout_v1.sql",
+      "version": "20260912120000",
+      "name": "t2_forma3_closeout_v1",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260913120000_t2_smeta_ozgarish_royxat_fix.sql",
+      "version": "20260913120000",
+      "name": "t2_smeta_ozgarish_royxat_fix",
+      "status": "APPLIED_NAME_MATCH_VERSION_DRIFT"
+    },
+    {
+      "file": "20260914120000_t2_platforma_superadmin_context_v1.sql",
+      "version": "20260914120000",
+      "name": "t2_platforma_superadmin_context_v1",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260915120000_t2_effective_authorization_core_v1.sql",
+      "version": "20260915120000",
+      "name": "t2_effective_authorization_core_v1",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260916120000_t2_kompaniya_yangila_v1.sql",
+      "version": "20260916120000",
+      "name": "t2_kompaniya_yangila_v1",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260917120000_t2_system_control_split_v1.sql",
+      "version": "20260917120000",
+      "name": "t2_system_control_split_v1",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260919120000_t2_construction_catalog_observation_v1.sql",
+      "version": "20260919120000",
+      "name": "t2_construction_catalog_observation_v1",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260920120000_t2_akt_qator_certified_v1.sql",
+      "version": "20260920120000",
+      "name": "t2_akt_qator_certified_v1",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260920130000_t2_akt_yarat_v2.sql",
+      "version": "20260920130000",
+      "name": "t2_akt_yarat_v2",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260920140000_t2_lrv_sync_envelope_v1.sql",
+      "version": "20260920140000",
+      "name": "t2_lrv_sync_envelope_v1",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    },
+    {
+      "file": "20260921120000_t2_price_control_v1.sql",
+      "version": "20260921120000",
+      "name": "t2_price_control_v1",
+      "status": "NOT_YET_APPLIED_OR_UNRECONCILED"
+    }
+  ]
+}

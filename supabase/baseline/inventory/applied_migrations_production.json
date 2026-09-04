@@ -1,0 +1,562 @@
+[
+  {
+    "version": "20260818172418",
+    "name": "t2_asos_sxema"
+  },
+  {
+    "version": "20260818174631",
+    "name": "t2_yadro_normalizatsiya"
+  },
+  {
+    "version": "20260818174856",
+    "name": "t2_markaz_jadvallar"
+  },
+  {
+    "version": "20260818175107",
+    "name": "t2_markirovka"
+  },
+  {
+    "version": "20260818175333",
+    "name": "t2_markirovka_iyerarxiya"
+  },
+  {
+    "version": "20260818175713",
+    "name": "t2_narxlash"
+  },
+  {
+    "version": "20260818180028",
+    "name": "t2_rollup_va_korinishlar"
+  },
+  {
+    "version": "20260818180436",
+    "name": "t2_xom_massiv_va_son"
+  },
+  {
+    "version": "20260818180604",
+    "name": "t2_markirovka_massiv"
+  },
+  {
+    "version": "20260818185412",
+    "name": "t2_xavfsizlik_qattiqlash"
+  },
+  {
+    "version": "20260818185701",
+    "name": "t2_ozgarish_kuzatuvi"
+  },
+  {
+    "version": "20260818190010",
+    "name": "t2_hisob_jurnalga_tushmasin"
+  },
+  {
+    "version": "20260818200104",
+    "name": "t2_soxta_razdel_filtri"
+  },
+  {
+    "version": "20260818200157",
+    "name": "t2_markirovka_soxta_rz_filtri"
+  },
+  {
+    "version": "20260818200352",
+    "name": "t2_lrv_korinishi"
+  },
+  {
+    "version": "20260818200820",
+    "name": "t2_lrv_filtr_ustuni_v2"
+  },
+  {
+    "version": "20260819063617",
+    "name": "t2_kompaniya_qatlami"
+  },
+  {
+    "version": "20260819063652",
+    "name": "t2_kompaniya_toldirish_va_qatiylashtirish"
+  },
+  {
+    "version": "20260819063735",
+    "name": "t2_versiya_ziddiyat_nazorati"
+  },
+  {
+    "version": "20260819064004",
+    "name": "t2_korinishlar_kompaniya_oxiriga"
+  },
+  {
+    "version": "20260819064136",
+    "name": "t2_kompaniya_avtomat_meros"
+  },
+  {
+    "version": "20260819064356",
+    "name": "t2_tenant_cheklovlar_tuzatildi"
+  },
+  {
+    "version": "20260819064530",
+    "name": "t2_ozgarish_jurnali_ochirishda_saqlanadi"
+  },
+  {
+    "version": "20260819064827",
+    "name": "t2_ozgarish_qayd_ochirishda_yiqilmaydi"
+  },
+  {
+    "version": "20260819064949",
+    "name": "t2_qator_tahrir_ziddiyat_bilan"
+  },
+  {
+    "version": "20260819065713",
+    "name": "t2_ozgarish_manba_frontend"
+  },
+  {
+    "version": "20260819070020",
+    "name": "t2_qator_tahrir_bitta_update"
+  },
+  {
+    "version": "20260819104728",
+    "name": "t2_kompaniya_tashkilot_maydonlari"
+  },
+  {
+    "version": "20260820045413",
+    "name": "t2_narx_svodkadan_kompaniya_conflict_tuzatish"
+  },
+  {
+    "version": "20260820050556",
+    "name": "t2_narx_svodkadan_ustun_sarlavhadan"
+  },
+  {
+    "version": "20260820050946",
+    "name": "t2_tasnif_takroriy_sarlavha_katta_harf"
+  },
+  {
+    "version": "20260820065241",
+    "name": "t2_qator_norma_va_raqam"
+  },
+  {
+    "version": "20260820065411",
+    "name": "t2_markirovka_norma_hajm_ajratish"
+  },
+  {
+    "version": "20260820065906",
+    "name": "t2_markirovka_hajm_tizim01_qoidasi"
+  },
+  {
+    "version": "20260820070356",
+    "name": "t2_kat_seksiya_ob_ajratish"
+  },
+  {
+    "version": "20260820070559",
+    "name": "t2_narx_svodkadan_seksiya_kategoriya"
+  },
+  {
+    "version": "20260820070734",
+    "name": "t2_narx_svodkadan_seksiya_tuzatish"
+  },
+  {
+    "version": "20260820103444",
+    "name": "t2_daraxt_norma_raqam_oxiriga"
+  },
+  {
+    "version": "20260820121345",
+    "name": "t2_narxla_qol_narxni_saqlash"
+  },
+  {
+    "version": "20260820121518",
+    "name": "t2_qator_tahrir_qol_belgisi"
+  },
+  {
+    "version": "20260820133634",
+    "name": "t2_seksiya_birlashgan_katakdan"
+  },
+  {
+    "version": "20260820134329",
+    "name": "t2_manba_yuklanmoqda_holati"
+  },
+  {
+    "version": "20260820141512",
+    "name": "t2_akt_f2_fakt_poydevor"
+  },
+  {
+    "version": "20260820141626",
+    "name": "t2_akt_korinishlar_va_invariantlar"
+  },
+  {
+    "version": "20260821041636",
+    "name": "t2_akt_idempotentlik"
+  },
+  {
+    "version": "20260821041756",
+    "name": "t2_akt_yarat_rpc"
+  },
+  {
+    "version": "20260821042132",
+    "name": "t2_akt_yarat_qoralama_holati"
+  },
+  {
+    "version": "20260821042340",
+    "name": "t2_akt_yarat_generated_summa"
+  },
+  {
+    "version": "20260821045233",
+    "name": "t2_akt_hayotiy_sikl"
+  },
+  {
+    "version": "20260821113959",
+    "name": "t2_akt_reestr_versiya"
+  },
+  {
+    "version": "20260821123047",
+    "name": "t2_markirovka_akt_himoyasi"
+  },
+  {
+    "version": "20260822042750",
+    "name": "t2_benchmark_funksiyasi"
+  },
+  {
+    "version": "20260822043614",
+    "name": "t2_markirovka_bitta_otish"
+  },
+  {
+    "version": "20260822055627",
+    "name": "t2_f2_moslash"
+  },
+  {
+    "version": "20260822055838",
+    "name": "t2_f2_import"
+  },
+  {
+    "version": "20260824115842",
+    "name": "t2_akt_yarat_narx_yoq"
+  },
+  {
+    "version": "20260824121708",
+    "name": "t2_f2_sql_moslashtirish_olib_tashlandi"
+  },
+  {
+    "version": "20260824144016",
+    "name": "t2_rollup_rz_ostidagi_rs_yoqolmasin"
+  },
+  {
+    "version": "20260824144225",
+    "name": "t2_qator_qosh"
+  },
+  {
+    "version": "20260824144313",
+    "name": "t2_qator_operation_id"
+  },
+  {
+    "version": "20260824144414",
+    "name": "t2_qator_qosh_v2"
+  },
+  {
+    "version": "20260825102640",
+    "name": "t2_narx_sana_jadval"
+  },
+  {
+    "version": "20260825102741",
+    "name": "t2_narx_markaz_korinish"
+  },
+  {
+    "version": "20260825102933",
+    "name": "t2_narx_belgila_va_sana_qosh"
+  },
+  {
+    "version": "20260825103051",
+    "name": "t2_narxla_belgilangan_narx"
+  },
+  {
+    "version": "20260825103837",
+    "name": "t2_narx_sana_manba_va_qol_qorigchi"
+  },
+  {
+    "version": "20260825104006",
+    "name": "t2_topilmaganlar_korinish"
+  },
+  {
+    "version": "20260825104358",
+    "name": "t2_narx_belgila_kalitlar"
+  },
+  {
+    "version": "20260825104543",
+    "name": "t2_narx_izoh_va_manba_qol"
+  },
+  {
+    "version": "20260825110947",
+    "name": "t2_f2_tahlil_korinishlar"
+  },
+  {
+    "version": "20260825123520",
+    "name": "t2_viborka_jadval"
+  },
+  {
+    "version": "20260825123600",
+    "name": "t2_viborka_smetadan_toldir"
+  },
+  {
+    "version": "20260825123727",
+    "name": "t2_viborka_qabul_yoz"
+  },
+  {
+    "version": "20260825123803",
+    "name": "t2_viborka_holat_korinishi"
+  },
+  {
+    "version": "20260825141130",
+    "name": "t2_akt_reestr_cheksiz_rekursiya_tuzatildi"
+  },
+  {
+    "version": "20260825142411",
+    "name": "t2_shartnoma_jadvallar"
+  },
+  {
+    "version": "20260825142436",
+    "name": "t2_nakrutka_default_qiymatlar"
+  },
+  {
+    "version": "20260825142539",
+    "name": "t2_nakrutka_hisob_funksiyasi"
+  },
+  {
+    "version": "20260825142639",
+    "name": "t2_nakrutka_koef_va_obyekt"
+  },
+  {
+    "version": "20260825142746",
+    "name": "t2_shartnoma_crud"
+  },
+  {
+    "version": "20260825143721",
+    "name": "t2_obyekt_nakrutka_korinishi"
+  },
+  {
+    "version": "20260825144604",
+    "name": "t2_buxgalteriya_jadvallar"
+  },
+  {
+    "version": "20260825144650",
+    "name": "t2_tolov_va_xarajat_rpc"
+  },
+  {
+    "version": "20260825144742",
+    "name": "t2_bux_korinishlar"
+  },
+  {
+    "version": "20260827181948",
+    "name": "t2_loyiha_qatnashchi"
+  },
+  {
+    "version": "20260827190737",
+    "name": "t2_azolik_boshqaruv"
+  },
+  {
+    "version": "20260827192107",
+    "name": "t2_akt_kozguni_eskirtiradi"
+  },
+  {
+    "version": "20260827192745",
+    "name": "t2_skelet_fizik_tuzilma_va_tijorat_boglar"
+  },
+  {
+    "version": "20260827193511",
+    "name": "t2_akt_yarat_invariant_ogohlantiradi"
+  },
+  {
+    "version": "20260827193858",
+    "name": "t2_loyiha_byudjet_va_holatlar"
+  },
+  {
+    "version": "20260827193948",
+    "name": "t2_loyiha_royxat_byudjet_holat_v2"
+  },
+  {
+    "version": "20260827195212",
+    "name": "t2_fakt_kiritish_yollari"
+  },
+  {
+    "version": "20260827195327",
+    "name": "t2_fakt_yoz_kunlik_raqam"
+  },
+  {
+    "version": "20260827195357",
+    "name": "t2_fakt_yoz_eski_imzo_olib_tashlandi"
+  },
+  {
+    "version": "20260827200158",
+    "name": "t2_papka_reestri"
+  },
+  {
+    "version": "20260827200554",
+    "name": "t2_royxat_sorov"
+  },
+  {
+    "version": "20260827202746",
+    "name": "t2_ai_kontekst"
+  },
+  {
+    "version": "20260828171752",
+    "name": "t2_erp_amal_zayavka"
+  },
+  {
+    "version": "20260828171951",
+    "name": "t2_mindmap_grafi_holat_va_belgi"
+  },
+  {
+    "version": "20260828173443",
+    "name": "t2_audit_avtomatik_trigger"
+  },
+  {
+    "version": "20260828173553",
+    "name": "t2_erp_amal_kim_qoshildi"
+  },
+  {
+    "version": "20260828182544",
+    "name": "t2_akt_qator_cascade_yopildi"
+  },
+  {
+    "version": "20260828182912",
+    "name": "t2_qator_holat_f2_narx"
+  },
+  {
+    "version": "20260828183636",
+    "name": "t2_invariant_tekshir"
+  },
+  {
+    "version": "20260828184015",
+    "name": "t2_invariant_tekshir_yolgon_ogoh_tuzatildi"
+  },
+  {
+    "version": "20260828191604",
+    "name": "t2_tenant_bux_narx_korinishlari"
+  },
+  {
+    "version": "20260829051300",
+    "name": "t2_procurement_request_contract_v1"
+  },
+  {
+    "version": "20260829051309",
+    "name": "t2_signal_engine"
+  },
+  {
+    "version": "20260829051320",
+    "name": "t2_mindmap_command_contract_hardening"
+  },
+  {
+    "version": "20260829051341",
+    "name": "t2_signal_read_model"
+  },
+  {
+    "version": "20260829051440",
+    "name": "t2_mindmap_grafi_request_status"
+  },
+  {
+    "version": "20260829051457",
+    "name": "t2_mindmap_grafi_signal_read_model"
+  },
+  {
+    "version": "20260829054438",
+    "name": "t2_signal_producers"
+  },
+  {
+    "version": "20260829104249",
+    "name": "t2_mindmap_zayavka_projection"
+  },
+  {
+    "version": "20260830040816",
+    "name": "t2_signal_trigger_keep_object_create_fast"
+  },
+  {
+    "version": "20260830044354",
+    "name": "t2_signal_bulk_import_coalescing"
+  },
+  {
+    "version": "20260831171534",
+    "name": "t2_entity_participant_command_contract"
+  },
+  {
+    "version": "20260831171605",
+    "name": "t2_participant_canonical_read_model"
+  },
+  {
+    "version": "20260831191147",
+    "name": "t2_company_storage_foundation_v1"
+  },
+  {
+    "version": "20260831191235",
+    "name": "t2_storage_legacy_write_policy_v1"
+  },
+  {
+    "version": "20260831191306",
+    "name": "t2_storage_reconciliation_v2"
+  },
+  {
+    "version": "20260831192114",
+    "name": "t2_company_storage_foundation_v1"
+  },
+  {
+    "version": "20260831202040",
+    "name": "t2_object_storage_provision_v1"
+  },
+  {
+    "version": "20260901210044",
+    "name": "t2_f2_baseline_price_v1"
+  },
+  {
+    "version": "20260901210307",
+    "name": "t2_smeta_change_control_v1"
+  },
+  {
+    "version": "20260901210527",
+    "name": "t2_forma3_closeout_v1"
+  },
+  {
+    "version": "20260901210934",
+    "name": "t2_smeta_ozgarish_royxat_fix"
+  },
+  {
+    "version": "20260902100709",
+    "name": "t2_file_truth_r2_canonical_v1"
+  },
+  {
+    "version": "20260902101520",
+    "name": "t2_file_truth_provider_check_fix"
+  },
+  {
+    "version": "20260902102020",
+    "name": "t2_file_truth_status_check_fix"
+  },
+  {
+    "version": "20260902102455",
+    "name": "t2_boss_dashboard_read_model_v1"
+  },
+  {
+    "version": "20260902102742",
+    "name": "t2_capability_registry_v1"
+  },
+  {
+    "version": "20260902103105",
+    "name": "t2_company_onboarding_v1"
+  },
+  {
+    "version": "20260902103449",
+    "name": "t2_document_registry_read_v1"
+  },
+  {
+    "version": "20260902103742",
+    "name": "t2_document_replica_move_v1"
+  },
+  {
+    "version": "20260902103927",
+    "name": "t2_sheets_writeback_reference_v1"
+  },
+  {
+    "version": "20260902104218",
+    "name": "t2_file_truth_constraint_vocab_fix_v1"
+  },
+  {
+    "version": "20260903041926",
+    "name": "t2_actor_azo_tekshir_remove_for_share_p0"
+  },
+  {
+    "version": "20260903043434",
+    "name": "t2_kompaniya_yangila_lock_down_p0"
+  },
+  {
+    "version": "20260903043552",
+    "name": "t2_legacy_azolik_royxat_sorov_lock_down_p0"
+  }
+]

@@ -28,8 +28,16 @@
  *
  * ISHLATISH (isolated DB va baseline mavjud bo'lganda):
  *   ISOLATED_TEST_DATABASE_URL=postgres://...localhost:54322/postgres \
- *   ISOLATED_BASELINE_SQL=/path/to/reviewed-baseline.sql \
+ *   ISOLATED_BASELINE_SQL=/path/to/production_schema_baseline.sql \
  *   node run.cjs
+ *
+ * `ISOLATED_BASELINE_SQL` fayli bilan bir qatorda
+ * `supabase/baseline/production_schema_baseline.manifest.json` (2026-09-04,
+ * shu round yozildi) ham o'qiladi -- uning `pending_migrations_not_yet_applied_to_production`
+ * ro'yxati production'ning HAQIQIY applied-migration tarixi bilan solishtirib
+ * chiqarilgan (o'zboshimchalik EMAS, `inventory/repo_migration_reconciliation.json`ga
+ * qara). Baseline tiklangach FAQAT o'sha ro'yxatdagi fayllar qo'llanadi --
+ * `included_migrations`dagilar QAYTA QO'LLANMAYDI (baseline'da allaqachon bor).
  */
 
 const fs = require('fs');
@@ -37,6 +45,7 @@ const path = require('path');
 const { productionEmasliginiTekshir } = require('./env-guard.cjs');
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
+const MANIFEST_PATH = path.join(__dirname, '..', 'baseline', 'production_schema_baseline.manifest.json');
 
 function log(qadam, xabar) {
   console.log(`[${qadam}] ${xabar}`);
@@ -82,9 +91,36 @@ async function main() {
   }
   log('BASELINE', `✅ Baseline topildi: ${baselineSql} (mazmuni bu skriptda TEKSHIRILMAYDI -- egasi tomonidan reviewed deb belgilangan bo'lishi kerak).`);
 
-  // ── QATLAM 3: forward migration ro'yxati (haqiqiy, fayl tizimidan) ──
-  const migratsiyalar = forwardMigrationlarniRoyxatQil();
-  log('MIGRATIONS', `${migratsiyalar.length} ta forward migration topildi (${migratsiyalar[0]} .. ${migratsiyalar[migratsiyalar.length - 1]}).`);
+  // ── QATLAM 3: manifest orqali FAQAT pending migratsiyalarni aniqlash ──
+  // Manifest yo'q bo'lsa -- eski, kamroq aniq xatti-harakatga qaytamiz (BARCHA
+  // forward migratsiya, ogohlantirish bilan): bu holatda baseline'ning o'zi
+  // qaysi migratsiyalarni allaqachon o'z ichiga olganini bilmaymiz.
+  const barchaMigratsiyalar = forwardMigrationlarniRoyxatQil();
+  let qollanadiganMigratsiyalar = barchaMigratsiyalar;
+  if (fs.existsSync(MANIFEST_PATH)) {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const pending = new Set(manifest.pending_migrations_not_yet_applied_to_production || []);
+    qollanadiganMigratsiyalar = barchaMigratsiyalar.filter((f) => pending.has(f));
+    log(
+      'MANIFEST',
+      `✅ ${MANIFEST_PATH} topildi -- baseline_sql_status=${manifest.baseline_sql_status}. ` +
+      `${barchaMigratsiyalar.length} ta forward migratsiyadan ${qollanadiganMigratsiyalar.length} ` +
+      `tasi baseline'da YO'Q (pending) -- faqat shular qo'llanadi, qolganlari baseline'da allaqachon bor.`,
+    );
+  } else {
+    log(
+      'MANIFEST',
+      `⚠️  ${MANIFEST_PATH} topilmadi -- barcha ${barchaMigratsiyalar.length} forward migratsiya ` +
+      `qo'llanadi deb hisoblanadi (baseline qaysi migratsiyalarni allaqachon o'z ichiga olishi noma'lum). ` +
+      `Bu XATOLI natija berishi mumkin agar baseline aslida keyingi migratsiyalarning ba'zilarini ham qamrab olgan bo'lsa.`,
+    );
+  }
+  log(
+    'MIGRATIONS',
+    qollanadiganMigratsiyalar.length
+      ? `${qollanadiganMigratsiyalar.length} ta qo'llanadigan migratsiya: ${qollanadiganMigratsiyalar[0]} .. ${qollanadiganMigratsiyalar[qollanadiganMigratsiyalar.length - 1]}.`
+      : '0 ta qo\'llanadigan migratsiya qoldi -- baseline hammasini allaqachon qamrab olgan.',
+  );
 
   // ── QATLAM 4+: DB ulanish, migratsiya qo'llash, seed, acceptance, teardown ──
   // Bu yerdan pastda HAQIQIY Postgres ulanish (node-postgres) kerak bo'ladi.

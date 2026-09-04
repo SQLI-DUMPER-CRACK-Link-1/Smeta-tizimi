@@ -240,7 +240,12 @@
         "supabase/migrations/20260921120000_t2_price_control_v1*.sql",
         "frontend/functions/api/sb-yoz.ts", "frontend/functions/api/sb.ts", "frontend/src/api/supabase.ts",
         "frontend/src/api/t2-price-control.ts", "frontend/src/test02/TestNarxNazorati.tsx",
-        "frontend/src/test02/TestSmetaBirlashgan.tsx", "ops/handoff/T2_REAL_PARK_LRV_VERTICAL_SLICE_004.md"
+        "frontend/src/test02/TestSmetaBirlashgan.tsx", "ops/handoff/T2_REAL_PARK_LRV_VERTICAL_SLICE_004.md",
+        "ops/handoff/T2_SMETA_TREE_IMPLEMENTATION_001_CLAUDE.md",
+        "ops/handoff/T2_LRV_CLOSURE_006_CLAUDE.md",
+        "frontend/src/test02/f2-exact-payload.ts", "frontend/src/test02/f2-exact-payload.test.ts",
+        "frontend/src/test02/TestF2Import.tsx",
+        "supabase/isolated-test/", "supabase/baseline/"
       ],
       "depends_on": ["T2-COMPANY-CONTROL-FOUNDATION-001"],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_LRV_CONTROL_001_CONTRACT.md", "ops/handoff/T2_LRV_EXACT_F2_INTEGRATION_003.md", "ops/handoff/T2_BRIDGE_CALLER_AUDIT_003.md", "ops/handoff/T2_REAL_PARK_LRV_VERTICAL_SLICE_004.md"],
