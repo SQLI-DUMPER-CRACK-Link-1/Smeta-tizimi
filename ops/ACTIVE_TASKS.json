@@ -562,6 +562,28 @@
       ],
       "production_write_allowed": false,
       "_izoh": "2026-09-05: owner asked for large, multi-milestone independent goals for idle agent capacity (same request that produced the sibling Narxlar lane). Owner separately confirmed the UZ construction document catalog doc should be treated as already legally reviewed -- no external lawyer sign-off gate blocks acting on its TPL specs, though the doc's own Section 9 law against fabricating unknown legal/financial values (VAT rate, Forma-3 totals) still stands independently of that authorization; the brief repeats this explicitly. Claude found createExportPreview()/ExportPreview.tsx only render an in-browser JSX summary -- no actual downloadable .xlsx/.docx matching the legal templates exists anywhere. The calculation engine itself (calculateProgressValuation, 5 existing test files) is explicitly out of scope to modify -- this lane only formats its already-correct output into real documents. No DB/migration work expected; flagged as an exception path in the brief if it turns out to be needed."
+    },
+    {
+      "id": "T2-PTO-CLOSURE-007-CLAUDE-RESURS-VEDOMOST",
+      "title": "Category (ЧЕЛ/МАШ/МАТ/ОБ/КАБ/М-К) resource statement rolled up from the whole smeta+F2, requested directly by the owner as the third of three parallel independent goals (Claude's own lane, alongside Codex's Narxlar cutover and Antigravity's document export)",
+      "owner": "claude",
+      "branch": "integration/next-main-release-v1-local2",
+      "base_sha": "62c2f1a",
+      "base_ref": "origin/integration/next-main-release-v1",
+      "status": "gates_partial_tsc_build_unverified_due_to_shared_machine_memory_pressure",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": [
+        "frontend/src/lib/resurs-vedomost.ts",
+        "frontend/src/admin/sahifalar/ResursVedomostNative.tsx",
+        "ops/handoff/T2_PTO_CLOSURE_007_CLAUDE_RESURS_VEDOMOST.md"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_CLAUDE_RESURS_VEDOMOST.md"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "2026-09-05: pure aggregation over the already-correct t2_qator_holat view (fixed earlier this session) -- no new calculation, only a category+resource rollup filtering to leaf resource rows (tur in rs/mat/ob), excluding rz/bl so work-line amounts are never double-counted against their own resource lines. Widened the T2QatorHolat TS type (tur/kod/birlik/kat were missing even though the SQL view already returns them, confirmed by reading the migration SQL directly) -- same class of gap as the earlier T2Qator.versiya fix. HONEST GAP: tsc -b and vite build could not complete this round -- 6 consecutive out-of-memory crashes at the Windows commit-limit level (not a V8 heap ceiling), consistent with 3 agents now running heavy builds concurrently on the same shared machine per the owner's own message. Substituted a manual grep-based audit of every T2QatorHolat consumer (none construct it via an object literal requiring all fields -- only as a function return/parameter type) plus a clean oxlint run and a passing targeted vitest run (10/10) as partial evidence. tsc -b/vite build must be re-run and this status updated before treating this lane as fully verified."
     }
   ]
 }

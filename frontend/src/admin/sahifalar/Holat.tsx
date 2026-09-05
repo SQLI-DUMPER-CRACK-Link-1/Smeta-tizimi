@@ -13,6 +13,7 @@ import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdditionalReplacementNative from './AdditionalReplacementNative';
+import ResursVedomostNative from './ResursVedomostNative';
 
 export type EditState = {
   edit: Edit;
@@ -344,6 +345,23 @@ export function Holat() {
           </summary>
           <div className="mt-3">
             <AdditionalReplacementNative />
+          </div>
+        </details>
+
+        {/* T2-PTO-CLOSURE-007: kategoriya (ЧЕЛ/МАШ/МАТ/ОБ/КАБ/М-К)
+            bo'yicha resurs vedomosti — butun smeta+F2'dan, `t2_qator_holat`
+            asosida (yangi hisob-kitob yo'q, faqat jamlanma). Ataylab
+            yopiq/ixtiyoriy, mavjud oqimga tegmaydi. */}
+        <details className="karta p-4 mb-4 group flex-shrink-0">
+          <summary className="cursor-pointer list-none flex items-center justify-between">
+            <h3 className="text-[14px] font-semibold text-text">
+              Resursiy vedomost (kategoriya bo'yicha) — yangi (GAS'siz) rejim
+            </h3>
+            <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
+            <span className="text-[11px] text-text-mute hidden group-open:inline">yopish ▴</span>
+          </summary>
+          <div className="mt-3">
+            <ResursVedomostNative />
           </div>
         </details>
 

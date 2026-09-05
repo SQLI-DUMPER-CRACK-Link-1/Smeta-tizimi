@@ -287,7 +287,13 @@ export type T2QatorHolat = {
   id: number;
   qator_id: number;
   obyekt_id: number;
+  /** `t2_qator.tur`: 'rz' (razdel), 'bl' (ish), 'rs'/'mat'/'ob' (resurs bargi). */
+  tur: string | null;
+  kod: string | null;
   nom: string | null;
+  birlik: string | null;
+  /** ЧЕЛ/МАШ/МАТ/ОБ/КАБ/М-К biznes kategoriyasi. */
+  kat: string | null;
   smeta_hajm: number;
   smeta_summa: number;
   /** ⚠️ FAKT — barcha `tur='fakt'` hujjatlarning yig'indisi. */
