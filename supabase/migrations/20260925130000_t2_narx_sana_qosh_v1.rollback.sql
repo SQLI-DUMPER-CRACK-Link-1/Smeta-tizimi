@@ -1,0 +1,3 @@
+-- The paired pre-use rollback lives with the first command migration so both
+-- functions are removed atomically and no durable price data is touched.
+-- Intentionally empty: see 20260925120000_t2_narx_belgila_v1.rollback.sql.
