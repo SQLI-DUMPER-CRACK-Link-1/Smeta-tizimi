@@ -9,6 +9,7 @@ import { FmtN } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
 import { AlertTriangle, Save, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import type { NarxQator } from '../../api/types';
+import NarxlarNative from './NarxlarNative';
 
 /* ЧЕЛ va МАШ — birlikdan avtomat aniqlanadi va QULFLANGAN (qat'iy qoida).
  * Qolganlari qo'lda tanlanadi. */
@@ -19,7 +20,27 @@ const KAT_RANG: Record<string, 'ok' | 'warn' | 'danger' | 'neytral'> = {
   'ЧЕЛ': 'neytral', 'МАШ': 'neytral', 'МАТ': 'ok', 'ОБ': 'warn', 'КАБ': 'neytral', 'М/К': 'neytral',
 };
 
+/* T2-PTO-CLOSURE-007: bosqichma-bosqich (feature flag) cutover — F2Import.tsx
+ * bilan bir xil naqsh. Flag O'CHIQ bo'lsa quyidagi NarxlarLegacy BAYT-BAYTIGA
+ * o'zgarishsiz ishlaydi. */
 export function Narxlar() {
+  const [native, setNative] = useState(() => {
+    try { return localStorage.getItem('t2-narxlar-native-mode') === 'true'; } catch { return false; }
+  });
+  return <>
+    <label className="flex items-center gap-2 p-3 text-sm">
+      <input type="checkbox" checked={native} onChange={(e) => {
+        const next = e.target.checked;
+        if (!window.confirm('Rejim almashsa, saqlanmagan tahrirlar yopiladi. Davom etasizmi?')) return;
+        try { localStorage.setItem('t2-narxlar-native-mode', String(next)); } catch { /* Joriy sessiyada ishlaydi. */ }
+        setNative(next);
+      }} />Yangi (GAS'siz) rejim — sinov
+    </label>
+    {native ? <NarxlarNative /> : <NarxlarLegacy />}
+  </>;
+}
+
+function NarxlarLegacy() {
   const [filter, setFilter] = useState('ALL');
   /* ⚡ 2026-08-16 ORALIQLAR bloki uchun */
   const obyektlar = useObyektlar();

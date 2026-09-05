@@ -440,7 +440,7 @@
       "branch": "codex/t2-f2-resumable-import-v1",
       "base_sha": "9151569",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "active",
+      "status": "merged_backend_ui_wiring_pending",
       "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
       "owns": [
         "supabase/migrations/20260922120000_t2_f2_import_job_v1*.sql",
@@ -452,7 +452,7 @@
         "ops/handoff/T2_PTO_CLOSURE_007_CODEX_F2_RESUMABLE_IMPORT.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "New lane opened 2026-09-05, deliberately scoped to exactly ONE of the 4 gaps Codex itself identified (20k-row ceiling / no durable job / non-durable draft / no R2 storage) after the owner's explicit sharp feedback that open-ended re-analysis (the redundant codex/t2-gas-exit-inventory-v1 branch) is not acceptable -- only bounded, closeable work is. The t2_f2_import_job_v1 migration already exists (inherited from an earlier, different task) but is explicitly marked 'NOT applied to production. NOT reviewed' in its own header and was never wired to any UI -- this lane is Codex reviewing/applying that existing draft for real and connecting it to F2ImportNative, with a single measurable done-when-X acceptance test (a ~30000-row synthetic file that would have been rejected before this lane must now process end-to-end via a checkpoint/resume flow). R2 file storage and Nakopitelniy reconciliation are explicitly OUT of scope for this lane by design, to keep it closeable."
+      "_izoh": "New lane opened 2026-09-05, deliberately scoped to exactly ONE of the 4 gaps Codex itself identified (20k-row ceiling / no durable job / non-durable draft / no R2 storage) after the owner's explicit sharp feedback that open-ended re-analysis (the redundant codex/t2-gas-exit-inventory-v1 branch) is not acceptable -- only bounded, closeable work is. The t2_f2_import_job_v1 migration already exists (inherited from an earlier, different task) but is explicitly marked 'NOT applied to production. NOT reviewed' in its own header and was never wired to any UI -- this lane is Codex reviewing/applying that existing draft for real and connecting it to F2ImportNative, with a single measurable done-when-X acceptance test (a ~30000-row synthetic file that would have been rejected before this lane must now process end-to-end via a checkpoint/resume flow). R2 file storage and Nakopitelniy reconciliation are explicitly OUT of scope for this lane by design, to keep it closeable. 2026-09-05 MERGED (Claude review): commit d75b1d14e854777bb4665fa071a092522e80c771 reviewed and merged -- durable job/checkpoint RPCs plus stale-draft-version guard, tested live in BEGIN...ROLLBACK (32000-row checkpoint, draft restore, stale-version rejection, foreign actor blocked), zero production residue. Codex's own report is explicit that wiring F2ImportNative's 20000-row/15MB reject wall to this new job model is OUT of its ownership and left for Claude -- that UI wiring is NOT done yet, tracked as the remaining open item on this lane before it can be called fully closed. Backend is safe to ship now regardless (inert until wired, and the flag defaults off)."
     },
     {
       "id": "T2-PTO-CLOSURE-007-CLAUDE-ADDREPL-UI",
@@ -523,7 +523,7 @@
       "branch": "codex/t2-narxlar-markazi-cutover-v1",
       "base_sha": "9151569",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "active",
+      "status": "merged",
       "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
       "owns": [
         "supabase/migrations/*_t2_narx_belgila*.sql",
@@ -538,7 +538,7 @@
         "frontend/src/api/t2-narx.ts"
       ],
       "production_write_allowed": false,
-      "_izoh": "2026-09-05: owner explicitly asked for large, multi-milestone independent goals for idle agent capacity (verbatim: 'katta katta ishlarni ber goal qilib beraman shu bilan ishlab yuraveradi'), as opposed to the earlier single tightly-bounded lane pattern. Claude found the read side of this domain (t2_narx_markaz/t2_topilmaganlar/t2_narx_qol_xavf views, documented in t2-narx.ts) and the sb-yoz.ts write gateway (narx_belgila/narx_sana_qosh parameter shaping, lines 481-528) already fully built -- only the actual t2_narx_belgila/t2_narx_sana_qosh RPCs are missing (0 matches across all local migrations) and there is a working TestNarxlar.tsx UI with zero canonical route wiring, mirroring the exact pattern already solved for F2Import. production_write_allowed:true narrative belongs in the brief's synthetic-data-then-cleanup section, per this ledger's standing convention -- the flag itself stays false."
+      "_izoh": "2026-09-05: owner explicitly asked for large, multi-milestone independent goals for idle agent capacity (verbatim: 'katta katta ishlarni ber goal qilib beraman shu bilan ishlab yuraveradi'), as opposed to the earlier single tightly-bounded lane pattern. Claude found the read side of this domain (t2_narx_markaz/t2_topilmaganlar/t2_narx_qol_xavf views, documented in t2-narx.ts) and the sb-yoz.ts write gateway (narx_belgila/narx_sana_qosh parameter shaping, lines 481-528) already fully built -- only the actual t2_narx_belgila/t2_narx_sana_qosh RPCs are missing (0 matches across all local migrations) and there is a working TestNarxlar.tsx UI with zero canonical route wiring, mirroring the exact pattern already solved for F2Import. production_write_allowed:true narrative belongs in the brief's synthetic-data-then-cleanup section, per this ledger's standing convention -- the flag itself stays false. 2026-09-05 MERGED (Claude review): commit e46af72930f3552ba7c97a605c5fb2f768b9d959 read in full -- correctly fails closed on multi-company actor ambiguity (legacy gateway has no company-context param, so the RPC resolves a single active membership and refuses to guess), CHEL/MASH derived strictly from unit (matches the hard project law against category-dropdown poisoning), optimistic lock + audit trail on both RPCs, kirgan=yozildi+tashlandi invariant enforced on the date-price bulk insert with an explicit reject reason per dropped row. Independently ran tsc -b/oxlint/vitest(234/234)/vite build/governance-check -- all clean; also found and fixed a genuinely stale allowlist test (testlar/t2_kompaniya.test.cjs's hardcoded 76-RPC expected list, missing 4 legitimate RPCs added earlier this session by Claude and Codex -- unrelated to this branch, just never updated). Claude then did the one piece Codex's own report explicitly left out (flag-gate Narxlar.tsx -> NarxlarNative.tsx, byte-for-byte legacy body preserved, confirmed via diff) -- this lane is now fully closed end to end."
     },
     {
       "id": "T2-PTO-CLOSURE-007-ANTIGRAVITY-DOCUMENT-EXPORT",

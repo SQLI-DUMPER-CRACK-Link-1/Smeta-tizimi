@@ -72,7 +72,16 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                          exact-source F2 write path (no smeta-price fallback --
                          see t2_akt_yarat_v2's own migration) + price-basis
                          (protocol/change/agreement) recording. */
-                      't2_akt_yarat_v2', 't2_price_basis_yarat_v1'].sort();
+                      't2_akt_yarat_v2', 't2_price_basis_yarat_v1',
+                      /* 2026-09-05, T2-PTO-CLOSURE-007 (Codex): Additional/
+                         Replacement -- old row on replacement is read-only,
+                         never mutated; relation is structural (change_type/
+                         replaces_line_id), never a name-marker. */
+                      't2_qoshimcha_ish_yarat_v1', 't2_zamena_ish_yarat_v1', 't2_resurs_bola_qosh_v1',
+                      /* 2026-09-05, T2-PTO-CLOSURE-007 (Codex): catalog
+                         observation ingestion -- exact-match-only auto-link,
+                         no price ever stored/copied through this path. */
+                      't2_catalog_observation_yoz_v1'].sort();
     T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));
