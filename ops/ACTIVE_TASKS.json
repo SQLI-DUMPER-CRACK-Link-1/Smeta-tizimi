@@ -370,6 +370,24 @@
       ],
       "production_write_allowed": false,
       "_izoh": "New lane opened 2026-09-04. Read-only/audit-only. Do not trust T2_LRV_CLOSURE_006_CLAUDE_INTEGRATION_REVIEW.md's own claims -- re-derive from the actual merged code (SmetaTree.tsx, TestDaraxt.tsx, catalog-ingest/index.ts) and re-run gates independently. Also sanity-checks the new f2IstisnolarniAniqla() exception categories against Antigravity's own T2_LRV_PRODUCT_AUDIT_001_ANTIGRAVITY.md acceptance criteria."
+    },
+    {
+      "id": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "title": "Finish the daily PTO workflow end-to-end (Smeta upload -> Narxlash -> LRV -> Fakt -> F2 Yasash/Import -> Price Control -> Additional/Replacement -> Nakopitelniy -> Sheets projection) as a real, GAS-free, canonical-route product",
+      "owner": "claude",
+      "branch": "integration/next-main-release-v1",
+      "base_sha": "879aa06",
+      "base_ref": "origin/main",
+      "status": "audit_complete_readmodels_fixed_route_cutover_needs_owner_decision",
+      "owns": [
+        "ops/handoff/T2_PTO_DAILY_WORKFLOW_CLOSURE_007.md",
+        "supabase/migrations/20260923120000_t2_qator_holat_certified_v1*.sql",
+        "supabase/migrations/20260923130000_t2_f2_read_models_certified_v1*.sql"
+      ],
+      "depends_on": ["T2-GAS-EXIT-LRV-CONTROL-001", "T2-GAS-EXIT-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_PTO_DAILY_WORKFLOW_CLOSURE_007.md"],
+      "production_write_allowed": false,
+      "_izoh": "2026-09-05: Section 2 audit done via Explore agent, verified against actual code at 879aa06 (not stale docs) -- KEY FINDING: every canonical daily route (/admin/f2, /admin/f2-tayyorlash, /admin/narxlar, /admin/holat/:id) is still 100% GAS-backed for its interactive path; everything GAS-free built this session (f2-match-engine, f2-import-parse, t2_akt_yarat_v2, Price Control, Additional/Replacement, catalog-ingest) lives only under /admin/test/* with zero canonical consumers. t2_qoshimcha_ish_yarat_v1/t2_zamena_ish_yarat_v1/t2_resurs_bola_qosh_v1 RPCs confirmed to not exist in any migration (frontend-only stubs). Found and fixed (applied to production) a real live gap: t2_qator_holat/t2_f2_kat_oy/t2_f2_tafsilot read models were still aggregating F2 via the legacy GENERATED summa column instead of certified_quantity/certified_amount (t2_akt_yarat_v2) -- confirmed a mathematical no-op against current data (zero certified rows exist yet) before and after applying. NOT done this round: the full GAS-to-canonical route cutover (Sections 5,13 of the brief) -- blocked on a genuine, explicitly-flagged product decision (Holat.tsx's selectedObyekt is a GAS/Drive folder-name string with no bridge to numeric t2_obyekt.id; a name-based match would be an invented, unreliable identity bridge) plus a rollout-strategy choice (feature-flagged staged cutover vs hard replace vs fix the identity bridge first) that only the owner can make given this is the owner's actual daily-use tool. READY_FOR_OWNER_DAILY_USE: NO, honestly reported per the task's own Section 36 rule against a false YES."
     }
   ]
 }
