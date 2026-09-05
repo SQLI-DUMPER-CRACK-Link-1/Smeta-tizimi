@@ -20,7 +20,15 @@
       "Bash(NODE_OPTIONS=--max-old-space-size=2048 npx tsc --noEmit -p tsconfig.app.json)",
       "Bash(NODE_OPTIONS=--max-old-space-size=3072 npx vite build)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npm ls *)",
+      "mcp__437cf8a8-cc91-4947-bdb3-6ae3b57d68a6__execute_sql",
+      "PowerShell(node \"C:\\\\Temp\\\\claude\\\\C--Users-PC-Documents-GAS\\\\028b4907-c94d-4e41-9280-d7f55b68d0e0\\\\scratchpad\\\\extract_columns.cjs\")",
+      "mcp__437cf8a8-cc91-4947-bdb3-6ae3b57d68a6__apply_migration",
+      "mcp__437cf8a8-cc91-4947-bdb3-6ae3b57d68a6__*",
+      "Bash(*)",
+      "PowerShell(*)",
+      "Bash(node -e ' *)"
     ]
   }
 }
