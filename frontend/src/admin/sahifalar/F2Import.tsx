@@ -21,6 +21,7 @@ import { Save, Upload, FileSpreadsheet, Wand2, CheckCircle2, AlertTriangle, Send
 import type { AktNode, F2Moslik } from '../../api/types';
 import { qoralamaSaqla, qoralamaOqi, qoralamaOchir, qoralamaVaqti } from '../store/f2Saqlash';
 import { resetF2Store, useF2Store } from '../store/useF2Store';
+import F2ImportNative from './F2ImportNative';
 
 /* Akt daraxtidagi BARCHA barg (leaf) tugunlar — jami summa faqat shulardan.
  * ⚠️ bl summasi bolalarining yig'indisi bo'lgani uchun uni QO'SHSAK ikki marta
@@ -107,6 +108,20 @@ function formatVol(val: any) {
 const QADAMLAR = ['Fayl', "Moslashtirish va bog'lash", 'Yozish'];
 
 export function F2Import() {
+  const [native, setNative] = useState(() => {
+    try { return localStorage.getItem('t2-f2-native-mode') === 'true'; } catch { return false; }
+  });
+  return <><label className="flex items-center gap-2 p-3 text-sm">
+    <input type="checkbox" checked={native} onChange={(e) => {
+      const next = e.target.checked;
+      if (!window.confirm('Rejim almashsa, saqlanmagan import yopiladi. Davom etasizmi?')) return;
+      try { localStorage.setItem('t2-f2-native-mode', String(next)); } catch { /* Joriy sessiyada ishlaydi. */ }
+      setNative(next);
+    }} />Yangi (GAS'siz) rejim — sinov
+  </label>{native ? <F2ImportNative /> : <F2ImportLegacy />}</>;
+}
+
+function F2ImportLegacy() {
   const obyektlar = useObyektlar();
   const [state, setState] = useF2Store();
   const { obyekt, oyNom, lokalka, qadam, aktTree, natija, yozishBoshlandi, fid, faylNomi, varaq, cfg, filtr, ochiqSignal, qolBekor, qolBog, qolDop, dopModalUid, dropState, smetaScrollTo } = state;
