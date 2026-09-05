@@ -433,3 +433,96 @@ bog‘langan dalillar bilan tasdiqlangan bo‘lsa yashil bo‘ladi.
 
 Bu savollar `unknown` deb saqlanadi; “0”, “kerak emas” yoki avtomatik F-3
 formula bilan to‘ldirilmaydi.
+
+---
+
+## 10. Drive’dagi haqiqiy blanklardan olingan dalillar
+
+Quyidagi xulosalar nazariy emas — Drive’dagi ishlatilgan hujjatlarni o‘qib
+olindi. Ular **kompaniyaning amaliy blanki** sifatida qabul qilinadi; lekin
+ular normativ ilovadan ustun emas.
+
+| Drive namuna | Ko‘rilgan tuzilma | TIZIM_02 uchun qaror |
+|---|---|---|
+| [Amfiteatr F2, 2025-12](https://docs.google.com/spreadsheets/d/1vVdZ6GWv6zTTNIqyz7OBlhv67JSpKV18RAKCG4zq2ZY/edit) | Alohida `АКТ`, `ОБЛОЖКА`, ish/resurs qatorlari; ish kodi, nomi, birlik, miqdor, birlik narxi, loyiha bo‘yicha summa va resurs turlari. | F-2 eksporti uch qismli profil bo‘ladi: muqova, qatorli akt, qiymat hujjati. BL–resurs daraxti saqlanadi. |
+| [Stella F2, 2026-07](https://docs.google.com/spreadsheets/d/1Tlr3W96XQHldajm_7SZ3FbKAFz8UDrutA27MjMO9Bvo/edit) | `СЧЁТ-ФАКТ.` va `ф2` alohida varaq: akt qatorlari hamda qiymat ma’lumotnomasi bitta narsaga aralashtirilmagan. | `work_acceptance` va `value_invoice` alohida document ID, lekin bir period va tasdiqlangan qatorlar to‘plamiga bog‘lanadi. |
+| [AOSR — Stella blanki](https://docs.google.com/spreadsheets/d/11OQCeeLueSQayDK7a17DgMQvYflfE2NK/edit) | ShNQ 3.01.01-22 6-ilova sarlavhasi, komissiya, ish bayoni, loyiha tashkiloti, material, chetlanish, boshlanish/tugash va keyingi ishga ruxsat. | Bu TPL-02ni real korxona blankiga moslaydi; free-text bayon saqlanadi, ammo sertifikat va chizma alohida kanonik havolasiz qolmaydi. |
+| [Nakopitelnaya PDF](https://drive.google.com/file/d/1lrwY7x__VFKVH4nsji4ItR7lx8zOLVNa/view) | Qoldiq ish summalari va PTO izohlari: “qancha qoldi, nima sababdan” kesimida. | Bu klassik davriy nakopitelniydan farqli **qoldiq ishlar/risk reestri**. Uni `remaining_work_register` sifatida alohida ko‘rsatish kerak; F-2 kumulyativi bilan aralashtirilmaydi. |
+
+### Drive blanklarida topilgan uchta muhim qoida
+
+1. **F-2ning muqovasi real dalil hisoblanadi.** Unda pudratchi, buyurtmachi,
+   obyekt, hisobot oyi va “haqiqiy bajarilgan hajmlar, loyiha-smeta hujjati,
+   ijro geodezik o‘lchovi hamda jurnal bilan tasdiqlangan” degan asos bor.
+   Tizim buni oddiy fayl nomi sifatida emas, qabul hujjati metama’lumoti va
+   bog‘langan dalillar sifatida saqlaydi.
+2. **Qiymat varag‘i alohida biznes hujjati.** Real namunada hujjat raqami,
+   tuzilgan sana, davr, tomonlarning rekvizitlari, shartnoma, umumiy qiymat,
+   “boshlangandan beri / yil boshidan / joriy oy” ko‘rsatkichlari, QQS va
+   tomonlar imzosi bor. Demak F-2 qatorlarini faqat Excelga chiqarish yetmaydi.
+3. **Blankdagi formula xatosi yashirilmasligi kerak.** Amfiteatrning amaldagi
+   qiymat varag‘ida `#VALUE!` va `#REF!` ko‘rinadigan kataklar uchradi. TIZIM_02
+   bunday eksportni “tayyor” deb belgilamaydi: `TEMPLATE_FORMULA_ERROR` bilan
+   bloklaydi, aniq katak/ustunni ko‘rsatadi va kanonik ma’lumotni o‘zgartirmaydi.
+
+### Drive shablonlarining kanonik xaritasi
+
+```text
+Drive F2 muqovasi       → document.profile = f2_cover_v1
+Drive “АКТ” qatorlari   → approved certified lines (stable_line_id bilan)
+Drive “СЧЁТ-ФАКТ.”      → value_invoice_v1 (alohida document ID)
+Drive AOSR blanki       → aosr_v1 (ShNQ 6-ilova)
+Drive qoldiq PDF        → remaining_work_register_v1 (ichki nazorat)
+Drive LRV_PLUS sheets   → secondary projection / import candidate
+```
+
+**Hech biri Drive satr raqamiga yoki papka nomiga tayanmaydi.** Drive fayli
+faqat `replica_file_id`, revision va hash bilan bog‘lanadi; kanonik obyekt,
+smeta qatori, akt va AOSR IDlari Supabase tarafida qoladi.
+
+---
+
+## 11. Hozirgi TIZIM_02 bilan aniq integratsiya yo‘li
+
+### Mavjud kuchli qatlamni saqlash
+
+| Mavjud TIZIM_02 elementi | Drive topilmasi bilan ulanish |
+|---|---|
+| `t2_qator` va uning ota-bola daraxti | F-2dagi BL/RS/MAT/OB qatorlari uchun barqaror manba; Excel tartibi identifikator bo‘lmaydi. |
+| `t2_akt` / `t2_akt_qator` | `АКТ` qatorli qismning kanonik shakli; tasdiqlangan certified triplet muzlaydi. |
+| exact certified quantity/price/amount qonuni | Drive formulasidan mustaqil original qabul summasini saqlaydi; hisoblangan farq faqat analitika. |
+| `t2_nakopitelniy_v1` | F-2 kumulyativ proyeksiyasi; Drive’dagi qoldiq/izoh reporti bilan birlashtirilmaydi. |
+| `t2_document_registry` + private R2 | F-2/AOSR/sertifikat/as-builtning binar haqiqati, Drive esa ikkilamchi nusxa. |
+| `t2_smeta_ozgarish` | Qo‘shimcha/almashtirishdan oldingi va keyingi scope relationi; eksportda nomga banner qo‘shilmaydi. |
+
+### Kiritilishi kerak bo‘lgan to‘rtta professional qatlam
+
+1. **Template registry.** `f2_cover_v1`, `f2_act_v1`, `value_invoice_v1`,
+   `aosr_v1`, `remaining_work_register_v1` — har biri `template_version`,
+   qaysi shartnoma/buyurtmachi uchun yoqilgani va validatsiya qoidasi bilan.
+2. **Hujjat paketi.** Bitta `f2_package` ichida muqova, qatorli akt, qiymat
+   ma’lumotnomasi va dalillar bo‘ladi. Qismlar mustaqil document IDga ega,
+   lekin bitta davr/revisionga bog‘langan.
+3. **Evidence chain.** F-2 qatori uchun AOSR, jurnal satri, sertifikat,
+   laboratoriya/protokol yoki geodeziya fayli `evidence_link` orqali
+   bog‘lanadi. Dalil bo‘lmasa status `needs_review`, lekin tizim dalilni
+   o‘ylab topmaydi.
+4. **Export validator.** Majburiy rekvizit, formula xatosi, yo‘qolgan
+   imzo/ERI, eski template version, bog‘lanmagan qator va manfiy miqdorni
+   tekshiradi. Natija `export_blocked` bo‘lsa, faqat ko‘rinadigan xato emas,
+   mashina o‘qiydigan sabab kodi ham qaytadi.
+
+### Ketma-ketlik
+
+```text
+1. Real Drive blanklarni versionlab registrga kiritish
+2. F-2 package read model va export-validator
+3. AOSR form + evidence link + approval workflow
+4. Remaining-work / slichitelniy ichki reestrlari
+5. Drive bilan faqat boshqariladigan replica sync
+6. Har buyurtmachi uchun value-invoice/F-3 huquqiy profilini yoqish
+```
+
+Bu ketma-ketlik eski ishlaydigan Sheets jarayonini sindirmaydi: Drive/Sheets
+bir muddat eksport va boshqariladigan replica bo‘lib qoladi, biroq yangi haqiqiy
+qabul, tasdiqlash va versiya biznes-truthi Supabasega yoziladi.
