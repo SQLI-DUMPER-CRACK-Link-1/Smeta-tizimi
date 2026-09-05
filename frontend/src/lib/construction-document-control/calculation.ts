@@ -31,3 +31,19 @@ export function calculateProgressValuation(input: ProgressValuationInput): Progr
  });
  const sum = (key: keyof ProgressLineResult) => money(rows.reduce((s,r) => s + (typeof r[key] === 'number' ? r[key] as number : 0),0)); return {input,rows,totals:{previousQuantity:sum('previousQuantity'),currentQuantity:sum('currentQuantity'),cumulativeQuantity:sum('cumulativeQuantity'),remainingQuantity:sum('remainingQuantity'),previousValue:sum('previousValue'),currentValue:sum('currentValue'),cumulativeValue:sum('cumulativeValue'),remainingValue:sum('remainingValue')}};
 }
+
+/** Nakopitelnaya vedomost "Holat" ustuni (normal/chegara/ortiqcha) --
+ *  UZ_CONSTRUCTION_DOCUMENT_CATALOG_AND_TEMPLATES_V1.md TPL-07 talabi.
+ *  "Ortiqcha" mavjud OVER_CERTIFICATION ogohlantirishidan olinadi (haqiqiy
+ *  hisob -- entitlement'dan oshgan). "Chegara" chegarasi (qolgan miqdor
+ *  entitlement'ning necha foizidan kam bo'lsa "chegara") hujjatda raqam
+ *  bilan ko'rsatilmagan -- mavjud narx-tafovut konvensiyasi (Narxlar.tsx
+ *  "5% dan ortiq tafovut") bilan bir xil qilib tanlandi, qonuniy talab
+ *  emas, kerak bo'lsa NAKOPITELNIY_CHEGARA_FOIZ o'zgartiriladi. */
+export type NakopitelniyHolat = 'normal' | 'chegara' | 'ortiqcha';
+export const NAKOPITELNIY_CHEGARA_FOIZ = 0.05;
+export function nakopitelniyHolat(row: Pick<ProgressLineResult, 'warnings' | 'remainingQuantity' | 'approvedEntitlementQuantity'>): NakopitelniyHolat {
+ if (row.warnings.includes('OVER_CERTIFICATION')) return 'ortiqcha';
+ if (row.approvedEntitlementQuantity > 0 && row.remainingQuantity / row.approvedEntitlementQuantity <= NAKOPITELNIY_CHEGARA_FOIZ) return 'chegara';
+ return 'normal';
+}
