@@ -87,6 +87,15 @@ Claude/integrator `Narxlar.tsx`ni quyidagicha ulashi kerak:
 Bu ownership chegarasi bajarilmaguncha `/admin/narxlar` cutoveri yakunlangan
 deb e’lon qilinmaydi.
 
+`operation_id` bo‘yicha ham mavjud kontrakt nomukammal: `t2-narx.ts` va
+`sb-yoz.ts` bu ikki amal uchun uni qabul qilmaydi yoki RPCga uzatmaydi.
+Shuning uchun yangi SQL funksiyalar to‘g‘ri optimistic lock va tabiiy noyob
+kalit bilan xavfsiz ishlaydi, lekin tarmoq uzilgandan keyingi mutlaq replay
+idempotentligi hali da’vo qilinmaydi. Ushbu holatni tuzatish uchun integrator
+bir xil UUIDni `NarxlarNative → t2-narx.ts → sb-yoz.ts → RPC` bo‘ylab uzatib,
+uni audit/idempotent jurnal bilan bog‘lashi kerak. Bu uch fayl ushbu taskning
+`owns` ro‘yxatidan tashqarida.
+
 ## Tekshiruvlar
 
 - `git diff --check`: PASS.
