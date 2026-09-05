@@ -57,10 +57,16 @@ manba topilmadi. Shu bois TIZIM_02:
 
 Amaliy shartnomalarda odatda ikki bog‘liq dalil alohida yuradi: bajarilgan
 ishlar hajmini topshirish-qabul qilish dalolatnomasi va pudratchi taqdim etgan
-qiymat bo‘yicha ma’lumotnoma-hisobvaraq-faktura. Shuning uchun tizim ularni
-bitta nom ostida yo‘qotmaydi: `work_acceptance` va `value_invoice` alohida
-hujjat turlari, zarur bo‘lsa bitta davr/qatorlar to‘plamiga bog‘langan ikki
-eksport bo‘ladi. [O‘zbekiston shartnoma namunasi](https://ufa.uz/wp-content/uploads/2025/05/farg%E2%80%98ona_uchun_futbol_maydonini_xarid_qilish_to%E2%80%98g%E2%80%98risidagi.pdf)
+qiymat bo‘yicha ma’lumotnoma-hisobvaraq-faktura. Kompaniyaning Drive’dagi
+amaldagi blanklarida ularning aniq profili quyidagicha:
+
+- `АКТ О ПРИЁМКЕ ВЫПОЛНЕННЫХ РАБОТ (Форма № 02)` — **Forma-2**;
+- `СПРАВКА-СЧЕТ-ФАКТУРА О СТОИМОСТИ ВЫПОЛНЕННЫХ РАБОТ ...` — **Forma-3**.
+
+TIZIM_02 ularni bitta nom ostida yo‘qotmaydi: `forma2_act` va
+`forma3_value_invoice` alohida hujjat turlari, zarur bo‘lsa bitta
+davr/qatorlar to‘plamiga bog‘langan ikki eksport bo‘ladi. [O‘zbekiston
+shartnoma namunasi](https://ufa.uz/wp-content/uploads/2025/05/farg%E2%80%98ona_uchun_futbol_maydonini_xarid_qilish_to%E2%80%98g%E2%80%98risidagi.pdf)
 
 Demak, eski F-2/F-3 eksporti qo‘llab-quvvatlanadi, biroq **“davlatning universal
 majburiy blanki”** deb noto‘g‘ri belgilanmaydi. Davlat mablag‘i, g‘aznachilik,
@@ -113,7 +119,7 @@ o‘zining barqaror IDsi bilan saqlanadi.
 | DOC-08 | Yopiq ishlar dalolatnomasi (AOSR) | **A** | Ish keyingi qatlam bilan berkitilsa | ishchi chizma, satr, material, joy | ShNQ 6-ilova blanki |
 | DOC-09 | Muhim konstruksiyani oraliq qabul qilish dalolatnomasi | **A** | Muhim/yuk ko‘taruvchi konstruksiya | konstruksiya, chizma, sinov | ShNQ 7-ilova blanki |
 | DOC-10 | As-built ishchi chizma | C/E | Ijro hujjatlari paketi | chizma reviziyasi, obyekt qismi | Fayl + o‘zgarish belgisi |
-| DOC-11 | Bajarilgan ishlar hajmini topshirish-qabul qilish dalolatnomasi (F-2/KS-2 nomi mumkin) | C | Davriy qabul/to‘lov | `t2_akt`, `t2_akt_qator` | Exact certified snapshot |
+| DOC-11 | Forma-2 — bajarilgan ishlar hajmini qabul qilish dalolatnomasi | C | Davriy qabul/to‘lov | `t2_akt`, `t2_akt_qator` | Exact certified snapshot |
 | DOC-12 | Qiymat ma’lumotnomasi-hisobvaraq-faktura yoki F-3/KS-3 nomli blank | C | Shartnoma talab qilsa | tasdiqlangan qabul satrlari | `FORMA3_RULE_UNRESOLVED` saqlanadi |
 | DOC-13 | Nakopitelnaya vedomost | **D** | Davriy/jamlangan nazorat | approved F-2, smeta reviziyasi | Read-only proyeksiya |
 | DOC-14 | Slichitelnaya vedomost | **D** | Smeta–fakt–F-2–ombor/Drive farqini tekshirish | ikkita manba + evidence | Taqqoslash, hech narsani yozmaydi |
@@ -215,7 +221,7 @@ usul yoki standart, asbob va kalibrovka, namuna/uskuna ID, kutilgan mezon,
 o‘lchangan natija, xulosa, laboratoriya/mas’ul imzo, ilova fayli. Natija
 `unknown` bo‘lsa “0” yozilmaydi.
 
-### TPL-06 — Bajarilgan ishlar hajmini topshirish-qabul qilish dalolatnomasi (DOC-11; F-2/KS-2 moslashuvi)
+### TPL-06 — Forma-2: bajarilgan ishlarni qabul qilish dalolatnomasi (DOC-11)
 
 Bu shartnomaviy blankning kanonik qator modeli:
 
@@ -236,11 +242,12 @@ Bu shartnomaviy blankning kanonik qator modeli:
 katalog yoki xarid narxi uni qayta yozmaydi. Xarid narxi sertifikatlangan narx
 emas, alohida biznes faktidir.
 
-**Unga bog‘lanadigan qiymat hujjati:** shartnoma talab qilganida
-`value_invoice` (ma’lumotnoma-hisobvaraq-faktura yoki o‘sha kontraktdagi
-F-3 blanki) alohida document ID bilan yaratiladi. U faqat tasdiqlangan qabul
-satrlari hamda kontraktda tasdiqlangan formulalarga tayanadi; “noma’lum” QQS,
-ushlab qolish yoki boshqa to‘lov elementlari avtomatik nolga almashtirilmaydi.
+**Unga bog‘lanadigan qiymat hujjati:** kompaniyaning amaldagi blankida
+`forma3_value_invoice` — `СПРАВКА-СЧЕТ-ФАКТУРА О СТОИМОСТИ ВЫПОЛНЕННЫХ
+РАБОТ ...`. U Forma-2ning o‘zi emas, alohida document ID bilan yaratiladigan
+**Forma-3**. Forma-3 faqat tasdiqlangan qabul satrlari hamda shartnomada
+tasdiqlangan formulalarga tayanadi; “noma’lum” QQS, ushlab qolish yoki boshqa
+to‘lov elementlari avtomatik nolga almashtirilmaydi.
 
 ### TPL-07 — Nakopitelnaya vedomost (DOC-13, ichki nazorat)
 
@@ -256,8 +263,8 @@ ushlab qolish yoki boshqa to‘lov elementlari avtomatik nolga almashtirilmaydi.
 - davr filtri hujjat sanasi/oyini aniq ko‘rsatadi;
 - oldingi davr natijasi muzlagan F-2 snapshotidan olinadi;
 - nakopitelniy tashqi hujjatni yoki qatorni tahrir qilmaydi;
-- `Forma-3`ni nakopitelniy asosida qonuniy to‘lov sertifikati deb e’lon qilish
-  manbasiz taqiqlanadi.
+- Nakopitelniy Forma-3ning o‘rnini bosa olmaydi: u ichki nazorat proyeksiyasi,
+  Forma-3 esa davriy qiymat ma’lumotnomasi-hisobvaraq-faktura eksportidir.
 
 ### TPL-08 — Slichitelnaya vedomost (DOC-14, ichki reconciliation)
 
@@ -444,34 +451,47 @@ ular normativ ilovadan ustun emas.
 
 | Drive namuna | Ko‘rilgan tuzilma | TIZIM_02 uchun qaror |
 |---|---|---|
-| [Amfiteatr F2, 2025-12](https://docs.google.com/spreadsheets/d/1vVdZ6GWv6zTTNIqyz7OBlhv67JSpKV18RAKCG4zq2ZY/edit) | Alohida `АКТ`, `ОБЛОЖКА`, ish/resurs qatorlari; ish kodi, nomi, birlik, miqdor, birlik narxi, loyiha bo‘yicha summa va resurs turlari. | F-2 eksporti uch qismli profil bo‘ladi: muqova, qatorli akt, qiymat hujjati. BL–resurs daraxti saqlanadi. |
-| [Stella F2, 2026-07](https://docs.google.com/spreadsheets/d/1Tlr3W96XQHldajm_7SZ3FbKAFz8UDrutA27MjMO9Bvo/edit) | `СЧЁТ-ФАКТ.` va `ф2` alohida varaq: akt qatorlari hamda qiymat ma’lumotnomasi bitta narsaga aralashtirilmagan. | `work_acceptance` va `value_invoice` alohida document ID, lekin bir period va tasdiqlangan qatorlar to‘plamiga bog‘lanadi. |
+| [Amfiteatr F2, 2025-12](https://docs.google.com/spreadsheets/d/1vVdZ6GWv6zTTNIqyz7OBlhv67JSpKV18RAKCG4zq2ZY/edit) | Alohida `ОБЛОЖКА`, `АКТ` va ish/resurs qatorlari bor. Muqovada `АКТ О ПРИЁМКЕ ВЫПОЛНЕННЫХ РАБОТ (Форма № 02)` deb aniq yozilgan; qatorli varaqda ish kodi, nomi, birlik, miqdor, birlik narxi, loyiha bo‘yicha summa va resurs turlari bor. | Bu **Forma-2 paketi**: muqova va qatorli akt bitta `forma2_act`ga tegishli mustaqil ko‘rinishlardir. BL–resurs daraxti saqlanadi. |
+| [Stella F2, 2026-07](https://docs.google.com/spreadsheets/d/1Tlr3W96XQHldajm_7SZ3FbKAFz8UDrutA27MjMO9Bvo/edit) | `ф2 Стелла сцена`da qatorli akt va yakunda `Итого по ранее оформленным Формам №2` bor; `СЧЁТ-ФАКТ.` varag‘ida esa `СПРАВКА-СЧЕТ-ФАКТУРА ...`, boshlangandan beri/yil boshidan/joriy oy kesimlari, QQS va imzolar bor. | `forma2_act` va **Forma-3** `forma3_value_invoice` alohida document ID, lekin bir davr va tasdiqlangan qatorlar to‘plamiga bog‘lanadi. Oldingi F-2 jami faqat tasdiqlangan tarixdan olinadi. |
+| [Amfiteatr F2, 2026-03](https://docs.google.com/spreadsheets/d/1no5TkAlsBNeX6tthOLrKdYvULj56Qr-J9Zo8LGF_amE/edit) | `Amfiteatr` varag‘i qatorli Forma-2; yonidagi `Лист1 (2)` metall og‘irligi, oraliq hisob va oy/jami/to‘lov-qoldiq hisoblarini olib boradigan **hisoblash varag‘i**. Unda `#REF!` formula uzilishlari ham bor. | `calculation_draft` alohida, tasdiqlanmagan ishchi qatlam. U sertifikatlangan F-2/F-3 haqiqatini almashtira olmaydi; formula xatosi eksportni bloklaydi. |
+| [AOSR reestri va blanklari](https://drive.google.com/drive/folders/1ySurglAgbADlj7CmyYEx9WsxVP88cFSh) | `Pechat_Kitobi` fayllarida `Akt_1_455` ... `Akt_40_494` kabi ketma-ket raqamlangan alohida AOSR varaqlari bor. `AKT_SYSTEM_TEMPLATES`da subpudratchili va subpudratchisiz ikki blank; ikkisi ham ShNQ 3.01.01-22, 6-ilovaga tayangan. | AOSR hujjati `aosr_number` bilan alohida reestrda yuradi; variant, obyekt, ish, loyiha, material/sertifikat, chetlanish, muddat, komissiya qarori va keyingi ishga ruxsat kanonik maydon bo‘ladi. |
 | [AOSR — Stella blanki](https://docs.google.com/spreadsheets/d/11OQCeeLueSQayDK7a17DgMQvYflfE2NK/edit) | ShNQ 3.01.01-22 6-ilova sarlavhasi, komissiya, ish bayoni, loyiha tashkiloti, material, chetlanish, boshlanish/tugash va keyingi ishga ruxsat. | Bu TPL-02ni real korxona blankiga moslaydi; free-text bayon saqlanadi, ammo sertifikat va chizma alohida kanonik havolasiz qolmaydi. |
 | [Nakopitelnaya PDF](https://drive.google.com/file/d/1lrwY7x__VFKVH4nsji4ItR7lx8zOLVNa/view) | Qoldiq ish summalari va PTO izohlari: “qancha qoldi, nima sababdan” kesimida. | Bu klassik davriy nakopitelniydan farqli **qoldiq ishlar/risk reestri**. Uni `remaining_work_register` sifatida alohida ko‘rsatish kerak; F-2 kumulyativi bilan aralashtirilmaydi. |
 
-### Drive blanklarida topilgan uchta muhim qoida
+### Drive blanklarida topilgan beshta muhim qoida
 
-1. **F-2ning muqovasi real dalil hisoblanadi.** Unda pudratchi, buyurtmachi,
+1. **Forma-2 muqovasi real dalil hisoblanadi.** Unda pudratchi, buyurtmachi,
    obyekt, hisobot oyi va “haqiqiy bajarilgan hajmlar, loyiha-smeta hujjati,
    ijro geodezik o‘lchovi hamda jurnal bilan tasdiqlangan” degan asos bor.
    Tizim buni oddiy fayl nomi sifatida emas, qabul hujjati metama’lumoti va
    bog‘langan dalillar sifatida saqlaydi.
-2. **Qiymat varag‘i alohida biznes hujjati.** Real namunada hujjat raqami,
+2. **Forma-3 qiymat varag‘i alohida biznes hujjati.** Real namunada hujjat raqami,
    tuzilgan sana, davr, tomonlarning rekvizitlari, shartnoma, umumiy qiymat,
    “boshlangandan beri / yil boshidan / joriy oy” ko‘rsatkichlari, QQS va
    tomonlar imzosi bor. Demak F-2 qatorlarini faqat Excelga chiqarish yetmaydi.
-3. **Blankdagi formula xatosi yashirilmasligi kerak.** Amfiteatrning amaldagi
-   qiymat varag‘ida `#VALUE!` va `#REF!` ko‘rinadigan kataklar uchradi. TIZIM_02
+3. **Hisoblash chernovigi sertifikat emas.** `Лист1 (2)`dagi metall/oylik/jami/
+   to‘lov-qoldiq hisoblari F-2/F-3ni tayyorlashga yordam beradi, lekin u
+   `qoralama` holatidan bevosita `tasdiqlangan` moliyaviy haqiqatga o‘ta olmaydi.
+   Unga manba F-2/F-3 qatori yoki shartnoma asosining IDsi bog‘lanmagan bo‘lsa,
+   natija `needs_review` bo‘ladi.
+4. **Blankdagi formula xatosi yashirilmasligi kerak.** Amfiteatrning amaldagi
+   hisoblash varag‘ida `#REF!`, qiymat varag‘ida esa avval `#VALUE!` va `#REF!`
+   ko‘rinadigan kataklar uchradi. TIZIM_02
    bunday eksportni “tayyor” deb belgilamaydi: `TEMPLATE_FORMULA_ERROR` bilan
    bloklaydi, aniq katak/ustunni ko‘rsatadi va kanonik ma’lumotni o‘zgartirmaydi.
+5. **AOSR har biri alohida ijro dalili.** Ketma-ket AOSR raqami bitta fayl ichida
+   varaqlar ko‘rinishida bo‘lsa ham, har varaq mustaqil dalolatnoma; uning raqami
+   faqat sarlavha emas, reestrdagi noyob biznes kalitidir.
 
 ### Drive shablonlarining kanonik xaritasi
 
 ```text
-Drive F2 muqovasi       → document.profile = f2_cover_v1
-Drive “АКТ” qatorlari   → approved certified lines (stable_line_id bilan)
-Drive “СЧЁТ-ФАКТ.”      → value_invoice_v1 (alohida document ID)
+Drive F2 muqovasi       → document.profile = forma2_cover_v1
+Drive “АКТ” qatorlari   → forma2_act_v1, approved certified lines (stable_line_id bilan)
+Drive “СЧЁТ-ФАКТ.”      → forma3_value_invoice_v1 (alohida document ID)
+Drive “Лист1 (2)”       → calculation_draft_v1 (sertifikat emas)
 Drive AOSR blanki       → aosr_v1 (ShNQ 6-ilova)
+Drive “Pechat kitobi”   → aosr_register_v1 (raqamli reestr)
 Drive qoldiq PDF        → remaining_work_register_v1 (ichki nazorat)
 Drive LRV_PLUS sheets   → secondary projection / import candidate
 ```
@@ -489,28 +509,32 @@ smeta qatori, akt va AOSR IDlari Supabase tarafida qoladi.
 | Mavjud TIZIM_02 elementi | Drive topilmasi bilan ulanish |
 |---|---|
 | `t2_qator` va uning ota-bola daraxti | F-2dagi BL/RS/MAT/OB qatorlari uchun barqaror manba; Excel tartibi identifikator bo‘lmaydi. |
-| `t2_akt` / `t2_akt_qator` | `АКТ` qatorli qismning kanonik shakli; tasdiqlangan certified triplet muzlaydi. |
+| `t2_akt` / `t2_akt_qator` | **Forma-2** `АКТ` qatorli qismning kanonik shakli; tasdiqlangan certified triplet muzlaydi. |
 | exact certified quantity/price/amount qonuni | Drive formulasidan mustaqil original qabul summasini saqlaydi; hisoblangan farq faqat analitika. |
-| `t2_nakopitelniy_v1` | F-2 kumulyativ proyeksiyasi; Drive’dagi qoldiq/izoh reporti bilan birlashtirilmaydi. |
+| `t2_nakopitelniy_v1` | F-2 kumulyativ proyeksiyasi; Drive’dagi qoldiq/izoh reporti bilan birlashtirilmaydi. Forma-3 uchun u faqat tekshiruv manbasi, hujjatning o‘zi emas. |
 | `t2_document_registry` + private R2 | F-2/AOSR/sertifikat/as-builtning binar haqiqati, Drive esa ikkilamchi nusxa. |
 | `t2_smeta_ozgarish` | Qo‘shimcha/almashtirishdan oldingi va keyingi scope relationi; eksportda nomga banner qo‘shilmaydi. |
 
 ### Kiritilishi kerak bo‘lgan to‘rtta professional qatlam
 
-1. **Template registry.** `f2_cover_v1`, `f2_act_v1`, `value_invoice_v1`,
-   `aosr_v1`, `remaining_work_register_v1` — har biri `template_version`,
+1. **Template registry.** `forma2_cover_v1`, `forma2_act_v1`,
+   `forma3_value_invoice_v1`, `calculation_draft_v1`, `aosr_v1`,
+   `aosr_register_v1`, `remaining_work_register_v1` — har biri `template_version`,
    qaysi shartnoma/buyurtmachi uchun yoqilgani va validatsiya qoidasi bilan.
-2. **Hujjat paketi.** Bitta `f2_package` ichida muqova, qatorli akt, qiymat
-   ma’lumotnomasi va dalillar bo‘ladi. Qismlar mustaqil document IDga ega,
-   lekin bitta davr/revisionga bog‘langan.
+2. **Hujjat paketi.** Bitta `f2_package` ichida `forma2_cover`, qatorli
+   `forma2_act`, alohida `forma3_value_invoice`, ixtiyoriy `calculation_draft`
+   va dalillar bo‘ladi. Qismlar mustaqil document IDga ega, lekin bitta
+   davr/revisionga bog‘langan. Qoralama hech qachon Forma-2 yoki Forma-3
+   tasdig‘ining o‘rniga o‘tmaydi.
 3. **Evidence chain.** F-2 qatori uchun AOSR, jurnal satri, sertifikat,
    laboratoriya/protokol yoki geodeziya fayli `evidence_link` orqali
    bog‘lanadi. Dalil bo‘lmasa status `needs_review`, lekin tizim dalilni
    o‘ylab topmaydi.
-4. **Export validator.** Majburiy rekvizit, formula xatosi, yo‘qolgan
-   imzo/ERI, eski template version, bog‘lanmagan qator va manfiy miqdorni
-   tekshiradi. Natija `export_blocked` bo‘lsa, faqat ko‘rinadigan xato emas,
-   mashina o‘qiydigan sabab kodi ham qaytadi.
+4. **Export validator.** Majburiy rekvizit, `TEMPLATE_FORMULA_ERROR`,
+   yo‘qolgan imzo/ERI, eski template version, bog‘lanmagan qator, manfiy miqdor
+   va Forma-2/3 davrlarining nomuvofiqligini tekshiradi. Natija
+   `export_blocked` bo‘lsa, faqat ko‘rinadigan xato emas, mashina o‘qiydigan
+   sabab kodi ham qaytadi.
 
 ### Ketma-ketlik
 
