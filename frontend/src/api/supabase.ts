@@ -608,6 +608,94 @@ export function sbT2AktYaratV2(p: {
   });
 }
 
+/* ── F2 RESUMABLE IMPORT JOB (T2-GAS-EXIT-001 §5/§6) ──────────────────────
+ * `t2_f2_import_job` (checkpointed progress) + `t2_f2_import_draft_qator`
+ * (durable per-row match/mapping draft) so a crashed tab, refresh, or lost
+ * network mid-review does not lose the work: the canonical state lives in
+ * Supabase, not in memory/localStorage. See ops/handoff/
+ * T2_PTO_CLOSURE_007_CODEX_F2_RESUMABLE_IMPORT.md and its _REPORT.md. */
+
+export type T2F2ImportJobHolat = {
+  ok: boolean;
+  job_id: number; obyekt_id: number; status: 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
+  cursor: Record<string, unknown>; total_rows: number | null;
+  processed_rows: number; matched_rows: number; unmatched_rows: number;
+  last_error: string | null; versiya: number;
+  started_at: string; updated_at: string; completed_at: string | null;
+};
+export type T2F2ImportJobNatija = { ok: boolean; error?: string; code?: string; job_id?: number; takror?: boolean; versiya?: number };
+
+/** ⚠️ `operationId` chaqiruvchidan keladi va QAYTA URINISHDA O'ZGARMAYDI — aks holda tarmoq uzilib qayta yuborilganda ikkinchi job yaraladi. */
+export function sbT2F2ImportJobYarat(p: {
+  obyektId: number; operationId: string; totalRows: number; sourceDocumentId?: number;
+}): Promise<T2F2ImportJobNatija> {
+  return yozAmali({
+    amal: 'f2_import_job_yarat', obyekt_id: p.obyektId,
+    operation_id: p.operationId, total_rows: p.totalRows,
+    source_document_id: p.sourceDocumentId ?? null,
+  });
+}
+
+/** `code:'STALE_VERSION'` — optimistic-lock normal holati, xato emas: chaqiruvchi joriy holatni qayta o'qib qayta urinishi kerak. */
+export function sbT2F2ImportJobIlgarilash(p: {
+  jobId: number; expectedVersiya: number;
+  processedDelta: number; matchedDelta: number; unmatchedDelta: number;
+  cursor?: unknown; status?: T2F2ImportJobHolat['status']; lastError?: string;
+}): Promise<T2F2ImportJobNatija> {
+  return yozAmali({
+    amal: 'f2_import_job_ilgarilash', job_id: p.jobId, expected_versiya: p.expectedVersiya,
+    processed_delta: p.processedDelta, matched_delta: p.matchedDelta, unmatched_delta: p.unmatchedDelta,
+    cursor: p.cursor ?? null, status: p.status ?? null, last_error: p.lastError ?? null,
+  });
+}
+
+export type T2F2ImportDraftHolat = 'avto_moslashti' | 'qolda_moslashtirildi' | 'otkazib_yuborildi' | 'hal_qilinmagan';
+export type T2F2ImportDraftQator = {
+  uid: string; holat: T2F2ImportDraftHolat; lrv_varaq: string | null; lrv_row: number | null;
+  kod: string | null; hajm: number | null; narx: number | null; summa: number | null;
+  sabab: string | null; versiya: number; yangilandi: string;
+};
+
+/** Bir chaqiruvda eng ko'p 5000 qator (RPC o'zi shuni majburlaydi) — kattaroq to'plam chaqiruvchi tomonidan bo'laklarga bo'linadi. */
+export function sbT2F2ImportDraftSaqla(p: {
+  jobId: number;
+  qatorlar: Array<{
+    uid: string; holat: T2F2ImportDraftHolat; expectedVersiya?: number;
+    lrvVaraq?: string; lrvRow?: number; kod?: string;
+    hajm?: number; narx?: number; summa?: number; sabab?: string;
+  }>;
+}): Promise<{ ok: boolean; error?: string; code?: string; job_id?: number; saqlandi?: number }> {
+  return yozAmali({
+    amal: 'f2_import_draft_saqla', job_id: p.jobId,
+    qatorlar: p.qatorlar.map((q) => ({
+      uid: q.uid, holat: q.holat, expected_versiya: q.expectedVersiya,
+      lrv_varaq: q.lrvVaraq ?? null, lrv_row: q.lrvRow ?? null, kod: q.kod ?? null,
+      hajm: q.hajm ?? null, narx: q.narx ?? null, summa: q.summa ?? null, sabab: q.sabab ?? null,
+    })),
+  });
+}
+
+/** `/api/sb` orqali — RPC `stable` (o'qish), GET bilan chaqiriladi, actor sessiyadan. */
+async function soroOqi<T>(soro: string, params: Record<string, unknown>): Promise<{ ok: boolean; natija?: T; error?: string }> {
+  const r = await fetch('/api/sb', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ soro, ...params }),
+  });
+  return r.json();
+}
+
+export async function sbT2F2ImportJobHolat(jobId: number): Promise<{ ok: boolean; error?: string } & Partial<T2F2ImportJobHolat>> {
+  const r = await soroOqi<T2F2ImportJobHolat>('f2_import_job_holat_v1', { job_id: jobId });
+  if (!r.ok || !r.natija || r.natija.ok !== true) return { ok: false, error: r.error || 'Job holati o\'qilmadi' };
+  return r.natija;
+}
+
+export async function sbT2F2ImportDraftRoyxat(jobId: number): Promise<{ ok: boolean; qatorlar: T2F2ImportDraftQator[]; error?: string }> {
+  const r = await soroOqi<{ ok: boolean; qatorlar: T2F2ImportDraftQator[] }>('f2_import_draft_royxat_v1', { job_id: jobId });
+  if (!r.ok || !r.natija || r.natija.ok !== true) return { ok: false, qatorlar: [], error: r.error || 'Qoralama o\'qilmadi' };
+  return { ok: true, qatorlar: r.natija.qatorlar || [] };
+}
+
 /**
  * Smetaga yangi qator qo'shadi (`t2_qator_qosh`).
  *
