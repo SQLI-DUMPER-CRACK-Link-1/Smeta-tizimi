@@ -57,7 +57,7 @@ it('yangi yo‘l asl summani V2 ga yozadi, javob yo‘qolganda ayni operation bi
   await waitFor(() => expect(mocks.jobIlgarilash).toHaveBeenCalledWith(expect.objectContaining({
     jobId: 1, status: 'running', matchedDelta: 1, unmatchedDelta: 0,
   })));
-  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByLabelText(/Varaq, davr va moslashtirish natijasini tekshirdim/));
   fireEvent.click(screen.getByText('F2 qoralamasini saqlash'));
   await screen.findByText('Yozish javobi olinmadi. Qayta urinish ayni operatsiyani tekshiradi.');
   fireEvent.click(screen.getByText('F2 qoralamasini saqlash'));
@@ -96,7 +96,7 @@ it('tugallanmagan job topilsa "Davom ettirish" taklif qiladi va uni to‘liq tik
   await screen.findByText('Ko‘rib chiqish kerak (tiklangan)');
   expect(screen.getByText(/1 manba qatoridan 1 tasi bog‘landi/)).toBeTruthy();
   mocks.write.mockResolvedValueOnce({ ok: true });
-  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByLabelText(/Varaq, davr va moslashtirish natijasini tekshirdim/));
   fireEvent.click(screen.getByText('F2 qoralamasini saqlash'));
   await screen.findByText('Tayyor — F2 qoralamasi saqlandi');
   // Tiklangan operation_id (yozish operatsiyasi) o'zgarishsiz ishlatildi -- qayta tiklash ikkinchi hujjat yaratmaydi.
