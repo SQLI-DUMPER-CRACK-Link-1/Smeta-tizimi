@@ -388,6 +388,50 @@
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/T2_PTO_DAILY_WORKFLOW_CLOSURE_007.md"],
       "production_write_allowed": false,
       "_izoh": "2026-09-05: Section 2 audit done via Explore agent, verified against actual code at 879aa06 (not stale docs) -- KEY FINDING: every canonical daily route (/admin/f2, /admin/f2-tayyorlash, /admin/narxlar, /admin/holat/:id) is still 100% GAS-backed for its interactive path; everything GAS-free built this session (f2-match-engine, f2-import-parse, t2_akt_yarat_v2, Price Control, Additional/Replacement, catalog-ingest) lives only under /admin/test/* with zero canonical consumers. t2_qoshimcha_ish_yarat_v1/t2_zamena_ish_yarat_v1/t2_resurs_bola_qosh_v1 RPCs confirmed to not exist in any migration (frontend-only stubs). Found and fixed (applied to production) a real live gap: t2_qator_holat/t2_f2_kat_oy/t2_f2_tafsilot read models were still aggregating F2 via the legacy GENERATED summa column instead of certified_quantity/certified_amount (t2_akt_yarat_v2) -- confirmed a mathematical no-op against current data (zero certified rows exist yet) before and after applying. NOT done this round: the full GAS-to-canonical route cutover (Sections 5,13 of the brief) -- blocked on a genuine, explicitly-flagged product decision (Holat.tsx's selectedObyekt is a GAS/Drive folder-name string with no bridge to numeric t2_obyekt.id; a name-based match would be an invented, unreliable identity bridge) plus a rollout-strategy choice (feature-flagged staged cutover vs hard replace vs fix the identity bridge first) that only the owner can make given this is the owner's actual daily-use tool. READY_FOR_OWNER_DAILY_USE: NO, honestly reported per the task's own Section 36 rule against a false YES."
+    },
+    {
+      "id": "T2-PTO-CLOSURE-007-CODEX-ADDITIONAL-REPLACEMENT-BACKEND",
+      "title": "Real backend RPC for Additional/Replacement (t2_qoshimcha_ish_yarat_v1/t2_zamena_ish_yarat_v1/t2_resurs_bola_qosh_v1) -- route-independent, safe to build regardless of the GAS cutover decision",
+      "owner": "codex",
+      "branch": "codex/t2-additional-replacement-backend-v1",
+      "base_sha": "181d87e",
+      "base_ref": "origin/integration/next-main-release-v1",
+      "status": "active",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": [
+        "supabase/migrations/20260924120000_t2_additional_replacement_v1*.sql",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_ADDITIONAL_REPLACEMENT_BACKEND_REPORT.md"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_ADDITIONAL_REPLACEMENT_BACKEND.md",
+        "ops/handoff/T2_LRV_PRODUCT_AUDIT_001_ANTIGRAVITY.md"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "New lane opened 2026-09-05. These RPCs are confirmed to not exist in any migration (frontend client stub only, per the CLOSURE-007 audit) and have zero real-route consumers, so building the real backend is safe regardless of the owner's still-pending GAS-cutover-strategy decision for the canonical daily routes. production_write_allowed:true because the brief explicitly asks Codex to test with synthetic data directly against production (owner's standing authorization) then clean up -- must not touch the real 8-object/17521-row dataset."
+    },
+    {
+      "id": "T2-PTO-CLOSURE-007-CODEX-CATALOG-WRITE",
+      "title": "Real write RPC for construction catalog ingestion (t2_catalog_observation_yoz_v1), wiring the already-merged pure catalog-ingest adapter to actually persist observations",
+      "owner": "codex",
+      "branch": "codex/t2-catalog-write-v1",
+      "base_sha": "181d87e",
+      "base_ref": "origin/integration/next-main-release-v1",
+      "status": "active",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": [
+        "supabase/migrations/20260924130000_t2_catalog_write_v1*.sql",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_CATALOG_WRITE_REPORT.md"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_CATALOG_WRITE.md",
+        "ops/handoff/T2_LRV_PRODUCT_AUDIT_001_ANTIGRAVITY.md"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "New lane opened 2026-09-05. frontend/src/lib/catalog-ingest/ is merged but has zero route consumers and its target tables are locked (revoke all from public/anon/authenticated) -- route-independent, safe regardless of the pending GAS-cutover decision. production_write_allowed:true for the same synthetic-data-then-cleanup testing reason as the sibling Additional/Replacement lane."
     }
   ]
 }
