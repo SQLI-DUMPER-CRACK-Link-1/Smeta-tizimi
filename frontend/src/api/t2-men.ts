@@ -116,11 +116,17 @@ export type KompaniyaYaratInput = { nom: string; inn?: string; telefon?: string;
 export type MemberAddInput = { kompaniya_id: number; login: string; rol: string; email?: string; ism?: string; operation_id?: string };
 export type MemberRoleInput = { azolik_id: number; rol: string; operation_id?: string };
 export type MemberRemoveInput = { azolik_id: number; operation_id?: string };
+/** T2-AUTH-PASSWORD-MIGRATION-001: director bcrypt parol o'rnatadi/qayta
+ *  belgilaydi. `member_add`ning o'zi parolga tegmaydi (o'sha RPC login+rolni
+ *  yozadi, xolos) -- yangi a'zo bu chaqiruvsiz TIZIMGA KIRA OLMAYDI, chunki
+ *  GAS'ning eski _XODIMLAR varag'ida ham yo'q. */
+export type MemberPasswordSetInput = { kompaniya_id: number; foydalanuvchi_id: number; yangi_parol: string; operation_id?: string };
 
 export const kompaniyaYarat = (i: KompaniyaYaratInput) => post('create', i);
 export const azoQosh = (i: MemberAddInput) => post('member_add', i);
 export const azoRol = (i: MemberRoleInput) => post('member_role', i);
 export const azoOchir = (i: MemberRemoveInput) => post('member_remove', i);
+export const azoParolBelgila = (i: MemberPasswordSetInput) => post('member_password_set', i);
 
 export function useOnboardingCommands() {
   const qc = useQueryClient();
@@ -133,5 +139,7 @@ export function useOnboardingCommands() {
     azoQosh: useMutation({ mutationFn: azoQosh, onSuccess: done }),
     azoRol: useMutation({ mutationFn: azoRol, onSuccess: done }),
     azoOchir: useMutation({ mutationFn: azoOchir, onSuccess: done }),
+    /* Parol ro'yxat/holatga ta'sir qilmaydi -- invalidatsiya shart emas. */
+    azoParolBelgila: useMutation({ mutationFn: azoParolBelgila }),
   };
 }

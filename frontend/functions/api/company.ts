@@ -11,7 +11,8 @@
  *        context or a revoked membership is rejected server-side, not just
  *        hidden from the menu.)
  *   POST /api/company { action, ... }           -> audited onboarding command
- *        action: create | member_add | member_role | member_remove | profile_update
+ *        action: create | member_add | member_role | member_remove |
+ *                member_password_set | profile_update
  *
  * No Drive/Sheets/GAS. No fake subscription/payment.
  */
@@ -27,6 +28,10 @@ const RPC = {
   member_add: 't2_azolik_qosh_v1',
   member_role: 't2_azolik_rol_ozgartir_v1',
   member_remove: 't2_azolik_ochir_v1',
+  /* T2-AUTH-PASSWORD-MIGRATION-001: director issues/resets a bcrypt password
+     for a member of their own company. Dual-check with the legacy GAS
+     _XODIMLAR sheet -- see frontend/functions/api/kirish.ts. */
+  member_password_set: 't2_parol_belgila_v1',
   profile_update: 't2_kompaniya_yangila_v1',
 } as const;
 
@@ -50,9 +55,9 @@ async function callRpc(env: Env, name: string, body: unknown) {
 }
 
 function statusFor(code: string, raw: string): number {
-  if (code === 'ACTOR_NOT_FOUND' || code === 'COMPANY_NOT_FOUND' || code === 'MEMBERSHIP_NOT_FOUND' || code === 'REQUEST_NOT_FOUND') return 404;
+  if (code === 'ACTOR_NOT_FOUND' || code === 'COMPANY_NOT_FOUND' || code === 'MEMBERSHIP_NOT_FOUND' || code === 'REQUEST_NOT_FOUND' || code === 'AZOLIK_TOPILMADI') return 404;
   if (code === 'AUTHORIZATION_DENIED' || /42501|direktor|a'zo|azo|membership|PERMISSION/i.test(code + raw)) return 403;
-  if (code === 'OPERATION_ID_REQUIRED' || /INVALID|REQUIRED/.test(code)) return 400;
+  if (code === 'OPERATION_ID_REQUIRED' || code === 'PAROL_QISQA' || /INVALID|REQUIRED/.test(code)) return 400;
   if (code === 'ALREADY_MEMBER' || code === 'LAST_DIRECTOR' || code === 'STALE_VERSION') return 409;
   return 502;
 }
@@ -158,6 +163,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       body = { p_actor_id: a.id, p_kompaniya_id: Number(b.kompaniya_id), p_login: String(b.login ?? ''), p_rol: String(b.rol ?? ''), p_email: b.email == null ? null : String(b.email), p_ism: b.ism == null ? null : String(b.ism), p_operation_id: opId };
     } else if (action === 'member_role') {
       body = { p_actor_id: a.id, p_azolik_id: Number(b.azolik_id), p_yangi_rol: String(b.rol ?? ''), p_operation_id: opId };
+    } else if (action === 'member_password_set') {
+      body = { p_actor_id: a.id, p_kompaniya_id: Number(b.kompaniya_id), p_foydalanuvchi_id: Number(b.foydalanuvchi_id), p_yangi_parol: String(b.yangi_parol ?? ''), p_operation_id: opId };
     } else if (action === 'profile_update') {
       const s = (v: unknown) => (v == null || v === '' ? null : String(v));
       body = {
