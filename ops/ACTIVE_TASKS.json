@@ -396,7 +396,7 @@
       "branch": "codex/t2-additional-replacement-backend-v1",
       "base_sha": "181d87e",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "active",
+      "status": "merged",
       "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
       "owns": [
         "supabase/migrations/20260924120000_t2_additional_replacement_v1*.sql",
@@ -409,7 +409,7 @@
         "ops/handoff/T2_LRV_PRODUCT_AUDIT_001_ANTIGRAVITY.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "New lane opened 2026-09-05. These RPCs are confirmed to not exist in any migration (frontend client stub only, per the CLOSURE-007 audit) and have zero real-route consumers, so building the real backend is safe regardless of the owner's still-pending GAS-cutover-strategy decision for the canonical daily routes. production_write_allowed:true because the brief explicitly asks Codex to test with synthetic data directly against production (owner's standing authorization) then clean up -- must not touch the real 8-object/17521-row dataset."
+      "_izoh": "New lane opened 2026-09-05. These RPCs are confirmed to not exist in any migration (frontend client stub only, per the CLOSURE-007 audit) and have zero real-route consumers, so building the real backend is safe regardless of the owner's still-pending GAS-cutover-strategy decision for the canonical daily routes. production_write_allowed:true because the brief explicitly asks Codex to test with synthetic data directly against production (owner's standing authorization) then clean up -- must not touch the real 8-object/17521-row dataset. 2026-09-05 MERGED (Claude review): commit a5a7ef46d39860ba4082b049955f2b0e95e6f183 read in full (SQL + sb-yoz.ts diff) -- single shared t2_addrepl_execute_v1 function, advisory-lock idempotency, optimistic lock via p_kutilgan_versiya, old row on replacement is only ever read (for share)/never UPDATEd, no name-marker pollution, correct revoke/grant lockdown. Independently ran tsc -b, tsc -p tsconfig.functions.json, oxlint, vitest (full suite 203/203 + targeted t2-additional-replacement.test.ts), vite build, node ops/governance-check.cjs -- all clean. Independently confirmed via Supabase MCP (read-only) against production tuoyrzadkgoltpqkdiyx: migration 20260905043049_t2_additional_replacement_v1 present in list_migrations, all 3 wrapper RPCs + t2_addrepl_execute_v1 exist with correct pronargs (13/14/14/1), t2_addrepl_command command-log table is empty (0 rows -- Codex tested inside BEGIN...ROLLBACK, leaving zero residue, cleaner than insert-then-delete), zero rows matching '_TEST_ADDREPL%' in t2_qator, t2_qator total row count still exactly 17521 (untouched). Merged into integration/next-main-release-v1-local2 alongside the sibling catalog-write branch (both touch sb-yoz.ts -- real merge conflict, resolved by keeping both branches' independent AMALLAR entries and else-if blocks side by side, re-verified clean after resolution)."
     },
     {
       "id": "T2-PTO-CLOSURE-007-CODEX-CATALOG-WRITE",
@@ -418,7 +418,7 @@
       "branch": "codex/t2-catalog-write-v1",
       "base_sha": "181d87e",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "active",
+      "status": "merged",
       "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
       "owns": [
         "supabase/migrations/20260924130000_t2_catalog_write_v1*.sql",
@@ -431,7 +431,7 @@
         "ops/handoff/T2_LRV_PRODUCT_AUDIT_001_ANTIGRAVITY.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "New lane opened 2026-09-05. frontend/src/lib/catalog-ingest/ is merged but has zero route consumers and its target tables are locked (revoke all from public/anon/authenticated) -- route-independent, safe regardless of the pending GAS-cutover decision. production_write_allowed:true for the same synthetic-data-then-cleanup testing reason as the sibling Additional/Replacement lane."
+      "_izoh": "New lane opened 2026-09-05. frontend/src/lib/catalog-ingest/ is merged but has zero route consumers and its target tables are locked (revoke all from public/anon/authenticated) -- route-independent, safe regardless of the pending GAS-cutover decision. production_write_allowed:true for the same synthetic-data-then-cleanup testing reason as the sibling Additional/Replacement lane. 2026-09-05 MERGED (Claude review): commit 93c656b76d6bf3c80bc5c08b9c77154e64c7e95d read in full -- idempotency via request-hash fingerprint (not full request), exact-normalized-match-only auto-link index t2_ish_turi_identity_exact_ix, explicitly REFUSES to auto-link or copy price for resource/material observations (t2_narx/material_alias have no code column so an exact triplet can't be proven -- Codex's own judgment call, correctly conservative, matches Cross-Object Price Safety law more carefully than the brief's literal wording), source_type='other' explicitly rejected rather than silently accepted, batch capped 1-1000, duplicate-source-line-in-batch detection, per-observation scope-consistency check, prices_stored:false in result. Independently ran tsc -b, tsc -p tsconfig.functions.json, oxlint, vitest (full 203/203 + targeted catalog-ingest/index.test.ts), vite build, governance-check -- all clean. Independently confirmed via Supabase MCP (read-only) against production: migration 20260905045803_t2_catalog_write_v1 present, t2_catalog_observation_yoz_v1 exists (5 args), t2_catalog_ingest_command empty (0 rows, BEGIN...ROLLBACK test method), t2_work_type_observation has 0 rows (no residue), zero test companies matching '_TEST_CATALOG%'. sb-yoz.ts merge conflict with sibling addrepl branch resolved (both AMALLAR entries + else-if blocks kept, independent)."
     },
     {
       "id": "T2-PTO-CLOSURE-007-CODEX-F2-CANONICAL-CUTOVER",
