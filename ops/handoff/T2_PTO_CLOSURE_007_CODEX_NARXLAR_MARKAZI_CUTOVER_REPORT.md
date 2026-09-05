@@ -10,7 +10,7 @@ qaytariladigan qabul sinovi shu branchda tayyor.
 
 - Asos: `883ef2079da46fddfe9c6df7ff4e451256dc7564`
 - Branch: `codex/t2-narxlar-markazi-cutover-v1`
-- Ishchi holat: ushbu commitdan keyin ko‘rsatiladi.
+- Asosiy manba commit: `cfb58fe799526030428f00be3cc4c1cf50c16eb6`
 
 ## Yaratilgan kanonik yozish kontrakti
 
