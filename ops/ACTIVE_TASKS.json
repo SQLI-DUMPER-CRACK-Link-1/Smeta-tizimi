@@ -438,9 +438,9 @@
       "title": "Feature-flagged GAS-free F2 import on the canonical /admin/f2 route -- owner-approved staged cutover strategy, exact-source (t2_akt_yarat_v2) write, old GAS path byte-unchanged when flag is off",
       "owner": "codex",
       "branch": "codex/t2-f2-canonical-cutover-v1",
-      "base_sha": "43a559a",
+      "base_sha": "161d5c9",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "active",
+      "status": "merged",
       "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
       "owns": [
         "frontend/src/admin/sahifalar/F2ImportNative.tsx",
@@ -454,7 +454,7 @@
         "ops/handoff/T2_PTO_DAILY_WORKFLOW_CLOSURE_007.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "New lane opened 2026-09-05 per owner's explicit strategy choice (staged/feature-flagged cutover, not a hard replace). Highest-priority canonical-route lane -- F2 import is the most-ready GAS-free path (f2-match-engine/f2-import-parse already merged and verified against a real production file). CRITICAL correction baked into the brief: must NOT copy TestF2Native.tsx's write path verbatim -- that still uses legacy t2_akt_yarat (v1), which violates the exact-source law; the new canonical-flagged path must use t2_akt_yarat_v2 like TestF2Import.tsx does. Flag is a simple localStorage toggle (not the unused t2_capability DB registry -- would add complexity with zero existing frontend consumer), default OFF, so the existing GAS path is provably byte-unchanged for any user who doesn't opt in."
+      "_izoh": "MERGED into integration/next-main-release-v1 2026-09-05 (58dab7c) -- reviewed component-by-component, not blind. Confirmed via direct manual read of all 4 files: F2Import()'s original body was renamed byte-for-byte to F2ImportLegacy() (Codex's own test proves this via a live `git show 0ce99a6:...` diff against the pre-change commit, independently re-run and confirmed), flag defaults OFF via localStorage, sbT2AktYaratV2 (not legacy v1) is used, exactWrite() reuses the existing f2AggregatsiyaQator/f2ExactPayloadQur pure functions rather than reimplementing, sourceLeaves() deliberately reads raw source cells rather than trusting the matcher's own returned narx/summa (verified live in F2ImportNative.ui.test.tsx: a mocked matcher response with wrong values 999999/999999 still results in a certified write of the true source values 1234.49/123.45). exactWrite() is deliberately MORE conservative than f2ExactPayloadQur -- it hard-blocks any row with a zero/missing price+amount combination rather than allowing priceIntentionallyAbsent -- flagged as an open product question for Antigravity's parallel audit (T2-PTO-CLOSURE-007-ANTIGRAVITY-F2-CUTOVER-AUDIT) rather than resolved unilaterally. Gates independently re-run (not trusting Codex's own report): tsc -b clean, tsc -p tsconfig.functions.json clean, vitest 215/215 (203 + 12 new, reproduced twice after one transient shared-machine worker crash), oxlint 0 new issues (2 new file-structure advisories on F2ImportNative.tsx are cosmetic Fast-Refresh warnings, not correctness; all F2Import.tsx warnings are pre-existing, inside the untouched legacy body), vite build clean, npm run tekshir PASS, governance-check PASS. Antigravity's independent audit result still pending -- will reconcile before declaring this lane's scope fully closed if any discrepancy is found."
     },
     {
       "id": "T2-PTO-CLOSURE-007-ANTIGRAVITY-F2-CUTOVER-AUDIT",
