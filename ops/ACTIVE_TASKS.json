@@ -440,7 +440,7 @@
       "branch": "codex/t2-f2-resumable-import-v1",
       "base_sha": "9151569",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "merged_backend_ui_wiring_pending",
+      "status": "merged_ui_wired_by_claude",
       "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
       "owns": [
         "supabase/migrations/20260922120000_t2_f2_import_job_v1*.sql",
@@ -452,7 +452,7 @@
         "ops/handoff/T2_PTO_CLOSURE_007_CODEX_F2_RESUMABLE_IMPORT.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "New lane opened 2026-09-05, deliberately scoped to exactly ONE of the 4 gaps Codex itself identified (20k-row ceiling / no durable job / non-durable draft / no R2 storage) after the owner's explicit sharp feedback that open-ended re-analysis (the redundant codex/t2-gas-exit-inventory-v1 branch) is not acceptable -- only bounded, closeable work is. The t2_f2_import_job_v1 migration already exists (inherited from an earlier, different task) but is explicitly marked 'NOT applied to production. NOT reviewed' in its own header and was never wired to any UI -- this lane is Codex reviewing/applying that existing draft for real and connecting it to F2ImportNative, with a single measurable done-when-X acceptance test (a ~30000-row synthetic file that would have been rejected before this lane must now process end-to-end via a checkpoint/resume flow). R2 file storage and Nakopitelniy reconciliation are explicitly OUT of scope for this lane by design, to keep it closeable. 2026-09-05 MERGED (Claude review): commit d75b1d14e854777bb4665fa071a092522e80c771 reviewed and merged -- durable job/checkpoint RPCs plus stale-draft-version guard, tested live in BEGIN...ROLLBACK (32000-row checkpoint, draft restore, stale-version rejection, foreign actor blocked), zero production residue. Codex's own report is explicit that wiring F2ImportNative's 20000-row/15MB reject wall to this new job model is OUT of its ownership and left for Claude -- that UI wiring is NOT done yet, tracked as the remaining open item on this lane before it can be called fully closed. Backend is safe to ship now regardless (inert until wired, and the flag defaults off)."
+      "_izoh": "New lane opened 2026-09-05, deliberately scoped to exactly ONE of the 4 gaps Codex itself identified (20k-row ceiling / no durable job / non-durable draft / no R2 storage) after the owner's explicit sharp feedback that open-ended re-analysis (the redundant codex/t2-gas-exit-inventory-v1 branch) is not acceptable -- only bounded, closeable work is. The t2_f2_import_job_v1 migration already exists (inherited from an earlier, different task) but is explicitly marked 'NOT applied to production. NOT reviewed' in its own header and was never wired to any UI -- this lane is Codex reviewing/applying that existing draft for real and connecting it to F2ImportNative, with a single measurable done-when-X acceptance test (a ~30000-row synthetic file that would have been rejected before this lane must now process end-to-end via a checkpoint/resume flow). R2 file storage and Nakopitelniy reconciliation are explicitly OUT of scope for this lane by design, to keep it closeable. 2026-09-05 MERGED (Claude review): commit d75b1d14e854777bb4665fa071a092522e80c771 reviewed and merged -- durable job/checkpoint RPCs plus stale-draft-version guard, tested live in BEGIN...ROLLBACK (32000-row checkpoint, draft restore, stale-version rejection, foreign actor blocked), zero production residue. Codex's own report is explicit that wiring F2ImportNative's 20000-row/15MB reject wall to this new job model is OUT of its ownership and left for Claude -- that UI wiring is NOT done yet, tracked as the remaining open item on this lane before it can be called fully closed. Backend is safe to ship now regardless (inert until wired, and the flag defaults off). UPDATE 2026-09-05 (Claude): migration re-reviewed and APPLIED to real production (tuoyrzadkgoltpqkdiyx) via apply_migration, confirmed in list_migrations; acceptance logic re-run against real obyekt/actor data, self-rolled-back, zero residue confirmed via row counts. UI wiring done -- see T2-PTO-CLOSURE-007-CLAUDE-F2-RESUMABLE-UI and ops/handoff/T2_PTO_CLOSURE_007_CLAUDE_F2_RESUMABLE_UI_REPORT.md for the full account (including a real BAD_STATUS_TRANSITION bug caught and fixed before shipping: the review checkpoint must use status='running', not 'paused', because this RPC own state machine does not allow paused->completed)."
     },
     {
       "id": "T2-PTO-CLOSURE-007-CLAUDE-ADDREPL-UI",
@@ -584,6 +584,33 @@
       ],
       "production_write_allowed": false,
       "_izoh": "2026-09-05: pure aggregation over the already-correct t2_qator_holat view (fixed earlier this session) -- no new calculation, only a category+resource rollup filtering to leaf resource rows (tur in rs/mat/ob), excluding rz/bl so work-line amounts are never double-counted against their own resource lines. Widened the T2QatorHolat TS type (tur/kod/birlik/kat were missing even though the SQL view already returns them, confirmed by reading the migration SQL directly) -- same class of gap as the earlier T2Qator.versiya fix. FOLLOW-UP RESOLVED: once shared-machine memory pressure cleared, tsc -b caught a real error the manual audit had missed (a mock helper spreading unknown[] into a typed function, then an arg-count mismatch after the first fix) in ResursVedomostNative.test.tsx -- fixed, then tsc -b, vite build, full vitest suite (234/234, one initial failure in AdditionalReplacementNative.test.tsx reproduced as a transient waitFor timeout under concurrent load, confirmed non-reproducing in isolation and on full-suite rerun), oxlint, and governance-check all passed clean. Fully verified, no open gates."
+    },
+    {
+      "id": "T2-PTO-CLOSURE-007-CLAUDE-F2-RESUMABLE-UI",
+      "title": "Wire the reviewed-and-applied t2_f2_import_job_v1 resumable job/checkpoint model into F2ImportNative (the UI wiring Codex left explicitly open)",
+      "owner": "claude",
+      "branch": "claude/f2-resumable-import-ui-v1",
+      "base_sha": "c95a492",
+      "base_ref": "origin/main",
+      "status": "completed",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": [
+        "frontend/functions/api/sb.ts",
+        "frontend/functions/api/sb-yoz.ts",
+        "frontend/src/admin/sahifalar/F2ImportNative.tsx",
+        "frontend/src/admin/sahifalar/F2ImportNative.ui.test.tsx",
+        "frontend/src/api/supabase.ts",
+        "ops/handoff/T2_PTO_CLOSURE_007_CLAUDE_F2_RESUMABLE_UI_REPORT.md"
+      ],
+      "depends_on": ["T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT"],
+      "must_read": [
+        "AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_F2_RESUMABLE_IMPORT.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_F2_RESUMABLE_IMPORT_REPORT.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_CLAUDE_F2_RESUMABLE_UI_REPORT.md"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "2026-09-05: Owner asked to read a post-deploy incident-round handoff and continue the work; picked up the F2 resumable-import UI wiring Codex's own report explicitly left open (T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT, status merged_backend_ui_wiring_pending), after the owner chose (via AskUserQuestion) for Claude to continue it. Re-reviewed the already-Codex-reviewed t2_f2_import_job_v1 migration myself before touching production; applied it for real (apply_migration), re-ran its own acceptance logic against real obyekt/actor data self-rolled-back with confirmed zero residue. Added the actor-verified sb.ts (2 new GET read-RPCs, stable) / sb-yoz.ts (3 new POST write-RPCs) transport, typed wrappers in supabase.ts, and wired F2ImportNative.tsx: old 15MB/20000-row hard walls replaced by MAX_FILE_BYTES=50MB/MAX_ROWS=60000 (validated range, still under the migration's own 100000 ceiling); per-5000-row draft-save chunking with a job-progress checkpoint written after EVERY chunk (not once at the end); full resumption (job_holat_v1 + draft_royxat_v1, reconstructing source/mapping straight from the draft table's own hajm/narx/summa/lrv_row columns -- no R2/original-file dependency, matching Codex's explicit no-R2-this-lane scope) via a 'Davom ettirish' banner keyed off a localStorage job-id pointer (secondary cache only, per the brief). Caught and fixed a real bug before shipping: the RPC's own status state machine forbids paused->completed, so the review checkpoint must stay 'running' throughout, not 'paused' -- a paused checkpoint would have made every real save() silently fail its own job-completion step with BAD_STATUS_TRANSITION (non-fatal to the user, since job completion is best-effort, but would have left every completed import's job stuck open). Proved the 'tugadi' bar with a new 30000-row synthetic mock test: 6 draft_saqla calls (<=5000 rows each), 6 job_ilgarilash checkpoint calls, final cursor.chunk=30000 -- plus a resumption test proving a resumed session reuses its original write operation_id (no duplicate akt document) and a normal-path test proving job/draft calls fire with correct shapes. Every job/draft call is try/caught and non-blocking -- a failure degrades to a visible warning, never blocks the EXACT SOURCE read/match/review/write path, per Codex brief item 4. Verified: npx tsc -b exit 0, npm run typecheck:functions exit 0, npx oxlint 0 new warnings (diffed F2ImportNative.tsx against a git-stash baseline to confirm the pre-existing 3 warnings are unchanged), npx vitest run 242/242 (was 240/240 before this session's Supabase-log-investigation increment), npm run build succeeds, node ops/governance-check.cjs PASS. NOT done (explicitly, per Codex's own out-of-scope list, unchanged): R2 canonical file storage (resumed rows show kod-only labels, cosmetic not functional); no cleanup for orphaned queued/running jobs a user never returns to (harmless, unreachable not deleted); canonical /admin/f2 still reaches this path only through F2Import.tsx's t2-f2-native-mode localStorage toggle, which defaults OFF -- no canonical-route default behavior changed. Full detail: ops/handoff/T2_PTO_CLOSURE_007_CLAUDE_F2_RESUMABLE_UI_REPORT.md."
     }
   ]
 }
