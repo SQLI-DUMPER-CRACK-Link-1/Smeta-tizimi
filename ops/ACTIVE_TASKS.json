@@ -434,6 +434,27 @@
       "_izoh": "New lane opened 2026-09-05. frontend/src/lib/catalog-ingest/ is merged but has zero route consumers and its target tables are locked (revoke all from public/anon/authenticated) -- route-independent, safe regardless of the pending GAS-cutover decision. production_write_allowed:true for the same synthetic-data-then-cleanup testing reason as the sibling Additional/Replacement lane. 2026-09-05 MERGED (Claude review): commit 93c656b76d6bf3c80bc5c08b9c77154e64c7e95d read in full -- idempotency via request-hash fingerprint (not full request), exact-normalized-match-only auto-link index t2_ish_turi_identity_exact_ix, explicitly REFUSES to auto-link or copy price for resource/material observations (t2_narx/material_alias have no code column so an exact triplet can't be proven -- Codex's own judgment call, correctly conservative, matches Cross-Object Price Safety law more carefully than the brief's literal wording), source_type='other' explicitly rejected rather than silently accepted, batch capped 1-1000, duplicate-source-line-in-batch detection, per-observation scope-consistency check, prices_stored:false in result. Independently ran tsc -b, tsc -p tsconfig.functions.json, oxlint, vitest (full 203/203 + targeted catalog-ingest/index.test.ts), vite build, governance-check -- all clean. Independently confirmed via Supabase MCP (read-only) against production: migration 20260905045803_t2_catalog_write_v1 present, t2_catalog_observation_yoz_v1 exists (5 args), t2_catalog_ingest_command empty (0 rows, BEGIN...ROLLBACK test method), t2_work_type_observation has 0 rows (no residue), zero test companies matching '_TEST_CATALOG%'. sb-yoz.ts merge conflict with sibling addrepl branch resolved (both AMALLAR entries + else-if blocks kept, independent)."
     },
     {
+      "id": "T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT",
+      "title": "Wire the already-drafted-but-unapplied t2_f2_import_job_v1 resumable job/checkpoint model into F2ImportNative so large F2 source files no longer hit the flat 20000-row/15MB rejection wall",
+      "owner": "codex",
+      "branch": "codex/t2-f2-resumable-import-v1",
+      "base_sha": "9151569",
+      "base_ref": "origin/integration/next-main-release-v1",
+      "status": "active",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": [
+        "supabase/migrations/20260922120000_t2_f2_import_job_v1*.sql",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_F2_RESUMABLE_IMPORT_REPORT.md"
+      ],
+      "depends_on": ["T2-PTO-CLOSURE-007-CODEX-F2-CANONICAL-CUTOVER"],
+      "must_read": [
+        "AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_F2_RESUMABLE_IMPORT.md"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "New lane opened 2026-09-05, deliberately scoped to exactly ONE of the 4 gaps Codex itself identified (20k-row ceiling / no durable job / non-durable draft / no R2 storage) after the owner's explicit sharp feedback that open-ended re-analysis (the redundant codex/t2-gas-exit-inventory-v1 branch) is not acceptable -- only bounded, closeable work is. The t2_f2_import_job_v1 migration already exists (inherited from an earlier, different task) but is explicitly marked 'NOT applied to production. NOT reviewed' in its own header and was never wired to any UI -- this lane is Codex reviewing/applying that existing draft for real and connecting it to F2ImportNative, with a single measurable done-when-X acceptance test (a ~30000-row synthetic file that would have been rejected before this lane must now process end-to-end via a checkpoint/resume flow). R2 file storage and Nakopitelniy reconciliation are explicitly OUT of scope for this lane by design, to keep it closeable."
+    },
+    {
       "id": "T2-PTO-CLOSURE-007-CODEX-F2-CANONICAL-CUTOVER",
       "title": "Feature-flagged GAS-free F2 import on the canonical /admin/f2 route -- owner-approved staged cutover strategy, exact-source (t2_akt_yarat_v2) write, old GAS path byte-unchanged when flag is off",
       "owner": "codex",
