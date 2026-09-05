@@ -34,23 +34,25 @@ bo'ladigan narsa: **butun smeta va F2'dan har bir KATEGORIYA (ЧЕЛ/МАШ/
   tasdiqlandi). Bu — `T2Qator.versiya` bilan bo'lgani kabi, TS tipi
   DB sxemasidan orqada qolgan xato.
 
-## Gates holati (HALOL)
+## Gates holati — TO'LIQ TASDIQLANDI (yangilangan)
 
+Xotira bo'shagach `tsc -b`ni qayta ishga tushirdim — va u QO'LDA
+tekshiruvim O'TKAZIB YUBORGAN HAQIQIY XATONI topdi: `ResursVedomostNative.
+test.tsx`da mock funksiya `unknown[]`ni tipланган funksiyaga spread
+qilayotgan edi (keyin argument-soni mos kelmasligi). Bu — nega qo'lda
+audit hech qachon `tsc`ning o'rnini bosolmasligining aniq isboti.
+Tuzatildim, so'ng:
+- `tsc -b` — toza.
+- `vite build` — muvaffaqiyatli.
+- `vitest` (to'liq to'plam) — 234/234 o'tdi. (Bitta boshlang'ich
+  ishga tushirishda `AdditionalReplacementNative.test.tsx`da vaqtinchalik
+  `waitFor` timeout bo'ldi — bu fayl yolg'iz ishga tushirilganda va
+  to'liq to'plamni qayta ishga tushirishda toza o'tdi, ya'ni bir martalik
+  yuklanish ta'siri edi, haqiqiy regressiya emas.)
 - `oxlint` — toza.
-- `vitest` (maqsadli, `resurs-vedomost.test.ts` + `ResursVedomostNative.
-  test.tsx`) — 10/10 o'tdi.
-- **`tsc -b` va `vite build` — bu safar TEKSHIRILMADI.** Mashina hozir
-  3 agent (Claude+Codex+Antigravity) bir vaqtda katta ishlar ustida
-  ishlayotgani sababli xotira tanqisligida (6 marta ketma-ket
-  "Fatal process out of memory" — Windows commit-limit darajasida,
-  V8'ning o'z heap chegarasi emas). Buning o'rniga QO'LDA tekshirdim:
-  `T2QatorHolat` kengaytirilgan yagona xavfli o'zgarish edi — `grep`
-  bilan BARCHA ishlatilgan joylarni tekshirdim, hech qayerda bu tip
-  uchun to'liq literal (barcha maydon talab qilinadigan) qurilish yo'q,
-  faqat funksiya parametri/qaytish tipi sifatida ishlatiladi — xavfsiz.
-  **Keyingi imkoniyatda `tsc -b`/`vite build`ni albatta qayta ishga
-  tushirib tasdiqlash kerak** — bu hozircha ochiq qoldirilgan yagona
-  band.
+- `node ops/governance-check.cjs` — PASS.
+
+Ochiq band qolmadi.
 
 ## Keyingi qadam (o'zim yoki keyingi sessiya uchun)
 

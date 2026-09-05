@@ -259,6 +259,7 @@ export function sbTreeQur(qatorlar: SbHolatQator[]): TreeNode[] {
 /** `t2_obyekt_jami` — obyekt + jamlanma raqamlar (view). */
 export type T2Obyekt = {
   id: number; nom: string; tur: string | null;
+  kompaniya_id: number;
   qator_soni: number | null; razdel: number | null;
   ish: number | null; resurs: number | null;
   jami: number | null;
@@ -311,6 +312,7 @@ export type T2QatorHolat = {
 };
 export type T2Qator = {
   id: number; obyekt_id: number; obyekt: string | null;
+  kompaniya_id: number;
   ota_id: number | null; daraja: number | null; tartib: number | null;
   tur: string | null; kod: string | null; nom: string | null;
   birlik: string | null;
@@ -326,6 +328,8 @@ export type T2Qator = {
   /** Optimistic-lock versiyasi (`t2_addrepl_execute_v1`/`t2_qator_tahrir`
    *  kabi RPC'lar `kutilgan_versiya`ni shu bilan solishtiradi). */
   versiya: number;
+  raqam: string | null;
+  norma: number | null;
 };
 
 export function sbT2QatorHolatOl(obyektId: number) {
@@ -444,6 +448,7 @@ export type T2Kompaniya = {
   toliq_nom: string | null; inn: string | null; manzil: string | null;
   rahbar: string | null; telefon: string | null; bank: string | null;
   hisob_raqam: string | null; mfo: string | null;
+  yaratildi: string;
 };
 
 export function sbT2KompaniyalarOl() {
@@ -748,6 +753,10 @@ export interface T2Faktura {
   items?: any[];
   /** Faqat yaratishda — qayta urinishda o'sha-o'sha bo'lishi kerak. */
   operation_id?: string;
+  versiya?: number;
+  kim?: string | null;
+  yaratildi?: string;
+  yangilandi?: string;
 }
 
 export function sbFakturalarOl(kompaniya_id: number) {
@@ -798,6 +807,8 @@ export interface T2IshTuri {
   norma: number;
   narx: number;
   kategoriya: string;
+  versiya?: number;
+  yaratilgan_vaqt?: string;
 }
 
 export function sbIshTurlariOl(kompaniya_id: number) {
