@@ -58,7 +58,7 @@ describe('Document Export Generators', () => {
       documentNumber: 'NAK-1'
     });
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer.buffer);
+    await wb.xlsx.load(buffer.buffer as ArrayBuffer);
     const ws = wb.getWorksheet(1);
     expect(ws).toBeDefined();
     
@@ -81,7 +81,7 @@ describe('Document Export Generators', () => {
       contractNumber: 'C-123'
     });
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer.buffer);
+    await wb.xlsx.load(buffer.buffer as ArrayBuffer);
     const ws = wb.getWorksheet(1);
     expect(ws).toBeDefined();
 
@@ -102,7 +102,7 @@ describe('Document Export Generators', () => {
       vatRatePercent: null
     });
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer.buffer);
+    await wb.xlsx.load(buffer.buffer as ArrayBuffer);
     const ws = wb.getWorksheet(1);
     
     const vatRow = ws!.getRow(9);
@@ -119,7 +119,7 @@ describe('Document Export Generators', () => {
       vatRatePercent: 12
     });
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer.buffer);
+    await wb.xlsx.load(buffer.buffer as ArrayBuffer);
     const ws = wb.getWorksheet(1);
     
     const vatRow = ws!.getRow(9);

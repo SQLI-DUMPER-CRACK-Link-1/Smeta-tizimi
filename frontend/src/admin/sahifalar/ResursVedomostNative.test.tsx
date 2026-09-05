@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../umumiy/kontekst/KompaniyaKontekst', () => ({ useKompaniya: () => mocks.company }));
 vi.mock('../../api/supabase', () => ({
   sbT2ObyektlarOlKomp: async () => ({ ok: true, qatorlar: [{ id: 8, nom: 'Sinov obyekt' }] }),
-  sbT2QatorHolatOl: (...args: unknown[]) => mocks.qatorHolat(...args),
+  sbT2QatorHolatOl: (...args: any[]) => mocks.qatorHolat(...args),
 }));
 afterEach(() => { cleanup(); mocks.qatorHolat.mockClear(); });
 

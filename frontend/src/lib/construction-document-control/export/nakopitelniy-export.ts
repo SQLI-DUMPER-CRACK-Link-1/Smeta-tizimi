@@ -79,7 +79,7 @@ export async function generateNakopitelniy(
     const holat = nakopitelniyHolat(row);
     
     // Convert holat to uppercase or formatted
-    let holatDisplay = holat;
+    let holatDisplay: string = holat;
     if (holat === 'ortiqcha') holatDisplay = 'ORTIQCHA';
     if (holat === 'chegara') holatDisplay = 'CHEGARA';
     if (holat === 'normal') holatDisplay = 'NORMAL';
