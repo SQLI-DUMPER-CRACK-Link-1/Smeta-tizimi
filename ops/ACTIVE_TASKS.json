@@ -455,6 +455,24 @@
       "_izoh": "New lane opened 2026-09-05, deliberately scoped to exactly ONE of the 4 gaps Codex itself identified (20k-row ceiling / no durable job / non-durable draft / no R2 storage) after the owner's explicit sharp feedback that open-ended re-analysis (the redundant codex/t2-gas-exit-inventory-v1 branch) is not acceptable -- only bounded, closeable work is. The t2_f2_import_job_v1 migration already exists (inherited from an earlier, different task) but is explicitly marked 'NOT applied to production. NOT reviewed' in its own header and was never wired to any UI -- this lane is Codex reviewing/applying that existing draft for real and connecting it to F2ImportNative, with a single measurable done-when-X acceptance test (a ~30000-row synthetic file that would have been rejected before this lane must now process end-to-end via a checkpoint/resume flow). R2 file storage and Nakopitelniy reconciliation are explicitly OUT of scope for this lane by design, to keep it closeable."
     },
     {
+      "id": "T2-PTO-CLOSURE-007-CLAUDE-ADDREPL-UI",
+      "title": "First real UI for the already-live Additional/Replacement backend (t2_qoshimcha_ish_yarat_v1/t2_zamena_ish_yarat_v1/t2_resurs_bola_qosh_v1) -- collapsed opt-in section on the canonical Holat.tsx page",
+      "owner": "claude",
+      "branch": "integration/next-main-release-v1-local2",
+      "base_sha": "3dcfec1",
+      "base_ref": "origin/integration/next-main-release-v1",
+      "status": "merged",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": [
+        "frontend/src/admin/sahifalar/AdditionalReplacementNative.tsx",
+        "frontend/src/admin/sahifalar/AdditionalReplacementNative.test.tsx"
+      ],
+      "depends_on": ["T2-PTO-CLOSURE-007-CODEX-ADDITIONAL-REPLACEMENT-BACKEND"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md"],
+      "production_write_allowed": false,
+      "_izoh": "2026-09-05: after merging Codex's Additional/Replacement backend, the ledger noted it had ZERO real-route consumers (frontend/src/api/t2-additional-replacement.ts existed but nothing called it outside tests). Built a self-contained new component with its OWN numeric obyekt/qator data source (sbT2ObyektlarOlKomp/sbT2DaraxtOl) -- deliberately independent from Holat.tsx's existing GAS-name-based tree, so it sidesteps the still-unresolved GAS-name<->t2_obyekt.id identity bridge rather than inventing one. Mounted as a collapsed <details> section in Holat.tsx (mirrors Narxlar.tsx's existing ORALIQLAR pattern) -- purely additive, zero changes to Holat's existing state/logic, default collapsed. Added the missing `versiya` field to the T2Qator TS type (t2_daraxt view already exposed it at the DB level; the type just hadn't caught up) -- needed for the optimistic-lock expectedVersion parameter. Caught and fixed a real bug via testing: the original code called the full obyektTanla() reset-and-reload after a successful write to refresh the tree, but that function also resets setDone(''), which immediately erased the just-set success message before it could ever render -- confirmed by writing a test that asserted on the rendered success text (not just the mock call count), which timed out until the fix (extracted a daraxtniYukla() helper that reloads rows without touching done/error state). Independently ran tsc -b, tsc -p tsconfig.functions.json, oxlint, full vitest suite (219/219), vite build -- all clean. No new migration, no new RPC -- only wires already-reviewed, already-live backend RPCs."
+    },
+    {
       "id": "T2-PTO-CLOSURE-007-CODEX-F2-CANONICAL-CUTOVER",
       "title": "Feature-flagged GAS-free F2 import on the canonical /admin/f2 route -- owner-approved staged cutover strategy, exact-source (t2_akt_yarat_v2) write, old GAS path byte-unchanged when flag is off",
       "owner": "codex",

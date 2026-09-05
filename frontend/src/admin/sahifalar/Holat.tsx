@@ -12,6 +12,7 @@ import { yangiUid } from '../../_shared/idempotent';
 import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { FmtN } from '../../lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
+import AdditionalReplacementNative from './AdditionalReplacementNative';
 
 export type EditState = {
   edit: Edit;
@@ -325,6 +326,26 @@ export function Holat() {
             )}
           </div>
         </header>
+
+        {/* T2-PTO-CLOSURE-007: qo'shimcha ish/zamena/resurs — real backend
+            (t2_qoshimcha_ish_yarat_v1 va h.k.) bilan ulangan, lekin
+            yuqoridagi GAS-nom asosidagi daraxtdan MUSTAQIL (o'z raqamli
+            obyekt/qator manbasiga ega) — shu bilan GAS-nom↔t2_obyekt.id
+            hali hal qilinmagan muammosini chetlab o'tadi. Ataylab
+            yopiq/ixtiyoriy — yuqoridagi mavjud oqimga hech narsa
+            o'zgartirmaydi. */}
+        <details className="karta p-4 mb-4 group flex-shrink-0">
+          <summary className="cursor-pointer list-none flex items-center justify-between">
+            <h3 className="text-[14px] font-semibold text-text">
+              Qo'shimcha ish / Zamena / Resurs qo'shish — yangi (GAS'siz) rejim
+            </h3>
+            <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
+            <span className="text-[11px] text-text-mute hidden group-open:inline">yopish ▴</span>
+          </summary>
+          <div className="mt-3">
+            <AdditionalReplacementNative />
+          </div>
+        </details>
 
         <div className="grid grid-cols-3 gap-4 mb-6 flex-shrink-0">
           <GlassCard className="p-4 border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent">

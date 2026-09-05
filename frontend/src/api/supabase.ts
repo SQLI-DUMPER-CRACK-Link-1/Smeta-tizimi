@@ -317,6 +317,9 @@ export type T2Qator = {
    *  kelgani. `apiHolatOlLokalka` ning o'rnini bosadi — daraxt
    *  ALLAQACHON birlashgan, filtrlash shu maydon bilan bo'ladi. */
   manba_id: number | null;
+  /** Optimistic-lock versiyasi (`t2_addrepl_execute_v1`/`t2_qator_tahrir`
+   *  kabi RPC'lar `kutilgan_versiya`ni shu bilan solishtiradi). */
+  versiya: number;
 };
 
 export function sbT2QatorHolatOl(obyektId: number) {
