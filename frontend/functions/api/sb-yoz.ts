@@ -28,6 +28,7 @@ const AMALLAR = {
   qoshimcha_ish_yarat_v1: { rpc: 't2_qoshimcha_ish_yarat_v1' },
   zamena_ish_yarat_v1: { rpc: 't2_zamena_ish_yarat_v1' },
   resurs_bola_qosh_v1: { rpc: 't2_resurs_bola_qosh_v1' },
+  catalog_observation_yoz_v1: { rpc: 't2_catalog_observation_yoz_v1' },
   qator_tahrir:   { rpc: 't2_qator_tahrir' },
   qator_qosh:     { rpc: 't2_qator_qosh' },
   akt_yarat:      { rpc: 't2_akt_yarat' },
@@ -344,6 +345,12 @@ export const onRequestPost: PagesFunction<{
       };
       if (amal === 'zamena_ish_yarat_v1') yuk.p_almashtirilayotgan_qator_id = so.almashtirilayotgan_qator_id;
       if (amal === 'resurs_bola_qosh_v1') yuk.p_tur = so.tur;
+    } else if (amal === 'catalog_observation_yoz_v1') {
+      if (!sess.foydalanuvchi_id || !so.operation_id || !Array.isArray(so.observations) || so.observations.length > 1000) {
+        return Response.json({ ok: false, error: 'Operatsiya va 1–1000 ta katalog kuzatuvi talab qilinadi.' }, { status: 400 });
+      }
+      yuk = { p_kompaniya_id: so.kompaniya_id, p_actor_id: sess.foydalanuvchi_id,
+        p_scope: so.scope, p_observations: so.observations, p_operation_id: so.operation_id };
     } else if (amal === 'akt_yarat_v2') {
       const obyektId = Number(so.obyekt_id);
       if (!Number.isFinite(obyektId) || obyektId <= 0) {
@@ -1638,6 +1645,9 @@ export const onRequestPost: PagesFunction<{
         ? 'Ma’lumot yangilangan. Yangi versiyani yuklab oling.'
         : code === '42501' ? 'Bu amal uchun ruxsat yo‘q.'
         : 'Qator yaratilmadi. Bog‘lanish, tartib va kiritilgan ma’lumotlarni tekshiring.' }, { status: code === '42501' ? 403 : 409 });
+    }
+    if (!r.ok && amal === 'catalog_observation_yoz_v1') {
+      return Response.json({ ok: false, error: 'Katalog kuzatuvlari yozilmadi. Ruxsat va manba doirasini tekshiring.' }, { status: 409 });
     }
     if (!r.ok) {
       return Response.json({ ok: false, error: 'Supabase ' + r.status + ': ' + matn.slice(0, 300) });
