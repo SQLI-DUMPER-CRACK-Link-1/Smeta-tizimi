@@ -24,7 +24,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { menOl, type Men } from '../../api/t2-men';
+import { useMen, type Men } from '../../api/t2-men';
 
 export type KompaniyaMavqe = 'zakazchik' | 'pudratchi' | 'loyihachi' | string;
 
@@ -112,20 +112,24 @@ function kompaniyaXatoMatni(e: any): { matn: string; auth: boolean } {
 
 export function KompaniyaProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
-  const [men, setMen] = useState<Men | null>(null);
-  const [yuklanmoqda, setYuk] = useState(true);
-  const [xato, setXato] = useState('');
-  const [authXato, setAuthXato] = useState(false);
+  /* ⚠️ 2026-09-05 (Claude): AVVAL bu yerda o'zining alohida useState+useEffect
+   * bilan menOl() chaqirardi — useMen() (KompaniyaPage.tsx, react-query)dan
+   * BUTUNLAY mustaqil kesh. Natija: yangi kompaniya ochilganda
+   * qc.invalidateQueries({queryKey:['men']}) faqat useMen()ni yangilardi,
+   * bu yerdagi holat esa ESKI qolardi — sahifa tepasidagi "Kontekst"
+   * tanlagichida yangi kompaniya HECH QACHON ko'rinmasdi (faqat to'liq
+   * sahifa qayta yuklansa). Endi BITTA haqiqat manbai: useMen(). */
+  const men_q = useMen();
+  const men: Men | null = men_q.data ?? null;
+  const yuklanmoqda = men_q.isLoading;
+  const xatoHolat = useMemo(
+    () => (men_q.isError ? kompaniyaXatoMatni(men_q.error) : { matn: '', auth: false }),
+    [men_q.isError, men_q.error],
+  );
+  const xato = xatoHolat.matn;
+  const authXato = xatoHolat.auth;
   const [joriyId, setJoriyId] = useState<number | null>(null);
   const [globalRejim, setGlobalRejim] = useState<boolean>(false);
-
-  const load = useCallback(() => {
-    setYuk(true); setXato(''); setAuthXato(false);
-    menOl()
-      .then((m) => { setMen(m); setYuk(false); })
-      .catch((e: any) => { const x = kompaniyaXatoMatni(e); setXato(x.matn); setAuthXato(x.auth); setYuk(false); });
-  }, []);
-  useEffect(() => { load(); }, [load]);
 
   const uid = men?.foydalanuvchi?.id ?? null;
   const yoz = useCallback((id: number | null, global: boolean) => {
@@ -183,7 +187,7 @@ export function KompaniyaProvider({ children }: { children: ReactNode }) {
     globalRejim: globalRejim && superadmin,
     globalGa, superadmin,
     kopKompaniya: kompaniyalar.length > 1,
-    yuklanmoqda, xato, authXato, qayta: load,
+    yuklanmoqda, xato, authXato, qayta: () => { void men_q.refetch(); },
     foydalanuvchi: men?.foydalanuvchi ?? null,
   };
 
