@@ -38,8 +38,19 @@ function xatoMatn(code?: string): string {
     case 'AUTH_REQUIRED': return 'Sessiya muddati tugagan. Chiqib, qaytadan kiring.';
     case 'AUTHORIZATION_DENIED': return 'Bu amal uchun ruxsatingiz yo‘q.';
     case 'STALE_VERSION': return 'Ma’lumot boshqa joyda yangilangan. Sahifani qayta yuklang.';
+    case 'PAROL_QISQA': return 'Parol kamida 8 belgi bo‘lishi kerak.';
+    case 'AZOLIK_TOPILMADI': return 'Bu foydalanuvchi shu kompaniyaning a‘zosi emas.';
     default: return 'Amalni bajarib bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.';
   }
+}
+
+/** T2-AUTH-PASSWORD-MIGRATION-001: 12 ta belgidan iborat, o‘qish oson
+ *  (chalkash 0/O, 1/l/I chiqarib tashlangan) tasodifiy vaqtinchalik parol. */
+function vaqtinchalikParolYarat(): string {
+  const belgilar = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let p = '';
+  for (let i = 0; i < 12; i++) p += belgilar[Math.floor(Math.random() * belgilar.length)];
+  return p;
 }
 
 function AzolarBoshqaruv({ kompaniyaId, kompaniyaNom, isDirector }: { kompaniyaId: number; kompaniyaNom: string; isDirector: boolean }) {
@@ -49,6 +60,11 @@ function AzolarBoshqaruv({ kompaniyaId, kompaniyaNom, isDirector }: { kompaniyaI
   const [yangiRol, setYangiRol] = useState<string>('prorab');
   const [azoLogin, setAzoLogin] = useState('');
   const [azoRol, setAzoRol] = useState<string>('prorab');
+  /* Faqat XOTIRADA — bazaga yozilmagan, sahifa yopilsa yo'qoladi. Bu ATAYLAB:
+     vaqtinchalik parol faqat SHU EKRANDA, BIR MARTA ko'rsatiladi, boshqa
+     hech qayerda saqlanmaydi (t2_foydalanuvchi.parol_hash allaqachon
+     xeshlangan — ochiq matnli qiymat bundan tashqari qayerda ham yo'q). */
+  const [korsatilganParol, setKorsatilganParol] = useState<{ login: string; parol: string } | null>(null);
 
   return (
     <div className="karta p-4">
@@ -78,6 +94,18 @@ function AzolarBoshqaruv({ kompaniyaId, kompaniyaNom, isDirector }: { kompaniyaI
                     <span className="text-[11px] px-1.5 py-0.5 rounded bg-surface-2 border border-border">{a.rol}</span>
                     {isDirector && <>
                       <button className="text-[12px] text-text-dim hover:text-text" onClick={() => { setTahrirId(a.azolik_id); setYangiRol(a.rol); }}>rol</button>
+                      <button className="text-[12px] text-text-dim hover:text-text flex items-center gap-0.5" title="Vaqtinchalik parol o‘rnatish"
+                        disabled={cmd.azoParolBelgila.isPending}
+                        onClick={() => {
+                          if (!confirm(`«${a.ism || a.login}» uchun YANGI vaqtinchalik parol o‘rnatilsinmi? Eski parol (agar bo‘lsa) ishlamay qoladi.`)) return;
+                          const parol = vaqtinchalikParolYarat();
+                          setKorsatilganParol(null);
+                          cmd.azoParolBelgila.mutate(
+                            { kompaniya_id: kompaniyaId, foydalanuvchi_id: a.foydalanuvchi_id, yangi_parol: parol },
+                            { onSuccess: () => setKorsatilganParol({ login: a.login, parol }) });
+                        }}>
+                        <KeyRound size={12} /> parol
+                      </button>
                       <button className="text-rose-400 hover:text-rose-300" title="A‘zolikni bekor qilish"
                         disabled={cmd.azoOchir.isPending}
                         onClick={() => { if (confirm(`«${a.ism || a.login}» a‘zoligi bekor qilinsinmi? Qilgan ishlari saqlanadi.`)) cmd.azoOchir.mutate({ azolik_id: a.azolik_id }); }}>
@@ -92,8 +120,18 @@ function AzolarBoshqaruv({ kompaniyaId, kompaniyaNom, isDirector }: { kompaniyaI
           {!q.data.some((a) => a.holat === 'faol') && <div className="py-2 text-[12px] text-text-dim">— faol a‘zo yo‘q —</div>}
         </div>
       )}
-      {(cmd.azoRol.isError || cmd.azoOchir.isError) && (
-        <p className="mt-2 text-[12px] text-rose-300">{xatoMatn(((cmd.azoRol.error || cmd.azoOchir.error) as any)?.code)}</p>
+      {(cmd.azoRol.isError || cmd.azoOchir.isError || cmd.azoParolBelgila.isError) && (
+        <p className="mt-2 text-[12px] text-rose-300">{xatoMatn(((cmd.azoRol.error || cmd.azoOchir.error || cmd.azoParolBelgila.error) as any)?.code)}</p>
+      )}
+      {korsatilganParol && (
+        <div className="mt-2 karta p-3 border-accent/40 bg-accent/5 flex items-start gap-2">
+          <KeyRound size={14} className="text-accent mt-0.5 shrink-0" />
+          <div className="min-w-0 text-[12px]">
+            <div><b>@{korsatilganParol.login}</b> uchun vaqtinchalik parol: <code className="px-1 py-0.5 rounded bg-surface-2 select-all">{korsatilganParol.parol}</code></div>
+            <div className="text-text-mute mt-0.5">Buni foydalanuvchiga xavfsiz tarzda (telefon/shaxsan) yetkazing — bu yerda qayta ko‘rsatilmaydi.</div>
+          </div>
+          <button className="ml-auto text-text-dim hover:text-text text-[12px] shrink-0" onClick={() => setKorsatilganParol(null)}>yopish</button>
+        </div>
       )}
 
       {isDirector && (

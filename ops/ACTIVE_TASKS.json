@@ -586,6 +586,32 @@
       "_izoh": "2026-09-05: pure aggregation over the already-correct t2_qator_holat view (fixed earlier this session) -- no new calculation, only a category+resource rollup filtering to leaf resource rows (tur in rs/mat/ob), excluding rz/bl so work-line amounts are never double-counted against their own resource lines. Widened the T2QatorHolat TS type (tur/kod/birlik/kat were missing even though the SQL view already returns them, confirmed by reading the migration SQL directly) -- same class of gap as the earlier T2Qator.versiya fix. FOLLOW-UP RESOLVED: once shared-machine memory pressure cleared, tsc -b caught a real error the manual audit had missed (a mock helper spreading unknown[] into a typed function, then an arg-count mismatch after the first fix) in ResursVedomostNative.test.tsx -- fixed, then tsc -b, vite build, full vitest suite (234/234, one initial failure in AdditionalReplacementNative.test.tsx reproduced as a transient waitFor timeout under concurrent load, confirmed non-reproducing in isolation and on full-suite rerun), oxlint, and governance-check all passed clean. Fully verified, no open gates."
     },
     {
+      "id": "T2-AUTH-PASSWORD-MIGRATION-001",
+      "title": "Supabase-native bcrypt password so a newly added company member can actually log in (incident item 2.1)",
+      "owner": "claude",
+      "branch": "claude/auth-password-migration-001",
+      "base_sha": "c95a492",
+      "base_ref": "origin/main",
+      "status": "completed",
+      "owns": [
+        "supabase/migrations/20261005120000_t2_parol_hash_v1*.sql",
+        "frontend/functions/api/kirish.ts",
+        "frontend/functions/api/kirish.test.ts",
+        "frontend/functions/api/company.ts",
+        "frontend/functions/api/company.test.ts",
+        "frontend/src/api/t2-men.ts",
+        "frontend/src/admin/pages/KompaniyaPage.tsx",
+        "ops/handoff/T2_AUTH_PASSWORD_MIGRATION_001_REPORT.md"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/T2_AUTH_PASSWORD_MIGRATION_001_REPORT.md"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "2026-09-05: T2_POST_DEPLOY_INCIDENT_ROUND_20260905.md item 2.1 -- 'A'zo qo'shish' wrote a new t2_foydalanuvchi/t2_azolik row but never touched a password (the column didn't exist), so a newly added member could not log in anywhere (not in GAS's plaintext _XODIMLAR sheet either). Owner decision via AskUserQuestion: migrate to Supabase, bcrypt-hashed, never plaintext, GAS stays parallel for existing logins -- explicitly NOT a full cutover of existing users. Added t2_foydalanuvchi.parol_hash/parol_yangilandi (nullable, additive) + t2_parol_tekshir_v1 (stable, login check, case-insensitive like GAS) + t2_parol_belgila_v1 (director-only, reuses t2_azo_actor_director_tekshir, idempotent via operation_id, rejects <8-char passwords before hashing). Applied to real production (tuoyrzadkgoltpqkdiyx) this session; re-ran the migration's own acceptance logic against real company/director data, self-rolled-back, zero residue confirmed (parol_hash null count unchanged, no sinov_% rows left). kirish.ts now dual-checks: NO_PASSWORD_SET -> falls through to the exact pre-existing GAS call unchanged (zero regression for every current user); a matching hash mints the session and GAS is never called; a wrong password against an EXISTING hash is a hard 401 with no fallback to GAS (fail-closed -- once a login has a Supabase password, GAS is never consulted for it again). Proved this exact branching with 3 new tests that assert which upstream URL was or was not called in each case, not just the JSON shape. company.ts gains member_password_set -> t2_parol_belgila_v1 (actor always from session, proved with a test that a spoofed actor id in the request body is ignored); KompaniyaPage.tsx's A'zolar tab gets a director-only 'parol' button per member row that generates a 12-char random temp password client-side, sets it via the new RPC, and shows it exactly once in a dismissible banner (never persisted, never logged). Verified: tsc -b exit 0, typecheck:functions exit 0, oxlint 0 new warnings, vitest 247/247 (this branch's baseline, isolated from the concurrent F2-resumable-import-UI branch's own +2), build succeeds, governance-check PASS. NOT done (explicit): no self-service change-own-password flow (a temp password must be reissued by a director, not changed by the user themselves); no forced-reset-on-first-login; existing GAS-only users (including GAS's own hardcoded default admin/570632 superadmin credential sitting in the source) are not migrated -- that is a separate, larger decision the owner has not been asked to make. Full detail: ops/handoff/T2_AUTH_PASSWORD_MIGRATION_001_REPORT.md."
+    },
+    {
       "id": "T2-PTO-CLOSURE-007-CLAUDE-F2-RESUMABLE-UI",
       "title": "Wire the reviewed-and-applied t2_f2_import_job_v1 resumable job/checkpoint model into F2ImportNative (the UI wiring Codex left explicitly open)",
       "owner": "claude",
