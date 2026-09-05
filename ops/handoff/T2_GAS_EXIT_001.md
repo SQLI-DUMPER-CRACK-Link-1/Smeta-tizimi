@@ -461,19 +461,52 @@ anywhere in the live app yet — `admin/sahifalar/F2Import.tsx` and
    (new chunk `TestF2Native-*.js` present), full suite still 150/150 — nothing
    else changed. **Still NOT the production cutover**: the canonical
    `/admin/f2` route (`F2Import.tsx`) is completely untouched and still
-   100% GAS-backed; `TestF2Native` is an additive, parallel `test02` page,
-   same pattern as `TestF2Import`/`TestSaqlash`. Retiring
-   `navbat.ts`/`kuzatuv.ts`'s F2 queue usage and actually switching the
-   canonical route's `useF2*` hooks to this pipeline is real user-facing
-   surgery — it needs its own design pass (fallback strategy, staged
-   rollout) per owner requirement §12's acceptance bar (disabling GAS must
-   not break F2 import/matching), not a rushed edit. LRV sourcing in
-   `TestF2Native` is still manual JSON paste — wiring it to the existing
-   `useHolat` (GAS-backed smeta tree) hook, or eventually a canonical
-   Supabase read model, is the natural next increment before this can be a
-   real day-to-day tool.
+   100% GAS-backed. See item 6 for what changed since.
+6. **Supabase write-through — DONE 2026-09-05.** Answers "when does this
+   reach Supabase?": until this increment, the answer was "never" — the
+   canonical `/admin/f2` GAS path (`apiF2QollaNavbatga` → `_f2FonQadam`)
+   writes to Google Sheets rows only and never touches `t2_akt`; a
+   separate, already-written GAS function `apiT2F2Import`
+   (`Smeta tizimi/T2_F2Import.js`) does call `t2_akt_yarat`, but no
+   frontend code calls it (dead code, confirmed by search) — and this
+   session's own `TestF2Native` from item 5 stopped at
+   match-result-in-memory with a manual-JSON-paste LRV tree (`row` was
+   whatever the pasted JSON said, not a real `qator_id`, so it could not be
+   written anywhere real).
+   `TestF2Native.tsx` now: (a) reads the LRV tree from **canonical
+   Supabase** via `sbT2DaraxtOl` (`t2_daraxt`, obyekt-scoped) instead of a
+   textarea, building the matcher's `LrvNode[]` with `row` set to the
+   REAL `t2_qator.id` (`daraxtdanLrvQur`, ota_id-based nesting) — so a
+   match's `F2Match.row` is directly usable as `qator_id`, no separate
+   id-mapping layer; (b) after matching, a "Hujjat yaratish" step maps
+   `mosliklar` to `{qator_id, hajm, narx}` and calls the existing, already
+   -shipped, already-tested `sbT2AktYarat` (`/api/sb-yoz` `akt_yarat` →
+   `t2_akt_yarat` RPC — the SAME RPC both the GAS bridge and the manual
+   `TestF2.tsx` entry page use; it is not new, only newly reachable from
+   this pipeline), with a per-run `operation_id` (`yangiOperationId()`)
+   for idempotency. Manual JSON paste is kept as a fallback (labeled and
+   disabled from writing, since a hand-typed `row` cannot be trusted as a
+   real `qator_id`) — Supabase-sourced trees are labeled and enable the
+   write step. `npx tsc -b` exit 0, `oxlint` clean, full suite 150/150
+   (nothing in the matcher/parser/endpoint changed — only this page and
+   its two new small helpers). **Still NOT the production cutover**:
+   `/admin/f2` (`F2Import.tsx`) is untouched; this proves the GAS-free
+   upload→parse→match→**Supabase write** loop closes end-to-end in the
+   parallel `test02` page, which is the concrete precondition for ever
+   attempting the canonical-route cutover (item 7). File upload for the
+   canonical route is a separate, still-open architecture question
+   (`apiF2FaylOqi` there takes a Drive `fileId`, not raw bytes — see the
+   owner Q&A this session).
+7. **Canonical `/admin/f2` cutover** — **NOT STARTED, real user-facing
+   surgery.** Retiring `navbat.ts`/`kuzatuv.ts`'s F2 queue usage and
+   switching the canonical route's `useF2*` hooks to this pipeline needs
+   its own design pass (fallback strategy, staged rollout, and — per the
+   owner Q&A — a decision on the file-upload architecture: direct-to-R2,
+   Drive-intermediate-with-direct-Cloudflare-read, or defer) per owner
+   requirement §12's acceptance bar (disabling GAS must not break F2
+   import/matching), not a rushed edit.
 
-None of 1-5 should be attempted as a rushed single pass — each carries real
+None of 1-7 should be attempted as a rushed single pass — each carries real
 financial-correctness or data-durability risk, and the Constitution's
 "Change safety" rule (migrations/production changes need explicit human
 approval, evidence over a green regex) applies to every one of them.
