@@ -27,6 +27,7 @@ begin
 end $$;
 
 drop function if exists public.t2_f2_import_draft_saqla_v1(bigint,bigint,jsonb);
+drop function if exists public.t2_f2_import_draft_royxat_v1(bigint,bigint);
 drop function if exists public.t2_f2_import_job_ilgarilash_v1(bigint,bigint,integer,integer,integer,integer,jsonb,text,text);
 drop function if exists public.t2_f2_import_job_holat_v1(bigint,bigint);
 drop function if exists public.t2_f2_import_job_yarat_v1(bigint,bigint,bigint,uuid,integer);
