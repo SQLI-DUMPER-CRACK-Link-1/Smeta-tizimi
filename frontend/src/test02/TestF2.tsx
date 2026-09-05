@@ -162,7 +162,7 @@ export default function TestF2() {
         ustunlar: 'id,tur,raqam,nom,birlik,kat,smeta_summa,fakt_summa,' +
                   'f2_summa,qoldiq_summa,f2_mumkin_summa,' +
                   'smeta_hajm,smeta_narx,fakt_hajm,f2_hajm,f2_mumkin_hajm',
-        tartib: 'tartib.asc', limit: 20000,
+        tartib: 'raqam.asc', limit: 20000,
       }),
       sbT2AktReestrOl(obyektId),
     ]);
