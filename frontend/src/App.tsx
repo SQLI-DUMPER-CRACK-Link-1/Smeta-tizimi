@@ -35,6 +35,7 @@ const WrapperCRM = lazy(() => import('./test02/WrapperCRM'));
 const TestSmetaBirlashgan = lazy(() => import('./test02/TestSmetaBirlashgan'));
 const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
 const TestF2Import  = lazy(() => import('./test02/TestF2Import'));
+const TestF2Native  = lazy(() => import('./test02/TestF2Native'));
 const TestF2        = lazy(() => import('./test02/TestF2'));
 const TestSklad     = lazy(() => import('./test02/TestSklad'));
 const TestZayavka   = lazy(() => import('./test02/TestZayavka'));
@@ -169,6 +170,7 @@ export default function App() {
             <Route path="tolov" element={<TestTolov />} />
             <Route path="sklad" element={<TestSklad />} />
               <Route path="zayavka" element={<TestZayavka />} />
+            <Route path="f2native" element={<TestF2Native />} />
             <Route path="faktura" element={<TestFaktura />} />
             <Route path="erp" element={<TestErp />} />
             <Route path="hisobot" element={<TestHisobot />} />
