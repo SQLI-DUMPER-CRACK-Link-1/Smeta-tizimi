@@ -18,6 +18,8 @@
 --    sees the last checkpoint, not row 1
 --  * draft rows upsert per-uid independently (editing one row's mapping does
 --    not require or disturb any other row's version)
+--  * an old browser draft version fails closed; resumption reads canonical
+--    draft rows rather than reconstructing them from localStorage
 --  * a job's rows are only visible/writable to a member of its own company
 --    (membership check actually raises, not just returns ok:false)
 
@@ -62,13 +64,24 @@ begin
         jsonb_build_object('uid','u2','holat','hal_qilinmagan')));
   if (v->>'saqlandi')::integer <> 2 then raise exception 'FAIL draft bulk upsert count: %', v; end if;
 
+  -- an old browser must not silently overwrite the mapping it did not read
   v := public.t2_f2_import_draft_saqla_v1(v_job, v_actor, jsonb_build_array(
-        jsonb_build_object('uid','u1','holat','qolda_moslashtirildi','lrv_varaq','List1','lrv_row',11,'kod','K1B')));
+        jsonb_build_object('uid','u1','holat','qolda_moslashtirildi','expected_versiya',999,'lrv_varaq','List1','lrv_row',11,'kod','K1B')));
+  if (v->>'code') <> 'STALE_DRAFT_VERSION' then raise exception 'FAIL stale draft version accepted: %', v; end if;
+
+  v := public.t2_f2_import_draft_saqla_v1(v_job, v_actor, jsonb_build_array(
+        jsonb_build_object('uid','u1','holat','qolda_moslashtirildi','expected_versiya',1,'lrv_varaq','List1','lrv_row',11,'kod','K1B')));
+  if (v->>'ok') <> 'true' then raise exception 'FAIL current draft version rejected: %', v; end if;
   if (select holat from public.t2_f2_import_draft_qator where job_id=v_job and uid='u1') <> 'qolda_moslashtirildi' then
     raise exception 'FAIL draft re-upsert did not update in place';
   end if;
   if (select count(*) from public.t2_f2_import_draft_qator where job_id=v_job) <> 2 then
     raise exception 'FAIL re-upsert created a duplicate row instead of updating';
+  end if;
+
+  v := public.t2_f2_import_draft_royxat_v1(v_job, v_actor);
+  if (v->>'ok') <> 'true' or jsonb_array_length(v->'qatorlar') <> 2 then
+    raise exception 'FAIL durable draft resumption read: %', v;
   end if;
 
   raise notice 'ALL T2_F2_IMPORT_JOB ACCEPTANCE CHECKS PASSED (job_id=%)', v_job;
