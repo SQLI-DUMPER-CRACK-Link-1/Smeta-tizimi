@@ -482,6 +482,12 @@ ular normativ ilovadan ustun emas.
 5. **AOSR har biri alohida ijro dalili.** Ketma-ket AOSR raqami bitta fayl ichida
    varaqlar ko‘rinishida bo‘lsa ham, har varaq mustaqil dalolatnoma; uning raqami
    faqat sarlavha emas, reestrdagi noyob biznes kalitidir.
+6. **Bir workbook avtomatik bitta davr paketi degani emas.** Ko‘rilgan Stella
+   namunasida fayl nomi, F-2 varag‘i va Forma-3 sarlavhasidagi davrlar bir-biriga
+   ishonchli identifikator bo‘la olmasligi ko‘rindi. Demak Drive nomi yoki varaq
+   nomi asosida F-2/F-3ni avtomatik bog‘lash taqiqlanadi. Bog‘lash uchun kamida
+   kanonik obyekt, shartnoma, hisobot davri, tasdiqlash holati va paket IDsi
+   talab qilinadi; mos kelmasa `TEMPLATE_HEADER_MISMATCH` chiqadi.
 
 ### Drive shablonlarining kanonik xaritasi
 
@@ -526,13 +532,16 @@ smeta qatori, akt va AOSR IDlari Supabase tarafida qoladi.
    va dalillar bo‘ladi. Qismlar mustaqil document IDga ega, lekin bitta
    davr/revisionga bog‘langan. Qoralama hech qachon Forma-2 yoki Forma-3
    tasdig‘ining o‘rniga o‘tmaydi.
+   `package_id` qatorli Forma-2 va Forma-3ni Drive nomi bilan emas, aynan
+   kanonik obyekt + shartnoma + davr + tasdiqlash snapshotiga bog‘laydi.
 3. **Evidence chain.** F-2 qatori uchun AOSR, jurnal satri, sertifikat,
    laboratoriya/protokol yoki geodeziya fayli `evidence_link` orqali
    bog‘lanadi. Dalil bo‘lmasa status `needs_review`, lekin tizim dalilni
    o‘ylab topmaydi.
 4. **Export validator.** Majburiy rekvizit, `TEMPLATE_FORMULA_ERROR`,
    yo‘qolgan imzo/ERI, eski template version, bog‘lanmagan qator, manfiy miqdor
-   va Forma-2/3 davrlarining nomuvofiqligini tekshiradi. Natija
+   `TEMPLATE_HEADER_MISMATCH` hamda Forma-2/3 davrlarining nomuvofiqligini
+   tekshiradi. Natija
    `export_blocked` bo‘lsa, faqat ko‘rinadigan xato emas, mashina o‘qiydigan
    sabab kodi ham qaytadi.
 
