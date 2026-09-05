@@ -4,7 +4,7 @@ import ResursVedomostNative from './ResursVedomostNative';
 
 const mocks = vi.hoisted(() => ({
   company: { joriy: { id: 1 }, yuklanmoqda: false },
-  qatorHolat: vi.fn(async () => ({
+  qatorHolat: vi.fn(async (_obyektId: number) => ({
     ok: true,
     qatorlar: [
       { id: 1, tur: 'rz', kat: null, nom: 'Razdel', birlik: null, smeta_hajm: 0, smeta_summa: 1000000, f2_hajm: 0, f2_summa: 0, qoldiq_hajm: 0, qoldiq_summa: 0 },
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../umumiy/kontekst/KompaniyaKontekst', () => ({ useKompaniya: () => mocks.company }));
 vi.mock('../../api/supabase', () => ({
   sbT2ObyektlarOlKomp: async () => ({ ok: true, qatorlar: [{ id: 8, nom: 'Sinov obyekt' }] }),
-  sbT2QatorHolatOl: (...args: unknown[]) => mocks.qatorHolat(...args),
+  sbT2QatorHolatOl: (obyektId: number) => mocks.qatorHolat(obyektId),
 }));
 afterEach(() => { cleanup(); mocks.qatorHolat.mockClear(); });
 

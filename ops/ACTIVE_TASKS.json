@@ -570,7 +570,7 @@
       "branch": "integration/next-main-release-v1-local2",
       "base_sha": "62c2f1a",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "gates_partial_tsc_build_unverified_due_to_shared_machine_memory_pressure",
+      "status": "released",
       "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
       "owns": [
         "frontend/src/lib/resurs-vedomost.ts",
@@ -583,7 +583,7 @@
         "ops/handoff/T2_PTO_CLOSURE_007_CLAUDE_RESURS_VEDOMOST.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "2026-09-05: pure aggregation over the already-correct t2_qator_holat view (fixed earlier this session) -- no new calculation, only a category+resource rollup filtering to leaf resource rows (tur in rs/mat/ob), excluding rz/bl so work-line amounts are never double-counted against their own resource lines. Widened the T2QatorHolat TS type (tur/kod/birlik/kat were missing even though the SQL view already returns them, confirmed by reading the migration SQL directly) -- same class of gap as the earlier T2Qator.versiya fix. HONEST GAP: tsc -b and vite build could not complete this round -- 6 consecutive out-of-memory crashes at the Windows commit-limit level (not a V8 heap ceiling), consistent with 3 agents now running heavy builds concurrently on the same shared machine per the owner's own message. Substituted a manual grep-based audit of every T2QatorHolat consumer (none construct it via an object literal requiring all fields -- only as a function return/parameter type) plus a clean oxlint run and a passing targeted vitest run (10/10) as partial evidence. tsc -b/vite build must be re-run and this status updated before treating this lane as fully verified."
+      "_izoh": "2026-09-05: pure aggregation over the already-correct t2_qator_holat view (fixed earlier this session) -- no new calculation, only a category+resource rollup filtering to leaf resource rows (tur in rs/mat/ob), excluding rz/bl so work-line amounts are never double-counted against their own resource lines. Widened the T2QatorHolat TS type (tur/kod/birlik/kat were missing even though the SQL view already returns them, confirmed by reading the migration SQL directly) -- same class of gap as the earlier T2Qator.versiya fix. FOLLOW-UP RESOLVED: once shared-machine memory pressure cleared, tsc -b caught a real error the manual audit had missed (a mock helper spreading unknown[] into a typed function, then an arg-count mismatch after the first fix) in ResursVedomostNative.test.tsx -- fixed, then tsc -b, vite build, full vitest suite (234/234, one initial failure in AdditionalReplacementNative.test.tsx reproduced as a transient waitFor timeout under concurrent load, confirmed non-reproducing in isolation and on full-suite rerun), oxlint, and governance-check all passed clean. Fully verified, no open gates."
     }
   ]
 }
