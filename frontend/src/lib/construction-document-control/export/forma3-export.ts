@@ -1,0 +1,125 @@
+import ExcelJS from 'exceljs';
+import { type ProgressValuationResult } from '../types';
+
+export interface Forma3ExportOptions {
+  projectName: string;
+  objectName: string;
+  periodLabel: string;
+  documentNumber: string;
+  contractNumber?: string;
+  vatRatePercent?: number | null; // e.g. 12 for 12%
+}
+
+export async function generateForma3(
+  valuation: ProgressValuationResult,
+  options: Forma3ExportOptions
+): Promise<Uint8Array> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Smeta tizimi';
+  const worksheet = workbook.addWorksheet('Forma-3');
+
+  worksheet.mergeCells('A1', 'E1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = 'Bajarilgan ishlar qiymati ma\'lumotnomasi-hisobvaraq-faktura (Forma-3)';
+  titleCell.font = { bold: true, size: 14 };
+  titleCell.alignment = { horizontal: 'center' };
+
+  worksheet.getCell('A2').value = `Obyekt: ${options.projectName} - ${options.objectName}`;
+  worksheet.getCell('A3').value = `Shartnoma: ${options.contractNumber ?? 'Noma\'lum'}`;
+  worksheet.getCell('A4').value = `Hujjat raqami: ${options.documentNumber}`;
+  worksheet.getCell('A5').value = `Davr: ${options.periodLabel}`;
+
+  for(let i=2; i<=5; i++) {
+    worksheet.mergeCells(`A${i}`, `E${i}`);
+  }
+
+  worksheet.addRow([]);
+
+  // Table headers (TPL-12 logic)
+  const headerRow = worksheet.addRow([
+    'T/r',
+    'Ko\'rsatkichlar',
+    'Oldingi davrgacha jami',
+    'Joriy davr',
+    'Boshlangandan beri jami'
+  ]);
+  
+  headerRow.font = { bold: true };
+  headerRow.eachCell((cell) => {
+    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+    cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
+  });
+
+  const { previousValue, currentValue, cumulativeValue } = valuation.totals;
+
+  const dataRow = worksheet.addRow([
+    '1',
+    'Bajarilgan ishlar qiymati (QQSsiz)',
+    previousValue,
+    currentValue,
+    cumulativeValue
+  ]);
+
+  dataRow.eachCell((cell, colNumber) => {
+    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    if (colNumber >= 3) cell.numFmt = '#,##0.00';
+  });
+
+  let prevVat: number | string = 'FORMA3_RULE_UNRESOLVED';
+  let curVat: number | string = 'FORMA3_RULE_UNRESOLVED';
+  let cumVat: number | string = 'FORMA3_RULE_UNRESOLVED';
+  
+  let prevTotal: number | string = 'FORMA3_RULE_UNRESOLVED';
+  let curTotal: number | string = 'FORMA3_RULE_UNRESOLVED';
+  let cumTotal: number | string = 'FORMA3_RULE_UNRESOLVED';
+
+  if (options.vatRatePercent != null) {
+    const rate = options.vatRatePercent / 100;
+    prevVat = previousValue * rate;
+    curVat = currentValue * rate;
+    cumVat = cumulativeValue * rate;
+
+    prevTotal = previousValue + (prevVat as number);
+    curTotal = currentValue + (curVat as number);
+    cumTotal = cumulativeValue + (cumVat as number);
+  }
+
+  const vatRow = worksheet.addRow([
+    '2',
+    `QQS (${options.vatRatePercent != null ? options.vatRatePercent + '%' : 'Aniqlanmagan'})`,
+    prevVat,
+    curVat,
+    cumVat
+  ]);
+
+  const totalRow = worksheet.addRow([
+    '3',
+    'JAMI QQS BILAN:',
+    prevTotal,
+    curTotal,
+    cumTotal
+  ]);
+
+  [vatRow, totalRow].forEach(row => {
+    row.eachCell((cell, colNumber) => {
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      if (typeof cell.value === 'number' && colNumber >= 3) {
+        cell.numFmt = '#,##0.00';
+      }
+      if (cell.value === 'FORMA3_RULE_UNRESOLVED') {
+        cell.font = { color: { argb: 'FFFF0000' }, italic: true };
+      }
+    });
+  });
+  totalRow.font = { bold: true };
+
+  worksheet.getColumn(1).width = 5;
+  worksheet.getColumn(2).width = 45;
+  worksheet.getColumn(3).width = 25;
+  worksheet.getColumn(4).width = 25;
+  worksheet.getColumn(5).width = 25;
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new Uint8Array(buffer);
+}
