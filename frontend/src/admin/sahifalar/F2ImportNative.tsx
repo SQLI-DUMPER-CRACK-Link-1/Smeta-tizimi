@@ -98,6 +98,7 @@ function NativeSession({ companyId }: { companyId: number }) {
   const [labels, setLabels] = useState(new Map<string, string>());
   const [targets, setTargets] = useState(new Map<number, string>());
   const [page, setPage] = useState(0);
+  const [faqatMoslashmagan, setFaqatMoslashmagan] = useState(false);
   const [phase, setPhase] = useState('Faylni tanlang');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -111,6 +112,8 @@ function NativeSession({ companyId }: { companyId: number }) {
   const writing = useRef(false);
   const jobId = useRef<number | null>(null);
   const jobVersiya = useRef(1);
+  const rawFile = useRef<File | null>(null);
+  const sourceDocId = useRef<number | undefined>(undefined);
   useEffect(() => {
     let active = true;
     void sbT2ObyektlarOlKomp(companyId).then(r => {
@@ -170,6 +173,7 @@ function NativeSession({ companyId }: { companyId: number }) {
   }
   async function upload(file: File) {
     reset(); setBook(null); setCols(null); setBusy(true); setPhase('Fayl o‘qilmoqda');
+    rawFile.current = file; sourceDocId.current = undefined;
     const token = generation.current;
     try {
       if (file.size > MAX_FILE_BYTES) throw new Error(`Fayl ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
@@ -178,6 +182,29 @@ function NativeSession({ companyId }: { companyId: number }) {
       setBook(workbook); chooseSheet(workbook, workbook.sheets[0]?.name || ''); setPhase('Varaq va ustunlarni tekshiring');
     } catch { if (generation.current === token) setError(`Fayl o‘qilmadi yoki ${MAX_FILE_BYTES / 1024 / 1024} MB chegarasidan oshdi. XLSX faylni tekshiring.`); }
     finally { setBusy(false); }
+  }
+  /** T2-PTO-DAILY-FINAL-CUTOVER-008 P0.2: F2 manba fayli ham canonical R2'ga
+   *  yuklanadi (FILE-TRUTH-001 ikki fazali /api/hujjat-yukla, mavjud va
+   *  ishlaydigan yo'l -- qayta ixtiro qilinmadi). Best-effort: xato bo'lsa
+   *  ham moslashtirish/yozish davom etadi, faqat provenance yo'q qoladi. */
+  async function sourceniR2gaYukla(file: File, objId: number): Promise<number | undefined> {
+    try {
+      const buf = await file.arrayBuffer();
+      const digest = await crypto.subtle.digest('SHA-256', buf);
+      const sha256 = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+      // `t2_f2_import_job_yarat_v1` hujjatning loyiha_id'ini obyektnikiga aynan
+      // solishtiradi (SOURCE_DOCUMENT_SCOPE_MISMATCH) -- shuning uchun bu yerda
+      // ham AYNAN o'sha loyiha_id yuboriladi, aks holda job hujjatni rad etadi.
+      const loyihaId = objects.find(o => o.id === objId)?.loyiha_id ?? null;
+      const fd = new FormData();
+      fd.append('fayl', file); fd.append('kompaniya_id', String(companyId));
+      if (loyihaId != null) fd.append('loyiha_id', String(loyihaId));
+      fd.append('obyekt_id', String(objId)); fd.append('turi', 'f2_akt');
+      fd.append('operation_id', yangiOperationId()); fd.append('sha256', sha256); fd.append('size', String(file.size));
+      const r = await fetch('/api/hujjat-yukla', { method: 'POST', body: fd });
+      const j: any = await r.json().catch(() => null);
+      return j && j.ok ? Number(j.document_id) : undefined;
+    } catch { return undefined; }
   }
   async function match() {
     if (!book || !cols || !objectId) return;
@@ -195,7 +222,13 @@ function NativeSession({ companyId }: { companyId: number }) {
       const index = new Map<number, LrvNode>(rows.map(q => [q.id, { type: q.tur as LrvNode['type'], kod: q.kod || undefined, nom: q.nom || undefined, birlik: q.birlik || undefined, row: q.id, varaq: 'SB', children: [] }]));
       const roots: LrvNode[] = [];
       for (const q of rows) { const n = index.get(q.id)!; const parent = q.ota_id == null ? undefined : index.get(q.ota_id); if (parent) parent.children!.push(n); else roots.push(n); }
-      const response = await fetch('/api/f2-moslash', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amal: 'moslash', aktTree: built.tree, lrvTree: roots }) });
+      const uploadPromise = rawFile.current
+        ? sourceniR2gaYukla(rawFile.current, Number(objectId)).then(id => { sourceDocId.current = id; })
+        : Promise.resolve();
+      const [response] = await Promise.all([
+        fetch('/api/f2-moslash', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amal: 'moslash', aktTree: built.tree, lrvTree: roots }) }),
+        uploadPromise,
+      ]);
       if (!response.ok) throw new Error('Moslashtirish bajarilmadi.');
       const result = await response.json() as F2MatchResult & { ok: boolean };
       if (!result.ok) throw new Error('Moslashtirish bajarilmadi.');
@@ -222,7 +255,7 @@ function NativeSession({ companyId }: { companyId: number }) {
    * SOURCE yozish yo'lining o'zi emas (Codex handoff SS4 qat'iy chegara). */
   async function qoralamaniSaqla(leaves: F2ExactManbaTugun[], bindings: Map<string, number>, names: Map<string, string>) {
     try {
-      const job = await sbT2F2ImportJobYarat({ obyektId: Number(objectId), operationId: yangiOperationId(), totalRows: leaves.length });
+      const job = await sbT2F2ImportJobYarat({ obyektId: Number(objectId), operationId: yangiOperationId(), totalRows: leaves.length, sourceDocumentId: sourceDocId.current });
       if (!job.ok || job.job_id == null) throw new Error(job.error || job.code || 'job yaratilmadi');
       jobId.current = job.job_id; jobVersiya.current = 1;
       try { localStorage.setItem(jobKey(objectId), String(job.job_id)); } catch { /* Faqat kesh -- ishlamasa ham davom etamiz. */ }
@@ -301,8 +334,25 @@ function NativeSession({ companyId }: { companyId: number }) {
     </fieldset>
     {cols && <fieldset disabled={busy || done} className="karta p-3 flex flex-wrap gap-3"><legend>Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>{(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => <label key={k}>{k}<input className="w-16 border" type="number" min="1" value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} /></label>)}<button onClick={() => void match()} disabled={!objectId || !month}>Moslashtirish</button></fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
-    {source.length > 0 && <><p>{source.length} manba qatoridan {source.filter(n => mapping.has(n.uid)).length} tasi bog‘landi.</p>
-      <details><summary>Bog‘lanishlarni ko‘rish</summary><div className="overflow-auto"><table className="w-full text-sm"><thead><tr><th>F2 manba</th><th>Smeta qatori</th><th>Hajm</th><th>Narx</th><th>Hujjat summasi</th></tr></thead><tbody>{source.slice(page * 50, page * 50 + 50).map(n => <tr key={n.uid}><td>{labels.get(n.uid)}</td><td>{targets.get(mapping.get(n.uid) || 0) || 'Moslashtirilmagan'}</td><td>{n.hajm}</td><td>{n.narx ?? '—'}</td><td>{n.summa ?? '—'}</td></tr>)}</tbody></table></div><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Oldingi</button><span> {page + 1} / {Math.ceil(source.length / 50)} </span><button disabled={(page + 1) * 50 >= source.length} onClick={() => setPage(p => p + 1)}>Keyingi</button></details>
+    {source.length > 0 && <>{(() => {
+      const korinadigan = faqatMoslashmagan ? source.filter(n => !mapping.has(n.uid)) : source;
+      const nishonlar = [...targets.entries()];
+      return <>
+        <p>{source.length} manba qatoridan {source.filter(n => mapping.has(n.uid)).length} tasi bog‘landi.
+          {' '}<label className="ml-2 text-[12px]"><input type="checkbox" checked={faqatMoslashmagan} onChange={e => { setFaqatMoslashmagan(e.target.checked); setPage(0); }} /> faqat moslashmaganlar</label>
+        </p>
+        <details open={faqatMoslashmagan}><summary>Bog‘lanishlarni ko‘rish va qo‘lda tuzatish</summary><div className="overflow-auto"><table className="w-full text-sm"><thead><tr><th>F2 manba</th><th>Smeta qatori</th><th>Hajm</th><th>Narx</th><th>Hujjat summasi</th></tr></thead><tbody>{korinadigan.slice(page * 50, page * 50 + 50).map(n => <tr key={n.uid}><td>{labels.get(n.uid)}</td><td>
+          <select value={mapping.get(n.uid) ?? ''} onChange={e => {
+            const v = e.target.value; const yangi = new Map(mapping);
+            if (v) yangi.set(n.uid, Number(v)); else yangi.delete(n.uid);
+            setMapping(yangi);
+          }}>
+            <option value="">— Moslashtirilmagan —</option>
+            {nishonlar.map(([id, nom]) => <option key={id} value={id}>{nom}</option>)}
+          </select>
+        </td><td>{n.hajm}</td><td>{n.narx ?? '—'}</td><td>{n.summa ?? '—'}</td></tr>)}</tbody></table></div><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Oldingi</button><span> {page + 1} / {Math.max(1, Math.ceil(korinadigan.length / 50))} </span><button disabled={(page + 1) * 50 >= korinadigan.length} onClick={() => setPage(p => p + 1)}>Keyingi</button></details>
+      </>;
+    })()}
       <F2PreapprovalAudit aktBarglar={source} getSmetaId={uid => mapping.get(uid)} />
       {payload.error && <p role="alert">{payload.error}</p>}
       <label className="block"><input type="checkbox" checked={reviewed} disabled={busy || done} onChange={e => setReviewed(e.target.checked)} /> Varaq, davr va moslashtirish natijasini tekshirdim</label>

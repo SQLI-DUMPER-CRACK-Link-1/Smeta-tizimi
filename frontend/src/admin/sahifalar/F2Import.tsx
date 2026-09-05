@@ -107,17 +107,21 @@ function formatVol(val: any) {
 
 const QADAMLAR = ['Fayl', "Moslashtirish va bog'lash", 'Yozish'];
 
+/* T2-PTO-DAILY-FINAL-CUTOVER-008: native (GAS'siz) endi DEFAULT/canonical.
+ * Legacy GAS yo'li favqulodda holat uchun kod ichida saqlanadi, lekin
+ * kundalik business flow emas -- shuning uchun default `native=true`,
+ * checkbox esa "muammo bo'lsa eskisiga o'tish" sifatida teskari ishlaydi. */
 export function F2Import() {
   const [native, setNative] = useState(() => {
-    try { return localStorage.getItem('t2-f2-native-mode') === 'true'; } catch { return false; }
+    try { return localStorage.getItem('t2-f2-native-mode') !== 'false'; } catch { return true; }
   });
-  return <><label className="flex items-center gap-2 p-3 text-sm">
-    <input type="checkbox" checked={native} onChange={(e) => {
-      const next = e.target.checked;
+  return <><label className="flex items-center gap-2 p-3 text-[12px] text-text-mute">
+    <input type="checkbox" checked={!native} onChange={(e) => {
+      const useLegacy = e.target.checked;
       if (!window.confirm('Rejim almashsa, saqlanmagan import yopiladi. Davom etasizmi?')) return;
-      try { localStorage.setItem('t2-f2-native-mode', String(next)); } catch { /* Joriy sessiyada ishlaydi. */ }
-      setNative(next);
-    }} />Yangi (GAS'siz) rejim — sinov
+      try { localStorage.setItem('t2-f2-native-mode', String(!useLegacy)); } catch { /* Joriy sessiyada ishlaydi. */ }
+      setNative(!useLegacy);
+    }} />Muammo bo'lsa: eski (GAS) rejimga o'tish
   </label>{native ? <F2ImportNative /> : <F2ImportLegacy />}</>;
 }
 
