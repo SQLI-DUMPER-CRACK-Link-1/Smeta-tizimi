@@ -515,6 +515,53 @@
       ],
       "production_write_allowed": false,
       "_izoh": "New lane opened 2026-09-05, running in parallel with Claude's own independent review of the same branch (not a substitute for it -- two independent reviews, results compared). Read-only/audit-only, no DB needed (all tests are mocked). Specifically asks Antigravity to render a judgment on Codex's own self-disclosed open question: exactWrite() blocks ANY zero/missing price+amount combination entirely, which is stricter than f2ExactPayloadQur's own priceIntentionallyAbsent allowance -- is this the right conservative default, or does it wrongly block a legitimate no-price F2 row?"
+    },
+    {
+      "id": "T2-PTO-CLOSURE-007-CODEX-NARXLAR-MARKAZI-CUTOVER",
+      "title": "Full GAS-free cutover of /admin/narxlar (Narxlar markazi): t2_narx_belgila/t2_narx_sana_qosh RPCs matching the already-written sb-yoz.ts gateway contract, then flag-gated native UI reusing TestNarxlar.tsx -- a large, multi-milestone owner-requested goal, not a single bounded task",
+      "owner": "codex",
+      "branch": "codex/t2-narxlar-markazi-cutover-v1",
+      "base_sha": "9151569",
+      "base_ref": "origin/integration/next-main-release-v1",
+      "status": "active",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": [
+        "supabase/migrations/*_t2_narx_belgila*.sql",
+        "supabase/migrations/*_t2_narx_sana_qosh*.sql",
+        "frontend/src/admin/sahifalar/NarxlarNative.tsx",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_NARXLAR_MARKAZI_CUTOVER_REPORT.md"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_CODEX_NARXLAR_MARKAZI_CUTOVER.md",
+        "frontend/src/api/t2-narx.ts"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "2026-09-05: owner explicitly asked for large, multi-milestone independent goals for idle agent capacity (verbatim: 'katta katta ishlarni ber goal qilib beraman shu bilan ishlab yuraveradi'), as opposed to the earlier single tightly-bounded lane pattern. Claude found the read side of this domain (t2_narx_markaz/t2_topilmaganlar/t2_narx_qol_xavf views, documented in t2-narx.ts) and the sb-yoz.ts write gateway (narx_belgila/narx_sana_qosh parameter shaping, lines 481-528) already fully built -- only the actual t2_narx_belgila/t2_narx_sana_qosh RPCs are missing (0 matches across all local migrations) and there is a working TestNarxlar.tsx UI with zero canonical route wiring, mirroring the exact pattern already solved for F2Import. production_write_allowed:true narrative belongs in the brief's synthetic-data-then-cleanup section, per this ledger's standing convention -- the flag itself stays false."
+    },
+    {
+      "id": "T2-PTO-CLOSURE-007-ANTIGRAVITY-DOCUMENT-EXPORT",
+      "title": "Real downloadable document generation (Nakopitelnaya vedomost/F-2/Forma-3, per docs/architecture/UZ_CONSTRUCTION_DOCUMENT_CATALOG_AND_TEMPLATES_V1.md TPL-05/06/07) from the already-built, already-tested construction-document-control calculation engine -- a large, multi-milestone owner-requested goal",
+      "owner": "antigravity",
+      "branch": null,
+      "base_sha": "9151569",
+      "base_ref": "origin/integration/next-main-release-v1",
+      "status": "active",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": [
+        "frontend/src/lib/construction-document-control/export-*.ts",
+        "ops/handoff/T2_PTO_CLOSURE_007_ANTIGRAVITY_DOCUMENT_EXPORT_REPORT.md"
+      ],
+      "depends_on": [],
+      "must_read": [
+        "AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/T2_PTO_CLOSURE_007_ANTIGRAVITY_DOCUMENT_EXPORT.md",
+        "docs/architecture/UZ_CONSTRUCTION_DOCUMENT_CATALOG_AND_TEMPLATES_V1.md",
+        "frontend/src/lib/construction-document-control/types.ts"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "2026-09-05: owner asked for large, multi-milestone independent goals for idle agent capacity (same request that produced the sibling Narxlar lane). Owner separately confirmed the UZ construction document catalog doc should be treated as already legally reviewed -- no external lawyer sign-off gate blocks acting on its TPL specs, though the doc's own Section 9 law against fabricating unknown legal/financial values (VAT rate, Forma-3 totals) still stands independently of that authorization; the brief repeats this explicitly. Claude found createExportPreview()/ExportPreview.tsx only render an in-browser JSX summary -- no actual downloadable .xlsx/.docx matching the legal templates exists anywhere. The calculation engine itself (calculateProgressValuation, 5 existing test files) is explicitly out of scope to modify -- this lane only formats its already-correct output into real documents. No DB/migration work expected; flagged as an exception path in the brief if it turns out to be needed."
     }
   ]
 }
