@@ -41,9 +41,12 @@ export function exactWrite(nodes: F2ExactManbaTugun[], mapping: Map<string, numb
     throw new Error('Narx yoki summa yo‘q/nol. Bu holat uchun manba kontrakti aniqlashtirilmaguncha yozish yopiq.');
   }
   const rows = f2AggregatsiyaQator(nodes, uid => mapping.get(uid));
-  if (rows.some(r => r.barchaNarxlar.length > 1)) throw new Error('Bir smeta qatoriga turli narxlar tushdi. Bog‘lanishni tekshiring.');
   const result = f2ExactPayloadQur(rows);
-  if (!result.ok) throw new Error('Hujjat summasi noaniq. Yozish to‘xtatildi.');
+  if (!result.ok) {
+    throw new Error(result.sabab === 'CONFLICTING_PRICES'
+      ? 'Bir smeta qatoriga turli narxlar tushdi. Birinchi narx tanlanmaydi; bog‘lanishni tekshiring.'
+      : 'Hujjat summasi noaniq. Yozish to‘xtatildi.');
+  }
   return result.qatorlar;
 }
 

@@ -29,7 +29,15 @@ function IstisnoMatni({ istisno }: { istisno: F2Exception }) {
     return <><FmtN val={istisno.hisoblangan} /> ≠ <FmtN val={istisno.hujjatdagi} /> (farq <FmtN val={istisno.farq} />) — hujjat summasi saqlanadi, tuzatilmaydi.</>;
   }
   if (istisno.turi === 'CONFLICTING_PRICES') {
-    return <>Bu qatorga birlashgan manba qatorlarida turli narx uchradi: {istisno.narxlar.map((n, i) => <span key={n}>{i > 0 ? ', ' : ''}<FmtN val={n} /></span>)} — birinchisi ({istisno.narxlar[0]}) ishlatiladi, qolganlari e'tibordan chetda qolmasin.</>;
+    return (
+      <>
+        Bu qatorga birlashgan manba qatorlarida turli narx uchradi:{' '}
+        {istisno.narxlar.map((n, i) => (
+          <span key={n}>{i > 0 ? ', ' : ''}<FmtN val={n} /></span>
+        ))}
+        {' '}— yozish to'xtaydi; birinchi narx tanlanmaydi.
+      </>
+    );
   }
   return <>Manfiy hajm (<FmtN val={istisno.hajm} />) — pererraschyot yoki qaytarilgan ish bo'lishi mumkin, tekshiring.</>;
 }

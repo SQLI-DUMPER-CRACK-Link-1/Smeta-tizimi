@@ -35,8 +35,9 @@ export type F2ExactQator = {
    * Shu qatorga birlashgan barcha manba tugunlarida uchragan (nol/manfiy
    * bo'lmagan) narxlar, birinchi ko'rilgan tartibda, TAKRORLANMAY. Odatda
    * bitta element (F2'da bir qator uchun narx bitta bo'ladi). Bir nechtasi
-   * bo'lsa -- `CONFLICTING_PRICES` istisnosi (`narx` maydoni hamon
-   * BIRINCHISINI saqlaydi, orqaga qarab moslik uchun).
+   * bo'lsa -- `CONFLICTING_PRICES` istisnosi. `narx` maydoni faqat
+   * diagnostika/orqaga mos o'qish uchun birinchi qiymatni saqlaydi;
+   * `f2ExactPayloadQur` bunday qatorni yozishga bermaydi.
    */
   barchaNarxlar: number[];
 };
@@ -44,8 +45,12 @@ export type F2ExactQator = {
 /**
  * Bir xil `qator_id`ga bog'langan bir nechta F2 qatorini (masalan bir
  * necha oy/varaq bo'lagi bitta smeta qatoriga tushsa) BITTA yozuvga
- * yig'adi: hajm/summa QO'SHILADI, narx birinchi topilgan qiymatdan
- * olinadi (F2 da bir xil qator uchun narx odatda bitta bo'ladi).
+ * yig'adi: hajm/summa QO'SHILADI. Bitta kanonik qatorga turli manba
+ * narxlari tushsa, `narx` faqat diagnostika uchun birinchi qiymatni ushlab
+ * turadi; bunday qator tasdiqlash payloadiga KIRMAYDI. Bitta `t2_akt_qator`
+ * bir vaqtning o'zida ikki sertifikatlangan unit-price'ni halol ifodalay
+ * olmaydi, shuning uchun "birinchisini tanlash" moliyaviy haqiqatni yo'qotar
+ * edi.
  */
 export function f2AggregatsiyaQator(
   nodes: F2ExactManbaTugun[],
@@ -91,7 +96,9 @@ export type F2ExactPayloadQatori = {
 export type F2ExactPayloadNatija =
   | { ok: true; qatorlar: F2ExactPayloadQatori[] }
   /** Narxi bor-yu F2 faylning o'z summasi yo'q qatorlar bor — qty*narx TO'QILMAYDI, foydalanuvchi ko'rib chiqishi kerak. */
-  | { ok: false; sabab: 'NEEDS_REVIEW'; noaniqSoni: number; noaniqQatorIdlar: number[] };
+  | { ok: false; sabab: 'NEEDS_REVIEW'; qatorIdlar: number[] }
+  /** Bitta kanonik qatorga bir nechta sertifikatlangan narx birlashtirib bo'lmaydi. */
+  | { ok: false; sabab: 'CONFLICTING_PRICES'; qatorIdlar: number[] };
 
 /**
  * Aggregatsiyalangan qatorlardan `t2_akt_yarat_v2` uchun aniq (exact)
@@ -99,13 +106,20 @@ export type F2ExactPayloadNatija =
  * payload yozmaydi), chaqiruvchi buni ko'rsatishi kerak.
  */
 export function f2ExactPayloadQur(rows: F2ExactQator[]): F2ExactPayloadNatija {
+  const narxZiddiyati = rows.filter((r) => r.barchaNarxlar.length > 1);
+  if (narxZiddiyati.length > 0) {
+    return {
+      ok: false,
+      sabab: 'CONFLICTING_PRICES',
+      qatorIdlar: narxZiddiyati.map((r) => r.qator_id),
+    };
+  }
   const noaniq = rows.filter((r) => r.narx != null && !r.summaBor);
   if (noaniq.length > 0) {
     return {
       ok: false,
       sabab: 'NEEDS_REVIEW',
-      noaniqSoni: noaniq.length,
-      noaniqQatorIdlar: noaniq.map((r) => r.qator_id),
+      qatorIdlar: noaniq.map((r) => r.qator_id),
     };
   }
   return {
@@ -150,10 +164,8 @@ export type F2Exception =
   /**
    * Bir xil smeta qatoriga birlashgan F2 manba tugunlarida IKKI XIL narx
    * uchradi (masalan hujjat ichida narx o'rtada o'zgargan yoki kiritish
-   * xatosi). Aggregatsiya faqat BIRINCHISINI ishlatadi (`row.narx`) --
-   * bu ko'pincha ARITHMETIC_MISMATCH sifatida ham ko'rinadi, lekin
-   * CONFLICTING_PRICES aynan SABABNI ko'rsatadi (Antigravity'ning
-   * T2-LRV-CLOSURE-006-ANTIGRAVITY-MERGE-AUDIT topilmasi asosida qo'shildi).
+   * xatosi). Ularni bitta sertifikatlangan qatorga birlashtirish taqiqlanadi;
+   * CONFLICTING_PRICES aynan sababni ko'rsatadi.
    */
   | { turi: 'CONFLICTING_PRICES'; qatorId: number; narxlar: number[] };
 

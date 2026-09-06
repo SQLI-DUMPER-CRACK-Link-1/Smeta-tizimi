@@ -76,8 +76,7 @@ describe('F2 exact payload — NEEDS_REVIEW ambiguity guard (never fabricates qt
     expect(natija.ok).toBe(false);
     if (!natija.ok) {
       expect(natija.sabab).toBe('NEEDS_REVIEW');
-      expect(natija.noaniqSoni).toBe(1);
-      expect(natija.noaniqQatorIdlar).toEqual([2]);
+      expect(natija.qatorIdlar).toEqual([2]);
     }
   });
 
@@ -94,6 +93,19 @@ describe('F2 exact payload — NEEDS_REVIEW ambiguity guard (never fabricates qt
         priceIntentionallyAbsent: true,
       });
     }
+  });
+
+  it('conflicting source prices block the whole batch instead of silently selecting the first price', () => {
+    const rows = f2AggregatsiyaQator(
+      [
+        { uid: 'ok', hajm: 1, narx: 100, summa: 100 },
+        { uid: 'first', hajm: 5, narx: 100, summa: 500 },
+        { uid: 'second', hajm: 5, narx: 150, summa: 750 },
+      ],
+      (uid) => (uid === 'ok' ? 1 : 2),
+    );
+    const natija = f2ExactPayloadQur(rows);
+    expect(natija).toEqual({ ok: false, sabab: 'CONFLICTING_PRICES', qatorIdlar: [2] });
   });
 
   it('the worked example (qty=10, price=123.45, source amount=1234.49) is carried through verbatim, not recomputed', () => {

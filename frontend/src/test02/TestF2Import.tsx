@@ -1376,9 +1376,13 @@ export default function TestF2Import() {
     if (tur === 'f2') {
       f2Payload = f2ExactPayloadQur(rows);
       if (!f2Payload.ok) {
+        const xabar = f2Payload.sabab === 'CONFLICTING_PRICES'
+          ? `${f2Payload.qatorIdlar.length} ta smeta qatoriga turli F2 narxlari birlashdi. ` +
+            `Birinchi narx tanlanmaydi: manba qatorlarini alohida bog'lang yoki hujjatni tekshiring.`
+          : `${f2Payload.qatorIdlar.length} ta qatorda narx bor, lekin F2 faylning o'z summasi (SUMMA ustuni) yo'q — ` +
+            `summa qty×narx dan TO'QILMAYDI. Faylni tekshiring yoki shu qatorlarni qo'lda ko'rib chiqing.`;
         toast(
-          `${f2Payload.noaniqSoni} ta qatorda narx bor, lekin F2 faylning o'z summasi (SUMMA ustuni) yo'q — ` +
-          `summa qty×narx dan TO'QILMAYDI. Faylni tekshiring yoki shu qatorlarni qo'lda ko'rib chiqing.`,
+          xabar,
           'danger', undefined, 15000,
         );
         return;
@@ -2111,7 +2115,6 @@ export default function TestF2Import() {
     </Sahifa>
   );
 }
-
 
 
 
