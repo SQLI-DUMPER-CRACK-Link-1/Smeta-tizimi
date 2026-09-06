@@ -44,5 +44,7 @@ const yozStart = client.indexOf('export async function yozAmali');
 const yoz = yozStart >= 0 ? client.slice(yozStart, yozStart + 1800) : '';
 must('frontend yozAmali raw response bodyni userga chiqarmaydi',
   yozStart >= 0 && !/matn\.slice|HTTP \$\{r\.status\}: \$\{matn/.test(yoz));
+must('native Supabase wrappers network tafsilotini userga chiqarmaydi',
+  !/Tarmoq:\s*['"]?\s*\+\s*\(e\?\.message|Tarmoq:\s*['"]?\s*\+\s*\(e\?\.message/.test(client.slice(0, 590)));
 
-console.log('  8 checks passed');
+console.log('  9 checks passed');
