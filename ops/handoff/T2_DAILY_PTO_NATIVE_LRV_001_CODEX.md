@@ -88,3 +88,7 @@ Yangi oqim:
 `f2-native-preparation.ts` pure kontrakti smeta narxiga fallbackni ataylab
 bilmaydi. `f2-native-preparation.test.ts` exact 1-tiyin farqi, Fakt limiti va
 bo'sh manba narxini regression bilan tekshiradi.
+
+`App.daily-native-routes.test.ts` kundalik admin route'lari eski GAS
+komponentlariga qaytmasligini regression bilan tekshiradi: LRV, Fakt, F2 import
+va F2 tayyorlashning barchasi native komponentlarda qoladi.
