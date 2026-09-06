@@ -27,6 +27,7 @@
  */
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
+import { xavfsizUpstream } from '../_shared/xato';
 
 /* Faqat shu jadvallar o'qiladi. Yangi jadval kerak bo'lsa SHU YERGA
    qo'shiladi — «hamma jadval ochiq» holatiga hech qachon o'tmaymiz. */
@@ -404,8 +405,13 @@ export const onRequestPost: PagesFunction<{
       Prefer: 'count=exact',
     };
 
-    /** Bitta sahifani o'qiydi. Xato bo'lsa `xato` maydonida qaytadi. */
-    async function sahifaOl(offset: number, limit: number) {
+    type SahifaNatija =
+      | { bolak: unknown[]; jami: number | null }
+      | { failed: true; status: number; detail: string };
+
+    /** Bitta sahifani o'qiydi. Upstream tafsiloti faqat keyingi xavfsiz
+     * boundaryga beriladi, brauzerga hech qachon qaytarilmaydi. */
+    async function sahifaOl(offset: number, limit: number): Promise<SahifaNatija> {
       const p = new URLSearchParams();
       p.set('select', so.ustunlar || '*');
       if (so.tartib) p.set('order', so.tartib);
@@ -414,10 +420,10 @@ export const onRequestPost: PagesFunction<{
       const url = baza + '?' + p.toString() + (so.filtr ? '&' + so.filtr : '');
       const r = await fetch(url, { headers: boshHeaders });
       const matn = await r.text();
-      if (!r.ok) return { xato: 'Supabase ' + r.status + ': ' + matn.slice(0, 300) };
+      if (!r.ok) return { failed: true, status: r.status, detail: matn.slice(0, 500) };
       let bolak: unknown[];
       try { bolak = JSON.parse(matn); }
-      catch { return { xato: 'Supabase JSON qaytarmadi: ' + matn.slice(0, 200) }; }
+      catch { return { failed: true, status: 502, detail: matn.slice(0, 500) }; }
       const cr = r.headers.get('content-range') || '';
       const jm = cr.split('/')[1];
       return { bolak: Array.isArray(bolak) ? bolak : [],
@@ -450,8 +456,8 @@ export const onRequestPost: PagesFunction<{
     const msBirinchi = Date.now() - tBir;
     let msQolgan = 0;
     soro++;
-    if ('xato' in birinchi && birinchi.xato) {
-      return Response.json({ ok: false, error: birinchi.xato });
+    if ('failed' in birinchi) {
+      return xavfsizUpstream(birinchi.status, birinchi.detail);
     }
     qatorlar = birinchi.bolak || [];
     jamiServerda = birinchi.jami ?? null;
@@ -464,7 +470,7 @@ export const onRequestPost: PagesFunction<{
 
     if (qatorlar.length >= SAHIFA && qatorlar.length < olinishiKerak) {
       /* Qolgan sahifalar ro'yxati — hammasi BIR VAQTDA */
-      const vazifalar: Promise<{ bolak?: unknown[]; jami?: number | null; xato?: string }>[] = [];
+      const vazifalar: Promise<SahifaNatija>[] = [];
       for (let off = qatorlar.length; off < olinishiKerak && vazifalar.length < MAX_SORO - 1;
            off += SAHIFA) {
         vazifalar.push(sahifaOl(off, Math.min(SAHIFA, olinishiKerak - off)));
@@ -475,7 +481,7 @@ export const onRequestPost: PagesFunction<{
       const natijalar = await Promise.all(vazifalar);
       msQolgan = Date.now() - tQol;
       for (const nat of natijalar) {
-        if (nat.xato) return Response.json({ ok: false, error: nat.xato });
+        if ('failed' in nat) return xavfsizUpstream(nat.status, nat.detail);
         if (nat.bolak?.length) qatorlar = qatorlar.concat(nat.bolak);
       }
     }
@@ -501,11 +507,7 @@ export const onRequestPost: PagesFunction<{
       msQolgan,
       ms: Date.now() - t0,
     });
-  } catch (err: any) {
-    return Response.json({
-      ok: false,
-      error: 'Cloudflare xatosi: ' + (err?.message || String(err)),
-      ms: Date.now() - t0,
-    });
+  } catch (err: unknown) {
+    return xavfsizUpstream(502, err);
   }
 };

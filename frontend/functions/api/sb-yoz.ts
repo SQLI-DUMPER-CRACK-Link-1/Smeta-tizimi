@@ -22,6 +22,7 @@
  */
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
+import { xavfsizUpstream } from '../_shared/xato';
 
 /** Har amal → qaysi RPC va uni kim chaqira oladi. */
 const AMALLAR = {
@@ -1811,20 +1812,18 @@ export const onRequestPost: PagesFunction<{
       return Response.json({ ok: false, error: 'Katalog kuzatuvlari yozilmadi. Ruxsat va manba doirasini tekshiring.' }, { status: 409 });
     }
     if (!r.ok) {
-      return Response.json({ ok: false, error: 'Supabase ' + r.status + ': ' + matn.slice(0, 300) });
+      return xavfsizUpstream(r.status, matn);
     }
     let natija: any;
     try { natija = JSON.parse(matn); } catch {
-      return Response.json({ ok: false, error: 'Baza JSON qaytarmadi: ' + matn.slice(0, 200) });
+      return xavfsizUpstream(502, matn);
     }
 
     /* Baza `{ok:false, sabab:'ziddiyat'|'invariant', …}` qaytarishi
        MUMKIN va bu xato emas — normal holat. O'zgartirmasdan uzatamiz. */
     return Response.json({ ...natija, amal, ms: Date.now() - t0 });
 
-  } catch (err: any) {
-    return Response.json({ ok: false,
-      error: 'Cloudflare xatosi: ' + (err?.message || String(err)),
-      ms: Date.now() - t0 });
+  } catch (err: unknown) {
+    return xavfsizUpstream(502, err);
   }
 };
