@@ -160,3 +160,45 @@ so‘nggi commitda remote’ga push qilindi. Integrator keyingi authenticated
 smokeda obyektida tasdiqlangan F2 davri yo‘q holat endi crash emasligini,
 tasdiqlangan davrli obyektlar esa avvalgi calculation path bilan ishlashini
 tekshirishi kerak.
+
+## 2026-09-06 — aniq remote checkpoint va authenticated smoke dalili
+
+- **REMOTE FIX HEAD:** `a87de0f0839ddcdd76eeb2b90dd92f23bbdaaf67`
+  (`fix(workbench): handle objects without approved F2 periods`).
+- **REMOTE BRANCH:** `origin/codex/t2-daily-workflow-reliability-fix-v1`.
+- **CLEAN TREE:** commitdan keyin ishchi daraxt toza; `git diff --check` PASS.
+- **CURRENT RELEASE REFS:** `origin/integration/next-main-release-v1 =
+  1eaaccbb1d598feebacc525573ef32c0d258a356`, `origin/main =
+  7a49befb611408c8b39ebd8e564465eb423b61bf`; ikkalasi ham o‘zgartirilmadi.
+
+### Smoke holati
+
+`https://adfc2e5e.smeta-tizimi.pages.dev` dagi autentifikatsiyalangan owner
+sessiyasi bilan dashboard, company context, A→B almashinuvi, Smeta/LRV,
+Fakt, F2 import, F2 tayyorlash, F2 tarixi, Participants va Document Center
+yo‘llari o‘qish-only smoke’da ko‘rildi. `Yangi O‘zbekiston bog‘i` uchun
+`/admin/hujjat-nazorat`da project tanlanganda candidate build hali ham
+`PROGRESS_PERIOD_OUT_OF_RANGE` bilan qulaydi; browser console buni tasdiqladi.
+Bu build `a87de0f` emas.
+
+Fix branch preview’da authenticated sessiya yo‘q (`/api/sessiya` → 401), shu
+sabab `a87de0f` bilan authenticated end-to-end PASS da’vosi qilinmadi.
+
+### `a87de0f` verification
+
+- Focused Vitest: **10/10 PASS**.
+- Full Vitest: **53 fayl, 277/277 PASS**.
+- `npm run typecheck:functions`: **PASS**.
+- `npx tsc --noEmit -p tsconfig.app.json`: **PASS**.
+- `npm run build`: **PASS**; faqat mavjud warninglar.
+- `npm run lint`: **PASS**, 0 error.
+- `npm run tekshir`: **PASS**.
+- `node ops/governance-check.cjs`: **PASS**.
+
+### Release gate
+
+`a87de0f` integration/main’ga olinib, shu commitni o‘z ichiga olgan
+authenticated Preview’da `hujjat-nazorat` no-approved-F2 empty-state qayta
+tekshirilmaguncha main/Production deploy qilinmasin. Supabase migration, R2,
+Cloudflare production binding va GAS production deployment bu checkpointda
+tegilmadi.
