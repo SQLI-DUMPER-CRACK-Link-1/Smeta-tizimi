@@ -62,7 +62,11 @@ export function xavfsizXato(code: string, status: number, xom?: unknown): Respon
   return Response.json({ ok: false, code, xato: xabar, error: xabar }, { status });
 }
 
-/** Supabase/uchinchi tomon javobini xom tafsilotsiz qaytaradi. */
-export function xavfsizUpstream(status: number, xom?: unknown): Response {
-  return xavfsizXato(xavfsizKod(xom, status), status >= 400 && status < 500 ? status : 502, xom);
+/** Supabase/uchinchi tomon javobini xom tafsilotsiz qaytaradi.
+ * `javobStatusi` kerak bo'lsa gateway o'zining xavfsiz HTTP semantikasini
+ * (masalan, not-applied=501 yoki permission=403) saqlab qoladi; body'dagi
+ * upstream matni hech qachon response'ga ko'chmaydi. */
+export function xavfsizUpstream(status: number, xom?: unknown, javobStatusi?: number): Response {
+  const responseStatus = javobStatusi ?? (status >= 400 && status < 500 ? status : 502);
+  return xavfsizXato(xavfsizKod(xom, status), responseStatus, xom);
 }

@@ -17,6 +17,8 @@ const helper = stripComments(R('frontend', 'functions', '_shared', 'xato.ts'));
 const readApi = stripComments(R('frontend', 'functions', 'api', 'sb.ts'));
 const writeApi = stripComments(R('frontend', 'functions', 'api', 'sb-yoz.ts'));
 const client = stripComments(R('frontend', 'src', 'api', 'supabase.ts'));
+const nativeGateways = ['hujjat-nazorat.ts', 'boss-dashboard.ts', 'system-control.ts']
+  .map((file) => stripComments(R('frontend', 'functions', 'api', file))).join('\n');
 
 console.log('\n── Xavfsiz upstream error boundary ──');
 must('shared helper xavfsizUpstream mavjud', /export function xavfsizUpstream\(/.test(helper));
@@ -46,5 +48,9 @@ must('frontend yozAmali raw response bodyni userga chiqarmaydi',
   yozStart >= 0 && !/matn\.slice|HTTP \$\{r\.status\}: \$\{matn/.test(yoz));
 must('native Supabase wrappers network tafsilotini userga chiqarmaydi',
   !/Tarmoq:\s*['"]?\s*\+\s*\(e\?\.message|Tarmoq:\s*['"]?\s*\+\s*\(e\?\.message/.test(client.slice(0, 590)));
+must('Boss/Control/Workbench gateway upstream matnini userga chiqarmaydi',
+  /xavfsizUpstream/.test(nativeGateways)
+  && !/xato\s*:\s*\([^\n]*(?:text\.slice|j\.message|err\?\.message)/.test(nativeGateways)
+  && !/xato\s*:\s*String\(err/.test(nativeGateways));
 
-console.log('  9 checks passed');
+console.log('  10 checks passed');

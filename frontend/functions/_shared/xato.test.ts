@@ -28,4 +28,17 @@ describe('xavfsizUpstream', () => {
     expect(body.error).toBe('Ma’lumot boshqa joyda o‘zgargan — sahifani yangilang.');
     log.mockRestore();
   });
+
+  it('keeps a gateway status override without exposing the upstream body', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const response = xavfsizUpstream(200, JSON.stringify({
+      code: 'AUTHORIZATION_DENIED', message: 'internal relation detail',
+    }), 403);
+    const body = await response.json() as Record<string, unknown>;
+
+    expect(response.status).toBe(403);
+    expect(body).toMatchObject({ ok: false, code: 'AUTHORIZATION_DENIED' });
+    expect(JSON.stringify(body)).not.toContain('internal relation detail');
+    log.mockRestore();
+  });
 });
