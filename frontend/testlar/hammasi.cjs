@@ -39,6 +39,7 @@ const TESTLAR = [
   ['DOCUMENT CENTER real FILE-TRUTH wiring', 't2_document_center.test.cjs'],
   ['DRIVE REPLICA worker + write-back', 't2_drive_replica.test.cjs'],
   ['SHEETS write-back reference', 't2_sheets_writeback.test.cjs'],
+  ['T2 native daily core + dedicated Bridge', 't2_native_daily_core.test.cjs'],
   ['SECURITY P0 cross-cutting guards', 't2_security_p0.test.cjs'],
   ['SMETA/F2/NAKOPITELNIY + change control', 't2_smeta_f2_nakopitelniy.test.cjs'],
   ['PRE-MAIN adversarial release contracts', 'pre_main_release_qa.test.cjs'],

@@ -91,7 +91,7 @@ export function HolatNative() {
 
         {!validId && (
           <section className="karta border-warn/40 bg-warn/5 p-4 text-[13px] text-text-dim">
-            Eski matnli obyekt havolasi kanonik identity emas. Yuqoridan obyektni tanlang — sahifa keyin faqat raqamli `t2_obyekt.id` bilan ishlaydi.
+            Obyektni ro‘yxatdan tanlang. Ishchi smeta shu tanlov bo‘yicha yuklanadi.
           </section>
         )}
         {error && <section className="karta flex items-center gap-2 border-danger/40 bg-danger/5 p-4 text-[13px] text-danger"><AlertTriangle size={16} />{error}</section>}
