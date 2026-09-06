@@ -12,6 +12,9 @@ import { f2IstisnolarniGuruhla } from './f2-preapproval-audit';
 type F2PreapprovalAuditProps = {
   aktBarglar: F2ExactManbaTugun[];
   getSmetaId: (uid: string) => number | null | undefined;
+  /** Native PTO ekranida texnik qator IDlari foydalanuvchiga chiqarilmaydi.
+   * Legacy diagnostika oynasi uchun default qiymat ataylab saqlanadi. */
+  texnikIdentifikatorlarniKorsatish?: boolean;
 };
 
 const sarlavha: Record<F2Exception['turi'], string> = {
@@ -35,7 +38,7 @@ function IstisnoMatni({ istisno }: { istisno: F2Exception }) {
 }
 
 /** F2 tasdiqlashidan oldingi, faqat-istisnolar audit ko'rinishi. Hech narsa yozmaydi. */
-export function F2PreapprovalAudit({ aktBarglar, getSmetaId }: F2PreapprovalAuditProps) {
+export function F2PreapprovalAudit({ aktBarglar, getSmetaId, texnikIdentifikatorlarniKorsatish = true }: F2PreapprovalAuditProps) {
   const qatorlar = useMemo(
     () => f2AggregatsiyaQator(aktBarglar, getSmetaId),
     [aktBarglar, getSmetaId],
@@ -62,7 +65,7 @@ export function F2PreapprovalAudit({ aktBarglar, getSmetaId }: F2PreapprovalAudi
       {(Object.entries(guruhlar) as Array<[F2Exception['turi'], F2Exception[]]>).map(([turi, qatorlar]) => qatorlar.length > 0 && (
         <div key={turi} className="rounded-lg border border-border/60 bg-black/10 p-2.5 space-y-1.5">
           <p className="font-medium text-text"><AlertTriangle size={13} className="mr-1 inline text-warn" /> {sarlavha[turi]} ({qatorlar.length})</p>
-          {qatorlar.map((istisno) => <p key={`${istisno.turi}-${istisno.qatorId}`} className="text-text-dim pl-1">Qator #{istisno.qatorId}: <IstisnoMatni istisno={istisno} /></p>)}
+          {qatorlar.map((istisno) => <p key={`${istisno.turi}-${istisno.qatorId}`} className="text-text-dim pl-1">{texnikIdentifikatorlarniKorsatish ? `Qator #${istisno.qatorId}: ` : ''}<IstisnoMatni istisno={istisno} /></p>)}
         </div>
       ))}
     </section>

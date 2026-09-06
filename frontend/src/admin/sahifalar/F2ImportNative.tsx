@@ -9,6 +9,8 @@ import { readXlsx, f2FaylOqiCore, type XlsxWorkbook, type F2ColumnConfig, type S
 import { type AktNode, type LrvNode, type F2MatchResult } from '../../lib/f2-match-engine';
 import { f2AggregatsiyaQator, f2ExactPayloadQur, type F2ExactManbaTugun } from '../../test02/f2-exact-payload';
 import { F2PreapprovalAudit } from '../../test02/F2PreapprovalAudit';
+import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
+import { F2Daraxt, type DaraxtTugun } from '../../umumiy/ui/F2Daraxt';
 
 /* T2-GAS-EXIT-001 SS5/SS6 + T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT:
  * eski qattiq devor (15MB / 20000 qator) endi durable job/draft modeli bilan
@@ -41,7 +43,7 @@ function draftdanTiklash(qatorlar: { uid: string; hajm: number | null; narx: num
     if (q.hajm == null) continue; // hal_qilinmagan/otkazib_yuborildi -- moslashmagan, exactWrite baribir rad etadi
     source.push({ uid: q.uid, hajm: q.hajm, narx: q.narx, summa: q.summa });
     if (q.lrv_row != null) mapping.set(q.uid, q.lrv_row);
-    labels.set(q.uid, (q.kod || q.uid) + ' (davom ettirilgan sessiya)');
+    labels.set(q.uid, (q.kod || 'F2 manba qatori') + ' (davom ettirilgan sessiya)');
   }
   return { source, mapping, labels };
 }
@@ -87,6 +89,79 @@ export function exactWrite(nodes: F2ExactManbaTugun[], mapping: Map<string, numb
   return result.qatorlar;
 }
 
+function foydalanuvchiSababi(value: string | undefined, hasCandidates: boolean) {
+  const reason = (value || '').toLowerCase();
+  if (hasCandidates || reason.includes('ambig') || reason.includes('noaniq')) return 'Bir nechta nomzod — qo‘lda bog‘lang';
+  if (reason.includes('kod') || reason.includes('not_found')) return 'Kod topilmadi — qo‘lda bog‘lang';
+  if (reason.includes('bir') || reason.includes('unit')) return 'O‘lchov birligini tekshiring';
+  if (reason.includes('group') || reason.includes('kat')) return 'Resurs guruhini tekshiring';
+  return value ? 'Qo‘lda tekshirish kerak' : 'Moslanmagan — qatorni sudrab bog‘lang';
+}
+
+function qidiruvgaMos(n: DaraxtTugun, qidiruv: string) {
+  const q = qidiruv.trim().toLowerCase();
+  if (!q) return true;
+  return [n.nom, n.kod, n.bir].filter(Boolean).join(' ').toLowerCase().includes(q);
+}
+
+/** Daraxt filtri parentni faqat o'zi yoki ko'rinadigan farzandi mos bo'lsa qoldiradi. */
+function daraxtniFiltrla(nodes: DaraxtTugun[], keep: (node: DaraxtTugun) => boolean): DaraxtTugun[] {
+  const out: DaraxtTugun[] = [];
+  for (const node of nodes) {
+    const children = node.children ? daraxtniFiltrla(node.children, keep) : [];
+    if (keep(node) || children.length > 0) out.push({ ...node, children });
+  }
+  return out;
+}
+
+function t2SmetaDaraxti(rows: T2Qator[], mapping: Map<string, number>) {
+  const nodes = new Map<number, DaraxtTugun>();
+  for (const row of rows) {
+    nodes.set(row.id, {
+      kalit: String(row.id),
+      type: row.tur || 'rs',
+      nom: row.nom || 'Nomsiz smeta qatori',
+      kod: row.kod || undefined,
+      bir: row.birlik || undefined,
+      hajm: row.hajm ?? undefined,
+      summa: row.summa ?? undefined,
+      belgi: mappingHasTarget(mapping, row.id) ? '✓ F2 manbasi bog‘langan' : 'Moslanmagan',
+    });
+  }
+  const roots: DaraxtTugun[] = [];
+  for (const row of rows) {
+    const node = nodes.get(row.id)!;
+    const parent = row.ota_id == null ? undefined : nodes.get(row.ota_id);
+    if (parent) parent.children = [...(parent.children || []), node];
+    else roots.push(node);
+  }
+  return roots;
+}
+
+function mappingHasTarget(mapping: Map<string, number>, targetId: number) {
+  for (const value of mapping.values()) if (value === targetId) return true;
+  return false;
+}
+
+function aktDaraxti(nodes: AktNode[], mapping: Map<string, number>, result: F2MatchResult | null): DaraxtTugun[] {
+  return nodes.map((node) => {
+    const candidateCount = result?.takliflar?.[node.uid]?.length || 0;
+    const linked = mapping.has(node.uid);
+    const reason = result?.sabablar?.[node.uid];
+    return {
+      kalit: node.uid,
+      type: node.type,
+      nom: node.nom || 'F2 manba qatori',
+      kod: node.kod || undefined,
+      bir: node.bir || undefined,
+      hajm: node.hajm,
+      summa: node.summa,
+      belgi: linked ? '✓ Bog‘langan' : foydalanuvchiSababi(reason, candidateCount > 0),
+      children: node.children ? aktDaraxti(node.children, mapping, result) : undefined,
+    };
+  });
+}
+
 function NativeSession({ companyId }: { companyId: number }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
   const [objectId, setObjectId] = useState('');
@@ -94,11 +169,14 @@ function NativeSession({ companyId }: { companyId: number }) {
   const [sheetName, setSheetName] = useState('');
   const [cols, setCols] = useState<F2ColumnConfig | null>(null);
   const [source, setSource] = useState<F2ExactManbaTugun[]>([]);
+  const [aktTree, setAktTree] = useState<AktNode[]>([]);
+  const [smetaRows, setSmetaRows] = useState<T2Qator[]>([]);
+  const [matchResult, setMatchResult] = useState<F2MatchResult | null>(null);
   const [mapping, setMapping] = useState(new Map<string, number>());
-  const [labels, setLabels] = useState(new Map<string, string>());
-  const [targets, setTargets] = useState(new Map<number, string>());
-  const [page, setPage] = useState(0);
-  const [faqatMoslashmagan, setFaqatMoslashmagan] = useState(false);
+  const [aktQidiruv, setAktQidiruv] = useState('');
+  const [smetaQidiruv, setSmetaQidiruv] = useState('');
+  const [bogFilter, setBogFilter] = useState<'hammasi' | 'boglanmagan' | 'boglangan' | 'ishonchsiz'>('hammasi');
+  const [ochiqSignal, setOchiqSignal] = useState(0);
   const [phase, setPhase] = useState('Faylni tanlang');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -144,7 +222,9 @@ function NativeSession({ companyId }: { companyId: number }) {
   }, [objectId]);
   function reset() {
     generation.current++;
-    setSource([]); setMapping(new Map()); setReviewed(false); setDone(false); setError(''); setDraftXato(''); setPage(0);
+    setSource([]); setAktTree([]); setSmetaRows([]); setMatchResult(null); setMapping(new Map());
+    setReviewed(false); setDone(false); setError(''); setDraftXato(''); setAktQidiruv(''); setSmetaQidiruv('');
+    setBogFilter('hammasi'); setOchiqSignal(0);
     operation.current = ''; jobId.current = null; jobVersiya.current = 1;
   }
   async function resume(r: Resumable) {
@@ -157,8 +237,9 @@ function NativeSession({ companyId }: { companyId: number }) {
       const cursor = (job.cursor || {}) as { writeOperationId?: string; month?: string };
       const { source: tiklanganSource, mapping: tiklanganMapping, labels: tiklanganLabels } = draftdanTiklash(draft.qatorlar);
       const rows = (smeta.qatorlar || []) as T2Qator[];
-      setTargets(new Map(rows.map(q => [q.id, `${q.kod || ''} ${q.nom || ''} (${q.birlik || '—'})`])));
-      setLabels(tiklanganLabels); setSource(tiklanganSource); setMapping(tiklanganMapping);
+      setSmetaRows(rows);
+      setAktTree(tiklanganSource.map((n) => ({ uid: n.uid, type: 'mat', nom: tiklanganLabels.get(n.uid) || 'F2 manba qatori', hajm: n.hajm, narx: n.narx ?? undefined, summa: n.summa ?? undefined })));
+      setSource(tiklanganSource); setMapping(tiklanganMapping);
       operation.current = cursor.writeOperationId || yangiOperationId();
       setMonth(cursor.month || ''); jobId.current = r.jobId; jobVersiya.current = job.versiya || 1;
       setResumable(null); setPhase('Ko‘rib chiqish kerak (tiklangan)');
@@ -241,7 +322,7 @@ function NativeSession({ companyId }: { companyId: number }) {
       const names = new Map<string, string>();
       const stack = [...built.tree];
       while (stack.length) { const n = stack.pop()!; names.set(n.uid, `${n.kod || ''} ${n.nom || ''} (${n.bir || '—'})`); stack.push(...(n.children || [])); }
-      setLabels(names); setTargets(new Map(rows.map(q => [q.id, `${q.kod || ''} ${q.nom || ''} (${q.birlik || '—'})`])));
+      setSmetaRows(rows); setAktTree(built.tree); setMatchResult(result);
       setSource(leaves); setMapping(bindings); operation.current = yangiOperationId(); setPhase('Ko‘rib chiqish kerak');
       await qoralamaniSaqla(leaves, bindings, names);
     } catch (e) { if (generation.current === token) setError(e instanceof Error ? e.message : 'O‘qish bajarilmadi.'); }
@@ -293,6 +374,53 @@ function NativeSession({ companyId }: { companyId: number }) {
       setDraftXato('Qoralama saqlanmadi (' + (e instanceof Error ? e.message : 'noma\'lum xato') + ') — hozircha davom etishingiz mumkin, lekin sahifa yopilsa oxirgi holat tiklanmasligi mumkin.');
     }
   }
+  const moslanganSoni = source.filter((n) => mapping.has(n.uid)).length;
+  const ishonchsizKalitlar = useMemo(() => new Set(source.filter((n) => {
+    const reason = (matchResult?.sabablar?.[n.uid] || '').toLowerCase();
+    return Boolean(matchResult?.takliflar?.[n.uid]?.length) || /ambig|noaniq|shubha|tekshir/.test(reason);
+  }).map((n) => n.uid)), [source, matchResult]);
+  const aktView = useMemo(() => {
+    const full = aktDaraxti(aktTree, mapping, matchResult);
+    const searched = daraxtniFiltrla(full, (node) => qidiruvgaMos(node, aktQidiruv));
+    return bogFilter === 'ishonchsiz'
+      ? daraxtniFiltrla(searched, (node) => node.type === 'rz' || ishonchsizKalitlar.has(node.kalit))
+      : searched;
+  }, [aktTree, mapping, matchResult, aktQidiruv, bogFilter, ishonchsizKalitlar]);
+  const smetaView = useMemo(() => daraxtniFiltrla(
+    t2SmetaDaraxti(smetaRows, mapping),
+    (node) => qidiruvgaMos(node, smetaQidiruv),
+  ), [smetaRows, mapping, smetaQidiruv]);
+  const aktBogMi = useMemo(() => (key: string) => mapping.has(key), [mapping]);
+  const smetaBogMi = useMemo(() => (key: string) => mappingHasTarget(mapping, Number(key)), [mapping]);
+  const boglash = (aktKalit: string, smetaKalit: string) => {
+    const targetId = Number(smetaKalit);
+    if (!aktKalit || !Number.isSafeInteger(targetId) || targetId <= 0) return;
+    setMapping((old) => {
+      const next = new Map(old);
+      next.set(aktKalit, targetId);
+      return next;
+    });
+    setReviewed(false);
+    setPhase('Qo‘lda bog‘landi — natijani tekshiring');
+  };
+  const manbaniUzish = (aktKalit: string) => {
+    setMapping((old) => {
+      const next = new Map(old);
+      next.delete(aktKalit);
+      return next;
+    });
+    setReviewed(false);
+    setPhase('Bog‘lanish bekor qilindi — natijani tekshiring');
+  };
+  const smetaBoglanishiniUzish = (smetaKalit: string) => {
+    const targetId = Number(smetaKalit);
+    setMapping((old) => {
+      const next = new Map([...old].filter(([, value]) => value !== targetId));
+      return next;
+    });
+    setReviewed(false);
+    setPhase('Smeta qatori bog‘lanishlari bekor qilindi');
+  };
   const payload = useMemo(() => { try { return { rows: exactWrite(source, mapping), error: '' }; } catch (e) { return { rows: [], error: e instanceof Error ? e.message : 'Tekshiruv kerak.' }; } }, [source, mapping]);
   async function save() {
     if (writing.current || done || !reviewed || payload.error || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
@@ -318,9 +446,20 @@ function NativeSession({ companyId }: { companyId: number }) {
     } catch { setError('Yozish javobi olinmadi. Qayta urinish ayni operatsiyani tekshiradi.'); }
     finally { writing.current = false; setBusy(false); }
   }
-  return <section className="p-4 space-y-4 max-w-5xl">
-    <h1 className="text-xl font-semibold">F2 import — yangi rejim</h1>
-    <p role="status">{phase}</p>
+  return <section className="p-4 space-y-4 max-w-[1800px] h-full overflow-auto">
+    <div className="sticky top-0 z-10 -mx-4 px-4 py-3 bg-bg/95 backdrop-blur border-b border-border space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><h1 className="text-xl font-semibold">F2 import — kanonik moslashtirish</h1><p className="text-xs text-text-dim">F2 manbasini LRV qatorlariga bog‘lang. Smeta narxi manba sifatida ishlatilmaydi.</p></div>
+        <p role="status" aria-live="polite" className="text-sm text-text-dim">{phase}</p>
+      </div>
+      {source.length > 0 && <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-emerald-300">{moslanganSoni} / {source.length} bog‘langan</span>
+        <span className="rounded-md bg-amber-500/10 px-2 py-1 text-amber-300">{source.length - moslanganSoni} ko‘rib chiqiladi</span>
+        <span className="w-full text-text-dim">{source.length} manba qatoridan {moslanganSoni} tasi bog‘landi.</span>
+        {ishonchsizKalitlar.size > 0 && <span className="rounded-md bg-rose-500/10 px-2 py-1 text-rose-300">{ishonchsizKalitlar.size} noaniq</span>}
+        <button type="button" className="ml-auto rounded-md border border-border px-2 py-1 text-text-dim hover:text-text" onClick={() => setOchiqSignal((n) => n + 1)}>Daraxtlarni ochish</button>
+      </div>}
+    </div>
     {resumable && !source.length && <p className="karta p-3">
       Tugallanmagan import bor ({resumable.matched}/{resumable.total ?? '?'} qator moslashtirilgan, {resumable.updatedAt ? new Date(resumable.updatedAt).toLocaleString() : ''}).{' '}
       <button onClick={() => void resume(resumable)} disabled={busy}>Davom ettirish</button>
@@ -334,26 +473,27 @@ function NativeSession({ companyId }: { companyId: number }) {
     </fieldset>
     {cols && <fieldset disabled={busy || done} className="karta p-3 flex flex-wrap gap-3"><legend>Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>{(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => <label key={k}>{k}<input className="w-16 border" type="number" min="1" value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} /></label>)}<button onClick={() => void match()} disabled={!objectId || !month}>Moslashtirish</button></fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
-    {source.length > 0 && <>{(() => {
-      const korinadigan = faqatMoslashmagan ? source.filter(n => !mapping.has(n.uid)) : source;
-      const nishonlar = [...targets.entries()];
-      return <>
-        <p>{source.length} manba qatoridan {source.filter(n => mapping.has(n.uid)).length} tasi bog‘landi.
-          {' '}<label className="ml-2 text-[12px]"><input type="checkbox" checked={faqatMoslashmagan} onChange={e => { setFaqatMoslashmagan(e.target.checked); setPage(0); }} /> faqat moslashmaganlar</label>
-        </p>
-        <details open={faqatMoslashmagan}><summary>Bog‘lanishlarni ko‘rish va qo‘lda tuzatish</summary><div className="overflow-auto"><table className="w-full text-sm"><thead><tr><th>F2 manba</th><th>Smeta qatori</th><th>Hajm</th><th>Narx</th><th>Hujjat summasi</th></tr></thead><tbody>{korinadigan.slice(page * 50, page * 50 + 50).map(n => <tr key={n.uid}><td>{labels.get(n.uid)}</td><td>
-          <select value={mapping.get(n.uid) ?? ''} onChange={e => {
-            const v = e.target.value; const yangi = new Map(mapping);
-            if (v) yangi.set(n.uid, Number(v)); else yangi.delete(n.uid);
-            setMapping(yangi);
-          }}>
-            <option value="">— Moslashtirilmagan —</option>
-            {nishonlar.map(([id, nom]) => <option key={id} value={id}>{nom}</option>)}
-          </select>
-        </td><td>{n.hajm}</td><td>{n.narx ?? '—'}</td><td>{n.summa ?? '—'}</td></tr>)}</tbody></table></div><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Oldingi</button><span> {page + 1} / {Math.max(1, Math.ceil(korinadigan.length / 50))} </span><button disabled={(page + 1) * 50 >= korinadigan.length} onClick={() => setPage(p => p + 1)}>Keyingi</button></details>
-      </>;
-    })()}
-      <F2PreapprovalAudit aktBarglar={source} getSmetaId={uid => mapping.get(uid)} />
+    {source.length > 0 && <>
+      <section className="karta p-3 space-y-3" aria-label="F2 va smeta moslashtirish">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex min-w-[220px] flex-1 items-center gap-2 text-xs text-text-dim">F2 manbasidan qidirish<input value={aktQidiruv} onChange={(e) => setAktQidiruv(e.target.value)} placeholder="Kod yoki nom" className="w-full rounded-md border border-border bg-bg px-2 py-1.5 text-text" /></label>
+          <label className="flex min-w-[220px] flex-1 items-center gap-2 text-xs text-text-dim">LRV qatoridan qidirish<input value={smetaQidiruv} onChange={(e) => setSmetaQidiruv(e.target.value)} placeholder="Kod yoki nom" className="w-full rounded-md border border-border bg-bg px-2 py-1.5 text-text" /></label>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-text-dim">F2 ko‘rinishi:</span>
+          {([['hammasi', 'Hammasi'], ['boglanmagan', 'Bog‘lanmagan'], ['boglangan', 'Bog‘langan'], ['ishonchsiz', 'Ishonchsiz']] as const).map(([value, label]) => <button type="button" key={value} onClick={() => setBogFilter(value)} className={`rounded-md border px-2 py-1 ${bogFilter === value ? 'border-accent bg-accent/15 text-accent' : 'border-border text-text-dim hover:text-text'}`}>{label}</button>)}
+          <span className="ml-auto text-text-dim">Sudrab bog‘lang · yashil belgi bilan uzing</span>
+        </div>
+        <IkkiPanel
+          chapSarlavha={<>F2 / AKT manbasi <span className="text-text-mute">({source.length})</span></>}
+          ongSarlavha={<>SMETA / LRV qatorlari <span className="text-text-mute">({smetaRows.length})</span></>}
+          balandlik="min(64vh, 720px)"
+          chap={<F2Daraxt tugunlar={aktView} bogMi={aktBogMi} sudraladi filtr={bogFilter === 'ishonchsiz' ? 'hammasi' : bogFilter} ochiqYopiqSignal={ochiqSignal} onBogBekor={manbaniUzish} bosh="F2 manba qatori topilmadi" />}
+          ong={<F2Daraxt tugunlar={smetaView} bogMi={smetaBogMi} tashlanadi onTashla={boglash} onBogBekor={smetaBoglanishiniUzish} ochiqYopiqSignal={ochiqSignal} bosh="Kanonik LRV qatori topilmadi" />}
+        />
+        <p className="text-[11px] text-text-dim">Qo‘lda bog‘lash uchun chapdagi F2 qatorini o‘ngdagi kanonik LRV qatoriga sudrang. Bog‘langan qatorni yashil tasdiq belgisi orqali ajrating. Texnik qator/varaq identifikatorlari foydalanuvchi ko‘rinishida yashirilgan.</p>
+      </section>
+      <F2PreapprovalAudit aktBarglar={source} getSmetaId={uid => mapping.get(uid)} texnikIdentifikatorlarniKorsatish={false} />
       {payload.error && <p role="alert">{payload.error}</p>}
       <label className="block"><input type="checkbox" checked={reviewed} disabled={busy || done} onChange={e => setReviewed(e.target.checked)} /> Varaq, davr va moslashtirish natijasini tekshirdim</label>
       <button className="karta p-3" disabled={busy || done || !reviewed || !!payload.error} onClick={() => void save()}>F2 qoralamasini saqlash</button>

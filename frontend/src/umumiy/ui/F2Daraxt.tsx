@@ -11,6 +11,9 @@ export type DaraxtTugun = {
   hajm?: number;
   summa?: number;
   belgi?: ReactNode;          // o'ng chetdagi qiymat
+  /** Ixtiyoriy amaliy nazorat (masalan F2 tanlovi yoki miqdor inputi).
+   * Legacy daraxtlar buni bermaydi; shu sabab eski ekranlar o'zgarmaydi. */
+  nazorat?: ReactNode;
   /* ⚡ 2026-08-15: oldingi oylarda QO'SHIMCHA/ZAMENA sifatida kiritilgan
    * qatorlar keyingi F2 importda ODDIY smeta qatoriday ko'rinardi —
    * foydalanuvchi: «u smeta obyomi emas qo'shimcha ish ekanligini
@@ -281,6 +284,11 @@ const DaraxtQator = memo(function DaraxtQator({
       </div>
 
       <span className={`flex-shrink-0 tabular-nums text-[13px] max-w-[240px] ${bog ? 'text-emerald-400 font-bold' : 'text-slate-400 font-medium'}`}>{t.belgi}</span>
+      {t.nazorat && (
+        <span className="flex-shrink-0 ml-1" onClick={(e) => e.stopPropagation()}>
+          {t.nazorat}
+        </span>
+      )}
     </div>
   );
 }, (a, b) =>
