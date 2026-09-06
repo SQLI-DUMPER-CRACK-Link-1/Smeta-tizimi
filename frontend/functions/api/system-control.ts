@@ -14,6 +14,7 @@
  */
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
+import { xavfsizUpstream, xavfsizXato } from '../_shared/xato';
 
 type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string };
 
@@ -85,7 +86,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
       const { r, j, text } = await callRpc(ctx.env, READ_RPC.global, { p_actor_id: a.actorId });
       if (!r.ok || !j || j.ok !== true) {
         const code = (j && j.code) || 'SYSTEM_CONTROL_FAILED';
-        return Response.json({ ok: false, code, reason: j?.reason, xato: (j && j.message) || text.slice(0, 200) }, { status: httpStatusFor(code, text) });
+        return xavfsizUpstream(r.status, j || text, httpStatusFor(code, text));
       }
       return Response.json(j);
     }
@@ -98,11 +99,11 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     const { r, j, text } = await callRpc(ctx.env, READ_RPC.company, { p_kompaniya_id: kompaniyaId, p_actor_id: a.actorId, p_loyiha_id: loyihaId });
     if (!r.ok || !j || j.ok !== true) {
       const code = (j && j.code) || 'SYSTEM_CONTROL_FAILED';
-      return Response.json({ ok: false, code, xato: (j && j.message) || text.slice(0, 200) }, { status: httpStatusFor(code, text) });
+      return xavfsizUpstream(r.status, j || text, httpStatusFor(code, text));
     }
     return Response.json(j);
   } catch (err: any) {
-    return Response.json({ ok: false, code: 'SYSTEM_CONTROL_FAILED', xato: String(err?.message || err) }, { status: 500 });
+    return xavfsizXato('SYSTEM_CONTROL_FAILED', 500, err?.message || String(err));
   }
 };
 
@@ -162,10 +163,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     const { r, j, text } = await callRpc(ctx.env, (RPC as any)[action], rpcBody);
     if (!r.ok || !j || j.ok !== true) {
       const code = (j && j.code) || 'CONTROL_COMMAND_FAILED';
-      return Response.json({ ok: false, code, xato: (j && j.xato) || (j && j.message) || text.slice(0, 200), versiya: j?.versiya }, { status: httpStatusFor(code, text) });
+      return xavfsizUpstream(r.status, j || text, httpStatusFor(code, text));
     }
     return Response.json({ ...j, operation_id: opId });
   } catch (err: any) {
-    return Response.json({ ok: false, code: 'CONTROL_COMMAND_FAILED', xato: String(err?.message || err) }, { status: 500 });
+    return xavfsizXato('CONTROL_COMMAND_FAILED', 500, err?.message || String(err));
   }
 };

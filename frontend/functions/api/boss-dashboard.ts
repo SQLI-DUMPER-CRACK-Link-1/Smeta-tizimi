@@ -6,6 +6,7 @@
  */
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
+import { xavfsizUpstream, xavfsizXato } from '../_shared/xato';
 
 type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string };
 
@@ -31,10 +32,10 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     if (!r.ok || !j || j.ok !== true) {
       const code = (j && j.code) || 'BOSS_DASHBOARD_FAILED';
       const status = code === 'COMPANY_NOT_FOUND' ? 404 : /actor|a'zo|azo|membership/i.test(code + text) ? 403 : 502;
-      return Response.json({ ok: false, code, xato: (j && j.message) || text.slice(0, 200) }, { status });
+      return xavfsizUpstream(r.status, j || text, status);
     }
     return Response.json(j);
   } catch (err: any) {
-    return Response.json({ ok: false, code: 'BOSS_DASHBOARD_FAILED', xato: String(err?.message || err) }, { status: 500 });
+    return xavfsizXato('BOSS_DASHBOARD_FAILED', 500, err?.message || String(err));
   }
 };
