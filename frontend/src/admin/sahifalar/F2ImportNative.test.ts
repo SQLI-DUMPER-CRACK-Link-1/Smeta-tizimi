@@ -35,6 +35,6 @@ describe('F2 kanonik manba kontrakti', () => {
     const current = readFileSync('src/admin/sahifalar/F2Import.tsx', 'utf8').replace(/\r\n/g, '\n');
     const body = old.slice(old.indexOf('export function F2Import() {') + 'export function F2Import() {'.length);
     expect(current.slice(current.indexOf('function F2ImportLegacy() {') + 'function F2ImportLegacy() {'.length)).toBe(body);
-    expect(current).toContain("localStorage.getItem('t2-f2-native-mode') === 'true'");
+    expect(current).toContain("localStorage.getItem('t2-f2-native-mode') !== 'false'");
   });
 });

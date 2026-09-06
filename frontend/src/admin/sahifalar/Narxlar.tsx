@@ -25,16 +25,16 @@ const KAT_RANG: Record<string, 'ok' | 'warn' | 'danger' | 'neytral'> = {
  * o'zgarishsiz ishlaydi. */
 export function Narxlar() {
   const [native, setNative] = useState(() => {
-    try { return localStorage.getItem('t2-narxlar-native-mode') === 'true'; } catch { return false; }
+    try { return localStorage.getItem('t2-narxlar-native-mode') !== 'false'; } catch { return true; }
   });
   return <>
-    <label className="flex items-center gap-2 p-3 text-sm">
-      <input type="checkbox" checked={native} onChange={(e) => {
-        const next = e.target.checked;
+    <label className="flex items-center gap-2 p-3 text-[12px] text-text-mute">
+      <input type="checkbox" checked={!native} onChange={(e) => {
+        const useLegacy = e.target.checked;
         if (!window.confirm('Rejim almashsa, saqlanmagan tahrirlar yopiladi. Davom etasizmi?')) return;
-        try { localStorage.setItem('t2-narxlar-native-mode', String(next)); } catch { /* Joriy sessiyada ishlaydi. */ }
-        setNative(next);
-      }} />Yangi (GAS'siz) rejim — sinov
+        try { localStorage.setItem('t2-narxlar-native-mode', String(!useLegacy)); } catch { /* Joriy sessiyada ishlaydi. */ }
+        setNative(!useLegacy);
+      }} />Muammo bo'lsa: eski (GAS) rejimga o'tish
     </label>
     {native ? <NarxlarNative /> : <NarxlarLegacy />}
   </>;
