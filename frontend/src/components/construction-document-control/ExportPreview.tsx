@@ -17,6 +17,8 @@ export interface ExportPreviewModel {
   vatRatePercent?: number | null;
 }
 
+const show = (value: number | null) => value == null ? 'NOANIQ' : value;
+
 export function ExportPreview({model}:{model:ExportPreviewModel}) {
   const handleNakopitelniy = async () => {
     const data = await generateNakopitelniy(model.rows, {
@@ -62,7 +64,7 @@ export function ExportPreview({model}:{model:ExportPreviewModel}) {
         </div>
       </div>
       <p className="text-sm">Davr: {model.f2PeriodId} · estimate revision: {model.estimateRevisionId}</p>
-      <p className="text-sm">Cumulative: {model.totals.cumulativeValue} · Remaining: {model.totals.remainingValue}</p>
+      <p className="text-sm">Cumulative: {show(model.totals.cumulativeValue)} · Remaining: {show(model.totals.remainingValue)}</p>
       <p className="text-xs text-slate-400">Hujjatlar: {model.documents.join(', ')}</p>
       {model.projectionHash && <p className="text-xs text-slate-500 font-mono mt-1">F-2 Projection Hash: {model.projectionHash}</p>}
       {model.reconciliation.length>0&&<p role="alert" className="text-red-300">Reconciliation: {model.reconciliation.map(x=>x.code).join(', ')}</p>}
