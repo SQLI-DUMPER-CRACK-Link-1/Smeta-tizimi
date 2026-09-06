@@ -23,6 +23,10 @@ UIga boradi.
 
 ## Keyingi majburiy qadam
 
-`/admin/holat/:id` hozircha eski GAS-name route'i. Uni matn nomi orqali
-taxminan bog'lamasdan, faqat sonli `t2_obyekt.id` bilan ishlaydigan native
-routega o'tkazish kerak. Shu native route shu adapterdan foydalanadi.
+`/admin/holat` va `/admin/holat/:id` endi `HolatNative`ga ulangan. U faqat
+sonli `t2_obyekt.id`ni qabul qiladi va `t2_daraxt`, `t2_qator_holat`,
+`t2_price_control_v1` o'qishlari bilan ishlaydi. Eski nomli URL GASga
+fallback qilinmaydi; foydalanuvchi kanonik obyektni ro'yxatdan tanlaydi.
+
+Bu commit faqat native LRV o'qish route'ini almashtiradi. Native Fakt
+yozish va F2 tayyorlash keyingi vertikal qatlamlar bo'lib qoladi.

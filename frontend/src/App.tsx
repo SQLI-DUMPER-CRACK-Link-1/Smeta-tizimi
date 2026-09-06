@@ -11,7 +11,7 @@ const BossShell = lazy(() => import('./boss/BossShell'));
 
 // Admin pages
 import { Obyektlar } from './admin/sahifalar/Obyektlar';
-import { Holat } from './admin/sahifalar/Holat';
+import { HolatNative } from './admin/sahifalar/HolatNative';
 import { Shartnoma } from './admin/sahifalar/Shartnoma';
 import { Sklad } from './admin/sahifalar/Sklad';
 import { Monitoring } from './admin/sahifalar/Monitoring';
@@ -111,7 +111,8 @@ export default function App() {
             </Suspense>
           } />
           <Route path="obyektlar" element={<Obyektlar />} />
-          <Route path="holat/:id" element={<Holat />} />
+          <Route path="holat" element={<HolatNative />} />
+          <Route path="holat/:id" element={<HolatNative />} />
           <Route path="f2" element={<F2Import />} />
           <Route path="f2-tayyorlash" element={<F2Tayyorlash />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
@@ -213,7 +214,8 @@ export default function App() {
               superseded by the canonical /admin/dashboard read model. */}
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="eski" element={<Umumiy />} />
-          <Route path="holat/:id" element={<Holat />} />
+          <Route path="holat" element={<HolatNative />} />
+          <Route path="holat/:id" element={<HolatNative />} />
           {/* ERP routes for Boss */}
           <Route path="kadrlar" element={<ErpKadrlar />} />
           <Route path="texnika" element={<ErpTexnika />} />
@@ -230,4 +232,3 @@ export default function App() {
 }
 
 function PageIdentity() { const { pathname } = useLocation(); useEffect(() => { document.title = titleForPath(pathname); }, [pathname]); return null; }
-
