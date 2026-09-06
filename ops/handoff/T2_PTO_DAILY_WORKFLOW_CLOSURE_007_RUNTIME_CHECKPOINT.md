@@ -1,3 +1,39 @@
+# 2026-09-06 — native Fakt jami tahriri checkpointi
+
+## Yangi yopilgan uzilish
+
+- Candidate: `f527200a0ce119086ea9c38c43e96c5dbc850ed4`.
+- `t2_fakt_belgila_v2` production katalogga `20260906120454` sifatida additive
+  qo‘llandi. Bu sxema va RPC qo‘shilishi bo‘lib, real biznes qatorlariga test
+  yozuvi kiritilmadi.
+- Fakt native sahifasida avvalgi `Ustiga qo‘shish` oqimi saqlandi va alohida
+  `Jami qiymat` oqimi qo‘shildi. Jami tahrir serverdagi kanonik joriy qiymatni
+  expected qiymat bilan solishtiradi; boshqa sessiya qiymatni o‘zgartirgan
+  bo‘lsa, `FAKT_CONFLICT` xavfsiz xabar bilan ko‘rsatiladi va ma’lumot qayta
+  yuklanadi.
+- Gateway allowlist `fakt_belgila_v2` ni faqat nomlangan
+  `t2_fakt_belgila_v2` RPC’ga bog‘laydi; actor so‘rov tanasidan olinmaydi.
+- Regressiya testi: `FaktNative.test.tsx` 3/3; standart qo‘shish, jami
+  optimistic update va conflict xabari qamrab olingan.
+
+## Gate dalili
+
+- `npx tsc -b --force` — PASS.
+- `npm run typecheck:functions` — PASS.
+- `npx vitest run --pool=threads --maxWorkers=1 --no-file-parallelism` — 52
+  fayl, 263 test, PASS.
+- `vite build` — PASS; Windows xotira bosimi sabab CPU-affinity bilan qayta
+  ishga tushirilgan, mahsulot xatosi aniqlanmadi.
+- `npm run lint` — 0 error, faqat mavjud warninglar.
+- `npm run tekshir` — PASS.
+- `node ops/governance-check.cjs` — PASS.
+
+## Chegara
+
+Bu candidate Cloudflare Production’ga chiqarilguncha oldingi deploy holati
+saqlanadi. F2 tasdiqlash, F2 eksporti va tarixiy F2 qiymatlari bu o‘zgarishdan
+ta’sirlanmaydi; Fakt jami faqat kanonik Fakt hujjati orqali o‘zgaradi.
+
 # T2 PTO kundalik oqim — 2026-09-06 runtime checkpoint
 
 ## Tayanch
