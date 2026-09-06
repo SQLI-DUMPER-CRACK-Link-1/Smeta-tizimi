@@ -63,8 +63,8 @@ export async function sbOqi<T = Record<string, unknown>>(s: SbSoro): Promise<SbJ
     /* Server o'z ms ini beradi (Supabase gacha), biz TO'LIQ yo'lni
        o'lchaymiz — foydalanuvchi kutadigan vaqt aynan shu. */
     return { ...j, ms: Math.round(performance.now() - t0) };
-  } catch (e: any) {
-    return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)),
+  } catch {
+    return { ok: false, error: 'Ma’lumotni yuklab bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.',
              ms: Math.round(performance.now() - t0) };
   }
 }
@@ -515,8 +515,8 @@ export async function sbT2QatorTahrir(
     });
     const j = (await r.json()) as T2TahrirNatija;
     return { ...j, ms: Math.round(performance.now() - t0) };
-  } catch (e: any) {
-    return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)),
+  } catch {
+    return { ok: false, error: 'O‘zgarishni saqlab bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.',
              ms: Math.round(performance.now() - t0) };
   }
 }
@@ -564,8 +564,8 @@ export async function yozAmali(yuk: Record<string, unknown>): Promise<AktNatija>
       ms: Math.round(performance.now() - t0) }; }
     if (!r.ok && !j.error) j.error = `HTTP ${r.status}: yozish so'rovi rad etildi`;
     return { ...j, ms: Math.round(performance.now() - t0) };
-  } catch (e: any) {
-    return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)),
+  } catch {
+    return { ok: false, error: 'O‘zgarishni saqlab bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.',
              ms: Math.round(performance.now() - t0) };
   }
 }
