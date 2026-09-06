@@ -25,7 +25,20 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     const response = await fetch(url, { headers:{apikey:ctx.env.SUPABASE_KEY,Authorization:`Bearer ${ctx.env.SUPABASE_KEY}`} });
     const rows = await response.json().catch(() => []) as any[];
     if (!response.ok) return json({ok:false,code:'PROJECTION_READ_FAILED'}, {status:502});
-    return json({ ok:true, changed:true, projection_hash:`${objectId}:${rows.length}`, headers:['kod','nom','birlik','fakt_hajm','f2_mumkin_hajm'], rows:rows.map((r:any) => ({...r,t2_entity_id:r.qator_id,t2_entity_version:r.fakt_hajm})) });
+    
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    const str = JSON.stringify(rows);
+    for (let i = 0, ch; i < str.length; i++) {
+      ch = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    const projectionHash = (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+    
+    if (payload.projection_hash === projectionHash) return json({ ok:true, changed:false });
+    return json({ ok:true, changed:true, projection_hash:projectionHash, headers:['kod','nom','birlik','fakt_hajm','f2_mumkin_hajm'], rows:rows.map((r:any) => ({...r,t2_entity_id:r.qator_id,t2_entity_version:r.fakt_hajm})) });
   }
   if (input?.action === 'fakt.write') {
     if (!uuid.test(String(payload.operation_id || ''))) return json({ok:false,code:'OPERATION_ID_REQUIRED'},{status:400});

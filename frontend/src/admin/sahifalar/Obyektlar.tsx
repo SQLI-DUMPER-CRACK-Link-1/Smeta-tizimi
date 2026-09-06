@@ -9,6 +9,8 @@ import { AuroraBackground, GlassCard } from '../../boss/sahifalar/Umumiy';
 import { Skelet, XatoHolat } from '../../umumiy/ui/Sahifa';
 import { FmtN, formatPercent } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
+import { useKompaniya } from '../../test02/KompaniyaTanlov';
+import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
 
 export function Obyektlar() {
   const soragan = useObyektlar();
@@ -16,6 +18,15 @@ export function Obyektlar() {
   const { data, refetch, isFetching, error } = soragan;
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [tashxisObyekt, setTashxisObyekt] = useState<string>('');
+  const [tashxis, setTashxis] = useState<ObyektTekshirNatija | null>(null);
+  const [dbObyektlar, setDbObyektlar] = useState<T2Obyekt[]>([]);
+  const { joriy } = useKompaniya();
+
+  useEffect(() => {
+    if (joriy?.id) sbT2ObyektlarOlKomp(joriy.id).then(r => setDbObyektlar(r.ok ? r.qatorlar as T2Obyekt[] : []));
+  }, [joriy?.id]);
+
   const navigate = useNavigate();
 
   // ⚡ Dvigatel (НАВБАТ) — fon rejimida ishlaydi, UI faqat holatni kuzatadi
@@ -24,8 +35,6 @@ export function Obyektlar() {
   const navbatFaol = !!navbat?.running;
   const obyektIshla = useObyektIshla();
   const tekshir = useObyektTekshir();
-  const [tashxisObyekt, setTashxisObyekt] = useState('');
-  const [tashxis, setTashxis] = useState<ObyektTekshirNatija | null>(null);
 
   /** Papkadagi fayllar qanday tanilganini sabablari bilan ko'rsatadi */
   async function tashxisOch(obyekt: string) {
