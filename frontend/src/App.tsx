@@ -64,7 +64,7 @@ const KompaniyaPage = lazy(() => import('./admin/pages/KompaniyaPage'));
 const DocumentCenterDemo = lazy(() => import('./admin/document-center/DocumentCenterDemo'));
 const ParticipantNetworkDemo = lazy(() => import('./admin/participants/ParticipantNetworkDemo'));
 const SystemControlDemo = lazy(() => import('./admin/system-control/SystemControlDemo'));
- import { F2Import } from './admin/sahifalar/F2Import';
+import F2ImportNative from './admin/sahifalar/F2ImportNative';
 import { F2TayyorlashNative } from './admin/sahifalar/F2TayyorlashNative';
 import { Narxlar } from './admin/sahifalar/Narxlar';
 import { Ierarxiya } from './admin/sahifalar/Ierarxiya';
@@ -115,7 +115,7 @@ export default function App() {
           <Route path="holat" element={<HolatNative />} />
           <Route path="holat/:id" element={<HolatNative />} />
           <Route path="fakt" element={<FaktNative />} />
-          <Route path="f2" element={<F2Import />} />
+          <Route path="f2" element={<F2ImportNative />} />
           <Route path="f2-tayyorlash" element={<F2TayyorlashNative />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
           <Route path="shartnomalar" element={<Shartnoma />} />
