@@ -63,7 +63,7 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       't2_loyiha_qatnashchi_biriktir', 't2_loyiha_qatnashchi_ochir',
                       't2_kontragent_saqla', 't2_kontragent_ochir',
                       't2_azolik_qosh_v1', 't2_azolik_rol_ozgartir_v1', 't2_azolik_ochir_v1',
-                      't2_fakt_yoz', 't2_fakt_belgila',
+                      't2_fakt_yoz_v2', 't2_fakt_belgila',
                       't2_kompaniya_yangila',
                       't2_material_alias_yoz', 't2_material_alias_ochir',
                       't2_mindmap_bog_v2', 't2_mindmap_bog_ochir_v2',
@@ -111,6 +111,12 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
     /RUXSAT\s*=\s*\['nom',\s*'hajm',\s*'narx',\s*'birlik',\s*'kat'\]/.test(s));
   T('manba doim `frontend` (klient o\'zi tanlay olmaydi)',
     s.indexOf("p_manba: 'frontend'") >= 0);
+  T('native Fakt sessiyadagi actor ID bilan V2 RPCga boradi',
+    s.indexOf("fakt_yoz_v2: { rpc: 't2_fakt_yoz_v2' }") >= 0 &&
+    s.indexOf("p_actor_id: sess.foydalanuvchi_id") >= 0 &&
+    s.indexOf("p_actor_label: sess.email || null") >= 0);
+  T('native Fakt operation_id siz rad etiladi',
+    s.indexOf("operation_id UUID bo\\'lishi kerak") >= 0);
 }
 
 console.log('\n── 2. O\'QISH ESHIGI YOZMAYDI ──');
@@ -163,4 +169,3 @@ console.log('\n── 5. HALOLLIK QOIDALARI ──');
 
 console.log(`\n═══ ${ok} o'tdi, ${xato} yiqildi ═══`);
 process.exit(xato ? 1 : 0);
-

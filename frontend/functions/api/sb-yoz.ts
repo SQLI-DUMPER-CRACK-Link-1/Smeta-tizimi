@@ -100,7 +100,7 @@ const AMALLAR = {
   loyiha_qatnashchi_ochir: { rpc: 't2_loyiha_qatnashchi_ochir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
   kontragent_ochir: { rpc: 't2_kontragent_ochir' },
-  fakt_yoz: { rpc: 't2_fakt_yoz' },
+  fakt_yoz_v2: { rpc: 't2_fakt_yoz_v2' },
   fakt_belgila: { rpc: 't2_fakt_belgila' },
   /* ⚠️ P0 SECURITY (2026-09-03): bu uchtasi avval to'g'ridan-to'g'ri
    * un-versioned RPC'ga (t2_azolik_qosh/_rol_ozgartir/_ochir) borardi —
@@ -1342,7 +1342,7 @@ export const onRequestPost: PagesFunction<{
        Foydalanuvchi: «ikkalasi ham bo'lishi kerak» — prorab kunlik ham,
        PTO jamlab ham. Ikkalasi AYNI RPC ga yozadi, farq faqat paket
        kattaligida; jamlash mantig'i o'zgarmaydi. */
-    } else if (amal === 'fakt_yoz') {
+    } else if (amal === 'fakt_yoz_v2') {
       const obyektId = Number(so.obyekt_id);
       if (!Number.isFinite(obyektId) || obyektId <= 0) {
         return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
@@ -1354,14 +1354,19 @@ export const onRequestPost: PagesFunction<{
       if (!Array.isArray(so.qatorlar) || so.qatorlar.length === 0) {
         return Response.json({ ok: false, error: 'qatorlar bo\'sh' });
       }
+      const operationId = String(so.operation_id || '');
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi kerak' });
+      }
       yuk = {
         p_obyekt_id: obyektId,
         p_sana: sana,
         p_qatorlar: so.qatorlar,
-        p_kim: sess.email || null,
-        p_operation_id: so.operation_id || null,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_operation_id: operationId,
         p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
         p_raqam: so.raqam ? String(so.raqam).slice(0, 50) : null,
+        p_actor_label: sess.email || null,
       };
 
     /* Ko'zgu varaqdan: JAMI qiymat beriladi, FARQ hujjat qilib yoziladi.

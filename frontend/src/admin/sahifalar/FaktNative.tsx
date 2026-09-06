@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Save } from 'lucide-react';
+import { AlertTriangle, Save } from 'lucide-react';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { toast } from '../../umumiy/ui/Toast';
@@ -21,6 +21,12 @@ export function FaktNative() {
   const operationId = useRef(crypto.randomUUID());
   const obyektId = Number(params.get('obyekt'));
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
+
+  const bugunMahalliy = () => {
+    const d = new Date();
+    const ikki = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${ikki(d.getMonth() + 1)}-${ikki(d.getDate())}`;
+  };
 
   useEffect(() => {
     if (!joriy?.id) return;
@@ -48,7 +54,7 @@ export function FaktNative() {
     setSaving(true);
     try {
       const r = await sbFaktYoz({
-        obyektId, sana: new Date().toISOString().slice(0, 10), qatorlar: qatorlarYozuvi,
+        obyektId, sana: bugunMahalliy(), qatorlar: qatorlarYozuvi,
         operationId: operationId.current, izoh: 'Website kanonik Fakt kiritishi',
       });
       if (!r.ok) { toast(r.error || r.xabar || 'Fakt saqlanmadi.', 'danger'); return; }

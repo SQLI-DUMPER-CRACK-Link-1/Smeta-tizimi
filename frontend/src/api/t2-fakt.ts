@@ -64,7 +64,7 @@ export function sbFaktYoz(p: {
   operationId?: string;
 }) {
   return yozAmali({
-    amal: 'fakt_yoz',
+    amal: 'fakt_yoz_v2',
     obyekt_id: p.obyektId,
     sana: p.sana,
     qatorlar: p.qatorlar,

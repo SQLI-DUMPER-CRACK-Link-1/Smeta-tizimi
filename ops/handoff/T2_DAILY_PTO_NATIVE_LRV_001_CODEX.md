@@ -37,4 +37,35 @@ yozish ham keyingi commitda real `/admin/fakt` route'iga qo'shildi:
 - muvaffaqiyatdan keyin `t2_qator_holat` qayta o'qiladi;
 - bu ekran F2 tarixini yozmaydi yoki tahrirlamaydi.
 
+### Fakt V2 qatlamining sababi
+
+Eski `t2_fakt_yoz` hujjat yaratish mexanizmi saqlab qolindi, ammo yangi
+brauzer oqimi unga to'g'ridan-to'g'ri ishonmaydi. `20260926120000_t2_fakt_yoz_v2`
+faqat native T2 yo'li uchun qo'shimcha command-boundary beradi:
+
+- `p_actor_id` HTTP so'rovidan emas, tasdiqlangan sessiyadan keladi;
+- obyektning kompaniyasi va actor a'zoligi DBda tekshiriladi;
+- har bir `qator_id` shu obyektning kanonik qatori bo'lishi shart;
+- bo'sh, nol yoki takrorlangan qatorlar rad etiladi;
+- `operation_id` majburiy: uzilgan tarmoqdan keyin qayta yuborish ikkinchi
+  Fakt hujjatini yaratmasligi kerak;
+- Fakt append-only hujjat bo'lgani uchun satrni "oxirgi yozgan yutadi" usulida
+  almashtirmaydi; concurrency receipt `operation_id` bilan yuritiladi.
+
+`/api/sb-yoz` native ekran uchun endi faqat `fakt_yoz_v2`ni oq ro'yxatda
+ushlaydi. Eski GAS/bridge chaqiruvlari uchun legacy RPC o'zgartirilmagan.
+
+Mahalliy sana hisoblash ham UTC kesimiga bog'liq bo'lmay qoldi: Toshkentdagi
+kun almashishida Fakt noto'g'ri sanaga tushmaydi.
+
+### V2 tekshiruvlari
+
+- `frontend/testlar/t2_kompaniya.test.cjs`: 25/25 PASS; V2 RPC oq ro'yxati,
+  sessiya actor-IDsi va majburiy UUID qo'riqchisi regression bilan qoplandi.
+- `npx tsc -b --force`: PASS.
+- `npm run build`: PASS (mavjud `grid.svg` va bundle-size ogohlantirishlari
+  build xatosi emas).
+- Migratsiya hali productionga qo'llanmagan; acceptance skripti faqat
+  `BEGIN ... ROLLBACK` muhitida real actor/qator bilan ishlatiladi.
+
 Native F2 tayyorlash keyingi vertikal qatlam bo'lib qoladi.
