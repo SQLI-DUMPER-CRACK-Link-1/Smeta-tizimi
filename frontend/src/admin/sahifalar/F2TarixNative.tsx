@@ -89,6 +89,11 @@ export function F2TarixNative() {
 
   async function tasdiqlash(akt: T2AktReestr) {
     if (akt.holat !== 'qoralama' || savingId != null) return;
+    const jami = akt.hujjat_jami == null ? 'noma’lum' : akt.hujjat_jami.toLocaleString('uz-UZ');
+    if (!window.confirm(
+      `F2 ${akt.oy?.slice(0, 7) || 'davri noma’lum'} hujjatini tasdiqlaysizmi?\n` +
+      `Jami: ${jami}. Tasdiqlangach u LRV va Nakopitelniy tarixiga kiradi.`,
+    )) return;
     setSavingId(akt.id); setError('');
     try {
       const result = await sbT2AktTasdiqlash(akt.id, akt.versiya, yangiOperationId());
