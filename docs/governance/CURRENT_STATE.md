@@ -50,3 +50,18 @@ read-model RPC `ok:true`; it does **not** include an authenticated end-to-end
 user flow (login is a prohibited action for Claude). `tizim02/MULOQOT.md` is an
 append-only historical journal, not current state — this file is the only
 current-state authority.
+# 2026-09-06 — T2 daily PTO native cutover addendum
+
+Quyidagi yozuvlar ushbu fayldagi eski release jadvalidan ustun bo‘lgan eng so‘nggi
+tekshirilgan holatdir. Eski jadval tarixiy dalil sifatida saqlanadi.
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `a755cec5bfb6da9d9652f3c7242b4eefc8f98492` — integration va `origin/main` bir xil. |
+| `production_deploy` | Cloudflare Pages `main` avtomatik deployi oldingi `7f292853` uchun muvaffaqiyatli tasdiqlangan; `a755cec` kodi push qilingandan keyingi yangi deploy runtime health tekshiruvi bilan qayta kuzatilmoqda. |
+| `daily_native_routes` | `/admin/obyektlar`, `/admin/holat/:id`, `/admin/fakt`, `/admin/f2`, `/admin/f2-tayyorlash` native canonical yo‘llarga ulangan; `/admin/narxlar` native rejimni odatiy holatda ochadi. |
+| `lrv_workbench` | `/admin/holat/:id` faqat raqamli `t2_obyekt.id` bilan daraxt, Faktga o‘tish, native smeta importi, qo‘shimcha/zamena/resurs, resurs vedomosti va narx nazoratini bitta kontekstga birlashtiradi. Yopiq panellar oldindan API chaqirmaydi. |
+| `old_gas_boundary` | Kundalik native LRV/Fakt/F2/F2 tayyorlash oqimi eski GAS biznes dvigateliga qaytmaydi. Eski modullar faqat compatibility/arxiv yo‘llari sifatida qolgan. |
+| `production_migrations` | T2 native LRV uchun kerakli besh additive migration live katalogda mavjud; `t2_fakt_yoz_v2` ham qo‘llangan. Ushbu checkpoint yangi production migration qo‘llamadi. |
+| `sheets_bridge` | Kod va ko‘prik kontrakti tayyor, lekin real Google trigger/Sheet↔Supabase acceptance hali egasi tomonidan faollashtirilmagan. |
+| `remaining_evidence` | Authenticated production deep-smoke egasining real sessiyasini talab qiladi; bu muhit parol yoki cookie olmagan. |
