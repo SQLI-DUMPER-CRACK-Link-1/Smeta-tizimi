@@ -124,3 +124,39 @@ Claude `953c86cf2fa159ce79907c407adf363ae19d6648` ni review qilib,
 qo‘shishi kerak. Avval disposable/preview acceptance, keyin alohida owner
 approval bo‘lsa migration apply qilinadi. Ushbu fix branch mainga yoki
 productionga push qilinmagan.
+
+## 2026-09-06 — authenticated preview P0 no-period empty-state correction
+
+Owner authenticated smoke’da `Asosiy kompaniya` → `Yangi O'zbekiston bog'i`
+→ `/admin/hujjat-nazorat` tanlovida sahifa
+`PROGRESS_PERIOD_OUT_OF_RANGE` bilan qulagani kuzatildi. Browser diagnostikasi
+bu xato `periods=[]` kelgan obyekt uchun frontend pure engine’ni
+`throughPeriod=0` bilan chaqirayotganini ko‘rsatdi; bu auth yoki Drive xatosi
+emas.
+
+Source correction:
+
+- `frontend/src/api/t2-document-control.ts` tasdiqlangan F2 davri yo‘q bo‘lsa
+  `progressValuationPage`dan hisoblashni chaqirmaydi va bo‘sh page qaytaradi.
+- `frontend/src/components/construction-document-control/ConstructionDocumentWorkbench.tsx`
+  no-period modelni hisoblashsiz professional empty state sifatida ko‘rsatadi.
+- `frontend/src/admin/pages/HujjatNazoratPage.tsx` eski takroriy no-period
+  xabarini olib tashladi; empty state bitta canonical workbench composition’dan
+  chiqadi.
+- `frontend/src/api/t2-document-control.test.ts` no-approved-F2 period uchun
+  regression test bilan mustahkamlandi.
+
+Verification:
+
+- Authenticated browser smoke: root cause reproduced with
+  `PROGRESS_PERIOD_OUT_OF_RANGE`.
+- Focused Vitest: **2 test files, 10/10 PASS**.
+- `npx tsc --noEmit -p tsconfig.app.json`: PASS.
+- `git diff --check`: PASS.
+- Production/main: o‘zgartirilmadi; migration/config/deploy bajarilmadi.
+
+Bu correction `codex/t2-daily-workflow-reliability-fix-v1` branchidagi eng
+so‘nggi commitda remote’ga push qilindi. Integrator keyingi authenticated
+smokeda obyektida tasdiqlangan F2 davri yo‘q holat endi crash emasligini,
+tasdiqlangan davrli obyektlar esa avvalgi calculation path bilan ishlashini
+tekshirishi kerak.
