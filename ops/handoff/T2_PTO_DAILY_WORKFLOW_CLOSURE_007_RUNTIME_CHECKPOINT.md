@@ -2,7 +2,7 @@
 
 ## Tayanch
 
-- Kod checkpointi: `a755cec5bfb6da9d9652f3c7242b4eefc8f98492`
+- Release checkpointi: `9ee8462d4695eff44203faee6f8ad1430fb1d890`; native UI kodi `a755cec5bfb6da9d9652f3c7242b4eefc8f98492` commitida.
 - Branchlar: `codex/t2-daily-native-lrv-v1`, `origin/integration/next-main-release-v1` va `origin/main` shu kod holatida.
 - Ish prinsipi: eski GAS biznes mantiqi ko‘chirilmaydi; T2 native oqim canonical Supabase/R2 contractidan foydalanadi.
 
