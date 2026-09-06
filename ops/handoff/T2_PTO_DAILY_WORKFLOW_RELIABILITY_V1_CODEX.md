@@ -6,6 +6,7 @@
 
 - **BASE:** `origin/main`dagi `7a49befb611408c8b39ebd8e564465eb423b61bf` asosida ochilgan ishchi tarmoq.
 - **BRANCH:** `codex/t2-daily-workflow-reliability-v1`.
+- **IMPLEMENTATION HEAD:** `8c7cf3b8fb1dcdfe9601b48936f6670ba3552afb` (`feat(t2): harden PTO daily canonical workflow`). Handoffni qayd etgan yakuniy hujjat commiti shu tarmoq uchida undan keyin keladi.
 - **INTEGRATION:** `origin/integration/next-main-release-v1` `46a68a3c11c146b41e03f3f2344712348dde0490`; ishchi tarmoq undan oltita keyingi hujjat/fiks commitini ham o‘z ichiga oladi.
 - **MAIN:** shu ish doirasida o‘zgartirilmagan.
 
@@ -51,7 +52,7 @@
 - Lint: **PASS**, 0 ta xato; mavjud ogohlantirishlar saqlangan.
 - `npm run tekshir`: **PASS**, `BUG_FOUND=0`.
 - `node ops/governance-check.cjs`: **PASS** (`4 required files, 29 tasks`).
-- `git diff --check`: yakuniy commitdan oldin qayta tekshiriladi.
+- `git diff --check`: **PASS**.
 
 ## Tayyorlik chegarasi
 
