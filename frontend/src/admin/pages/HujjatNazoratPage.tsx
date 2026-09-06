@@ -73,7 +73,7 @@ export default function HujjatNazoratPage() {
       {noPerm && <p className="text-sm text-rose-300">Bu obyekt uchun ruxsat yo‘q.</p>}
       {q.isLoading && <p className="text-sm text-text-dim">Yuklanmoqda…</p>}
       {q.isError && !notApplied && !noPerm && (
-        <p className="text-sm text-rose-300">Xato: {String((q.error as any)?.code || (q.error as any)?.message || 'noma’lum')}</p>
+        <p className="text-sm text-rose-300">Ma’lumotlarni yuklab bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.</p>
       )}
 
       {model && page && <ConstructionDocumentWorkbench model={model} page={page} />}

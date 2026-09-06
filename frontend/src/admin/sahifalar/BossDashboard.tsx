@@ -24,6 +24,15 @@ const SEV: Record<string, string> = {
   medium: 'text-sky-300 bg-sky-500/10 border-sky-500/30',
   low: 'text-zinc-300 bg-zinc-500/10 border-zinc-500/30',
 };
+const SIGNAL_ENTITY_LABEL: Record<string, string> = {
+  loyiha: 'Loyiha',
+  obyekt: 'Obyekt',
+  qator: 'Smeta qatori',
+  hujjat: 'Hujjat',
+  shartnoma: 'Shartnoma',
+  fakt: 'Fakt',
+};
+const signalEntityLabel = (value: string | null | undefined) => SIGNAL_ENTITY_LABEL[String(value ?? '').toLowerCase()] ?? 'Tegishli bo‘lim';
 
 function Kpi({ Icon, nom, qiymat, izoh, ulangan = true }: {
   Icon: typeof Wallet; nom: string; qiymat: string; izoh?: string; ulangan?: boolean;
@@ -70,7 +79,7 @@ export default function BossDashboard() {
       {q.isLoading && <div className="text-text-dim text-sm">Yuklanmoqda…</div>}
       {q.isError && (
         <div className="rounded-lg bg-rose-500/8 border border-rose-500/25 px-4 py-3 text-[13px] text-rose-200 flex items-center gap-2">
-          <AlertTriangle size={16} /> Rahbar paneli yuklanmadi: {(q.error as any)?.message || 'xato'}
+          <AlertTriangle size={16} /> Rahbar paneli yuklanmadi. Birozdan so‘ng qayta urinib ko‘ring.
         </div>
       )}
 
@@ -119,7 +128,7 @@ export default function BossDashboard() {
                 {q.data.signal.royxat.map((s) => (
                   <li key={s.id} className={'rounded-md border px-2.5 py-1.5 text-[12px] ' + (SEV[s.severity || 'low'] || SEV.low)}>
                     <div className="font-medium truncate">{s.title || s.signal_type}</div>
-                    <div className="text-[10px] opacity-70">{s.entity_type} #{s.entity_id}{s.due_at ? ' · muddat ' + new Date(s.due_at).toLocaleDateString('uz-UZ') : ''}</div>
+                    <div className="text-[10px] opacity-70">{signalEntityLabel(s.entity_type)}{s.due_at ? ' · muddat ' + new Date(s.due_at).toLocaleDateString('uz-UZ') : ''}</div>
                   </li>
                 ))}
                 {q.data.signal.royxat.length === 0 && <li className="text-[12px] text-text-dim">Ochiq signal yo‘q.</li>}

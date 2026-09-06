@@ -97,7 +97,7 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       if (!r.ok) { setError(r.xabar || r.error || 'Saqlanmadi.'); return; }
       formniTozala();
       await daraxtniYukla(objectId);
-      setDone(`Yaratildi: qator #${r.qator_id}`);
+      setDone('O‘zgarish muvaffaqiyatli yaratildi.');
     } catch { setError('Tarmoq xatosi — qayta urinib ko‘ring.'); }
     finally { setBusy(false); }
   }
