@@ -17,4 +17,13 @@ describe('T2 kundalik PTO navigatsiyasi', () => {
     expect(operatsion).toContain("{ yol: '/admin/f2'");
     expect(operatsion).toContain("{ yol: '/admin/f2-tayyorlash'");
   });
+
+  it('development /admin/test yo‘llari production sidebarida ko‘rinmaydi', () => {
+    expect(shell).not.toMatch(/yol:\s*['"]\/admin\/test\//);
+  });
+
+  it('native obyekt yo‘li eski Tizim_01 menyusida takrorlanmaydi', () => {
+    expect(eski).not.toContain("'/admin/obyektlar'");
+    expect(shell.slice(0, shell.indexOf('const ESKI_TIZIM_MENYU'))).toContain("{ yol: '/admin/obyektlar'");
+  });
 });

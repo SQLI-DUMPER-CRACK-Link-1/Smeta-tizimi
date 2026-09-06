@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
-import { AlertTriangle, ChevronDown, ChevronRight, Archive, ShieldCheck } from 'lucide-react';
-import { Map, LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Archive } from 'lucide-react';
+import { Map, LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, ClipboardList, Users } from 'lucide-react';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 import { KompaniyaProvider, useKompaniya } from '../umumiy/kontekst/KompaniyaKontekst';
@@ -28,13 +28,12 @@ const TIZIM_02_GURUHLAR = [
     id: 'asosiy',
     menyular: [
       { yol: '/admin/dashboard', nom: 'Rahbar paneli', Ikonka: BarChart },
-      { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
+      { yol: '/admin/obyektlar', nom: 'Obyektlar', Ikonka: Building2 },
       { yol: '/admin/participants', nom: 'Loyiha ishtirokchilari', Ikonka: Users },
       { yol: '/admin/documents', nom: 'Hujjatlar', Ikonka: FileStack },
       { yol: '/admin/hujjat-nazorat', nom: 'Hujjat nazorati (F2/Nakopitelniy)', Ikonka: FileOutput },
       { yol: '/admin/fakt', nom: 'Bajarilgan ishlar (Fakt)', Ikonka: ClipboardList },
         { yol: '/admin/mindmap', nom: 'Mindmap (Xarita)', Ikonka: Map },
-      { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
     ]
   },
   {
@@ -45,12 +44,6 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/holat', nom: 'Ishchi smeta / LRV', Ikonka: FileText },
       { yol: '/admin/f2', nom: 'F2 import', Ikonka: FileInput },
       { yol: '/admin/f2-tayyorlash', nom: 'F2 tayyorlash', Ikonka: FileOutput },
-      { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
-        { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
-      { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
-        { yol: '/admin/test/zayavka', nom: 'Zayavkalar (PTO)', Ikonka: ClipboardList },
-        { yol: '/admin/test/aosr', nom: 'QA/QC (AOSR/APPOK)', Ikonka: ShieldCheck },
-      { yol: '/admin/test/erp', nom: 'Kadrlar, Texnika (ERP)', Ikonka: Users },
     ]
   },
   {
@@ -58,15 +51,12 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: Settings,
     id: 'tizim',
     menyular: [
-      { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
       { yol: '/admin/storage', nom: 'Fayl saqlash (Storage)', Ikonka: HardHat },
-      { yol: '/admin/test/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
     ]
   }
 ];
 
 const ESKI_TIZIM_MENYU = [
-  { yol: '/admin/obyektlar',  nom: 'Obyektlar',   Ikonka: Building2 },
   { yol: '/admin/buxgalteriya', nom: 'Buxgalteriya', Ikonka: Calculator },
   { yol: '/admin/shartnomalar', nom: 'Shartnomalar', Ikonka: FileSignature },
   { yol: '/admin/fakturalar', nom: 'Fakturalar (Eski)', Ikonka: FileText },
