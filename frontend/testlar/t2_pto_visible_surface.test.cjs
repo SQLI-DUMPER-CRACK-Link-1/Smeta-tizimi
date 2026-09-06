@@ -74,6 +74,9 @@ must('DocumentCenter omits technical document identity',
 must('BossDashboard omits technical signal identity and raw error',
   !/s\.entity_type\}\s*#\$\{s\.entity_id\}|\(q\.error as any\)\?\.message/.test(noComment(ptoSources.find(([name]) => name === 'BossDashboard')[1])),
   'rahbar paneli signal ID yoki backend xatosini foydalanuvchiga chiqarmasligi kerak');
+must('F2 tarixida developer versiya izohi yo‘q',
+  !/serverdagi versiya|revision\s*[:=]/i.test(noComment(ptoSources.find(([name]) => name === 'F2TarixNative')[1])),
+  'operatorga ichki versiya atamasi emas, tushunarli tasdiqlash holati ko‘rsatilishi kerak');
 
 console.log(`\n═══ ${passed} passed, ${failed} failed ═══`);
 process.exit(failed ? 1 : 0);
