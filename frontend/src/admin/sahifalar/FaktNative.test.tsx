@@ -48,7 +48,7 @@ describe('FaktNative kanonik yozish usullari', () => {
   it('standart ustiga qo‘shish yo‘li mavjud kanonik fakt yozish kontraktini saqlaydi', async () => {
     mocks.faktYoz.mockResolvedValue({ ok: true });
     renderFakt();
-    const input = await screen.findByLabelText('Fakt 22');
+    const input = await screen.findByLabelText('Fakt hajmi: BL-01');
     fireEvent.change(input, { target: { value: '3.5' } });
     fireEvent.click(screen.getByRole('button', { name: 'Faktni saqlash' }));
     await waitFor(() => expect(mocks.faktYoz).toHaveBeenCalledWith(expect.objectContaining({
@@ -62,9 +62,9 @@ describe('FaktNative kanonik yozish usullari', () => {
   it('jami rejimi expected qiymatni yuborib optimistic total edit ishlatadi', async () => {
     mocks.faktBelgilaV2.mockResolvedValue({ ok: true, fakt_hajm: 128.75 });
     renderFakt();
-    await screen.findByLabelText('Fakt 22');
+    await screen.findByLabelText('Fakt hajmi: BL-01');
     fireEvent.click(screen.getByRole('button', { name: 'Jami qiymat' }));
-    fireEvent.change(screen.getByLabelText('Fakt 22'), { target: { value: '128.75' } });
+    fireEvent.change(screen.getByLabelText('Fakt hajmi: BL-01'), { target: { value: '128.75' } });
     fireEvent.click(screen.getByRole('button', { name: 'Faktni saqlash' }));
     await waitFor(() => expect(mocks.faktBelgilaV2).toHaveBeenCalledWith(expect.objectContaining({
       obyektId: 8,
@@ -80,9 +80,9 @@ describe('FaktNative kanonik yozish usullari', () => {
   it('jami rejimida server conflicti foydalanuvchiga xavfsiz xabar bo‘lib qaytadi', async () => {
     mocks.faktBelgilaV2.mockResolvedValue({ ok: false, code: 'FAKT_CONFLICT' });
     renderFakt();
-    await screen.findByLabelText('Fakt 22');
+    await screen.findByLabelText('Fakt hajmi: BL-01');
     fireEvent.click(screen.getByRole('button', { name: 'Jami qiymat' }));
-    fireEvent.change(screen.getByLabelText('Fakt 22'), { target: { value: '128.75' } });
+    fireEvent.change(screen.getByLabelText('Fakt hajmi: BL-01'), { target: { value: '128.75' } });
     fireEvent.click(screen.getByRole('button', { name: 'Faktni saqlash' }));
     await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(
       expect.stringContaining('eskirgan qiymat sabab rad etildi'), 'warn',

@@ -18,6 +18,7 @@ export interface ExportPreviewModel {
 }
 
 const show = (value: number | null) => value == null ? 'NOANIQ' : value;
+const errorLabel: Record<string, string> = { NAKOPITELNIY_MISMATCH: 'Nakopitelniy yig‘indisi mos emas', MISSING_BASELINE_PRICE: 'Boshlang‘ich narx manbasi yo‘q' };
 
 export function ExportPreview({model}:{model:ExportPreviewModel}) {
   const handleNakopitelniy = async () => {
@@ -54,7 +55,7 @@ export function ExportPreview({model}:{model:ExportPreviewModel}) {
   };
 
   return (
-    <section aria-label="Export preview" className="rounded-xl border border-white/10 p-4">
+    <section aria-label="Excel eksporti oldindan ko‘rish" className="rounded-xl border border-white/10 p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-medium">Hujjatlarni yuklab olish</h2>
         <div className="flex gap-2">
@@ -63,13 +64,12 @@ export function ExportPreview({model}:{model:ExportPreviewModel}) {
           <button onClick={handleForma3} className="px-3 py-1 bg-purple-600 hover:bg-purple-500 rounded text-sm font-medium transition-colors">Forma-3</button>
         </div>
       </div>
-      <p className="text-sm">Davr: {model.f2PeriodId} · estimate revision: {model.estimateRevisionId}</p>
-      <p className="text-sm">Cumulative: {show(model.totals.cumulativeValue)} · Remaining: {show(model.totals.remainingValue)}</p>
-      <p className="text-xs text-slate-400">Hujjatlar: {model.documents.join(', ')}</p>
-      {model.projectionHash && <p className="text-xs text-slate-500 font-mono mt-1">F-2 Projection Hash: {model.projectionHash}</p>}
-      {model.reconciliation.length>0&&<p role="alert" className="text-red-300">Reconciliation: {model.reconciliation.map(x=>x.code).join(', ')}</p>}
+      <p className="text-sm">Tanlangan davr: tayyor · Smeta manbasi: mavjud</p>
+      <p className="text-sm">Jami bajarilgan: {show(model.totals.cumulativeValue)} · Qolgan: {show(model.totals.remainingValue)}</p>
+      <p className="text-xs text-slate-400">Biriktirilgan dalillar: {model.documents.length ? `${model.documents.length} ta hujjat` : 'qayd etilmagan'}</p>
+      {model.reconciliation.length>0&&<p role="alert" className="text-red-300">Tekshiruvda {model.reconciliation.length} ta nomuvofiqlik bor: {model.reconciliation.map(x=>errorLabel[x.code] ?? 'Qator ma’lumoti mos emas').join(', ')}</p>}
     </section>
   );
 }
-export function ExportValidationSummary({errors}:{errors:readonly {lineId:Id;code:string}[]}){return <p className={errors.length?'text-red-300':'text-emerald-300'}>{errors.length?`${errors.length} reconciliation errors`:'Export reconciliation passed'}</p>}
-export function ReconciliationErrors({errors}:{errors:readonly {lineId:Id;code:string}[]}){return <ul aria-label="Reconciliation errors">{errors.map(x=><li key={`${x.lineId}:${x.code}`}>{x.lineId}: {x.code}</li>)}</ul>}
+export function ExportValidationSummary({errors}:{errors:readonly {lineId:Id;code:string}[]}){return <p className={errors.length?'text-red-300':'text-emerald-300'}>{errors.length?`${errors.length} ta eksport tekshiruvi talab qiladi`:'Eksport hisob-kitobi mos'}</p>}
+export function ReconciliationErrors({errors}:{errors:readonly {lineId:Id;code:string}[]}){return <ul aria-label="Eksport nomuvofiqliklari">{errors.map(x=><li key={`${x.lineId}:${x.code}`}>{errorLabel[x.code] ?? 'Qator ma’lumoti mos emas'}</li>)}</ul>}

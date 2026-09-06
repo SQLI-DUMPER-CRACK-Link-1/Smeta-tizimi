@@ -46,6 +46,7 @@ const TESTLAR = [
   ['PRE-MAIN adversarial release contracts', 'pre_main_release_qa.test.cjs'],
   ['COMPANY CONTEXT P0 (provider/scope/superadmin)', 't2_company_context.test.cjs'],
   ['COMPANY CONTEXT adversarial oracle (Codex)', 't2_company_context_adversarial.test.cjs'],
+  ['PTO visible T2 navigation/identity guard', 't2_pto_visible_surface.test.cjs'],
   ['Cloudflare Functions TS gate oracle (Codex)', 't2_functions_typecheck_gate.test.cjs'],
 ];
 

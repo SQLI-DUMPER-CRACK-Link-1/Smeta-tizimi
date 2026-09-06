@@ -46,7 +46,7 @@ export default function DocumentsPage() {
           documents={documents}
           health={health}
           loading={q.isLoading}
-          error={q.isError && !notApplied ? String((q.error as any)?.code || 'xato') : undefined}
+          error={q.isError && !notApplied ? 'Hujjatlarni yuklab bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.' : undefined}
           noPermission={(q.error as any)?.code === 'HTTP_403'}
           onDownload={(id) => { window.open(hujjatYuklabOlishUrl(Number(id)), '_blank', 'noopener'); }}
           onOpen={(id) => { window.open(hujjatYuklabOlishUrl(Number(id)), '_blank', 'noopener'); }}
