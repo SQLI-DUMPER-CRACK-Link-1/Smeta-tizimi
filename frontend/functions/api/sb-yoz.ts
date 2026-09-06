@@ -109,6 +109,7 @@ const AMALLAR = {
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
   kontragent_ochir: { rpc: 't2_kontragent_ochir' },
   fakt_yoz_v2: { rpc: 't2_fakt_yoz_v2' },
+  fakt_belgila_v2: { rpc: 't2_fakt_belgila_v2' },
   fakt_belgila: { rpc: 't2_fakt_belgila' },
   /* ⚠️ P0 SECURITY (2026-09-03): bu uchtasi avval to'g'ridan-to'g'ri
    * un-versioned RPC'ga (t2_azolik_qosh/_rol_ozgartir/_ochir) borardi —
@@ -1457,6 +1458,40 @@ export const onRequestPost: PagesFunction<{
         p_yangi_jami: Number(so.yangi_jami),
         p_sana: so.sana ? String(so.sana) : null,
         p_kim: sess.email || null,
+      };
+
+    /* Sayt uchun kanonik JAMI Fakt qiymatini optimistik qulf bilan belgilash.
+       Bu eski `fakt_belgila` emas: obyekt, actor, joriy qiymat va operation_id
+       server kontrakti orqali tekshiriladi. */
+    } else if (amal === 'fakt_belgila_v2') {
+      const obyektId = Number(so.obyekt_id);
+      const qatorId = Number(so.qator_id);
+      const expected = Number(so.expected_fakt_hajm);
+      const yangi = Number(so.yangi_fakt_hajm);
+      const operationId = String(so.operation_id || '');
+      if (!Number.isSafeInteger(obyektId) || obyektId <= 0 || !Number.isSafeInteger(qatorId) || qatorId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id yoki qator_id noto\'g\'ri' });
+      }
+      if (!Number.isFinite(expected) || !Number.isFinite(yangi)) {
+        return Response.json({ ok: false, error: 'Fakt qiymatlari son bo\'lishi kerak' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi kerak' });
+      }
+      const sana = String(so.sana || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(sana)) {
+        return Response.json({ ok: false, error: 'sana YYYY-MM-DD shaklida bo\'lishi kerak' });
+      }
+      yuk = {
+        p_obyekt_id: obyektId,
+        p_qator_id: qatorId,
+        p_expected_fakt_hajm: expected,
+        p_yangi_fakt_hajm: yangi,
+        p_sana: sana,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_operation_id: operationId,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_actor_label: sess.email || null,
       };
 
     /* ══════════ A'ZOLIK (Xodimlar va Rollar) ══════════
