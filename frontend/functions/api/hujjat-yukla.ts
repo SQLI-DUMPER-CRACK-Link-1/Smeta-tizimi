@@ -59,6 +59,14 @@ async function sha256Hex(buf: ArrayBuffer): Promise<string> {
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function upstreamDocumentFailure(code: string, status = 502) {
+  return Response.json({
+    ok: false,
+    code,
+    xato: 'Kanonik hujjat reyestri vaqtincha ishlamadi. Birozdan so‘ng qayta urinib ko‘ring.',
+  }, { status });
+}
+
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   try {
     const sess = await tekshir(ctx.request.headers.get('Cookie'), ctx.env.SESSIYA_KALIT);
@@ -95,8 +103,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       p_expected_size: declaredSize, p_client_sha256: clientSha, p_operation_id: operationId, p_revision: revision,
     });
     if (!reserve.httpOk || !reserve.body || reserve.body.ok !== true) {
-      return Response.json({ ok: false, code: (reserve.body && reserve.body.code) || 'DOCUMENT_RESERVE_FAILED',
-        xato: (reserve.body && reserve.body.message) || reserve.raw?.slice(0, 300) }, { status: 502 });
+      return upstreamDocumentFailure((reserve.body && typeof reserve.body.code === 'string') ? reserve.body.code : 'DOCUMENT_RESERVE_FAILED');
     }
     const documentId: number = reserve.body.document_id;
     const r2Key: string = reserve.body.r2_key;
@@ -146,9 +153,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     if (!fin.httpOk || !fin.body || fin.body.ok !== true) {
       // R2 object exists but registry not finalized -> reconcile worker will
       // finalize it from R2 (row stays 'reserved'). Report a soft failure.
-      return Response.json({ ok: false, code: (fin.body && fin.body.code) || 'DOCUMENT_FINALIZE_FAILED',
-        xato: 'Fayl saqlandi, reyestr yakunlanmadi — tez orada tiklanadi', document_id: documentId,
-        r2_key: r2Key, canonical_storage_status: 'reserved' }, { status: 202 });
+      return Response.json({
+        ok: false,
+        code: (fin.body && typeof fin.body.code === 'string') ? fin.body.code : 'DOCUMENT_FINALIZE_FAILED',
+        xato: 'Fayl saqlandi, reyestr yakunlanmadi — tiklash jarayoni davom etadi.',
+        document_id: documentId, r2_key: r2Key, canonical_storage_status: 'reserved',
+      }, { status: 202 });
     }
 
     return Response.json({
@@ -156,7 +166,11 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       r2_key: r2Key, sha256: fin.body.sha256, sha256_verified: fin.body.sha256_verified,
       size_bytes: declaredSize, versiya: fin.body.versiya, drive_sync: 'pending',
     });
-  } catch (err: any) {
-    return Response.json({ ok: false, code: 'UPLOAD_FAILED', xato: 'Yuklash xatosi: ' + (err?.message || String(err)) }, { status: 500 });
+  } catch {
+    return Response.json({
+      ok: false,
+      code: 'UPLOAD_FAILED',
+      xato: 'Kanonik fayl yuklanmadi. Birozdan so‘ng qayta urinib ko‘ring.',
+    }, { status: 500 });
   }
 };

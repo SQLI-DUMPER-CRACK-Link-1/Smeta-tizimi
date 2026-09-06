@@ -17,4 +17,10 @@ describe('SmetaTree scalable flattening', () => {
     // getAllKeys faqat BOLASI BOR tugunlarni qaytaradi (MAT bargi -- yo'q).
     expect(getAllKeys([n] as any)).toEqual(['S#1', 'S#2']);
   });
+
+  it('T2 qator IDsi bor bo‘lsa, varaq/qator o‘zgarishidan qat’i nazar kalitni saqlaydi', () => {
+    const withId = { id: 77, varaq: 'Amfiteatr', row: 184, nom: 'Beton' } as any;
+    expect(flattenTree([withId], {} as Record<string, boolean>)[0].key).toBe('t2:77');
+    expect(flattenTree([{ ...withId, row: 226 }], { 't2:77': true } as Record<string, boolean>)[0].key).toBe('t2:77');
+  });
 });

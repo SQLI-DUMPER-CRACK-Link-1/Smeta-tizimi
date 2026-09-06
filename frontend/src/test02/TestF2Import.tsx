@@ -1260,8 +1260,8 @@ export default function TestF2Import() {
         nom: n.nom || '',
         kod: n.kod,
         bir: n.birlik,
-        hajm: n.smetaHajm,
-        summa: n.smeta,
+        hajm: n.smetaHajm ?? undefined,
+        summa: n.smeta ?? undefined,
         isQosh: n.isQosh,
         isZamena: n.isZamena,
         manfiy: (n.smetaHajm ?? 0) < 0,
@@ -2111,7 +2111,6 @@ export default function TestF2Import() {
     </Sahifa>
   );
 }
-
 
 
 

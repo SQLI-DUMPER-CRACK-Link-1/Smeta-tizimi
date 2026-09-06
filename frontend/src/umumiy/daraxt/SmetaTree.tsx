@@ -40,6 +40,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
     () => new Map((priceControlLines || []).map((line) => [line.qator_id, line])),
     [priceControlLines],
   );
+  const priceControlReady = (priceControlLines?.length ?? 0) > 0;
 
   /* ⚠️ 2026-08-17 (audit): «Qidiruv…» maydoni hech narsaga ULANMAGAN edi —
      yozish mumkin, lekin daraxt o'zgarmasdi. Minglab qatorli smetada bu
@@ -90,8 +91,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
     getScrollElement: () => parentRef.current,
     estimateSize: (idx) => {
       const row = flatNodes[idx];
-      const key = `${row.node.varaq}#${row.node.row}`;
-      if (expandedDetailId === key) return 250;
+      if (expandedDetailId === row.key) return 250;
       return density === 'compact' ? 34 : 44;
     },
     overscan: 20,
@@ -114,7 +114,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   };
   const showMoney = preset === 'TOLIQ' || preset === 'NARX';
   const showSmetaAndFakt = preset !== 'F2';
-  const selected = flatNodes.find((row) => `${row.node.varaq}#${row.node.row}` === selectedKey);
+  const selected = flatNodes.find((row) => row.key === selectedKey);
 
   return (
     <div className={`relative flex flex-col h-full bg-surface border border-border rounded-xl shadow-sm overflow-hidden ${density === 'compact' ? 'text-xs' : 'text-sm'}`}>
@@ -150,7 +150,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
         </div>
         <div className="mt-2 flex gap-1 overflow-x-auto">
           {([['all','Hammasi'],['f2','F2 olish mumkin'],['qosh','Qo\'shimcha'],['zamena','Zamena'],['bl','Faqat BL'],['mat','Materiallar']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>)}
-          {priceControlLines ? ([['frozen','Muzlagan'],['risk','Xavf ostida'],['basis','Protokolsiz']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>) : <span className="px-2 py-1 text-[11px] text-text-mute">Narx nazorati ma'lumoti ulanmagan</span>}
+          {priceControlReady ? ([['frozen','Muzlagan'],['risk','Xavf ostida'],['basis','Protokolsiz']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>) : <span className="px-2 py-1 text-[11px] text-text-mute">Narx nazorati ma'lumoti ulanmagan</span>}
         </div>
       </div>
 
@@ -202,16 +202,16 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const row = flatNodes[virtualRow.index];
             const node = row.node;
-            const key = `${node.varaq}#${node.row}`;
+            const key = row.key;
             const isEdited = !!edits[key];
             const currentFakt = edits[key]?.edit.fakt ?? node.fakt ?? 0;
-            const isOverLimit = currentFakt > (node.smetaHajm || 0);
+            const isOverLimit = node.smetaHajm != null && currentFakt > node.smetaHajm;
             const priceControl = node.id == null ? undefined : priceControlByQatorId.get(node.id);
             const nazoratHolati = priceControl ? PRICE_STATE_BADGE[priceControl.price_state] : undefined;
             
             return (
               <div
-                key={virtualRow.index}
+                key={row.key}
                 draggable={isEditMode}
                 onDragStart={(e) => {
                   if (!isEditMode) return;
@@ -253,7 +253,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                     {/* Expand/Collapse Chevron */}
                     <div className="w-5 flex items-center justify-center flex-shrink-0">
                       {row.hasChildren ? (
-                        <button aria-label="Shoxni ochish yoki yopish" onClick={(e) => { e.stopPropagation(); toggleExpand(`${node.varaq}#${node.row}`); }} className="p-0.5 hover:bg-surface-2 rounded text-text-dim hover:text-white">
+                        <button aria-label="Shoxni ochish yoki yopish" aria-expanded={row.isExpanded} onClick={(e) => { e.stopPropagation(); toggleExpand(key); }} className="p-0.5 hover:bg-surface-2 rounded text-text-dim hover:text-white">
                           {row.isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                         </button>
                       ) : (
@@ -316,26 +316,26 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                   </div>}
                   
                   <div className="w-24 text-right">
-                      <FmtN val={node.f2ol || 0} cl="text-purple-400" />
+                       <FmtN val={node.f2ol} cl="text-purple-400" />
                   </div>
-                  <div className="w-24 text-right text-cyan-300"><FmtN val={node.f2mum || 0} /></div>
+                  <div className="w-24 text-right text-cyan-300"><FmtN val={node.f2mum} /></div>
                   
                   <div className="w-20 text-right text-amber-300/80"><FmtN val={node.qoldiq} /></div>
                   <div className={nazoratHolati ? `w-20 text-left truncate ${nazoratHolati.className}` : 'w-20 text-left text-text-mute'} title={nazoratHolati?.label || 'Narx nazorati ma\'lumoti ulanmagan'}>{nazoratHolati ? `${nazoratHolati.emoji} ${nazoratHolati.label}` : '—'}</div>
 
                   {showMoney && <div className="w-4 border-r border-white/10 h-full mx-2 flex items-center justify-center">
                     {/* Tiny visual progress bar for Fakt */}
-                    <div className="w-full h-8 flex flex-col justify-end bg-black/30 rounded-sm overflow-hidden" title={`Fakt: ${Math.round((node.fakt / (node.smetaHajm || 1)) * 100)}%`}>
-                      <div className="w-full bg-emerald-500/50" style={{ height: `${Math.min((node.fakt / (node.smetaHajm || 1)) * 100, 100)}%` }} />
+                    <div className="w-full h-8 flex flex-col justify-end bg-black/30 rounded-sm overflow-hidden" title={node.fakt != null && node.smetaHajm != null ? `Fakt: ${Math.round((node.fakt / (node.smetaHajm || 1)) * 100)}%` : 'Fakt foizi noma’lum'}>
+                      {node.fakt != null && node.smetaHajm != null && <div className="w-full bg-emerald-500/50" style={{ height: `${Math.min((node.fakt / (node.smetaHajm || 1)) * 100, 100)}%` }} />}
                     </div>
                   </div>}
 
                   {/* SUMMAS (Nakrutka) */}
                   {showMoney && <><div className="w-24 text-right text-blue-200"><FmtN val={node.smeta} /></div>
-                  <div className="w-24 text-right text-emerald-300 font-bold"><FmtN val={node.stFakt ?? (node.fakt * (node.narx || 0))} /></div>
-                  <div className="w-24 text-right text-purple-300 font-bold"><FmtN val={node.stF2 || 0} /></div>
-                  <div className="w-24 text-right text-cyan-300"><FmtN val={node.stOst ?? (node.f2mum * (node.narx || 0))} /></div>
-                  <div className="w-24 text-right text-amber-300"><FmtN val={(node.smeta || 0) - (node.stFakt ?? (node.fakt * (node.narx || 0)))} /></div></>}
+                  <div className="w-24 text-right text-emerald-300 font-bold"><FmtN val={node.stFakt} /></div>
+                  <div className="w-24 text-right text-purple-300 font-bold"><FmtN val={node.stF2} /></div>
+                  <div className="w-24 text-right text-cyan-300"><FmtN val={node.stOst} /></div>
+                  <div className="w-24 text-right text-amber-300"><FmtN val={node.stOst != null && node.smeta != null ? node.smeta - node.stOst : null} /></div></>}
                 </div>
 
                 {/* Expanded RowDetailPanel for F2 Monthly Editing */}

@@ -144,6 +144,43 @@ const AMALLAR = {
 
 type Amal = keyof typeof AMALLAR;
 
+/** Tasdiqlashda qaysi tenantga tegishli ekanini klient yuborgan qiymatdan
+ * emas, kanonik aktdan aniqlaymiz. Bu oldingi `akt_id`ni bilgan boshqa
+ * kompaniya a’zosi hujjatni tasdiqlab yuborishi mumkin bo‘lgan bo‘shliqni
+ * yopadi. `foydalanuvchi_id` faqat tekshirilgan sessiyadan keladi. */
+async function aktTasdiqlashRuxsati(
+  env: { SUPABASE_URL: string; SUPABASE_KEY: string }, aktId: number, actorId: number,
+): Promise<{ ok: true; kompaniyaId: number; rol: string } | { ok: false; status: number }> {
+  const headers = {
+    apikey: env.SUPABASE_KEY,
+    Authorization: 'Bearer ' + env.SUPABASE_KEY,
+    'Content-Type': 'application/json',
+  };
+  try {
+    const aktResponse = await fetch(
+      supabaseBaseUrl(env.SUPABASE_URL) + `/rest/v1/t2_akt?id=eq.${aktId}&select=id,kompaniya_id&limit=1`,
+      { headers },
+    );
+    if (!aktResponse.ok) return { ok: false, status: 403 };
+    const aktlar = await aktResponse.json() as unknown;
+    const akt = Array.isArray(aktlar) ? aktlar[0] as { id?: unknown; kompaniya_id?: unknown } | undefined : undefined;
+    const kompaniyaId = Number(akt?.kompaniya_id);
+    if (!akt || !Number.isSafeInteger(kompaniyaId) || kompaniyaId <= 0) return { ok: false, status: 403 };
+
+    const memberResponse = await fetch(
+      supabaseBaseUrl(env.SUPABASE_URL) + '/rest/v1/rpc/t2_actor_kompaniya_azo_tekshir',
+      { method: 'POST', headers, body: JSON.stringify({ p_kompaniya_id: kompaniyaId, p_actor_id: actorId }) },
+    );
+    if (!memberResponse.ok) return { ok: false, status: 403 };
+    const rolePayload = await memberResponse.json() as unknown;
+    const rol = typeof rolePayload === 'string' ? rolePayload : '';
+    if (!rol || rol === 'boss' || rol === 'rahbar') return { ok: false, status: 403 };
+    return { ok: true, kompaniyaId, rol };
+  } catch {
+    return { ok: false, status: 503 };
+  }
+}
+
 export const onRequestPost: PagesFunction<{
   SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string;
 }> = async (ctx) => {
@@ -820,7 +857,18 @@ export const onRequestPost: PagesFunction<{
       const v = Number.isFinite(versiya) ? versiya : null;
 
       if (amal === 'akt_tasdiqlash') {
-        yuk = { p_akt_id: aktId, p_kutilgan_versiya: v, p_kim: sess.email || '' };
+        if (!uuidRe.test(operationId)) {
+          return Response.json({ ok: false, error: 'Tasdiqlash uchun operation_id (UUID) majburiy' }, { status: 400 });
+        }
+        const actorId = Number(sess.foydalanuvchi_id);
+        if (!Number.isSafeInteger(actorId) || actorId <= 0) {
+          return Response.json({ ok: false, error: 'Tasdiqlash uchun sessiya yangilanishi kerak' }, { status: 401 });
+        }
+        const access = await aktTasdiqlashRuxsati(ctx.env, aktId, actorId);
+        if (!access.ok) {
+          return Response.json({ ok: false, error: access.status === 503 ? 'Tasdiqlash xizmati vaqtincha mavjud emas' : 'Bu hujjatni tasdiqlashga ruxsat yo‘q' }, { status: access.status });
+        }
+        yuk = { p_akt_id: aktId, p_kutilgan_versiya: v, p_kim: sess.email || '', p_operation_id: operationId };
       } else {
         yuk = { p_akt_id: aktId, p_kutilgan_versiya: v, p_kim: sess.email || '',
                 p_sabab: so.sabab ? String(so.sabab).slice(0, 500) : null };

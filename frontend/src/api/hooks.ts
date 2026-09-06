@@ -275,7 +275,7 @@ export function useHolatSaqla(obyekt: string) {
         const qidir = (nodes: TreeNode[]) => {
           for (const n of nodes) {
             if (n.varaq === e.varaq && n.row === e.row) {
-              eskiFakt = n.fakt;
+              eskiFakt = n.fakt ?? undefined;
               return;
             }
             if (n.children) qidir(n.children);

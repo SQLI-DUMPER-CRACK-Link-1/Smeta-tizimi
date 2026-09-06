@@ -12,7 +12,12 @@ export type FlatNode = {
 
 /** Bitta joyda — `flattenTree`/`getAllKeys` ikkalasi ham SHUNI ishlatadi,
  *  ilgari ikki joyda mustaqil takrorlanardi. */
-export const nodeKey = (n: TreeNode) => `${n.varaq}#${n.row}`;
+/**
+ * Kanonik T2 qatorida `id` — yagona identity. Legacy `holat` qatorlarida
+ * esa id yo‘q, shu sabab eski varaq#qator kaliti faqat o‘sha oqimda qoladi.
+ * `xom_qator` takrorlansa yoki o‘zgarsa T2 tanlov/expand holati buzilmaydi.
+ */
+export const nodeKey = (n: TreeNode) => n.id != null ? `t2:${n.id}` : `${n.varaq}#${n.row}`;
 
 /**
  * T2-REAL-PARK-LRV-CLOSURE-005 (Codex tree lane, `codex/t2-smeta-tree-ux-v1`

@@ -229,8 +229,9 @@ export function sbTreeQur(qatorlar: SbHolatQator[]): TreeNode[] {
      shuning uchun bu yerda hisoblanadi (soxta emas: bolalardan). */
   for (const rz of tartib) {
     for (const bl of rz.children || []) {
-      rz.smeta += bl.smeta; rz.fakt += bl.fakt;
-      rz.f2ol += bl.f2ol; rz.qoldiq += bl.qoldiq;
+      rz.smeta = (rz.smeta ?? 0) + (bl.smeta ?? 0);
+      rz.fakt = (rz.fakt ?? 0) + (bl.fakt ?? 0);
+      rz.f2ol += bl.f2ol; rz.qoldiq = (rz.qoldiq ?? 0) + (bl.qoldiq ?? 0);
       rz.stFakt = (rz.stFakt || 0) + (bl.stFakt || 0);
       rz.stF2 = (rz.stF2 || 0) + (bl.stF2 || 0);
     }
@@ -295,8 +296,8 @@ export type T2QatorHolat = {
   birlik: string | null;
   /** ЧЕЛ/МАШ/МАТ/ОБ/КАБ/М-К biznes kategoriyasi. */
   kat: string | null;
-  smeta_hajm: number;
-  smeta_summa: number;
+  smeta_hajm: number | null;
+  smeta_summa: number | null;
   /** ⚠️ FAKT — barcha `tur='fakt'` hujjatlarning yig'indisi. */
   fakt_hajm: number;
   fakt_summa: number;
@@ -307,8 +308,13 @@ export type T2QatorHolat = {
   f2_summa: number;
   /** Qoldiq — smeta dan F2 orqali OLINMAGAN qism (hali hisob-fakturaga
    *  chiqmagan). */
-  qoldiq_hajm: number;
-  qoldiq_summa: number;
+  qoldiq_hajm: number | null;
+  qoldiq_summa: number | null;
+  f2_mumkin_hajm?: number;
+  f2_mumkin_summa?: number;
+  f2_narx?: number | null;
+  fakt_narx?: number | null;
+  f2_narx_farq_foiz?: number | null;
 };
 export type T2Qator = {
   id: number; obyekt_id: number; obyekt: string | null;
@@ -376,7 +382,11 @@ export function sbT2DaraxtOl(obyektId: number) {
  * Bu yerda TAXMIN YO'Q: bog'lanish bazadan keladi.
  */
 export function sbT2TreeQur(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): TreeNode[] {
-  const son = (v: unknown) => Number(v) || 0;
+  const son = (v: unknown): number | null => {
+    if (v == null || String(v).trim() === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
   const xarita = new Map<number, TreeNode>();
   const ildiz: TreeNode[] = [];
   
@@ -395,20 +405,22 @@ export function sbT2TreeQur(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): Tre
       type: (r.tur as TreeNode['type']) || 'rs',
       nom: r.nom || '',
       varaq: r.obyekt || '',
-      row: son(r.xom_qator),
+      row: son(r.xom_qator) ?? 0,
       kat: r.kat || '',
       kod: r.kod || '',
       birlik: r.birlik || '',
       smetaHajm: son(r.hajm),
       smeta: son(r.summa),
       narx: son(r.narx),
-      fakt: h ? h.fakt_summa : 0,
-      qoldiq: h ? h.qoldiq_summa : son(r.summa),
+      /* Fakt va qoldiq daraxtning HAJM ustunlari. Pul qiymatlari alohida
+         stFakt/stF2/stOst maydonlariga boradi. */
+      fakt: h ? h.fakt_hajm : 0,
+      qoldiq: h ? h.qoldiq_hajm : son(r.hajm),
       /* `t2_qator_holat`dagi F2 faqat tasdiqlangan kanonik aktlardan
          yig'iladi. Uni nolga tushirish native LRVda "F2 olish mumkin"
          qiymatini noto'g'ri kattalashtirib yuborardi. */
       f2ol: h ? h.f2_hajm : 0,
-      f2mum: h ? Math.max(0, h.fakt_hajm - h.f2_hajm) : 0,
+      f2mum: h ? (h.f2_mumkin_hajm ?? Math.max(0, h.fakt_hajm - h.f2_hajm)) : 0,
       stFakt: h ? h.fakt_summa : 0,
       stF2: h ? h.f2_summa : 0,
       stOst: h ? h.qoldiq_summa : son(r.summa),
@@ -741,9 +753,10 @@ export function sbT2QatorQosh(p: {
   });
 }
 
-export function sbT2AktTasdiqlash(aktId: number, kutilganVersiya?: number): Promise<AktNatija> {
+export function sbT2AktTasdiqlash(aktId: number, kutilganVersiya?: number,
+                                  operationId: string = yangiOperationId()): Promise<AktNatija> {
   return yozAmali({ amal: 'akt_tasdiqlash', akt_id: aktId,
-                    kutilgan_versiya: kutilganVersiya });
+                    kutilgan_versiya: kutilganVersiya, operation_id: operationId });
 }
 
 export function sbT2AktBekor(aktId: number, sabab: string,

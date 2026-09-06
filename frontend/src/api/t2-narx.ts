@@ -241,6 +241,11 @@ export type F2Tafsilot = {
   kod: string | null; nom: string | null; birlik: string | null;
   kat: string | null; qator_tur: string | null;
   hajm: number; narx: number | null; summa: number | null; izoh: string | null;
+  /** Certified manba tripleti va uning ko‘rgazmali read-model qiymatlari. */
+  certified_quantity?: number | null; certified_unit_price?: number | null;
+  certified_amount?: number | null; provenance_status?: string | null;
+  gorunish_hajm?: number | null; gorunish_narx?: number | null;
+  gorunish_summa?: number | null;
 };
 
 export function sbT2F2TafsilotOl(p: { obyektId: number; oy?: string; tur?: 'fakt' | 'f2' }) {

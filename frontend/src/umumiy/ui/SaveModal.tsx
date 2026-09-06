@@ -21,8 +21,10 @@ export function SaveModal({ isOpen, onClose, onSave, edits, isSaving, obyekt }: 
 
   const editsList = Object.values(edits);
   const totalDiff = editsList.reduce((acc, { edit, node }) => {
-    const newVal = edit.fakt ?? node.fakt;
-    return acc + (newVal - node.fakt) * node.narx;
+    const oldFakt = node.fakt ?? 0;
+    const newVal = edit.fakt ?? oldFakt;
+    const narx = node.narx ?? 0;
+    return acc + (newVal - oldFakt) * narx;
   }, 0);
 
   return (
@@ -64,8 +66,9 @@ export function SaveModal({ isOpen, onClose, onSave, edits, isSaving, obyekt }: 
               <table className="w-full text-left">
                 <tbody className="divide-y divide-border">
                   {editsList.map(({ edit, node }) => {
-                    const newVal = edit.fakt ?? node.fakt;
-                    const diff = newVal - node.fakt;
+                    const oldFakt = node.fakt ?? 0;
+                    const newVal = edit.fakt ?? oldFakt;
+                    const diff = newVal - oldFakt;
                     return (
                       <tr key={`${node.varaq}#${node.row}`} className="hover:bg-surface-2/30">
                         <td className="px-4 py-2 truncate max-w-[200px]" title={node.nom}>
