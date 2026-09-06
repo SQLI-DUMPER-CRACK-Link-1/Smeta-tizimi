@@ -67,3 +67,60 @@
 1. Shu tarmoq commitini integratsiyaga olib, Cloudflare Preview’da autentifikatsiyalangan vertical-slice smoke qilish: login → obyekt → smeta → fakt → F2 import/tarix → narx nazorati → resurs/nakopitelniy.
 2. Preview smoke yashil bo‘lsa, mavjud release runbook bo‘yicha main va production deployni faqat deployed SHA bilan tekshirib yakunlash.
 3. Owner Google ko‘prigini qo‘llanmaga ko‘ra yoqib, bitta xavfsiz fakt o‘zgarishi bilan Sheet → Bridge → canonical Supabase → qayta projection round-tripini tasdiqlashi.
+
+---
+
+## 2026-09-06 — P0 null-semantika correction checkpointi
+
+Yuqoridagi eski checkpoint tarixiy ma’lumot sifatida saqlanadi. Ushbu
+addendum ayni Codex fix branchidagi eng so‘nggi source/test holatini bildiradi.
+
+- **FIX BRANCH:** `codex/t2-daily-workflow-reliability-fix-v1`
+- **FIX HEAD:** `953c86cf2fa159ce79907c407adf363ae19d6648`
+- **BASE RELEASE REFS:** `origin/main = 7a49befb611408c8b39ebd8e564465eb423b61bf`; `origin/integration/next-main-release-v1 = 1eaaccbb1d598feebacc525573ef32c0d258a356`.
+- **MAIN/PRODUCTION:** bu checkpointda o‘zgartirilmadi; yangi migration qo‘llanilmadi.
+
+### Aniqlangan muammo va tuzatish
+
+Live read-only tekshiruvda `public.t2_qator`da `17,521` qator, shundan
+`2,195` tasida `narx IS NULL`, `456` tasida `hajm IS NULL` ekanligi ko‘rildi.
+Amaldagi production `t2_workbench_v1(5,4,null,3)` ushbu ma’lumotlardan bir
+qatorning `baselineReferencePrice`ini `0` qilib qaytargan. Bu `unknown`ni
+`zero`ga aylantiruvchi P0 edi.
+
+Source correction:
+
+- `supabase/migrations/20261011120000_t2_workbench_preserve_null_v1.sql`
+  `q.hajm`/`q.narx`ni JSONB read modelga bevosita uzatadi; old migration
+  o‘zgartirilmagan.
+- `.rollback.sql` migrationdan oldingi function definitionni backup table’da
+  saqlab, rollbackda aynan shu definitionni tiklaydi; functionni drop qilmaydi.
+- `.acceptance.sql` null baseline fixture bilan read-only behavioral PASS
+  sentinel beradi.
+- `normalizeWorkbench`, pure valuation engine va native F2 adapter nullni
+  saqlaydi; missing baseline quantity/price warninglari va `aniq emas` holati
+  ko‘rsatiladi. Exportda noma’lum qiymat `NOANIQ`, Forma-3 legal total esa
+  `FORMA3_RULE_UNRESOLVED` bo‘lib qoladi.
+
+### Verification
+
+- `npx tsc --noEmit -p tsconfig.app.json`: PASS.
+- `npm run typecheck:functions`: PASS.
+- `npm test -- --pool=forks --maxWorkers=1`: **53 test files, 276/276 PASS**.
+- `npm run build`: PASS; faqat mavjud `/grid.svg`, ineffective dynamic
+  import va katta bundle warninglari qolgan.
+- `npm run lint`: exit 0; faqat pre-existing warninglar.
+- `npm run tekshir`: PASS, barcha registered suites PASS.
+- `node ops/governance-check.cjs`: PASS.
+- `git diff --check`: PASS.
+- Branch-preview anonymous probes: `/api/soglik` HTTP 200 va
+  `/api/sessiya` HTTP 401; authenticated owner smoke bu muhitda credential
+  bo‘lmagani uchun bajarilmadi.
+
+### Keyingi integrator amali
+
+Claude `953c86cf2fa159ce79907c407adf363ae19d6648` ni review qilib,
+`20261011120000_t2_workbench_preserve_null_v1.sql`ni release package’ga
+qo‘shishi kerak. Avval disposable/preview acceptance, keyin alohida owner
+approval bo‘lsa migration apply qilinadi. Ushbu fix branch mainga yoki
+productionga push qilinmagan.
