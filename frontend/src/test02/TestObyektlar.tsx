@@ -247,7 +247,7 @@ export default function TestObyektlar() {
                     return (
                       <tr key={o.id}
                         className="border-b border-border last:border-0 hover:bg-[var(--surface-2)]/60 transition-colors group">
-                        <td className="px-4 py-3 text-text cursor-pointer" onClick={() => navigate('/admin/test/daraxt?obyekt=' + encodeURIComponent(o.nom))}>
+                        <td className="px-4 py-3 text-text cursor-pointer" onClick={() => navigate('/admin/holat/' + o.id)}>
                           {o.nom}
                         </td>
                         <td className="px-3 py-3 text-center">
