@@ -334,7 +334,7 @@
       "branch": "codex/t2-lrv-preapproval-ui-v1",
       "base_sha": "6da04f489f403fb0a4e185fae58a637cf1feda20",
       "base_ref": "origin/integration/next-main-release-v1",
-      "status": "active",
+      "status": "completed",
       "lane_of": "T2-GAS-EXIT-LRV-CONTROL-001",
       "owns": [
         "frontend/src/test02/f2-preapproval-audit.tsx",
@@ -347,7 +347,7 @@
         "ops/handoff/T2_LRV_PRODUCT_AUDIT_001_ANTIGRAVITY.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "New lane opened 2026-09-04. DB-independent, consumes the new f2IstisnolarniAniqla() pure function Claude added to frontend/src/test02/f2-exact-payload.ts this round (16 tests, exceptions-only per the LRV Control law). Do not touch f2-exact-payload.ts/.test.ts, frontend/src/umumiy/daraxt/**, t2-additional-replacement.ts, or catalog-ingest/** (other, already-merged lanes). Full brief: T2_LRV_CLOSURE_006_CODEX_PREAPPROVAL_UI.md."
+      "_izoh": "COMPLETED 2026-09-06. F2PreapprovalAudit.tsx va f2-preapproval-audit.ts helperi integration/main tarkibida. UI faqat NEEDS_REVIEW, ARITHMETIC_MISMATCH, NEGATIVE_HAJM va CONFLICTING_PRICES istisnolarini ko‘rsatadi; toza qatorlar render qilinmaydi, yozish mantig‘i va f2-exact-payload.ts o‘zgarmagan. Report: ops/handoff/T2_LRV_CLOSURE_006_CODEX_PREAPPROVAL_UI_REPORT.md. Main runtime tekshiruvi: deploy 18054ff muvaffaqiyatli."
     },
     {
       "id": "T2-LRV-CLOSURE-006-ANTIGRAVITY-MERGE-AUDIT",

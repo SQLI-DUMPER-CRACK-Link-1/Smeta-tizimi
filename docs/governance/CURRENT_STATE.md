@@ -1,3 +1,20 @@
+# 2026-09-06 — T2 daily native LRV: yakuniy deploy checkpointi
+
+Ushbu addendum eng so‘nggi masofaviy va runtime tekshiruvini qayd etadi.
+Avvalgi addendumlar tarixiy dalil sifatida saqlanadi.
+
+| Field | Current value |
+|---|---|
+| `integration_sha` | `46a68a3c11c146b41e03f3f2344712348dde0490` — `origin/integration/next-main-release-v1`. |
+| `main_sha` | `18054ffe0f08de3212820c26fc247e103f7dcdc3` — `origin/main`; lokal va masofaviy ko‘rsatkich bir xil. |
+| `cloudflare_deploy` | Cloudflare Pages deploy `a1907b0d.smeta-tizimi.pages.dev`; GitHub Cloudflare check muvaffaqiyatli, commit `18054ff` bilan aynan mos. |
+| `runtime_smoke` | `/` va `/admin/fakt` — HTTP 200; `/api/soglik` — HTTP 200, kerakli muhit belgilarini va `service_role` kalit rolini ko‘rsatdi; `/api/sessiya` va `/api/hujjat-royxat` anonim so‘rovga mos ravishda 401 qaytardi. |
+| `r2` | `wrangler.toml` ichida private `R2_CANONICAL` → `smeta-tizimi-canonical`; public access yo‘q. |
+| `production_migration` | `t2_fakt_belgila_v2` live katalogda `20260906120454` sifatida mavjud; real biznes qatoriga sinov yozuvi kiritilmagan. |
+| `preapproval_ui` | F2 import oqimida faqat istisnolar oynasi ishlatiladi; toza qatorlar qayta chizilmaydi, F2 summasi UI tomonidan o‘zgartirilmaydi. |
+| `verification` | `tsc`, functions typecheck, barqaror Vitest `52 fayl / 263 test`, build, lint, `tekshir`, governance va `git diff --check` — PASS. |
+| `authenticated_smoke` | To‘liq login va biznes vertikal smoke bu muhitda egasining haqiqiy sessiyasini talab qiladi; anonim xavfsizlik smoke’i PASS. |
+
 # 2026-09-06 — T2 daily native LRV: canonical Fakt jami tahriri
 
 Ushbu addendum quyidagi eski jadvaldan ustun bo‘lgan eng so‘nggi tekshirilgan

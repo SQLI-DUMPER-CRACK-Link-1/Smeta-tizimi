@@ -1,4 +1,14 @@
-# 2026-09-06 — native Fakt jami tahriri checkpointi
+# 2026-09-06 — yakuniy native PTO release checkpointi
+
+## Masofaviy release dalili
+
+- `origin/integration/next-main-release-v1`: `46a68a3c11c146b41e03f3f2344712348dde0490`.
+- `origin/main`: `18054ffe0f08de3212820c26fc247e103f7dcdc3`.
+- Cloudflare Pages deploy `a1907b0d.smeta-tizimi.pages.dev` aynan `18054ff` commitidan muvaffaqiyatli yaratilgan.
+- `/` va `/admin/fakt` HTTP 200; `/api/soglik` HTTP 200 va `service_role` rolini qaytardi.
+- Anonim `/api/sessiya` va `/api/hujjat-royxat` so‘rovlari 401 bilan fail-closed ishladi.
+- R2 binding `R2_CANONICAL` private `smeta-tizimi-canonical` bucketiga ulangan.
+- To‘liq autentifikatsiyalangan biznes smoke egasining real sessiyasini talab qiladi; bu muhitda parol yoki cookie saqlanmagan.
 
 ## Yangi yopilgan uzilish
 
