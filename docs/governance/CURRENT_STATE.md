@@ -1,3 +1,22 @@
+# 2026-09-06 — T2 PTO daily reliability: joriy integratsiya checkpointi
+
+Ushbu yangi addendum joriy release ishining o‘lchangan holatini qayd etadi;
+quyidagi avvalgi yozuvlar tarixiy dalil sifatida saqlanadi va qayta yozilmaydi.
+
+| Field | Current value |
+|---|---|
+| `integration_sha` | `af050f71f4b57700eeb823ac0a2f6f82cc2f939d` — `origin/integration/next-main-release-v1`; implementation `8c7cf3b8fb1dcdfe9601b48936f6670ba3552afb`, handoff va governance checkpoint shu SHAda. |
+| `main_sha` | `7a49befb611408c8b39ebd8e564465eb423b61bf` — ushbu ish davomida main o‘zgartirilmadi. |
+| `cloudflare_deploy` | Yangi candidate deploy qilinmadi; `97676085.smeta-tizimi.pages.dev` eski `6d64f66` candidate bo‘lib, `af050f` uchun deploy/Preview tengligi tasdiqlanmadi. |
+| `runtime_smoke` | `af050f` candidate uchun authenticated vertikal smoke hali bajarilmadi; mavjud brauzer dalili eski deployga tegishli va release dalili sifatida qabul qilinmaydi. |
+| `r2` | Private `R2_CANONICAL` → `smeta-tizimi-canonical`; public access o‘chirilgan; repo konfiguratsiyasi PASS. |
+| `production_migration` | `t2_lrv_approved_f2_rollup_v1`, source `20260906130000`, live ledger versiyasi `20260906141808`; acceptance `LRV_APPROVED_F2_ROLLUP_ACCEPTANCE_PASS`; biznes qatorlariga DML kiritilmagan. |
+| `live_counts` | `t2_qator=17521`, `t2_akt=1`, `t2_akt_qator=0`, tasdiqlangan F2 aktlari `0`, qoralama F2 aktlari `1`, LRV view `1`; null qiymatlar manbada saqlanadi. |
+| `native_routes` | Native T2 Smeta/Fakt/F2/F2 tarixi/F2 tayyorlash yo‘llarida eski `apiHolatOl`, `apiHolatSaqla` va `gas()` bog‘liqligi topilmadi; R2 oldindan yuklash va price-control adapterlari source darajasida mavjud. |
+| `sheets_bridge` | Ko‘prik kodi, yashirin canonical ID/version/hash va setup hujjati mavjud; egasi tomonidan aktivlashtirish hamda haqiqiy ikki tomonlama round-trip hali bajarilmagan. |
+| `verification` | `tsc`, build, barqaror Vitest `52 fayl / 271 test`, lint `0 error`, `tekshir`, governance va `git diff --check` — PASS. |
+| `release_status` | `SOURCE_READY / INTEGRATION_UPDATED`; main, Cloudflare Production va candidate deploy o‘zgartirilmadi. |
+
 # 2026-09-06 — T2 daily native LRV: so‘nggi deploy checkpointi
 
 Ushbu addendum eng so‘nggi masofaviy va runtime tekshiruvini qayd etadi.
