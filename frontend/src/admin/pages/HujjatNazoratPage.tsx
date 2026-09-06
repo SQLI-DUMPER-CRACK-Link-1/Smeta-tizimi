@@ -78,9 +78,6 @@ export default function HujjatNazoratPage() {
 
       {model && page && <ConstructionDocumentWorkbench model={model} page={page} />}
 
-      {model && model.valuation.periods.length === 0 && (
-        <p className="text-sm text-text-dim">Bu obyektda hali tasdiqlangan Ф2 davri yo‘q — Nakopitelniy bo‘sh.</p>
-      )}
     </div>
   );
 }

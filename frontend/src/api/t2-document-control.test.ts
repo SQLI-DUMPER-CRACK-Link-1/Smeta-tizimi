@@ -53,6 +53,17 @@ describe('t2-document-control adapter', () => {
     expect(page.rows[0].cumulativeQuantity).toBe(3);
   });
 
+  it('returns a professional empty page when the object has no approved F2 period', () => {
+    const noPeriods = structuredClone(raw) as any;
+    noPeriods.currentPeriodId = null;
+    noPeriods.valuation.periods = [];
+    const model = normalizeWorkbench(noPeriods);
+    const page = progressValuationPage(model, { limit: 50 });
+    expect(page.rows).toEqual([]);
+    expect(page.totalCount).toBe(0);
+    expect(page.query.limit).toBe(50);
+  });
+
   it('preserves missing baseline quantity/price as unknown instead of zero', () => {
     const missingBaseline = structuredClone(raw) as any;
     missingBaseline.valuation.lines[0].baselineQuantity = null;
