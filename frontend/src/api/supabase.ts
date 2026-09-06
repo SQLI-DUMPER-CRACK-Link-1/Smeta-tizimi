@@ -404,8 +404,14 @@ export function sbT2TreeQur(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): Tre
       narx: son(r.narx),
       fakt: h ? h.fakt_summa : 0,
       qoldiq: h ? h.qoldiq_summa : son(r.summa),
-      f2ol: 0,
-      f2mum: 0,
+      /* `t2_qator_holat`dagi F2 faqat tasdiqlangan kanonik aktlardan
+         yig'iladi. Uni nolga tushirish native LRVda "F2 olish mumkin"
+         qiymatini noto'g'ri kattalashtirib yuborardi. */
+      f2ol: h ? h.f2_hajm : 0,
+      f2mum: h ? Math.max(0, h.fakt_hajm - h.f2_hajm) : 0,
+      stFakt: h ? h.fakt_summa : 0,
+      stF2: h ? h.f2_summa : 0,
+      stOst: h ? h.qoldiq_summa : son(r.summa),
       faktHajm: h ? h.fakt_hajm : 0,
       qoldiqHajm: h ? h.qoldiq_hajm : son(r.hajm),
       qoldiqSumma: h ? h.qoldiq_summa : son(r.summa),
@@ -968,4 +974,3 @@ export function sbKompaniyaYangila(id: number, kutilganVersiya: number, maydonla
     hisob_raqam: maydonlar.hisobRaqam, mfo: maydonlar.mfo, mavqe: maydonlar.mavqe,
   });
 }
-
