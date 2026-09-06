@@ -11,6 +11,10 @@ import {
 } from '../../api/supabase';
 import type { TreeNode } from '../../api/types';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
+import SmetaYuklaNative from './SmetaYuklaNative';
+import AdditionalReplacementNative from './AdditionalReplacementNative';
+import ResursVedomostNative from './ResursVedomostNative';
+import NarxNazoratNative from './NarxNazoratNative';
 
 /**
  * Kundalik ISHCHI SMETA/LRV sahifasi. Bu komponentda Sheet nomi, Drive
@@ -26,6 +30,7 @@ export function HolatNative() {
   const [priceControlLines, setPriceControlLines] = useState<PriceControlLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [ochiqPanel, setOchiqPanel] = useState<string | null>(null);
 
   const obyektId = Number(id);
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
@@ -101,6 +106,34 @@ export function HolatNative() {
         )}
         {validId && !loading && !error && tree.length === 0 && <section className="karta p-5 text-[13px] text-text-dim">Bu obyektda kanonik smeta qatorlari yo‘q.</section>}
         {tree.length > 0 && !loading && <div className="min-h-0 flex-1"><SmetaTree data={tree} priceControlLines={priceControlLines} /></div>}
+        {selected && !loading && !error && (
+          <div className="shrink-0 space-y-3" aria-label="LRV kundalik boshqaruv panellari">
+            <details className="karta group p-3" open={ochiqPanel === 'smeta'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'smeta' : null)}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">
+                <span>Smeta XLSX yuklash</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
+              </summary>
+              {ochiqPanel === 'smeta' && <div className="mt-3 max-h-[360px] overflow-auto"><SmetaYuklaNative obyektId={obyektId} /></div>}
+            </details>
+            <details className="karta group p-3" open={ochiqPanel === 'o‘zgarish'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'o‘zgarish' : null)}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">
+                <span>Qo‘shimcha ish / Zamena / Resurs qo‘shish</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
+              </summary>
+              {ochiqPanel === 'o‘zgarish' && <div className="mt-3 max-h-[520px] overflow-auto"><AdditionalReplacementNative obyektId={obyektId} /></div>}
+            </details>
+            <details className="karta group p-3" open={ochiqPanel === 'resurs'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'resurs' : null)}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">
+                <span>Resurs vedomosti</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
+              </summary>
+              {ochiqPanel === 'resurs' && <div className="mt-3 max-h-[520px] overflow-auto"><ResursVedomostNative obyektId={obyektId} /></div>}
+            </details>
+            <details className="karta group p-3" open={ochiqPanel === 'narx'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'narx' : null)}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">
+                <span>Narx nazorati</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
+              </summary>
+              {ochiqPanel === 'narx' && <div className="mt-3 max-h-[520px] overflow-auto"><NarxNazoratNative obyektId={obyektId} /></div>}
+            </details>
+          </div>
+        )}
       </div>
     </Sahifa>
   );

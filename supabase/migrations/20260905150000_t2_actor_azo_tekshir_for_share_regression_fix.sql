@@ -41,4 +41,9 @@ begin
   raise exception 'actor bu kompaniyaning faol a''zosi emas' using errcode='42501';
 end $function$;
 
+-- Bu ichki SECURITY DEFINER yordamchi faqat kanonik service-role/RPC
+-- zanjiridan ishlatiladi. Brauzer roli uni bevosita chaqira olmaydi.
+revoke all on function public.t2_actor_kompaniya_azo_tekshir(bigint,bigint) from public, anon, authenticated;
+grant execute on function public.t2_actor_kompaniya_azo_tekshir(bigint,bigint) to service_role;
+
 commit;

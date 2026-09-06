@@ -41,6 +41,14 @@ const AMALLAR = {
      T2_F2Import.js) still uses it directly, not through this gateway. */
   akt_yarat_v2:   { rpc: 't2_akt_yarat_v2' },
   price_basis_yarat: { rpc: 't2_price_basis_yarat_v1' },
+  /* T2-GAS-EXIT-001 §5/§6: resumable F2 import job + durable draft mapping.
+     Read-only counterparts (f2_import_job_holat_v1/f2_import_draft_royxat_v1)
+     live in /api/sb (they are `stable`, GET-safe). These three are volatile
+     writes: create/advance the job, upsert draft rows. p_actor_id ALWAYS
+     from the verified session, exactly like every other v1 RPC here. */
+  f2_import_job_yarat: { rpc: 't2_f2_import_job_yarat_v1' },
+  f2_import_job_ilgarilash: { rpc: 't2_f2_import_job_ilgarilash_v1' },
+  f2_import_draft_saqla: { rpc: 't2_f2_import_draft_saqla_v1' },
   akt_tasdiqlash: { rpc: 't2_akt_tasdiqlash' },
   akt_bekor:      { rpc: 't2_akt_bekor' },
   narx_belgila:   { rpc: 't2_narx_belgila' },
@@ -101,6 +109,7 @@ const AMALLAR = {
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
   kontragent_ochir: { rpc: 't2_kontragent_ochir' },
   fakt_yoz_v2: { rpc: 't2_fakt_yoz_v2' },
+  fakt_belgila_v2: { rpc: 't2_fakt_belgila_v2' },
   fakt_belgila: { rpc: 't2_fakt_belgila' },
   /* ⚠️ P0 SECURITY (2026-09-03): bu uchtasi avval to'g'ridan-to'g'ri
    * un-versioned RPC'ga (t2_azolik_qosh/_rol_ozgartir/_ochir) borardi —
@@ -386,6 +395,71 @@ export const onRequestPost: PagesFunction<{
         p_raqam: so.raqam ? String(so.raqam).slice(0, 100) : null,
         p_operation_id: so.operation_id,
         p_manba: 'frontend_v2',
+      };
+
+    /* ══════════ F2 RESUMABLE IMPORT JOB (T2-GAS-EXIT-001 §5/§6) ══════════
+     * `f2_import_job_ilgarilash`/`f2_import_draft_saqla` xato yoki eskirgan
+     * versiya bo'lsa 200 status bilan `{ok:false, code:...}` qaytaradi (RPC
+     * o'zi shunday javob beradi) -- bu yerda status kodini o'zgartirmaymiz,
+     * chunked worker javobni o'zi tekshiradi (STALE_VERSION/STALE_DRAFT_VERSION
+     * xato emas, optimistic-lock normal holati). */
+    } else if (amal === 'f2_import_job_yarat') {
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isFinite(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(so.operation_id || ''))) {
+        return Response.json({ ok: false, error: 'operation_id (UUID) majburiy -- usiz qayta urinish ikkinchi job yaratadi' });
+      }
+      const totalRows = Number(so.total_rows);
+      if (!Number.isFinite(totalRows) || totalRows < 1 || totalRows > 100000) {
+        return Response.json({ ok: false, error: 'total_rows 1..100000 oralig\'ida bo\'lishi kerak' });
+      }
+      yuk = {
+        p_obyekt_id: obyektId,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_source_document_id: so.source_document_id ? Number(so.source_document_id) : null,
+        p_operation_id: so.operation_id,
+        p_total_rows: totalRows,
+      };
+
+    } else if (amal === 'f2_import_job_ilgarilash') {
+      const jobId = Number(so.job_id);
+      if (!Number.isFinite(jobId) || jobId <= 0) {
+        return Response.json({ ok: false, error: 'job_id noto\'g\'ri' });
+      }
+      if (!Number.isInteger(Number(so.expected_versiya)) || Number(so.expected_versiya) < 1) {
+        return Response.json({ ok: false, error: 'expected_versiya noto\'g\'ri' });
+      }
+      const delta = ['processed_delta', 'matched_delta', 'unmatched_delta'].every(
+        (k) => Number.isFinite(Number((so as any)[k])) && Number((so as any)[k]) >= 0);
+      if (!delta) {
+        return Response.json({ ok: false, error: 'processed_delta/matched_delta/unmatched_delta manfiy bo\'lmagan son bo\'lishi kerak' });
+      }
+      yuk = {
+        p_job_id: jobId,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_expected_versiya: Number(so.expected_versiya),
+        p_processed_delta: Number(so.processed_delta),
+        p_matched_delta: Number(so.matched_delta),
+        p_unmatched_delta: Number(so.unmatched_delta),
+        p_cursor: so.cursor ?? null,
+        p_status: so.status ?? null,
+        p_last_error: so.last_error ? String(so.last_error).slice(0, 500) : null,
+      };
+
+    } else if (amal === 'f2_import_draft_saqla') {
+      const jobId = Number(so.job_id);
+      if (!Number.isFinite(jobId) || jobId <= 0) {
+        return Response.json({ ok: false, error: 'job_id noto\'g\'ri' });
+      }
+      if (!Array.isArray(so.qatorlar) || so.qatorlar.length === 0 || so.qatorlar.length > 5000) {
+        return Response.json({ ok: false, error: 'qatorlar 1..5000 ta bo\'lishi kerak' });
+      }
+      yuk = {
+        p_job_id: jobId,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_qatorlar: so.qatorlar,
       };
 
     /* ══════════ NARX BASIS (Протокол согласования цены va h.k.) ══════════ */
@@ -1384,6 +1458,40 @@ export const onRequestPost: PagesFunction<{
         p_yangi_jami: Number(so.yangi_jami),
         p_sana: so.sana ? String(so.sana) : null,
         p_kim: sess.email || null,
+      };
+
+    /* Sayt uchun kanonik JAMI Fakt qiymatini optimistik qulf bilan belgilash.
+       Bu eski `fakt_belgila` emas: obyekt, actor, joriy qiymat va operation_id
+       server kontrakti orqali tekshiriladi. */
+    } else if (amal === 'fakt_belgila_v2') {
+      const obyektId = Number(so.obyekt_id);
+      const qatorId = Number(so.qator_id);
+      const expected = Number(so.expected_fakt_hajm);
+      const yangi = Number(so.yangi_fakt_hajm);
+      const operationId = String(so.operation_id || '');
+      if (!Number.isSafeInteger(obyektId) || obyektId <= 0 || !Number.isSafeInteger(qatorId) || qatorId <= 0) {
+        return Response.json({ ok: false, error: 'obyekt_id yoki qator_id noto\'g\'ri' });
+      }
+      if (!Number.isFinite(expected) || !Number.isFinite(yangi)) {
+        return Response.json({ ok: false, error: 'Fakt qiymatlari son bo\'lishi kerak' });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi kerak' });
+      }
+      const sana = String(so.sana || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(sana)) {
+        return Response.json({ ok: false, error: 'sana YYYY-MM-DD shaklida bo\'lishi kerak' });
+      }
+      yuk = {
+        p_obyekt_id: obyektId,
+        p_qator_id: qatorId,
+        p_expected_fakt_hajm: expected,
+        p_yangi_fakt_hajm: yangi,
+        p_sana: sana,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_operation_id: operationId,
+        p_izoh: so.izoh ? String(so.izoh).slice(0, 500) : null,
+        p_actor_label: sess.email || null,
       };
 
     /* ══════════ A'ZOLIK (Xodimlar va Rollar) ══════════

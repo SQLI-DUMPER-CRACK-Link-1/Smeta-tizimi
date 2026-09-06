@@ -43,30 +43,73 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return Response.json({ ok: false, xato: 'Логин ва паролни киритинг' }, { status: 400 });
   }
 
-  try {
-    const r = await fetch(ctx.env.GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        __api: 1,
-        token: ctx.env.GAS_TOKEN,
-        fn: 'apiKirishTekshir',
-        args: [login, parol]
-      }),
-    });
-
-    const data = await r.json<{ ok: boolean; data: string | null }>();
-    if (data.ok && data.data) {
-      rol = data.data as Rol;
+  /* T2-AUTH-PASSWORD-MIGRATION-001 — DUAL-CHECK, ATAYLAB.
+   *
+   * Incident (2026-09-05): "A'zo qo'shish" Supabaga login+rol yozadi,
+   * lekin parolga hech qachon TEGMAYDI (t2_foydalanuvchi da parol maydoni
+   * umuman yo'q edi) -- yangi a'zo GAS ning ochiq matnli _XODIMLAR
+   * varag'ida ham yo'q, demak TIZIMGA UMUMAN KIRA OLMASDI.
+   *
+   * Yechim: Supabase'da HASHLANGAN (bcrypt, hech qachon ochiq matn) parol
+   * -- lekin MAVJUD hech bir foydalanuvchi buzilmasin. Shuning uchun:
+   *   1) Avval Supabase'dan (`t2_parol_tekshir_v1`) so'raymiz.
+   *   2) `NO_PASSWORD_SET` bo'lsa -- bu login hali Supabase parolini
+   *      OLMAGAN (hozircha HAMMA eski foydalanuvchi shunday) -- ESKI GAS
+   *      yo'liga o'tamiz, xatti-harakat O'ZGARMAYDI.
+   *   3) Hash BOR bo'lsa (`ok:true` YOKI `PAROL_NOTOGRI`) -- GAS UMUMAN
+   *      CHAQIRILMAYDI. Noto'g'ri parol qat'iy rad etiladi, GAS'ga
+   *      "orqaga qaytib" tekshirilmaydi -- aks holda Supabase paroli
+   *      GAS parolini chetlab o'tishning yashirin yo'liga aylanardi. */
+  let supabaseNatija: { ok: boolean; code?: string; foydalanuvchi_id?: number; rol?: string } | null = null;
+  if (ctx.env.SUPABASE_URL && ctx.env.SUPABASE_KEY) {
+    try {
+      const rr = await fetch(supabaseBaseUrl(ctx.env.SUPABASE_URL) + '/rest/v1/rpc/t2_parol_tekshir_v1', {
+        method: 'POST',
+        headers: { apikey: ctx.env.SUPABASE_KEY, Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_login: login, p_parol: parol }),
+      });
+      if (rr.ok) supabaseNatija = await rr.json();
+    } catch (err) {
+      console.error('[kirish] t2_parol_tekshir_v1 transport:', err);
+      // Tarmoq xatosi -- GAS'ga tushamiz (pastdagi umumiy yo'l), Supabase'ni qayta chaqirmaymiz.
     }
-  } catch (err) {
-    console.error('GAS ga bog\'lanishda xato:', err);
   }
 
-  if (!rol) {
-    // Brute-force sekinlashtirish
-    await new Promise(r => setTimeout(r, 800));
-    return Response.json({ ok: false, xato: 'Логин ёки парол нотўғри' }, { status: 401 });
+  if (supabaseNatija && supabaseNatija.code !== 'NO_PASSWORD_SET') {
+    if (supabaseNatija.ok && supabaseNatija.rol) {
+      rol = supabaseNatija.rol as Rol;
+    } else {
+      // Hash BOR, lekin mos kelmadi -- GAS'ga qaytish YO'Q (fail-closed).
+      await new Promise(r => setTimeout(r, 800));
+      return Response.json({ ok: false, xato: 'Логин ёки парол нотўғри' }, { status: 401 });
+    }
+  } else {
+    // NO_PASSWORD_SET (yoki Supabase javob bermadi) -- ESKI GAS yo'li, o'zgarishsiz.
+    try {
+      const r = await fetch(ctx.env.GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          __api: 1,
+          token: ctx.env.GAS_TOKEN,
+          fn: 'apiKirishTekshir',
+          args: [login, parol]
+        }),
+      });
+
+      const data = await r.json<{ ok: boolean; data: string | null }>();
+      if (data.ok && data.data) {
+        rol = data.data as Rol;
+      }
+    } catch (err) {
+      console.error('GAS ga bog\'lanishda xato:', err);
+    }
+
+    if (!rol) {
+      // Brute-force sekinlashtirish
+      await new Promise(r => setTimeout(r, 800));
+      return Response.json({ ok: false, xato: 'Логин ёки парол нотўғри' }, { status: 401 });
+    }
   }
 
   /* ⚡ 2026-09-02 (T2-COMPANY-CONTEXT-P0-FIX-001) — KANONIK LOGIN.

@@ -10,7 +10,6 @@ const AdminShell = lazy(() => import('./admin/AdminShell'));
 const BossShell = lazy(() => import('./boss/BossShell'));
 
 // Admin pages
-import { Obyektlar } from './admin/sahifalar/Obyektlar';
 import { HolatNative } from './admin/sahifalar/HolatNative';
 import { FaktNative } from './admin/sahifalar/FaktNative';
 import { Shartnoma } from './admin/sahifalar/Shartnoma';
@@ -111,7 +110,9 @@ export default function App() {
               <BossDashboard />
             </Suspense>
           } />
-          <Route path="obyektlar" element={<Obyektlar />} />
+          {/* Kundalik obyekt ro'yxati endi faqat t2_obyekt kanonik IDlari
+              bilan ishlaydi. Eski Drive/GAS kartalari arxiv yo'liga chiqmaydi. */}
+          <Route path="obyektlar" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><TestObyektlar /></Suspense>} />
           <Route path="holat" element={<HolatNative />} />
           <Route path="holat/:id" element={<HolatNative />} />
           <Route path="fakt" element={<FaktNative />} />

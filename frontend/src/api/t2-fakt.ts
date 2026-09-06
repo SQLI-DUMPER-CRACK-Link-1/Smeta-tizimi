@@ -98,6 +98,42 @@ export function sbFaktBelgila(p: {
   }>;
 }
 
+/**
+ * Saytning kanonik Fakt jami tahriri.
+ *
+ * Bu ko'zgu/legacy `fakt_belgila` yo'li emas: server qatorning joriy
+ * qiymatini `expectedFaktHajm` bilan solishtiradi, farqni kanonik Fakt
+ * hujjati sifatida yozadi va eskirgan brauzer qiymatini FAKT_CONFLICT bilan
+ * rad etadi.
+ */
+export function sbFaktBelgilaV2(p: {
+  obyektId: number;
+  qatorId: number;
+  expectedFaktHajm: number;
+  yangiFaktHajm: number;
+  /** YYYY-MM-DD */
+  sana: string;
+  operationId: string;
+  izoh?: string;
+}) {
+  return yozAmali({
+    amal: 'fakt_belgila_v2',
+    obyekt_id: p.obyektId,
+    qator_id: p.qatorId,
+    expected_fakt_hajm: p.expectedFaktHajm,
+    yangi_fakt_hajm: p.yangiFaktHajm,
+    sana: p.sana,
+    operation_id: p.operationId,
+    izoh: p.izoh,
+  }) as Promise<FaktNatija & {
+    code?: string;
+    current_fakt_hajm?: number;
+    fakt_hajm?: number;
+    unchanged?: boolean;
+    error?: string;
+  }>;
+}
+
 /* ── O'QISH: qator bo'yicha smeta / fakt / Ф2 holati ────────────────────── */
 
 export type QatorHolat = {

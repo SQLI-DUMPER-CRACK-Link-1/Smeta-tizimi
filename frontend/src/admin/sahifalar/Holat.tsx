@@ -14,6 +14,8 @@ import { FmtN } from '../../lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdditionalReplacementNative from './AdditionalReplacementNative';
 import ResursVedomostNative from './ResursVedomostNative';
+import NarxNazoratNative from './NarxNazoratNative';
+import SmetaYuklaNative from './SmetaYuklaNative';
 
 export type EditState = {
   edit: Edit;
@@ -362,6 +364,41 @@ export function Holat() {
           </summary>
           <div className="mt-3">
             <ResursVedomostNative />
+          </div>
+        </details>
+
+        {/* T2-PTO-DAILY-FINAL-CUTOVER-008 P0.9: narx nazorati — real backend
+            (t2_price_control_v1) bilan ulangan, GAS-nom daraxtidan
+            MUSTAQIL, boshqa ikkitasi bilan bir xil naqsh. */}
+        <details className="karta p-4 mb-4 group flex-shrink-0">
+          <summary className="cursor-pointer list-none flex items-center justify-between">
+            <h3 className="text-[14px] font-semibold text-text">
+              Narx nazorati (muzlagan / xavf ostida) — yangi (GAS'siz) rejim
+            </h3>
+            <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
+            <span className="text-[11px] text-text-mute hidden group-open:inline">yopish ▴</span>
+          </summary>
+          <div className="mt-3">
+            <NarxNazoratNative />
+          </div>
+        </details>
+
+        {/* T2-FINAL-CLEAN-CUTOVER P0.2: smeta XLSX to'g'ridan-to'g'ri
+            brauzerdan canonical Supabase'ga (t2_smeta_import_bulk_v1) —
+            Google Drive/Sheets/GAS'siz. Faqat BO'SH obyektga birinchi
+            import uchun (SMETA_ALREADY_EXISTS obyektga ustidan yozishni
+            rad etadi) — boshqa uchtasi bilan bir xil ochish-ixtiyoriy
+            naqsh, mavjud oqimga tegmaydi. */}
+        <details className="karta p-4 mb-4 group flex-shrink-0">
+          <summary className="cursor-pointer list-none flex items-center justify-between">
+            <h3 className="text-[14px] font-semibold text-text">
+              Smeta yuklash (XLSX) — yangi (GAS'siz) rejim
+            </h3>
+            <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
+            <span className="text-[11px] text-text-mute hidden group-open:inline">yopish ▴</span>
+          </summary>
+          <div className="mt-3">
+            <SmetaYuklaNative />
           </div>
         </details>
 

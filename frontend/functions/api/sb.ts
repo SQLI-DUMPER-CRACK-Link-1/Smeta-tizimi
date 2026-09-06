@@ -162,7 +162,7 @@ export const onRequestPost: PagesFunction<{
     const so = await ctx.request.json<{
       jadval?: string; filtr?: string; ustunlar?: string;
       tartib?: string; limit?: number;
-      soro?: string; obyekt_id?: number; kompaniya_id?: number; akt_id?: number;
+      soro?: string; obyekt_id?: number; kompaniya_id?: number; akt_id?: number; job_id?: number;
     }>();
 
     /* ══════════ O'QISH-RPC (AI konteksti) ══════════════════════════════
@@ -177,7 +177,7 @@ export const onRequestPost: PagesFunction<{
      *
      * Rol: `boss`/`rahbar` ham CHAQIRA OLADI — bu faqat o'qish. */
     if (so.soro) {
-      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya' | 'obyekt_actor' | 'akt_actor'> = {
+      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya' | 'obyekt_actor' | 'akt_actor' | 'job_actor'> = {
         ai_kontekst: 'obyekt',
         ai_umumiy: 'kompaniya',
         /* ⚡ 2026-08-28: mindmap butun grafni (tugunlar + bog'lanishlar)
@@ -191,6 +191,11 @@ export const onRequestPost: PagesFunction<{
            it is never client-supplied. */
         price_control_v1: 'obyekt_actor',
         f2_exact_qatorlar_v1: 'akt_actor',
+        /* T2-GAS-EXIT-001 §5/§6: resumable F2 import job — resumption reads.
+           Both RPCs are `stable` (read-only) and membership-checked inside
+           the function itself via job_id -> kompaniya_id, same law as above. */
+        f2_import_job_holat_v1: 'job_actor',
+        f2_import_draft_royxat_v1: 'job_actor',
       };
       const tur = OQISH_RPC[so.soro];
       if (!tur) {
@@ -222,7 +227,14 @@ export const onRequestPost: PagesFunction<{
         }
         q.set('p_akt_id', String(id));
       }
-      if (tur === 'obyekt_actor' || tur === 'akt_actor') {
+      if (tur === 'job_actor') {
+        const id = Number(so.job_id);
+        if (!Number.isFinite(id) || id <= 0) {
+          return Response.json({ ok: false, error: 'job_id noto\'g\'ri' });
+        }
+        q.set('p_job_id', String(id));
+      }
+      if (tur === 'obyekt_actor' || tur === 'akt_actor' || tur === 'job_actor') {
         if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
           return Response.json({ ok: false, error: 'Sessiyada foydalanuvchi yo\'q' }, { status: 401 });
         }

@@ -31,10 +31,22 @@ function t2BridgeTick(){
   var ss=t2BridgeControl_(), rows=t2BridgeRows_(ss.getSheetByName('PROEKSIYALAR'));
   var out={ok:true,pulled:0,pushed:0,conflicts:0,failed:0};
   rows.forEach(function(row){
-    try { var pull=t2BridgeCall_('projection.pull',{obyekt_id:Number(row.obyekt_id), projection_hash:row.last_projection_hash||null});
-      if(pull.ok && pull.changed){ t2BridgeApplyProjection_(SpreadsheetApp.openById(row.spreadsheet_id), row.tab, pull); out.pulled++; }
-      var push=t2BridgePushChanges_(SpreadsheetApp.openById(row.spreadsheet_id), row.tab, Number(row.obyekt_id));
+    try {
+      /* Avval foydalanuvchining ruxsat etilgan Fakt tahririni kanonik
+         buyruqqa yuboramiz. Aks holda pull eski proyeksiya bilan uning
+         kiritgan qiymatini ustidan yozib yuborishi mumkin edi. */
+      var target=SpreadsheetApp.openById(row.spreadsheet_id);
+      var push=t2BridgePushChanges_(target, row.tab, Number(row.obyekt_id));
       out.pushed+=push.pushed; out.conflicts+=push.conflicts;
+      /* Ziddiyatda Sheetdagi kiritma saqlanadi; operator CONFLICTLAR
+         jadvalidan hal qiladi. Uni jim turib qayta proyeksiya qilish mumkin emas. */
+      if(push.conflicts) return;
+      var pull=t2BridgeCall_('projection.pull',{obyekt_id:Number(row.obyekt_id), projection_hash:row.last_projection_hash||null});
+      if(pull.ok && pull.changed){
+        t2BridgeApplyProjection_(target, row.tab, pull);
+        t2BridgeProjectionSynced_(ss,row._rowNumber,pull.projection_hash);
+        out.pulled++;
+      }
     } catch(e){ out.failed++; t2BridgeLog_(ss,'XATOLAR',['tick',String(row.obyekt_id),String(e)]); }
   });
   return out;
@@ -71,5 +83,11 @@ function t2BridgeCall_(action,payload){
   try{return JSON.parse(r.getContentText());}catch(e){return {ok:false,code:'BRIDGE_JSON_INVALID'};}
 }
 function t2BridgeControl_(){ var c=t2BridgeCfg_(); return c.control?SpreadsheetApp.openById(c.control):SpreadsheetApp.getActive(); }
-function t2BridgeRows_(sh){ var v=sh.getDataRange().getValues(), h=v.shift()||[]; return v.filter(function(r){return r[0];}).map(function(r){var o={};h.forEach(function(k,i){o[k]=r[i];});return o;}); }
+function t2BridgeRows_(sh){ var v=sh.getDataRange().getValues(), h=v.shift()||[]; return v.map(function(r,index){var o={_rowNumber:index+2};h.forEach(function(k,i){o[k]=r[i];});return o;}).filter(function(r){return r.obyekt_id;}); }
+function t2BridgeProjectionSynced_(control,rowNumber,hash){
+  var headers=control.getSheetByName('PROEKSIYALAR').getRange(1,1,1,control.getSheetByName('PROEKSIYALAR').getLastColumn()).getValues()[0];
+  var hashColumn=headers.indexOf('last_projection_hash')+1, syncedColumn=headers.indexOf('last_synced_at')+1;
+  if(hashColumn>0) control.getSheetByName('PROEKSIYALAR').getRange(rowNumber,hashColumn).setValue(hash);
+  if(syncedColumn>0) control.getSheetByName('PROEKSIYALAR').getRange(rowNumber,syncedColumn).setValue(new Date());
+}
 function t2BridgeLog_(ss,tab,row){ ss.getSheetByName(tab).appendRow(row); }

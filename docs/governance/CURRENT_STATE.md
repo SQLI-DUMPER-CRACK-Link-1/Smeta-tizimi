@@ -1,3 +1,17 @@
+# 2026-09-06 — T2 daily native LRV: canonical Fakt jami tahriri
+
+Ushbu addendum quyidagi eski jadvaldan ustun bo‘lgan eng so‘nggi tekshirilgan
+holatni qayd etadi.
+
+| Field | Current value |
+|---|---|
+| `candidate_sha` | `f527200a0ce119086ea9c38c43e96c5dbc850ed4` — native Fakt jami tahriri, gateway allowlist va regressiya testi. |
+| `production_migration` | `20260906120454 t2_fakt_belgila_v2` live katalogda mavjud; qo‘llanishi faqat additive DDL bo‘ldi, biznes qatorlariga yozuv qilinmadi. |
+| `fakt_web_contract` | `/admin/fakt?obyekt=<id>` endi `Ustiga qo‘shish` (`t2_fakt_yoz_v2`) va `Jami qiymat` (`t2_fakt_belgila_v2`) rejimlariga ega. Ikkinchi rejim joriy Faktni `expected_fakt_hajm` bilan tekshiradi va eskirgan qiymatni `FAKT_CONFLICT` bilan rad etadi. |
+| `fakt_safety` | Actor server sessiyasidan olinadi; obyekt/qator munosabati va operation UUID RPC’da tekshiriladi; muvaffaqiyatsiz yoki ziddiyatli natijadan keyin UI kanonik qiymatlarni qayta yuklaydi. |
+| `verification` | Focused 3/3, full stable Vitest 52 fayl/263 test PASS, functions typecheck PASS, build CPU-affinity bilan PASS, lint 0 error, `tekshir` PASS, governance PASS. |
+| `production_deploy` | Ushbu candidate hali Cloudflare Production’ga chiqarilmadi; main/integration release keyingi merge va deploy tekshiruvigacha `73c3a817...` holatida edi. |
+
 # TIZIM_02 current state
 
 Replaceable measured state, not a journal. Last checked: 2026-09-03 — NEXT-MAIN-RELEASE-V1 shipped, then two P0 security hotfixes applied directly to prod, then T2-COMPANY-CONTROL-FOUNDATION-001 integration (Codex v1 auth core + fix/company-context-p0 reconciled, 3 backend migrations authored) under a re-engaged production freeze, then T2-COMPANY-CONTROL-CLOSEOUT Phase A: Codex auth core v2 superseded v1 (platform role has no separate table), Antigravity's 3 confirmed P0s closed (role integration, route guards, Control Center tabs). Phase B (T2-GAS-EXIT-LRV-CONTROL-001 foundation contracts) follows in the same session.
@@ -50,3 +64,18 @@ read-model RPC `ok:true`; it does **not** include an authenticated end-to-end
 user flow (login is a prohibited action for Claude). `tizim02/MULOQOT.md` is an
 append-only historical journal, not current state — this file is the only
 current-state authority.
+# 2026-09-06 — T2 daily PTO native cutover addendum
+
+Quyidagi yozuvlar ushbu fayldagi eski release jadvalidan ustun bo‘lgan eng so‘nggi
+tekshirilgan holatdir. Eski jadval tarixiy dalil sifatida saqlanadi.
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `5edc7f31bc2536f69f7a555348479fd8de46ded2` — integration va `origin/main` bir xil. |
+| `production_deploy` | Cloudflare Pages `main` → `5edc7f31bc2536f69f7a555348479fd8de46ded2` deployi `success`; deploy URL `6b78875b.smeta-tizimi.pages.dev`. |
+| `daily_native_routes` | `/admin/obyektlar`, `/admin/holat/:id`, `/admin/fakt`, `/admin/f2`, `/admin/f2-tayyorlash` native canonical yo‘llarga ulangan; `/admin/narxlar` native rejimni odatiy holatda ochadi. |
+| `lrv_workbench` | `/admin/holat/:id` faqat raqamli `t2_obyekt.id` bilan daraxt, Faktga o‘tish, native smeta importi, qo‘shimcha/zamena/resurs, resurs vedomosti va narx nazoratini bitta kontekstga birlashtiradi. Yopiq panellar oldindan API chaqirmaydi. |
+| `old_gas_boundary` | Kundalik native LRV/Fakt/F2/F2 tayyorlash oqimi eski GAS biznes dvigateliga qaytmaydi. Eski modullar faqat compatibility/arxiv yo‘llari sifatida qolgan. |
+| `production_migrations` | T2 native LRV uchun kerakli besh additive migration live katalogda mavjud; `t2_fakt_yoz_v2` ham qo‘llangan. Ushbu checkpoint yangi production migration qo‘llamadi. |
+| `sheets_bridge` | Kod va ko‘prik kontrakti tayyor, lekin real Google trigger/Sheet↔Supabase acceptance hali egasi tomonidan faollashtirilmagan. |
+| `remaining_evidence` | Authenticated production deep-smoke egasining real sessiyasini talab qiladi; bu muhit parol yoki cookie olmagan. |
