@@ -1,10 +1,10 @@
-# 2026-09-06 — yakuniy native PTO release checkpointi
+# 2026-09-06 — so‘nggi native PTO release checkpointi
 
 ## Masofaviy release dalili
 
 - `origin/integration/next-main-release-v1`: `46a68a3c11c146b41e03f3f2344712348dde0490`.
-- `origin/main`: `18054ffe0f08de3212820c26fc247e103f7dcdc3`.
-- Cloudflare Pages deploy `a1907b0d.smeta-tizimi.pages.dev` aynan `18054ff` commitidan muvaffaqiyatli yaratilgan.
+- `origin/main` governance checkpointi: `6d64f66d7cbe71fc3a145b86bc1de505a8de1f0d`.
+- Cloudflare Pages deploy `97676085.smeta-tizimi.pages.dev` aynan `6d64f66` commitidan muvaffaqiyatli yaratilgan.
 - `/` va `/admin/fakt` HTTP 200; `/api/soglik` HTTP 200 va `service_role` rolini qaytardi.
 - Anonim `/api/sessiya` va `/api/hujjat-royxat` so‘rovlari 401 bilan fail-closed ishladi.
 - R2 binding `R2_CANONICAL` private `smeta-tizimi-canonical` bucketiga ulangan.
