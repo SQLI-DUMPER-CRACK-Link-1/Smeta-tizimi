@@ -1,3 +1,15 @@
+# 2026-09-06 — joriy continuation checkpointi
+
+Ushbu addendum quyidagi 2026-09-02 tarixiy release yozuvini o‘zgartirmaydi.
+
+- Joriy integration: `f182bd77cf2798852d5968a4e39bdbc1f39a03fb`.
+- Joriy main: `7a49befb611408c8b39ebd8e564465eb423b61bf`; main push qilinmadi.
+- Candidate Preview: `https://1ca8fc74.smeta-tizimi.pages.dev`; Cloudflare check `success`, source `f182bd7`.
+- `/api/soglik` anonim runtime dalili: HTTP 200, Supabase `service_role`, canonical RPC HTTP 200, `SESSIYA_KALIT` va `GAS_URL` mavjud.
+- To‘liq authenticated vertical smoke, main merge/push va Production deploy keyingi release gate sifatida ochiq.
+- Live additive migration: `20260906141808 t2_lrv_approved_f2_rollup_v1`; biznes qatorlariga DML yo‘q.
+- Gate’lar: TypeScript, build, 52 fayl/271 test, lint, `tekshir`, governance va diff-check — PASS.
+
 # NEXT-MAIN-RELEASE-V1 — production runbook
 
 Status: **RELEASED 2026-09-02 evening.** MAIN: `b6db686` → `9462a36` (`--no-ff`).

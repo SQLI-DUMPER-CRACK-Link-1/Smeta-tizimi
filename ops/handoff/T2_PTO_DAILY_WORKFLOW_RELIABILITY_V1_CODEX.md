@@ -7,8 +7,9 @@
 - **BASE:** `origin/main`dagi `7a49befb611408c8b39ebd8e564465eb423b61bf` asosida ochilgan ishchi tarmoq.
 - **BRANCH:** `codex/t2-daily-workflow-reliability-v1`.
 - **IMPLEMENTATION HEAD:** `8c7cf3b8fb1dcdfe9601b48936f6670ba3552afb` (`feat(t2): harden PTO daily canonical workflow`). Handoffni qayd etgan yakuniy hujjat commiti shu tarmoq uchida undan keyin keladi.
-- **INTEGRATION:** `origin/integration/next-main-release-v1` `46a68a3c11c146b41e03f3f2344712348dde0490`; ishchi tarmoq undan oltita keyingi hujjat/fiks commitini ham o‘z ichiga oladi.
+- **INTEGRATION:** `origin/integration/next-main-release-v1` `f182bd77cf2798852d5968a4e39bdbc1f39a03fb`; governance checkpoint implementation va handoff commitlaridan keyingi yakuniy qayd hisoblanadi.
 - **MAIN:** shu ish doirasida o‘zgartirilmagan.
+- **CLOUDFLARE CANDIDATE:** `https://1ca8fc74.smeta-tizimi.pages.dev` — GitHub Cloudflare check `success`, aynan `f182bd7` commitidan qurilgan; Production deploy qilinmagan.
 
 ## Ishonchli kundalik yo‘l
 
@@ -53,6 +54,7 @@
 - `npm run tekshir`: **PASS**, `BUG_FOUND=0`.
 - `node ops/governance-check.cjs`: **PASS** (`4 required files, 29 tasks`).
 - `git diff --check`: **PASS**.
+- Candidate anonim runtime tekshiruvi: `/api/soglik` HTTP 200, `ok=true`, `supabase_key_role=service_role`, `canonical_rpc_http_status=200`, `sessiya_kalit_set=true`, `gas_url_set=true`; `/api/sessiya` autentifikatsiyasiz kutilgan HTTP 401 qaytardi. To‘liq authenticated vertical smoke hali egasining sessiyasi bilan bajarilmadi.
 
 ## Tayyorlik chegarasi
 
