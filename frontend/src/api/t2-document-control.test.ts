@@ -52,4 +52,23 @@ describe('t2-document-control adapter', () => {
     expect(page.rows).toHaveLength(1);
     expect(page.rows[0].cumulativeQuantity).toBe(3);
   });
+
+  it('preserves missing baseline quantity/price as unknown instead of zero', () => {
+    const missingBaseline = structuredClone(raw) as any;
+    missingBaseline.valuation.lines[0].baselineQuantity = null;
+    missingBaseline.valuation.lines[0].baselineReferencePrice = null;
+    const model = normalizeWorkbench(missingBaseline);
+    const result = calculateProgressValuation(model.valuation);
+    const row = result.rows[0];
+    expect(row.baselineQuantity).toBeNull();
+    expect(row.baselineReferencePrice).toBeNull();
+    expect(row.approvedEntitlementQuantity).toBeNull();
+    expect(row.remainingQuantity).toBeNull();
+    expect(row.previousValue).toBeNull();
+    expect(row.currentValue).toBeNull();
+    expect(row.cumulativeValue).toBeNull();
+    expect(row.warnings).toEqual(expect.arrayContaining(['MISSING_BASELINE_QUANTITY', 'MISSING_BASELINE_PRICE']));
+    expect(result.totals.remainingQuantity).toBeNull();
+    expect(result.totals.cumulativeValue).toBeNull();
+  });
 });

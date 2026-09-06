@@ -52,13 +52,14 @@ export async function generateForma3(
   });
 
   const { previousValue, currentValue, cumulativeValue } = valuation.totals;
+  const valuationUnknown = previousValue === null || currentValue === null || cumulativeValue === null;
 
   const dataRow = worksheet.addRow([
     '1',
     'Bajarilgan ishlar qiymati (QQSsiz)',
-    previousValue,
-    currentValue,
-    cumulativeValue
+    valuationUnknown ? 'FORMA3_RULE_UNRESOLVED' : previousValue,
+    valuationUnknown ? 'FORMA3_RULE_UNRESOLVED' : currentValue,
+    valuationUnknown ? 'FORMA3_RULE_UNRESOLVED' : cumulativeValue
   ]);
 
   dataRow.eachCell((cell, colNumber) => {
@@ -74,11 +75,11 @@ export async function generateForma3(
   let curTotal: number | string = 'FORMA3_RULE_UNRESOLVED';
   let cumTotal: number | string = 'FORMA3_RULE_UNRESOLVED';
 
-  if (options.vatRatePercent != null) {
+  if (options.vatRatePercent != null && !valuationUnknown) {
     const rate = options.vatRatePercent / 100;
-    prevVat = previousValue * rate;
-    curVat = currentValue * rate;
-    cumVat = cumulativeValue * rate;
+    prevVat = previousValue! * rate;
+    curVat = currentValue! * rate;
+    cumVat = cumulativeValue! * rate;
 
     prevTotal = previousValue + (prevVat as number);
     curTotal = currentValue + (curVat as number);

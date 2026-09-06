@@ -63,6 +63,11 @@ const dropNulls = <T extends Record<string, any>>(o: T): T => {
   for (const [k, v] of Object.entries(o)) if (v !== null && v !== undefined) out[k] = v;
   return out as T;
 };
+const nullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 /** Raw t2_workbench_v1 jsonb -> ConstructionDocumentControlReadModel. */
 export function normalizeWorkbench(raw: any): ConstructionDocumentControlReadModel {
@@ -83,8 +88,8 @@ export function normalizeWorkbench(raw: any): ConstructionDocumentControlReadMod
       lines: (v.lines ?? []).map((l: any) => ({
         lineId: String(l.lineId), sectionId: String(l.sectionId ?? 'root'),
         description: l.description ?? '', unit: l.unit ?? '',
-        baselineQuantity: Number(l.baselineQuantity ?? 0),
-        baselineReferencePrice: Number(l.baselineReferencePrice ?? 0),
+        baselineQuantity: nullableNumber(l.baselineQuantity),
+        baselineReferencePrice: nullableNumber(l.baselineReferencePrice),
       })),
       changes: (v.changes ?? []).map((c: any) => ({
         changeId: String(c.changeId), kind: c.kind, status: c.status,

@@ -18,4 +18,7 @@ describe('nakopitelniyHolat (TPL-07 holat ustuni)',()=>{
  it('entitlement 0 yoki manfiy bo\'lsa (nol bazaviy hajm) bo\'lishga urinmaydi, normal qaytaradi',()=>{
   expect(nakopitelniyHolat({warnings:[],remainingQuantity:0,approvedEntitlementQuantity:0})).toBe('normal');
  });
+ it('bazaviy qiymat noma\'lum bo\'lsa holatni aniq emas deb ko\'rsatadi',()=>{
+  expect(nakopitelniyHolat({warnings:['MISSING_BASELINE_PRICE'],remainingQuantity:null,approvedEntitlementQuantity:null})).toBe('aniq_emas');
+ });
 });

@@ -41,6 +41,7 @@ const TESTLAR = [
   ['SHEETS write-back reference', 't2_sheets_writeback.test.cjs'],
   ['SECURITY P0 cross-cutting guards', 't2_security_p0.test.cjs'],
   ['Xavfsiz upstream error boundary', 't2_safe_error_boundary.test.cjs'],
+  ['Workbench NULL semantics', 't2_workbench_null_semantics.test.cjs'],
   ['SMETA/F2/NAKOPITELNIY + change control', 't2_smeta_f2_nakopitelniy.test.cjs'],
   ['PRE-MAIN adversarial release contracts', 'pre_main_release_qa.test.cjs'],
   ['COMPANY CONTEXT P0 (provider/scope/superadmin)', 't2_company_context.test.cjs'],
