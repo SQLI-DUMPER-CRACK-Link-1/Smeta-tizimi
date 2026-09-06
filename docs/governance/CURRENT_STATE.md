@@ -57,8 +57,8 @@ tekshirilgan holatdir. Eski jadval tarixiy dalil sifatida saqlanadi.
 
 | Field | Current value |
 |---|---|
-| `main_sha` | `a755cec5bfb6da9d9652f3c7242b4eefc8f98492` — integration va `origin/main` bir xil. |
-| `production_deploy` | Cloudflare Pages `main` → `9ee8462d4695eff44203faee6f8ad1430fb1d890` deployi `success`; deploy URL `f0e6595d.smeta-tizimi.pages.dev`. |
+| `main_sha` | `5edc7f31bc2536f69f7a555348479fd8de46ded2` — integration va `origin/main` bir xil. |
+| `production_deploy` | Cloudflare Pages `main` → `5edc7f31bc2536f69f7a555348479fd8de46ded2` deployi `success`; deploy URL `6b78875b.smeta-tizimi.pages.dev`. |
 | `daily_native_routes` | `/admin/obyektlar`, `/admin/holat/:id`, `/admin/fakt`, `/admin/f2`, `/admin/f2-tayyorlash` native canonical yo‘llarga ulangan; `/admin/narxlar` native rejimni odatiy holatda ochadi. |
 | `lrv_workbench` | `/admin/holat/:id` faqat raqamli `t2_obyekt.id` bilan daraxt, Faktga o‘tish, native smeta importi, qo‘shimcha/zamena/resurs, resurs vedomosti va narx nazoratini bitta kontekstga birlashtiradi. Yopiq panellar oldindan API chaqirmaydi. |
 | `old_gas_boundary` | Kundalik native LRV/Fakt/F2/F2 tayyorlash oqimi eski GAS biznes dvigateliga qaytmaydi. Eski modullar faqat compatibility/arxiv yo‘llari sifatida qolgan. |
