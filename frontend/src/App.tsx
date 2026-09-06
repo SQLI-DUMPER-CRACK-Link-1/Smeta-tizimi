@@ -65,7 +65,7 @@ const DocumentCenterDemo = lazy(() => import('./admin/document-center/DocumentCe
 const ParticipantNetworkDemo = lazy(() => import('./admin/participants/ParticipantNetworkDemo'));
 const SystemControlDemo = lazy(() => import('./admin/system-control/SystemControlDemo'));
  import { F2Import } from './admin/sahifalar/F2Import';
-import { F2Tayyorlash } from './admin/sahifalar/F2Tayyorlash';
+import { F2TayyorlashNative } from './admin/sahifalar/F2TayyorlashNative';
 import { Narxlar } from './admin/sahifalar/Narxlar';
 import { Ierarxiya } from './admin/sahifalar/Ierarxiya';
 import { Fakturalar } from './admin/sahifalar/Fakturalar';
@@ -116,7 +116,7 @@ export default function App() {
           <Route path="holat/:id" element={<HolatNative />} />
           <Route path="fakt" element={<FaktNative />} />
           <Route path="f2" element={<F2Import />} />
-          <Route path="f2-tayyorlash" element={<F2Tayyorlash />} />
+          <Route path="f2-tayyorlash" element={<F2TayyorlashNative />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
           <Route path="shartnomalar" element={<Shartnoma />} />
           <Route path="fakturalar" element={<Fakturalar />} />

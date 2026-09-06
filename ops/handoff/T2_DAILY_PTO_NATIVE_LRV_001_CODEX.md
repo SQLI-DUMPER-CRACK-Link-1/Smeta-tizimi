@@ -69,3 +69,22 @@ kun almashishida Fakt noto'g'ri sanaga tushmaydi.
   `BEGIN ... ROLLBACK` muhitida real actor/qator bilan ishlatiladi.
 
 Native F2 tayyorlash keyingi vertikal qatlam bo'lib qoladi.
+
+## Native F2 tayyorlash
+
+`/admin/f2-tayyorlash` endi `F2TayyorlashNative`ga ulanadi. Eski
+`F2Tayyorlash.tsx` o'chirilmagan, biroq T2 kundalik route'ida chaqirilmaydi.
+Yangi oqim:
+
+1. joriy kompaniyaning kanonik obyektini sonli ID bilan tanlaydi;
+2. faqat `t2_qator_holat.f2_mumkin_hajm > 0` qatorlarini o'qiydi;
+3. foydalanuvchi F2 hujjatidan hajm, narx, summa va manba sahifasini kiritadi;
+4. hajm Fakt qoldig'idan oshsa, manba/narx/summa bo'lmasa yozish rad etiladi;
+5. `qty * price != document amount` bo'lsa, farq ochiq belgilanadi, ammo
+   aynan hujjat summasi `certified_amount` sifatida saqlanadi;
+6. `sbT2AktYaratV2` kanonik qoralama yaratadi; tasdiqlash alohida,
+   versionli boshqaruv amali bo'lib qoladi.
+
+`f2-native-preparation.ts` pure kontrakti smeta narxiga fallbackni ataylab
+bilmaydi. `f2-native-preparation.test.ts` exact 1-tiyin farqi, Fakt limiti va
+bo'sh manba narxini regression bilan tekshiradi.
