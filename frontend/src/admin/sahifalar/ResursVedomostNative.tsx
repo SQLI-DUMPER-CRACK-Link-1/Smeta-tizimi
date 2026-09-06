@@ -10,9 +10,9 @@ import { FmtN } from '../../lib/format';
 // bo'lishi tuzatilgan), yangi hisob-kitob yo'q, faqat jamlanma. Holat.tsx
 // bilan bir xil "ochish ixtiyoriy" naqsh — mavjud oqimga tegmaydi.
 
-function Sessiya({ companyId }: { companyId: number }) {
+function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectId?: number }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
-  const [objectId, setObjectId] = useState('');
+  const [objectId, setObjectId] = useState(fixedObjectId ? String(fixedObjectId) : '');
   const [kategoriyalar, setKategoriyalar] = useState<ResursVedomostKategoriya[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +27,10 @@ function Sessiya({ companyId }: { companyId: number }) {
     });
     return () => { active = false; };
   }, [companyId]);
+
+  useEffect(() => {
+    if (fixedObjectId) void obyektTanla(String(fixedObjectId));
+  }, [fixedObjectId]);
 
   async function obyektTanla(id: string) {
     setObjectId(id); setKategoriyalar([]); setError('');
@@ -48,13 +52,13 @@ function Sessiya({ companyId }: { companyId: number }) {
 
   return (
     <div className="space-y-3 p-1">
-      <label className="block text-sm">Obyekt
+      {!fixedObjectId && <label className="block text-sm">Obyekt
         <select aria-label="Obyekt" className="ml-2 border rounded px-2 py-1"
           value={objectId} onChange={e => void obyektTanla(e.target.value)}>
           <option value="">Tanlang</option>
           {objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
         </select>
-      </label>
+      </label>}
       {loading && <p role="status">Yuklanmoqda…</p>}
       {error && <p role="alert" className="text-danger">{error}</p>}
       {kategoriyalar.length > 0 && (
@@ -106,9 +110,9 @@ function Sessiya({ companyId }: { companyId: number }) {
   );
 }
 
-export default function ResursVedomostNative() {
+export default function ResursVedomostNative({ obyektId }: { obyektId?: number } = {}) {
   const { joriy, yuklanmoqda } = useKompaniya();
   if (yuklanmoqda) return <p>Kompaniya yuklanmoqda…</p>;
   if (!joriy?.id) return <p>Kompaniyani tanlang.</p>;
-  return <Sessiya key={joriy.id} companyId={joriy.id} />;
+  return <Sessiya key={`${joriy.id}:${obyektId ?? 'all'}`} companyId={joriy.id} fixedObjectId={obyektId} />;
 }

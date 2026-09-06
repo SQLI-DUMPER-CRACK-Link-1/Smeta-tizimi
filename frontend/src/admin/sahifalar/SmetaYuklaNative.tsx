@@ -16,9 +16,9 @@ import { readXlsx, f2FaylOqiCore, type XlsxWorkbook, type F2ColumnConfig } from 
  */
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
-function Sessiya({ companyId }: { companyId: number }) {
+function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectId?: number }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
-  const [objectId, setObjectId] = useState('');
+  const [objectId, setObjectId] = useState(fixedObjectId ? String(fixedObjectId) : '');
   const [book, setBook] = useState<XlsxWorkbook | null>(null);
   const [sheetName, setSheetName] = useState('');
   const [cols, setCols] = useState<F2ColumnConfig | null>(null);
@@ -38,6 +38,10 @@ function Sessiya({ companyId }: { companyId: number }) {
     });
     return () => { active = false; };
   }, [companyId]);
+
+  useEffect(() => {
+    if (fixedObjectId) setObjectId(String(fixedObjectId));
+  }, [fixedObjectId]);
 
   function reset() {
     generation.current++; setError(''); setResult(null); setCols(null); setPreview([]);
@@ -118,13 +122,13 @@ function Sessiya({ companyId }: { companyId: number }) {
 
   return (
     <div className="space-y-3 p-1">
-      <label className="block text-sm">Obyekt
+      {!fixedObjectId && <label className="block text-sm">Obyekt
         <select aria-label="Obyekt" className="ml-2 border rounded px-2 py-1"
           value={objectId} onChange={e => { setObjectId(e.target.value); reset(); }}>
           <option value="">Tanlang</option>
           {objects.map(o => <option key={o.id} value={o.id}>{o.nom}{o.qator_soni ? ` (${o.qator_soni} qator bor)` : ' (bo‘sh)'}</option>)}
         </select>
-      </label>
+      </label>}
       {objectId && alreadyHasSmeta && (
         <p role="alert" className="text-danger text-sm">Bu obyektda allaqachon {selectedObject?.qator_soni} qatorlik smeta bor — bu ekran faqat BO‘SH obyektga birinchi import uchun.</p>
       )}
@@ -170,9 +174,9 @@ function Sessiya({ companyId }: { companyId: number }) {
   );
 }
 
-export default function SmetaYuklaNative() {
+export default function SmetaYuklaNative({ obyektId }: { obyektId?: number } = {}) {
   const { joriy, yuklanmoqda } = useKompaniya();
   if (yuklanmoqda) return <p>Kompaniya yuklanmoqda…</p>;
   if (!joriy?.id) return <p>Kompaniyani tanlang.</p>;
-  return <Sessiya key={joriy.id} companyId={joriy.id} />;
+  return <Sessiya key={`${joriy.id}:${obyektId ?? 'all'}`} companyId={joriy.id} fixedObjectId={obyektId} />;
 }

@@ -16,9 +16,9 @@ function qatorNomi(q: T2Qator): string {
   return `${'  '.repeat(q.daraja ?? 0)}${q.kod ? q.kod + ' ' : ''}${q.nom || ''} [${q.tur}]`;
 }
 
-function Sessiya({ companyId }: { companyId: number }) {
+function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectId?: number }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
-  const [objectId, setObjectId] = useState('');
+  const [objectId, setObjectId] = useState(fixedObjectId ? String(fixedObjectId) : '');
   const [rows, setRows] = useState<T2Qator[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -44,6 +44,12 @@ function Sessiya({ companyId }: { companyId: number }) {
     });
     return () => { active = false; };
   }, [companyId]);
+
+  useEffect(() => {
+    if (!fixedObjectId) return;
+    setObjectId(String(fixedObjectId)); setRows([]); setParentId(''); formniTozala(); setError(''); setDone('');
+    void daraxtniYukla(String(fixedObjectId));
+  }, [fixedObjectId]);
 
   function formniTozala() {
     setKod(''); setNom(''); setBirlik(''); setHajm(''); setSabab(''); setOldId('');
@@ -98,13 +104,13 @@ function Sessiya({ companyId }: { companyId: number }) {
 
   return (
     <div className="space-y-3 p-1">
-      <label className="block text-sm">Obyekt
+      {!fixedObjectId && <label className="block text-sm">Obyekt
         <select aria-label="Obyekt" className="ml-2 border rounded px-2 py-1"
           value={objectId} onChange={e => void obyektTanla(e.target.value)}>
           <option value="">Tanlang</option>
           {objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
         </select>
-      </label>
+      </label>}
       {loading && <p role="status">Smeta yuklanmoqda…</p>}
       {objectId && !loading && (
         <>
@@ -170,9 +176,9 @@ function Sessiya({ companyId }: { companyId: number }) {
   );
 }
 
-export default function AdditionalReplacementNative() {
+export default function AdditionalReplacementNative({ obyektId }: { obyektId?: number } = {}) {
   const { joriy, yuklanmoqda } = useKompaniya();
   if (yuklanmoqda) return <p>Kompaniya yuklanmoqda…</p>;
   if (!joriy?.id) return <p>Kompaniyani tanlang.</p>;
-  return <Sessiya key={joriy.id} companyId={joriy.id} />;
+  return <Sessiya key={`${joriy.id}:${obyektId ?? 'all'}`} companyId={joriy.id} fixedObjectId={obyektId} />;
 }
