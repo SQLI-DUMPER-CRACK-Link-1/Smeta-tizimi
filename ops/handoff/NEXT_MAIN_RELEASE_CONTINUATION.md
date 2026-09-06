@@ -1,3 +1,72 @@
+# 2026-09-06 — Authenticated smoke incident and safety checkpoint
+
+Ushbu addendum `integration/next-main-release-v1` uchun release gate hali
+yopilmaganini qayd etadi. Productionga yangi deploy qilinmadi.
+
+## Verified refs
+
+- `origin/main`: `7a49befb611408c8b39ebd8e564465eb423b61bf` (to‘g‘ridan-to‘g‘ri
+  `git ls-remote` bilan tekshirildi).
+- `origin/integration/next-main-release-v1`:
+  `50e1fb72a81e187ba495865ce8515b13603dd9be` (to‘g‘ridan-to‘g‘ri
+  `git ls-remote` bilan tekshirildi).
+- `origin/codex/t2-daily-workflow-reliability-v1`:
+  `1eaaccbb1d598feebacc525573ef32c0d258a356`; integration tipining ajdodi.
+- `origin/codex/f2-approval-safety-v1`:
+  `b3a2e83b177509226384e70e082292268fb0b32a`.
+
+Oddiy `git fetch --all --prune` umumiy checkoutdagi mavjud
+`.git/packed-refs.lock` sabab bajarilmadi. Lock tekshirildi va faol git
+jarayoni ko‘rinmagani bilan, xavfsizlik uchun o‘chirilmadi. Remote ref’lar
+`git ls-remote` bilan alohida tekshirildi; fetch xatosidan remote yo‘qligi
+haqida xulosa qilinmadi.
+
+## P0 safety finding
+
+Authenticated exact Preview’da F2 tarixida `t2_akt.id=19`, object `5`, davr
+`2026-07`, holat `tasdiqlangan` ko‘rindi. Read-only Supabase tekshiruvi shu
+akt uchun `versiya=3`, `hujjat_jami=241983934.956...` va audit yozuvi
+`holat: qoralama → tasdiqlangan` ekanini ko‘rsatdi. Auditdagi `kim` NULL.
+Bu tasdiqlashni kim yoki qaysi oqim bajarganini isbotlamaydi, lekin kutilmagan
+production yozuvi mavjudligi release’ni to‘xtatish uchun yetarli.
+
+Owner bu approval ataylab qilinganini yoki tasodifiy ekanini tekshirmaguncha
+aktni avtomatik qaytarmaslik, reject qilmaslik yoki boshqa biznes yozuvini
+o‘zgartirmaslik kerak.
+
+## Source safety fix
+
+`codex/f2-approval-safety-v1 @ b3a2e83b177509226384e70e082292268fb0b32a`
+`F2TarixNative` tasdiqlashdan oldin summa va tarixga ta’sirini ko‘rsatadigan
+explicit `window.confirm` talab qiladi; cancel holatida RPC chaqirilmaydi.
+Behavioral tests 2/2 PASS. Bu patch hali integration yoki production’ga
+qo‘shilmagan.
+
+## Verification
+
+- focused safety test: 2/2 PASS;
+- full Vitest: 54 fayl / 279 test PASS;
+- functions typecheck: PASS;
+- `npm run build`: PASS;
+- `npm run lint`: exit 0, faqat mavjud warninglar;
+- `npm run tekshir`: PASS;
+- `node ops/governance-check.cjs`: PASS, stale `CURRENT_STATE.main_sha`
+  warning bilan;
+- `git diff --check`: PASS;
+- safety worktree: clean.
+
+## Remaining release gate
+
+Authenticated smoke hali quyidagilar bo‘yicha to‘liq PASS emas: Price
+Control, Additional/Zamena, Resource statement, Nakopitelniy/Excel va
+Document Center. F2 approval incidenti ham owner tomonidan tasdiqlanmagan.
+Shuning uchun main push, safety patch integration, Cloudflare deploy va
+production smoke hozircha bajarilmaydi.
+
+Next exact safe action: owner `t2_akt.id=19` / object `5` / `2026-07`
+approvalini tekshiradi; shundan keyin safety patch candidate’ga controlled
+integrate qilinadi va authenticated smoke boshidan qayta o‘tkaziladi.
+
 # 2026-09-06 — T2 PTO daily reliability continuation checkpointi
 
 Quyidagi 2026-09-02 post-release yozuvi tarixiy dalil sifatida saqlanadi.
