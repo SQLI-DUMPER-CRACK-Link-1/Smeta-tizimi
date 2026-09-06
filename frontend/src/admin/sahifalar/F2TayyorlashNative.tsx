@@ -104,8 +104,8 @@ export function F2TayyorlashNative() {
     return tekshiruv.qatorlar.reduce((sum, row) => sum + (row.certifiedAmount || 0), 0);
   }, [tekshiruv.qatorlar]);
 
-  const ozgartir = (id: number, next: Partial<Draft>) => setDrafts((old) => ({ ...old, [id]: { ...(old[id] || boshDraft), ...next } }));
-  const tanlovniAlmashtir = (id: number) => {
+  const ozgartir = useCallback((id: number, next: Partial<Draft>) => setDrafts((old) => ({ ...old, [id]: { ...(old[id] || boshDraft), ...next } })), []);
+  const tanlovniAlmashtir = useCallback((id: number) => {
     setDrafts((old) => {
       if (old[id]) {
         const next = { ...old };
@@ -115,7 +115,7 @@ export function F2TayyorlashNative() {
       const holat = holatById.get(id);
       return { ...old, [id]: { ...boshDraft, quantity: holat && holat.f2_mumkin_hajm > 0 ? String(holat.f2_mumkin_hajm) : '' } };
     });
-  };
+  }, [holatById]);
 
   const smetaDaraxti = useMemo(() => {
     const allowed = new Set<number>();
@@ -154,7 +154,7 @@ export function F2TayyorlashNative() {
       else roots.push(node);
     }
     return roots;
-  }, [qatorlar, smetaRows, holatById, qatorById, tanlanganIds, drafts]);
+  }, [qatorlar, smetaRows, holatById, qatorById, tanlanganIds, drafts, ozgartir, tanlovniAlmashtir]);
   const visibleSmetaDaraxti = useMemo(() => daraxtniQidir(smetaDaraxti, qidiruv), [smetaDaraxti, qidiruv]);
 
   const previewSections = useMemo(() => {
