@@ -29,4 +29,12 @@ sonli `t2_obyekt.id`ni qabul qiladi va `t2_daraxt`, `t2_qator_holat`,
 fallback qilinmaydi; foydalanuvchi kanonik obyektni ro'yxatdan tanlaydi.
 
 Bu commit faqat native LRV o'qish route'ini almashtiradi. Native Fakt
-yozish va F2 tayyorlash keyingi vertikal qatlamlar bo'lib qoladi.
+yozish ham keyingi commitda real `/admin/fakt` route'iga qo'shildi:
+
+- obyekt va qator identitysi sonli kanonik ID;
+- yozish faqat `fakt_yoz` commandi orqali;
+- operation ID qayta urinishda o'zgarmaydi;
+- muvaffaqiyatdan keyin `t2_qator_holat` qayta o'qiladi;
+- bu ekran F2 tarixini yozmaydi yoki tahrirlamaydi.
+
+Native F2 tayyorlash keyingi vertikal qatlam bo'lib qoladi.

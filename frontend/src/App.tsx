@@ -12,6 +12,7 @@ const BossShell = lazy(() => import('./boss/BossShell'));
 // Admin pages
 import { Obyektlar } from './admin/sahifalar/Obyektlar';
 import { HolatNative } from './admin/sahifalar/HolatNative';
+import { FaktNative } from './admin/sahifalar/FaktNative';
 import { Shartnoma } from './admin/sahifalar/Shartnoma';
 import { Sklad } from './admin/sahifalar/Sklad';
 import { Monitoring } from './admin/sahifalar/Monitoring';
@@ -113,6 +114,7 @@ export default function App() {
           <Route path="obyektlar" element={<Obyektlar />} />
           <Route path="holat" element={<HolatNative />} />
           <Route path="holat/:id" element={<HolatNative />} />
+          <Route path="fakt" element={<FaktNative />} />
           <Route path="f2" element={<F2Import />} />
           <Route path="f2-tayyorlash" element={<F2Tayyorlash />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
@@ -216,6 +218,7 @@ export default function App() {
           <Route path="eski" element={<Umumiy />} />
           <Route path="holat" element={<HolatNative />} />
           <Route path="holat/:id" element={<HolatNative />} />
+          <Route path="fakt" element={<FaktNative />} />
           {/* ERP routes for Boss */}
           <Route path="kadrlar" element={<ErpKadrlar />} />
           <Route path="texnika" element={<ErpTexnika />} />

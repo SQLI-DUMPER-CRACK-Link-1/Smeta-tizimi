@@ -32,6 +32,7 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/participants', nom: 'Loyiha ishtirokchilari', Ikonka: Users },
       { yol: '/admin/documents', nom: 'Hujjatlar', Ikonka: FileStack },
       { yol: '/admin/hujjat-nazorat', nom: 'Hujjat nazorati (F2/Nakopitelniy)', Ikonka: FileOutput },
+      { yol: '/admin/fakt', nom: 'Bajarilgan ishlar (Fakt)', Ikonka: ClipboardList },
         { yol: '/admin/mindmap', nom: 'Mindmap (Xarita)', Ikonka: Map },
       { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
     ]
