@@ -558,7 +558,10 @@ export async function yozAmali(yuk: Record<string, unknown>): Promise<AktNatija>
     const matn = await r.text();
     let j: AktNatija;
     try { j = JSON.parse(matn) as AktNatija; }
-    catch { return { ok: false, error: `HTTP ${r.status}: ${matn.slice(0, 300) || 'server JSON qaytarmadi'}`, ms: Math.round(performance.now() - t0) }; }
+    catch { return { ok: false, error: r.status >= 500
+      ? 'Server vaqtincha javob bermadi. Birozdan so‘ng qayta urinib ko‘ring.'
+      : 'So‘rovni bajarib bo‘lmadi. Kiritilgan ma’lumotlarni tekshiring.',
+      ms: Math.round(performance.now() - t0) }; }
     if (!r.ok && !j.error) j.error = `HTTP ${r.status}: yozish so'rovi rad etildi`;
     return { ...j, ms: Math.round(performance.now() - t0) };
   } catch (e: any) {
