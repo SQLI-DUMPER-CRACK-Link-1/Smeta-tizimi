@@ -4,6 +4,7 @@ import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
 import { t2NakopitelniyOl, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami } from '../../api/t2-nakopitelniy';
 import { nakopitelniyVedomostExportXlsx } from '../../lib/nakopitelniy-vedomost-export';
+import { generateF2AktTn } from '../../lib/f2-akt-tn-export';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 import { FmtN } from '../../lib/format';
 
@@ -88,6 +89,13 @@ function Sessiya({ companyId }: { companyId: number }) {
     downloadBlob(new Uint8Array(bytes), `nakopitelniy_${obyektNom}_${davr}.xlsx`.replace(/\s+/g, '_'));
   };
 
+  /** T1->T2 PTO gap-close: rasmiy TN Akt-2 shaklidagi Ф2 hujjati -- mijoz/
+   *  bankka topshiriladigan qog'oz format (apiF2TayyorHujjatYarat porti). */
+  const aktEksportQil = async () => {
+    const bytes = await generateF2AktTn(qatorlar, { obyektNom, davr });
+    downloadBlob(new Uint8Array(bytes), `F2_akt_${obyektNom}_${davr}.xlsx`.replace(/\s+/g, '_'));
+  };
+
   return (
     <div className="space-y-3 p-1">
       <div className="flex flex-wrap items-end gap-3">
@@ -125,6 +133,13 @@ function Sessiya({ companyId }: { companyId: number }) {
           <button type="button" onClick={() => void eksportQil()}
             className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-sm hover:opacity-90">
             <Download size={14} /> XLSX eksport
+          </button>
+        )}
+        {qatorlar.length > 0 && (
+          <button type="button" onClick={() => void aktEksportQil()}
+            title="Mijoz/bankka topshiriladigan rasmiy shakl (TN Akt-2)"
+            className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-accent/50 text-accent text-sm hover:bg-accent/10">
+            <Download size={14} /> Rasmiy Ф2 hujjati
           </button>
         )}
       </div>
