@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Search, Link2, Unlink, ArrowRight } from 'lucide-react';
+import { Search, Link2, Unlink, ArrowRight, GitPullRequestArrow, PlusSquare } from 'lucide-react';
 import type { AktNode, LrvNode } from '../../lib/f2-match-engine';
 import type { F2ExactManbaTugun } from '../../test02/f2-exact-payload';
+import type { T2Qator } from '../../api/supabase';
+import { F2AddReplModal, type DropAction } from './F2AddReplModal';
 
 /**
  * T2-PTO-OWNER-CRITICAL-CLOSURE P0-2: professional two-pane F2<->Smeta
@@ -36,6 +38,14 @@ export interface F2TwoPaneWorkbenchProps {
   mapping: Map<string, number>;
   onMappingChange: (next: Map<string, number>) => void;
   disabled?: boolean;
+  /** Additional/Zamena drag-drop creation -- optional: only wired when the
+   *  caller also supplies raw t2_qator rows (needed for parent/old-row
+   *  versiya) and object/company context. Without these, drop targets fall
+   *  back to link-only (existing rows), same as before. */
+  smetaRawRows?: T2Qator[];
+  companyId?: number;
+  objectId?: number;
+  onSmetaChanged?: () => void | Promise<void>;
 }
 
 function nom(n: string | undefined, fallback: string) { return n && n.trim() ? n : fallback; }
@@ -52,6 +62,16 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
   const [srcQ, setSrcQ] = useState('');
   const [tgtQ, setTgtQ] = useState('');
   const [faqatMoslashmagan, setFaqatMoslashmagan] = useState(false);
+  const [draggingUid, setDraggingUid] = useState<string | null>(null);
+  const [dropOverKey, setDropOverKey] = useState<string | null>(null);
+  const [pendingDrop, setPendingDrop] = useState<{ sourceUid: string; action: DropAction } | null>(null);
+
+  const dragDropEnabled = !!(p.smetaRawRows && p.companyId != null && p.objectId != null && p.onSmetaChanged);
+  const rowById = useMemo(() => {
+    const m = new Map<number, T2Qator>();
+    for (const r of p.smetaRawRows || []) m.set(r.id, r);
+    return m;
+  }, [p.smetaRawRows]);
 
   const sourceNodes = p.sourceTree ?? flatSourceNodes(p.sourceFlat, p.labels);
   const bindingsByTarget = useMemo(() => {
@@ -59,6 +79,39 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
     for (const [uid, id] of p.mapping) { const a = m.get(id); if (a) a.push(uid); else m.set(id, [uid]); }
     return m;
   }, [p.mapping]);
+
+  function sourceNodeByUid(uid: string, nodes = sourceNodes): AktNode | null {
+    for (const n of nodes) {
+      if (n.uid === uid) return n;
+      if (n.children) { const f = sourceNodeByUid(uid, n.children); if (f) return f; }
+    }
+    return null;
+  }
+
+  function handleDropOnLeaf(sourceUid: string, targetRow: number) {
+    if (!dragDropEnabled) return;
+    const oldRow = rowById.get(targetRow);
+    const parent = oldRow?.ota_id != null ? rowById.get(oldRow.ota_id) : null;
+    if (!oldRow || !parent) return;
+    setPendingDrop({ sourceUid, action: { kind: 'replacement', oldRow, parent } });
+  }
+  function handleDropOnContainer(sourceUid: string, containerRow: number) {
+    if (!dragDropEnabled) return;
+    const parent = rowById.get(containerRow);
+    if (!parent) return;
+    const action: DropAction = parent.tur === 'rz'
+      ? { kind: 'additional', parent }
+      : { kind: 'resource', parent };
+    setPendingDrop({ sourceUid, action });
+  }
+  function afterCreated(qatorId: number) {
+    if (!pendingDrop) return;
+    const next = new Map(p.mapping);
+    next.set(pendingDrop.sourceUid, qatorId);
+    p.onMappingChange(next);
+    setPendingDrop(null);
+    void p.onSmetaChanged?.();
+  }
 
   const matchedCount = p.sourceFlat.filter(n => p.mapping.has(n.uid)).length;
 
@@ -97,12 +150,17 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
         <div key={n.uid}
           role="button" tabIndex={0}
           aria-pressed={isSelected}
+          draggable={dragDropEnabled && !p.disabled}
+          onDragStart={e => { if (!dragDropEnabled) return; e.dataTransfer.setData('text/plain', n.uid); e.dataTransfer.effectAllowed = 'link'; setDraggingUid(n.uid); }}
+          onDragEnd={() => setDraggingUid(null)}
           onClick={() => !p.disabled && setSelected(isSelected ? null : n.uid)}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!p.disabled) setSelected(isSelected ? null : n.uid); } }}
           style={{ marginLeft: depth * 14 }}
+          title={dragDropEnabled ? 'Bosib bog‘lang, yoki smeta tomonga tortib qo‘shimcha/zamena yarating' : undefined}
           className={
             'flex items-center gap-1.5 px-2 py-1 rounded-md text-[12px] cursor-pointer border ' +
-            (isSelected ? 'border-accent bg-accent/10 ring-1 ring-accent'
+            (draggingUid === n.uid ? 'opacity-40'
+              : isSelected ? 'border-accent bg-accent/10 ring-1 ring-accent'
               : matched ? 'border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10'
               : 'border-transparent hover:bg-surface-2/60')
           }>
@@ -146,15 +204,27 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
       budget.left--;
       const bound = bindingsByTarget.get(n.row) || [];
       const canLink = !!selected && !p.disabled;
+      const dropKey = 'leaf:' + n.row;
+      const isDropTarget = dragDropEnabled && dropOverKey === dropKey;
       return (
         <div key={n.row}
           role="button" tabIndex={0}
           onClick={() => { if (selected) link(selected, n.row); }}
           onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && selected) { e.preventDefault(); link(selected, n.row); } }}
+          onDragOver={e => { if (dragDropEnabled) { e.preventDefault(); e.dataTransfer.dropEffect = 'link'; setDropOverKey(dropKey); } }}
+          onDragLeave={() => { if (dropOverKey === dropKey) setDropOverKey(null); }}
+          onDrop={e => {
+            if (!dragDropEnabled) return;
+            e.preventDefault(); setDropOverKey(null);
+            const uid = e.dataTransfer.getData('text/plain');
+            if (uid) handleDropOnLeaf(uid, n.row);
+          }}
           style={{ marginLeft: depth * 14 }}
+          title={dragDropEnabled ? 'Bu qatorni zamena qilish uchun F2 manba qatorini shu yerga tashlang' : undefined}
           className={
             'flex items-center gap-1.5 px-2 py-1 rounded-md text-[12px] border ' +
-            (canLink ? 'cursor-pointer border-accent/40 hover:bg-accent/10' : 'border-transparent') +
+            (isDropTarget ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+              : canLink ? 'cursor-pointer border-accent/40 hover:bg-accent/10' : 'border-transparent') +
             (bound.length ? ' bg-emerald-500/5' : '')
           }>
           <span>{TUR_BELGI[n.type as Tur] || '•'}</span>
@@ -169,9 +239,26 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
     }
     const children = (n.children || []).map(c => renderTargetNode(c, depth + 1, budget)).filter(Boolean);
     if (n.type === 'rz' && children.length === 0) return null;
+    const dropKey = 'container:' + n.row;
+    const isDropTarget = dragDropEnabled && dropOverKey === dropKey && (n.type === 'rz' || n.type === 'bl');
     return (
       <div key={(n.row ?? 0) + '-' + (n.nom || '')}>
-        <div style={{ marginLeft: depth * 14 }} className="px-2 py-1 text-[12px] font-semibold text-text-dim">
+        <div style={{ marginLeft: depth * 14 }}
+          onDragOver={e => { if (dragDropEnabled && (n.type === 'rz' || n.type === 'bl')) { e.preventDefault(); e.dataTransfer.dropEffect = 'link'; setDropOverKey(dropKey); } }}
+          onDragLeave={() => { if (dropOverKey === dropKey) setDropOverKey(null); }}
+          onDrop={e => {
+            if (!dragDropEnabled || (n.type !== 'rz' && n.type !== 'bl')) return;
+            e.preventDefault(); setDropOverKey(null);
+            const uid = e.dataTransfer.getData('text/plain');
+            if (uid) handleDropOnContainer(uid, n.row);
+          }}
+          title={dragDropEnabled && (n.type === 'rz' || n.type === 'bl')
+            ? (n.type === 'rz' ? 'Yangi ish (BL) qo‘shish uchun shu yerga tashlang' : 'Yangi resurs qo‘shish uchun shu yerga tashlang')
+            : undefined}
+          className={
+            'px-2 py-1 text-[12px] font-semibold text-text-dim rounded-md border ' +
+            (isDropTarget ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500' : 'border-transparent')
+          }>
           {TUR_BELGI[n.type as Tur] || '📁'} {nom(n.nom, 'Bo‘lim')}
         </div>
         {children}
@@ -240,6 +327,30 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
       {p.sourceFlat.some(n => !p.mapping.has(n.uid)) && !faqatMoslashmagan && (
         <p className="text-[11px] text-text-mute">Moslashmagan qatorlarni tezroq topish uchun "faqat moslashmaganlar"ni belgilang.</p>
       )}
+      {dragDropEnabled && (
+        <p className="text-[11px] text-text-mute flex items-center gap-3">
+          <span className="inline-flex items-center gap-1"><GitPullRequestArrow size={12} /> qator ustiga tashlang — zamena</span>
+          <span className="inline-flex items-center gap-1"><PlusSquare size={12} /> bo‘lim/ish ustiga tashlang — qo‘shimcha</span>
+        </p>
+      )}
+      {pendingDrop && p.companyId != null && p.objectId != null && (() => {
+        const srcNode = sourceNodeByUid(pendingDrop.sourceUid);
+        const srcFlat = p.sourceFlat.find(f => f.uid === pendingDrop.sourceUid);
+        const label = p.labels.get(pendingDrop.sourceUid) || '';
+        return (
+          <F2AddReplModal
+            action={pendingDrop.action}
+            companyId={p.companyId}
+            objectId={p.objectId}
+            initialNom={srcNode?.nom || label.replace(/\s*\([^)]*\)\s*$/, '').trim() || label}
+            initialKod={srcNode?.kod}
+            initialBirlik={srcNode?.bir}
+            initialHajm={srcNode?.hajm ?? srcFlat?.hajm}
+            onClose={() => setPendingDrop(null)}
+            onCreated={afterCreated}
+          />
+        );
+      })()}
     </div>
   );
 }

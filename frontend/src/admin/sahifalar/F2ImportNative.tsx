@@ -108,6 +108,7 @@ function NativeSession({ companyId }: { companyId: number }) {
   const [targets, setTargets] = useState(new Map<number, string>());
   const [sourceTree, setSourceTree] = useState<AktNode[] | null>(null);
   const [smetaRoots, setSmetaRoots] = useState<LrvNode[]>([]);
+  const [smetaRawRows, setSmetaRawRows] = useState<T2Qator[]>([]);
   const [phase, setPhase] = useState('Faylni tanlang');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -155,7 +156,7 @@ function NativeSession({ companyId }: { companyId: number }) {
   function reset() {
     generation.current++;
     setSource([]); setMapping(new Map()); setReviewed(false); setDone(false); setError(''); setDraftXato('');
-    setSourceTree(null); setSmetaRoots([]);
+    setSourceTree(null); setSmetaRoots([]); setSmetaRawRows([]);
     operation.current = ''; jobId.current = null; jobVersiya.current = 1;
   }
   async function resume(r: Resumable) {
@@ -169,7 +170,7 @@ function NativeSession({ companyId }: { companyId: number }) {
       const { source: tiklanganSource, mapping: tiklanganMapping, labels: tiklanganLabels } = draftdanTiklash(draft.qatorlar);
       const rows = (smeta.qatorlar || []) as T2Qator[];
       setTargets(new Map(rows.map(q => [q.id, `${q.kod || ''} ${q.nom || ''} (${q.birlik || '—'})`])));
-      setSmetaRoots(smetaRootsFromRows(rows));
+      setSmetaRoots(smetaRootsFromRows(rows)); setSmetaRawRows(rows);
       setLabels(tiklanganLabels); setSource(tiklanganSource); setMapping(tiklanganMapping);
       operation.current = cursor.writeOperationId || yangiOperationId();
       setMonth(cursor.month || ''); jobId.current = r.jobId; jobVersiya.current = job.versiya || 1;
@@ -228,6 +229,19 @@ function NativeSession({ companyId }: { companyId: number }) {
       throw new Error('F2 manba fayli kanonik R2 ga yuklanmadi. Import to‘xtatildi.');
     }
   }
+  /** T2-PTO-OWNER-CRITICAL-CLOSURE: F2TwoPaneWorkbench's drag-drop
+   *  Additional/Zamena creation calls this after a successful create so the
+   *  right (Smeta) pane immediately shows the new row -- without it the
+   *  user would have to re-run match() (losing review progress) to see
+   *  what they just added. */
+  async function refreshSmeta() {
+    if (!objectId) return;
+    const r = await sbT2DaraxtOl(Number(objectId));
+    if (!r.ok) return;
+    const rows = (r.qatorlar || []) as T2Qator[];
+    setTargets(new Map(rows.map(q => [q.id, `${q.kod || ''} ${q.nom || ''} (${q.birlik || '—'})`])));
+    setSmetaRoots(smetaRootsFromRows(rows)); setSmetaRawRows(rows);
+  }
   async function match() {
     if (!book || !cols || !objectId) return;
     reset(); const token = generation.current; setBusy(true); setPhase('Moslashtirilmoqda');
@@ -259,7 +273,7 @@ function NativeSession({ companyId }: { companyId: number }) {
       const stack = [...built.tree];
       while (stack.length) { const n = stack.pop()!; names.set(n.uid, `${n.kod || ''} ${n.nom || ''} (${n.bir || '—'})`); stack.push(...(n.children || [])); }
       setLabels(names); setTargets(new Map(rows.map(q => [q.id, `${q.kod || ''} ${q.nom || ''} (${q.birlik || '—'})`])));
-      setSourceTree(built.tree); setSmetaRoots(roots);
+      setSourceTree(built.tree); setSmetaRoots(roots); setSmetaRawRows(rows);
       setSource(leaves); setMapping(bindings); operation.current = yangiOperationId(); setPhase('Ko‘rib chiqish kerak');
       await qoralamaniSaqla(leaves, bindings, names);
     } catch (e) { if (generation.current === token) setError(e instanceof Error ? e.message : 'O‘qish bajarilmadi.'); }
@@ -361,6 +375,8 @@ function NativeSession({ companyId }: { companyId: number }) {
         smetaRoots={smetaRoots} targets={targets}
         mapping={mapping} onMappingChange={setMapping}
         disabled={busy || done}
+        smetaRawRows={smetaRawRows} companyId={companyId} objectId={objectId ? Number(objectId) : undefined}
+        onSmetaChanged={refreshSmeta}
       />
       <F2PreapprovalAudit aktBarglar={source} getSmetaId={uid => mapping.get(uid)} />
       {payload.error && <p role="alert">{payload.error}</p>}
