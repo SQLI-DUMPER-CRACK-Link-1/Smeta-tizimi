@@ -12,7 +12,6 @@ import {
 import type { TreeNode } from '../../api/types';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
 import SmetaYuklaNative from './SmetaYuklaNative';
-import AdditionalReplacementNative from './AdditionalReplacementNative';
 import ResursVedomostNative from './ResursVedomostNative';
 import NarxNazoratNative from './NarxNazoratNative';
 
@@ -113,12 +112,6 @@ export function HolatNative() {
                 <span>Smeta XLSX yuklash</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
               </summary>
               {ochiqPanel === 'smeta' && <div className="mt-3 max-h-[360px] overflow-auto"><SmetaYuklaNative obyektId={obyektId} onImportlandi={yuklash} /></div>}
-            </details>
-            <details className="karta group p-3" open={ochiqPanel === 'o‘zgarish'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'o‘zgarish' : null)}>
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">
-                <span>Qo‘shimcha ish / Zamena / Resurs qo‘shish</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
-              </summary>
-              {ochiqPanel === 'o‘zgarish' && <div className="mt-3 max-h-[520px] overflow-auto"><AdditionalReplacementNative obyektId={obyektId} /></div>}
             </details>
             <details className="karta group p-3" open={ochiqPanel === 'resurs'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'resurs' : null)}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">

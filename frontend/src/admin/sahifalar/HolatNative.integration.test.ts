@@ -7,11 +7,9 @@ describe('kanonik LRV sahifasi kundalik native oqimni birlashtiradi', () => {
 
   it('faqat raqamli obyekt kontekstida mavjud native panellarni ulaydi', () => {
     expect(source).toContain("import SmetaYuklaNative from './SmetaYuklaNative';");
-    expect(source).toContain("import AdditionalReplacementNative from './AdditionalReplacementNative';");
     expect(source).toContain("import ResursVedomostNative from './ResursVedomostNative';");
     expect(source).toContain("import NarxNazoratNative from './NarxNazoratNative';");
     expect(source).toContain('<SmetaYuklaNative obyektId={obyektId} onImportlandi={yuklash} />');
-    expect(source).toContain('<AdditionalReplacementNative obyektId={obyektId} />');
     expect(source).toContain('<ResursVedomostNative obyektId={obyektId} />');
     expect(source).toContain('<NarxNazoratNative obyektId={obyektId} />');
   });
@@ -19,5 +17,9 @@ describe('kanonik LRV sahifasi kundalik native oqimni birlashtiradi', () => {
   it('eski GAS kompozit sahifani canonical LRV oqimiga qaytarmaydi', () => {
     expect(source).not.toContain("from './Holat'");
     expect(source).not.toContain('apiHolatOl');
+  });
+
+  it('owner: forma-asosli Qo‘shimcha/Zamena qo‘shgich olib tashlandi -- bu endi F2 import ikki oynali panelida (drag-drop) ishlaydi', () => {
+    expect(source).not.toContain('AdditionalReplacementNative');
   });
 });
