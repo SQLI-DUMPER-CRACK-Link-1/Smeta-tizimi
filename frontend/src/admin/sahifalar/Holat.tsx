@@ -147,9 +147,9 @@ export function Holat() {
               nom: child.nom,
               kod: child.kod,
               birlik: child.birlik,
-              narx: child.narx,
-              norm: child.smetaHajm, 
-              f: child.fakt,
+              narx: child.narx ?? undefined,
+              norm: child.smetaHajm ?? undefined,
+              f: child.fakt ?? undefined,
               f2Uid: yangiUid(),
             });
           }
@@ -162,9 +162,9 @@ export function Holat() {
           nom: dragSource.nom,
           kod: dragSource.kod,
           birlik: dragSource.birlik,
-          narx: dragSource.narx,
-          norm: dragSource.smetaHajm,
-          f: dragSource.fakt,
+          narx: dragSource.narx ?? undefined,
+          norm: dragSource.smetaHajm ?? undefined,
+          f: dragSource.fakt ?? undefined,
           f2Uid: yangiUid(),
         });
       }

@@ -7,20 +7,20 @@ export type TreeNode = {
   kat?: string;
   kod?: string;
   birlik?: string;
-  smetaHajm: number;   // HAJM
-  smeta: number;       // PUL
-  narx: number;
-  fakt: number;
-  qoldiq: number;
-  faktHajm?: number;
-  qoldiqHajm?: number;
-  qoldiqSumma?: number;
+  smetaHajm: number | null;   // HAJM
+  smeta: number | null;       // PUL
+  narx: number | null;
+  fakt: number | null;
+  qoldiq: number | null;
+  faktHajm?: number | null;
+  qoldiqHajm?: number | null;
+  qoldiqSumma?: number | null;
   narx_usul?: string;
   qoshimcha?: boolean;
   zamena?: boolean;
   f2ol: number;
   f2mum: number;
-  stFakt?: number; stF2?: number; stOst?: number;
+  stFakt?: number | null; stF2?: number | null; stOst?: number | null;
   oylar?: Record<string, { obyom: number; narx: number; narxIsFormula?: boolean; uid?: string; }>;
   isQosh?: boolean;
   isZamena?: boolean;

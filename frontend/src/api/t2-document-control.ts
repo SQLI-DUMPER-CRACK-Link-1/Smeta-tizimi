@@ -63,6 +63,11 @@ const dropNulls = <T extends Record<string, any>>(o: T): T => {
   for (const [k, v] of Object.entries(o)) if (v !== null && v !== undefined) out[k] = v;
   return out as T;
 };
+const nullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 /** Raw t2_workbench_v1 jsonb -> ConstructionDocumentControlReadModel. */
 export function normalizeWorkbench(raw: any): ConstructionDocumentControlReadModel {
@@ -83,8 +88,8 @@ export function normalizeWorkbench(raw: any): ConstructionDocumentControlReadMod
       lines: (v.lines ?? []).map((l: any) => ({
         lineId: String(l.lineId), sectionId: String(l.sectionId ?? 'root'),
         description: l.description ?? '', unit: l.unit ?? '',
-        baselineQuantity: Number(l.baselineQuantity ?? 0),
-        baselineReferencePrice: Number(l.baselineReferencePrice ?? 0),
+        baselineQuantity: nullableNumber(l.baselineQuantity),
+        baselineReferencePrice: nullableNumber(l.baselineReferencePrice),
       })),
       changes: (v.changes ?? []).map((c: any) => ({
         changeId: String(c.changeId), kind: c.kind, status: c.status,
@@ -132,9 +137,15 @@ export function progressValuationPage(
   model: ConstructionDocumentControlReadModel,
   q: { offset?: number; limit?: number; search?: string; sectionId?: string } = {},
 ): ProgressValuationPage {
-  const rows = calculateProgressValuation(model.valuation).rows;
+  // An object without an approved F2 period is a valid empty state.  The SQL
+  // contract keeps throughPeriod at 0 for JSON shape stability, but there is
+  // no period for the pure engine to evaluate yet.
   const offset = Math.max(0, q.offset ?? 0);
   const limit = Math.max(1, q.limit ?? 200);
+  if (model.valuation.periods.length === 0) {
+    return { rows: [], totalCount: 0, query: { offset, limit, search: q.search, sectionId: q.sectionId } };
+  }
+  const rows = calculateProgressValuation(model.valuation).rows;
   let filtered = rows;
   if (q.search) { const s = q.search.toLowerCase(); filtered = filtered.filter(r => r.description.toLowerCase().includes(s)); }
   if (q.sectionId) filtered = filtered.filter(r => r.sectionId === q.sectionId);

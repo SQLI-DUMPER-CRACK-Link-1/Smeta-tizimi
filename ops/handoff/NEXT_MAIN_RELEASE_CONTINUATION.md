@@ -1,3 +1,15 @@
+# 2026-09-06 — T2 PTO daily reliability continuation checkpointi
+
+Quyidagi 2026-09-02 post-release yozuvi tarixiy dalil sifatida saqlanadi.
+
+- `integration/next-main-release-v1`: `f182bd77cf2798852d5968a4e39bdbc1f39a03fb`.
+- `main`: `7a49befb611408c8b39ebd8e564465eb423b61bf`; bu checkpoint main’ga chiqarilmadi.
+- Cloudflare candidate: `https://1ca8fc74.smeta-tizimi.pages.dev`; GitHub check `success`, source commit `f182bd7`.
+- Anonim runtime: `/api/soglik` HTTP 200, Supabase `service_role`, canonical RPC HTTP 200, `SESSIYA_KALIT` va `GAS_URL` mavjud; `/api/sessiya` autentifikatsiyasiz 401.
+- Local/source gate’lar: `tsc`, build, Vitest `52 fayl / 271 test`, lint, `tekshir`, governance va `git diff --check` — PASS.
+- Live additive view migratsiyasi: `t2_lrv_approved_f2_rollup_v1`, ledger `20260906141808`; biznes qatorlariga yozuv kiritilmagan.
+- Ochilgan ish: egasining authenticated vertikal smoke dalili; Sheets bridge real aktivatsiya/round-trip; shundan keyin release runbook bo‘yicha main va Production qarori.
+
 # NEXT-MAIN-RELEASE-V1 — RELEASED (post-release record)
 
 **RELEASED 2026-09-02 evening.** This top section is authoritative; the

@@ -28,11 +28,10 @@ function jobKey(objectId: string) { return 't2-f2-import-job:' + objectId; }
 
 type Resumable = { jobId: number; matched: number; total: number | null; updatedAt: string };
 
-/** `hajm/narx/summa` durable draftda o'zi saqlangani uchun (T2-PTO-CLOSURE-007
- *  REPORT) qayta tiklashda original faylga qaytish shart emas -- faqat R2 fayl
- *  saqlash (ataylab bu safar qamrovdan chiqarilgan) yo'qligi sabab, "kod"dan
- *  boshqa (nom/bir) ko'rgazma matni tiklanmaydi. Bu funksionallikka ta'sir
- *  qilmaydi -- `exactWrite` faqat hajm/narx/summaga tayanadi. */
+/** `hajm/narx/summa` durable draftda o'zi saqlangani uchun qayta tiklashda
+ *  original faylga qaytish shart emas. Dastlabki sessiyada esa fayl avval
+ *  canonical R2 registry'ga yoziladi; resume mavjud jobning saqlangan
+ *  source_document_id bog'lanishiga tayanadi. */
 function draftdanTiklash(qatorlar: { uid: string; hajm: number | null; narx: number | null; summa: number | null; lrv_row: number | null; kod: string | null }[]) {
   const source: F2ExactManbaTugun[] = [];
   const mapping = new Map<string, number>();
@@ -114,6 +113,7 @@ function NativeSession({ companyId }: { companyId: number }) {
   const jobVersiya = useRef(1);
   const rawFile = useRef<File | null>(null);
   const sourceDocId = useRef<number | undefined>(undefined);
+  const sourceOperationId = useRef('');
   useEffect(() => {
     let active = true;
     void sbT2ObyektlarOlKomp(companyId).then(r => {
@@ -173,7 +173,7 @@ function NativeSession({ companyId }: { companyId: number }) {
   }
   async function upload(file: File) {
     reset(); setBook(null); setCols(null); setBusy(true); setPhase('Fayl o‘qilmoqda');
-    rawFile.current = file; sourceDocId.current = undefined;
+    rawFile.current = file; sourceDocId.current = undefined; sourceOperationId.current = yangiOperationId();
     const token = generation.current;
     try {
       if (file.size > MAX_FILE_BYTES) throw new Error(`Fayl ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
@@ -183,11 +183,12 @@ function NativeSession({ companyId }: { companyId: number }) {
     } catch { if (generation.current === token) setError(`Fayl o‘qilmadi yoki ${MAX_FILE_BYTES / 1024 / 1024} MB chegarasidan oshdi. XLSX faylni tekshiring.`); }
     finally { setBusy(false); }
   }
-  /** T2-PTO-DAILY-FINAL-CUTOVER-008 P0.2: F2 manba fayli ham canonical R2'ga
-   *  yuklanadi (FILE-TRUTH-001 ikki fazali /api/hujjat-yukla, mavjud va
-   *  ishlaydigan yo'l -- qayta ixtiro qilinmadi). Best-effort: xato bo'lsa
-   *  ham moslashtirish/yozish davom etadi, faqat provenance yo'q qoladi. */
-  async function sourceniR2gaYukla(file: File, objId: number): Promise<number | undefined> {
+  /** T2-PTO-DAILY-FINAL-CUTOVER-008 P0.2: F2 manba fayli canonical R2'ga
+   *  importdan OLDIN yoziladi. R2 qabul qilmasa, qoralama/kanonik akt
+   *  yaratilmaydi — binary manba bilan biznes yozuvi ajralib ketmasin. Bir
+   *  fayl sessiyasidagi qayta urinish aynan bitta operation_id bilan ketadi. */
+  async function sourceniR2gaYukla(file: File, objId: number): Promise<number> {
+    if (sourceDocId.current != null) return sourceDocId.current;
     try {
       const buf = await file.arrayBuffer();
       const digest = await crypto.subtle.digest('SHA-256', buf);
@@ -200,11 +201,20 @@ function NativeSession({ companyId }: { companyId: number }) {
       fd.append('fayl', file); fd.append('kompaniya_id', String(companyId));
       if (loyihaId != null) fd.append('loyiha_id', String(loyihaId));
       fd.append('obyekt_id', String(objId)); fd.append('turi', 'f2_akt');
-      fd.append('operation_id', yangiOperationId()); fd.append('sha256', sha256); fd.append('size', String(file.size));
+      fd.append('operation_id', sourceOperationId.current || (sourceOperationId.current = yangiOperationId()));
+      fd.append('sha256', sha256); fd.append('size', String(file.size));
       const r = await fetch('/api/hujjat-yukla', { method: 'POST', body: fd });
       const j: any = await r.json().catch(() => null);
-      return j && j.ok ? Number(j.document_id) : undefined;
-    } catch { return undefined; }
+      const documentId = j && j.ok ? Number(j.document_id) : NaN;
+      if (!r.ok || !Number.isSafeInteger(documentId) || documentId <= 0) {
+        throw new Error('F2 manba fayli kanonik R2 saqlashga qabul qilinmadi.');
+      }
+      sourceDocId.current = documentId;
+      return documentId;
+    } catch (e) {
+      if (e instanceof Error && e.message === 'F2 manba fayli kanonik R2 saqlashga qabul qilinmadi.') throw e;
+      throw new Error('F2 manba fayli kanonik R2 ga yuklanmadi. Import to‘xtatildi.');
+    }
   }
   async function match() {
     if (!book || !cols || !objectId) return;
@@ -222,13 +232,9 @@ function NativeSession({ companyId }: { companyId: number }) {
       const index = new Map<number, LrvNode>(rows.map(q => [q.id, { type: q.tur as LrvNode['type'], kod: q.kod || undefined, nom: q.nom || undefined, birlik: q.birlik || undefined, row: q.id, varaq: 'SB', children: [] }]));
       const roots: LrvNode[] = [];
       for (const q of rows) { const n = index.get(q.id)!; const parent = q.ota_id == null ? undefined : index.get(q.ota_id); if (parent) parent.children!.push(n); else roots.push(n); }
-      const uploadPromise = rawFile.current
-        ? sourceniR2gaYukla(rawFile.current, Number(objectId)).then(id => { sourceDocId.current = id; })
-        : Promise.resolve();
-      const [response] = await Promise.all([
-        fetch('/api/f2-moslash', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amal: 'moslash', aktTree: built.tree, lrvTree: roots }) }),
-        uploadPromise,
-      ]);
+      if (!rawFile.current) throw new Error('F2 manba fayli topilmadi. XLSX faylni qayta tanlang.');
+      await sourceniR2gaYukla(rawFile.current, Number(objectId));
+      const response = await fetch('/api/f2-moslash', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amal: 'moslash', aktTree: built.tree, lrvTree: roots }) });
       if (!response.ok) throw new Error('Moslashtirish bajarilmadi.');
       const result = await response.json() as F2MatchResult & { ok: boolean };
       if (!result.ok) throw new Error('Moslashtirish bajarilmadi.');
@@ -327,7 +333,10 @@ function NativeSession({ companyId }: { companyId: number }) {
     </p>}
     {draftXato && <p role="alert" className="text-warn">{draftXato}</p>}
     <fieldset disabled={busy || done} className="flex flex-wrap gap-4">
-      <label>Obyekt<select aria-label="Obyekt" value={objectId} onChange={e => { reset(); setObjectId(e.target.value); }}><option value="">Tanlang</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}</select></label>
+      <label>Obyekt<select aria-label="Obyekt" value={objectId} onChange={e => {
+        reset(); setObjectId(e.target.value); rawFile.current = null;
+        sourceDocId.current = undefined; sourceOperationId.current = '';
+      }}><option value="">Tanlang</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}</select></label>
       <label>F2 davri<input type="month" value={month} onChange={e => setMonth(e.target.value)} disabled={source.length > 0} /></label>
       <label>XLSX fayl<input type="file" accept=".xlsx,.xlsm" onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} /></label>
       {book && <label>Varaq<select value={sheetName} onChange={e => chooseSheet(book, e.target.value)}>{book.sheets.map(s => <option key={s.name}>{s.name}</option>)}</select></label>}

@@ -22,11 +22,11 @@ export function observationsFromTree(scope: CatalogIngestScope, nodes: TreeNode[
     if (node.children?.length) stack.push(...[...node.children].reverse());
     const sourceLineKey = `${node.varaq}#${node.row}`;
     if (node.type === 'bl') {
-      out.push({ kind: 'work_type', scope, sourceLineKey, code: node.kod, name: node.nom, unit: node.birlik, sourcePrice: node.narx });
+      out.push({ kind: 'work_type', scope, sourceLineKey, code: node.kod, name: node.nom, unit: node.birlik, sourcePrice: node.narx ?? undefined });
       continue;
     }
     const kind = resourceKind(node.type);
-    if (kind) out.push({ kind: 'resource', resourceKind: kind, scope, sourceLineKey, code: node.kod, name: node.nom, unit: node.birlik, sourcePrice: node.narx });
+    if (kind) out.push({ kind: 'resource', resourceKind: kind, scope, sourceLineKey, code: node.kod, name: node.nom, unit: node.birlik, sourcePrice: node.narx ?? undefined });
   }
   return out;
 }

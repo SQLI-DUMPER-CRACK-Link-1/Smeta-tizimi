@@ -99,8 +99,8 @@ export async function handleFaylOqi(body: FaylOqiBody) {
 
   let workbook;
   try { workbook = await readXlsx(bytes); }
-  catch (e) {
-    return Response.json({ ok: false, code: 'FILE_READ_ERROR', xabar: String((e as Error)?.message || e) }, { status: 422 });
+  catch {
+    return Response.json({ ok: false, code: 'FILE_READ_ERROR', xabar: 'XLSX faylni o‘qib bo‘lmadi. Faylni tekshirib qayta urinib ko‘ring.' }, { status: 422 });
   }
 
   const sheet = body.varaqNom

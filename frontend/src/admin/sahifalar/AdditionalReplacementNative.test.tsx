@@ -39,7 +39,7 @@ it('qo‘shimcha ish uchun ota versiyasini va operation_id ni to‘g‘ri yubora
   fireEvent.change(screen.getByLabelText('Hajm'), { target: { value: '12' } });
   fireEvent.change(screen.getByLabelText('Sabab'), { target: { value: 'Loyiha o‘zgardi' } });
   fireEvent.click(screen.getByText('Yaratish'));
-  await screen.findByText('Yaratildi: qator #99');
+  await screen.findByText('O‘zgarish muvaffaqiyatli yaratildi.');
   expect(mocks.additional).toHaveBeenCalledWith(expect.objectContaining({
     obyektId: 8, otaQatorId: 1, expectedVersion: 3, operationId: 'test-operation',
     nom: 'Yangi ish', birlik: 'm2', hajm: 12, sabab: 'Loyiha o‘zgardi',
@@ -60,7 +60,7 @@ it('zamena uchun eski qator faqat tanlangan ota ostidagi qatorlardan chiqadi, es
   fireEvent.change(screen.getByLabelText('Hajm'), { target: { value: '7' } });
   fireEvent.change(screen.getByLabelText('Sabab'), { target: { value: 'Xato o‘lchov' } });
   fireEvent.click(screen.getByText('Yaratish'));
-  await screen.findByText('Yaratildi: qator #100');
+  await screen.findByText('O‘zgarish muvaffaqiyatli yaratildi.');
   expect(mocks.replacement).toHaveBeenCalledWith(expect.objectContaining({
     almashtirilayotganQatorId: 2, otaQatorId: 1, expectedVersion: 3,
   }));

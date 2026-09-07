@@ -29,9 +29,11 @@ const TIZIM_02_GURUHLAR = [
     menyular: [
       { yol: '/admin/dashboard', nom: 'Rahbar paneli', Ikonka: BarChart },
       { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
+      { yol: '/admin/obyektlar', nom: 'Obyektlar ro‘yxati', Ikonka: Building2 },
       { yol: '/admin/participants', nom: 'Loyiha ishtirokchilari', Ikonka: Users },
       { yol: '/admin/documents', nom: 'Hujjatlar', Ikonka: FileStack },
       { yol: '/admin/hujjat-nazorat', nom: 'Hujjat nazorati (F2/Nakopitelniy)', Ikonka: FileOutput },
+      { yol: '/admin/f2-tarix', nom: 'F2 tarixi / tasdiqlash', Ikonka: ClipboardList },
       { yol: '/admin/fakt', nom: 'Bajarilgan ishlar (Fakt)', Ikonka: ClipboardList },
         { yol: '/admin/mindmap', nom: 'Mindmap (Xarita)', Ikonka: Map },
       { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
@@ -42,6 +44,10 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: HardHat,
     id: 'operatsion',
     menyular: [
+      { yol: '/admin/holat', nom: 'Ishchi smeta / LRV', Ikonka: FileText },
+      { yol: '/admin/f2', nom: 'F2 import (kanonik)', Ikonka: FileInput },
+      { yol: '/admin/f2-tayyorlash', nom: 'F2 tayyorlash', Ikonka: FileOutput },
+      { yol: '/admin/narxlar', nom: 'Narxlar nazorati', Ikonka: Tags },
       { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
         { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
       { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
@@ -63,13 +69,9 @@ const TIZIM_02_GURUHLAR = [
 ];
 
 const ESKI_TIZIM_MENYU = [
-  { yol: '/admin/obyektlar',  nom: 'Obyektlar',   Ikonka: Building2 },
-  { yol: '/admin/f2',         nom: 'Ф2 импорт',    Ikonka: FileInput },
   { yol: '/admin/buxgalteriya', nom: 'Buxgalteriya', Ikonka: Calculator },
   { yol: '/admin/shartnomalar', nom: 'Shartnomalar', Ikonka: FileSignature },
   { yol: '/admin/fakturalar', nom: 'Fakturalar (Eski)', Ikonka: FileText },
-  { yol: '/admin/f2-tayyorlash', nom: 'Ф2 тайёрлаш', Ikonka: FileOutput },
-  { yol: '/admin/narxlar',    nom: 'Narxlar',      Ikonka: Tags },
   { yol: '/admin/ierarxiya',  nom: 'Ierarxiya',    Ikonka: Network },
   { yol: '/admin/sklad',      nom: 'Sklad',        Ikonka: Package },
   { yol: '/admin/monitoring', nom: 'Monitoring',   Ikonka: Activity },

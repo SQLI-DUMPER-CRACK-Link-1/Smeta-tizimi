@@ -15,6 +15,7 @@
  */
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
+import { xavfsizUpstream, xavfsizXato } from '../_shared/xato';
 
 type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string };
 
@@ -29,17 +30,18 @@ async function rpc(env: Env, name: string, body: Record<string, unknown>) {
   const text = await r.text();
   let j: any = null;
   try { j = JSON.parse(text); } catch { /* keep raw */ }
-  return { httpOk: r.ok, j, text };
+  return { httpOk: r.ok, status: r.status, j, text };
 }
 
-function reply(name: string, res: { httpOk: boolean; j: any; text: string }, failCode: string) {
-  const { httpOk, j, text } = res;
+function reply(_name: string, res: { httpOk: boolean; status: number; j: any; text: string }, failCode: string) {
+  const { httpOk, status: upstreamStatus, j, text } = res;
   if (!httpOk || !j || j.ok !== true) {
     const code = (j && j.code) || failCode;
     const status = /42501|a'zo|azo|membership|DENIED/i.test(code + text) ? 403
       : /does not exist|PGRST202|not applied/i.test(text) ? 501
       : 502;
-    return Response.json({ ok: false, code, rpc: name, xato: (j && (j.xato || j.message)) || text.slice(0, 300) }, { status });
+    const safe = xavfsizUpstream(upstreamStatus, j || text, status);
+    return safe;
   }
   return Response.json(j);
 }
@@ -91,7 +93,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
         return Response.json({ ok: false, code: 'AMAL_INVALID', amal }, { status: 400 });
     }
   } catch (err: any) {
-    return Response.json({ ok: false, code: 'HUJJAT_NAZORAT_FAILED', xato: String(err?.message || err) }, { status: 500 });
+    return xavfsizXato('HUJJAT_NAZORAT_FAILED', 500, err?.message || String(err));
   }
 };
 
@@ -141,6 +143,6 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
         return Response.json({ ok: false, code: 'AMAL_INVALID', amal }, { status: 400 });
     }
   } catch (err: any) {
-    return Response.json({ ok: false, code: 'HUJJAT_NAZORAT_FAILED', xato: String(err?.message || err) }, { status: 500 });
+    return xavfsizXato('HUJJAT_NAZORAT_FAILED', 500, err?.message || String(err));
   }
 };
