@@ -11,6 +11,8 @@
 - **Overnight merge/main:** `eb190c4b1bb13a750e7aa19fb082b8636b167de8`
 - **Integration Preview:** `https://a5db2041.smeta-tizimi.pages.dev`
 - **Main Preview:** `https://d0cf4c36.smeta-tizimi.pages.dev`
+- **Reconciliation branch:** `codex/t2-overnight-reconciliation-v1`
+- **Reconciliation HEAD:** `dd546dbf7b4e6a19436e66f1755a9f2ab22a3128`
 
 Remote branchlar mustaqil `git ls-remote` bilan tekshirildi. Asl foydalanuvchi
 worktree’si (unborn/dirty holat) o‘zgartirilmadi.
