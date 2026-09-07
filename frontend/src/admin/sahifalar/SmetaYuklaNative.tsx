@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { sbT2ObyektlarOlKomp, sbT2ResursKategoriyaBelgila, yangiOperationId, type T2Obyekt, type T2ResursKategoriya } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { readXlsx, f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
@@ -29,6 +30,8 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
  */
 export type ResNarxYozuv = { kod?: string; nom?: string; birlik?: string; narx: number };
 export type ResNarxIndeks = { byKod: Map<string, number>; byNomBir: Map<string, number> };
+
+export type ImportQadam = { kalit: string; nom: string; holat: 'ishlamoqda' | 'tayyor' | 'xato'; tafsilot?: string };
 
 /** Client-side tolerant numeric parse (comma-decimal, thousands spaces) -- server-side t2_son mirrors this. */
 function son(v: unknown): number | undefined {
@@ -99,6 +102,34 @@ export function narxlarniDaraxtgaQoll(tree: AktNode[], idx: ResNarxIndeks): { tr
   return { tree: tree.map(walk), mosSoni, mosEmasSoni };
 }
 
+/** Import jarayonining haqiqiy vaqtdagi qadam ro'yxati -- foydalanuvchi:
+ *  "qanaqadir jarayon bo'layotganini bilib bo'lmaydi ... to'lib boruvchi
+ *  ... animatsiya va loglar bilan ko'rsatib tursa". Progress-bar HAQIQIY
+ *  tugagan qadamlar ulushi (simulyatsiya emas); har qadam o'z natijasi
+ *  (tafsilot) bilan qatorlab ko'rsatiladi. */
+export function ImportQadamlarPaneli({ qadamlar }: { qadamlar: ImportQadam[] }) {
+  const tayyor = qadamlar.filter(q => q.holat === 'tayyor').length;
+  const foiz = qadamlar.length ? Math.round((tayyor / qadamlar.length) * 100) : 0;
+  return (
+    <div className="karta p-3 space-y-2" role="status" aria-live="polite">
+      <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+        <div className="h-full bg-accent transition-[width] duration-300 ease-out" style={{ width: Math.max(foiz, 6) + '%' }} />
+      </div>
+      <ul className="space-y-1 text-[12.5px]">
+        {qadamlar.map(q => (
+          <li key={q.kalit} className="flex items-center gap-2">
+            {q.holat === 'ishlamoqda' && <Loader2 size={13} className="animate-spin text-accent flex-shrink-0" />}
+            {q.holat === 'tayyor' && <CheckCircle2 size={13} className="text-ok flex-shrink-0" />}
+            {q.holat === 'xato' && <XCircle size={13} className="text-danger flex-shrink-0" />}
+            <span className={q.holat === 'xato' ? 'text-danger' : 'text-text'}>{q.nom}</span>
+            {q.tafsilot && <span className="text-text-mute">— {q.tafsilot}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectId?: number }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
   const [objectId, setObjectId] = useState(fixedObjectId ? String(fixedObjectId) : '');
@@ -119,6 +150,11 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
   const [resIndexSize, setResIndexSize] = useState(0);
   const [katKorib, setKatKorib] = useState<Array<{ nom: string; birlik: string; tanlangan: T2ResursKategoriya }>>([]);
   const [katSaqlanmoqda, setKatSaqlanmoqda] = useState(false);
+  /** Owner: "qanaqadir jarayon bo'layotganini bilib bo'lmaydi" -- import
+   *  bosqichlari haqiqiy vaqtda, har bir qadam nima qilayotgani va
+   *  natijasi bilan ko'rsatiladi (simulyatsiya emas -- har bir yozuv
+   *  aynan shu qadam tugagach yoziladi). */
+  const [importQadamlari, setImportQadamlari] = useState<ImportQadam[]>([]);
   const rawFile = useRef<File | null>(null);
   const sourceDocumentId = useRef<number | undefined>(undefined);
   const sourceOperationId = useRef('');
@@ -253,22 +289,56 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
   async function importQil() {
     if (!book || !cols || !objectId) return;
     setError(''); setResult(null); const token = generation.current; setBusy(true); setPhase('Import qilinmoqda');
+    setImportQadamlari([]);
+    const jonli = () => generation.current === token;
+    /** Yangi qadam boshlanganini ko'rsatadi -- ro'yxatga qo'shiladi, holati "ishlamoqda". */
+    const qadam = (nom: string) => { if (jonli()) setImportQadamlari(prev => [...prev, { kalit: String(prev.length), nom, holat: 'ishlamoqda' }]); };
+    /** Oxirgi (hozir ishlayotgan) qadamni yakunlaydi -- muvaffaqiyat yoki xato, tafsilot bilan. */
+    const yakunla = (holat: 'tayyor' | 'xato', tafsilot?: string) => {
+      if (!jonli()) return;
+      setImportQadamlari(prev => {
+        if (!prev.length) return prev;
+        const c = prev.slice();
+        c[c.length - 1] = { ...c[c.length - 1], holat, tafsilot };
+        return c;
+      });
+    };
     try {
       // Kategoriya tuzatishlar (agar bo'lsa) importdan OLDIN registrga
       // yoziladi -- shu import ham ulardan darhol foydalanishi uchun.
-      await katlarniSaqla();
+      if (katKorib.some(k => k.tanlangan !== 'МАТ')) {
+        qadam('Kategoriya tuzatishlari saqlanmoqda');
+        await katlarniSaqla();
+        yakunla('tayyor');
+      }
+
+      qadam('Fayl tuzilishi (bo‘lim/ish/resurs) qurilmoqda');
       const sheet = book.sheet(sheetName)!;
       const built = f2FaylOqiCore(sheet.rows, cols);
-      if (!('tree' in built) || !built.tree.length) throw new Error('Ustunlarni tekshiring — daraxt bo‘sh chiqdi.');
+      if (!('tree' in built) || !built.tree.length) {
+        yakunla('xato', 'daraxt bo‘sh chiqdi');
+        throw new Error('Ustunlarni tekshiring — daraxt bo‘sh chiqdi.');
+      }
+      yakunla('tayyor', built.tree.length + ' ta bo‘lim topildi');
+
       // RES fayli ulangan bo'lsa: narxi YO'Q rs/mat/ob barglariga kod/nom+birlik
       // bo'yicha narx qo'llanadi. LRV faylida allaqachon narx bo'lgan qatorlar
       // ustidan YOZILMAYDI (narxlarniDaraxtgaQoll'ning o'zi shuni ta'minlaydi).
-      const importTree = resIndex ? narxlarniDaraxtgaQoll(built.tree, resIndex).tree : built.tree;
+      let importTree = built.tree;
+      if (resIndex) {
+        qadam('RES narxlari LRV daraxtiga ulanmoqda');
+        const qollangan = narxlarniDaraxtgaQoll(built.tree, resIndex);
+        importTree = qollangan.tree;
+        yakunla('tayyor', qollangan.mosSoni + ' ta mos, ' + qollangan.mosEmasSoni + ' ta narxsiz qoldi');
+      }
 
       if (!rawFile.current) throw new Error('Smeta manba fayli topilmadi. XLSX faylni qayta tanlang.');
+      qadam('Manba fayl R2 saqlashga yuklanmoqda');
       const sourceDocumentId = await sourceniR2gaYukla(rawFile.current, Number(objectId));
-      if (generation.current !== token) return;
+      if (!jonli()) return;
+      yakunla('tayyor', 'hujjat №' + sourceDocumentId);
 
+      qadam('Kanonik bazaga yozilmoqda');
       const r = await fetch('/api/smeta-yukla', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -276,15 +346,31 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
           operationId: importOperationId.current || (importOperationId.current = yangiOperationId()), sourceDocumentId, tree: importTree,
         }),
       });
-      const j = await r.json() as { ok: boolean; code?: string; qator_soni?: number };
-      if (generation.current !== token) return;
+      const j = await r.json() as { ok: boolean; code?: string; xato?: string; qator_soni?: number };
+      if (!jonli()) return;
       if (!j.ok) {
-        if (j.code === 'SMETA_ALREADY_EXISTS') throw new Error('Bu obyektda smeta allaqachon mavjud — ustidan yozilmaydi (xavfsizlik uchun).');
-        throw new Error('Import bajarilmadi (' + (j.code || 'xato') + ').');
+        if (j.code === 'SMETA_ALREADY_EXISTS') {
+          yakunla('xato', 'smeta allaqachon mavjud');
+          throw new Error('Bu obyektda smeta allaqachon mavjud — ustidan yozilmaydi (xavfsizlik uchun).');
+        }
+        yakunla('xato', j.xato || j.code || 'noma’lum xato');
+        throw new Error('Import bajarilmadi (' + (j.code || 'xato') + ')' + (j.xato ? ': ' + j.xato : '') + '.');
       }
+      yakunla('tayyor', (j.qator_soni || 0) + ' qator yozildi');
       setResult({ qator_soni: j.qator_soni || 0 }); setPhase('Tayyor');
       setObjects(prev => prev.map(o => o.id === Number(objectId) ? { ...o, qator_soni: j.qator_soni ?? o.qator_soni } : o));
-    } catch (e) { if (generation.current === token) setError(e instanceof Error ? e.message : 'Import bajarilmadi.'); }
+    } catch (e) {
+      if (jonli()) {
+        // Agar biror qadam "ishlamoqda" holatida to'xtab qolgan bo'lsa
+        // (masalan kutilmagan istisno, yuqoridagi yakunla() chaqirilmagan
+        // joyda) -- uni ham "xato" deb yakunlaymiz, osilib qolmasin.
+        setImportQadamlari(prev => {
+          if (!prev.length || prev[prev.length - 1].holat !== 'ishlamoqda') return prev;
+          const c = prev.slice(); c[c.length - 1] = { ...c[c.length - 1], holat: 'xato' }; return c;
+        });
+        setError(e instanceof Error ? e.message : 'Import bajarilmadi.');
+      }
+    }
     finally { setBusy(false); }
   }
 
@@ -312,7 +398,8 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
           onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
         </label>
       )}
-      {busy && <p role="status">{phase}…</p>}
+      {busy && importQadamlari.length === 0 && <p role="status">{phase}…</p>}
+      {importQadamlari.length > 0 && <ImportQadamlarPaneli qadamlar={importQadamlari} />}
       {error && <p role="alert" className="text-danger">{error}</p>}
       {book && cols && !result && (
         <>
