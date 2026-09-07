@@ -465,72 +465,83 @@ export default function TestXarita() {
   const tanlanganBogMaqsad = tanlanganBog ? graf.tugunlar.find((t) => t.id === tanlanganBog.maqsad) : null;
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0f1d] text-white overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: 'var(--ft-void)', color: 'var(--ft-text)' }}>
       {/* BOSHQARUV */}
-      <div className="flex-shrink-0 border-b border-white/10 bg-black/40 px-5 py-3">
+      <div className="flex-shrink-0 px-5 py-3 relative z-10"
+           style={{ background: 'var(--ft-panel)', borderBottom: '1px solid var(--ft-border)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              <Move size={18} className="text-sky-400" /> Rahbarning tirik holat xaritasi
-              {saqlanmoqda && <span className="text-[10px] text-amber-400 inline-flex items-center gap-1"><Save size={11} /> saqlanmoqda…</span>}
+            <h1 className="text-[16px] font-bold tracking-wide flex items-center gap-2" style={{ color: 'var(--ft-text-hi)' }}>
+              <Move size={16} className="ft-accent" /> RAHBAR XARITASI
+              {saqlanmoqda && <span className="text-[10px] uppercase font-bold ft-blink" style={{ color: 'var(--ft-warn)' }}>
+                <Save size={10} className="inline mr-1" /> saqlanmoqda
+              </span>}
             </h1>
-            <p className="text-[11px] text-zinc-400 mt-0.5">
-              Obyekt ustidagi belgi — shu obyekt bo'yicha real e'tibor talab qiladigan holat.
-              Xarita har 30 soniyada yangilanadi · tugunni sudrang, nuqtadan chiziq torting
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--ft-text-dim)' }}>
+              Obyekt holati va bog'lanishlar · Har 30s yangilanadi · Sudrash va ulash funksiyalari mavjud
             </p>
           </div>
           <div className="flex items-center gap-1.5">
-            {oxirgiYangilanish && <span className="text-[10px] text-zinc-500 inline-flex items-center gap-1 mr-1"><Clock size={11} /> {oxirgiYangilanish.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}</span>}
-            <button onClick={hammasiniQaytaTer} title="Hammasini ustunlarga qayta terish"
-              className="px-2.5 py-2 bg-white/5 hover:bg-white/10 rounded-lg inline-flex items-center gap-1.5 text-[11px]">
-              <LayoutGrid size={14} /> Qayta terish
+            {oxirgiYangilanish && <span className="text-[10px] mr-2" style={{ color: 'var(--ft-text-mute)' }}>
+              <Clock size={10} className="inline mr-1" />
+              {oxirgiYangilanish.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+            </span>}
+            <button onClick={hammasiniQaytaTer} title="Hammasini ustunlarga qayta terish" className="lux-btn-ghost text-[11px] px-2.5 h-7">
+              <LayoutGrid size={13} /> Qayta terish
             </button>
-            <button onClick={ekrangaSigdir} title="Ekranga sig'dirish"
-              className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><Maximize2 size={15} /></button>
-            <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><ZoomOut size={15} /></button>
-            <span className="text-[11px] text-zinc-500 w-10 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><ZoomIn size={15} /></button>
-            <button onClick={yukla} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><RefreshCcw size={15} className={yuklanmoqda ? 'animate-spin' : ''} /></button>
+            <div className="w-[1px] h-4 mx-1" style={{ background: 'var(--ft-border)' }}></div>
+            <button onClick={ekrangaSigdir} title="Ekranga sig'dirish" className="lux-btn-ghost h-7 w-7 p-0 justify-center"><Maximize2 size={13} /></button>
+            <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))} className="lux-btn-ghost h-7 w-7 p-0 justify-center"><ZoomOut size={13} /></button>
+            <span className="text-[11px] w-10 text-center font-mono" style={{ color: 'var(--ft-blue)' }}>{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))} className="lux-btn-ghost h-7 w-7 p-0 justify-center"><ZoomIn size={13} /></button>
+            <button onClick={yukla} className="lux-btn-primary h-7 w-7 p-0 justify-center ml-1">
+              <RefreshCcw size={13} className={yuklanmoqda ? 'animate-spin' : ''} />
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2 mt-3 flex-wrap border-t border-white/5 pt-3">
-          <span className="text-[11px] text-zinc-500 mr-1">Rejim:</span>
+        
+        <div className="flex items-center gap-2 mt-3 flex-wrap pt-3" style={{ borderTop: '1px solid var(--ft-border)' }}>
+          <span className="text-[10px] uppercase font-bold tracking-widest mr-1" style={{ color: 'var(--ft-text-mute)' }}>Rejim:</span>
           {['bosh', 'qurilish', 'taminot', 'moliya', 'resurs', 'risk'].map((m) => (
             <button key={m} onClick={() => setKorinish(m as any)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
-                korinish === m ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'border-transparent text-zinc-400 hover:bg-white/10'
-              }`}>
-              {m === 'bosh' ? 'Bosh panel' : m.charAt(0).toUpperCase() + m.slice(1)}
+              className="px-3 py-1 rounded-[4px] text-[10px] font-bold uppercase tracking-wider transition-all duration-200"
+              style={korinish === m 
+                ? { background: 'var(--ft-blue-bg)', color: 'var(--ft-blue-hi)', border: '1px solid var(--ft-blue-border)', boxShadow: '0 0 10px rgba(59,130,246,0.1)' } 
+                : { background: 'transparent', color: 'var(--ft-text-dim)', border: '1px solid transparent' }
+              }>
+              {m === 'bosh' ? 'Asosiy' : m}
             </button>
           ))}
         </div>
+        
         <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <span className="text-[11px] text-zinc-500 mr-1">Yangi qo'shish:</span>
+          <span className="text-[10px] uppercase font-bold tracking-widest mr-1" style={{ color: 'var(--ft-text-mute)' }}>Qo'shish:</span>
           {YARATSA_BOLADI.map((y) => {
             const Ik = TUR_IKONKA[y.tur];
             return (
               <button key={y.tur} onClick={() => { setYaratModal(y.tur); setMaydonlar({}); }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border hover:bg-white/10 transition-colors"
-                style={{ borderColor: TUR_RANG[y.tur] + '55', color: TUR_RANG[y.tur] }}>
-                <Plus size={12} /> <Ik size={12} /> {TUR_NOM[y.tur]}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-[10px] font-bold uppercase tracking-wider transition-colors"
+                style={{ borderColor: TUR_RANG[y.tur] + '33', color: TUR_RANG[y.tur], border: '1px solid', background: TUR_RANG[y.tur] + '0a' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = TUR_RANG[y.tur] + '1a'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = TUR_RANG[y.tur] + '0a'; }}
+              >
+                <Plus size={11} /> <Ik size={11} /> {TUR_NOM[y.tur]}
               </button>
             );
           })}
-          <span className="text-[10px] text-zinc-600 ml-2">
-            (Obyekt — «Obyektlar» sahifasidan, unga Drive papkasi ham kerak)
-          </span>
         </div>
 
         {graf.jamlanma && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-sky-500/15 bg-sky-500/5 px-3 py-2 text-[11px]">
-            <span className="font-semibold text-sky-300 inline-flex items-center gap-1.5"><CheckCircle2 size={13} /> Tashkilot holati</span>
-            <span className="text-zinc-300">{graf.jamlanma.obyekt_soni} ta obyekt</span>
-            <span className="text-zinc-400">Smeta: <b className="text-white">{pulQisqa(graf.jamlanma.smeta_jami)}</b></span>
-            <span className="text-zinc-400">Fakt: <b className="text-white">{pulQisqa(graf.jamlanma.fakt_jami)}</b></span>
-            <span className="text-zinc-400">F2: <b className="text-white">{pulQisqa(graf.jamlanma.f2_jami)}</b></span>
-            {graf.jamlanma.zayavka_kutilmoqda > 0 && <span className="text-amber-300">{graf.jamlanma.zayavka_kutilmoqda} ta ochiq zayavka</span>}
-            {graf.jamlanma.narxsiz_obyekt > 0 && <span className="text-amber-300">{graf.jamlanma.narxsiz_obyekt} ta obyektda narx yo'q</span>}
-            {graf.jamlanma.smetasiz_obyekt > 0 && <span className="text-rose-300">{graf.jamlanma.smetasiz_obyekt} ta obyektda smeta yo'q</span>}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md px-3 py-2 text-[11px] font-mono tracking-tight"
+               style={{ background: 'var(--ft-blue-bg)', border: '1px solid var(--ft-border-md)' }}>
+            <span className="font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--ft-blue-hi)' }}>
+              <Activity size={13} /> Holat
+            </span>
+            <span style={{ color: 'var(--ft-text)' }}>{graf.jamlanma.obyekt_soni} OBYEKT</span>
+            <span style={{ color: 'var(--ft-text-dim)' }}>SMETA: <b style={{ color: 'var(--ft-text-hi)' }}>{pulQisqa(graf.jamlanma.smeta_jami)}</b></span>
+            <span style={{ color: 'var(--ft-text-dim)' }}>FAKT: <b style={{ color: 'var(--ft-text-hi)' }}>{pulQisqa(graf.jamlanma.fakt_jami)}</b></span>
+            <span style={{ color: 'var(--ft-text-dim)' }}>F2: <b style={{ color: 'var(--ft-text-hi)' }}>{pulQisqa(graf.jamlanma.f2_jami)}</b></span>
+            {graf.jamlanma.zayavka_kutilmoqda > 0 && <span className="ft-blink font-bold" style={{ color: 'var(--ft-warn)' }}>{graf.jamlanma.zayavka_kutilmoqda} ZAYAVKA</span>}
           </div>
         )}
 
@@ -539,30 +550,30 @@ export default function TestXarita() {
             <input
               value={qidiruv}
               onChange={(e) => { setQidiruv(e.target.value); setTanlangan(null); setTanlanganBog(null); }}
-              placeholder="Obyekt, loyiha yoki resursni qidiring…"
-              aria-label="Mindmap tugunlarini qidirish"
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white outline-none placeholder:text-zinc-600 focus:border-sky-400/60"
+              placeholder="Obyekt, loyiha yoki resurs..."
+              className="input w-full h-8 px-3 text-[11px]"
             />
           </div>
-          <span className="text-[10px] text-zinc-600">Ko'rinish:</span>
+          <span className="text-[10px] uppercase font-bold tracking-widest mx-1" style={{ color: 'var(--ft-text-mute)' }}>Filtr:</span>
           {([
             ['barchasi', 'Barchasi'],
-            ['etibor', "E'tibor kerak"],
-            ['zayavka', 'Ochiq zayavka'],
+            ['etibor', "E'tibor"],
+            ['zayavka', 'Zayavka'],
           ] as const).map(([kalit, nom]) => (
             <button
-              key={kalit}
-              type="button"
+              key={kalit} type="button"
               onClick={() => { setHolatFiltri(kalit); setTanlangan(null); setTanlanganBog(null); }}
-              className={'rounded-lg border px-2.5 py-1.5 text-[10px] transition-colors ' +
-                (holatFiltri === kalit ? 'border-sky-400/60 bg-sky-400/15 text-sky-200' : 'border-white/10 bg-white/5 text-zinc-400 hover:text-white')}
+              className="px-2.5 py-1 rounded-[4px] text-[10px] font-bold uppercase tracking-wider transition-colors"
+              style={holatFiltri === kalit 
+                ? { background: 'var(--ft-blue-bg)', color: 'var(--ft-blue-hi)', border: '1px solid var(--ft-border-md)' } 
+                : { background: 'transparent', color: 'var(--ft-text-dim)', border: '1px solid var(--ft-border)' }}
             >{nom}</button>
           ))}
-          <span className="text-[10px] text-zinc-600 ml-auto">{korsatilganTugunlar.length}/{graf.tugunlar.length} tugun</span>
+          <span className="text-[10px] font-mono ml-auto" style={{ color: 'var(--ft-blue)' }}>{korsatilganTugunlar.length} / {graf.tugunlar.length} TUGUN</span>
         </div>
       </div>
 
-      {xato && <div className="m-3 p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-lg text-sm">{xato}</div>}
+      {xato && <div className="m-3 p-3 rounded-[4px] text-xs font-mono" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid var(--ft-danger)', color: 'var(--ft-danger)' }}>{xato}</div>}
 
       {/* KANVAS */}
       <div
@@ -570,7 +581,7 @@ export default function TestXarita() {
         className="flex-1 relative overflow-hidden touch-none"
         style={{
           cursor: chiziqManbaId ? 'crosshair' : 'grab',
-          backgroundImage: 'radial-gradient(circle, #1e293b 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, rgba(59,130,246,0.15) 1px, transparent 1px)',
           backgroundSize: (24 * zoom) + 'px ' + (24 * zoom) + 'px',
           backgroundPosition: pan.x + 'px ' + pan.y + 'px',
         }}
@@ -590,7 +601,7 @@ export default function TestXarita() {
               const manbaTur = graf.tugunlar.find((t) => t.id === b.manba)?.tur || 'obyekt';
               const maqsadTur = graf.tugunlar.find((t) => t.id === b.maqsad)?.tur || 'obyekt';
               const maxsusBog = ['sklad', 'texnika', 'kadr'].includes(manbaTur) || ['sklad', 'texnika', 'kadr'].includes(maqsadTur);
-              const rang = maxsusBog ? '#facc15' : TUR_RANG[manbaTur];
+              const rang = maxsusBog ? 'var(--ft-warn)' : TUR_RANG[manbaTur];
               const qalinlik = maxsusBog ? 3 : 2;
               const bogNomi = RUXSAT_BOGLANISH.find(r => r.tur === b.tur)?.nom || BOG_TUR_NOM[b.tur] || b.tur;
               const d = bezier(m.x + NODE_W, m.y + NODE_H / 2, q.x, q.y + NODE_H / 2);
@@ -603,11 +614,14 @@ export default function TestXarita() {
                   onClick={(e) => { e.stopPropagation(); setTanlanganBog(b); setTanlangan(null); }}>
                   <title>{bogNomi} · {b.uzsa_boladi ? 'Tekshirish yoki uzish uchun bosing' : 'Tuzilmaviy bog\'lanish'}</title>
                   <path d={d} fill="none" stroke="transparent" strokeWidth={16} />
-                  <path d={d} fill="none" stroke={bogTanlangan ? '#f8fafc' : rang} strokeWidth={bogTanlangan ? 4 : qalinlik}
+                  <path d={d} fill="none" stroke={bogTanlangan ? 'var(--ft-text-hi)' : rang} strokeWidth={bogTanlangan ? 4 : qalinlik}
                     strokeOpacity={bogTanlangan ? 1 : (b.uzsa_boladi ? 0.6 : 0.25)}
-                    strokeDasharray={b.uzsa_boladi ? 'none' : '4,4'} />
+                    strokeDasharray={b.uzsa_boladi ? 'none' : '4,4'} 
+                    style={bogTanlangan ? { filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.4))' } : {}}/>
                   {bogTanlangan && (
-                    <text x={midX} y={midY - 10} fill="#94a3b8" fontSize="10" textAnchor="middle" pointerEvents="none" className="select-none shadow-black drop-shadow-md">
+                    <text x={midX} y={midY - 10} fill="var(--ft-blue-hi)" fontSize="10" textAnchor="middle" pointerEvents="none" 
+                          className="select-none font-bold tracking-widest font-mono"
+                          style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))' }}>
                       {bogNomi} {b.rol ? `(${b.rol})` : ''}
                     </text>
                   )}
@@ -616,7 +630,8 @@ export default function TestXarita() {
             })}
             {chiziqManba && (
               <path d={bezier(chiziqManba.x + NODE_W, chiziqManba.y + NODE_H / 2, kursor.x, kursor.y)}
-                fill="none" stroke="#38bdf8" strokeWidth={2} strokeDasharray="6,4" />
+                fill="none" stroke="var(--ft-cyan-hi)" strokeWidth={2} strokeDasharray="6,4"
+                style={{ filter: 'drop-shadow(0 0 6px var(--ft-cyan))' }} />
             )}
           </svg>
 
@@ -633,24 +648,19 @@ export default function TestXarita() {
                 data-tugun={t.id}
                 onPointerDown={(e) => bosildiTugun(e, t.id)}
                 onClick={() => { if (!rejim.current) { setTanlangan(t.id); setTanlanganBog(null); } }}
-                className={'absolute rounded-xl border bg-[#111827] px-3 py-2 flex flex-col justify-center select-none shadow-lg transition-opacity duration-300 ' +
+                className={'absolute rounded-[6px] border px-3 py-2 flex flex-col justify-center select-none transition-all duration-200 ' +
                   (korinish === 'risk' && !((t.meta?.belgi || []) as MindmapBelgi[]).some(b => b.daraja === 'ogoh') ? 'opacity-30 grayscale ' : 'opacity-100 ') +
-                  (nishon && boglashMumkin ? 'ring-2 ring-sky-400/70' : '') + (nishon && !boglashMumkin ? 'opacity-50 ring-2 ring-rose-500/70' : '') + (tanlangan === t.id ? ' ring-2 ring-white/70' : '')}
-                style={{ left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, borderColor: rang + '66', cursor: 'move' }}>
+                  (nishon && boglashMumkin ? 'ring-2 ring-[var(--ft-cyan-hi)] shadow-[0_0_15px_var(--ft-cyan)]' : '') + 
+                  (nishon && !boglashMumkin ? 'opacity-30 ring-2 ring-[var(--ft-danger)]' : '') + 
+                  (tanlangan === t.id ? ' ring-2 ring-[var(--ft-text-hi)] z-20 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : ' shadow-lg')}
+                style={{ 
+                  left: joy.x, top: joy.y, width: NODE_W, height: NODE_H, 
+                  background: 'var(--ft-card)',
+                  borderColor: tanlangan === t.id ? 'var(--ft-text-hi)' : (rang + '40'), 
+                  borderLeft: `3px solid ${rang}`,
+                  cursor: 'move' 
+                }}>
                 
-                  {/* ⚠️ 2026-08-28 (Claude) — SOXTA BELGI OLIB TASHLANDI.
-                      Avval shart bunday edi:
-                        t.tur === 'obyekt' && t.nom.includes('Yangi')
-                      va ekranga QATTIQ YOZILGAN «90m parog (Zayavka)»
-                      chiqarilardi. Ya'ni nomida «Yangi» bo'lgan har qanday
-                      obyekt hech qanday zayavkasiz ham bildirishnoma
-                      ko'rsatardi — bu loyihaning eng qat'iy qoidasini
-                      (soxta ma'lumot) buzardi.
-
-                      Endi belgilar bazada HAQIQIY manbadan hisoblanadi
-                      (`t2_mindmap_grafi` → `meta.belgi`): kutilayotgan
-                      zayavka, narxsiz qator, eskirgan ko'zgu, yuklanmagan
-                      smeta. Manba bo'sh bo'lsa belgi CHIQMAYDI. */}
                   {(() => {
                     const belgilar = (t.meta?.belgi ?? []) as MindmapBelgi[];
                     if (!belgilar.length) return null;
@@ -669,28 +679,31 @@ export default function TestXarita() {
                           navigate(yol);
                         }}
                         title={belgilar.map((b) => '• ' + b.matn).join('\n')}
-                        className={'absolute -top-2 -left-2 text-white text-[10px] font-bold ' +
-                          'px-2 py-0.5 rounded-full border-2 border-[#111827] shadow-lg ' +
-                          'flex items-center gap-1 z-20 ' +
-                          (ogoh ? 'bg-amber-500 hover:bg-amber-400' : 'bg-sky-500 hover:bg-sky-400')}>
-                        <AlertTriangle size={11} />
+                        className={'absolute -top-2.5 -left-2.5 text-[10px] font-bold font-mono tracking-tight ' +
+                          'px-2 py-0.5 rounded-[4px] shadow-[0_0_12px_rgba(0,0,0,0.5)] ' +
+                          'flex items-center gap-1 z-30 ft-pulse transition-all ' +
+                          (ogoh ? 'bg-[var(--ft-warn)] text-[var(--ft-void)]' : 'bg-[var(--ft-blue)] text-white')}>
+                        <AlertTriangle size={11} strokeWidth={3} />
                         {belgilar.length === 1
                           ? (belgilar[0].soni ?? '') + ' ' + BELGI_QISQA[belgilar[0].tur]
-                          : belgilar.length + ' ogohlantirish'}
+                          : belgilar.length + ' RISK'}
                       </button>
                     );
                   })()}
 
-                  <div className="flex items-center gap-1.5 font-semibold text-[12px] truncate" style={{ color: rang }}>
-                  <Ik size={13} className="flex-shrink-0" /><span className="truncate">{t.nom}</span>
+                  <div className="flex items-center gap-1.5 font-bold text-[12px] truncate uppercase tracking-wide" style={{ color: rang }}>
+                  <Ik size={13} className="flex-shrink-0" strokeWidth={2.5} /><span className="truncate">{t.nom}</span>
                 </div>
-                <div className="text-[10px] text-zinc-500 truncate">{tafsilot(t)}</div>
+                <div className="text-[9.5px] font-mono truncate mt-0.5" style={{ color: 'var(--ft-text-dim)' }}>{tafsilot(t)}</div>
                 {t.tur !== 'kompaniya' && (
                   <div onPointerDown={(e) => bosildiNuqta(e, t.id)}
                     title="Bog'lash uchun shu nuqtadan chiziq torting"
                     aria-label={t.nom + ' uchun bog\'lash porti'}
-                    className="absolute -right-[7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-[#0a0f1d] cursor-crosshair hover:scale-150 transition-transform"
-                    style={{ background: rang }} />
+                    className="absolute -right-[6px] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full cursor-crosshair transition-transform"
+                    style={{ background: rang, border: '2px solid var(--ft-card)', boxShadow: `0 0 8px ${rang}` }} 
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-50%) scale(1.6)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-50%) scale(1)'; }}
+                  />
                 )}
               </div>
             );
