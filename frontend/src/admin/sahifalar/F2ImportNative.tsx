@@ -9,6 +9,7 @@ import { readXlsx, f2FaylOqiCore, type XlsxWorkbook, type F2ColumnConfig, type S
 import { type AktNode, type LrvNode, type F2MatchResult } from '../../lib/f2-match-engine';
 import { f2AggregatsiyaQator, f2ExactPayloadQur, type F2ExactManbaTugun } from '../../test02/f2-exact-payload';
 import { F2PreapprovalAudit } from '../../test02/F2PreapprovalAudit';
+import { F2TwoPaneWorkbench } from './F2TwoPaneWorkbench';
 
 /* T2-GAS-EXIT-001 SS5/SS6 + T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT:
  * eski qattiq devor (15MB / 20000 qator) endi durable job/draft modeli bilan
@@ -73,6 +74,15 @@ export function sourceLeaves(tree: AktNode[], grid: SheetGrid, cols: F2ColumnCon
   return out;
 }
 
+/** t2_qator flat rows -> LrvNode tree, by canonical parent id (`ota_id`) --
+ *  never by row number. Shared between a fresh match() and a resumed session. */
+export function smetaRootsFromRows(rows: T2Qator[]): LrvNode[] {
+  const index = new Map<number, LrvNode>(rows.map(q => [q.id, { type: q.tur as LrvNode['type'], kod: q.kod || undefined, nom: q.nom || undefined, birlik: q.birlik || undefined, row: q.id, varaq: 'SB', children: [] }]));
+  const roots: LrvNode[] = [];
+  for (const q of rows) { const n = index.get(q.id)!; const parent = q.ota_id == null ? undefined : index.get(q.ota_id); if (parent) parent.children!.push(n); else roots.push(n); }
+  return roots;
+}
+
 export function exactWrite(nodes: F2ExactManbaTugun[], mapping: Map<string, number>) {
   if (!nodes.length || nodes.some(n => !mapping.has(n.uid))) throw new Error('Barcha manba qatorlari moslashtirilishi kerak.');
   // Shared helper nol summani yo'q deb hisoblaydi; shu holatni jim o'tkazmaymiz.
@@ -96,8 +106,8 @@ function NativeSession({ companyId }: { companyId: number }) {
   const [mapping, setMapping] = useState(new Map<string, number>());
   const [labels, setLabels] = useState(new Map<string, string>());
   const [targets, setTargets] = useState(new Map<number, string>());
-  const [page, setPage] = useState(0);
-  const [faqatMoslashmagan, setFaqatMoslashmagan] = useState(false);
+  const [sourceTree, setSourceTree] = useState<AktNode[] | null>(null);
+  const [smetaRoots, setSmetaRoots] = useState<LrvNode[]>([]);
   const [phase, setPhase] = useState('Faylni tanlang');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -144,7 +154,8 @@ function NativeSession({ companyId }: { companyId: number }) {
   }, [objectId]);
   function reset() {
     generation.current++;
-    setSource([]); setMapping(new Map()); setReviewed(false); setDone(false); setError(''); setDraftXato(''); setPage(0);
+    setSource([]); setMapping(new Map()); setReviewed(false); setDone(false); setError(''); setDraftXato('');
+    setSourceTree(null); setSmetaRoots([]);
     operation.current = ''; jobId.current = null; jobVersiya.current = 1;
   }
   async function resume(r: Resumable) {
@@ -158,6 +169,7 @@ function NativeSession({ companyId }: { companyId: number }) {
       const { source: tiklanganSource, mapping: tiklanganMapping, labels: tiklanganLabels } = draftdanTiklash(draft.qatorlar);
       const rows = (smeta.qatorlar || []) as T2Qator[];
       setTargets(new Map(rows.map(q => [q.id, `${q.kod || ''} ${q.nom || ''} (${q.birlik || '—'})`])));
+      setSmetaRoots(smetaRootsFromRows(rows));
       setLabels(tiklanganLabels); setSource(tiklanganSource); setMapping(tiklanganMapping);
       operation.current = cursor.writeOperationId || yangiOperationId();
       setMonth(cursor.month || ''); jobId.current = r.jobId; jobVersiya.current = job.versiya || 1;
@@ -229,9 +241,8 @@ function NativeSession({ companyId }: { companyId: number }) {
       if (!r.ok) throw new Error('Smeta o‘qilmadi.');
       const rows = (r.qatorlar || []) as T2Qator[];
       if (rows.length > MAX_ROWS) throw new Error(`Smeta ${MAX_ROWS} qatordan katta.`);
-      const index = new Map<number, LrvNode>(rows.map(q => [q.id, { type: q.tur as LrvNode['type'], kod: q.kod || undefined, nom: q.nom || undefined, birlik: q.birlik || undefined, row: q.id, varaq: 'SB', children: [] }]));
-      const roots: LrvNode[] = [];
-      for (const q of rows) { const n = index.get(q.id)!; const parent = q.ota_id == null ? undefined : index.get(q.ota_id); if (parent) parent.children!.push(n); else roots.push(n); }
+      const roots = smetaRootsFromRows(rows);
+      const validIds = new Set(rows.map(q => q.id));
       if (!rawFile.current) throw new Error('F2 manba fayli topilmadi. XLSX faylni qayta tanlang.');
       await sourceniR2gaYukla(rawFile.current, Number(objectId));
       const response = await fetch('/api/f2-moslash', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amal: 'moslash', aktTree: built.tree, lrvTree: roots }) });
@@ -241,13 +252,14 @@ function NativeSession({ companyId }: { companyId: number }) {
       if (generation.current !== token) return;
       const bindings = new Map<string, number>();
       for (const m of result.mosliklar) {
-        if (!index.has(m.row) || bindings.has(m.uid)) throw new Error('Moslashtirish javobida noaniq bog‘lanish bor.');
+        if (!validIds.has(m.row) || bindings.has(m.uid)) throw new Error('Moslashtirish javobida noaniq bog‘lanish bor.');
         bindings.set(m.uid, m.row);
       }
       const names = new Map<string, string>();
       const stack = [...built.tree];
       while (stack.length) { const n = stack.pop()!; names.set(n.uid, `${n.kod || ''} ${n.nom || ''} (${n.bir || '—'})`); stack.push(...(n.children || [])); }
       setLabels(names); setTargets(new Map(rows.map(q => [q.id, `${q.kod || ''} ${q.nom || ''} (${q.birlik || '—'})`])));
+      setSourceTree(built.tree); setSmetaRoots(roots);
       setSource(leaves); setMapping(bindings); operation.current = yangiOperationId(); setPhase('Ko‘rib chiqish kerak');
       await qoralamaniSaqla(leaves, bindings, names);
     } catch (e) { if (generation.current === token) setError(e instanceof Error ? e.message : 'O‘qish bajarilmadi.'); }
@@ -343,25 +355,13 @@ function NativeSession({ companyId }: { companyId: number }) {
     </fieldset>
     {cols && <fieldset disabled={busy || done} className="karta p-3 flex flex-wrap gap-3"><legend>Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>{(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => <label key={k}>{k}<input className="w-16 border" type="number" min="1" value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} /></label>)}<button onClick={() => void match()} disabled={!objectId || !month}>Moslashtirish</button></fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
-    {source.length > 0 && <>{(() => {
-      const korinadigan = faqatMoslashmagan ? source.filter(n => !mapping.has(n.uid)) : source;
-      const nishonlar = [...targets.entries()];
-      return <>
-        <p>{source.length} manba qatoridan {source.filter(n => mapping.has(n.uid)).length} tasi bog‘landi.
-          {' '}<label className="ml-2 text-[12px]"><input type="checkbox" checked={faqatMoslashmagan} onChange={e => { setFaqatMoslashmagan(e.target.checked); setPage(0); }} /> faqat moslashmaganlar</label>
-        </p>
-        <details open={faqatMoslashmagan}><summary>Bog‘lanishlarni ko‘rish va qo‘lda tuzatish</summary><div className="overflow-auto"><table className="w-full text-sm"><thead><tr><th>F2 manba</th><th>Smeta qatori</th><th>Hajm</th><th>Narx</th><th>Hujjat summasi</th></tr></thead><tbody>{korinadigan.slice(page * 50, page * 50 + 50).map(n => <tr key={n.uid}><td>{labels.get(n.uid)}</td><td>
-          <select value={mapping.get(n.uid) ?? ''} onChange={e => {
-            const v = e.target.value; const yangi = new Map(mapping);
-            if (v) yangi.set(n.uid, Number(v)); else yangi.delete(n.uid);
-            setMapping(yangi);
-          }}>
-            <option value="">— Moslashtirilmagan —</option>
-            {nishonlar.map(([id, nom]) => <option key={id} value={id}>{nom}</option>)}
-          </select>
-        </td><td>{n.hajm}</td><td>{n.narx ?? '—'}</td><td>{n.summa ?? '—'}</td></tr>)}</tbody></table></div><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Oldingi</button><span> {page + 1} / {Math.max(1, Math.ceil(korinadigan.length / 50))} </span><button disabled={(page + 1) * 50 >= korinadigan.length} onClick={() => setPage(p => p + 1)}>Keyingi</button></details>
-      </>;
-    })()}
+    {source.length > 0 && <>
+      <F2TwoPaneWorkbench
+        sourceTree={sourceTree} sourceFlat={source} labels={labels}
+        smetaRoots={smetaRoots} targets={targets}
+        mapping={mapping} onMappingChange={setMapping}
+        disabled={busy || done}
+      />
       <F2PreapprovalAudit aktBarglar={source} getSmetaId={uid => mapping.get(uid)} />
       {payload.error && <p role="alert">{payload.error}</p>}
       <label className="block"><input type="checkbox" checked={reviewed} disabled={busy || done} onChange={e => setReviewed(e.target.checked)} /> Varaq, davr va moslashtirish natijasini tekshirdim</label>
