@@ -1,3 +1,21 @@
+# 2026-09-07 — T2 safe release reconciliation: amaldagi holat
+
+Quyidagi addendum oldingi yozuvlarni tarixiy dalil sifatida saqlagan holda
+hozirgi xavfsiz release cutoverini qayd etadi.
+
+| Field | Current value |
+|---|---|
+| `base_sha` | `50e1fb72a81e187ba495865ce8515b13603dd9be` — xavfsiz integration manbasi. |
+| `safe_candidate` | `b60d6d64fc647116bee6299bc8de17fd26ca601b` — reconciliation o‘zgarishlari bilan yakuniy xavfsiz kod daraxti. |
+| `main_sha` | `b6f8c141674c9f5ed18e2e9b62e189a0e3d0b4e6` |
+| `production_deploy` | Cloudflare Pages check `success`; latest commit `b6f8c14`; deploy preview `https://0aca4f41.smeta-tizimi.pages.dev`. `https://smeta-tizimi.pages.dev` va deploy preview HTML build xeshi bir xil. |
+| `runtime_smoke` | Production `/api/soglik` HTTP 200, `ok=true`, `supabase_key_role=service_role`, canonical RPC HTTP 200; protected API’lar 401; noto‘g‘ri login 401 va cookie yo‘q; asosiy admin route’lar HTTP 200. |
+| `r2` | `frontend/wrangler.toml` private `R2_CANONICAL` → `smeta-tizimi-canonical`; public canonical bucket yo‘q. Authenticated binary round-trip bu muhitda bajarilmadi. |
+| `production_migrations` | Ushbu cutoverda yangi migration qo‘llanmadi; production business data o‘zgartirilmadi. |
+| `gas` | GAS deploy qilinmadi; bridge source’dagi xavfsiz LockService tuzatishi source-only. |
+| `authenticated_smoke` | Ownerning yaroqli browser sessiyasi mavjud emasligi sabab login → obyekt → Smeta → LRV → Fakt → F2 → tarix → narx → Nakopitelniy to‘liq smoke isbotlanmadi. |
+| `release_status` | Safe code main’ga chiqarildi va Cloudflare deploy qilindi; authenticated owner vertical smoke — ochiq dalil bo‘shlig‘i. |
+
 # 2026-09-06 — T2 PTO daily reliability: joriy integratsiya checkpointi
 
 Ushbu yangi addendum joriy release ishining o‘lchangan holatini qayd etadi;

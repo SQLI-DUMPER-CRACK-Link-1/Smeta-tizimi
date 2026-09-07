@@ -4,6 +4,26 @@
 **Rol:** mustaqil integrator/auditor
 **Holat:** `SOURCE_RECONCILED`, main/productionga qo‘shilmagan
 
+## Amaldagi cutover addendumi — 2026-09-07
+
+Yuqoridagi audit qarori overnight branchni ko‘r-ko‘rona integratsiya qilmaslik
+haqida edi. Keyingi xavfsiz cutover alohida temporary worktree’da bajarildi:
+
+- safe candidate: `b60d6d64fc647116bee6299bc8de17fd26ca601b`;
+- main merge: `b6f8c141674c9f5ed18e2e9b62e189a0e3d0b4e6`;
+- merge tree safe candidate tree bilan bir xil;
+- Cloudflare Pages check `success`, latest commit `b6f8c14`, deploy preview:
+  `https://0aca4f41.smeta-tizimi.pages.dev`;
+- production alias va deploy preview HTML build xeshi bir xil;
+- productionga migration, business-data yozuvi, secret o‘zgarishi yoki GAS
+  deploy qilinmadi;
+- authenticated owner vertical smoke yaroqli sessiya yo‘qligi sabab ochiq
+  qoldi.
+
+Shu sabab hujjatdagi eski `main/productionga qo‘shilmagan` holat dastlabki
+reconciliation checkpointi uchun tarixiy hisoblanadi; amaldagi release holati
+yuqoridagi cutover dalillari bilan o‘qiladi.
+
 ## Tekshirilgan manbalar
 
 - **Integration baza:** `50e1fb72a81e187ba495865ce8515b13603dd9be`
