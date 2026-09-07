@@ -49,6 +49,7 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/f2-tayyorlash', nom: 'F2 tayyorlash', Ikonka: FileOutput },
       { yol: '/admin/nakopitelniy', nom: 'Nakopitelniy vedomost', Ikonka: NotebookPen },
       { yol: '/admin/narxlar', nom: 'Narxlar nazorati', Ikonka: Tags },
+      { yol: '/admin/nakrutka', nom: 'Nakrutka (ustama) hisobi', Ikonka: Calculator },
       { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
         { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
       { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },

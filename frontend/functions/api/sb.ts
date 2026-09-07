@@ -164,6 +164,7 @@ export const onRequestPost: PagesFunction<{
       jadval?: string; filtr?: string; ustunlar?: string;
       tartib?: string; limit?: number;
       soro?: string; obyekt_id?: number; kompaniya_id?: number; akt_id?: number; job_id?: number;
+      shartnoma_id?: number;
     }>();
 
     /* ══════════ O'QISH-RPC (AI konteksti) ══════════════════════════════
@@ -178,7 +179,7 @@ export const onRequestPost: PagesFunction<{
      *
      * Rol: `boss`/`rahbar` ham CHAQIRA OLADI — bu faqat o'qish. */
     if (so.soro) {
-      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya' | 'obyekt_actor' | 'akt_actor' | 'job_actor'> = {
+      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya' | 'obyekt_actor' | 'akt_actor' | 'job_actor' | 'kompaniya_actor'> = {
         ai_kontekst: 'obyekt',
         ai_umumiy: 'kompaniya',
         /* ⚡ 2026-08-28: mindmap butun grafni (tugunlar + bog'lanishlar)
@@ -197,6 +198,11 @@ export const onRequestPost: PagesFunction<{
            the function itself via job_id -> kompaniya_id, same law as above. */
         f2_import_job_holat_v1: 'job_actor',
         f2_import_draft_royxat_v1: 'job_actor',
+        /* T1->T2 PTO gap-close: NAKRUTKA (markup cascade) reads. Both RPCs
+           are `stable`, membership-checked inside via
+           t2_actor_kompaniya_azo_tekshir. */
+        nakrutka_koef_ol_v1: 'kompaniya_actor',
+        obyekt_nakrutka_v1: 'obyekt_actor',
       };
       const tur = OQISH_RPC[so.soro];
       if (!tur) {
@@ -235,7 +241,7 @@ export const onRequestPost: PagesFunction<{
         }
         q.set('p_job_id', String(id));
       }
-      if (tur === 'obyekt_actor' || tur === 'akt_actor' || tur === 'job_actor') {
+      if (tur === 'obyekt_actor' || tur === 'akt_actor' || tur === 'job_actor' || tur === 'kompaniya_actor') {
         if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
           return Response.json({ ok: false, error: 'Sessiyada foydalanuvchi yo\'q' }, { status: 401 });
         }
@@ -251,6 +257,27 @@ export const onRequestPost: PagesFunction<{
             { ok: false, error: 'Bu kompaniyaga ruxsat yo\'q' }, { status: 403 });
         }
         if (kid != null) q.set('p_kompaniya_id', String(kid));
+      }
+      if (tur === 'kompaniya_actor') {
+        const kid = Number(so.kompaniya_id);
+        if (!Number.isFinite(kid) || kid <= 0) {
+          return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+        }
+        if (!Array.isArray(sess.kompaniyalar) ||
+            !sess.kompaniyalar.some((a) => a.kompaniya_id === kid)) {
+          return Response.json(
+            { ok: false, error: 'Bu kompaniyaga ruxsat yo\'q' }, { status: 403 });
+        }
+        q.set('p_kompaniya_id', String(kid));
+      }
+      if (so.soro === 'nakrutka_koef_ol_v1' || so.soro === 'obyekt_nakrutka_v1') {
+        if (so.shartnoma_id != null && String(so.shartnoma_id) !== '') {
+          const sid = Number(so.shartnoma_id);
+          if (!Number.isFinite(sid) || sid <= 0) {
+            return Response.json({ ok: false, error: 'shartnoma_id noto\'g\'ri' });
+          }
+          q.set('p_shartnoma_id', String(sid));
+        }
       }
       if (so.soro === 'mindmap_grafi_v2') {
         const mode = String((so as any).mode || 'overview');

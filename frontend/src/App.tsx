@@ -66,6 +66,7 @@ const SystemControlDemo = lazy(() => import('./admin/system-control/SystemContro
 import F2ImportNative from './admin/sahifalar/F2ImportNative';
 import { F2TayyorlashNative } from './admin/sahifalar/F2TayyorlashNative';
 import NakopitelniyVedomost from './admin/sahifalar/NakopitelniyVedomost';
+import NakrutkaNative from './admin/sahifalar/NakrutkaNative';
 import F2TarixNative from './admin/sahifalar/F2TarixNative';
 import { Narxlar } from './admin/sahifalar/Narxlar';
 import { Ierarxiya } from './admin/sahifalar/Ierarxiya';
@@ -124,6 +125,7 @@ export default function App() {
           <Route path="f2" element={<F2ImportNative />} />
           <Route path="f2-tayyorlash" element={<F2TayyorlashNative />} />
           <Route path="nakopitelniy" element={<NakopitelniyVedomost />} />
+          <Route path="nakrutka" element={<NakrutkaNative />} />
           <Route path="f2-tarix" element={<F2TarixNative />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
           <Route path="shartnomalar" element={<Shartnoma />} />

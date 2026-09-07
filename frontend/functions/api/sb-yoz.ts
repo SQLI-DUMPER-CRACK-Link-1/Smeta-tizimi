@@ -107,6 +107,7 @@ const AMALLAR = {
   obyekt_loyihaga_biriktir: { rpc: 't2_obyekt_loyihaga_biriktir' },
   obyekt_yarat: { rpc: 't2_obyekt_yarat_v1' },
   resurs_kategoriya_belgila: { rpc: 't2_resurs_kategoriya_belgila_v1' },
+  nakrutka_koef_saqla: { rpc: 't2_nakrutka_koef_saqla_v1' },
   loyiha_qatnashchi_biriktir: { rpc: 't2_loyiha_qatnashchi_biriktir' },
   loyiha_qatnashchi_ochir: { rpc: 't2_loyiha_qatnashchi_ochir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
@@ -1283,6 +1284,42 @@ export const onRequestPost: PagesFunction<{
         p_birlik: String(so.birlik).trim().slice(0, 50),
         p_kategoriya: String(so.kategoriya),
         p_operation_id: UUID_RE2.test(String(so.operation_id || '')) ? so.operation_id : crypto.randomUUID(),
+      };
+
+    /* T1->T2 PTO gap-close: NAKRUTKA (markup/overhead cascade) koeffitsienti
+       saqlash. T1 GAS'ning apiNakrutkaSaqla (Smeta tizimi/80_Shartnoma.js)
+       porti -- supabase/migrations/20261014090000_t2_nakrutka_v1.sql.
+       shartnoma_id null bo'lsa -- kompaniya standart koeffitsienti, aks
+       holda faqat o'sha shartnomaga tegishli override. */
+    } else if (amal === 'nakrutka_koef_saqla') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      const KOEF_RUXSAT = [
+        'ЗТР_СОЦСТРАХ', 'ТРАНСПОРТ_МАТЕРИАЛ', 'СКЛАДСКИЕ_МАТЕРИАЛ', 'СКЛАДСКИЕ_МК',
+        'ТРАНСПОРТ_КАБЕЛЬ', 'ПРОЧИЕ_ПОДРЯДЧИК', 'ТРАНСПОРТ_ОБОРУД', 'ЗАГОТ_СКЛАД_ОБОРУД',
+        'СТРАХОВАНИЕ', 'РИСК', 'НДС',
+      ];
+      if (!KOEF_RUXSAT.includes(String(so.koef_kod))) {
+        return Response.json({ ok: false, error: 'koef_kod noto\'g\'ri: ' + KOEF_RUXSAT.join('|') });
+      }
+      const qiymat = Number(so.qiymat);
+      if (!Number.isFinite(qiymat)) {
+        return Response.json({ ok: false, error: 'qiymat noto\'g\'ri' });
+      }
+      const shartnomaId = so.shartnoma_id == null || so.shartnoma_id === '' ? null : Number(so.shartnoma_id);
+      if (shartnomaId != null && (!Number.isFinite(shartnomaId) || shartnomaId <= 0)) {
+        return Response.json({ ok: false, error: 'shartnoma_id noto\'g\'ri' });
+      }
+      const UUID_RE3 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_shartnoma_id: shartnomaId,
+        p_koef_kod: String(so.koef_kod),
+        p_qiymat: qiymat,
+        p_operation_id: UUID_RE3.test(String(so.operation_id || '')) ? so.operation_id : crypto.randomUUID(),
       };
 
     /* ⚠️ Polimorfik tashkilot bog'lanishi (MASTER_REJA band 1): taraf
