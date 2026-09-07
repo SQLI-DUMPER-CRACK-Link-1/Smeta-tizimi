@@ -74,6 +74,42 @@ export function katTaxmini(nom: string, birlik: string): 'ЧЕЛ' | 'МАШ' | '
   return 'МАТ';
 }
 
+export type VaraqTegi = 'lrv' | 'res' | 'etibor_bermaslik';
+
+/**
+ * Owner: "smeta lrv res... nomni farqi yo'q tizim o'zi aniqlashga harakat
+ * qilishi kerak hujjatni ko'rib ... bitta hujjat ichida ham lrv ham res
+ * sahifalari ham bo'lishi mumkin". Varaq nomiga qaraganda YOMON heuristika
+ * -- odamlar varaqni istalgan narsa deb ataydi ("Sheet1", "Лист2" va h.k.).
+ * Buning o'rniga MAZMUNGA qaraladi:
+ *   RES (tekis narx katalogi): deyarli har bir qatorda narx bor, lekin
+ *     hajm deyarli YO'Q (loyihaga bog'liq emas -- umumiy narxnoma).
+ *   LRV (ish/hajm ierarxiyasi): hajm ustuni bor va ko'p qatorda
+ *     to'ldirilgan (narx bo'lsin-bo'lmasin -- LRV ko'pincha narxsiz keladi).
+ * Ikkalasi ham yo'q yoki juda kam ma'lumot -- "nomalum" (foydalanuvchi
+ * qo'lda belgilaydi, hech narsa taxmin qilib yozilmaydi).
+ */
+export function varaqTuriTaxmin(rows: SheetGrid): 'lrv' | 'res' | 'nomalum' {
+  const cols = f2UstunAniqla(rows);
+  if (cols.nom < 0) return 'nomalum';
+  let jami = 0, narxli = 0, hajmli = 0;
+  for (const row of rows) {
+    const nom = String(row[cols.nom] ?? '').trim();
+    if (!nom) continue;
+    jami++;
+    const narx = cols.narx >= 0 ? son(row[cols.narx]) : undefined;
+    const hajm = cols.obyom >= 0 ? son(row[cols.obyom]) : undefined;
+    if (narx != null && narx > 0) narxli++;
+    if (hajm != null) hajmli++;
+  }
+  if (jami < 3) return 'nomalum';
+  const narxNisbat = narxli / jami;
+  const hajmNisbat = hajmli / jami;
+  if (hajmNisbat > 0.3) return 'lrv';
+  if (narxNisbat > 0.6) return 'res';
+  return 'nomalum';
+}
+
 export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
   const byKod = new Map<string, number>();
   const byNomBir = new Map<string, number>();
@@ -130,7 +166,7 @@ export function ImportQadamlarPaneli({ qadamlar }: { qadamlar: ImportQadam[] }) 
   );
 }
 
-function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectId?: number }) {
+function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: number; fixedObjectId?: number; onImportlandi?: () => void }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
   const [objectId, setObjectId] = useState(fixedObjectId ? String(fixedObjectId) : '');
   const [book, setBook] = useState<XlsxWorkbook | null>(null);
@@ -155,6 +191,16 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
    *  natijasi bilan ko'rsatiladi (simulyatsiya emas -- har bir yozuv
    *  aynan shu qadam tugagach yoziladi). */
   const [importQadamlari, setImportQadamlari] = useState<ImportQadam[]>([]);
+  /** Owner: bitta faylda ham LRV, ham RES varaqlari bo'lishi mumkin --
+   *  har bir varaq turi mazmuniga qarab avtomatik taxmin qilinadi
+   *  (varaqTuriTaxmin), foydalanuvchi shu yerda tasdiqlaydi/tuzatadi. */
+  const [varaqTeglari, setVaraqTeglari] = useState<Record<string, VaraqTegi>>({});
+  /** RES deb belgilangan har bir ICHKI varaq uchun avtomatik aniqlangan
+   *  ustunlar -- f2UstunAniqla standart holatda ЕNKБ shakli (ikki qatorli
+   *  sarlavha)ni kutadi, oddiy tekis kod/nom/narx jadvalida ustunlar
+   *  noto'g'ri chiqishi mumkin, shuning uchun foydalanuvchi shu yerda ham
+   *  tuzata oladi (alohida RES fayl bilan bir xil naqsh). */
+  const [inFileResCols, setInFileResCols] = useState<Record<string, F2ColumnConfig>>({});
   const rawFile = useRef<File | null>(null);
   const sourceDocumentId = useRef<number | undefined>(undefined);
   const sourceOperationId = useRef('');
@@ -177,6 +223,30 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
   function reset() {
     generation.current++; setError(''); setResult(null); setCols(null); setPreview([]);
     setResBook(null); setResCols(null); setResIndex(null); setResIndexSize(0); setResError('');
+    setVaraqTeglari({}); setInFileResCols({});
+  }
+
+  /** Foydalanuvchi bir varaqni qo'lda LRV yoki RES deb belgilaydi (yoki
+   *  e'tiborsiz qoldiradi). LRV -- radio kabi, faqat BITTASI bo'lishi
+   *  mumkin (aynan shu varaqdan daraxt quriladi); RES -- checkbox kabi,
+   *  bir nechtasi bo'lishi mumkin (barchasining narxlari birlashtiriladi). */
+  function varaqTegBelgila(workbook: XlsxWorkbook, name: string, teg: VaraqTegi) {
+    setVaraqTeglari(prev => {
+      const next = { ...prev, [name]: teg };
+      if (teg === 'lrv') {
+        for (const k of Object.keys(next)) if (k !== name && next[k] === 'lrv') next[k] = 'etibor_bermaslik';
+      }
+      return next;
+    });
+    setResIndex(null); setResIndexSize(0);
+    if (teg === 'lrv') chooseSheet(workbook, name);
+    if (teg === 'res') {
+      setInFileResCols(prev => {
+        if (prev[name]) return prev; // avval belgilangan tuzatish saqlanadi
+        const sheet = workbook.sheet(name);
+        return sheet ? { ...prev, [name]: f2UstunAniqla(sheet.rows) } : prev;
+      });
+    }
   }
 
   function chooseSheet(workbook: XlsxWorkbook, name: string) {
@@ -197,7 +267,29 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       if (file.size > MAX_FILE_BYTES) throw new Error(`Fayl ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
       const workbook = await readXlsx(await file.arrayBuffer());
       if (generation.current !== token) return;
-      setBook(workbook); chooseSheet(workbook, workbook.sheets[0]?.name || ''); setPhase('Varaq va ustunlarni tekshiring');
+      setBook(workbook);
+
+      // Har bir varaq mazmuniga qarab LRV/RES/e'tiborsiz deb taxmin
+      // qilinadi -- birinchi LRV-ga o'xshagan varaq daraxt qurish uchun
+      // tanlanadi, qolgan LRV-ga o'xshaganlari (bo'lsa) ehtiyot uchun
+      // e'tiborsiz qoldiriladi (foydalanuvchi qo'lda qayta belgilay oladi).
+      const teglar: Record<string, VaraqTegi> = {};
+      const resUstunlari: Record<string, F2ColumnConfig> = {};
+      let lrvTanlandi = '';
+      for (const s of workbook.sheets) {
+        const sheet = workbook.sheet(s.name);
+        const taxmin = sheet ? varaqTuriTaxmin(sheet.rows) : 'nomalum';
+        teglar[s.name] = taxmin === 'nomalum' ? 'etibor_bermaslik' : taxmin;
+        if (taxmin === 'res' && sheet) resUstunlari[s.name] = f2UstunAniqla(sheet.rows);
+      }
+      for (const s of workbook.sheets) {
+        if (teglar[s.name] !== 'lrv') continue;
+        if (!lrvTanlandi) lrvTanlandi = s.name; else teglar[s.name] = 'etibor_bermaslik';
+      }
+      if (!lrvTanlandi) { lrvTanlandi = workbook.sheets[0]?.name || ''; teglar[lrvTanlandi] = 'lrv'; }
+      setVaraqTeglari(teglar); setInFileResCols(resUstunlari);
+
+      chooseSheet(workbook, lrvTanlandi); setPhase('Varaq va ustunlarni tekshiring');
     } catch { if (generation.current === token) setError('Fayl o‘qilmadi. XLSX faylni tekshiring.'); }
     finally { setBusy(false); }
   }
@@ -251,11 +343,32 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
     const sheet = workbook.sheet(name);
     setResCols(sheet ? f2UstunAniqla(sheet.rows) : null);
   }
+  /** Narx satrlarini BARCHA manbalardan yig'adi: (1) asosiy faylda RES deb
+   *  belgilangan varaq(lar) -- ustunlar avtomatik aniqlanadi, (2) alohida
+   *  yuklangan RES fayli (bor bo'lsa, ustunlari foydalanuvchi tuzatgan
+   *  holda). Ikkalasi ham bo'lishi, faqat bittasi bo'lishi yoki hech biri
+   *  bo'lmasligi mumkin -- owner: "bitta hujjat ichida ham lrv ham res
+   *  sahifalari ham bo'lishi mumkin". */
+  function resSatrlariBarchaManbadan(): ResNarxYozuv[] {
+    const out: ResNarxYozuv[] = [];
+    if (book) {
+      for (const s of book.sheets) {
+        if (varaqTeglari[s.name] !== 'res') continue;
+        const sheet = book.sheet(s.name);
+        if (!sheet) continue;
+        out.push(...resSatrlariniOl(sheet.rows, inFileResCols[s.name] || f2UstunAniqla(sheet.rows)));
+      }
+    }
+    if (resBook && resCols) {
+      const sheet = resBook.sheet(resSheetName);
+      if (sheet) out.push(...resSatrlariniOl(sheet.rows, resCols));
+    }
+    return out;
+  }
+
   function resNarxlarniUlash() {
-    if (!resBook || !resCols) return;
-    const sheet = resBook.sheet(resSheetName);
-    if (!sheet) return;
-    const satrlar = resSatrlariniOl(sheet.rows, resCols);
+    const satrlar = resSatrlariBarchaManbadan();
+    if (!satrlar.length) return;
     setResIndex(resNarxIndeksiQur(satrlar));
     setResIndexSize(satrlar.length);
     // "МАТ" (standart) chiqqan noyob nom+birlik juftlari -- aynan shular
@@ -359,6 +472,12 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       yakunla('tayyor', (j.qator_soni || 0) + ' qator yozildi');
       setResult({ qator_soni: j.qator_soni || 0 }); setPhase('Tayyor');
       setObjects(prev => prev.map(o => o.id === Number(objectId) ? { ...o, qator_soni: j.qator_soni ?? o.qator_soni } : o));
+      // Bu sahifa ko'pincha boshqa "asosiy" sahifa (masalan HolatNative)
+      // ichida kichik panel sifatida ochiladi -- import muvaffaqiyatli
+      // bo'lgach o'sha tashqi sahifa o'z daraxtini/summasini avtomatik
+      // qayta yuklashi kerak, aks holda foydalanuvchi qo'lda "restart"
+      // qilishga majbur bo'ladi (owner: shuni topib berdi).
+      onImportlandi?.();
     } catch (e) {
       if (jonli()) {
         // Agar biror qadam "ishlamoqda" holatida to'xtab qolgan bo'lsa
@@ -404,12 +523,52 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       {book && cols && !result && (
         <>
           {book.sheets.length > 1 && (
-            <label className="block text-sm">Varaq
-              <select aria-label="Varaq" className="ml-2 border rounded px-2 py-1"
-                value={sheetName} onChange={e => chooseSheet(book, e.target.value)}>
-                {book.sheets.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-              </select>
-            </label>
+            <div className="karta p-3 space-y-1.5">
+              <p className="text-[12px] font-semibold text-text">
+                Varaqlar — har biri LRV yoki RES sifatida taxmin qilindi, kerak bo‘lsa tuzating
+              </p>
+              <p className="text-[11px] text-text-mute">
+                Bitta faylda ham LRV (ish/hajm ierarxiyasi), ham RES (narx katalogi) varaqlari bo‘lishi mumkin.
+                Aynan BITTA varaq LRV bo‘ladi (undan daraxt quriladi); RES belgilangan varaq(lar)ning narxlari
+                birlashtirib qo‘llanadi.
+              </p>
+              <table className="w-full text-[12.5px]">
+                <thead><tr className="text-text-mute text-left"><th className="font-normal pb-1">Varaq</th><th className="font-normal pb-1">LRV</th><th className="font-normal pb-1">RES</th></tr></thead>
+                <tbody>
+                  {book.sheets.map(s => (
+                    <tr key={s.name} className="border-t border-border/40">
+                      <td className="py-1 pr-2">{s.name}</td>
+                      <td className="py-1 pr-2">
+                        <input type="radio" name="lrv-varaq" aria-label={`${s.name} — LRV`}
+                          checked={varaqTeglari[s.name] === 'lrv'}
+                          onChange={() => varaqTegBelgila(book, s.name, 'lrv')} />
+                      </td>
+                      <td className="py-1">
+                        <input type="checkbox" aria-label={`${s.name} — RES`}
+                          checked={varaqTeglari[s.name] === 'res'}
+                          onChange={e => varaqTegBelgila(book, s.name, e.target.checked ? 'res' : 'etibor_bermaslik')} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {book.sheets.filter(s => varaqTeglari[s.name] === 'res').map(s => {
+                const c = inFileResCols[s.name];
+                if (!c) return null;
+                return (
+                  <fieldset key={s.name} className="flex flex-wrap gap-3 items-end pt-1 border-t border-border/40">
+                    <legend className="text-[11px] text-text-mute">«{s.name}» RES ustunlari (1 dan boshlab)</legend>
+                    {(['kod', 'nom', 'bir', 'narx'] as const).map(k => (
+                      <label key={k} className="text-[12px]">{k}
+                        <input className="w-16 border rounded px-1 ml-1" type="number" min="1"
+                          value={c[k] + 1}
+                          onChange={e => { setResIndex(null); setResIndexSize(0); setInFileResCols(prev => ({ ...prev, [s.name]: { ...c, [k]: Number(e.target.value) - 1 } })); }} />
+                      </label>
+                    ))}
+                  </fieldset>
+                );
+              })}
+            </div>
           )}
           <div className="karta p-3 text-[12px] overflow-auto max-h-64">
             <table className="w-full">
@@ -429,10 +588,11 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
             </p>
             <p className="text-[11px] text-text-mute">
               Real smeta odatda 2 hujjat: LRV (ish/hajm — yuqorida) va RES (kod/nom/birlik bo‘yicha resurs narxlari).
-              LRV faylida narx bo‘lmasa, RES faylini shu yerga yuklang — narxlar kod (ustuvor), topilmasa nom+birlik bo‘yicha ulanadi.
+              Agar RES yuqoridagi bir varaqqa BELGILANGAN bo‘lsa, alohida fayl shart emas — shu yerdagi tugma
+              bilan ulang. Alohida RES fayli bo‘lsa, shu yerga ham yuklashingiz mumkin (ikkalasi ham birlashtiriladi).
               LRV faylida allaqachon narxi bor qatorlar ustidan yozilmaydi.
             </p>
-            <label className="block text-sm">RES fayli (XLSX)
+            <label className="block text-sm">Alohida RES fayli (XLSX, ixtiyoriy)
               <input aria-label="RES fayli" type="file" accept=".xlsx,.xlsm" className="ml-2"
                 onChange={e => { const f = e.target.files?.[0]; if (f) void uploadRes(f); }} />
             </label>
@@ -449,7 +609,7 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
                   </label>
                 )}
                 <fieldset className="flex flex-wrap gap-3 items-end">
-                  <legend className="text-[11px] text-text-mute">RES ustunlari (1 dan boshlab)</legend>
+                  <legend className="text-[11px] text-text-mute">Alohida RES fayl ustunlari (1 dan boshlab)</legend>
                   {(['kod', 'nom', 'bir', 'narx'] as const).map(k => (
                     <label key={k} className="text-[12px]">{k}
                       <input className="w-16 border rounded px-1 ml-1" type="number" min="1"
@@ -457,45 +617,47 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
                         onChange={e => { setResIndex(null); setResIndexSize(0); setResCols({ ...resCols, [k]: Number(e.target.value) - 1 }); }} />
                     </label>
                   ))}
-                  <button type="button" className="tugma" onClick={resNarxlarniUlash}>Narxlarni ulash</button>
                 </fieldset>
-                {resIndex && (
-                  <p className="text-[12px] text-success">
-                    {resIndexSize} ta resurs narxi o‘qildi ({resIndex.byKod.size} ta kod bo‘yicha, {resIndex.byNomBir.size} ta nom+birlik bo‘yicha).
-                    Import bosilganda mos keluvchi narxsiz qatorlarga qo‘llanadi.
-                  </p>
-                )}
-                {katKorib.length > 0 && (
-                  <div className="karta p-2 space-y-1.5 border-amber-500/30">
-                    <p className="text-[11px] text-text-mute">
-                      {katKorib.length} ta resurs standart МАТ (material) deb belgilangan — agar ular aslida
-                      ОБ (uskuna), КАБ (kabel) yoki М/К bo‘lsa, shu yerda tuzating. Belgilangan tur keyingi
-                      importlarda ham eslab qolinadi.
-                    </p>
-                    <div className="overflow-auto max-h-48 text-[12px]">
-                      <table className="w-full">
-                        <tbody>
-                          {katKorib.slice(0, 300).map((k, i) => (
-                            <tr key={k.nom + '|' + k.birlik} className="border-t border-border/40">
-                              <td className="py-0.5 pr-2">{k.nom} <span className="text-text-mute">({k.birlik})</span></td>
-                              <td className="py-0.5 text-right">
-                                <select className="border rounded px-1 py-0.5" value={k.tanlangan}
-                                  onChange={e => setKatKorib(prev => prev.map((p, pi) => pi === i ? { ...p, tanlangan: e.target.value as T2ResursKategoriya } : p))}>
-                                  <option value="МАТ">МАТ</option>
-                                  <option value="ОБ">ОБ</option>
-                                  <option value="КАБ">КАБ</option>
-                                  <option value="М/К">М/К</option>
-                                </select>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {katSaqlanmoqda && <p role="status" className="text-[11px]">Kategoriyalar saqlanmoqda…</p>}
-                  </div>
-                )}
               </>
+            )}
+            {(book?.sheets.some(s => varaqTeglari[s.name] === 'res') || (resBook && resCols)) && (
+              <button type="button" className="tugma" onClick={resNarxlarniUlash}>Narxlarni ulash</button>
+            )}
+            {resIndex && (
+              <p className="text-[12px] text-success">
+                {resIndexSize} ta resurs narxi o‘qildi ({resIndex.byKod.size} ta kod bo‘yicha, {resIndex.byNomBir.size} ta nom+birlik bo‘yicha).
+                Import bosilganda mos keluvchi narxsiz qatorlarga qo‘llanadi.
+              </p>
+            )}
+            {katKorib.length > 0 && (
+              <div className="karta p-2 space-y-1.5 border-amber-500/30">
+                <p className="text-[11px] text-text-mute">
+                  {katKorib.length} ta resurs standart МАТ (material) deb belgilangan — agar ular aslida
+                  ОБ (uskuna), КАБ (kabel) yoki М/К bo‘lsa, shu yerda tuzating. Belgilangan tur keyingi
+                  importlarda ham eslab qolinadi.
+                </p>
+                <div className="overflow-auto max-h-48 text-[12px]">
+                  <table className="w-full">
+                    <tbody>
+                      {katKorib.slice(0, 300).map((k, i) => (
+                        <tr key={k.nom + '|' + k.birlik} className="border-t border-border/40">
+                          <td className="py-0.5 pr-2">{k.nom} <span className="text-text-mute">({k.birlik})</span></td>
+                          <td className="py-0.5 text-right">
+                            <select className="border rounded px-1 py-0.5" value={k.tanlangan}
+                              onChange={e => setKatKorib(prev => prev.map((p, pi) => pi === i ? { ...p, tanlangan: e.target.value as T2ResursKategoriya } : p))}>
+                              <option value="МАТ">МАТ</option>
+                              <option value="ОБ">ОБ</option>
+                              <option value="КАБ">КАБ</option>
+                              <option value="М/К">М/К</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {katSaqlanmoqda && <p role="status" className="text-[11px]">Kategoriyalar saqlanmoqda…</p>}
+              </div>
             )}
           </div>
           <button type="button" className="tugma tugma-asosiy" disabled={busy} onClick={() => void importQil()}>
@@ -510,9 +672,9 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
   );
 }
 
-export default function SmetaYuklaNative({ obyektId }: { obyektId?: number } = {}) {
+export default function SmetaYuklaNative({ obyektId, onImportlandi }: { obyektId?: number; onImportlandi?: () => void } = {}) {
   const { joriy, yuklanmoqda } = useKompaniya();
   if (yuklanmoqda) return <p>Kompaniya yuklanmoqda…</p>;
   if (!joriy?.id) return <p>Kompaniyani tanlang.</p>;
-  return <Sessiya key={`${joriy.id}:${obyektId ?? 'all'}`} companyId={joriy.id} fixedObjectId={obyektId} />;
+  return <Sessiya key={`${joriy.id}:${obyektId ?? 'all'}`} companyId={joriy.id} fixedObjectId={obyektId} onImportlandi={onImportlandi} />;
 }

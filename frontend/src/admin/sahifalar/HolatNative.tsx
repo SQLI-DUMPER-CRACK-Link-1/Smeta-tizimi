@@ -112,7 +112,7 @@ export function HolatNative() {
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">
                 <span>Smeta XLSX yuklash</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
               </summary>
-              {ochiqPanel === 'smeta' && <div className="mt-3 max-h-[360px] overflow-auto"><SmetaYuklaNative obyektId={obyektId} /></div>}
+              {ochiqPanel === 'smeta' && <div className="mt-3 max-h-[360px] overflow-auto"><SmetaYuklaNative obyektId={obyektId} onImportlandi={yuklash} /></div>}
             </details>
             <details className="karta group p-3" open={ochiqPanel === 'o‘zgarish'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'o‘zgarish' : null)}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">

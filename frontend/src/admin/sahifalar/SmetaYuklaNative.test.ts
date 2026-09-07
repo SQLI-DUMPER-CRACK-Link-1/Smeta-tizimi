@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini } from './SmetaYuklaNative';
+import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin } from './SmetaYuklaNative';
 import type { AktNode } from '../../lib/f2-match-engine';
 import type { F2ColumnConfig } from '../../lib/f2-import-parse';
 
@@ -62,6 +62,44 @@ describe('RES (resursniy vedomost) narx moslashtirish', () => {
     expect(out[0].narx).toBeUndefined();
     expect(mosSoni).toBe(0);
     expect(mosEmasSoni).toBe(1);
+  });
+});
+
+describe('varaqTuriTaxmin (owner: bitta faylda ham LRV, ham RES varaqlari bo‘lishi mumkin)', () => {
+  const sarlavha = [
+    ['№', 'ШИФР', 'НАИМЕНОВАНИЕ РАБОТ И ЗАТРАТ', 'ЕД. ИЗМ.', 'КОЛИЧЕСТВО', '', 'СТОИМОСТЬ, СУМ', ''],
+    ['', '', '', '', 'на единицу', 'по проектным данным', 'на.ед.изм', 'общая'],
+  ];
+
+  it('hajm (obyom) ustuni ko‘p to‘ldirilgan bo‘lsa LRV deb taxmin qiladi (narxsiz bo‘lsa ham)', () => {
+    const rows = [
+      ...sarlavha,
+      ['1', 'K1', 'Ish 1', 'м3', '', '10', '', ''],
+      ['2', 'K2', 'Ish 2', 'м3', '', '20', '', ''],
+      ['3', 'K3', 'Ish 3', 'м3', '', '15', '', ''],
+      ['4', 'K4', 'Ish 4', 'м3', '', '30', '', ''],
+    ];
+    expect(varaqTuriTaxmin(rows)).toBe('lrv');
+  });
+
+  it('narx deyarli har qatorda bor, hajm deyarli yo‘q bo‘lsa RES deb taxmin qiladi', () => {
+    const rows = [
+      ...sarlavha,
+      ['1', 'R1', 'Resurs 1', 'кг', '', '', '5000', ''],
+      ['2', 'R2', 'Resurs 2', 'кг', '', '', '12000', ''],
+      ['3', 'R3', 'Resurs 3', 'шт', '', '', '800000', ''],
+      ['4', 'R4', 'Resurs 4', 'м', '', '', '15000', ''],
+    ];
+    expect(varaqTuriTaxmin(rows)).toBe('res');
+  });
+
+  it('ma’lumot juda kam bo‘lsa taxmin qilmaydi -- noma’lum qaytaradi', () => {
+    const rows = [...sarlavha, ['1', 'X1', 'Nomalum 1', 'dona', '', '', '', '']];
+    expect(varaqTuriTaxmin(rows)).toBe('nomalum');
+  });
+
+  it('bo‘sh/mazmunsiz varaqni taxmin qilmaydi', () => {
+    expect(varaqTuriTaxmin([['x'], [], []])).toBe('nomalum');
   });
 });
 

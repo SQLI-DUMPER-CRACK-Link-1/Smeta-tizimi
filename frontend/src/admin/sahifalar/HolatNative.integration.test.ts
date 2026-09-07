@@ -10,7 +10,7 @@ describe('kanonik LRV sahifasi kundalik native oqimni birlashtiradi', () => {
     expect(source).toContain("import AdditionalReplacementNative from './AdditionalReplacementNative';");
     expect(source).toContain("import ResursVedomostNative from './ResursVedomostNative';");
     expect(source).toContain("import NarxNazoratNative from './NarxNazoratNative';");
-    expect(source).toContain('<SmetaYuklaNative obyektId={obyektId} />');
+    expect(source).toContain('<SmetaYuklaNative obyektId={obyektId} onImportlandi={yuklash} />');
     expect(source).toContain('<AdditionalReplacementNative obyektId={obyektId} />');
     expect(source).toContain('<ResursVedomostNative obyektId={obyektId} />');
     expect(source).toContain('<NarxNazoratNative obyektId={obyektId} />');
