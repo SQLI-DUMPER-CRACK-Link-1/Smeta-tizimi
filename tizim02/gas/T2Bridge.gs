@@ -83,30 +83,39 @@ function t2BridgeInstallTrigger_(){
 }
 
 function t2BridgeTick(){
-  var ss=t2BridgeControl_(), rows=t2BridgeRows_(ss.getSheetByName('PROEKSIYALAR'));
-  var out={ok:true,pulled:0,pushed:0,conflicts:0,failed:0};
-  rows.forEach(function(row){
-    try {
-      /* Avval foydalanuvchining faqat ruxsat etilgan Fakt tahririni yuboramiz.
-         Aks holda pull uning kiritgan qiymatini ustidan yozib yuborishi mumkin. */
-      var target=SpreadsheetApp.openById(row.spreadsheet_id);
-      var push=t2BridgePushChanges_(target, row.tab, Number(row.obyekt_id));
-      out.pushed+=push.pushed; out.conflicts+=push.conflicts;
-      /* Ziddiyat/noaniqlikda Sheetdagi kiritma saqlanadi; canonical holat
-         keyingi operator qarorisiz ustidan yozilmaydi. */
-      if(push.conflicts) return;
-      var pull=t2BridgeCall_('projection.pull',{obyekt_id:Number(row.obyekt_id), projection_hash:row.last_projection_hash||null});
-      if(pull.ok && pull.changed){
-        t2BridgeApplyProjection_(target, row.tab, pull);
-        t2BridgeProjectionSynced_(ss,row._rowNumber,pull.projection_hash);
-        out.pulled++;
-      }else if(!pull.ok){
-        t2BridgeLog_(ss,'XATOLAR',[new Date(),'',String(row.obyekt_id),pull.code||'BRIDGE_PULL_FAILED']);
-        out.failed++;
-      }
-    } catch(e){ out.failed++; t2BridgeLog_(ss,'XATOLAR',[new Date(),'','tick',String(row.obyekt_id),String(e)]); }
-  });
-  return out;
+  /* Vaqt triggeri ustma-ust ishga tushsa, bir xil Sheet o‘zgarishi ikki marta
+     yuborilmasin. Lock faqat ko‘prik ishini ketma-ketlashtiradi; kanonik
+     idempotency va versiya tekshiruvi baribir Cloudflare/Supabase’da qoladi. */
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(1000)) return {ok:false,code:'BRIDGE_TICK_ALREADY_RUNNING'};
+  try {
+    var ss=t2BridgeControl_(), rows=t2BridgeRows_(ss.getSheetByName('PROEKSIYALAR'));
+    var out={ok:true,pulled:0,pushed:0,conflicts:0,failed:0};
+    rows.forEach(function(row){
+      try {
+        /* Avval foydalanuvchining faqat ruxsat etilgan Fakt tahririni yuboramiz.
+           Aks holda pull uning kiritgan qiymatini ustidan yozib yuborishi mumkin. */
+        var target=SpreadsheetApp.openById(row.spreadsheet_id);
+        var push=t2BridgePushChanges_(target, row.tab, Number(row.obyekt_id));
+        out.pushed+=push.pushed; out.conflicts+=push.conflicts;
+        /* Ziddiyat/noaniqlikda Sheetdagi kiritma saqlanadi; canonical holat
+           keyingi operator qarorisiz ustidan yozilmaydi. */
+        if(push.conflicts) return;
+        var pull=t2BridgeCall_('projection.pull',{obyekt_id:Number(row.obyekt_id), projection_hash:row.last_projection_hash||null});
+        if(pull.ok && pull.changed){
+          t2BridgeApplyProjection_(target, row.tab, pull);
+          t2BridgeProjectionSynced_(ss,row._rowNumber,pull.projection_hash);
+          out.pulled++;
+        }else if(!pull.ok){
+          t2BridgeLog_(ss,'XATOLAR',[new Date(),'',String(row.obyekt_id),pull.code||'BRIDGE_PULL_FAILED']);
+          out.failed++;
+        }
+      } catch(e){ out.failed++; t2BridgeLog_(ss,'XATOLAR',[new Date(),'','tick',String(row.obyekt_id),String(e)]); }
+    });
+    return out;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function t2BridgePushChanges_(ss, tab, obyektId){
