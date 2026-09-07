@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Database, RefreshCw, AlertTriangle, Trash2, Edit3, MapPin, X, Briefcase, Save } from 'lucide-react';
+import { Database, RefreshCw, AlertTriangle, Trash2, Edit3, MapPin, X, Briefcase, Save, Plus, FolderKanban } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
 import { FmtN } from '../lib/format';
-import { sbT2ObyektlarOlKomp, sbObyektOchirish, sbObyektTahrirlash, sbObyektLokatsiyaBelgila, type T2Obyekt } from '../api/supabase';
+import { sbT2ObyektlarOlKomp, sbObyektOchirish, sbObyektTahrirlash, sbObyektLokatsiyaBelgila, sbT2ObyektYarat, type T2Obyekt } from '../api/supabase';
+import { sbT2LoyihalarOl, type T2Loyiha } from '../api/t2-loyiha';
 import { toast } from '../umumiy/ui/Toast';
 import { useKompaniya } from './KompaniyaTanlov';
 
@@ -68,6 +69,34 @@ export default function TestObyektlar() {
   const [nomi, setNomi] = useState('');
   const [tur, setTur] = useState('');
   const [position, setPosition] = useState<L.LatLng | null>(null);
+
+  // T2-PTO-OWNER-CRITICAL-CLOSURE P0-1: production obyekt yaratish.
+  const [loyihalar, setLoyihalar] = useState<T2Loyiha[]>([]);
+  const [yaratishOchiq, setYaratishOchiq] = useState(false);
+  const [yangiNom, setYangiNom] = useState('');
+  const [yangiLoyihaId, setYangiLoyihaId] = useState('');
+  const [yaratilmoqda, setYaratilmoqda] = useState(false);
+
+  useEffect(() => {
+    if (!joriy?.id) { setLoyihalar([]); return; }
+    let active = true;
+    void sbT2LoyihalarOl(joriy.id).then(r => { if (active && r.ok) setLoyihalar(r.qatorlar || []); });
+    return () => { active = false; };
+  }, [joriy?.id]);
+
+  const obyektYarat = async () => {
+    if (!joriy?.id || !yangiNom.trim()) return;
+    setYaratilmoqda(true);
+    try {
+      const r = await sbT2ObyektYarat({ kompaniyaId: joriy.id, loyihaId: yangiLoyihaId ? Number(yangiLoyihaId) : null, nom: yangiNom.trim() });
+      if (!r.ok) { toast(r.error || r.code || 'Obyekt yaratilmadi', 'danger'); return; }
+      toast('Obyekt yaratildi', 'ok');
+      setYaratishOchiq(false); setYangiNom(''); setYangiLoyihaId('');
+      yukla();
+    } catch (e: any) {
+      toast('Xatolik: ' + (e?.message || e), 'danger');
+    } finally { setYaratilmoqda(false); }
+  };
 
   const handleOchirish = async (e: any, o: Qator) => {
     e.stopPropagation();
@@ -147,16 +176,63 @@ export default function TestObyektlar() {
       sarlavha="Obyektlar (Arxitektura va Lokatsiya)"
       tavsif="Obyektlarni tahrirlash va Xaritadan (Geolokatsiya) joyini belgilash."
       amallar={
-        <button onClick={yukla} disabled={yuklanmoqda}
-          className="h-9 px-3 inline-flex items-center gap-2 rounded-[10px] karta text-sm
-                     text-text hover:border-[var(--accent)]/50 transition-colors
-                     disabled:opacity-50">
-          <RefreshCw size={15} className={yuklanmoqda ? 'animate-spin' : ''} />
-          Yangilash
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setYaratishOchiq(true)}
+            className="h-9 px-3 inline-flex items-center gap-2 rounded-[10px]
+                       bg-[var(--accent)] text-white text-sm font-medium
+                       hover:opacity-90 transition-opacity">
+            <Plus size={15} />
+            Yangi obyekt
+          </button>
+          <button onClick={yukla} disabled={yuklanmoqda}
+            className="h-9 px-3 inline-flex items-center gap-2 rounded-[10px] karta text-sm
+                       text-text hover:border-[var(--accent)]/50 transition-colors
+                       disabled:opacity-50">
+            <RefreshCw size={15} className={yuklanmoqda ? 'animate-spin' : ''} />
+            Yangilash
+          </button>
+        </div>
       }
     >
       <div className="space-y-3">
+        {yaratishOchiq && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-surface border border-border p-5 rounded-2xl w-[440px] shadow-2xl">
+              <h3 className="font-bold text-lg mb-4 text-text flex items-center gap-2">
+                <FolderKanban className="text-accent" /> Yangi obyekt
+              </h3>
+              <label className="block text-sm mb-3">
+                <span className="text-text-dim text-[12px]">Nomi</span>
+                <input value={yangiNom} onChange={e => setYangiNom(e.target.value)} autoFocus
+                  className="mt-1 w-full bg-bg border border-border rounded-xl p-2.5 text-sm text-text outline-none focus:border-sky-500"
+                  placeholder="Masalan: Amfiteatr, blok A" />
+              </label>
+              <label className="block text-sm mb-4">
+                <span className="text-text-dim text-[12px]">Loyiha (ixtiyoriy)</span>
+                <select value={yangiLoyihaId} onChange={e => setYangiLoyihaId(e.target.value)}
+                  className="mt-1 w-full bg-bg border border-border rounded-xl p-2.5 text-sm text-text outline-none focus:border-sky-500">
+                  <option value="">— Loyihasiz —</option>
+                  {loyihalar.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
+                </select>
+                {!loyihalar.length && (
+                  <span className="text-[11px] text-text-mute mt-1 block">
+                    Hali loyiha yo'q. <a href="/admin/loyiha" className="text-accent underline">Loyiha yaratish</a>
+                  </span>
+                )}
+              </label>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => { setYaratishOchiq(false); setYangiNom(''); setYangiLoyihaId(''); }}
+                  className="px-5 py-2 rounded-xl text-sm font-medium text-text-dim hover:bg-surface-2 transition-colors">
+                  Bekor qilish
+                </button>
+                <button onClick={() => void obyektYarat()} disabled={!yangiNom.trim() || yaratilmoqda}
+                  className="px-5 py-2 rounded-xl text-sm font-medium bg-accent text-white hover:bg-accent/80 transition-colors shadow-lg shadow-accent/20 disabled:opacity-50">
+                  {yaratilmoqda ? 'Yaratilmoqda…' : 'Yaratish'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {editObj && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="bg-surface border border-border p-5 rounded-2xl w-[600px] shadow-2xl flex flex-col max-h-[90vh]">

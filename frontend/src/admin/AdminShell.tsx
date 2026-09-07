@@ -28,7 +28,7 @@ const TIZIM_02_GURUHLAR = [
     id: 'asosiy',
     menyular: [
       { yol: '/admin/dashboard', nom: 'Rahbar paneli', Ikonka: BarChart },
-      { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
+      { yol: '/admin/loyiha', nom: 'Loyihalar', Ikonka: FolderKanban },
       { yol: '/admin/obyektlar', nom: 'Obyektlar ro‘yxati', Ikonka: Building2 },
       { yol: '/admin/participants', nom: 'Loyiha ishtirokchilari', Ikonka: Users },
       { yol: '/admin/documents', nom: 'Hujjatlar', Ikonka: FileStack },
@@ -47,6 +47,7 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/holat', nom: 'Ishchi smeta / LRV', Ikonka: FileText },
       { yol: '/admin/f2', nom: 'F2 import (kanonik)', Ikonka: FileInput },
       { yol: '/admin/f2-tayyorlash', nom: 'F2 tayyorlash', Ikonka: FileOutput },
+      { yol: '/admin/nakopitelniy', nom: 'Nakopitelniy vedomost', Ikonka: NotebookPen },
       { yol: '/admin/narxlar', nom: 'Narxlar nazorati', Ikonka: Tags },
       { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
         { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },

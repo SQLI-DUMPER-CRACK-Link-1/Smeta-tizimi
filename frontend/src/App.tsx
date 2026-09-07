@@ -65,6 +65,7 @@ const ParticipantNetworkDemo = lazy(() => import('./admin/participants/Participa
 const SystemControlDemo = lazy(() => import('./admin/system-control/SystemControlDemo'));
 import F2ImportNative from './admin/sahifalar/F2ImportNative';
 import { F2TayyorlashNative } from './admin/sahifalar/F2TayyorlashNative';
+import NakopitelniyVedomost from './admin/sahifalar/NakopitelniyVedomost';
 import F2TarixNative from './admin/sahifalar/F2TarixNative';
 import { Narxlar } from './admin/sahifalar/Narxlar';
 import { Ierarxiya } from './admin/sahifalar/Ierarxiya';
@@ -114,11 +115,15 @@ export default function App() {
           {/* Kundalik obyekt ro'yxati endi faqat t2_obyekt kanonik IDlari
               bilan ishlaydi. Eski Drive/GAS kartalari arxiv yo'liga chiqmaydi. */}
           <Route path="obyektlar" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><TestObyektlar /></Suspense>} />
+          {/* T2-PTO-OWNER-CRITICAL-CLOSURE P0-1: loyiha yaratish/tanlash
+              production yo'lda -- avval faqat /admin/test/loyiha ostida edi. */}
+          <Route path="loyiha" element={<Suspense fallback={<div className="p-6 text-text-dim">Yuklanmoqda...</div>}><TestLoyiha /></Suspense>} />
           <Route path="holat" element={<HolatNative />} />
           <Route path="holat/:id" element={<HolatNative />} />
           <Route path="fakt" element={<FaktNative />} />
           <Route path="f2" element={<F2ImportNative />} />
           <Route path="f2-tayyorlash" element={<F2TayyorlashNative />} />
+          <Route path="nakopitelniy" element={<NakopitelniyVedomost />} />
           <Route path="f2-tarix" element={<F2TarixNative />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
           <Route path="shartnomalar" element={<Shartnoma />} />

@@ -992,6 +992,21 @@ export async function sbObyektLokatsiyaBelgila(id: number, lat: number, lng: num
   return await res.json();
 }
 
+/** T2-PTO-OWNER-CRITICAL-CLOSURE P0-1: native obyekt yaratish -- Drive
+ *  storage-provisioning zanjiridan (t2_object_create_v1) mustaqil, T1 GAS'ga
+ *  hech qanday chaqiruv yo'q. */
+export async function sbT2ObyektYarat(p: { kompaniyaId: number; loyihaId?: number | null; nom: string; operationId?: string }): Promise<{ ok: boolean; obyekt_id?: number; code?: string; error?: string }> {
+  const res = await fetch('/api/sb-yoz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amal: 'obyekt_yarat', kompaniya_id: p.kompaniyaId, loyiha_id: p.loyihaId ?? null,
+      nom: p.nom, operation_id: p.operationId || yangiOperationId(),
+    }),
+  });
+  return await res.json();
+}
+
 export async function sbObyektTahrirlash(id: number, nomi: string, tur: string): Promise<any> {
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',

@@ -105,6 +105,7 @@ const AMALLAR = {
   loyiha_yangila: { rpc: 't2_loyiha_yangila' },
   loyiha_ochir: { rpc: 't2_loyiha_ochir' },
   obyekt_loyihaga_biriktir: { rpc: 't2_obyekt_loyihaga_biriktir' },
+  obyekt_yarat: { rpc: 't2_obyekt_yarat_v1' },
   loyiha_qatnashchi_biriktir: { rpc: 't2_loyiha_qatnashchi_biriktir' },
   loyiha_qatnashchi_ochir: { rpc: 't2_loyiha_qatnashchi_ochir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
@@ -1233,6 +1234,29 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'obyekt_id noto\'g\'ri' });
       }
       yuk = { p_obyekt_id: obyektId, p_loyiha_id: loyihaId };
+
+    /* T2-PTO-OWNER-CRITICAL-CLOSURE P0-1: production obyekt yaratish, Drive
+       storage-provisioning zanjiridan (t2_object_create_v1) mustaqil --
+       o'sha zanjir hech qanday Function chaqiruvchisiga ega emas va
+       real Drive papka bog'lanishisiz OBJECT_STORAGE_NOT_PROVISIONED
+       qaytaradi (supabase/migrations/20261011090000_t2_obyekt_yarat_v1.sql
+       header'ida sabab tafsilotlari). */
+    } else if (amal === 'obyekt_yarat') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      if (!String(so.nom || '').trim()) {
+        return Response.json({ ok: false, error: 'nom bo\'sh bo\'lishi mumkin emas' });
+      }
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_loyiha_id: so.loyiha_id == null || so.loyiha_id === '' ? null : Number(so.loyiha_id),
+        p_nom: String(so.nom).trim().slice(0, 300),
+        p_operation_id: UUID_RE.test(String(so.operation_id || '')) ? so.operation_id : crypto.randomUUID(),
+      };
 
     /* ⚠️ Polimorfik tashkilot bog'lanishi (MASTER_REJA band 1): taraf
        kompaniya_id YOKI kontragent_id — ANIQ BITTASI, ikkalasi ham yoki
