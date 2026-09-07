@@ -17,6 +17,6 @@ T('BUZUQ havola ushlanadi',          JSON.stringify(fn(['/admin/shartnoma'])) ==
 T("parametrli marshrut (holat/:id)", fn(['/admin/holat/Amfiteatr']).length === 0);
 T("/admin index o'tadi",             fn(['/admin']).length === 0);
 T('bir nechta buzuq qaytadi',        fn(['/admin/yoq1','/admin/obyektlar','/admin/yoq2']).length === 2);
-T('19 ta haqiqiy menyu havolasi toza', fn(['/admin/obyektlar','/admin/f2','/admin/buxgalteriya','/admin/shartnomalar','/admin/fakturalar','/admin/f2-tayyorlash','/admin/narxlar','/admin/ierarxiya','/admin/sklad','/admin/monitoring','/admin/kadrlar','/admin/texnika','/admin/taminot','/admin/sifat','/admin/fayl-boglash','/admin/hujjatlar','/admin/shaxsiy-smeta','/admin/supabase','/admin/sozlamalar']).length === 0);
+T('21 ta haqiqiy menyu havolasi toza', fn(['/admin/obyektlar','/admin/holat','/admin/fakt','/admin/f2','/admin/buxgalteriya','/admin/shartnomalar','/admin/fakturalar','/admin/f2-tayyorlash','/admin/narxlar','/admin/ierarxiya','/admin/sklad','/admin/monitoring','/admin/kadrlar','/admin/texnika','/admin/taminot','/admin/sifat','/admin/fayl-boglash','/admin/hujjatlar','/admin/shaxsiy-smeta','/admin/supabase','/admin/sozlamalar']).length === 0);
 console.log(`\n═══ ${ok} o'tdi, ${xato} yiqildi ═══`);
 process.exit(xato ? 1 : 0);
