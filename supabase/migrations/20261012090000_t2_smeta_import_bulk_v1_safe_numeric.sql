@@ -1,16 +1,17 @@
--- T2-FINAL-CLEAN-CUTOVER P0.2: native Smeta XLSX -> canonical Supabase
--- t2_qator (RZ/BL/RS/resources), off Google Drive/Sheets/GAS entirely.
+-- T2-PTO-OWNER-CRITICAL-CLOSURE bugfix: t2_smeta_import_bulk_v1 crashed
+-- (uncaught 22P02 invalid_text_representation, surfaced to the browser as a
+-- bare IMPORT_RPC_FAILED) the instant any real-world hajm/narx/summa cell
+-- carried anything past a bare number -- confirmed against production with
+-- '10,5 м3' (reproducing what a real LRV export commonly contains: a
+-- comma-decimal quantity with a trailing unit, non-breaking-space thousands
+-- separators, dash placeholders, formula-error text). `nullif(...,'')::numeric`
+-- has zero tolerance for any of that.
 --
--- SAFETY (no destructive risk): this RPC ONLY populates an EMPTY object
--- (zero existing t2_qator rows). It NEVER replaces/deletes an existing
--- working smeta -- re-importing over a populated object is refused
--- (SMETA_ALREADY_EXISTS). A "replace existing smeta" flow is a distinct,
--- much riskier product decision (what happens to existing Fakt/F2/
--- Additional/Replacement rows referencing the old qator_ids) intentionally
--- NOT attempted here.
---
--- Idempotent via operation_id (t2_onboarding_command_log reuse, same law
--- as t2_azolik_qosh_v1/t2_akt_yarat_v2).
+-- t2_son(text) (used already by t2_akt_yarat for the exact same class of
+-- input) already solves this: strips non-breaking spaces/whitespace,
+-- comma->dot, drops anything left that isn't part of a number, and returns
+-- NULL (never throws) when nothing numeric survives. Swapping it in here --
+-- same reuse-not-reinvent rule as everywhere else this cutover.
 
 begin;
 
@@ -33,9 +34,6 @@ begin
   if not exists (select 1 from public.t2_obyekt where id=p_obyekt_id and kompaniya_id=p_kompaniya_id) then
     return jsonb_build_object('ok',false,'code','OBJECT_ACCESS_DENIED');
   end if;
-  -- ATAYLAB QAT'IY: bo'sh bo'lmagan obyektga import RAD ETILADI -- mavjud
-  -- ish (Fakt/F2/Additional/Replacement) qator_id'larga bog'langan bo'lishi
-  -- mumkin, ularni jimgina almashtirish DESTRUCTIVE bo'lardi.
   if exists (select 1 from public.t2_qator where obyekt_id=p_obyekt_id) then
     return jsonb_build_object('ok',false,'code','SMETA_ALREADY_EXISTS');
   end if;
@@ -54,7 +52,6 @@ begin
     local_id text primary key, id bigint, parent_local_id text, ordinal integer
   ) on commit drop;
 
-  -- 1-PASS: hamma qatorni ota_id'siz yozamiz, id generatsiya qilinadi.
   with kir as (
     select
       (x->>'local_id') as local_id, (x->>'parent_local_id') as parent_local_id,
@@ -66,12 +63,6 @@ begin
     from jsonb_array_elements(p_qatorlar) with ordinality as t(x, ordinality)
   ),
   ins as (
-    -- ESLATMA: t2_qator.operation_id ustunida t2_qator_operation_id_uniq
-    -- (bitta qatorga bitta operatsiya) bor -- ko'p qatorli bulk importda
-    -- BIR XIL p_operation_id'ni har bir qatorga yozib bo'lmaydi (unique
-    -- buziladi). Idempotentlik allaqachon t2_onboarding_command_log orqali
-    -- butun chaqiruv darajasida ta'minlangan, shu sabab qator darajasida
-    -- operation_id null qoldiriladi.
     insert into public.t2_qator(obyekt_id, kompaniya_id, tur, kod, nom, birlik, hajm, narx, summa,
       manba_id, tartib, daraja)
     select p_obyekt_id, p_kompaniya_id, tur, kod, nom, birlik, hajm, narx, summa,
@@ -83,14 +74,11 @@ begin
   select kir.local_id, ins.id, kir.parent_local_id, kir.ordinal
   from kir join ins on ins.tartib = kir.ordinal;
 
-  -- 2-PASS: ota_id local_id xaritasi orqali bog'lanadi.
   update public.t2_qator q set ota_id = pmap.id
   from t2_smeta_import_map m
   join t2_smeta_import_map pmap on pmap.local_id = m.parent_local_id
   where q.id = m.id and m.parent_local_id is not null;
 
-  -- daraja (chuqurlik) rekursiv hisoblanadi -- 1-pass har bir qator uchun
-  -- faqat o'z ota_id'ini bilardi, umumiy chuqurlikni emas.
   with recursive chuqurlik as (
     select id, 0::int as d from public.t2_qator where obyekt_id=p_obyekt_id and ota_id is null
     union all
