@@ -77,11 +77,12 @@ async function rpc(env: Env, name: string, args: Record<string, unknown>) {
   return { httpOk: r.ok, body: j, raw: text };
 }
 
-function importRpcFailure(code = 'IMPORT_RPC_FAILED', status = 502) {
+function importRpcFailure(code = 'IMPORT_RPC_FAILED', status = 502, detail?: string) {
   return Response.json({
     ok: false,
     code,
-    xato: 'Kanonik smeta importi bajarilmadi. Birozdan so‘ng qayta urinib ko‘ring.',
+    xato: 'Kanonik smeta importi bajarilmadi. Birozdan so‘ng qayta urinib ko‘ring.'
+      + (detail ? ' (' + detail + ')' : ''),
   }, { status });
 }
 
@@ -106,10 +107,22 @@ async function handleImport(env: Env, actorId: number, body: ImportBody) {
       p_operation_id: body.operationId, p_source_document_id: body.sourceDocumentId ?? null,
       p_qatorlar: rows,
     });
-  } catch {
+  } catch (err) {
+    console.error('[smeta-yukla] import RPC unreachable:', err);
     return importRpcFailure('IMPORT_RPC_UNREACHABLE');
   }
-  if (!res.httpOk || !res.body) return importRpcFailure();
+  if (!res.httpOk || !res.body) {
+    // ⚠️ 2026-09-07: bu shoxcha AVVAL sabab HAQIQATDA nima ekanini butunlay
+    // yashirardi -- na foydalanuvchi, na keyinchalik tekshiruvchi (men)
+    // buni ko'ra olardi (aynan shu tufayli t2_qator.manba_id/t2_manba FK
+    // xatosi haqiqiy foydalanuvchi hujjat yuklaguncha topilmagan edi).
+    // Endi: server logiga TO'LIQ xom javob, mijozga esa qisqa Postgres
+    // kodi (masalan "23503") -- ichki sxema tafsilotlarisiz, lekin
+    // qo'llab-quvvatlashga xabar berish uchun yetarli.
+    console.error('[smeta-yukla] import RPC failed:', res.raw.slice(0, 2000));
+    const kod = res.body && typeof res.body.code === 'string' ? res.body.code : undefined;
+    return importRpcFailure('IMPORT_RPC_FAILED', 502, kod);
+  }
   return Response.json(res.body, { status: res.body.ok ? 200 : 409 });
 }
 

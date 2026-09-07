@@ -188,6 +188,42 @@ html, body, #root { min-height: 100%; }
   box-shadow: 0 0 0 2px rgba(79, 123, 255, 0.25), inset 0 2px 4px 0 rgba(0, 0, 0, 0.2);
 }
 
+/* ⚡ 2026-09-07: `.tugma`/`.tugma-asosiy` (SmetaYuklaNative.tsx,
+ * KompaniyaPage.tsx) were used on real <button> elements but NEVER
+ * defined anywhere -- with no class rule and no other sizing/color
+ * utility classes alongside them, those buttons rendered as bare,
+ * unstyled text (no border, no background, no padding), indistinguishable
+ * from a plain paragraph. Owner: "matnlarni o'zi buyruqni bajaradi ...
+ * import qilish deb oddiy tekst turibdi lekin uni bossa u ish
+ * boshlaydi" -- this is exactly that bug. Defined once, here, instead
+ * of rewriting each call site. */
+.tugma {
+  display: inline-flex; align-items: center; justify-content: center; gap: .375rem;
+  height: 2rem; padding: 0 .75rem; border-radius: .5rem;
+  font-size: .8125rem; font-weight: 500; line-height: 1;
+  border: 1px solid var(--border); color: var(--text);
+  background-color: var(--surface-2);
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, opacity .15s;
+}
+.tugma:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--text);
+}
+.tugma:disabled { opacity: .5; cursor: not-allowed; }
+
+.tugma-asosiy {
+  display: inline-flex; align-items: center; justify-content: center; gap: .375rem;
+  height: 2rem; padding: 0 .875rem; border-radius: .5rem;
+  font-size: .8125rem; font-weight: 600; line-height: 1;
+  border: 1px solid transparent; color: #fff;
+  background-color: var(--accent);
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.tugma-asosiy:hover:not(:disabled) { opacity: .9; }
+.tugma-asosiy:disabled { opacity: .5; cursor: not-allowed; }
+
 .drag-handle {
   cursor: grab;
 }

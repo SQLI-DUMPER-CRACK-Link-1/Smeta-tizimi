@@ -16,6 +16,11 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
   
   let rol: Rol | null = null;
+  // T2-AUTH-GAS-RETIREMENT-001: true only when THIS login's password was
+  // just verified by GAS (not by Supabase's own bcrypt hash). Used below to
+  // self-heal this login onto the fast Supabase-only path for next time --
+  // see supabase/migrations/20261015090000_t2_kirish_gas_parol_kochirish_v1.sql.
+  let viaGas = false;
 
   /* ⚠️ 2026-08-28 XAVFSIZLIK TUZATISHI (Claude, login auditi).
    *
@@ -84,7 +89,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       return Response.json({ ok: false, xato: 'Логин ёки парол нотўғри' }, { status: 401 });
     }
   } else {
-    // NO_PASSWORD_SET (yoki Supabase javob bermadi) -- ESKI GAS yo'li, o'zgarishsiz.
+    // NO_PASSWORD_SET (yoki Supabase javob bermadi) -- ESKI GAS yo'li.
+    viaGas = true;
     try {
       const r = await fetch(ctx.env.GAS_URL, {
         method: 'POST',
@@ -146,7 +152,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
             Authorization: 'Bearer ' + ctx.env.SUPABASE_KEY!,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ p_login: login, p_rol: rol }),
+          /* `p_gas_verified_parol` ONLY when this exact login+password pair
+           * was just proven correct by GAS above -- lets the RPC hash and
+           * store it (only if this login has no Supabase hash yet), so
+           * every LATER login for this user skips GAS entirely. Never sent
+           * on the Supabase-native path (hash already exists there). */
+          body: JSON.stringify({ p_login: login, p_rol: rol, p_gas_verified_parol: viaGas ? parol : null }),
         });
       const text = await r.text();
       if (!r.ok) {
