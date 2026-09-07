@@ -66,7 +66,7 @@ function GlowingOrbs() {
         <meshBasicMaterial color="#0ea5e9" />
       </Sphere>
       <Sphere ref={orb2} args={[6, 32, 32]}>
-        <meshBasicMaterial color="#d4af37" />
+        <meshBasicMaterial color="#6366f1" />
       </Sphere>
       <Sphere ref={orb3} args={[5, 32, 32]}>
         <meshBasicMaterial color="#8b5cf6" />
@@ -75,7 +75,10 @@ function GlowingOrbs() {
   );
 }
 
-// --- HAShAMATLI OLTIN ZARRACHALAR (Gold Particles) ---
+// --- ELEKTR KO'K ZARRACHALAR (Electric Blue Particles) ---
+// T2-PTO-OWNER-CRITICAL-CLOSURE P0-6: gold/luxury (#d4af37) was explicitly
+// rejected by the owner -- recolored to the approved dark graphite/navy +
+// electric blue/violet direction.
 function Zarrachalar() {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const COUNT = 200;
@@ -107,11 +110,11 @@ function Zarrachalar() {
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, COUNT]}>
       <icosahedronGeometry args={[1, 0]} />
-      <meshStandardMaterial 
-        color="#d4af37" 
-        metalness={1} 
+      <meshStandardMaterial
+        color="#38bdf8"
+        metalness={1}
         roughness={0.2}
-        emissive="#d4af37"
+        emissive="#38bdf8"
         emissiveIntensity={3.0}
       />
     </instancedMesh>
