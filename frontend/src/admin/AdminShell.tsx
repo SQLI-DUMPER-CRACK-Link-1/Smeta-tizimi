@@ -76,8 +76,18 @@ const TIZIM_02_GURUHLAR = [
  * Sozlamalar) -- foydalanuvchi: "bitta funksiya bir nechta joylarga
  * takrorlanganda tushunmayman, odamni chalkashtirib qo'yadi". Aniq
  * dublikatlar OLIB TASHLANDI (marshrutning o'zi App.tsx'da qoldi --
- * eski chuqur havolalar buzilmaydi, faqat menyudan yashirilgan). Faqat
- * HALI hech qayerda ustma-ust tushmaydigan mustaqil sahifalar qoldi. */
+ * eski chuqur havolalar buzilmaydi, faqat menyudan yashirilgan).
+ *
+ * 2026-09-07 (2): foydalanuvchi -- "eski tizim1ga tegishli hammasini
+ * pastdagi tizim1 oilasiga qo'shib tashla, umuman hozirgi aktual ishga
+ * aralashmasin". Qolgan yozuvlarning HECH biri T2 native quvuriga
+ * (Smeta/F2/Nakopitelniy/Nakrutka/Narx nazorati/Loyihalar/Obyektlar/
+ * Hujjat nazorati) tegishli EMAS -- bularning barchasi T1 GAS davridan
+ * qolgan mustaqil sahifalar yoki sof dev/diagnostika vositalari. Shu
+ * sabab BITTA aniq "Tizim 1 (eski)" oilasiga jamlangan, standart holatda
+ * YOPIQ (yuqoridagi `useState(false)`) va faqat shu bo'limda -- yuqoridagi
+ * `TIZIM_02_GURUHLAR` (joriy aktual ish) bilan hech qanday umumiy nom,
+ * yo'l yoki komponent bo'lishmaydi. */
 const ESKI_TIZIM_MENYU = [
   { yol: '/admin/buxgalteriya', nom: 'Buxgalteriya', Ikonka: Calculator },
   { yol: '/admin/ierarxiya',  nom: 'Ierarxiya',    Ikonka: Network },
@@ -344,7 +354,7 @@ function AdminShellInner() {
                   className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-400 transition-colors"
                 >
                   <Archive size={14} />
-                  <span className="flex-1 text-left whitespace-nowrap">Qo'shimcha / kam ishlatiladigan</span>
+                  <span className="flex-1 text-left whitespace-nowrap">Tizim 1 (eski) va arxiv</span>
                   {eskiOchiq ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </button>
                 <div className={`space-y-0.5 pl-2 mt-1 ${eskiOchiq ? 'block' : 'hidden'}`}>
