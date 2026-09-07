@@ -118,8 +118,9 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
 
   return (
     <div className={`relative flex flex-col h-full bg-surface border border-border rounded-xl shadow-sm overflow-hidden ${density === 'compact' ? 'text-xs' : 'text-sm'}`}>
-      <div className="border-b border-border bg-surface-2/50 px-4 py-2 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="sticky top-0 z-30 flex-shrink-0 bg-surface-2/95 backdrop-blur-md">
+        <div className="border-b border-border px-4 py-2">
+          <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
           <Search size={14} className="absolute left-2 top-2 text-text-mute" />
           <input
@@ -139,25 +140,25 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                 className="ml-2 text-accent hover:underline">tozalash</button>
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-2">
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
           <select value={preset} onChange={(e) => setPreset(e.target.value as any)} className="px-2 py-1.5 bg-surface border border-border rounded-md" aria-label="Ustun preset">
             <option value="ASOSIY">Asosiy</option><option value="F2">F2</option><option value="NARX">Narx nazorati</option><option value="TOLIQ">To'liq</option>
           </select>
           <button onClick={() => changeDensity(density === 'compact' ? 'comfort' : 'compact')} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">{density === 'compact' ? 'Comfort' : 'Compact'}</button>
           <button onClick={expandAll} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">Hammasini yoyish</button>
           <button onClick={collapseAll} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">Yig'ish</button>
-        </div>
-        <div className="mt-2 flex gap-1 overflow-x-auto">
+          </div>
+          <div className="mt-2 flex gap-1 overflow-x-auto">
           {([['all','Hammasi'],['f2','F2 olish mumkin'],['qosh','Qo\'shimcha'],['zamena','Zamena'],['bl','Faqat BL'],['mat','Materiallar']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>)}
           {priceControlReady ? ([['frozen','Muzlagan'],['risk','Xavf ostida'],['basis','Protokolsiz']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>) : <span className="px-2 py-1 text-[11px] text-text-mute">Narx nazorati ma'lumoti ulanmagan</span>}
+          </div>
         </div>
-      </div>
 
-      <div className="min-w-[930px] h-5 border-b border-white/5 bg-black/40 flex items-center px-4 sticky top-[76px] z-20 flex-shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+      <div className="min-w-[930px] h-5 border-b border-white/5 bg-black/40 flex items-center px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
         <div className="flex-1 sticky left-0 z-20 bg-black/40">ISH</div><div className="w-20 text-center">SMETA</div><div className="w-24 text-center">FAKT</div><div className="w-24 text-center">F2</div><div className="w-24 text-center">NAZORAT</div><div className="w-20 text-center">HOLAT</div>{showMoney && <div className="w-[390px] text-center">QIYMATLAR</div>}
       </div>
-      <div className="min-w-[930px] h-8 border-b border-white/5 bg-black/40 flex items-center px-4 sticky top-[96px] z-20 flex-shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider backdrop-blur-md">
+      <div className="min-w-[930px] h-8 border-b border-white/5 bg-black/40 flex items-center px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
         <div className="flex-1">Nom / Birlik</div>
         <div className="flex items-center h-full pr-4 flex-shrink-0 gap-4">
           {showSmetaAndFakt && <div className="w-20 text-right text-blue-400/70" title="Smeta Hajm">Sm. Vol</div>}
@@ -175,6 +176,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
           <div className="w-24 text-right text-cyan-400" title="F2 Olish Mumkin Summa (Nakrutka)">F2 M. Sum</div>
           <div className="w-24 text-right text-amber-400" title="Qoldiq Summa (Nakrutka)">Ost. Sum</div></>}
         </div>
+      </div>
       </div>
 
       <div 

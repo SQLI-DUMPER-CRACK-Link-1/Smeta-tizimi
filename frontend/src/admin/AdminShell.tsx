@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
-import { AlertTriangle, ChevronDown, ChevronRight, Archive, ShieldCheck } from 'lucide-react';
-import { Map, LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
+import { Activity, AlertTriangle, Archive, BarChart, Building2, Calculator, ChevronDown, ChevronRight, ClipboardList, Database, FileInput, FileOutput, FileSignature, FileStack, FileText, FlaskConical, FolderKanban, Gauge, HardHat, LayoutDashboard, Link2, LogOut, Map, Menu, Network, NotebookPen, Package, Settings, ShieldAlert, ShoppingCart, Tags, Truck, Users, X } from 'lucide-react';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 import { KompaniyaProvider, useKompaniya } from '../umumiy/kontekst/KompaniyaKontekst';
@@ -27,16 +26,10 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: LayoutDashboard,
     id: 'asosiy',
     menyular: [
-      { yol: '/admin/dashboard', nom: 'Rahbar paneli', Ikonka: BarChart },
-      { yol: '/admin/test/portfel', nom: 'Loyihalar va Obyektlar', Ikonka: FolderKanban },
-      { yol: '/admin/obyektlar', nom: 'Obyektlar ro‘yxati', Ikonka: Building2 },
+      { yol: '/admin/dashboard', nom: 'Dashboard', Ikonka: BarChart },
+      { yol: '/admin/obyektlar', nom: 'Loyihalar va obyektlar', Ikonka: FolderKanban },
       { yol: '/admin/participants', nom: 'Loyiha ishtirokchilari', Ikonka: Users },
-      { yol: '/admin/documents', nom: 'Hujjatlar', Ikonka: FileStack },
-      { yol: '/admin/hujjat-nazorat', nom: 'Hujjat nazorati (F2/Nakopitelniy)', Ikonka: FileOutput },
-      { yol: '/admin/f2-tarix', nom: 'F2 tarixi / tasdiqlash', Ikonka: ClipboardList },
-      { yol: '/admin/fakt', nom: 'Bajarilgan ishlar (Fakt)', Ikonka: ClipboardList },
-        { yol: '/admin/mindmap', nom: 'Mindmap (Xarita)', Ikonka: Map },
-      { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
+      { yol: '/admin/mindmap', nom: 'Mindmap', Ikonka: Map },
     ]
   },
   {
@@ -44,16 +37,15 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: HardHat,
     id: 'operatsion',
     menyular: [
-      { yol: '/admin/holat', nom: 'Ishchi smeta / LRV', Ikonka: FileText },
-      { yol: '/admin/f2', nom: 'F2 import (kanonik)', Ikonka: FileInput },
+      { yol: '/admin/holat', nom: 'PTO workbench · Smeta / LRV', Ikonka: FileText },
+      { yol: '/admin/fakt', nom: 'Fakt · bajarilgan ishlar', Ikonka: ClipboardList },
       { yol: '/admin/f2-tayyorlash', nom: 'F2 tayyorlash', Ikonka: FileOutput },
+      { yol: '/admin/f2', nom: 'F2 import', Ikonka: FileInput },
+      { yol: '/admin/f2-tarix', nom: 'F2 tarixi / tasdiqlash', Ikonka: ClipboardList },
+      { yol: '/admin/hujjat-nazorat', nom: 'Nakopitelniy / hujjat nazorati', Ikonka: FileOutput },
       { yol: '/admin/narxlar', nom: 'Narxlar nazorati', Ikonka: Tags },
-      { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
-        { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
-      { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
-        { yol: '/admin/test/zayavka', nom: 'Zayavkalar (PTO)', Ikonka: ClipboardList },
-        { yol: '/admin/test/aosr', nom: 'QA/QC (AOSR/APPOK)', Ikonka: ShieldCheck },
-      { yol: '/admin/test/erp', nom: 'Kadrlar, Texnika (ERP)', Ikonka: Users },
+      { yol: '/admin/documents', nom: 'Hujjatlar markazi', Ikonka: FileStack },
+      { yol: '/admin/fayl-boglash', nom: 'Sinxronizatsiya', Ikonka: Link2 },
     ]
   },
   {
@@ -61,9 +53,8 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: Settings,
     id: 'tizim',
     menyular: [
-      { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
-      { yol: '/admin/storage', nom: 'Fayl saqlash (Storage)', Ikonka: HardHat },
-      { yol: '/admin/test/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
+      { yol: '/admin/sozlamalar', nom: 'Sozlamalar', Ikonka: Settings },
+      { yol: '/admin/storage', nom: 'Storage workspace', Ikonka: HardHat },
     ]
   }
 ];
@@ -79,13 +70,49 @@ const ESKI_TIZIM_MENYU = [
   { yol: '/admin/texnika',    nom: 'Texnika',      Ikonka: Truck },
   { yol: '/admin/taminot',    nom: "Ta'minot",     Ikonka: ShoppingCart },
   { yol: '/admin/sifat',      nom: 'Sifat (QA)',   Ikonka: ShieldAlert },
-  { yol: '/admin/fayl-boglash', nom: 'Fayl bog’lash', Ikonka: Link2 },
-  { yol: '/admin/hujjatlar', nom: 'Hujjatlar', Ikonka: FileStack },
+  { yol: '/admin/hujjatlar', nom: 'Hujjatlar (eski)', Ikonka: FileStack },
   { yol: '/admin/shaxsiy-smeta', nom: 'Shaxsiy smeta', Ikonka: NotebookPen },
   { yol: '/admin/supabase', nom: 'Supabase', Ikonka: Database },
   { yol: '/admin/tezlik', nom: 'Tezlik sinovi', Ikonka: Gauge },
   { yol: '/admin/sozlamalar', nom: 'Sozlamalar (eski)',   Ikonka: Settings },
 ];
+
+const ROUTE_LABELS: Array<[string, string]> = [
+  ['/admin/dashboard', 'Dashboard'],
+  ['/admin/obyektlar', 'Loyihalar va obyektlar'],
+  ['/admin/holat', 'PTO workbench'],
+  ['/admin/fakt', 'Fakt'],
+  ['/admin/f2-tayyorlash', 'F2 tayyorlash'],
+  ['/admin/f2', 'F2 import'],
+  ['/admin/f2-tarix', 'F2 tarixi'],
+  ['/admin/hujjat-nazorat', 'Nakopitelniy / hujjat nazorati'],
+  ['/admin/narxlar', 'Narxlar nazorati'],
+  ['/admin/documents', 'Hujjatlar markazi'],
+  ['/admin/fayl-boglash', 'Sinxronizatsiya'],
+  ['/admin/storage', 'Storage workspace'],
+  ['/admin/participants', 'Loyiha ishtirokchilari'],
+  ['/admin/mindmap', 'Mindmap'],
+  ['/admin/kompaniya', 'Kompaniya'],
+  ['/admin/system-control', 'Tizim boshqaruv markazi'],
+  ['/admin/sozlamalar', 'Sozlamalar'],
+];
+function routeLabel(pathname: string) {
+  return ROUTE_LABELS.find(([path]) => pathname === path || pathname.startsWith(`${path}/`))?.[1] ?? 'Workspace';
+}
+
+function routeContext(pathname: string, search: string) {
+  const params = new URLSearchParams(search);
+  const loyiha = params.get('loyiha') ?? params.get('project');
+  const objectFromQuery = params.get('obyekt') ?? params.get('object');
+  const objectFromPath = pathname.match(/^\/admin\/holat\/([^/]+)/)?.[1];
+  const format = (label: string, value: string | null | undefined) => {
+    if (!value) return null;
+    let decoded = value;
+    try { decoded = decodeURIComponent(value); } catch { /* keep the URL value */ }
+    return /^\d+$/.test(decoded) ? `${label} #${decoded}` : `${label}: ${decoded}`;
+  };
+  return [format('Loyiha', loyiha), format('Obyekt', objectFromQuery ?? objectFromPath)].filter(Boolean).join(' · ');
+}
 
 export default function AdminShell() {
   return (
@@ -106,6 +133,7 @@ function AdminShellInner() {
   const sess = useSessiya();
   const k = useKompaniya();
   const joy = useLocation();
+  const [sidebarOchiq, setSidebarOchiq] = useState(false);
   // Effective role for THIS render: the active company's own membership
   // role, or a platform-level label when no company is selected. Never the
   // stale global session role.
@@ -113,7 +141,9 @@ function AdminShellInner() {
 
   // Avtomatik ochish logikasi
   const eskiIchida = ESKI_TIZIM_MENYU.some((m) => joy.pathname.startsWith(m.yol));
-  const [eskiOchiq, setEskiOchiq] = useState(true);
+  // Texnik/legacy modullar oddiy PTO operatoriga birinchi ko'rinishda
+  // aralashmaydi. Eski URL bevosita ochilsa, navigatsiya o'z-o'zidan ochiladi.
+  const [eskiOchiq, setEskiOchiq] = useState(false);
   
   // Qaysi guruhlar ochiq ekanligini saqlash
   const [ochiqGuruhlar, setOchiqGuruhlar] = useState<Record<string, boolean>>(() => {
@@ -123,7 +153,7 @@ function AdminShellInner() {
       if (g.menyular.some(m => joy.pathname.startsWith(m.yol))) {
         d[g.id] = true;
       } else {
-        d[g.id] = true; // Default open for better visibility
+        d[g.id] = g.id === 'asosiy' || g.id === 'operatsion';
       }
     });
     return d;
@@ -145,10 +175,12 @@ function AdminShellInner() {
   }, [sess.isError, sess.error]);
 
   const handleLogout = tizimdanChiq;
+  const activeRouteLabel = routeLabel(joy.pathname);
+  const activeScopeLabel = routeContext(joy.pathname, joy.search);
 
   if (sess.isLoading) {
     return (
-      <div className="h-screen bg-[#020617] flex items-center justify-center">
+      <div className="os-auth-state">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-white/20 border-t-accent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-text-dim text-sm">Kirish tekshirilmoqda…</p>
@@ -161,7 +193,7 @@ function AdminShellInner() {
 
   if (sessiyaYoq) {
     return (
-      <div className="h-screen bg-[#020617] flex items-center justify-center">
+      <div className="os-auth-state">
         <div className="text-center max-w-sm px-6">
           <AlertTriangle size={28} className="text-warn mx-auto mb-3" />
           <p className="text-text font-medium mb-1">Kirish talab qilinadi</p>
@@ -176,7 +208,7 @@ function AdminShellInner() {
 
   if (sess.isError) {
     return (
-      <div className="h-screen bg-[#020617] flex items-center justify-center">
+      <div className="os-auth-state">
         <div className="text-center max-w-sm px-6">
           <AlertTriangle size={28} className="text-warn mx-auto mb-3" />
           <p className="text-text font-medium mb-1">Server bilan aloqa yo'q</p>
@@ -205,23 +237,21 @@ function AdminShellInner() {
     if (g.id === 'global' || g.id === 'tizim') return g;
     let allowedMenus = g.menyular;
     if (effektivRol === 'prorab') {
-      // Prorab faqat Logistika (Sklad) va Loyihalar(Fakt) ko'radi
-      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
-      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('logistika'));
+      // Prorab: obyektlar, Fakt va kerakli hujjatlarni ko'radi.
+      const prorab = new Set(['/admin/obyektlar', '/admin/fakt', '/admin/documents']);
+      allowedMenus = allowedMenus.filter((m) => prorab.has(m.yol));
     } else if (effektivRol === 'pto') {
-      // PTO Portfel va Moliya(Smeta/F2)
-      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
-      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya') || m.yol.includes('smeta'));
+      // PTO: smeta, Fakt, F2, Nakopitelniy va narx manbasi.
+      const pto = ['/admin/dashboard', '/admin/obyektlar', '/admin/holat', '/admin/fakt', '/admin/f2', '/admin/f2-tayyorlash', '/admin/f2-tarix', '/admin/hujjat-nazorat', '/admin/narxlar', '/admin/documents'];
+      allowedMenus = allowedMenus.filter((m) => pto.includes(m.yol));
     } else if (effektivRol === 'bugalter') {
-      // Bugalter Moliya, CRM
-      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('crm'));
-      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya') || m.yol.includes('smeta'));
+      const moliya = ['/admin/dashboard', '/admin/fakt', '/admin/f2-tarix', '/admin/hujjat-nazorat', '/admin/documents'];
+      allowedMenus = allowedMenus.filter((m) => moliya.includes(m.yol));
     } else if (effektivRol === 'rahbar' || effektivRol === 'boss' || effektivRol === 'admin' || effektivRol === 'superadmin') {
       // Ruxsat hammasiga
     } else if (effektivRol === 'buyurtmachi' || effektivRol === 'pudratchi' || effektivRol === 'kuzatuvchi') {
-      // Faqat portfel (o'qish uchun) — yozuv ruxsati alohida serverda tekshiriladi
-      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
-      else allowedMenus = [];
+      // Faqat obyektlar va dashboard (o'qish uchun); yozuv serverda tekshiriladi.
+      allowedMenus = allowedMenus.filter((m) => ['/admin/dashboard', '/admin/obyektlar', '/admin/documents'].includes(m.yol));
     } else {
       allowedMenus = []; // Kompaniya hali tanlanmagan yoki noma'lum rol
     }
@@ -229,20 +259,25 @@ function AdminShellInner() {
   }).filter(g => g.menyular.length > 0);
 
   return (
-    <div className="os-app-shell flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30">
+    <div className="os-app-shell flex h-[100dvh] min-h-0 overflow-hidden text-white relative font-sans selection:bg-accent/30">
 
-      {/* Sidebar - custom-scrollbar added for smooth scrolling on small laptops */}
-      <aside className="os-sidebar relative z-10 w-64 xl:w-72 border-r backdrop-blur-xl flex flex-col">
+      {sidebarOchiq && <button aria-label="Menyuni yopish" className="os-sidebar-backdrop" onClick={() => setSidebarOchiq(false)} />}
+
+      {/* Sidebar. Mobil ekranlarda u drawer; katta ekranda doimiy ishchi nav. */}
+      <aside className={`os-sidebar relative z-30 w-64 xl:w-72 border-r backdrop-blur-xl flex flex-col ${sidebarOchiq ? 'os-sidebar--open' : ''}`}>
         <div className="p-4 border-b border-border flex items-center gap-3">
           <div className="os-brand-mark w-8 h-8 rounded-lg flex items-center justify-center">
             <FlaskConical className="text-white" size={18} />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-[15px] font-bold text-text leading-tight tracking-wider">SMETA TIZIM 02</h1>
             <p className="text-[11px] text-text-dim uppercase tracking-wider font-medium mt-0.5 text-accent/80">
               👑 {k.globalRejim ? 'Global (superadmin)' : (k.joriy?.rol || (k.yuklanmoqda ? '…' : 'Kompaniya tanlanmagan'))}
             </p>
           </div>
+          <button aria-label="Menyuni yopish" className="os-mobile-only rounded-lg p-1.5 text-text-dim hover:bg-white/5" onClick={() => setSidebarOchiq(false)}>
+            <X size={18} />
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4">
@@ -260,9 +295,11 @@ function AdminShellInner() {
               
               <div className={`space-y-0.5 pl-2 ${ochiqGuruhlar[guruh.id] ? 'block' : 'hidden'}`}>
                 {guruh.menyular.map(m => (
-                  <NavLink
-                    key={m.yol}
-                    to={m.yol}
+                    <NavLink
+                      key={m.yol}
+                      to={m.yol}
+                      end={m.yol !== '/admin/holat' && m.yol !== '/admin/obyektlar'}
+                      onClick={() => setSidebarOchiq(false)}
                     className={({ isActive }) =>
                       `os-nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-[13.5px] font-medium transition-colors duration-[120ms] cursor-pointer relative ${
                         isActive
@@ -300,6 +337,7 @@ function AdminShellInner() {
                 <NavLink
                   key={m.yol}
                   to={m.yol}
+                  onClick={() => setSidebarOchiq(false)}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors duration-[120ms] cursor-pointer ${
                       isActive
@@ -328,10 +366,21 @@ function AdminShellInner() {
         </div>
       </aside>
 
-      <main className="os-workspace relative z-10 flex-1 overflow-hidden flex flex-col">
-        {/* YAGONA kompaniya konteksti — barcha /admin/* sahifalari shuni ishlatadi */}
-        <div className="os-context-bar flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2 border-b backdrop-blur-sm z-20">
-          <KompaniyaTanlagich />
+      <main className="os-workspace relative z-10 min-w-0 min-h-0 flex-1 overflow-hidden flex flex-col">
+        {/* YAGONA kompaniya + loyiha ish konteksti. Sahifa sarlavhasi URLdan
+            o'qiladi, shuning uchun foydalanuvchi qaysi ish makonida ekanini
+            har doim ko'radi va back/refreshdan keyin ham yo'qolmaydi. */}
+        <div className="os-context-bar flex-shrink-0 flex items-center gap-3 px-4 sm:px-6 py-2.5 border-b backdrop-blur-sm z-20">
+          <button aria-label="Menyuni ochish" className="os-mobile-only os-menu-button" onClick={() => setSidebarOchiq(true)}>
+            <Menu size={18} />
+          </button>
+          <div className="min-w-0 flex-1 flex items-center gap-2">
+            <KompaniyaTanlagich />
+            <span className="os-context-divider" aria-hidden="true">/</span>
+            <span className="os-route-label truncate" aria-current="page">{activeRouteLabel}</span>
+            {activeScopeLabel && <><span className="os-context-divider" aria-hidden="true">/</span><span className="os-route-context truncate">{activeScopeLabel}</span></>}
+          </div>
+          <span className="os-live-pill" title="Kanonik ma'lumotlar serverdan o'qiladi"><span className="os-live-dot" /> Live data</span>
         </div>
 
         {sess.data && !sess.data.yozaOladi && (
@@ -347,7 +396,7 @@ function AdminShellInner() {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="os-route-viewport flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col">
           <RuxsatGuard />
         </div>
       </main>

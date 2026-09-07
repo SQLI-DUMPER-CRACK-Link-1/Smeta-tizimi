@@ -324,24 +324,30 @@ function NativeSession({ companyId }: { companyId: number }) {
     } catch { setError('Yozish javobi olinmadi. Qayta urinish ayni operatsiyani tekshiradi.'); }
     finally { writing.current = false; setBusy(false); }
   }
-  return <section className="p-4 space-y-4 max-w-5xl">
-    <h1 className="text-xl font-semibold">F2 import — yangi rejim</h1>
-    <p role="status">{phase}</p>
+  return <section className="os-workbench space-y-5">
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">F2 · MANBA IMPORTI</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight">F2 import</h1>
+        <p className="mt-1 max-w-2xl text-sm text-text-dim">XLSX manbasini tekshiring, qatorlarni kanonik LRV bilan aniq bog‘lang va tasdiqlashdan oldin qoralama sifatida saqlang.</p>
+      </div>
+      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs text-text-dim"><span className="h-1.5 w-1.5 rounded-full bg-accent" /> {phase}</span>
+    </header>
     {resumable && !source.length && <p className="karta p-3">
       Tugallanmagan import bor ({resumable.matched}/{resumable.total ?? '?'} qator moslashtirilgan, {resumable.updatedAt ? new Date(resumable.updatedAt).toLocaleString() : ''}).{' '}
       <button onClick={() => void resume(resumable)} disabled={busy}>Davom ettirish</button>
     </p>}
     {draftXato && <p role="alert" className="text-warn">{draftXato}</p>}
-    <fieldset disabled={busy || done} className="flex flex-wrap gap-4">
-      <label>Obyekt<select aria-label="Obyekt" value={objectId} onChange={e => {
+    <fieldset disabled={busy || done} className="karta grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <label className="text-xs text-text-dim">Obyekt<select aria-label="Obyekt" className="input mt-1 h-10" value={objectId} onChange={e => {
         reset(); setObjectId(e.target.value); rawFile.current = null;
         sourceDocId.current = undefined; sourceOperationId.current = '';
       }}><option value="">Tanlang</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}</select></label>
-      <label>F2 davri<input type="month" value={month} onChange={e => setMonth(e.target.value)} disabled={source.length > 0} /></label>
-      <label>XLSX fayl<input type="file" accept=".xlsx,.xlsm" onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} /></label>
-      {book && <label>Varaq<select value={sheetName} onChange={e => chooseSheet(book, e.target.value)}>{book.sheets.map(s => <option key={s.name}>{s.name}</option>)}</select></label>}
+      <label className="text-xs text-text-dim">F2 davri<input className="input mt-1 h-10" type="month" value={month} onChange={e => setMonth(e.target.value)} disabled={source.length > 0} /></label>
+      <label className="text-xs text-text-dim">XLSX fayl<input className="input mt-1 h-10 text-xs" type="file" accept=".xlsx,.xlsm" onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} /></label>
+      {book && <label className="text-xs text-text-dim">Varaq<select className="input mt-1 h-10" value={sheetName} onChange={e => chooseSheet(book, e.target.value)}>{book.sheets.map(s => <option key={s.name}>{s.name}</option>)}</select></label>}
     </fieldset>
-    {cols && <fieldset disabled={busy || done} className="karta p-3 flex flex-wrap gap-3"><legend>Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>{(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => <label key={k}>{k}<input className="w-16 border" type="number" min="1" value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} /></label>)}<button onClick={() => void match()} disabled={!objectId || !month}>Moslashtirish</button></fieldset>}
+    {cols && <fieldset disabled={busy || done} className="karta flex flex-wrap items-end gap-3 p-4"><legend className="px-1 text-xs font-semibold text-text">Ustun raqamlari (1 dan boshlab)</legend>{(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => <label key={k} className="text-xs text-text-dim">{k}<input className="input mt-1 h-9 w-20" type="number" min="1" value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} /></label>)}<button className="h-9 rounded-[10px] bg-accent px-4 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50" onClick={() => void match()} disabled={!objectId || !month}>Moslashtirish</button></fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
     {source.length > 0 && <>{(() => {
       const korinadigan = faqatMoslashmagan ? source.filter(n => !mapping.has(n.uid)) : source;
@@ -350,7 +356,7 @@ function NativeSession({ companyId }: { companyId: number }) {
         <p>{source.length} manba qatoridan {source.filter(n => mapping.has(n.uid)).length} tasi bog‘landi.
           {' '}<label className="ml-2 text-[12px]"><input type="checkbox" checked={faqatMoslashmagan} onChange={e => { setFaqatMoslashmagan(e.target.checked); setPage(0); }} /> faqat moslashmaganlar</label>
         </p>
-        <details open={faqatMoslashmagan}><summary>Bog‘lanishlarni ko‘rish va qo‘lda tuzatish</summary><div className="overflow-auto"><table className="w-full text-sm"><thead><tr><th>F2 manba</th><th>Smeta qatori</th><th>Hajm</th><th>Narx</th><th>Hujjat summasi</th></tr></thead><tbody>{korinadigan.slice(page * 50, page * 50 + 50).map(n => <tr key={n.uid}><td>{labels.get(n.uid)}</td><td>
+        <details className="karta overflow-hidden" open={faqatMoslashmagan}><summary className="cursor-pointer border-b border-border px-4 py-3 text-sm font-medium">Bog‘lanishlarni ko‘rish va qo‘lda tuzatish</summary><div className="overflow-auto"><table className="w-full text-sm"><thead className="bg-surface-2 text-xs text-text-dim"><tr><th className="px-3 py-2 text-left">F2 manba</th><th className="px-3 py-2 text-left">Smeta qatori</th><th className="px-3 py-2 text-right">Hajm</th><th className="px-3 py-2 text-right">Narx</th><th className="px-3 py-2 text-right">Hujjat summasi</th></tr></thead><tbody>{korinadigan.slice(page * 50, page * 50 + 50).map(n => <tr key={n.uid} className="border-t border-border"><td className="px-3 py-2">{labels.get(n.uid)}</td><td>
           <select value={mapping.get(n.uid) ?? ''} onChange={e => {
             const v = e.target.value; const yangi = new Map(mapping);
             if (v) yangi.set(n.uid, Number(v)); else yangi.delete(n.uid);
@@ -365,7 +371,7 @@ function NativeSession({ companyId }: { companyId: number }) {
       <F2PreapprovalAudit aktBarglar={source} getSmetaId={uid => mapping.get(uid)} />
       {payload.error && <p role="alert">{payload.error}</p>}
       <label className="block"><input type="checkbox" checked={reviewed} disabled={busy || done} onChange={e => setReviewed(e.target.checked)} /> Varaq, davr va moslashtirish natijasini tekshirdim</label>
-      <button className="karta p-3" disabled={busy || done || !reviewed || !!payload.error} onClick={() => void save()}>F2 qoralamasini saqlash</button>
+      <button className="h-10 rounded-[10px] bg-accent px-4 text-sm font-medium text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50" disabled={busy || done || !reviewed || !!payload.error} onClick={() => void save()}>F2 qoralamasini saqlash</button>
     </>}
   </section>;
 }

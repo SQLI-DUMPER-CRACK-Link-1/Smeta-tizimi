@@ -40,15 +40,30 @@
   --t-rs: #7DD3FC;
   --t-mat: #6EE7B7;
   --t-ob: #FCD34D;
+  /* Product shell tokens — components should consume these instead of
+     inventing one-off values. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --shadow-panel: 0 12px 32px rgba(0, 0, 0, .18);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+  --content-max: 1680px;
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
   font-family: Inter, system-ui, sans-serif;
+  margin: 0;
 }
 
-html, body, #root { min-height: 100%; }
+html, body, #root { height: 100%; min-height: 100%; }
 
 /* Construction Command Center — umumiy qobiq.
    Bu bezak emas: barcha rollar bir xil makonda ishlashi, holat ranglari
@@ -59,6 +74,14 @@ html, body, #root { min-height: 100%; }
     radial-gradient(85% 65% at 100% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 58%),
     radial-gradient(70% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
     var(--bg);
+}
+.os-app-shell > * { min-height: 0; }
+.os-auth-state {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--text);
 }
 .os-app-shell::before {
   content: '';
@@ -77,6 +100,7 @@ html, body, #root { min-height: 100%; }
   background: color-mix(in srgb, var(--surface) 92%, black);
   border-color: color-mix(in srgb, var(--border) 80%, white 8%);
   box-shadow: 18px 0 46px rgba(0, 0, 0, .16);
+  min-height: 0;
 }
 .os-workspace {
   background: linear-gradient(135deg, rgba(255, 255, 255, .012), transparent 34%);
@@ -89,6 +113,26 @@ html, body, #root { min-height: 100%; }
   background: color-mix(in srgb, var(--surface) 74%, transparent);
   border-color: color-mix(in srgb, var(--border) 75%, white 7%);
 }
+.os-context-divider { color: var(--text-mute, #596276); font-size: 0.75rem; }
+.os-route-label { color: var(--text-dim); font-size: 0.75rem; font-weight: 600; letter-spacing: .01em; }
+.os-route-context { color: var(--text); font-size: 0.72rem; font-weight: 600; letter-spacing: .01em; }
+.os-live-pill {
+  display: inline-flex; align-items: center; gap: .4rem; flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--ok) 26%, transparent);
+  border-radius: 999px; padding: .25rem .55rem;
+  color: color-mix(in srgb, var(--ok) 82%, white);
+  background: color-mix(in srgb, var(--ok) 8%, transparent);
+  font-size: .68rem; font-weight: 600; letter-spacing: .02em;
+}
+.os-live-dot { width: .38rem; height: .38rem; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 15%, transparent); }
+.os-route-viewport > * { min-width: 0; }
+.os-menu-button {
+  width: 2.15rem; height: 2.15rem; display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  color: var(--text-dim); background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+}
+.os-sidebar-backdrop { display: none; }
+.os-mobile-only { display: none; }
 .os-nav-label { letter-spacing: .12em; }
 .os-nav-link {
   border: 1px solid transparent;
@@ -190,6 +234,40 @@ html, body, #root { min-height: 100%; }
 
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+/* Workbench surfaces share a neutral visual language while each panel keeps
+   its own semantic border/background (warning, success, danger). */
+.os-workbench {
+  width: min(100%, var(--content-max));
+  margin-inline: auto;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+.os-workbench > header {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  padding-bottom: 1rem;
+}
+.os-workbench > .karta,
+.os-workbench > section.karta { box-shadow: var(--shadow-panel); }
+.os-workbench > section:not(.karta) { box-shadow: var(--shadow-panel); }
+
+@media (max-width: 1023px) {
+  .os-mobile-only { display: inline-flex; }
+  .os-sidebar {
+    position: fixed; inset: 0 auto 0 0; width: min(19rem, 88vw);
+    transform: translateX(-105%); transition: transform .2s ease;
+    box-shadow: 24px 0 56px rgba(0, 0, 0, .38);
+  }
+  .os-sidebar.os-sidebar--open { transform: translateX(0); }
+  .os-sidebar-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 20;
+    border: 0; background: rgba(2, 6, 23, .72); backdrop-filter: blur(2px);
+  }
+}
+
+@media (max-width: 640px) {
+  .os-live-pill { display: none; }
+  .os-context-divider, .os-route-label, .os-route-context { display: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -41,10 +41,20 @@ export default function HujjatNazoratPage() {
   if (!joriy?.id) return <KompaniyaKerak nima="Hujjat nazorati (F2/Nakopitelniy)" />;
 
   return (
-    <div className="p-6 bg-bg min-h-screen text-text space-y-4">
+    <div className="os-workbench text-text space-y-4">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">PTO · HUJJAT NAZORATI</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nakopitelniy va tasdiqlangan F2</h1>
+          <p className="mt-1 max-w-2xl text-sm text-text-dim">Smeta, o‘zgarishlar, F2 davrlari va yopilish dalillarini bitta kanonik ish oynasida tekshiring.</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-full border border-ok/20 bg-ok/5 px-3 py-1.5 text-xs text-ok">
+          <span className="h-1.5 w-1.5 rounded-full bg-ok" /> Supabase read-model
+        </div>
+      </header>
       {joriy?.id && (
-        <div className="flex flex-wrap gap-3">
-          <label className="text-[13px]">
+        <div className="karta flex flex-wrap items-end gap-3 p-3">
+          <label className="text-[13px] min-w-[220px]">
             <span className="mr-2 text-text-dim">Loyiha</span>
             <select className="rounded-lg border border-border bg-surface px-2 py-1"
               value={loyihaId ?? ''} onChange={(e) => setLoyihaId(Number(e.target.value) || null)}>
@@ -52,7 +62,7 @@ export default function HujjatNazoratPage() {
               {loyihalar.map((l) => <option key={l.id} value={l.id}>{l.nom}</option>)}
             </select>
           </label>
-          <label className="text-[13px]">
+          <label className="text-[13px] min-w-[220px]">
             <span className="mr-2 text-text-dim">Obyekt</span>
             <select className="rounded-lg border border-border bg-surface px-2 py-1"
               value={obyektId ?? ''} onChange={(e) => setObyektId(Number(e.target.value) || null)}>

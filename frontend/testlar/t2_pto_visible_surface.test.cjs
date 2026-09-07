@@ -36,6 +36,18 @@ for (const route of ['/admin/obyektlar', '/admin/f2', '/admin/f2-tayyorlash', '/
   must(route + ' legacy menu duplicate removed', !exactMenuPath(oldMenu, route),
     route + ' ESKI_TIZIM_MENYU ichida qolmasligi kerak');
 }
+must('canonical nav uses production routes only', !/\/admin\/test\//.test(t2Menu),
+  'oddiy PTO menyusida test/texnik marshrutlar ko‘rinmasligi kerak');
+for (const route of ['/admin/dashboard', '/admin/obyektlar', '/admin/holat', '/admin/fakt', '/admin/f2', '/admin/f2-tayyorlash', '/admin/f2-tarix', '/admin/hujjat-nazorat', '/admin/narxlar', '/admin/documents', '/admin/fayl-boglash']) {
+  must(route + ' is present in the canonical IA', exactMenuPath(t2Menu, route),
+    route + ' production information architecture ichida bo‘lishi kerak');
+}
+must('legacy modules start collapsed', /useState\(false\)/.test(shell),
+  'Tizim_01/ERP menyusi default ko‘rinishda PTO ishini bosmasligi kerak');
+must('shell uses one bounded viewport contract', /h-\[100dvh\][\s\S]{0,300}overflow-hidden/.test(shell) && /os-route-viewport[\s\S]{0,120}overflow-y-auto/.test(shell),
+  'qobiq o‘z balandligini boshqarib, route viewport scroll host bo‘lishi kerak');
+must('shell keeps URL project/object context visible', /function routeContext\(/.test(shell) && /os-route-context/.test(shell),
+  'loyiha/obyekt tanlovi route query yoki parametrida bo‘lsa, qobiqda yo‘qolmasligi kerak');
 for (const route of ['/admin/obyektlar', '/admin/f2', '/admin/f2-tayyorlash', '/admin/narxlar']) {
   must(route + ' remains in T2 navigation', exactMenuPath(t2Menu, route),
     route + ' TIZIM_02 navigation ichida ko‘rinadigan bo‘lishi kerak');
