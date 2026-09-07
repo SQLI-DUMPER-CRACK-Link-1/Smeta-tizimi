@@ -1,3 +1,41 @@
+# 2026-09-07 — T2 safe release reconciliation: amaldagi holat
+
+Quyidagi addendum oldingi yozuvlarni tarixiy dalil sifatida saqlagan holda
+hozirgi xavfsiz release cutoverini qayd etadi.
+
+| Field | Current value |
+|---|---|
+| `base_sha` | `50e1fb72a81e187ba495865ce8515b13603dd9be` — xavfsiz integration manbasi. |
+| `safe_candidate` | `b60d6d64fc647116bee6299bc8de17fd26ca601b` — reconciliation o‘zgarishlari bilan yakuniy xavfsiz kod daraxti. |
+| `main_sha` | `b6f8c141674c9f5ed18e2e9b62e189a0e3d0b4e6` |
+| `production_deploy` | Cloudflare Pages check `success`; latest commit `b6f8c14`; deploy preview `https://0aca4f41.smeta-tizimi.pages.dev`. `https://smeta-tizimi.pages.dev` va deploy preview HTML build xeshi bir xil. |
+| `runtime_smoke` | Production `/api/soglik` HTTP 200, `ok=true`, `supabase_key_role=service_role`, canonical RPC HTTP 200; protected API’lar 401; noto‘g‘ri login 401 va cookie yo‘q; asosiy admin route’lar HTTP 200. |
+| `r2` | `frontend/wrangler.toml` private `R2_CANONICAL` → `smeta-tizimi-canonical`; public canonical bucket yo‘q. Authenticated binary round-trip bu muhitda bajarilmadi. |
+| `production_migrations` | Ushbu cutoverda yangi migration qo‘llanmadi; production business data o‘zgartirilmadi. |
+| `gas` | GAS deploy qilinmadi; bridge source’dagi xavfsiz LockService tuzatishi source-only. |
+| `authenticated_smoke` | Ownerning yaroqli browser sessiyasi mavjud emasligi sabab login → obyekt → Smeta → LRV → Fakt → F2 → tarix → narx → Nakopitelniy to‘liq smoke isbotlanmadi. |
+| `release_status` | Safe code main’ga chiqarildi va Cloudflare deploy qilindi; authenticated owner vertical smoke — ochiq dalil bo‘shlig‘i. |
+
+# 2026-09-06 — T2 PTO daily reliability: joriy integratsiya checkpointi
+
+Ushbu yangi addendum joriy release ishining o‘lchangan holatini qayd etadi;
+quyidagi avvalgi yozuvlar tarixiy dalil sifatida saqlanadi va qayta yozilmaydi.
+
+| Field | Current value |
+|---|---|
+| `integration_sha` | `f182bd77cf2798852d5968a4e39bdbc1f39a03fb` — `origin/integration/next-main-release-v1`; implementation `8c7cf3b8fb1dcdfe9601b48936f6670ba3552afb`, handoff `af050f71...`, governance checkpoint shu SHAda. |
+| `main_sha` | `7a49befb611408c8b39ebd8e564465eb423b61bf` |
+| `main_change` | Ushbu ish davomida main o‘zgartirilmadi. |
+| `cloudflare_deploy` | Candidate `f182bd7` uchun Cloudflare Pages deploy muvaffaqiyatli: `https://1ca8fc74.smeta-tizimi.pages.dev`; main/Production deploy qilinmadi. |
+| `runtime_smoke` | Candidate `/`, `/admin/fakt` — HTTP 200; `/api/soglik` — HTTP 200, `ok=true`, Supabase `service_role`, `canonical_rpc_http_status=200`, `SESSIYA_KALIT`/`GAS_URL` mavjud. Authenticated vertikal smoke hali bajarilmadi. |
+| `r2` | Private `R2_CANONICAL` → `smeta-tizimi-canonical`; public access o‘chirilgan; repo konfiguratsiyasi PASS. |
+| `production_migration` | `t2_lrv_approved_f2_rollup_v1`, source `20260906130000`, live ledger versiyasi `20260906141808`; acceptance `LRV_APPROVED_F2_ROLLUP_ACCEPTANCE_PASS`; biznes qatorlariga DML kiritilmagan. |
+| `live_counts` | `t2_qator=17521`, `t2_akt=1`, `t2_akt_qator=0`, tasdiqlangan F2 aktlari `0`, qoralama F2 aktlari `1`, LRV view `1`; null qiymatlar manbada saqlanadi. |
+| `native_routes` | Native T2 Smeta/Fakt/F2/F2 tarixi/F2 tayyorlash yo‘llarida eski `apiHolatOl`, `apiHolatSaqla` va `gas()` bog‘liqligi topilmadi; R2 oldindan yuklash va price-control adapterlari source darajasida mavjud. |
+| `sheets_bridge` | Ko‘prik kodi, yashirin canonical ID/version/hash va setup hujjati mavjud; egasi tomonidan aktivlashtirish hamda haqiqiy ikki tomonlama round-trip hali bajarilmagan. |
+| `verification` | `tsc`, build, barqaror Vitest `52 fayl / 271 test`, lint `0 error`, `tekshir`, governance va `git diff --check` — PASS. |
+| `release_status` | `SOURCE_READY / INTEGRATION_UPDATED / PREVIEW_DEPLOYED`; main va Cloudflare Production o‘zgartirilmadi. |
+
 # 2026-09-06 — T2 daily native LRV: so‘nggi deploy checkpointi
 
 Ushbu addendum eng so‘nggi masofaviy va runtime tekshiruvini qayd etadi.

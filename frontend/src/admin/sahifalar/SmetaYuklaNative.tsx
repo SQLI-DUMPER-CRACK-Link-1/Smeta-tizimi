@@ -28,6 +28,9 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ qator_soni: number } | null>(null);
   const rawFile = useRef<File | null>(null);
+  const sourceDocumentId = useRef<number | undefined>(undefined);
+  const sourceOperationId = useRef('');
+  const importOperationId = useRef('');
   const generation = useRef(0);
 
   useEffect(() => {
@@ -58,7 +61,8 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
 
   async function upload(file: File) {
     reset(); setBook(null); setBusy(true); setPhase('Fayl o‘qilmoqda');
-    rawFile.current = file;
+    rawFile.current = file; sourceDocumentId.current = undefined;
+    sourceOperationId.current = yangiOperationId(); importOperationId.current = yangiOperationId();
     const token = generation.current;
     try {
       if (file.size > MAX_FILE_BYTES) throw new Error(`Fayl ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
@@ -69,7 +73,8 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
     finally { setBusy(false); }
   }
 
-  async function sourceniR2gaYukla(file: File, objId: number): Promise<number | undefined> {
+  async function sourceniR2gaYukla(file: File, objId: number): Promise<number> {
+    if (sourceDocumentId.current != null) return sourceDocumentId.current;
     try {
       const buf = await file.arrayBuffer();
       const digest = await crypto.subtle.digest('SHA-256', buf);
@@ -79,12 +84,21 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       fd.append('fayl', file); fd.append('kompaniya_id', String(companyId));
       if (loyihaId != null) fd.append('loyiha_id', String(loyihaId));
       fd.append('obyekt_id', String(objId)); fd.append('turi', 'smeta');
-      fd.append('operation_id', yangiOperationId()); fd.append('sha256', sha256); fd.append('size', String(file.size));
+      fd.append('operation_id', sourceOperationId.current || (sourceOperationId.current = yangiOperationId()));
+      fd.append('sha256', sha256); fd.append('size', String(file.size));
       const r = await fetch('/api/hujjat-yukla', { method: 'POST', body: fd });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const j: any = await r.json().catch(() => null);
-      return j && j.ok ? Number(j.document_id) : undefined;
-    } catch { return undefined; }
+      const documentId = j && j.ok ? Number(j.document_id) : NaN;
+      if (!r.ok || !Number.isSafeInteger(documentId) || documentId <= 0) {
+        throw new Error('Manba fayli kanonik R2 saqlashga qabul qilinmadi.');
+      }
+      sourceDocumentId.current = documentId;
+      return documentId;
+    } catch (e) {
+      if (e instanceof Error && e.message === 'Manba fayli kanonik R2 saqlashga qabul qilinmadi.') throw e;
+      throw new Error('Manba fayli kanonik R2 ga yuklanmadi. Import to‘xtatildi.');
+    }
   }
 
   async function importQil() {
@@ -95,14 +109,15 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       const built = f2FaylOqiCore(sheet.rows, cols);
       if (!('tree' in built) || !built.tree.length) throw new Error('Ustunlarni tekshiring — daraxt bo‘sh chiqdi.');
 
-      const sourceDocumentId = rawFile.current ? await sourceniR2gaYukla(rawFile.current, Number(objectId)) : undefined;
+      if (!rawFile.current) throw new Error('Smeta manba fayli topilmadi. XLSX faylni qayta tanlang.');
+      const sourceDocumentId = await sourceniR2gaYukla(rawFile.current, Number(objectId));
       if (generation.current !== token) return;
 
       const r = await fetch('/api/smeta-yukla', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amal: 'import', kompaniyaId: companyId, obyektId: Number(objectId),
-          operationId: yangiOperationId(), sourceDocumentId, tree: built.tree,
+          operationId: importOperationId.current || (importOperationId.current = yangiOperationId()), sourceDocumentId, tree: built.tree,
         }),
       });
       const j = await r.json() as { ok: boolean; code?: string; qator_soni?: number };
@@ -124,7 +139,10 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
     <div className="space-y-3 p-1">
       {!fixedObjectId && <label className="block text-sm">Obyekt
         <select aria-label="Obyekt" className="ml-2 border rounded px-2 py-1"
-          value={objectId} onChange={e => { setObjectId(e.target.value); reset(); }}>
+          value={objectId} onChange={e => {
+            setObjectId(e.target.value); reset(); rawFile.current = null;
+            sourceDocumentId.current = undefined; sourceOperationId.current = ''; importOperationId.current = '';
+          }}>
           <option value="">Tanlang</option>
           {objects.map(o => <option key={o.id} value={o.id}>{o.nom}{o.qator_soni ? ` (${o.qator_soni} qator bor)` : ' (bo‘sh)'}</option>)}
         </select>
@@ -135,7 +153,7 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       {objectId && !alreadyHasSmeta && (
         <label className="block text-sm">Smeta fayli (XLSX)
           <input aria-label="Smeta fayli" type="file" accept=".xlsx,.xlsm" className="ml-2"
-            onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
+          onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
         </label>
       )}
       {busy && <p role="status">{phase}…</p>}

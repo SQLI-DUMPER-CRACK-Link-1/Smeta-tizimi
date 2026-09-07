@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import F2ImportNative from './F2ImportNative';
 
@@ -26,6 +26,9 @@ vi.mock('../../lib/f2-import-parse', () => ({
     ? { tree: rows.map((_, i) => ({ uid: 'f2_' + i, type: 'mat', nom: 'Beton', hajm: 10, narx: 123.45, summa: 1234.49 })) }
     : { cols: { kod: 0, nom: 0, bir: 0, norma: 0, obyom: 0, narx: 1, sum: 2 } },
 }));
+beforeEach(() => {
+  vi.stubGlobal('crypto', { subtle: { digest: async () => new ArrayBuffer(32) } });
+});
 afterEach(() => {
   cleanup(); vi.unstubAllGlobals(); mocks.write.mockReset(); mocks.company.joriy.id = 1;
   mocks.jobYarat.mockReset(); mocks.jobIlgarilash.mockReset(); mocks.draftSaqla.mockReset();
@@ -33,7 +36,9 @@ afterEach(() => {
   try { localStorage.clear(); } catch { /* jsdom */ }
 });
 it('yangi yo‘l asl summani V2 ga yozadi, javob yo‘qolganda ayni operation bilan qaytaradi', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, mosliklar: [{ uid: 'f2_0', row: 123, summa: 999999, narx: 999999 }] }) }));
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => url.includes('/api/hujjat-yukla')
+    ? { ok: true, json: async () => ({ ok: true, document_id: 501 }) }
+    : { ok: true, json: async () => ({ ok: true, mosliklar: [{ uid: 'f2_0', row: 123, summa: 999999, narx: 999999 }] }) }));
   mocks.write.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({ ok: true });
   mocks.jobYarat.mockResolvedValue({ ok: true, job_id: 1, takror: false });
   mocks.draftSaqla.mockResolvedValue({ ok: true, saqlandi: 1 });
@@ -68,6 +73,24 @@ it('yangi yo‘l asl summani V2 ga yozadi, javob yo‘qolganda ayni operation bi
   // Hujjat yozilgach job 'completed' deb belgilanadi va kesh tozalanadi.
   await waitFor(() => expect(mocks.jobIlgarilash).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' })));
   expect(localStorage.getItem('t2-f2-import-job:8')).toBeNull();
+});
+it('R2 manba qabul qilmasa F2 moslashtirish va yozish boshlanmaydi', async () => {
+  const fetchMock = vi.fn().mockImplementation(async (url: string) => url.includes('/api/hujjat-yukla')
+    ? { ok: false, json: async () => ({ ok: false }) }
+    : { ok: true, json: async () => ({ ok: true, mosliklar: [{ uid: 'f2_0', row: 123 }] }) });
+  vi.stubGlobal('fetch', fetchMock);
+  render(<F2ImportNative />);
+  await screen.findByText('Sinov obyekt');
+  fireEvent.change(screen.getByLabelText('Obyekt'), { target: { value: '8' } });
+  fireEvent.change(screen.getByLabelText('F2 davri'), { target: { value: '2026-02' } });
+  const file = new File(['x'], 'manba-yo‘q.xlsx');
+  Object.defineProperty(file, 'arrayBuffer', { value: async () => new ArrayBuffer(1) });
+  fireEvent.change(screen.getByLabelText('XLSX fayl'), { target: { files: [file] } });
+  await screen.findByText('Varaq va ustunlarni tekshiring');
+  fireEvent.click(screen.getByText('Moslashtirish'));
+  await screen.findByText('F2 manba fayli kanonik R2 saqlashga qabul qilinmadi.');
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(mocks.jobYarat).not.toHaveBeenCalled();
 });
 it('kompaniya almashganda eski obyekt tanlovi saqlanmaydi', async () => {
   const { rerender } = render(<F2ImportNative />);
@@ -104,7 +127,8 @@ it('tugallanmagan job topilsa "Davom ettirish" taklif qiladi va uni to‘liq tik
 });
 it('30 000 qatorlik faylni rad etmaydi va har 5000 tadan checkpoint qiladi (Codex "tugadi" mezoni)', async () => {
   mocks.qatorSoni = 30000;
-  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: { body: string }) => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, init: { body: string }) => {
+    if (url.includes('/api/hujjat-yukla')) return { ok: true, json: async () => ({ ok: true, document_id: 777 }) };
     const body = JSON.parse(init.body) as { aktTree: { uid: string }[] };
     return { ok: true, json: async () => ({ ok: true, mosliklar: body.aktTree.map((n) => ({ uid: n.uid, row: 123, summa: 1234.49, narx: 123.45 })) }) };
   }));

@@ -83,6 +83,7 @@ export async function generateNakopitelniy(
     if (holat === 'ortiqcha') holatDisplay = 'ORTIQCHA';
     if (holat === 'chegara') holatDisplay = 'CHEGARA';
     if (holat === 'normal') holatDisplay = 'NORMAL';
+    if (holat === 'aniq_emas') holatDisplay = 'ANIQ EMAS';
     if (isMismatch) holatDisplay += ' (MISMATCH)';
 
     // ⚠️ NARX O'ZIDAN TO'QILMAYDI: sertifikatlangan summa noma'lum (null)
@@ -90,16 +91,20 @@ export async function generateNakopitelniy(
     // yerda "0" YOZILMAYDI (0 "hali sertifikatlanmagan" bilan bir xil
     // ko'rinib, haqiqiy noaniqlikni yashirib qo'yardi). "NOANIQ" yoziladi.
     const summaNoaniq = row.cumulativeCertifiedValue == null;
+    const baselineQuantityNoaniq = row.baselineQuantity == null;
+    const entitlementNoaniq = row.approvedEntitlementQuantity == null;
+    const remainingQuantityNoaniq = row.remainingQuantity == null;
+    const remainingValueNoaniq = row.remainingValue == null;
     const dataRow = worksheet.addRow([
       row.description,
       row.unit,
-      row.baselineQuantity,
+      baselineQuantityNoaniq ? 'NOANIQ' : row.baselineQuantity,
       row.approvedChangeQuantity,
-      row.approvedEntitlementQuantity,
+      entitlementNoaniq ? 'NOANIQ' : row.approvedEntitlementQuantity,
       row.previousQuantity,
       row.currentQuantity,
       row.cumulativeQuantity,
-      row.remainingQuantity,
+      remainingQuantityNoaniq ? 'NOANIQ' : row.remainingQuantity,
       summaNoaniq ? 'NOANIQ' : row.cumulativeCertifiedValue,
       holatDisplay
     ]);
@@ -118,6 +123,10 @@ export async function generateNakopitelniy(
         cell.numFmt = '#,##0.00';
       }
     });
+    if (baselineQuantityNoaniq) dataRow.getCell(3).font = { color: { argb: 'FFFF0000' }, italic: true };
+    if (entitlementNoaniq) dataRow.getCell(5).font = { color: { argb: 'FFFF0000' }, italic: true };
+    if (remainingQuantityNoaniq) dataRow.getCell(9).font = { color: { argb: 'FFFF0000' }, italic: true };
+    if (remainingValueNoaniq) dataRow.getCell(9).note = 'Remaining value: NOANIQ';
     if (summaNoaniq) dataRow.getCell(10).font = { color: { argb: 'FFFF0000' }, italic: true };
 
     if (holat === 'ortiqcha' || isMismatch) {

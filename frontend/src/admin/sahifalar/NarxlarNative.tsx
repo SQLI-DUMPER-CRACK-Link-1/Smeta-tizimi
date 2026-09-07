@@ -250,7 +250,7 @@ export default function NarxlarNative() {
             </label>
             <label className="text-[12px] text-text-dim">Sana narxi uchun sana<input type="date" value={sana} onChange={e => setSana(e.target.value)} className="mt-1 block w-full input" /></label>
           </div>
-          {tanlanganRegistr && <p className="mt-2 text-[11px] text-text-mute">Registr versiyasi: {tanlanganRegistr.versiya}. Saqlash optimistic lock bilan bajariladi.</p>}
+          {tanlanganRegistr && <p className="mt-2 text-[11px] text-text-mute">Saqlash paytida mavjud narx qayta tekshiriladi.</p>}
           <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => void narxniSaqlash()} disabled={saqlanmoqda} className="px-3 py-2 rounded-lg bg-accent text-white text-[12px] disabled:opacity-50"><Save size={14} className="inline mr-1" />Belgilangan narxni saqlash</button><button onClick={() => void sanaNarxiniQoshish()} disabled={saqlanmoqda} className="px-3 py-2 rounded-lg bg-white/5 text-text text-[12px] disabled:opacity-50">Sana narxini qo‘shish</button></div>
         </section>}
       </div>

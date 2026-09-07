@@ -77,6 +77,14 @@ async function rpc(env: Env, name: string, args: Record<string, unknown>) {
   return { httpOk: r.ok, body: j, raw: text };
 }
 
+function importRpcFailure(code = 'IMPORT_RPC_FAILED', status = 502) {
+  return Response.json({
+    ok: false,
+    code,
+    xato: 'Kanonik smeta importi bajarilmadi. Birozdan so‘ng qayta urinib ko‘ring.',
+  }, { status });
+}
+
 async function handleImport(env: Env, actorId: number, body: ImportBody) {
   if (!body.kompaniyaId || !body.obyektId || !body.operationId) {
     return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
@@ -91,14 +99,17 @@ async function handleImport(env: Env, actorId: number, body: ImportBody) {
     return Response.json({ ok: false, code: 'TOO_MANY_ROWS', xabar: `${rows.length} qator (limit ${MAX_ROWS})` }, { status: 422 });
   }
 
-  const res = await rpc(env, 't2_smeta_import_bulk_v1', {
-    p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_obyekt_id: body.obyektId,
-    p_operation_id: body.operationId, p_source_document_id: body.sourceDocumentId ?? null,
-    p_qatorlar: rows,
-  });
-  if (!res.httpOk || !res.body) {
-    return Response.json({ ok: false, code: 'IMPORT_RPC_FAILED', xato: res.raw?.slice(0, 300) }, { status: 502 });
+  let res: Awaited<ReturnType<typeof rpc>>;
+  try {
+    res = await rpc(env, 't2_smeta_import_bulk_v1', {
+      p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_obyekt_id: body.obyektId,
+      p_operation_id: body.operationId, p_source_document_id: body.sourceDocumentId ?? null,
+      p_qatorlar: rows,
+    });
+  } catch {
+    return importRpcFailure('IMPORT_RPC_UNREACHABLE');
   }
+  if (!res.httpOk || !res.body) return importRpcFailure();
   return Response.json(res.body, { status: res.body.ok ? 200 : 409 });
 }
 

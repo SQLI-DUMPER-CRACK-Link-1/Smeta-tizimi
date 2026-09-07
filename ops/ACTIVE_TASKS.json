@@ -637,6 +637,26 @@
       ],
       "production_write_allowed": false,
       "_izoh": "2026-09-05: Owner asked to read a post-deploy incident-round handoff and continue the work; picked up the F2 resumable-import UI wiring Codex's own report explicitly left open (T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT, status merged_backend_ui_wiring_pending), after the owner chose (via AskUserQuestion) for Claude to continue it. Re-reviewed the already-Codex-reviewed t2_f2_import_job_v1 migration myself before touching production; applied it for real (apply_migration), re-ran its own acceptance logic against real obyekt/actor data self-rolled-back with confirmed zero residue. Added the actor-verified sb.ts (2 new GET read-RPCs, stable) / sb-yoz.ts (3 new POST write-RPCs) transport, typed wrappers in supabase.ts, and wired F2ImportNative.tsx: old 15MB/20000-row hard walls replaced by MAX_FILE_BYTES=50MB/MAX_ROWS=60000 (validated range, still under the migration's own 100000 ceiling); per-5000-row draft-save chunking with a job-progress checkpoint written after EVERY chunk (not once at the end); full resumption (job_holat_v1 + draft_royxat_v1, reconstructing source/mapping straight from the draft table's own hajm/narx/summa/lrv_row columns -- no R2/original-file dependency, matching Codex's explicit no-R2-this-lane scope) via a 'Davom ettirish' banner keyed off a localStorage job-id pointer (secondary cache only, per the brief). Caught and fixed a real bug before shipping: the RPC's own status state machine forbids paused->completed, so the review checkpoint must stay 'running' throughout, not 'paused' -- a paused checkpoint would have made every real save() silently fail its own job-completion step with BAD_STATUS_TRANSITION (non-fatal to the user, since job completion is best-effort, but would have left every completed import's job stuck open). Proved the 'tugadi' bar with a new 30000-row synthetic mock test: 6 draft_saqla calls (<=5000 rows each), 6 job_ilgarilash checkpoint calls, final cursor.chunk=30000 -- plus a resumption test proving a resumed session reuses its original write operation_id (no duplicate akt document) and a normal-path test proving job/draft calls fire with correct shapes. Every job/draft call is try/caught and non-blocking -- a failure degrades to a visible warning, never blocks the EXACT SOURCE read/match/review/write path, per Codex brief item 4. Verified: npx tsc -b exit 0, npm run typecheck:functions exit 0, npx oxlint 0 new warnings (diffed F2ImportNative.tsx against a git-stash baseline to confirm the pre-existing 3 warnings are unchanged), npx vitest run 242/242 (was 240/240 before this session's Supabase-log-investigation increment), npm run build succeeds, node ops/governance-check.cjs PASS. NOT done (explicitly, per Codex's own out-of-scope list, unchanged): R2 canonical file storage (resumed rows show kod-only labels, cosmetic not functional); no cleanup for orphaned queued/running jobs a user never returns to (harmless, unreachable not deleted); canonical /admin/f2 still reaches this path only through F2Import.tsx's t2-f2-native-mode localStorage toggle, which defaults OFF -- no canonical-route default behavior changed. Full detail: ops/handoff/T2_PTO_CLOSURE_007_CLAUDE_F2_RESUMABLE_UI_REPORT.md."
+    },
+    {
+      "id": "T2-PTO-DAILY-RELIABILITY-V1-CODEX",
+      "title": "T2 PTO kundalik kanonik workflow reliability checkpointi",
+      "owner": "codex",
+      "branch": "codex/t2-daily-workflow-reliability-v1",
+      "base_sha": "7a49befb611408c8b39ebd8e564465eb423b61bf",
+      "status": "ready_for_review",
+      "lane_of": "T2-PTO-DAILY-WORKFLOW-CLOSURE-007",
+      "owns": ["ops/handoff/T2_PTO_DAILY_WORKFLOW_RELIABILITY_V1_CODEX.md"],
+      "depends_on": ["T2-PTO-DAILY-WORKFLOW-CLOSURE-007"],
+      "must_read": [
+        "AGENTS.md",
+        "docs/governance/CONSTITUTION.md",
+        "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/NEXT_MAIN_RELEASE_CONTINUATION.md",
+        "ops/handoff/T2_PTO_DAILY_WORKFLOW_RELIABILITY_V1_CODEX.md"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "2026-09-06: native T2 kundalik workflow reliability checkpointi. Integration f182bd7 ga yangilandi; live LRV approved-F2 rollup view migratsiyasi qayd etildi; source gate'lar PASS. Candidate Cloudflare deployi authenticated vertikal smoke bilan hali tasdiqlanmagan, Sheets bridge esa owner aktivatsiyasi va round-trip dalilini kutmoqda."
     }
   ]
 }

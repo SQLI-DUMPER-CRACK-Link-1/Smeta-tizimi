@@ -39,11 +39,15 @@ const TESTLAR = [
   ['DOCUMENT CENTER real FILE-TRUTH wiring', 't2_document_center.test.cjs'],
   ['DRIVE REPLICA worker + write-back', 't2_drive_replica.test.cjs'],
   ['SHEETS write-back reference', 't2_sheets_writeback.test.cjs'],
+  ['T2 overnight reconciliation regression guard', 't2_overnight_reconciliation.test.cjs'],
   ['SECURITY P0 cross-cutting guards', 't2_security_p0.test.cjs'],
+  ['Xavfsiz upstream error boundary', 't2_safe_error_boundary.test.cjs'],
+  ['Workbench NULL semantics', 't2_workbench_null_semantics.test.cjs'],
   ['SMETA/F2/NAKOPITELNIY + change control', 't2_smeta_f2_nakopitelniy.test.cjs'],
   ['PRE-MAIN adversarial release contracts', 'pre_main_release_qa.test.cjs'],
   ['COMPANY CONTEXT P0 (provider/scope/superadmin)', 't2_company_context.test.cjs'],
   ['COMPANY CONTEXT adversarial oracle (Codex)', 't2_company_context_adversarial.test.cjs'],
+  ['PTO visible T2 navigation/identity guard', 't2_pto_visible_surface.test.cjs'],
   ['Cloudflare Functions TS gate oracle (Codex)', 't2_functions_typecheck_gate.test.cjs'],
 ];
 
