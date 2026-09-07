@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll } from './SmetaYuklaNative';
+import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini } from './SmetaYuklaNative';
 import type { AktNode } from '../../lib/f2-match-engine';
 import type { F2ColumnConfig } from '../../lib/f2-import-parse';
 
@@ -62,5 +62,15 @@ describe('RES (resursniy vedomost) narx moslashtirish', () => {
     expect(out[0].narx).toBeUndefined();
     expect(mosSoni).toBe(0);
     expect(mosEmasSoni).toBe(1);
+  });
+});
+
+describe('katTaxmini (mijoz tomoni ko‘rib chiqish uchun taxmin)', () => {
+  it('birlikda ЧЕЛ bo‘lsa ЧЕЛ', () => expect(katTaxmini('Ishchi', 'чел-час')).toBe('ЧЕЛ'));
+  it('birlikda МАШ bo‘lsa МАШ', () => expect(katTaxmini('Kran', 'маш-час')).toBe('МАШ'));
+  it('nomda ТРУДА МАШИНИСТОВ bo‘lsa МАШ', () => expect(katTaxmini('Затраты труда машинистов', 'чел-час')).toBe('МАШ'));
+  it('boshqa hollarda МАТ (standart) -- ОБ/КАБ/М-К hech qachon taxmin qilinmaydi', () => {
+    expect(katTaxmini('Кабель ВВГ 3х2,5', 'м')).toBe('МАТ');
+    expect(katTaxmini('Экскаватор', 'шт')).toBe('МАТ');
   });
 });

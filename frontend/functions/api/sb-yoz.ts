@@ -106,6 +106,7 @@ const AMALLAR = {
   loyiha_ochir: { rpc: 't2_loyiha_ochir' },
   obyekt_loyihaga_biriktir: { rpc: 't2_obyekt_loyihaga_biriktir' },
   obyekt_yarat: { rpc: 't2_obyekt_yarat_v1' },
+  resurs_kategoriya_belgila: { rpc: 't2_resurs_kategoriya_belgila_v1' },
   loyiha_qatnashchi_biriktir: { rpc: 't2_loyiha_qatnashchi_biriktir' },
   loyiha_qatnashchi_ochir: { rpc: 't2_loyiha_qatnashchi_ochir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
@@ -1256,6 +1257,32 @@ export const onRequestPost: PagesFunction<{
         p_loyiha_id: so.loyiha_id == null || so.loyiha_id === '' ? null : Number(so.loyiha_id),
         p_nom: String(so.nom).trim().slice(0, 300),
         p_operation_id: UUID_RE.test(String(so.operation_id || '')) ? so.operation_id : crypto.randomUUID(),
+      };
+
+    /* T2-PTO-OWNER-CRITICAL-CLOSURE: resurs kategoriya (ЧЕЛ/МАШ/МАТ/ОБ/М/К/КАБ)
+       registri -- T1 GAS'ning "NARXLAR" registri (10_Engine.js _narxlarKatMap)
+       bilan bir xil mexanizm: bir marta tasdiqlangan nom+birlik keyingi
+       importlarda avtomatik eslab qolinadi. */
+    } else if (amal === 'resurs_kategoriya_belgila') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
+      }
+      const KAT_RUXSAT = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'М/К', 'КАБ'];
+      if (!KAT_RUXSAT.includes(String(so.kategoriya))) {
+        return Response.json({ ok: false, error: 'kategoriya noto\'g\'ri: ' + KAT_RUXSAT.join('|') });
+      }
+      if (!String(so.nom || '').trim() || !String(so.birlik || '').trim()) {
+        return Response.json({ ok: false, error: 'nom va birlik majburiy' });
+      }
+      const UUID_RE2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_nom: String(so.nom).trim().slice(0, 300),
+        p_birlik: String(so.birlik).trim().slice(0, 50),
+        p_kategoriya: String(so.kategoriya),
+        p_operation_id: UUID_RE2.test(String(so.operation_id || '')) ? so.operation_id : crypto.randomUUID(),
       };
 
     /* ⚠️ Polimorfik tashkilot bog'lanishi (MASTER_REJA band 1): taraf

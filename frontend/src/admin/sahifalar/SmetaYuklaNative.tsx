@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { sbT2ObyektlarOlKomp, yangiOperationId, type T2Obyekt } from '../../api/supabase';
+import { sbT2ObyektlarOlKomp, sbT2ResursKategoriyaBelgila, yangiOperationId, type T2Obyekt, type T2ResursKategoriya } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { readXlsx, f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
 import type { AktNode } from '../../lib/f2-match-engine';
@@ -57,6 +57,20 @@ export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxY
   return out;
 }
 
+/** Server t2_kat_birlik bilan bir xil mantiq (birlik matnida ЧЕЛ/МАШ),
+ *  faqat mijoz tomonda ko'rib chiqish uchun taxmin -- yakuniy kategoriya
+ *  hamisha serverda (registr + t2_kat_birlik) hisoblanadi. ОБ/КАБ/М/К hech
+ *  qachon shu taxmindan chiqmaydi -- T1 GAS ham buni faqat registr orqali
+ *  hal qilardi (10_Engine.js), shuning uchun МАТ (standart) qatorlar
+ *  ko'rib chiqish uchun ko'rsatiladi. */
+export function katTaxmini(nom: string, birlik: string): 'ЧЕЛ' | 'МАШ' | 'МАТ' {
+  const b = birlik.toUpperCase();
+  if (nom.toUpperCase().includes('ТРУДА МАШИНИСТОВ')) return 'МАШ';
+  if (b.includes('ЧЕЛ')) return 'ЧЕЛ';
+  if (b.includes('МАШ')) return 'МАШ';
+  return 'МАТ';
+}
+
 export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
   const byKod = new Map<string, number>();
   const byNomBir = new Map<string, number>();
@@ -103,6 +117,8 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
   const [resError, setResError] = useState('');
   const [resIndex, setResIndex] = useState<ResNarxIndeks | null>(null);
   const [resIndexSize, setResIndexSize] = useState(0);
+  const [katKorib, setKatKorib] = useState<Array<{ nom: string; birlik: string; tanlangan: T2ResursKategoriya }>>([]);
+  const [katSaqlanmoqda, setKatSaqlanmoqda] = useState(false);
   const rawFile = useRef<File | null>(null);
   const sourceDocumentId = useRef<number | undefined>(undefined);
   const sourceOperationId = useRef('');
@@ -206,12 +222,41 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
     const satrlar = resSatrlariniOl(sheet.rows, resCols);
     setResIndex(resNarxIndeksiQur(satrlar));
     setResIndexSize(satrlar.length);
+    // "МАТ" (standart) chiqqan noyob nom+birlik juftlari -- aynan shular
+    // haqiqatda ОБ/КАБ/М/К bo'lishi mumkin (T1 GAS ham buni faqat registr
+    // orqali hal qilardi, hech qachon avtomatik taxmin qilmagan).
+    const korilgan = new Set<string>();
+    const kandidatlar: Array<{ nom: string; birlik: string; tanlangan: T2ResursKategoriya }> = [];
+    for (const s of satrlar) {
+      if (!s.nom || !s.birlik) continue;
+      if (katTaxmini(s.nom, s.birlik) !== 'МАТ') continue;
+      const key = s.nom.toUpperCase() + '|' + s.birlik.toUpperCase();
+      if (korilgan.has(key)) continue;
+      korilgan.add(key);
+      kandidatlar.push({ nom: s.nom, birlik: s.birlik, tanlangan: 'МАТ' });
+    }
+    setKatKorib(kandidatlar);
+  }
+
+  /** O'zgartirilgan (МАТ'dan boshqa) kategoriyalarni registrga yozadi --
+   *  best-effort, muvaffaqiyatsizlik importni to'xtatmaydi. */
+  async function katlarniSaqla() {
+    const ozgarganlar = katKorib.filter(k => k.tanlangan !== 'МАТ');
+    if (!ozgarganlar.length) return;
+    setKatSaqlanmoqda(true);
+    try {
+      await Promise.all(ozgarganlar.map(k =>
+        sbT2ResursKategoriyaBelgila({ kompaniyaId: companyId, nom: k.nom, birlik: k.birlik, kategoriya: k.tanlangan }).catch(() => null)));
+    } finally { setKatSaqlanmoqda(false); }
   }
 
   async function importQil() {
     if (!book || !cols || !objectId) return;
     setError(''); setResult(null); const token = generation.current; setBusy(true); setPhase('Import qilinmoqda');
     try {
+      // Kategoriya tuzatishlar (agar bo'lsa) importdan OLDIN registrga
+      // yoziladi -- shu import ham ulardan darhol foydalanishi uchun.
+      await katlarniSaqla();
       const sheet = book.sheet(sheetName)!;
       const built = f2FaylOqiCore(sheet.rows, cols);
       if (!('tree' in built) || !built.tree.length) throw new Error('Ustunlarni tekshiring — daraxt bo‘sh chiqdi.');
@@ -332,6 +377,36 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
                     {resIndexSize} ta resurs narxi o‘qildi ({resIndex.byKod.size} ta kod bo‘yicha, {resIndex.byNomBir.size} ta nom+birlik bo‘yicha).
                     Import bosilganda mos keluvchi narxsiz qatorlarga qo‘llanadi.
                   </p>
+                )}
+                {katKorib.length > 0 && (
+                  <div className="karta p-2 space-y-1.5 border-amber-500/30">
+                    <p className="text-[11px] text-text-mute">
+                      {katKorib.length} ta resurs standart МАТ (material) deb belgilangan — agar ular aslida
+                      ОБ (uskuna), КАБ (kabel) yoki М/К bo‘lsa, shu yerda tuzating. Belgilangan tur keyingi
+                      importlarda ham eslab qolinadi.
+                    </p>
+                    <div className="overflow-auto max-h-48 text-[12px]">
+                      <table className="w-full">
+                        <tbody>
+                          {katKorib.slice(0, 300).map((k, i) => (
+                            <tr key={k.nom + '|' + k.birlik} className="border-t border-border/40">
+                              <td className="py-0.5 pr-2">{k.nom} <span className="text-text-mute">({k.birlik})</span></td>
+                              <td className="py-0.5 text-right">
+                                <select className="border rounded px-1 py-0.5" value={k.tanlangan}
+                                  onChange={e => setKatKorib(prev => prev.map((p, pi) => pi === i ? { ...p, tanlangan: e.target.value as T2ResursKategoriya } : p))}>
+                                  <option value="МАТ">МАТ</option>
+                                  <option value="ОБ">ОБ</option>
+                                  <option value="КАБ">КАБ</option>
+                                  <option value="М/К">М/К</option>
+                                </select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {katSaqlanmoqda && <p role="status" className="text-[11px]">Kategoriyalar saqlanmoqda…</p>}
+                  </div>
                 )}
               </>
             )}

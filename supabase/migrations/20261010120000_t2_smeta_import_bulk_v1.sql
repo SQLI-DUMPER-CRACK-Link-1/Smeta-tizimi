@@ -65,6 +65,22 @@ begin
       (ordinality)::integer as ordinal
     from jsonb_array_elements(p_qatorlar) with ordinality as t(x, ordinality)
   ),
+  -- resurs kategoriyasi (ЧЕЛ/МАШ/МАТ/ОБ/М/К/КАБ): avval kompaniyaning o'z
+  -- tasdiqlangan registri (t2_resurs_kategoriya, nom+birlik bo'yicha --
+  -- T1 GAS'ning "NARXLAR" registri bilan bir xil mexanizm), topilmasa
+  -- t2_kat_birlik (birlik bo'yicha ЧЕЛ/МАШ, aks holda МАТ).
+  kir_kat as (
+    select kir.*,
+      case when kir.tur in ('rs','mat','ob') then
+        coalesce(
+          (select rk.kategoriya from public.t2_resurs_kategoriya rk
+            where rk.kompaniya_id = p_kompaniya_id
+              and rk.nom_key = public.t2_resurs_nom_kalit(kir.nom)
+              and rk.birlik_key = public.t2_resurs_birlik_kalit(kir.birlik)),
+          public.t2_kat_birlik(kir.birlik, kir.nom))
+      end as kat
+    from kir
+  ),
   ins as (
     -- ESLATMA: t2_qator.operation_id ustunida t2_qator_operation_id_uniq
     -- (bitta qatorga bitta operatsiya) bor -- ko'p qatorli bulk importda
@@ -73,15 +89,15 @@ begin
     -- butun chaqiruv darajasida ta'minlangan, shu sabab qator darajasida
     -- operation_id null qoldiriladi.
     insert into public.t2_qator(obyekt_id, kompaniya_id, tur, kod, nom, birlik, hajm, narx, summa,
-      manba_id, tartib, daraja)
+      manba_id, tartib, daraja, kat)
     select p_obyekt_id, p_kompaniya_id, tur, kod, nom, birlik, hajm, narx, summa,
-      p_source_document_id, ordinal, 0
-    from kir order by ordinal
+      p_source_document_id, ordinal, 0, kat
+    from kir_kat order by ordinal
     returning id, tartib
   )
   insert into t2_smeta_import_map(local_id, id, parent_local_id, ordinal)
-  select kir.local_id, ins.id, kir.parent_local_id, kir.ordinal
-  from kir join ins on ins.tartib = kir.ordinal;
+  select kir_kat.local_id, ins.id, kir_kat.parent_local_id, kir_kat.ordinal
+  from kir_kat join ins on ins.tartib = kir_kat.ordinal;
 
   -- 2-PASS: ota_id local_id xaritasi orqali bog'lanadi.
   update public.t2_qator q set ota_id = pmap.id

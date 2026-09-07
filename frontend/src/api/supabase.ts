@@ -1007,6 +1007,23 @@ export async function sbT2ObyektYarat(p: { kompaniyaId: number; loyihaId?: numbe
   return await res.json();
 }
 
+/** T2-PTO-OWNER-CRITICAL-CLOSURE: resurs kategoriya (ЧЕЛ/МАШ/МАТ/ОБ/М/К/КАБ)
+ *  registrini belgilash -- T1 GAS "NARXLAR" registri bilan bir xil mexanizm
+ *  (nom+birlik bo'yicha bir marta tasdiqlansa, keyingi importlar eslaydi). */
+export type T2ResursKategoriya = 'ЧЕЛ' | 'МАШ' | 'МАТ' | 'ОБ' | 'М/К' | 'КАБ';
+export async function sbT2ResursKategoriyaBelgila(p: { kompaniyaId: number; nom: string; birlik: string; kategoriya: T2ResursKategoriya; operationId?: string }): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch('/api/sb-yoz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amal: 'resurs_kategoriya_belgila', kompaniya_id: p.kompaniyaId,
+      nom: p.nom, birlik: p.birlik, kategoriya: p.kategoriya,
+      operation_id: p.operationId || yangiOperationId(),
+    }),
+  });
+  return await res.json();
+}
+
 export async function sbObyektTahrirlash(id: number, nomi: string, tur: string): Promise<any> {
   const res = await fetch('/api/sb-yoz', {
     method: 'POST',
