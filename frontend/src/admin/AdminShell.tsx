@@ -85,6 +85,13 @@ const ESKI_TIZIM_MENYU = [
   { yol: '/admin/sozlamalar', nom: 'Sozlamalar (eski)',   Ikonka: Settings },
 ];
 
+/* T2-PRODUCT-RECOVERY P0: `t2_effective_authorization_core_v1`ning o'z
+ * ruxsat jadvaliga mos (frontend/functions dagi RPC bilan bir xil manba
+ * — biri o'zgarsa ikkinchisi ham yangilanishi kerak). Faqat shu rollarda
+ * HECH QANDAY `.write` ruxsati yo'q. `boss` BU YERDA YO'Q — u to'liq
+ * yozish huquqiga ega. */
+const YOZA_OLMAYDIGAN_ROLLAR = new Set(['rahbar', 'buyurtmachi', 'pudratchi', 'kuzatuvchi']);
+
 export default function AdminShell() {
   return (
     <KompaniyaProvider>
@@ -332,20 +339,41 @@ function AdminShellInner() {
           <KompaniyaTanlagich />
         </div>
 
-        {sess.data && !sess.data.yozaOladi && (
+        {/* ⚠️ 2026-09-07 (Claude, P0): AVVAL bu yerda `sess.data.yozaOladi`
+         * ishlatilardi — /api/sessiya'dagi BITTA GLOBAL rol asosida
+         * (`functions/api/sessiya.ts`: `!(rol==='boss'||rol==='rahbar')`).
+         * Bu rol foydalanuvchining "birinchi (eng kichik id) faol
+         * a'zoligi"dan kelardi — QAYSI KOMPANIYA TANLANGANIGA BOG'LIQ
+         * EMAS. Natija: "New Times" kompaniyasida haqiqiy BOSS bo'lgan
+         * odam ham "yozish mumkin emas" ogohlantirishini ko'rardi, chunki
+         * boss GLOBAL darajada har doim shu ro'yxatga tushardi.
+         * Haqiqiy qonun: RUXSAT — FAOL KOMPANIYA A'ZOLIGI + SERVER
+         * EFFECTIVE AUTHORIZATION (`t2_effective_authorization_v1`), hech
+         * qachon global sessiya satri emas. `t2_effective_authorization_
+         * core_v1`ning o'z ruxsat jadvaliga ko'ra faqat `rahbar`/
+         * `buyurtmachi`/`pudratchi`/`kuzatuvchi` HAQIQATAN yozish huquqiga
+         * ega emas — `boss` esa TO'LIQ yozish huquqiga ega. */}
+        {!k.globalRejim && k.joriy && YOZA_OLMAYDIGAN_ROLLAR.has(effektivRol) && (
           <div className="flex-shrink-0 z-20 bg-warn/15 border-b border-warn/30 px-6 py-2 flex items-center gap-2 text-sm text-text backdrop-blur-sm">
             <AlertTriangle size={16} className="text-warn flex-shrink-0" />
             <span className="flex-1">
-              Siz <strong>{sess.data.rol}</strong> rolida kirgansiz — bu rolda <strong>yozish mumkin emas</strong>.
-              Admin bo'lib qayta kiring.
+              Siz <strong>«{k.joriy.nom}»</strong>da <strong>{effektivRol}</strong> rolidasiz — bu rol shu kompaniyada faqat ko'rish uchun.
             </span>
-            <button onClick={handleLogout} className="h-7 px-3 rounded-lg bg-warn/20 hover:bg-warn/30 text-text text-xs font-medium cursor-pointer">
-              Chiqish
-            </button>
           </div>
         )}
 
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        {/* ⚠️ 2026-09-07 (Claude, T2-PRODUCT-RECOVERY P0): AVVAL bu yerda
+         * `overflow-hidden` bor edi — har bir sahifa Outlet ichida
+         * ATAYLAB o'z scroll konteynerini qurmasa, viewport'dan tashqarida
+         * qolgan kontentga HECH QANDAY yo'l bilan yetib bo'lmasdi (sichqon
+         * g'ildiragi, touchpad, PageDown — hech biri ishlamasdi, chunki
+         * scroll oladigan konteyner umuman yo'q edi). Endi standart:
+         * sahifa o'zi scroll qiladi. Ichki "workbench" (masalan virtual
+         * jadval, o'z balandligini o'zi boshqaradigan) sahifalar bemalol
+         * ichki `overflow-hidden`/`h-full` saqlaydi — bu ichki konteyner
+         * shu tashqi scroll konteynerining ICHIDA, hajmi mos kelsa
+         * tashqi scroll umuman ko'rinmaydi. */}
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
           <RuxsatGuard />
         </div>
       </main>

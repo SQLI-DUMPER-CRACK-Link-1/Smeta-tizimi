@@ -418,7 +418,15 @@ export default function KompaniyaPage() {
     );
   }
 
-  const men = q.data!;
+  /* ⚠️ 2026-09-07 (Claude): `isLoading`/`isError` ikkalasi ham false
+   * bo'lib, `data` hali ham `undefined` bo'lishi mumkin (masalan
+   * fon-refetch orasidagi qisqa holat) — `q.data!` shu holatda
+   * "Cannot read properties of undefined" bilan butun sahifani
+   * qulatardi (ErrorBoundary tomonidan tutilgan, lekin foydalanuvchi
+   * uchun "Sahifani ko'rsatib bo'lmadi" degan foydasiz umumiy xato
+   * ko'rinardi). */
+  if (!q.data) return <div className="p-6 text-sm text-text-dim flex items-center gap-2"><Loader2 className="animate-spin" size={16} /> Yuklanmoqda…</div>;
+  const men = q.data;
 
   return (
     <div className="p-6 bg-bg min-h-screen text-text max-w-4xl">

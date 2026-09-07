@@ -154,9 +154,17 @@ export const onRequestPost: PagesFunction<{
     if (!sess) {
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });
     }
-    /* Rahbar rejimida yozish yo'q — `/api/gas` bilan BIR XIL qoida.
-       Ikki joyda ikki xil qoida bo'lsa, biri unutiladi. */
-    if (sess.rol === 'boss' || sess.rol === 'rahbar') {
+    /* ⚠️ 2026-09-07 (Claude, P0 — T2-PRODUCT-RECOVERY): AVVAL bu yerda
+     * `boss` ham bloklangan edi. `sess.rol` — LOGIN vaqtida hisoblangan
+     * GLOBAL rol (foydalanuvchining ENG BIRINCHI faol a'zoligidan,
+     * qaysi kompaniya tanlanganidan MUSTAQIL — `t2_parol_tekshir_v1`ga
+     * qarang). Haqiqiy qonun: RUXSAT — FAOL KOMPANIYA A'ZOLIGI + SERVER
+     * EFFECTIVE AUTHORIZATION (`t2_effective_authorization_v1`ning
+     * o'z jadvaliga ko'ra `boss` TO'LIQ yozish huquqiga ega — faqat
+     * `rahbar` haqiqatan o'quvchi-nazoratchi). Bu global tekshiruv
+     * ENDI faqat `rahbar`ni to'sadi; kompaniyaga xos aniq tekshiruv
+     * pastda (`azolik.rol`) davom etadi. */
+    if (sess.rol === 'rahbar') {
       return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' },
                            { status: 403 });
     }
@@ -225,9 +233,13 @@ export const onRequestPost: PagesFunction<{
          * GAS'dan kelgan BITTA rolga asoslanadi (barcha kompaniya uchun
          * bir xil). Lekin bitta odam bir kompaniyada admin, boshqasida
          * faqat rahbar (ko'ruvchi) bo'lishi mumkin — bu haqiqiy
-         * maqsad. Shu kompaniyaga xos rol boss/rahbar bo'lsa, global
-         * rol boshqacha bo'lsa ham bu YOZUV rad etiladi. */
-        if (azolik.rol === 'boss' || azolik.rol === 'rahbar') {
+         * maqsad. ⚠️ 2026-09-07 (Claude, P0): AVVAL bu yerda `boss` ham
+         * bloklangan edi — bu XATO edi (real ruxsat jadvaliga qarang:
+         * `t2_effective_authorization_v1`da `boss` TO'LIQ yozish
+         * huquqiga ega, faqat `rahbar` emas). Shu kompaniyaga xos rol
+         * `rahbar` bo'lsa, global rol boshqacha bo'lsa ham bu YOZUV
+         * rad etiladi. */
+        if (azolik.rol === 'rahbar') {
           return Response.json({ ok: false,
             error: 'Bu kompaniyada rahbar rolida yozish mumkin emas' },
             { status: 403 });

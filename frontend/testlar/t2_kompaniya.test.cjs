@@ -111,8 +111,14 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
     s.indexOf('/rest/v1/' + '${') < 0 && !/rest\/v1\/'\s*\+\s*[a-z]/.test(s));
   T('versiya MAJBURIY (usiz rad etiladi)',
     s.indexOf('kutilgan_versiya majburiy') >= 0);
-  T('rahbar roli yoza olmaydi',
-    s.indexOf("sess.rol === 'boss'") >= 0 && s.indexOf('403') >= 0);
+  /* ⚠️ 2026-09-07 (Claude, P0): AVVAL bu yerda `sess.rol === 'boss'`
+     satri tekshirilardi — bu global check `boss`ni HAM bloklardi, bu
+     XATO edi (real ruxsat jadvaliga ko'ra boss to'liq yozish huquqiga
+     ega, faqat rahbar emas). Endi to'g'ri qonunga mos: faqat `rahbar`
+     bloklanadi. */
+  T('rahbar roli yoza olmaydi (boss EMAS)',
+    s.indexOf("sess.rol === 'rahbar'") >= 0 && s.indexOf('403') >= 0 &&
+    !/sess\.rol === 'boss'/.test(s));
   T('maydon oq ro\'yxati bor',
     /RUXSAT\s*=\s*\['nom',\s*'hajm',\s*'narx',\s*'birlik',\s*'kat'\]/.test(s));
   T('manba doim `frontend` (klient o\'zi tanlay olmaydi)',

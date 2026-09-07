@@ -67,8 +67,11 @@ console.log('\n── 3. sb-yoz.ts HAR YOZUVDA A\'ZOLIKNI TEKSHIRADIMI ──');
   T('eski sessiya (kompaniyalar yo\'q) bloklanib qolmaydi',
     /Array\.isArray\(sess\.kompaniyalar\)/.test(s));
   T('rad javobi 403 bilan qaytadi', /zo emassiz[\s\S]{0,80}status:\s*403/.test(s));
-  T('POLIMORFIK ROL: shu kompaniyadagi rol boss/rahbar bo\'lsa yozish rad etiladi',
-    /azolik\.rol === 'boss' \|\| azolik\.rol === 'rahbar'/.test(s));
+  /* ⚠️ 2026-09-07 (Claude, P0): AVVAL `boss` ham shu yerda bloklangan
+     edi — bu XATO edi (t2_effective_authorization_v1ning o'z jadvaliga
+     ko'ra boss to'liq yozish huquqiga ega). Endi faqat `rahbar`. */
+  T('POLIMORFIK ROL: shu kompaniyadagi rol rahbar bo\'lsa yozish rad etiladi (boss EMAS)',
+    /azolik\.rol === 'rahbar'/.test(s) && !/azolik\.rol === 'boss'/.test(s));
 }
 
 console.log('\n── 4. sb.ts (O\'QISH) HAM KOMPANIYA A\'ZOLIGINI TEKSHIRADIMI ──');
