@@ -9,6 +9,8 @@ import { readXlsx, f2FaylOqiCore, type XlsxWorkbook, type F2ColumnConfig, type S
 import { type AktNode, type LrvNode, type F2MatchResult } from '../../lib/f2-match-engine';
 import { f2AggregatsiyaQator, f2ExactPayloadQur, type F2ExactManbaTugun } from '../../test02/f2-exact-payload';
 import { F2PreapprovalAudit } from '../../test02/F2PreapprovalAudit';
+import { Skelet } from '../../umumiy/ui/Sahifa';
+import { IkkiPanel } from '../../umumiy/ui/IkkiPanel';
 
 /* T2-GAS-EXIT-001 SS5/SS6 + T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT:
  * eski qattiq devor (15MB / 20000 qator) endi durable job/draft modeli bilan
@@ -97,7 +99,14 @@ function NativeSession({ companyId }: { companyId: number }) {
   const [labels, setLabels] = useState(new Map<string, string>());
   const [targets, setTargets] = useState(new Map<number, string>());
   const [page, setPage] = useState(0);
-  const [faqatMoslashmagan, setFaqatMoslashmagan] = useState(false);
+  const [matchingFilter, setMatchingFilter] = useState<'all' | 'suggested' | 'unmatched'>('all');
+  const [sourceSearch, setSourceSearch] = useState('');
+  const [targetSearch, setTargetSearch] = useState('');
+  const [selectedUid, setSelectedUid] = useState<string | null>(null);
+  const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
+  const [manualBindings, setManualBindings] = useState<Set<string>>(new Set());
+  const targetRowRefs = useRef<Record<number, HTMLTableRowElement | null>>({});
+  const sourceRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const [phase, setPhase] = useState('Faylni tanlang');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -145,6 +154,7 @@ function NativeSession({ companyId }: { companyId: number }) {
   function reset() {
     generation.current++;
     setSource([]); setMapping(new Map()); setReviewed(false); setDone(false); setError(''); setDraftXato(''); setPage(0);
+    setMatchingFilter('all'); setSourceSearch(''); setTargetSearch(''); setSelectedUid(null); setSelectedTargetId(null); setManualBindings(new Set());
     operation.current = ''; jobId.current = null; jobVersiya.current = 1;
   }
   async function resume(r: Resumable) {
@@ -248,7 +258,7 @@ function NativeSession({ companyId }: { companyId: number }) {
       const stack = [...built.tree];
       while (stack.length) { const n = stack.pop()!; names.set(n.uid, `${n.kod || ''} ${n.nom || ''} (${n.bir || '—'})`); stack.push(...(n.children || [])); }
       setLabels(names); setTargets(new Map(rows.map(q => [q.id, `${q.kod || ''} ${q.nom || ''} (${q.birlik || '—'})`])));
-      setSource(leaves); setMapping(bindings); operation.current = yangiOperationId(); setPhase('Ko‘rib chiqish kerak');
+      setSource(leaves); setMapping(bindings); setManualBindings(new Set()); operation.current = yangiOperationId(); setPhase('Ko‘rib chiqish kerak');
       await qoralamaniSaqla(leaves, bindings, names);
     } catch (e) { if (generation.current === token) setError(e instanceof Error ? e.message : 'O‘qish bajarilmadi.'); }
     finally { setBusy(false); }
@@ -300,6 +310,60 @@ function NativeSession({ companyId }: { companyId: number }) {
     }
   }
   const payload = useMemo(() => { try { return { rows: exactWrite(source, mapping), error: '' }; } catch (e) { return { rows: [], error: e instanceof Error ? e.message : 'Tekshiruv kerak.' }; } }, [source, mapping]);
+  const importSummary = useMemo(() => {
+    const unmatched = source.filter((row) => !mapping.has(row.uid)).length;
+    const missingValues = source.filter((row) => row.narx == null || row.summa == null).length;
+    const arithmeticMismatch = source.filter((row) => row.narx != null && row.summa != null && Math.abs(row.hajm * row.narx - row.summa) > 0.005).length;
+    const reviewRequired = source.filter((row) => !mapping.has(row.uid) || row.narx == null || row.summa == null || (row.narx != null && row.summa != null && Math.abs(row.hajm * row.narx - row.summa) > 0.005)).length;
+    return {
+      exactMatched: source.length - reviewRequired,
+      reviewRequired,
+      unmatched,
+      arithmeticMismatch,
+      missingValues,
+    };
+  }, [mapping, source]);
+  useEffect(() => {
+    const target = selectedUid ? mapping.get(selectedUid) ?? null : null;
+    setSelectedTargetId(target);
+    const sourceRow = selectedUid ? sourceRowRefs.current[selectedUid] : null;
+    const targetRow = target != null ? targetRowRefs.current[target] : null;
+    if (sourceRow && typeof sourceRow.scrollIntoView === 'function') sourceRow.scrollIntoView({ block: 'nearest' });
+    if (targetRow && typeof targetRow.scrollIntoView === 'function') targetRow.scrollIntoView({ block: 'nearest' });
+  }, [mapping, selectedUid]);
+  const visibleSource = useMemo(() => {
+    const query = sourceSearch.trim().toLowerCase();
+    return source.filter((row) => {
+      const label = (labels.get(row.uid) || row.uid).toLowerCase();
+      const mapped = mapping.has(row.uid);
+      const stateMatches = matchingFilter === 'all' || (matchingFilter === 'suggested' && mapped && !manualBindings.has(row.uid)) || (matchingFilter === 'unmatched' && !mapped);
+      return stateMatches && (!query || label.includes(query));
+    });
+  }, [labels, manualBindings, mapping, matchingFilter, source, sourceSearch]);
+  useEffect(() => {
+    if (!visibleSource.length) { setSelectedUid(null); return; }
+    if (!selectedUid || !visibleSource.some((row) => row.uid === selectedUid)) setSelectedUid(visibleSource[0].uid);
+  }, [selectedUid, visibleSource]);
+  const visibleTargets = useMemo(() => {
+    const query = targetSearch.trim().toLowerCase();
+    return [...targets.entries()].filter(([, label]) => !query || label.toLowerCase().includes(query)).slice(0, 500);
+  }, [targetSearch, targets]);
+  const sourceByTarget = useMemo(() => {
+    const index = new Map<number, F2ExactManbaTugun>();
+    for (const row of source) {
+      const targetId = mapping.get(row.uid);
+      if (targetId != null && !index.has(targetId)) index.set(targetId, row);
+    }
+    return index;
+  }, [mapping, source]);
+  const manualRebind = (targetId: number) => {
+    if (!selectedUid || done || busy) return;
+    const next = new Map(mapping);
+    next.set(selectedUid, targetId);
+    setMapping(next);
+    setManualBindings((old) => new Set(old).add(selectedUid));
+    setSelectedTargetId(targetId);
+  };
   async function save() {
     if (writing.current || done || !reviewed || payload.error || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
     writing.current = true; setBusy(true); setPhase('Yozilmoqda'); setError('');
@@ -349,25 +413,42 @@ function NativeSession({ companyId }: { companyId: number }) {
     </fieldset>
     {cols && <fieldset disabled={busy || done} className="karta flex flex-wrap items-end gap-3 p-4"><legend className="px-1 text-xs font-semibold text-text">Ustun raqamlari (1 dan boshlab)</legend>{(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => <label key={k} className="text-xs text-text-dim">{k}<input className="input mt-1 h-9 w-20" type="number" min="1" value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} /></label>)}<button className="h-9 rounded-[10px] bg-accent px-4 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50" onClick={() => void match()} disabled={!objectId || !month}>Moslashtirish</button></fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
-    {source.length > 0 && <>{(() => {
-      const korinadigan = faqatMoslashmagan ? source.filter(n => !mapping.has(n.uid)) : source;
-      const nishonlar = [...targets.entries()];
-      return <>
-        <p>{source.length} manba qatoridan {source.filter(n => mapping.has(n.uid)).length} tasi bog‘landi.
-          {' '}<label className="ml-2 text-[12px]"><input type="checkbox" checked={faqatMoslashmagan} onChange={e => { setFaqatMoslashmagan(e.target.checked); setPage(0); }} /> faqat moslashmaganlar</label>
-        </p>
-        <details className="karta overflow-hidden" open={faqatMoslashmagan}><summary className="cursor-pointer border-b border-border px-4 py-3 text-sm font-medium">Bog‘lanishlarni ko‘rish va qo‘lda tuzatish</summary><div className="overflow-auto"><table className="w-full text-sm"><thead className="bg-surface-2 text-xs text-text-dim"><tr><th className="px-3 py-2 text-left">F2 manba</th><th className="px-3 py-2 text-left">Smeta qatori</th><th className="px-3 py-2 text-right">Hajm</th><th className="px-3 py-2 text-right">Narx</th><th className="px-3 py-2 text-right">Hujjat summasi</th></tr></thead><tbody>{korinadigan.slice(page * 50, page * 50 + 50).map(n => <tr key={n.uid} className="border-t border-border"><td className="px-3 py-2">{labels.get(n.uid)}</td><td>
-          <select value={mapping.get(n.uid) ?? ''} onChange={e => {
-            const v = e.target.value; const yangi = new Map(mapping);
-            if (v) yangi.set(n.uid, Number(v)); else yangi.delete(n.uid);
-            setMapping(yangi);
-          }}>
-            <option value="">— Moslashtirilmagan —</option>
-            {nishonlar.map(([id, nom]) => <option key={id} value={id}>{nom}</option>)}
-          </select>
-        </td><td>{n.hajm}</td><td>{n.narx ?? '—'}</td><td>{n.summa ?? '—'}</td></tr>)}</tbody></table></div><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Oldingi</button><span> {page + 1} / {Math.max(1, Math.ceil(korinadigan.length / 50))} </span><button disabled={(page + 1) * 50 >= korinadigan.length} onClick={() => setPage(p => p + 1)}>Keyingi</button></details>
-      </>;
-    })()}
+    {source.length > 0 && <>
+      <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5" aria-label="F2 import tekshiruv xulosasi">
+        {[
+          ['Aniq mos', importSummary.exactMatched, importSummary.exactMatched ? 'text-ok' : 'text-text'],
+          ['Ko‘rib chiqish', importSummary.reviewRequired, importSummary.reviewRequired ? 'text-warn' : 'text-text'],
+          ['Moslashmagan', importSummary.unmatched, importSummary.unmatched ? 'text-danger' : 'text-text'],
+          ['Arifmetik farq', importSummary.arithmeticMismatch, importSummary.arithmeticMismatch ? 'text-warn' : 'text-text'],
+          ['Qiymat yo‘q', importSummary.missingValues, importSummary.missingValues ? 'text-warn' : 'text-text'],
+        ].map(([label, value, tone]) => <div key={String(label)} className="karta px-3 py-2"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-mute">{label}</p><p className={`mt-1 text-lg font-semibold tabular-nums ${tone}`}>{value}</p></div>)}
+      </section>
+      <section className="karta flex flex-wrap items-center justify-between gap-3 p-3" aria-label="F2 matching filterlari">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-text-dim"><span>{source.length} manba qatoridan {source.filter((n) => mapping.has(n.uid)).length} tasi bog‘landi.</span><span>·</span><span>{targets.size} kanonik qator</span></div>
+        <div className="flex flex-wrap gap-1" role="tablist" aria-label="Moslash holati">
+          {([['all', 'Hammasi'], ['suggested', 'Avto moslangan'], ['unmatched', 'Moslashmagan']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={matchingFilter === id} onClick={() => { setMatchingFilter(id); setPage(0); }} className={`rounded-full border px-2.5 py-1 text-[11px] ${matchingFilter === id ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-dim hover:text-text'}`}>{label}</button>)}
+        </div>
+      </section>
+      <IkkiPanel
+        balandlik="min(640px, calc(100dvh - 390px))"
+        chapSarlavha={<span>F2 manba <span className="text-text-mute">({visibleSource.length})</span></span>}
+        ongSarlavha={<span>Kanonik smeta / LRV <span className="text-text-mute">({targets.size})</span></span>}
+        chapOng={<input aria-label="F2 manbadan qidirish" value={sourceSearch} onChange={(event) => { setSourceSearch(event.target.value); setPage(0); }} placeholder="Manbadan qidirish…" className="input h-8 w-44 text-xs" />}
+        chap={<div className="min-w-[560px]">
+          <div className="sticky top-0 z-[1] border-b border-border bg-surface-2 px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-text-dim">Qatorni tanlang — o‘ng panelda mos smeta qatori yoritiladi</div>
+          <table className="w-full text-xs"><thead className="sticky top-[33px] z-[1] bg-surface-2 text-text-dim"><tr><th className="px-3 py-2 text-left">Ish / manba</th><th className="text-right">Hajm</th><th className="text-right">Narx</th><th className="text-right">Summa</th><th className="px-3">Holat</th></tr></thead><tbody>{visibleSource.slice(page * 80, page * 80 + 80).map((n) => { const mapped = mapping.get(n.uid); const selected = selectedUid === n.uid; const manual = manualBindings.has(n.uid); const mismatch = n.narx != null && n.summa != null && Math.abs(n.hajm * n.narx - n.summa) > 0.005; return <tr key={n.uid} ref={(el) => { sourceRowRefs.current[n.uid] = el; }} onClick={() => setSelectedUid(n.uid)} className={`cursor-pointer border-t border-border transition-colors ${selected ? 'bg-accent/15' : 'hover:bg-surface-2/60'}`}><td className="max-w-[270px] px-3 py-2"><div className="truncate font-medium text-text">{labels.get(n.uid) || 'Manba qatori'}</div><div className="text-[10px] text-text-mute">{manual ? 'Qo‘lda bog‘langan' : mapped != null ? 'Avto tavsiya' : 'Moslashmagan'}</div></td><td className="text-right tabular-nums">{n.hajm}</td><td className="text-right tabular-nums">{n.narx ?? '—'}</td><td className="text-right tabular-nums">{n.summa ?? '—'}{mismatch && <div className="text-[10px] text-warn">Q×narx farqi</div>}</td><td className="px-3 text-center">{mapped != null ? <span className={manual ? 'text-accent' : 'text-ok'}>{manual ? 'Qo‘lda' : 'Tavsiya'}</span> : <span className="text-danger">Kutilmoqda</span>}</td></tr>; })}</tbody></table>
+          {visibleSource.length === 0 && <div className="p-8 text-center text-sm text-text-dim">Bu filtr bo‘yicha manba qatori topilmadi.</div>}
+          {visibleSource.length > 80 && <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs text-text-dim"><button type="button" disabled={page === 0} onClick={() => setPage((value) => value - 1)} className="rounded border border-border px-2 py-1 disabled:opacity-40">Oldingi</button><span>{page * 80 + 1}–{Math.min((page + 1) * 80, visibleSource.length)} / {visibleSource.length}</span><button type="button" disabled={(page + 1) * 80 >= visibleSource.length} onClick={() => setPage((value) => value + 1)} className="rounded border border-border px-2 py-1 disabled:opacity-40">Keyingi</button></div>}
+        </div>}
+        ong={<div className="min-w-[520px]">
+          <div className="sticky top-0 z-[1] flex items-center justify-between gap-2 border-b border-border bg-surface-2 px-3 py-2"><span className="text-[10px] uppercase tracking-[0.1em] text-text-dim">Tanlangan manba: {selectedUid ? (labels.get(selectedUid) || '—') : 'qator tanlang'}</span><input aria-label="Kanonik smetadan qidirish" value={targetSearch} onChange={(event) => setTargetSearch(event.target.value)} placeholder="Smetadan qidirish…" className="input h-8 w-48 text-xs" /></div>
+          {selectedUid && <div className="border-b border-accent/20 bg-accent/5 px-3 py-2 text-xs text-text-dim">O‘ng tomondan qatorni tanlang, keyin <b className="text-text">Bog‘lash</b> ni bosing. Bu faqat matching bog‘lanishini o‘zgartiradi; F2 qiymatlari manba fayldan qoladi.</div>}
+          <table className="w-full text-xs"><thead className="sticky top-[49px] z-[1] bg-surface-2 text-text-dim"><tr><th className="px-3 py-2 text-left">Kanonik ish / resurs</th><th className="text-right">Bog‘langan</th><th className="px-3 text-right">Amal</th></tr></thead><tbody>{visibleTargets.map(([id, label]) => { const mappedSource = sourceByTarget.get(id); const selected = selectedTargetId === id; return <tr key={id} ref={(el) => { targetRowRefs.current[id] = el; }} onClick={() => { setSelectedTargetId(id); if (mappedSource) setSelectedUid(mappedSource.uid); }} className={`border-t border-border transition-colors ${selected ? 'bg-accent/15' : 'hover:bg-surface-2/60'}`}><td className="max-w-[300px] px-3 py-2"><div className="truncate text-text">{label}</div>{mappedSource && <div className="text-[10px] text-ok">{labels.get(mappedSource.uid) || 'Manba qatori'}</div>}</td><td className="text-right text-text-dim">{mappedSource ? '1' : '—'}</td><td className="px-3 text-right"><button type="button" onClick={(event) => { event.stopPropagation(); manualRebind(id); }} disabled={!selectedUid || busy || done} className="rounded border border-accent/40 px-2 py-1 text-[11px] font-semibold text-text hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40">{mapping.get(selectedUid || '') === id ? 'Bog‘langan' : 'Bog‘lash'}</button></td></tr>; })}</tbody></table>
+          {visibleTargets.length === 0 && <div className="p-8 text-center text-sm text-text-dim">Smeta qatori topilmadi.</div>}
+          {targets.size > visibleTargets.length && <p className="border-t border-border px-3 py-2 text-[11px] text-text-mute">{visibleTargets.length} ta qator ko‘rsatildi. Qidiruvni toraytiring.</p>}
+        </div>}
+      />
+      <p className="text-xs text-text-mute">Matching workbench: avtomatik tavsiya → ko‘rib chiqish → zarur bo‘lsa qo‘lda qayta bog‘lash. Ichki row/UID identifikatorlari biznes nomi sifatida ishlatilmaydi.</p>
       <F2PreapprovalAudit aktBarglar={source} getSmetaId={uid => mapping.get(uid)} />
       {payload.error && <p role="alert">{payload.error}</p>}
       <label className="block"><input type="checkbox" checked={reviewed} disabled={busy || done} onChange={e => setReviewed(e.target.checked)} /> Varaq, davr va moslashtirish natijasini tekshirdim</label>
@@ -378,7 +459,7 @@ function NativeSession({ companyId }: { companyId: number }) {
 
 export default function F2ImportNative() {
   const { joriy, yuklanmoqda } = useKompaniya();
-  if (yuklanmoqda) return <p>Kompaniya yuklanmoqda…</p>;
-  if (!joriy?.id) return <p>Kompaniyani tanlang.</p>;
+  if (yuklanmoqda) return <div className="os-workbench"><Skelet qatorlar={5} /></div>;
+  if (!joriy?.id) return <div className="os-workbench"><div className="karta p-6 text-sm text-text-dim">F2 importni boshlash uchun kompaniyani tanlang.</div></div>;
   return <NativeSession key={joriy.id} companyId={joriy.id} />;
 }

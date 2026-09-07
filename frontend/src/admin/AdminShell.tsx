@@ -103,15 +103,19 @@ function routeLabel(pathname: string) {
 function routeContext(pathname: string, search: string) {
   const params = new URLSearchParams(search);
   const loyiha = params.get('loyiha') ?? params.get('project');
+  const loyihaNomi = params.get('loyiha_nomi') ?? params.get('project_name') ?? params.get('projectName');
   const objectFromQuery = params.get('obyekt') ?? params.get('object');
+  const objectNomi = params.get('obyekt_nomi') ?? params.get('object_name') ?? params.get('objectName');
   const objectFromPath = pathname.match(/^\/admin\/holat\/([^/]+)/)?.[1];
-  const format = (label: string, value: string | null | undefined) => {
-    if (!value) return null;
-    let decoded = value;
-    try { decoded = decodeURIComponent(value); } catch { /* keep the URL value */ }
-    return /^\d+$/.test(decoded) ? `${label} #${decoded}` : `${label}: ${decoded}`;
+  const format = (label: string, value: string | null | undefined, name: string | null | undefined) => {
+    if (name) {
+      let decodedName = name;
+      try { decodedName = decodeURIComponent(name); } catch { /* keep the URL value */ }
+      return `${label}: ${decodedName}`;
+    }
+    return value ? `${label} tanlangan` : null;
   };
-  return [format('Loyiha', loyiha), format('Obyekt', objectFromQuery ?? objectFromPath)].filter(Boolean).join(' · ');
+  return [format('Loyiha', loyiha, loyihaNomi), format('Obyekt', objectFromQuery ?? objectFromPath, objectNomi)].filter(Boolean).join(' · ');
 }
 
 export default function AdminShell() {

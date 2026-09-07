@@ -7,8 +7,9 @@ import { FmtN } from '../../lib/format';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
 import {
   sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur,
-  type T2Obyekt,
+  yangiOperationId, type T2Obyekt,
 } from '../../api/supabase';
+import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
 import type { TreeNode } from '../../api/types';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
 import SmetaYuklaNative from './SmetaYuklaNative';
@@ -73,6 +74,38 @@ export function HolatNative() {
   const faktJami = tree.reduce((sum, n) => sum + (n.stFakt || 0), 0);
   const f2Jami = tree.reduce((sum, n) => sum + (n.stF2 || 0), 0);
 
+  const faktSaqlash = useCallback(async (node: TreeNode, mode: 'qoshish' | 'jami', value: number) => {
+    if (!validId || node.id == null) return { ok: false, message: 'Kanonik qator ID topilmadi.' };
+    const sana = new Date().toISOString().slice(0, 10);
+    const operationId = yangiOperationId();
+    if (mode === 'qoshish') {
+      const result = await sbFaktYoz({
+        obyektId,
+        sana,
+        operationId,
+        qatorlar: [{ qator_id: node.id, hajm: value }],
+        izoh: 'LRV ichidan kanonik Fakt qo‘shish',
+      });
+      if (!result.ok) return { ok: false, message: result.error || result.xabar || 'Fakt qo‘shilmadi.' };
+    } else {
+      const result = await sbFaktBelgilaV2({
+        obyektId,
+        qatorId: node.id,
+        expectedFaktHajm: Number(node.fakt || 0),
+        yangiFaktHajm: value,
+        sana,
+        operationId,
+        izoh: 'LRV ichidan kanonik Fakt jami tahriri',
+      });
+      if (!result.ok) {
+        const conflict = result.code === 'FAKT_CONFLICT';
+        return { ok: false, conflict, message: conflict ? 'Qator serverda o‘zgargan. Yangilang va qayta urinib ko‘ring.' : (result.error || result.xabar || 'Fakt saqlanmadi.') };
+      }
+    }
+    await yuklash();
+    return { ok: true };
+  }, [obyektId, validId, yuklash]);
+
   return (
     <Sahifa sarlavha="Ishchi smeta / LRV" tavsif="Supabase kanonik qatorlari va tasdiqlangan F2 tarixi">
       <div className="flex h-full min-h-0 flex-col gap-3">
@@ -80,7 +113,7 @@ export function HolatNative() {
           <button onClick={() => navigate('/admin/obyektlar')} className="rounded-lg border border-border p-2 text-text-dim hover:text-text" aria-label="Obyektlarga qaytish"><ArrowLeft size={17} /></button>
           <label className="min-w-[260px] flex-1 text-[12px] font-medium text-text">
             Kanonik obyekt
-            <select value={validId ? String(obyektId) : ''} onChange={(e) => navigate(`/admin/holat/${e.target.value}`)} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text outline-none focus:border-accent">
+            <select value={validId ? String(obyektId) : ''} onChange={(e) => { const object = obyektlar.find((item) => item.id === Number(e.target.value)); navigate(`/admin/holat/${e.target.value}?obyekt_nomi=${encodeURIComponent(object?.nom || '')}`); }} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text outline-none focus:border-accent">
               <option value="">-- obyektni tanlang --</option>
               {obyektlar.map((o) => <option key={o.id} value={o.id}>{o.nom}</option>)}
             </select>
@@ -105,7 +138,7 @@ export function HolatNative() {
           </section>
         )}
         {validId && !loading && !error && tree.length === 0 && <section className="karta p-5 text-[13px] text-text-dim">Bu obyektda kanonik smeta qatorlari yo‘q.</section>}
-        {tree.length > 0 && !loading && <div className="min-h-0 flex-1"><SmetaTree data={tree} priceControlLines={priceControlLines} /></div>}
+        {tree.length > 0 && !loading && <div className="min-h-0 flex-1"><SmetaTree data={tree} priceControlLines={priceControlLines} onFaktSave={faktSaqlash} /></div>}
         {selected && !loading && !error && (
           <div className="shrink-0 space-y-3" aria-label="LRV kundalik boshqaruv panellari">
             <details className="karta group p-3" open={ochiqPanel === 'smeta'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'smeta' : null)}>

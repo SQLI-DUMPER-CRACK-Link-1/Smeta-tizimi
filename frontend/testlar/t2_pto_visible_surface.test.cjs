@@ -90,5 +90,33 @@ must('F2 tarixida developer versiya izohi yo‘q',
   !/serverdagi versiya|revision\s*[:=]/i.test(noComment(ptoSources.find(([name]) => name === 'F2TarixNative')[1])),
   'operatorga ichki versiya atamasi emas, tushunarli tasdiqlash holati ko‘rsatilishi kerak');
 
+console.log('\n── LRV / F2 operator workflow guard ──');
+const lrv = noComment(read('frontend', 'src', 'umumiy', 'daraxt', 'SmetaTree.tsx'));
+const holat = noComment(read('frontend', 'src', 'admin', 'sahifalar', 'HolatNative.tsx'));
+const f2Prep = noComment(read('frontend', 'src', 'admin', 'sahifalar', 'F2TayyorlashNative.tsx'));
+const f2Import = noComment(read('frontend', 'src', 'admin', 'sahifalar', 'F2ImportNative.tsx'));
+must('LRV exposes canonical Fakt save port', /onFaktSave\?/.test(lrv) && /sbFaktBelgilaV2/.test(holat) && /sbFaktYoz/.test(holat),
+  'Fakt LRV ichidan typed canonical adapter orqali yozilishi kerak');
+must('LRV distinguishes total and delta Fakt', /Jami Faktni o‘rnatish/.test(lrv) && /Faktga qo‘shish/.test(lrv),
+  'operator jami qiymat va qo‘shiladigan qiymatni adashtirmasligi kerak');
+must('LRV has save/conflict state', /Saqlanmoqda/.test(lrv) && /conflict|serverda o‘zgargan/.test(lrv),
+  'Fakt yozish holati va optimistic conflict ko‘rinishi kerak');
+must('F2 preparation has bulk possible-volume action', /Barcha mumkin hajmni olish/.test(f2Prep),
+  'yuzlab qatorni qo‘lda kiritishga majburlamaslik kerak');
+must('F2 preparation has exception summary', /Tanlangan qatorlar/.test(f2Prep) && /Ogohlantirishlar/.test(f2Prep) && /Narx asosi yo‘q/.test(f2Prep),
+  'F2 tayyorlash yuqori darajadagi exception summary berishi kerak');
+must('F2 import has exact/review/unmatched summary', /Aniq mos/.test(f2Import) && /Ko‘rib chiqish/.test(f2Import) && /Moslashmagan/.test(f2Import),
+  'F2 import operatorga raw JSON o‘rniga tekshiruv xulosasini ko‘rsatishi kerak');
+must('F2 import is a two-pane matching workbench', /IkkiPanel/.test(f2Import) && /F2 manba/.test(f2Import) && /Kanonik smeta \/ LRV/.test(f2Import),
+  'F2 manbasi va kanonik smeta yonma-yon ko‘rinishi kerak');
+must('F2 matching supports visual rebind and synchronized focus', /manualRebind/.test(f2Import) && /selectedUid/.test(f2Import) && /scrollIntoView/.test(f2Import),
+  'manual rebind, tanlangan qator va panel bo‘yicha scroll saqlanishi kerak');
+const nakopPage = noComment(read('frontend', 'src', 'admin', 'pages', 'HujjatNazoratPage.tsx'));
+const nakop = noComment(read('frontend', 'src', 'components', 'construction-document-control', 'NakopitelniyWorkspace.tsx'));
+must('Nakopitelniy has project/object/period filters', /Davr/.test(nakopPage) && /Loyiha/.test(nakopPage) && /Obyekt/.test(nakopPage) && /qidiruv/.test(nakopPage),
+  'Nakopitelniy read-model uchun kontekst va davr filtrlari ko‘rinishi kerak');
+must('Nakopitelniy separates period and cumulative values', /Oldingi/.test(nakop) && /Joriy F2/.test(nakop) && /Jamlanma/.test(nakop) && /Qolgan/.test(nakop),
+  'miqdor va qiymatning oldingi/joriy/jamlanma/qolgan o‘qlari alohida ko‘rsatilishi kerak');
+
 console.log(`\n═══ ${passed} passed, ${failed} failed ═══`);
 process.exit(failed ? 1 : 0);

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { TreeNode } from '../../api/types';
 import { flattenTree, getAllKeys } from './utils';
@@ -16,6 +16,12 @@ interface SmetaTreeProps {
   onNodeDrop?: (source: TreeNode, target?: TreeNode) => void;
   /** `t2_price_control_v1` read-modelining aynan shu object uchun natijasi. */
   priceControlLines?: readonly PriceControlLine[];
+  /** LRV ichidagi kichik, canonical Fakt yozish porti. Backend qoidalari parentda qoladi. */
+  onFaktSave?: (node: TreeNode, mode: 'qoshish' | 'jami', value: number) => Promise<{
+    ok: boolean;
+    message?: string;
+    conflict?: boolean;
+  }>;
 }
 
 function TreeTypeIcon({ type }: { type: TreeNode['type'] }) {
@@ -25,7 +31,7 @@ function TreeTypeIcon({ type }: { type: TreeNode['type'] }) {
   return <Pickaxe size={14} aria-hidden="true" />;
 }
 
-export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, setEdits, onNodeDrop, priceControlLines }: SmetaTreeProps) {
+export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, setEdits, onNodeDrop, priceControlLines, onFaktSave }: SmetaTreeProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
@@ -35,6 +41,11 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   const [preset, setPreset] = useState<'ASOSIY' | 'F2' | 'NARX' | 'TOLIQ'>('ASOSIY');
   const [quickFilter, setQuickFilter] = useState<'all' | 'f2' | 'qosh' | 'zamena' | 'bl' | 'mat' | 'frozen' | 'risk' | 'basis'>('all');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState<'umumiy' | 'fakt' | 'f2' | 'narx' | 'audit'>('umumiy');
+  const [faktMode, setFaktMode] = useState<'qoshish' | 'jami'>('jami');
+  const [faktValue, setFaktValue] = useState('');
+  const [faktSaving, setFaktSaving] = useState(false);
+  const [faktStatus, setFaktStatus] = useState<{ tone: 'ok' | 'warn' | 'danger'; text: string } | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const priceControlByQatorId = useMemo(
     () => new Map((priceControlLines || []).map((line) => [line.qator_id, line])),
@@ -115,6 +126,37 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   const showMoney = preset === 'TOLIQ' || preset === 'NARX';
   const showSmetaAndFakt = preset !== 'F2';
   const selected = flatNodes.find((row) => row.key === selectedKey);
+  const selectedFakt = selected?.node.fakt;
+
+  useEffect(() => {
+    if (!selectedKey) return;
+    setFaktMode('jami');
+    setFaktValue(selectedFakt == null ? '' : String(selectedFakt));
+    setFaktStatus(null);
+  }, [selectedFakt, selectedKey]);
+
+  const faktniSaqlash = async () => {
+    if (!selected || !onFaktSave || selected.node.id == null || faktSaving) return;
+    const value = Number(faktValue.trim().replace(',', '.'));
+    if (!Number.isFinite(value)) {
+      setFaktStatus({ tone: 'warn', text: 'Fakt hajmini raqam ko‘rinishida kiriting.' });
+      return;
+    }
+    setFaktSaving(true);
+    setFaktStatus({ tone: 'warn', text: 'Saqlanmoqda…' });
+    try {
+      const result = await onFaktSave(selected.node, faktMode, value);
+      if (result.ok) {
+        setFaktStatus({ tone: 'ok', text: 'Saqlandi. Server qiymati yangilandi.' });
+      } else {
+        setFaktStatus({ tone: result.conflict ? 'warn' : 'danger', text: result.message || 'Fakt saqlanmadi.' });
+      }
+    } catch {
+      setFaktStatus({ tone: 'danger', text: 'Javob olinmadi. O‘zgartirish qayta tekshiriladi.' });
+    } finally {
+      setFaktSaving(false);
+    }
+  };
 
   return (
     <div className={`relative flex flex-col h-full bg-surface border border-border rounded-xl shadow-sm overflow-hidden ${density === 'compact' ? 'text-xs' : 'text-sm'}`}>
@@ -244,6 +286,10 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                   if ((node.type === 'bl' || node.type === 'rs') && isEditMode) {
                     setExpandedDetailId(prev => prev === key ? null : key);
                   }
+                }}
+                onDoubleClick={() => {
+                  setSelectedKey(key);
+                  setDrawerTab('fakt');
                 }}
               >
                 {row.depth > 0 && <span aria-hidden="true" className="absolute top-0 bottom-0 border-l border-border/70" style={{ left: `${row.depth * 24 + 23}px` }} />}
@@ -412,19 +458,52 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
       </div>
       {selected && !isEditMode && (
         <aside className="absolute inset-y-0 right-0 z-40 w-[min(460px,90vw)] overflow-auto border-l border-border bg-surface p-4 shadow-2xl" aria-label="Qator tafsilotlari">
-          <button onClick={() => setSelectedKey(null)} className="float-right text-text-dim"><X size={18}/></button>
-          <p className="pr-8 text-xs text-text-mute">{selected.lineage.join(' › ')}</p>
-          <h3 className="mt-2 font-semibold">{selected.node.nom || 'Nomsiz'}</h3>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-            {[
-              ['Asosiy', 'Kod, birlik va hajmlar'],
-              ['F2 tarixi', oylar.length ? `${oylar.length} oy — obyom/narx/summa` : 'Ma\'lumot yo\'q'],
-              ['Narx nazorati', selected.node.id != null && priceControlByQatorId.get(selected.node.id) ? PRICE_STATE_BADGE[priceControlByQatorId.get(selected.node.id)!.price_state].label : 'Ma\'lumot ulanmagan'],
-              ['Resurslar', 'Ma\'lumot yo\'q'],
-              ['Hujjatlar', 'Ma\'lumot yo\'q'],
-              ['O\'zgarishlar', selected.node.isZamena ? 'Zamena aloqasi mavjud' : 'Ma\'lumot yo\'q'],
-            ].map(([title, value]) => <div key={title} className="rounded border border-border p-3"><b>{title}</b><p className="mt-1 text-text-dim">{value}</p></div>)}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-text-mute">{selected.lineage.join(' › ')}</p>
+              <h3 className="mt-2 truncate font-semibold" title={selected.node.nom || 'Nomsiz'}>{selected.node.nom || 'Nomsiz'}</h3>
+              <p className="mt-1 text-[11px] text-text-mute">{selected.node.kod || 'Kod yo‘q'} · {selected.node.birlik || 'Birlik yo‘q'}</p>
+            </div>
+            <button onClick={() => setSelectedKey(null)} className="shrink-0 rounded p-1 text-text-dim hover:bg-surface-2 hover:text-text" aria-label="Qator tafsilotlarini yopish"><X size={18}/></button>
           </div>
+          <div className="mt-4 flex gap-1 overflow-x-auto border-b border-border" role="tablist" aria-label="Qator tafsilotlari bo‘limlari">
+            {([['umumiy', 'Umumiy'], ['fakt', 'Fakt'], ['f2', 'F2 tarixi'], ['narx', 'Narx'], ['audit', 'Audit']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={drawerTab === id} onClick={() => setDrawerTab(id)} className={`whitespace-nowrap border-b-2 px-2 py-2 text-xs font-medium ${drawerTab === id ? 'border-accent text-text' : 'border-transparent text-text-dim hover:text-text'}`}>{label}</button>)}
+          </div>
+          {drawerTab === 'umumiy' && <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+            {[
+              ['Smeta hajmi', <FmtN key="smeta" val={selected.node.smetaHajm} />],
+              ['Fakt hajmi', <FmtN key="fakt" val={selected.node.fakt} />],
+              ['F2 hajmi', <FmtN key="f2" val={selected.node.f2ol} />],
+              ['F2 mumkin', <FmtN key="mumkin" val={selected.node.f2mum} />],
+              ['Resurslar', 'Qator zanjiri orqali'],
+              ['O‘zgarish', selected.node.isZamena ? 'Zamena aloqasi mavjud' : selected.node.isQosh ? 'Qo‘shimcha ish' : 'Oddiy qator'],
+            ].map(([title, value]) => <div key={String(title)} className="rounded border border-border p-3"><b>{title}</b><p className="mt-1 text-text-dim">{value}</p></div>)}
+          </div>}
+          {drawerTab === 'fakt' && <div className="mt-4 space-y-4">
+            {onFaktSave ? <>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded border border-border p-3"><span className="text-text-mute">Smeta</span><strong className="mt-1 block text-text"><FmtN val={selected.node.smetaHajm} /></strong></div>
+                <div className="rounded border border-border p-3"><span className="text-text-mute">Joriy Fakt</span><strong className="mt-1 block text-ok"><FmtN val={selected.node.fakt} /></strong></div>
+                <div className="rounded border border-border p-3"><span className="text-text-mute">F2</span><strong className="mt-1 block text-accent"><FmtN val={selected.node.f2ol} /></strong></div>
+                <div className="rounded border border-border p-3"><span className="text-text-mute">F2 mumkin</span><strong className="mt-1 block text-accent"><FmtN val={selected.node.f2mum} /></strong></div>
+              </div>
+              <fieldset className="space-y-3 rounded-lg border border-border bg-surface-2/50 p-3" disabled={faktSaving}>
+                <legend className="px-1 text-xs font-semibold text-text">Fakt amalini tanlang</legend>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className={`cursor-pointer rounded border p-2 text-xs ${faktMode === 'jami' ? 'border-accent bg-accent/10 text-text' : 'border-border text-text-dim'}`}><input className="sr-only" type="radio" name="lrv-fakt-mode" checked={faktMode === 'jami'} onChange={() => { setFaktMode('jami'); setFaktValue(String(selected.node.fakt ?? '')); setFaktStatus(null); }} />Jami Faktni o‘rnatish<p className="mt-1 text-[11px] text-text-mute">Server eskirgan qiymatni conflict sifatida tekshiradi.</p></label>
+                  <label className={`cursor-pointer rounded border p-2 text-xs ${faktMode === 'qoshish' ? 'border-accent bg-accent/10 text-text' : 'border-border text-text-dim'}`}><input className="sr-only" type="radio" name="lrv-fakt-mode" checked={faktMode === 'qoshish'} onChange={() => { setFaktMode('qoshish'); setFaktValue(''); setFaktStatus(null); }} />Faktga qo‘shish<p className="mt-1 text-[11px] text-text-mute">Kiritilgan qiymat alohida Fakt qatoriga yoziladi.</p></label>
+                </div>
+                <label className="block text-xs font-medium text-text">{faktMode === 'jami' ? 'Yangi jami Fakt hajmi' : 'Qo‘shiladigan Fakt hajmi'}
+                  <input aria-label={faktMode === 'jami' ? 'Yangi jami Fakt hajmi' : 'Qo‘shiladigan Fakt hajmi'} type="number" step="any" value={faktValue} onChange={(event) => setFaktValue(event.target.value)} className="mt-1 block w-full rounded-lg border border-border bg-bg px-3 py-2 text-right font-mono text-sm text-text outline-none focus:border-accent" />
+                </label>
+                <button type="button" onClick={() => void faktniSaqlash()} disabled={faktSaving || selected.node.id == null || !faktValue.trim()} className="inline-flex items-center justify-center rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{faktSaving ? 'Saqlanmoqda…' : 'Faktni saqlash'}</button>
+                {faktStatus && <p role={faktStatus.tone === 'danger' ? 'alert' : undefined} className={`text-xs ${faktStatus.tone === 'ok' ? 'text-ok' : faktStatus.tone === 'warn' ? 'text-warn' : 'text-danger'}`}>{faktStatus.text}</p>}
+              </fieldset>
+            </> : <p className="rounded border border-border p-3 text-xs text-text-dim">Fakt yozish porti bu ko‘rinishda ulanmagan.</p>}
+          </div>}
+          {drawerTab === 'f2' && <div className="mt-4 space-y-2 text-xs"><div className="rounded border border-border p-3"><b>F2 tarixi</b><p className="mt-1 text-text-dim">{oylar.length ? `${oylar.length} oy — obyom, narx va summa` : 'Ma’lumot ulanmagan'}</p></div><div className="rounded border border-border p-3"><b>F2 mumkin</b><p className="mt-1 text-text-dim"><FmtN val={selected.node.f2mum} /></p></div></div>}
+          {drawerTab === 'narx' && <div className="mt-4 rounded border border-border p-3 text-xs"><b>Narx nazorati</b><p className="mt-1 text-text-dim">{selected.node.id != null && priceControlByQatorId.get(selected.node.id) ? PRICE_STATE_BADGE[priceControlByQatorId.get(selected.node.id)!.price_state].label : 'Ma’lumot ulanmagan'}</p></div>}
+          {drawerTab === 'audit' && <div className="mt-4 space-y-2 text-xs"><div className="rounded border border-border p-3"><b>Qator identifikatori</b><p className="mt-1 font-mono text-text-dim">{selected.node.id ?? 'Kanonik ID yo‘q'}</p></div><div className="rounded border border-border p-3"><b>O‘zgarish holati</b><p className="mt-1 text-text-dim">{selected.node.isZamena ? 'Zamena aloqasi mavjud' : selected.node.isQosh ? 'Qo‘shimcha ish' : 'Oddiy qator'}</p></div></div>}
         </aside>
       )}
     </div>
