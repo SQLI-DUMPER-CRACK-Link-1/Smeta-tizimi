@@ -50,6 +50,42 @@ body {
 
 html, body, #root { min-height: 100%; }
 
+/* ⚡ 2026-09-07: native form controls (bare <select>/<input>/<textarea>,
+ * the overwhelming majority across the app -- 85+ <select> alone) had NO
+ * dark styling of their own, so they fell back to the browser's LIGHT
+ * default (white popup, black text) on top of this dark app. That single
+ * inconsistency was doing more to make the product look "like an old
+ * site" than any color-token choice. Fixed ONCE, at the root, instead of
+ * touching every page: `@layer base` so an explicit Tailwind utility on
+ * a specific control (e.g. `bg-white`) still wins via layer order, but
+ * every unstyled control now inherits the app's own theme by default.
+ * `color-scheme: dark` also darkens the native dropdown POPUP list and
+ * OS-level pickers (date, etc.) that CSS alone can't reach. */
+:root { color-scheme: dark; }
+
+@layer base {
+  select, input, textarea {
+    background-color: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 0.35rem 0.6rem;
+    font: inherit;
+  }
+  select { background-color: var(--surface-2); }
+  select option { background-color: var(--surface-2); color: var(--text); }
+  input[type="checkbox"], input[type="radio"] {
+    background: none; border: none; padding: 0; width: auto; accent-color: var(--accent);
+  }
+  input::placeholder, textarea::placeholder { color: var(--text-dim); opacity: 1; }
+  select:focus, input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  select:disabled, input:disabled, textarea:disabled { opacity: .5; cursor: not-allowed; }
+}
+
 /* Construction Command Center — umumiy qobiq.
    Bu bezak emas: barcha rollar bir xil makonda ishlashi, holat ranglari
    esa faqat biznes ma'nosini bildirishi uchun past-kontrastli tayanch. */

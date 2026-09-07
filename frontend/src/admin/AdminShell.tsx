@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle, ChevronDown, ChevronRight, Archive, ShieldCheck } from 'lucide-react';
-import { Map, LogOut, Building2, FileInput, FileSignature, Package, Activity, Tags, Network, Calculator, FileOutput, HardHat, Truck, ShoppingCart, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, CalendarDays, Upload, ClipboardList, BookOpen, Briefcase, CreditCard, UserPlus, Box, Trash2, Users, FolderKanban } from 'lucide-react';
+import { Map, LogOut, Building2, FileInput, Activity, Tags, Network, Calculator, FileOutput, HardHat, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, ClipboardList, Briefcase, Box, Trash2, Users, FolderKanban } from 'lucide-react';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 import { KompaniyaProvider, useKompaniya } from '../umumiy/kontekst/KompaniyaKontekst';
@@ -50,7 +50,6 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/nakopitelniy', nom: 'Nakopitelniy vedomost', Ikonka: NotebookPen },
       { yol: '/admin/narxlar', nom: 'Narxlar nazorati', Ikonka: Tags },
       { yol: '/admin/nakrutka', nom: 'Nakrutka (ustama) hisobi', Ikonka: Calculator },
-      { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
         { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
       { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
         { yol: '/admin/test/zayavka', nom: 'Zayavkalar (PTO)', Ikonka: ClipboardList },
@@ -70,23 +69,23 @@ const TIZIM_02_GURUHLAR = [
   }
 ];
 
+/* 2026-09-07: bu ro'yxat avval 16 ta yozuvdan iborat edi va yarmi
+ * `TIZIM_02_GURUHLAR`dagi Wrapper sahifalar (Moliya/Logistika/ERP/AOSR)
+ * bilan AYNAN bir xil funksiyani ikkinchi marta ko'rsatardi (Shartnomalar,
+ * Fakturalar, Sklad, Kadrlar, Texnika, Ta'minot, Sifat, Hujjatlar,
+ * Sozlamalar) -- foydalanuvchi: "bitta funksiya bir nechta joylarga
+ * takrorlanganda tushunmayman, odamni chalkashtirib qo'yadi". Aniq
+ * dublikatlar OLIB TASHLANDI (marshrutning o'zi App.tsx'da qoldi --
+ * eski chuqur havolalar buzilmaydi, faqat menyudan yashirilgan). Faqat
+ * HALI hech qayerda ustma-ust tushmaydigan mustaqil sahifalar qoldi. */
 const ESKI_TIZIM_MENYU = [
   { yol: '/admin/buxgalteriya', nom: 'Buxgalteriya', Ikonka: Calculator },
-  { yol: '/admin/shartnomalar', nom: 'Shartnomalar', Ikonka: FileSignature },
-  { yol: '/admin/fakturalar', nom: 'Fakturalar (Eski)', Ikonka: FileText },
   { yol: '/admin/ierarxiya',  nom: 'Ierarxiya',    Ikonka: Network },
-  { yol: '/admin/sklad',      nom: 'Sklad',        Ikonka: Package },
   { yol: '/admin/monitoring', nom: 'Monitoring',   Ikonka: Activity },
-  { yol: '/admin/kadrlar',    nom: 'Kadrlar',      Ikonka: HardHat },
-  { yol: '/admin/texnika',    nom: 'Texnika',      Ikonka: Truck },
-  { yol: '/admin/taminot',    nom: "Ta'minot",     Ikonka: ShoppingCart },
-  { yol: '/admin/sifat',      nom: 'Sifat (QA)',   Ikonka: ShieldAlert },
   { yol: '/admin/fayl-boglash', nom: 'Fayl bog’lash', Ikonka: Link2 },
-  { yol: '/admin/hujjatlar', nom: 'Hujjatlar', Ikonka: FileStack },
   { yol: '/admin/shaxsiy-smeta', nom: 'Shaxsiy smeta', Ikonka: NotebookPen },
   { yol: '/admin/supabase', nom: 'Supabase', Ikonka: Database },
   { yol: '/admin/tezlik', nom: 'Tezlik sinovi', Ikonka: Gauge },
-  { yol: '/admin/sozlamalar', nom: 'Sozlamalar (eski)',   Ikonka: Settings },
 ];
 
 /* T2-PRODUCT-RECOVERY P0: `t2_effective_authorization_core_v1`ning o'z
@@ -120,10 +119,16 @@ function AdminShellInner() {
   // stale global session role.
   const effektivRol: string = k.globalRejim ? 'superadmin' : (k.joriy?.rol ?? '');
 
-  // Avtomatik ochish logikasi
+  // Avtomatik ochish logikasi -- standart YOPIQ (2026-09-07: bu bo'lim
+  // hamma vaqt ochiq turgani "sayt eski/chalkash ko'rinadi" shikoyatining
+  // asosiy sababi edi -- endi faqat kerak bo'lganda, o'zi ochadi).
   const eskiIchida = ESKI_TIZIM_MENYU.some((m) => joy.pathname.startsWith(m.yol));
-  const [eskiOchiq, setEskiOchiq] = useState(true);
-  
+  const [eskiOchiq, setEskiOchiq] = useState(false);
+  // Sidebar sichqoncha kelganda kengayadi, aks holda faqat belgichalar
+  // (ikonalar) qatori -- foydalanuvchi: "yon panelni sichqoncha borsa
+  // katta ochiladigan bo'lmasa faqat belgichalari ko'rinib turadigan".
+  const [kengaygan, setKengaygan] = useState(false);
+
   // Qaysi guruhlar ochiq ekanligini saqlash
   const [ochiqGuruhlar, setOchiqGuruhlar] = useState<Record<string, boolean>>(() => {
     const d: Record<string, boolean> = {};
@@ -215,21 +220,24 @@ function AdminShellInner() {
     let allowedMenus = g.menyular;
     if (effektivRol === 'prorab') {
       // Prorab faqat Logistika (Sklad) va Loyihalar(Fakt) ko'radi
-      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
+      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('loyiha') || m.yol.includes('fakt'));
       else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('logistika'));
     } else if (effektivRol === 'pto') {
-      // PTO Portfel va Moliya(Smeta/F2)
-      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
-      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya') || m.yol.includes('smeta'));
+      // PTO — bu butun T2 native smeta/F2/nakopitelniy quvurining asosiy
+      // ishlatuvchisi: 'operatsion' (Ishchi smeta/F2/Nakopitelniy/Narxlar/
+      // Nakrutka/Moliya/Logistika/Zayavka/AOSR/ERP) VA 'asosiy' (Loyihalar/
+      // Obyektlar/Hujjatlar/F2 tarixi/Fakt) to'liq ochiq -- cheklash faqat
+      // "Rahbar paneli" va ishtirokchi boshqaruvi kabi rahbariyat funksiyalarida.
+      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => !m.yol.includes('dashboard') && !m.yol.includes('participants'));
     } else if (effektivRol === 'bugalter') {
       // Bugalter Moliya, CRM
       if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('crm'));
-      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya') || m.yol.includes('smeta'));
+      else if (g.id === 'operatsion') allowedMenus = allowedMenus.filter(m => m.yol.includes('moliya'));
     } else if (effektivRol === 'rahbar' || effektivRol === 'boss' || effektivRol === 'admin' || effektivRol === 'superadmin') {
       // Ruxsat hammasiga
     } else if (effektivRol === 'buyurtmachi' || effektivRol === 'pudratchi' || effektivRol === 'kuzatuvchi') {
-      // Faqat portfel (o'qish uchun) — yozuv ruxsati alohida serverda tekshiriladi
-      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('portfel'));
+      // Faqat loyihalar/obyektlar (o'qish uchun) — yozuv ruxsati alohida serverda tekshiriladi
+      if (g.id === 'asosiy') allowedMenus = allowedMenus.filter(m => m.yol.includes('loyiha') || m.yol.includes('obyekt'));
       else allowedMenus = [];
     } else {
       allowedMenus = []; // Kompaniya hali tanlanmagan yoki noma'lum rol
@@ -240,99 +248,138 @@ function AdminShellInner() {
   return (
     <div className="os-app-shell flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30">
 
-      {/* Sidebar - custom-scrollbar added for smooth scrolling on small laptops */}
-      <aside className="os-sidebar relative z-10 w-64 xl:w-72 border-r backdrop-blur-xl flex flex-col">
-        <div className="p-4 border-b border-border flex items-center gap-3">
-          <div className="os-brand-mark w-8 h-8 rounded-lg flex items-center justify-center">
+      {/* Sidebar -- 2026-09-07: standart holatda faqat belgichalar (ikonalar)
+       * qatori, sichqoncha ustiga borilganda to'liq (nomlar bilan) kengayadi.
+       * Foydalanuvchi: "yon panelni sichqoncha borsa katta ochiladigan
+       * bo'lmasa faqat belgichalari ko'rinib turadigan qilib ber". */}
+      <aside
+        onMouseEnter={() => setKengaygan(true)}
+        onMouseLeave={() => setKengaygan(false)}
+        className={`os-sidebar relative z-10 border-r backdrop-blur-xl flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
+          kengaygan ? 'w-64 xl:w-72' : 'w-[68px]'
+        }`}
+      >
+        <div className={`p-4 border-b border-border flex items-center ${kengaygan ? 'gap-3' : 'justify-center'}`}>
+          <div className="os-brand-mark w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
             <FlaskConical className="text-white" size={18} />
           </div>
-          <div>
-            <h1 className="text-[15px] font-bold text-text leading-tight tracking-wider">SMETA TIZIM 02</h1>
-            <p className="text-[11px] text-text-dim uppercase tracking-wider font-medium mt-0.5 text-accent/80">
-              👑 {k.globalRejim ? 'Global (superadmin)' : (k.joriy?.rol || (k.yuklanmoqda ? '…' : 'Kompaniya tanlanmagan'))}
-            </p>
-          </div>
+          {kengaygan && (
+            <div className="min-w-0">
+              <h1 className="text-[15px] font-bold text-text leading-tight tracking-wider whitespace-nowrap">SMETA TIZIM 02</h1>
+              <p className="text-[11px] text-text-dim uppercase tracking-wider font-medium mt-0.5 text-accent/80 whitespace-nowrap">
+                👑 {k.globalRejim ? 'Global (superadmin)' : (k.joriy?.rol || (k.yuklanmoqda ? '…' : 'Kompaniya tanlanmagan'))}
+              </p>
+            </div>
+          )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4">
-          
-          {filtrKilinganGuruhlar.map(guruh => (
-            <div key={guruh.id} className="space-y-1">
-              <button
-                onClick={() => toggleGuruh(guruh.id)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-bold text-text-dim uppercase tracking-wider hover:text-text transition-colors group"
-              >
-                <guruh.Ikonka size={14} className="text-text-dim group-hover:text-accent transition-colors" />
-                <span className="flex-1 text-left">{guruh.nom}</span>
-                {ochiqGuruhlar[guruh.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </button>
-              
-              <div className={`space-y-0.5 pl-2 ${ochiqGuruhlar[guruh.id] ? 'block' : 'hidden'}`}>
-                {guruh.menyular.map(m => (
-                  <NavLink
-                    key={m.yol}
-                    to={m.yol}
-                    className={({ isActive }) =>
-                      `os-nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-[13.5px] font-medium transition-colors duration-[120ms] cursor-pointer relative ${
-                        isActive
-                          ? 'os-nav-link--active'
-                          : ''
-                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <m.Ikonka className="w-[16px] h-[16px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.5} />
-                        <span className="truncate">{m.nom}</span>
-                      </>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          <div className="h-px bg-white/10 my-4 mx-2" />
-
-          {/* Eski Tizim */}
-          <div>
-            <button
-              onClick={() => setEskiOchiq((v) => !v)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-400 transition-colors"
-            >
-              <Archive size={14} />
-              <span className="flex-1 text-left">Barcha Modullar (ERP & Tizim_01)</span>
-              
-            </button>
-            <div className={`space-y-0.5 pl-2 mt-1 ${eskiOchiq ? 'block' : 'hidden'}`}>
-              {ESKI_TIZIM_MENYU.map((m) => (
-                <NavLink
-                  key={m.yol}
-                  to={m.yol}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors duration-[120ms] cursor-pointer ${
-                      isActive
-                        ? 'bg-zinc-800 text-white'
-                        : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
-                    }`
-                  }
-                >
-                  <m.Ikonka className="w-[14px] h-[14px] flex-shrink-0" strokeWidth={1.5} />
-                  <span className="truncate">{m.nom}</span>
-                </NavLink>
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-3 space-y-4">
+          {!kengaygan ? (
+            /* Belgichalar qatori: guruh sarlavhalarisiz, faqat ikonalar --
+             * har bir guruh orasida yupqa ajratuvchi chiziq. */
+            <div className="space-y-1">
+              {filtrKilinganGuruhlar.map((guruh, gi) => (
+                <div key={guruh.id} className={gi > 0 ? 'space-y-1 pt-3 mt-3 border-t border-white/10' : 'space-y-1'}>
+                  {guruh.menyular.map(m => (
+                    <NavLink
+                      key={m.yol}
+                      to={m.yol}
+                      title={m.nom}
+                      className={({ isActive }) =>
+                        `os-nav-link flex items-center justify-center h-10 rounded-lg transition-colors duration-[120ms] cursor-pointer ${
+                          isActive ? 'os-nav-link--active' : ''
+                        }`
+                      }
+                    >
+                      {({ isActive }) => <m.Ikonka className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.5} />}
+                    </NavLink>
+                  ))}
+                </div>
               ))}
             </div>
-          </div>
-          
+          ) : (
+            <>
+              {filtrKilinganGuruhlar.map(guruh => (
+                <div key={guruh.id} className="space-y-1">
+                  <button
+                    onClick={() => toggleGuruh(guruh.id)}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-bold text-text-dim uppercase tracking-wider hover:text-text transition-colors group"
+                  >
+                    <guruh.Ikonka size={14} className="text-text-dim group-hover:text-accent transition-colors" />
+                    <span className="flex-1 text-left whitespace-nowrap">{guruh.nom}</span>
+                    {ochiqGuruhlar[guruh.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </button>
+
+                  <div className={`space-y-0.5 pl-2 ${ochiqGuruhlar[guruh.id] ? 'block' : 'hidden'}`}>
+                    {guruh.menyular.map(m => (
+                      <NavLink
+                        key={m.yol}
+                        to={m.yol}
+                        className={({ isActive }) =>
+                          `os-nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-[13.5px] font-medium transition-colors duration-[120ms] cursor-pointer relative ${
+                            isActive
+                              ? 'os-nav-link--active'
+                              : ''
+                          }`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <m.Ikonka className="w-[16px] h-[16px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.5} />
+                            <span className="truncate">{m.nom}</span>
+                          </>
+                        )}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="h-px bg-white/10 my-4 mx-2" />
+
+              {/* Eski Tizim -- ustma-ust tushmaydigan qolgan mustaqil sahifalar */}
+              <div>
+                <button
+                  onClick={() => setEskiOchiq((v) => !v)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-400 transition-colors"
+                >
+                  <Archive size={14} />
+                  <span className="flex-1 text-left whitespace-nowrap">Qo'shimcha / kam ishlatiladigan</span>
+                  {eskiOchiq ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                <div className={`space-y-0.5 pl-2 mt-1 ${eskiOchiq ? 'block' : 'hidden'}`}>
+                  {ESKI_TIZIM_MENYU.map((m) => (
+                    <NavLink
+                      key={m.yol}
+                      to={m.yol}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors duration-[120ms] cursor-pointer ${
+                          isActive
+                            ? 'bg-zinc-800 text-white'
+                            : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
+                        }`
+                      }
+                    >
+                      <m.Ikonka className="w-[14px] h-[14px] flex-shrink-0" strokeWidth={1.5} />
+                      <span className="truncate">{m.nom}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </nav>
 
         <div className="p-3 border-t border-border space-y-1">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+            title="Tizimdan chiqish"
+            className={`flex items-center w-full rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors ${
+              kengaygan ? 'gap-3 px-3 py-2 text-left' : 'justify-center h-10'
+            }`}
           >
-            <LogOut className="w-[18px] h-[18px]" />
-            <span className="text-sm font-medium">Tizimdan Chiqish</span>
+            <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
+            {kengaygan && <span className="text-sm font-medium whitespace-nowrap">Tizimdan Chiqish</span>}
           </button>
         </div>
       </aside>
