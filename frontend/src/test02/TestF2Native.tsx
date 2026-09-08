@@ -222,7 +222,7 @@ export default function TestF2Native() {
             <FileUp size={15} className="text-accent" /> F2 akt faylini tanlang (.xlsx)
           </label>
           <input
-            type="file" accept=".xlsx,.xlsm"
+            type="file" accept=".xlsx,.xlsm,.xls"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) void faylTanlandi(f); }}
             disabled={ishlayapti}
             className="text-[12px] text-text-dim file:mr-3 file:px-3 file:py-1.5 file:rounded-lg

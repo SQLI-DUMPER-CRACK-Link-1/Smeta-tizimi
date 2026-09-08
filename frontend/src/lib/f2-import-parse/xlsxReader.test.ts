@@ -36,4 +36,36 @@ describe('readXlsx', () => {
   test('throws a clear error on a non-ZIP input rather than silently returning empty/wrong data', async () => {
     await expect(readXlsx(new TextEncoder().encode('not a zip file at all'))).rejects.toThrow('XLSX_NOT_A_ZIP');
   });
+
+  /**
+   * Owner (2026-09-07): "eski shakldagi exellni ocholmas ekan tizim ...
+   * universal bo'lsin" -- legacy binary .xls (Excel 97-2003, BIFF8/OLE2,
+   * NOT a ZIP) must open through this same `readXlsx` everywhere it's
+   * called, not per-page. Built via SheetJS's own writer (real OLE2/BIFF8
+   * bytes, not a hand-rolled fixture) so this proves the real format
+   * round-trips, without shipping a real proprietary .xls in this public
+   * repo.
+   */
+  test('reads a real legacy .xls (BIFF8/OLE2, not a ZIP) via the SheetJS fallback', async () => {
+    const XLSX = await import('xlsx');
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Kod', 'Nom', 'Narx'],
+      ['B25', 'Beton B25', 500000],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Smeta');
+    const bytes = XLSX.write(wb, { type: 'array', bookType: 'biff8' }) as ArrayBuffer;
+
+    // Sanity: confirm the fixture really is OLE2, not a ZIP -- otherwise this
+    // test would silently exercise the ZIP path instead of the one it names.
+    const head = new Uint8Array(bytes).subarray(0, 8);
+    expect([...head]).toEqual([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+
+    const parsed = await readXlsx(bytes);
+    expect(parsed.sheets).toHaveLength(1);
+    const sheet = parsed.sheet('Smeta');
+    expect(sheet).not.toBeNull();
+    expect(sheet!.rows[0]).toEqual(['Kod', 'Nom', 'Narx']);
+    expect(sheet!.rows[1]).toEqual(['B25', 'Beton B25', 500000]);
+  });
 });

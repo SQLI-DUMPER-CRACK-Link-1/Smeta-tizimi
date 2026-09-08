@@ -513,7 +513,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       )}
       {objectId && !alreadyHasSmeta && (
         <label className="block text-sm">Smeta fayli (XLSX)
-          <input aria-label="Smeta fayli" type="file" accept=".xlsx,.xlsm" className="ml-2"
+          <input aria-label="Smeta fayli" type="file" accept=".xlsx,.xlsm,.xls" className="ml-2"
           onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
         </label>
       )}
@@ -593,7 +593,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
               LRV faylida allaqachon narxi bor qatorlar ustidan yozilmaydi.
             </p>
             <label className="block text-sm">Alohida RES fayli (XLSX, ixtiyoriy)
-              <input aria-label="RES fayli" type="file" accept=".xlsx,.xlsm" className="ml-2"
+              <input aria-label="RES fayli" type="file" accept=".xlsx,.xlsm,.xls" className="ml-2"
                 onChange={e => { const f = e.target.files?.[0]; if (f) void uploadRes(f); }} />
             </label>
             {resBusy && <p role="status" className="text-[12px]">RES fayli o‘qilmoqda…</p>}

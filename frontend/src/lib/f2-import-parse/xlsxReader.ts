@@ -33,6 +33,57 @@ export interface XlsxWorkbook {
   sheet(name: string): XlsxSheet | null;
 }
 
+/** OLE2/CFBF magic bytes -- every legacy binary `.xls` (Excel 97-2003, BIFF8)
+ *  file starts with exactly this signature, regardless of extension. Real
+ *  `.xlsx` is a ZIP and never starts with this. */
+const OLE2_SIG = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+
+function isLegacyOle2(buf: Uint8Array): boolean {
+  if (buf.length < OLE2_SIG.length) return false;
+  for (let i = 0; i < OLE2_SIG.length; i++) if (buf[i] !== OLE2_SIG[i]) return false;
+  return true;
+}
+
+/**
+ * Owner (2026-09-07): "eski shakldagi exellni ocholmas ekan tizim ... hamma
+ * joyda ham bunaqa versiyaga bog'liq holda masala qilmasin, universal
+ * bo'lsin" -- old-format (.xls, Excel 97-2003 BIFF8) files must open
+ * everywhere this reads a spreadsheet, not per-page. Fixed ONCE here (the
+ * one function every upload path calls) rather than in each caller.
+ *
+ * BIFF8 is a completely different binary format from OOXML (an OLE2
+ * compound-file container, not a ZIP) -- there is no reasonable
+ * dependency-free way to parse it (unlike the ZIP+XML `.xlsx` path above,
+ * which is simple enough to hand-roll). SheetJS is the standard, battle-
+ * tested reader for it; loaded via dynamic import so the ~800KB parser
+ * only ever downloads for someone who actually uploads a legacy file --
+ * every current real upload path is a real `.xlsx`, so this changes
+ * nothing for the common case.
+ */
+async function readLegacyXls(buf: Uint8Array): Promise<XlsxWorkbook> {
+  let XLSX: typeof import('xlsx');
+  try {
+    XLSX = await import('xlsx');
+  } catch {
+    throw new Error('XLS_LEGACY_READER_UNAVAILABLE: eski (.xls) formatni o‘qish kutubxonasi yuklanmadi.');
+  }
+  const wb = XLSX.read(buf, { type: 'array', cellDates: false });
+  const sheets: XlsxSheet[] = wb.SheetNames.map((name) => {
+    const ws = wb.Sheets[name];
+    const rows = (XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as unknown[][])
+      .map((row) => row.map((cell): CellValue => {
+        if (cell == null) return null;
+        if (typeof cell === 'string' || typeof cell === 'number') return cell;
+        return String(cell);
+      }));
+    const merges: XlsxSheet['merges'] = (ws['!merges'] || []).map((m) => ({
+      r1: m.s.r, c1: m.s.c, r2: m.e.r, c2: m.e.c,
+    }));
+    return { name, rows, merges };
+  });
+  return { sheets, sheet: (name: string) => sheets.find((s) => s.name === name) ?? null };
+}
+
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_DIR_SIG = 0x02014b50;
 const LOCAL_HEADER_SIG = 0x04034b50;
@@ -171,6 +222,7 @@ function parseWorkbookSheetList(xml: string, relsXml: string | undefined): Array
 /** Reads an .xlsx (or .xlsm) file's every non-hidden-by-name sheet into `{name, rows, merges}`. Hidden-sheet filtering (as GAS's `apiF2Varaqlar` does) is the CALLER's job — this returns everything found in the workbook. */
 export async function readXlsx(bytes: ArrayBuffer | Uint8Array): Promise<XlsxWorkbook> {
   const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  if (isLegacyOle2(buf)) return readLegacyXls(buf);
   const files = await unzip(buf);
   const dec = new TextDecoder('utf-8');
 
