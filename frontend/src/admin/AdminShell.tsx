@@ -47,6 +47,7 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/holat', nom: 'Ishchi smeta / LRV', Ikonka: FileText },
       { yol: '/admin/f2', nom: 'F2 import (kanonik)', Ikonka: FileInput },
       { yol: '/admin/f2-tayyorlash', nom: 'F2 tayyorlash', Ikonka: FileOutput },
+      { yol: '/admin/smeta-narxlash', nom: 'Smetani narxlash (RES)', Ikonka: Tags },
       { yol: '/admin/narxlar', nom: 'Narxlar nazorati', Ikonka: Tags },
       { yol: '/admin/test/smeta', nom: 'Smeta va F2 Import', Ikonka: FileInput },
         { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },

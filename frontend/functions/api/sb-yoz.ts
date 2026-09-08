@@ -30,6 +30,7 @@ const AMALLAR = {
   zamena_ish_yarat_v1: { rpc: 't2_zamena_ish_yarat_v1' },
   resurs_bola_qosh_v1: { rpc: 't2_resurs_bola_qosh_v1' },
   catalog_observation_yoz_v1: { rpc: 't2_catalog_observation_yoz_v1' },
+  smeta_narxla_res: { rpc: 't2_smeta_narxla_res_v1' },
   qator_tahrir:   { rpc: 't2_qator_tahrir' },
   qator_qosh:     { rpc: 't2_qator_qosh' },
   akt_yarat:      { rpc: 't2_akt_yarat' },
@@ -192,12 +193,6 @@ export const onRequestPost: PagesFunction<{
     if (!sess) {
       return Response.json({ ok: false, error: 'Кириш талаб қилинади' }, { status: 401 });
     }
-    /* Rahbar rejimida yozish yo'q — `/api/gas` bilan BIR XIL qoida.
-       Ikki joyda ikki xil qoida bo'lsa, biri unutiladi. */
-    if (sess.rol === 'boss' || sess.rol === 'rahbar') {
-      return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' },
-                           { status: 403 });
-    }
     if (!ctx.env.SUPABASE_URL || !ctx.env.SUPABASE_KEY) {
       return Response.json({ ok: false, sozlanmagan: true,
         error: 'Supabase sozlanmagan (SUPABASE_URL / SUPABASE_KEY)' });
@@ -208,6 +203,12 @@ export const onRequestPost: PagesFunction<{
     const amal: Amal = (so.amal || 'qator_tahrir') as Amal;
     if (!Object.prototype.hasOwnProperty.call(AMALLAR, amal)) {
       return Response.json({ ok: false, error: 'Noma\'lum amal: ' + String(so.amal) });
+    }
+    /* Rahbar rejimi odatda faqat o'qiydi. RES narxlash esa alohida PTO
+       kontrakti: RPC tenant, faol a'zolik va aniq rolni qayta tekshiradi. */
+    if (sess.rol === 'rahbar' || (sess.rol === 'boss' && amal !== 'smeta_narxla_res')) {
+      return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' },
+                           { status: 403 });
     }
 
     const MINDMAP_V2 = amal.startsWith('mindmap_');
@@ -229,6 +230,22 @@ export const onRequestPost: PagesFunction<{
       if (amal !== 'mindmap_joylashuv_saqla' && amal !== 'resurs_yarat_v2' &&
           (!Number.isInteger(Number(so.expected_version)) || Number(so.expected_version) < 0)) {
         return Response.json({ ok: false, error: 'expected_version noto\'g\'ri' });
+      }
+    }
+    if (amal === 'smeta_narxla_res') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
+        return Response.json({ ok: false, error: 'Narxlash uchun tasdiqlangan actor talab qilinadi' }, { status: 401 });
+      }
+      if (!Number.isInteger(kompaniyaId) || kompaniyaId <= 0 || !Number.isInteger(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id va obyekt_id noto\'g\'ri' });
+      }
+      if (!uuidRe.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi shart' });
+      }
+      if (!Array.isArray(so.narxlar) || so.narxlar.length === 0 || so.narxlar.length > 10000) {
+        return Response.json({ ok: false, error: 'RES narxlari 1..10000 qator bo\'lishi shart' });
       }
     }
 
@@ -265,7 +282,7 @@ export const onRequestPost: PagesFunction<{
          * faqat rahbar (ko'ruvchi) bo'lishi mumkin — bu haqiqiy
          * maqsad. Shu kompaniyaga xos rol boss/rahbar bo'lsa, global
          * rol boshqacha bo'lsa ham bu YOZUV rad etiladi. */
-        if (azolik.rol === 'boss' || azolik.rol === 'rahbar') {
+        if ((azolik.rol === 'boss' && amal !== 'smeta_narxla_res') || azolik.rol === 'rahbar') {
           return Response.json({ ok: false,
             error: 'Bu kompaniyada rahbar rolida yozish mumkin emas' },
             { status: 403 });
@@ -276,7 +293,24 @@ export const onRequestPost: PagesFunction<{
     let yuk: Record<string, unknown>;
 
     /* ══════════ QATOR TAHRIRI ══════════ */
-    if (amal === 'qator_tahrir') {
+    if (amal === 'smeta_narxla_res') {
+      const narxlar = so.narxlar.map((q: any) => ({
+        kod: q.kod == null ? null : String(q.kod).slice(0, 160),
+        nom: q.nom == null ? null : String(q.nom).slice(0, 1500),
+        birlik: q.birlik == null ? null : String(q.birlik).slice(0, 80),
+        narx: Number(q.narx),
+      }));
+      if (narxlar.some((q: { nom: unknown; birlik: unknown; narx: number }) =>
+        !String(q.nom ?? '').trim() || !String(q.birlik ?? '').trim() || !Number.isFinite(q.narx) || q.narx <= 0)) {
+        return Response.json({ ok: false, error: 'Har RES qatorida nom, birlik va musbat narx bo\'lishi shart' });
+      }
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
+        p_obyekt_id: Number(so.obyekt_id), p_operation_id: operationId, p_narxlar: narxlar,
+      };
+
+    /* ══════════ QATOR TAHRIRI ══════════ */
+    } else if (amal === 'qator_tahrir') {
       const qatorId = Number(so.qator_id);
       if (!Number.isFinite(qatorId) || qatorId <= 0) {
         return Response.json({ ok: false, error: 'qator_id noto\'g\'ri' });
