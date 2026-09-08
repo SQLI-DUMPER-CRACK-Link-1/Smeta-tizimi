@@ -330,6 +330,10 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
   const [resIndexSize, setResIndexSize] = useState(0);
   const [katKorib, setKatKorib] = useState<Array<{ nom: string; birlik: string; tanlangan: T2ResursKategoriya }>>([]);
   const [katSaqlanmoqda, setKatSaqlanmoqda] = useState(false);
+  /* T2-SMETA-RETRY-CLEAR-001: xato/eskirgan smetani obyektni
+   * o'chirmasdan tozalab, darhol qaytadan yuklash imkonini beradi. */
+  const [tozalanmoqda, setTozalanmoqda] = useState(false);
+  const [tozalaXato, setTozalaXato] = useState('');
   /** Owner: "qanaqadir jarayon bo'layotganini bilib bo'lmaydi" -- import
    *  bosqichlari haqiqiy vaqtda, har bir qadam nima qilayotgani va
    *  natijasi bilan ko'rsatiladi (simulyatsiya emas -- har bir yozuv
@@ -368,6 +372,25 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     generation.current++; setError(''); setResult(null); setCols(null); setPreview([]);
     setResBook(null); setResCols(null); setResIndex(null); setResIndexSize(0); setResError('');
     setVaraqTeglari({}); setInFileResCols({});
+  }
+
+  /** T2-SMETA-RETRY-CLEAR-001: haqiqiy hodisa -- import xato bo'lganda
+   *  yagona "chiqish" butun obyektni korzinkaga tashlab, yangisini
+   *  yaratish edi (bu esa nom-band bo'lib qolish hodisasiga olib keldi).
+   *  Bu tugma obyektning o'zini saqlab, faqat uning smeta qatorlarini
+   *  tozalaydi -- shundan keyin darhol qaytadan yuklash mumkin bo'ladi. */
+  async function smetaniTozala() {
+    if (!objectId) return;
+    if (!confirm(`Bu obyektdagi ${selectedObject?.qator_soni ?? 0} qatorlik smeta BUTUNLAY o'chiriladi (obyektning o'zi qoladi). Davom etasizmi?`)) return;
+    setTozalanmoqda(true); setTozalaXato('');
+    try {
+      const r = await smetaSorov({ amal: 'smeta_tozala', kompaniyaId: companyId, obyektId: Number(objectId), operationId: yangiOperationId() });
+      if (!r.ok) { setTozalaXato(r.xato || r.code || 'Smeta tozalanmadi.'); return; }
+      setObjects(prev => prev.map(o => o.id === Number(objectId) ? { ...o, qator_soni: 0 } : o));
+      reset(); rawFile.current = null; sourceDocumentId.current = undefined;
+      sourceOperationId.current = ''; importOperationId.current = '';
+      onImportlandi?.();
+    } finally { setTozalanmoqda(false); }
   }
 
   /** Foydalanuvchi bir varaqni qo'lda LRV yoki RES deb belgilaydi (yoki
@@ -725,7 +748,14 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         </select>
       </label>}
       {objectId && alreadyHasSmeta && (
-        <p role="alert" className="text-danger text-sm">Bu obyektda allaqachon {selectedObject?.qator_soni} qatorlik smeta bor — bu ekran faqat BO‘SH obyektga birinchi import uchun.</p>
+        <div className="space-y-2">
+          <p role="alert" className="text-danger text-sm">Bu obyektda allaqachon {selectedObject?.qator_soni} qatorlik smeta bor — bu ekran faqat BO‘SH obyektga birinchi import uchun.</p>
+          <button type="button" className="text-sm text-danger underline disabled:opacity-50"
+            disabled={tozalanmoqda} onClick={() => void smetaniTozala()}>
+            {tozalanmoqda ? 'Tozalanmoqda…' : 'Smetani tozalab, qaytadan yuklash'}
+          </button>
+          {tozalaXato && <p role="alert" className="text-danger text-sm">{tozalaXato}</p>}
+        </div>
       )}
       {objectId && !alreadyHasSmeta && (
         <label className="block text-sm">Smeta fayli (XLSX)

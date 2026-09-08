@@ -74,7 +74,16 @@ interface ImportYakunlaBody {
   kompaniyaId: number;
   sessiyaId: number;
 }
-type SmetaYuklaBody = FaylOqiBody | ImportBody | ImportBoshlaBody | ImportBolakBody | ImportYakunlaBody;
+/* T2-SMETA-RETRY-CLEAR-001: xato/eskirgan importdan keyin obyektni
+ * o'chirib-qayta-yaratmasdan, faqat uning smeta qatorlarini tozalab,
+ * darhol qayta import qilish imkonini beradi (t2_smeta_tozalash_v1). */
+interface SmetaTozalaBody {
+  amal: 'smeta_tozala';
+  kompaniyaId: number;
+  obyektId: number;
+  operationId: string;
+}
+type SmetaYuklaBody = FaylOqiBody | ImportBody | ImportBoshlaBody | ImportBolakBody | ImportYakunlaBody | SmetaTozalaBody;
 
 type FlatRow = SmetaFlatQator;
 
@@ -193,6 +202,16 @@ async function handleImportYakunla(env: Env, actorId: number, body: ImportYakunl
   });
 }
 
+async function handleSmetaTozala(env: Env, actorId: number, body: SmetaTozalaBody) {
+  if (!body.kompaniyaId || !body.obyektId || !body.operationId) {
+    return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
+  }
+  return bolakliRpc(env, 't2_smeta_tozalash_v1', {
+    p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_obyekt_id: body.obyektId,
+    p_operation_id: body.operationId,
+  });
+}
+
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (!ctx.env.SUPABASE_URL || !ctx.env.SUPABASE_KEY || !ctx.env.SESSIYA_KALIT) {
     return Response.json({ ok: false, code: 'CONFIG' }, { status: 500 });
@@ -214,5 +233,6 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (body.amal === 'import_boshla') return handleImportBoshla(ctx.env, actorId, body);
   if (body.amal === 'import_bolak') return handleImportBolak(ctx.env, actorId, body);
   if (body.amal === 'import_yakunla') return handleImportYakunla(ctx.env, actorId, body);
+  if (body.amal === 'smeta_tozala') return handleSmetaTozala(ctx.env, actorId, body);
   return Response.json({ ok: false, code: 'BAD_AMAL' }, { status: 400 });
 };
