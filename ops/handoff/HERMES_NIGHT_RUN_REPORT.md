@@ -1,7 +1,7 @@
 BASE_SHA=806b2955ff00932c25b327991fa2d89a2048064e
 INTEGRATION_BRANCH=hermes/pto-revolution-2026-09
-LATEST_PUSHED_SHA=c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6
-LATEST_LOCAL_SHA=c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6
+LATEST_PUSHED_SHA=7e2130184fed815e494c11d5014d84022dd89f5b
+LATEST_LOCAL_SHA=7e2130184fed815e494c11d5014d84022dd89f5b
 GITHUB_PUSH_STATUS=PUSHED_AND_REMOTE_VERIFIED
 SUPABASE_AUTH_STATUS=CONNECTED_READ_ONLY_MCP; CLI_NOT_INSTALLED
 CLOUDFLARE_AUTH_STATUS=MCP_CONFIGURED_BUT_RUNTIME_UNVERIFIED; WRANGLER_NOT_INSTALLED
@@ -105,8 +105,8 @@ parity, approval/history/export, Forma-3/KS-3 rules and owner smoke.
 
 ## RELEASE / HANDOFF
 
-Validated implementation commit `c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6`
-and handoff commit `05bc3e4149078455d89c618686bcbf981dd6609e` exist locally and
-the latter matches `origin/hermes/pto-revolution-2026-09`. Staged diff/check,
-secret scan and non-interactive push verification passed. Never merge or push
-main.
+Validated implementation commit `c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6`,
+handoff commit `05bc3e4149078455d89c618686bcbf981dd6609e`, and status checkpoint
+`7e2130184fed815e494c11d5014d84022dd89f5b` exist in the dedicated branch.
+Staged diff/check, secret scan and non-interactive push verification passed.
+Never merge or push main.
