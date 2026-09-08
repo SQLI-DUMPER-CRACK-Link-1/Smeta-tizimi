@@ -146,7 +146,9 @@ function ObyektKaskad({ obyektId }: { obyektId: number }) {
           </div>
         ))}
       </div>
-      <table className="w-full text-[13px] border-collapse">
+      {/* Kaskad jadvali eng keng — tor ekranda o'z konteynerida suriladi. */}
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[520px] text-[13px] border-collapse">
         <tbody>
           {KASKAD_QATORLAR.map(({ key, label }) => {
             const isItogo = key.startsWith('itogo') || key === 'vsego';
@@ -159,10 +161,12 @@ function ObyektKaskad({ obyektId }: { obyektId: number }) {
           })}
         </tbody>
       </table>
+      </div>
       {jadval && (
         <div>
           <h4 className="text-sm font-semibold text-text mb-1">Kategoriya bo'yicha yakuniy koeffitsient jadvali</h4>
-          <table className="w-full text-[13px] border-collapse">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[480px] text-[13px] border-collapse">
             <tbody>
               {Object.entries(jadval).map(([kat, k]) => (
                 <tr key={kat} className="border-t border-border/60">
@@ -172,6 +176,7 @@ function ObyektKaskad({ obyektId }: { obyektId: number }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

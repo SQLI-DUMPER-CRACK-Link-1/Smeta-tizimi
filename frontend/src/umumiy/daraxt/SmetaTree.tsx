@@ -54,6 +54,8 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   const [faktSaving, setFaktSaving] = useState(false);
   const [faktStatus, setFaktStatus] = useState<{ tone: 'ok' | 'warn' | 'danger'; text: string } | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
+  /** Ustun sarlavhalari — tana bilan birga gorizontal suriladi. */
+  const sarlavhaRef = useRef<HTMLDivElement>(null);
   const priceControlByQatorId = useMemo(
     () => new Map((priceControlLines || []).map((line) => [line.qator_id, line])),
     [priceControlLines],
@@ -204,6 +206,11 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
           </div>
         </div>
 
+      {/* ⚠️ Sarlavha va qatorlar AVVAL ikki alohida gorizontal kontekstda edi:
+          930px dan tor ekranda tanani o'ngga surganda ustun sarlavhalari
+          joyida qolib, raqamlar boshqa ustun tagiga tushib ketardi. Endi
+          sarlavha tananing scrollLeft'iga ergashadi (pastdagi onScroll). */}
+      <div ref={sarlavhaRef} className="overflow-x-hidden">
       <div className="min-w-[930px] h-5 border-b border-white/5 bg-black/40 flex items-center px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
         <div className="flex-1 sticky left-0 z-20 bg-black/40">ISH</div><div className="w-20 text-center">SMETA</div><div className="w-24 text-center">FAKT</div><div className="w-24 text-center">F2</div><div className="w-24 text-center">NAZORAT</div><div className="w-20 text-center">HOLAT</div>{showMoney && <div className="w-[390px] text-center">QIYMATLAR</div>}
       </div>
@@ -227,10 +234,15 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
         </div>
       </div>
       </div>
+      </div>
 
       <div 
         className="flex-1 overflow-auto" 
         ref={parentRef}
+        onScroll={(e) => {
+          const h = sarlavhaRef.current;
+          if (h) h.scrollLeft = e.currentTarget.scrollLeft;
+        }}
         onDragOver={(e) => {
           if (!isEditMode) return;
           e.preventDefault();

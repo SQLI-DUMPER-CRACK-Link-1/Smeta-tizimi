@@ -370,24 +370,57 @@ function NativeSession({ companyId }: { companyId: number }) {
     } catch { setError('Yozish javobi olinmadi. Qayta urinish ayni operatsiyani tekshiradi.'); }
     finally { writing.current = false; setBusy(false); }
   }
-  return <section className="p-4 space-y-4 max-w-5xl">
-    <h1 className="text-xl font-semibold">F2 import — yangi rejim</h1>
-    <p role="status">{phase}</p>
-    {resumable && !source.length && <p className="karta p-3">
-      Tugallanmagan import bor ({resumable.matched}/{resumable.total ?? '?'} qator moslashtirilgan, {resumable.updatedAt ? new Date(resumable.updatedAt).toLocaleString() : ''}).{' '}
-      <button onClick={() => void resume(resumable)} disabled={busy}>Davom ettirish</button>
+  /* `max-w-5xl` (1024px) butun sahifani qisardi — 2 oynali moslashtirish
+     workbench'i uchun bu juda tor, keng monitorda ham yarmi bo'sh turardi.
+     Endi kenglik chegarasi yo'q, ichki panellar o'zi moslashadi. */
+  return <section className="w-full space-y-4 p-3 sm:p-4">
+    <h1 className="text-lg font-semibold sm:text-xl">F2 import — yangi rejim</h1>
+    <p role="status" className="text-[13px] text-text-dim">{phase}</p>
+    {resumable && !source.length && <p className="karta flex flex-wrap items-center gap-2 p-3 text-[13px]">
+      <span>Tugallanmagan import bor ({resumable.matched}/{resumable.total ?? '?'} qator moslashtirilgan, {resumable.updatedAt ? new Date(resumable.updatedAt).toLocaleString() : ''}).</span>
+      <button onClick={() => void resume(resumable)} disabled={busy} className="tugma">Davom ettirish</button>
     </p>}
     {draftXato && <p role="alert" className="text-warn">{draftXato}</p>}
-    <fieldset disabled={busy || done} className="flex flex-wrap gap-4">
-      <label>Obyekt<select aria-label="Obyekt" value={objectId} onChange={e => {
-        reset(); setObjectId(e.target.value); rawFile.current = null;
-        sourceDocId.current = undefined; sourceOperationId.current = '';
-      }}><option value="">Tanlang</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}</select></label>
-      <label>F2 davri<input type="month" value={month} onChange={e => setMonth(e.target.value)} disabled={source.length > 0} /></label>
-      <label>XLSX fayl<input type="file" accept=".xlsx,.xlsm,.xls" onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} /></label>
-      {book && <label>Varaq<select value={sheetName} onChange={e => chooseSheet(book, e.target.value)}>{book.sheets.map(s => <option key={s.name}>{s.name}</option>)}</select></label>}
+    {/* Bu forma avval umuman stilsiz edi (yalang'och <label>+<input>):
+        tor ekranda yorliq va maydon bir qatorga tiqilib, o'qib bo'lmasdi.
+        Endi loyihaning o'z `.karta`/`.input` tizimi va ekranga qarab
+        1→2→4 ustunga bo'linadigan panjara. */}
+    <fieldset disabled={busy || done} className="karta grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-4">
+      <label className="block text-[12px] font-medium text-text">Obyekt
+        <select aria-label="Obyekt" value={objectId} onChange={e => {
+          reset(); setObjectId(e.target.value); rawFile.current = null;
+          sourceDocId.current = undefined; sourceOperationId.current = '';
+        }} className="input mt-1.5 block h-9 w-full px-2 text-[13px]">
+          <option value="">Tanlang</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
+        </select>
+      </label>
+      <label className="block text-[12px] font-medium text-text">F2 davri
+        <input type="month" value={month} onChange={e => setMonth(e.target.value)} disabled={source.length > 0}
+          className="input mt-1.5 block h-9 w-full px-2 text-[13px]" />
+      </label>
+      <label className="block text-[12px] font-medium text-text">XLSX fayl
+        <input type="file" accept=".xlsx,.xlsm,.xls" onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }}
+          className="input mt-1.5 block h-9 w-full px-2 py-1.5 text-[12px] file:mr-2 file:rounded file:border-0 file:bg-surface file:px-2 file:py-1 file:text-[12px] file:text-text" />
+      </label>
+      {book && <label className="block text-[12px] font-medium text-text">Varaq
+        <select value={sheetName} onChange={e => chooseSheet(book, e.target.value)}
+          className="input mt-1.5 block h-9 w-full px-2 text-[13px]">
+          {book.sheets.map(s => <option key={s.name}>{s.name}</option>)}
+        </select>
+      </label>}
     </fieldset>
-    {cols && <fieldset disabled={busy || done} className="karta p-3 flex flex-wrap gap-3"><legend>Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>{(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => <label key={k}>{k}<input className="w-16 border" type="number" min="1" value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} /></label>)}<button onClick={() => void match()} disabled={!objectId || !month}>Moslashtirish</button></fieldset>}
+    {cols && <fieldset disabled={busy || done} className="karta p-3">
+      <legend className="px-1 text-[12px] font-medium text-text-dim">Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>
+      <div className="mt-2 flex flex-wrap items-end gap-2 sm:gap-3">
+        {(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => (
+          <label key={k} className="text-[12px] text-text-dim">{k}
+            <input className="input mt-1 block h-8 w-16 px-1.5 text-center text-[13px]" type="number" min="1"
+              value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} />
+          </label>
+        ))}
+        <button onClick={() => void match()} disabled={!objectId || !month} className="tugma tugma-asosiy ml-auto">Moslashtirish</button>
+      </div>
+    </fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
     {source.length > 0 && <>
       <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5" aria-label="F2 import tekshiruv xulosasi">

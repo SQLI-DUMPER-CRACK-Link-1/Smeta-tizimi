@@ -75,7 +75,11 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
                   Smeta: <FmtN val={k.jamiSmetaSumma} /> · F2: <FmtN val={k.jamiF2Summa} /> · Qoldiq: <FmtN val={k.jamiQoldiqSumma} />
                 </span>
               </summary>
-              <table className="w-full text-[12px] mt-2">
+              {/* 8 ustun + uzun ruscha resurs nomlari: tor ekranda jadval
+                  BUTUN sahifani gorizontal surib yubormasligi uchun o'z
+                  konteyneri ichida suriladi. */}
+              <div className="mt-2 overflow-x-auto">
+              <table className="w-full min-w-[640px] text-[12px]">
                 <thead className="text-text-mute text-left">
                   <tr>
                     <th className="py-1">Resurs</th><th>Birlik</th>
@@ -99,6 +103,7 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
                   ))}
                 </tbody>
               </table>
+              </div>
             </details>
           ))}
         </>

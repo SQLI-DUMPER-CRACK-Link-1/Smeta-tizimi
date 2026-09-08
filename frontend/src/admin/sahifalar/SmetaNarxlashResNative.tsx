@@ -4,6 +4,7 @@ import { resNarxlashPreview, resQatorlariniOl, resVaraqlariniTop, type ResNarx, 
 import { sbT2SmetaNarxlaRes } from '../../api/t2-smeta-narxlash';
 import { yangiOperationId, sbT2DaraxtOl, sbT2ObyektlarOlKomp, type T2Obyekt, type T2Qator } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
+import { Sahifa } from '../../umumiy/ui/Sahifa';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -86,36 +87,84 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
   }
 
   const topilgan = book ? resVaraqlariniTop(book) : [];
-  return <div className="space-y-3 p-1">
-    {!fixedObjectId && <label className="block text-sm">Obyekt
-      <select aria-label="Narxlash obyekti" className="ml-2 border rounded px-2 py-1" value={objectId} onChange={(e) => void obyektniYukla(e.target.value)}>
-        <option value="">Tanlang</option>{objects.map((o) => <option key={o.id} value={o.id}>{o.nom}</option>)}
-      </select>
-    </label>}
-    <p className="text-[12px] text-text-mute">Bu ekran faqat narxi yo‘q (`NULL` yoki `0`) RS/MAT/OB qatorlarini RES bilan to‘ldiradi. Mavjud narx, F2 va tarixiy certified qiymatlar o‘zgarmaydi.</p>
-    {objectId && <label className="block text-sm">RES fayli (XLSX/XLS)
-      <input aria-label="RES narx fayli" type="file" accept=".xlsx,.xlsm,.xls" className="ml-2" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) void faylYukla(f); }} />
-    </label>}
-    {busy && <p role="status">Hisoblanmoqda…</p>}
-    {error && <p role="alert" className="text-danger">{error}</p>}
-    {topilgan.length > 0 && <div className="karta p-3 space-y-1">
-      <p className="font-semibold text-[12px]">RES varaqlari</p>
-      {topilgan.map((x) => <label key={x.nom} className="block text-[12px]"><input type="checkbox" className="mr-2" checked={tanlanganVaraqlar.includes(x.nom)} onChange={(e) => varaqniAlmashtir(x.nom, e.target.checked)} />{x.nom}</label>)}
+  return <div className="space-y-3">
+    <p className="text-[12px] text-text-mute">
+      Bu ekran faqat narxi yo‘q (<code>NULL</code> yoki <code>0</code>) RS/MAT/OB qatorlarini RES bilan to‘ldiradi.
+      Mavjud narx, F2 va tarixiy certified qiymatlar o‘zgarmaydi.
+    </p>
+
+    {/* Obyekt + fayl bir qatorda (keng ekran), tor ekranda ustma-ust. */}
+    <div className="karta grid gap-3 p-3 sm:grid-cols-2">
+      {!fixedObjectId && <label className="block text-[12px] font-medium text-text">Obyekt
+        <select aria-label="Narxlash obyekti" value={objectId} onChange={(e) => void obyektniYukla(e.target.value)}
+          className="input mt-1.5 block h-9 w-full px-2 text-[13px]">
+          <option value="">Tanlang</option>{objects.map((o) => <option key={o.id} value={o.id}>{o.nom}</option>)}
+        </select>
+      </label>}
+      {objectId && <label className="block text-[12px] font-medium text-text">RES fayli (XLSX/XLS)
+        <input aria-label="RES narx fayli" type="file" accept=".xlsx,.xlsm,.xls" disabled={busy}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void faylYukla(f); }}
+          className="input mt-1.5 block h-9 w-full px-2 py-1.5 text-[12px] file:mr-2 file:rounded file:border-0 file:bg-surface file:px-2 file:py-1 file:text-[12px] file:text-text" />
+      </label>}
+    </div>
+
+    {busy && <p role="status" className="text-[13px] text-text-dim">Hisoblanmoqda…</p>}
+    {error && <p role="alert" className="karta border-danger/40 bg-danger/5 p-3 text-[13px] text-danger">{error}</p>}
+
+    {topilgan.length > 0 && <div className="karta p-3">
+      <p className="text-[12px] font-semibold text-text">RES varaqlari</p>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+        {topilgan.map((x) => (
+          <label key={x.nom} className="inline-flex items-center gap-2 text-[12px]">
+            <input type="checkbox" checked={tanlanganVaraqlar.includes(x.nom)}
+              onChange={(e) => varaqniAlmashtir(x.nom, e.target.checked)} />{x.nom}
+          </label>
+        ))}
+      </div>
     </div>}
-    {preview && <div className="karta p-3 space-y-1 text-[12px]" aria-live="polite">
-      <p><b>Oldindan ko‘rish:</b> {preview.narxsiz} ta narxsiz resurs qatori.</p>
-      <p className="text-success">{preview.mos} tasiga RES narxi aniq topildi.</p>
-      <p>{preview.narxsizQoldi} tasi narxsiz qoladi — ular taxmin qilinmaydi.</p>
-      {preview.ziddiyatliManba > 0 && <p className="text-amber-600">{preview.ziddiyatliManba} ta RES kalitida turli narx bor; ular avtomatik qo‘llanmaydi.</p>}
-      <button type="button" className="tugma tugma-asosiy" disabled={busy || preview.mos === 0} onClick={() => void tasdiqla()}>Tasdiqlab narxlash</button>
+
+    {/* Oldindan ko'rish — yozishdan OLDIN ko'riladigan yagona joy,
+        shuning uchun raqamlar matn ichida emas, alohida kartochkalarda. */}
+    {preview && <div className="karta p-3" aria-live="polite">
+      <p className="text-[12px] font-semibold text-text">Oldindan ko‘rish — hali hech narsa yozilmadi</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        {([
+          ['Narxsiz qator', preview.narxsiz, 'text-text'],
+          ['Narxi topildi', preview.mos, preview.mos ? 'text-ok' : 'text-text'],
+          ['Narxsiz qoladi', preview.narxsizQoldi, preview.narxsizQoldi ? 'text-warn' : 'text-text'],
+        ] as const).map(([label, value, tone]) => (
+          <div key={label} className="rounded-lg border border-border px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-mute">{label}</p>
+            <p className={`mt-1 text-lg font-semibold tabular-nums ${tone}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+      {preview.ziddiyatliManba > 0 && <p className="mt-2 text-[12px] text-warn">
+        {preview.ziddiyatliManba} ta RES kalitida turli narx bor — ular avtomatik qo‘llanmaydi (taxmin qilinmaydi).
+      </p>}
+      <button type="button" className="tugma tugma-asosiy mt-3 w-full sm:w-auto"
+        disabled={busy || preview.mos === 0} onClick={() => void tasdiqla()}>Tasdiqlab narxlash</button>
     </div>}
-    {natija && <p role="status" className="text-success">{natija}</p>}
+
+    {natija && <p role="status" className="karta border-ok/40 bg-ok/5 p-3 text-[13px] text-success">{natija}</p>}
   </div>;
 }
 
 export default function SmetaNarxlashResNative({ obyektId }: { obyektId?: number } = {}) {
   const { joriy, yuklanmoqda } = useKompaniya();
-  if (yuklanmoqda) return <p>Kompaniya yuklanmoqda…</p>;
-  if (!joriy?.id) return <p>Kompaniyani tanlang.</p>;
-  return <Sessiya key={`${joriy.id}:${obyektId ?? 'all'}`} companyId={joriy.id} fixedObjectId={obyektId} />;
+  const ichki = yuklanmoqda
+    ? <p className="text-[13px] text-text-dim">Kompaniya yuklanmoqda…</p>
+    : !joriy?.id
+      ? <p className="text-[13px] text-text-dim">Kompaniyani tanlang.</p>
+      : <Sessiya key={`${joriy.id}:${obyektId ?? 'all'}`} companyId={joriy.id} fixedObjectId={obyektId} />;
+  /* `obyektId` berilgan bo'lsa — bu boshqa sahifa ichiga qo'yilgan panel,
+     o'z sarlavhasi kerak emas. Mustaqil marshrut sifatida ochilganda esa
+     qolgan PTO ekranlari bilan bir xil `Sahifa` karkasida bo'ladi. */
+  if (obyektId != null) return ichki;
+  return (
+    <Sahifa sarlavha="Smetani narxlash (RES)"
+      tavsif="Allaqachon import qilingan, narxsiz smetaga RES katalogidan narx qo‘llash">
+      {ichki}
+    </Sahifa>
+  );
 }

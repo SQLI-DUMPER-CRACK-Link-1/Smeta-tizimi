@@ -288,7 +288,11 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* Tor ekranda ikki panelni yonma-yon siqish o'rniga ustma-ust
+          qo'yamiz — aks holda ikkalasi ham o'qib bo'lmaydigan darajada
+          ensiz bo'ladi. Bog'lashning "tanla → o'ngdan bos" usuli ikkala
+          holatda ham ishlaydi (sudrash faqat keng ekranda qulay). */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="karta overflow-hidden flex flex-col">
           <div className="px-2 py-1.5 border-b border-border bg-surface-2/60 flex items-center gap-2">
             <span className="text-[11px] font-semibold text-text-dim uppercase tracking-wide">F2 manba (fayl)</span>
