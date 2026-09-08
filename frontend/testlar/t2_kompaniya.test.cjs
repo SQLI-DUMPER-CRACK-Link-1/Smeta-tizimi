@@ -53,12 +53,6 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       't2_shartnoma_saqla', 't2_shartnoma_ochir', 't2_shartnoma_bog_saqla', 't2_nakrutka_saqla',
                       't2_tolov_yoz', 't2_tolov_tahrir', 't2_tolov_ochir', 't2_xarajat_yoz', 't2_xarajat_tahrir', 't2_xarajat_ochir',
                       't2_korzinkaga_tashlash', 't2_korzinkadan_tiklash', 't2_butunlay_ochirish', 't2_obyekt_yangila',
-                      /* 2026-09-08: native PTO cutover qo'shgan uchta
-                         nomlangan buyruq. Ular gatewayda ochiq qolishi
-                         kerak, lekin ro'yxatga aniq kiritilmaguncha jim
-                         kengayish sifatida qabul qilinmaydi. */
-                      't2_obyekt_yarat_v1', 't2_resurs_kategoriya_belgila_v1',
-                      't2_nakrutka_koef_saqla_v1',
                       't2_aosr_yoz', 't2_aosr_bekor', 't2_aosr_bog_saqla', 't2_aosr_bog_ochir', 't2_audit_yoz',
                       't2_obyekt_hujjat_yoz', 't2_obyekt_hujjat_ochir',
                       't2_sklad_yarat', 't2_kadr_yarat', 't2_texnika_yarat',
@@ -93,7 +87,23 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       /* 2026-09-05, T2-PTO-CLOSURE-007 (Codex): catalog
                          observation ingestion -- exact-match-only auto-link,
                          no price ever stored/copied through this path. */
-                      't2_catalog_observation_yoz_v1'].sort();
+                      't2_catalog_observation_yoz_v1',
+                      /* RES narxlash: faqat server tekshirgan, exact-match-only
+                         narx kiritish; mavjud narxlar va F2 tarixi o'zgarmaydi. */
+                      't2_smeta_narxla_res_v1',
+                      /* ⚠️ 2026-09-08 (Claude): bu uchtasi 2026-09-07 dagi
+                         commitlarimda `AMALLAR` ga qo'shilgan, lekin SHU
+                         ro'yxatga kiritilmagan edi — natijada bu tekshiruv
+                         o'shandan beri qizil turgan. Ro'yxatning butun
+                         maqsadi shu: hech kim (men ham) jimgina yangi
+                         yozuvchi RPC ochib qo'ymasin. Endi tenglashtirildi.
+                         `t2_obyekt_yarat_v1` — kanonik obyekt yaratish;
+                         `t2_resurs_kategoriya_belgila_v1` — ЧЕЛ/МАШ/МАТ/ОБ/
+                         КАБ/М-К registri; `t2_nakrutka_koef_saqla_v1` —
+                         ustama koeffitsientlari. Uchalasi ham idempotent va
+                         tenant/rol tekshiruvini RPC ichida bajaradi. */
+                      't2_obyekt_yarat_v1', 't2_resurs_kategoriya_belgila_v1',
+                      't2_nakrutka_koef_saqla_v1'].sort();
     T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));
@@ -178,9 +188,8 @@ console.log('\n── 5. HALOLLIK QOIDALARI ──');
   const o = oqi('src/test02/TestObyektlar.tsx');
   T('narxlanmagan qatorlar OCHIQ ko\'rsatiladi',
     o.indexOf('NARXLANMAGAN') >= 0 || o.indexOf('narxsiz') >= 0);
-  /* Qator tahriri endi test02 dagi eski alohida sahifa emas, balki
-     kanonik LRV daraxti ham ishlatadigan modal. Himoya aynan real
-     foydalanuvchi yo'liga qarashi kerak. */
+  /* Qator tahriri test02 dagi eski sahifa emas: haqiqiy LRV daraxti
+     ishlatadigan kanonik modal tekshiriladi. */
   const t = oqi('src/umumiy/ui/QatorTahrirModal.tsx');
   T('ziddiyat «xato» emas, tushuntirish sifatida ko\'rsatiladi',
     t.indexOf('boshqa foydalanuvchi o‘zgartirdi') >= 0);

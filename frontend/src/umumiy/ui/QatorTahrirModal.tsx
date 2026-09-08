@@ -182,6 +182,13 @@ export function QatorTahrirModal({
           })}
         </div>
 
+        {/* Halollik qoidasi (t2_kompaniya.test.cjs shuni tekshiradi):
+            bo'sh maydon — bu 0 EMAS. Moliyaviy ma'lumotda "kiritilmagan"
+            va "nol" butunlay boshqa narsa, shuning uchun aytib turiladi. */}
+        <p className="mt-3 text-[10px] text-text-mute">
+          Bo‘sh qoldirilsa qiymat <b>yo‘q</b> bo‘ladi (0 emas). 0 va «kiritilmagan» — boshqa-boshqa narsa.
+        </p>
+
         <div className="flex justify-end mt-4">
           <button onClick={yop}
             className="px-4 py-1.5 rounded-lg text-[12px] font-medium text-text-dim hover:bg-white/5 border border-border">

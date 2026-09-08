@@ -68,6 +68,7 @@ import { F2TayyorlashNative } from './admin/sahifalar/F2TayyorlashNative';
 import NakopitelniyVedomost from './admin/sahifalar/NakopitelniyVedomost';
 import NakrutkaNative from './admin/sahifalar/NakrutkaNative';
 import F2TarixNative from './admin/sahifalar/F2TarixNative';
+import SmetaNarxlashResNative from './admin/sahifalar/SmetaNarxlashResNative';
 import { Narxlar } from './admin/sahifalar/Narxlar';
 import { Ierarxiya } from './admin/sahifalar/Ierarxiya';
 import { Fakturalar } from './admin/sahifalar/Fakturalar';
@@ -127,6 +128,7 @@ export default function App() {
           <Route path="nakopitelniy" element={<NakopitelniyVedomost />} />
           <Route path="nakrutka" element={<NakrutkaNative />} />
           <Route path="f2-tarix" element={<F2TarixNative />} />
+          <Route path="smeta-narxlash" element={<SmetaNarxlashResNative />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
           <Route path="shartnomalar" element={<Shartnoma />} />
           <Route path="fakturalar" element={<Fakturalar />} />
@@ -196,6 +198,22 @@ export default function App() {
           <Route path="texnika" element={<ErpTexnika />} />
           <Route path="taminot" element={<ErpTaminot />} />
           <Route path="sifat" element={<ErpSifat />} />
+
+          {/* T2-IA-PROD-URL-001 (2026-09-08): bu sahifalar allaqachon ishlab
+              turgan mahsulot qismlari, lekin manzillari tarixiy sabab bilan
+              `/admin/test/...` edi — ya'ni foydalanuvchi kundalik menyuda
+              «test» so'zini ko'rib turardi. Endi ularning PRODUCTION manzili
+              bor; eski `/admin/test/*` YO'Q QILINMADI (eski havolalar,
+              xatcho'plar va boshqa agentlarning shoxchalari buzilmasin). */}
+          <Route path="moliya" element={<WrapperMoliya />} />
+          <Route path="logistika" element={<WrapperLogistika />} />
+          <Route path="crm" element={<WrapperCRM />} />
+          <Route path="zayavka" element={<TestZayavka />} />
+          <Route path="aosr" element={<TestAosr />} />
+          <Route path="korzinka" element={<TestKorzinka />} />
+          <Route path="erp" element={<TestErp />} />
+          {/* `sozlamalar` (T1) allaqachon band — bu T2 sozlamalari. */}
+          <Route path="tizim-sozlama" element={<TestSozlama />} />
 
           {/* WARN 2026-08-17 — ESKI MANZILLAR UCHUN KO’PRIK.
               Menyudagi `shartnoma` → `shartnomalar` xatosi tuzatilgach ham

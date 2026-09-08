@@ -39,7 +39,7 @@ export function Sahifa<T = unknown>({
       initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
       animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
       transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col h-full overflow-hidden"
+      className="flex flex-col h-full min-h-0 min-w-0 overflow-hidden"
     >
       <header className="flex-shrink-0 px-6 pt-6 pb-4 flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
@@ -64,7 +64,7 @@ export function Sahifa<T = unknown>({
           {amallar}
         </div>
       </header>
-      <div className="flex-1 overflow-auto px-6 pb-6">{ichki}</div>
+      <div className="flex-1 min-h-0 min-w-0 overflow-auto px-6 pb-6">{ichki}</div>
     </motion.div>
   );
 }

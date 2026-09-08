@@ -30,6 +30,7 @@ const AMALLAR = {
   zamena_ish_yarat_v1: { rpc: 't2_zamena_ish_yarat_v1' },
   resurs_bola_qosh_v1: { rpc: 't2_resurs_bola_qosh_v1' },
   catalog_observation_yoz_v1: { rpc: 't2_catalog_observation_yoz_v1' },
+  smeta_narxla_res: { rpc: 't2_smeta_narxla_res_v1' },
   qator_tahrir:   { rpc: 't2_qator_tahrir' },
   qator_qosh:     { rpc: 't2_qator_qosh' },
   akt_yarat:      { rpc: 't2_akt_yarat' },
@@ -243,6 +244,25 @@ export const onRequestPost: PagesFunction<{
       }
     }
 
+    /* RES narxlash — yuk shakli shu yerda ham tekshiriladi (RPC ham qayta
+       tekshiradi: tenant, faol a'zolik, rol va 1..10000 chegara). */
+    if (amal === 'smeta_narxla_res') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      const obyektId = Number(so.obyekt_id);
+      if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
+        return Response.json({ ok: false, error: 'Narxlash uchun tasdiqlangan actor talab qilinadi' }, { status: 401 });
+      }
+      if (!Number.isInteger(kompaniyaId) || kompaniyaId <= 0 || !Number.isInteger(obyektId) || obyektId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id va obyekt_id noto\'g\'ri' });
+      }
+      if (!uuidRe.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id UUID bo\'lishi shart' });
+      }
+      if (!Array.isArray(so.narxlar) || so.narxlar.length === 0 || so.narxlar.length > 10000) {
+        return Response.json({ ok: false, error: 'RES narxlari 1..10000 qator bo\'lishi shart' });
+      }
+    }
+
     /* ⚡ 2026-08-27 (Claude, foydalanuvchi tasdig'i — "haqiqiy multi-
      * tenant" poydevorining birinchi haqiqiy TEKSHIRUVI): avvalgacha
      * `kompaniya_id` mijoz yuborgan har qanday qiymat bo'lardi va
@@ -290,8 +310,31 @@ export const onRequestPost: PagesFunction<{
 
     let yuk: Record<string, unknown>;
 
+    /* ══════════ RES NARXLASH ══════════
+       Allaqachon import qilingan, narxsiz smetani RES katalogi bilan
+       narxlaydi. Matn uzunliklari bu yerda kesiladi; moslashtirish va
+       "narxi bor qator ustidan yozilmasin" qoidasi RPC ichida. */
+    if (amal === 'smeta_narxla_res') {
+      const narxlar = (so.narxlar as unknown[]).map((raw) => {
+        const q = raw as Record<string, unknown>;
+        return {
+          kod: q.kod == null ? null : String(q.kod).slice(0, 160),
+          nom: q.nom == null ? null : String(q.nom).slice(0, 1500),
+          birlik: q.birlik == null ? null : String(q.birlik).slice(0, 80),
+          narx: Number(q.narx),
+        };
+      });
+      if (narxlar.some((q) =>
+        !String(q.nom ?? '').trim() || !String(q.birlik ?? '').trim() || !Number.isFinite(q.narx) || q.narx <= 0)) {
+        return Response.json({ ok: false, error: 'Har RES qatorida nom, birlik va musbat narx bo\'lishi shart' });
+      }
+      yuk = {
+        p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
+        p_obyekt_id: Number(so.obyekt_id), p_operation_id: operationId, p_narxlar: narxlar,
+      };
+
     /* ══════════ QATOR TAHRIRI ══════════ */
-    if (amal === 'qator_tahrir') {
+    } else if (amal === 'qator_tahrir') {
       const qatorId = Number(so.qator_id);
       if (!Number.isFinite(qatorId) || qatorId <= 0) {
         return Response.json({ ok: false, error: 'qator_id noto\'g\'ri' });
