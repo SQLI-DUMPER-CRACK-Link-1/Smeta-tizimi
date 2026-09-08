@@ -38,5 +38,16 @@ describe('RES narxlash kalitlari', () => {
     );
     expect(result.ziddiyatliManba).toBe(1);
     expect(result.mos).toBe(0);
+    expect(result.moslashmagan[0]?.sabab).toBe('RES_MANBA_ZIDDIYATI');
+  });
+
+  it('PTOga moslashmagan qator va tur bo‘yicha aniq sababni beradi', () => {
+    const result = resNarxlashPreview([
+      { id: 1, tur: 'rs', kod: 'A', nom: 'Ishchi kuchi', birlik: 'soat', narx: null },
+      { id: 2, tur: 'ob', kod: 'B', nom: null, birlik: 'dona', narx: 0 },
+    ], [{ kod: 'C', nom: 'Boshqa resurs', birlik: 'dona', narx: 5 }]);
+    expect(result.turBoyicha.rs).toEqual({ narxsiz: 1, mos: 0 });
+    expect(result.turBoyicha.ob).toEqual({ narxsiz: 1, mos: 0 });
+    expect(result.moslashmagan.map((x) => x.sabab)).toEqual(['RES_MANBASI_TOPILMADI', 'QATOR_IDENTIYASI_YOQ']);
   });
 });

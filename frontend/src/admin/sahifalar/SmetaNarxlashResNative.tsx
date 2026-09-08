@@ -6,6 +6,12 @@ import { yangiOperationId, sbT2DaraxtOl, sbT2ObyektlarOlKomp, type T2Obyekt, typ
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const SABAB_NOMI = {
+  QATOR_IDENTIYASI_YOQ: 'qatorning nomi yoki birligi yo‘q',
+  RES_MANBASI_TOPILMADI: 'RESda aynan mos qator topilmadi',
+  RES_MANBA_ZIDDIYATI: 'bir RES kalitida turli narxlar bor',
+  BIR_NECHTA_NARX_VARIANTI: 'bir nechta mos narx varianti bor',
+} as const;
 
 function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectId?: number }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
@@ -106,7 +112,17 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       <p><b>Oldindan ko‘rish:</b> {preview.narxsiz} ta narxsiz resurs qatori.</p>
       <p className="text-success">{preview.mos} tasiga RES narxi aniq topildi.</p>
       <p>{preview.narxsizQoldi} tasi narxsiz qoladi — ular taxmin qilinmaydi.</p>
+      <p className="text-text-mute">RS: {preview.turBoyicha.rs.mos}/{preview.turBoyicha.rs.narxsiz} · MAT: {preview.turBoyicha.mat.mos}/{preview.turBoyicha.mat.narxsiz} · OB: {preview.turBoyicha.ob.mos}/{preview.turBoyicha.ob.narxsiz}</p>
       {preview.ziddiyatliManba > 0 && <p className="text-amber-600">{preview.ziddiyatliManba} ta RES kalitida turli narx bor; ular avtomatik qo‘llanmaydi.</p>}
+      {preview.moslashmagan.length > 0 && <details className="mt-2 rounded border border-border p-2">
+        <summary className="cursor-pointer font-medium">Narxsiz qoladigan qatorlar sababi ({preview.moslashmagan.length})</summary>
+        <ul className="mt-2 max-h-52 space-y-1 overflow-auto text-text-dim">
+          {preview.moslashmagan.slice(0, 100).map((q, i) => <li key={`${q.tur}:${q.kod}:${q.nom}:${i}`}>
+            <b>{q.tur.toUpperCase()}</b> · {q.kod || 'kodsiz'} · {q.nom || 'nomsiz'} ({q.birlik || 'birliksiz'}) — {SABAB_NOMI[q.sabab]}
+          </li>)}
+          {preview.moslashmagan.length > 100 && <li>Yana {preview.moslashmagan.length - 100} ta qator bor.</li>}
+        </ul>
+      </details>}
       <button type="button" className="tugma tugma-asosiy" disabled={busy || preview.mos === 0} onClick={() => void tasdiqla()}>Tasdiqlab narxlash</button>
     </div>}
     {natija && <p role="status" className="text-success">{natija}</p>}
