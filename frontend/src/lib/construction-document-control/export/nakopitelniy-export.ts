@@ -18,17 +18,17 @@ export async function generateNakopitelniy(
   const worksheet = workbook.addWorksheet('Nakopitelnaya vedomost');
 
   // Header meta
-  worksheet.mergeCells('A1', 'K1');
+  worksheet.mergeCells('A1', 'N1');
   const titleCell = worksheet.getCell('A1');
   titleCell.value = `Nakopitelnaya vedomost (Davr: ${options.periodLabel})`;
   titleCell.font = { bold: true, size: 14 };
   titleCell.alignment = { horizontal: 'center' };
 
-  worksheet.mergeCells('A2', 'K2');
+  worksheet.mergeCells('A2', 'N2');
   worksheet.getCell('A2').value = `Obyekt: ${options.projectName} - ${options.objectName}`;
   worksheet.getCell('A2').font = { italic: true };
   
-  worksheet.mergeCells('A3', 'K3');
+  worksheet.mergeCells('A3', 'N3');
   worksheet.getCell('A3').value = `Hujjat raqami: ${options.documentNumber}`;
 
   worksheet.addRow([]); // empty row
@@ -40,11 +40,14 @@ export async function generateNakopitelniy(
     'Bazaviy hajm',
     'Tasdiqlangan o\'zgarish',
     'Jami limit',
-    'Oldingi tasdiqlangan F-2',
-    'Joriy F-2',
-    'Jami F-2',
-    'Qoldiq',
-    'Sertifikatlangan summa',
+    'Oldingi F-2 hajmi',
+    'Joriy F-2 hajmi',
+    'Jami F-2 hajmi',
+    'Qoldiq hajm',
+    'Oldingi F-2 manba summasi',
+    'Joriy F-2 manba summasi',
+    'Jami F-2 manba summasi',
+    'Qoldiq summa (smeta nazorati)',
     'Holat'
   ]);
 
@@ -70,7 +73,7 @@ export async function generateNakopitelniy(
     worksheet.insertRow(5, ['DIQQAT: Nakopitelniy Mismatch xatosi topildi! Ba\'zi qatorlarda summalash to\'g\'ri kelmayapti.']);
     const alertRow = worksheet.getRow(5);
     alertRow.font = { color: { argb: 'FFFF0000' }, bold: true };
-    worksheet.mergeCells('A5', 'K5');
+    worksheet.mergeCells('A5', 'N5');
   }
 
   // Data rows
@@ -90,6 +93,8 @@ export async function generateNakopitelniy(
     // bo'lsa -- masalan qatorda narx manbasi hali qayd etilmagan -- bu
     // yerda "0" YOZILMAYDI (0 "hali sertifikatlanmagan" bilan bir xil
     // ko'rinib, haqiqiy noaniqlikni yashirib qo'yardi). "NOANIQ" yoziladi.
+    const previousSummaNoaniq = row.previousCertifiedValue == null;
+    const currentSummaNoaniq = row.currentCertifiedValue == null;
     const summaNoaniq = row.cumulativeCertifiedValue == null;
     const baselineQuantityNoaniq = row.baselineQuantity == null;
     const entitlementNoaniq = row.approvedEntitlementQuantity == null;
@@ -105,7 +110,10 @@ export async function generateNakopitelniy(
       row.currentQuantity,
       row.cumulativeQuantity,
       remainingQuantityNoaniq ? 'NOANIQ' : row.remainingQuantity,
+      previousSummaNoaniq ? 'NOANIQ' : row.previousCertifiedValue,
+      currentSummaNoaniq ? 'NOANIQ' : row.currentCertifiedValue,
       summaNoaniq ? 'NOANIQ' : row.cumulativeCertifiedValue,
+      remainingValueNoaniq ? 'NOANIQ' : row.remainingValue,
       holatDisplay
     ]);
 
@@ -118,28 +126,30 @@ export async function generateNakopitelniy(
         right: { style: 'thin' }
       };
 
-      // Numbers formatting (columns 3 to 10)
-      if (colNumber >= 3 && colNumber <= 10 && typeof cell.value === 'number') {
+      // Miqdor va qiymat ustunlari.
+      if (colNumber >= 3 && colNumber <= 14 && typeof cell.value === 'number') {
         cell.numFmt = '#,##0.00';
       }
     });
     if (baselineQuantityNoaniq) dataRow.getCell(3).font = { color: { argb: 'FFFF0000' }, italic: true };
     if (entitlementNoaniq) dataRow.getCell(5).font = { color: { argb: 'FFFF0000' }, italic: true };
     if (remainingQuantityNoaniq) dataRow.getCell(9).font = { color: { argb: 'FFFF0000' }, italic: true };
-    if (remainingValueNoaniq) dataRow.getCell(9).note = 'Remaining value: NOANIQ';
-    if (summaNoaniq) dataRow.getCell(10).font = { color: { argb: 'FFFF0000' }, italic: true };
+    if (previousSummaNoaniq) dataRow.getCell(10).font = { color: { argb: 'FFFF0000' }, italic: true };
+    if (currentSummaNoaniq) dataRow.getCell(11).font = { color: { argb: 'FFFF0000' }, italic: true };
+    if (summaNoaniq) dataRow.getCell(12).font = { color: { argb: 'FFFF0000' }, italic: true };
+    if (remainingValueNoaniq) dataRow.getCell(13).font = { color: { argb: 'FFFF0000' }, italic: true };
 
     if (holat === 'ortiqcha' || isMismatch) {
-      dataRow.getCell(11).font = { color: { argb: 'FFFF0000' }, bold: true }; // Red
+      dataRow.getCell(14).font = { color: { argb: 'FFFF0000' }, bold: true }; // Red
     } else if (holat === 'chegara') {
-      dataRow.getCell(11).font = { color: { argb: 'FFFFA500' }, bold: true }; // Orange
+      dataRow.getCell(14).font = { color: { argb: 'FFFFA500' }, bold: true }; // Orange
     }
   });
 
   // Adjust column widths
   worksheet.getColumn(1).width = 40;
   worksheet.getColumn(2).width = 10;
-  for (let i = 3; i <= 11; i++) {
+  for (let i = 3; i <= 14; i++) {
     worksheet.getColumn(i).width = 15;
   }
 

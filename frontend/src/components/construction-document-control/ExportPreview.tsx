@@ -1,7 +1,7 @@
 import type { Id, ProgressLineResult, ProgressValuationResult } from '../../lib/construction-document-control';
 import { generateNakopitelniy } from '../../lib/construction-document-control/export/nakopitelniy-export';
 import { generateForma2 } from '../../lib/construction-document-control/export/forma2-export';
-import { generateForma3 } from '../../lib/construction-document-control/export/forma3-export';
+import { generateSlichitelniy } from '../../lib/construction-document-control/export/slichitelniy-export';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 
 export interface ExportPreviewModel { 
@@ -14,7 +14,6 @@ export interface ExportPreviewModel {
   projectName: string;
   objectName: string;
   contractId?: Id; projectionHash?: string;
-  vatRatePercent?: number | null;
 }
 
 const show = (value: number | null) => value == null ? 'NOANIQ' : value;
@@ -42,16 +41,14 @@ export function ExportPreview({model}:{model:ExportPreviewModel}) {
     downloadBlob(data, `Forma2_${model.f2PeriodId}.xlsx`);
   };
 
-  const handleForma3 = async () => {
-    const data = await generateForma3({ input: null as any, rows: [...model.rows], totals: model.totals }, {
+  const handleSlichitelniy = async () => {
+    const data = await generateSlichitelniy(model.rows, {
       projectName: model.projectName,
       objectName: model.objectName,
       periodLabel: model.f2PeriodId,
-      documentNumber: `F3-${model.f2PeriodId}`,
-      contractNumber: model.contractId,
-      vatRatePercent: model.vatRatePercent
+      documentNumber: `SLC-${model.f2PeriodId}`,
     });
-    downloadBlob(data, `Forma3_${model.f2PeriodId}.xlsx`);
+    downloadBlob(data, `Slichitelnaya_${model.f2PeriodId}.xlsx`);
   };
 
   return (
@@ -61,12 +58,14 @@ export function ExportPreview({model}:{model:ExportPreviewModel}) {
         <div className="flex gap-2">
           <button onClick={handleNakopitelniy} className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors">Nakopitelniy</button>
           <button onClick={handleForma2} className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-sm font-medium transition-colors">Forma-2</button>
-          <button onClick={handleForma3} className="px-3 py-1 bg-purple-600 hover:bg-purple-500 rounded text-sm font-medium transition-colors">Forma-3</button>
+          <button onClick={handleSlichitelniy} className="px-3 py-1 bg-sky-700 hover:bg-sky-600 rounded text-sm font-medium transition-colors">Slichitelniy</button>
+          <button disabled aria-describedby="forma3-holati" className="px-3 py-1 rounded text-sm font-medium bg-slate-700 text-slate-400 cursor-not-allowed">Forma-3</button>
         </div>
       </div>
       <p className="text-sm">Tanlangan davr: tayyor · Smeta manbasi: mavjud</p>
       <p className="text-sm">Jami bajarilgan: {show(model.totals.cumulativeValue)} · Qolgan: {show(model.totals.remainingValue)}</p>
       <p className="text-xs text-slate-400">Biriktirilgan dalillar: {model.documents.length ? `${model.documents.length} ta hujjat` : 'qayd etilmagan'}</p>
+      <p id="forma3-holati" className="text-xs text-amber-300">Forma-3: FORMA3_RULE_UNRESOLVED — shartnoma/buxgalteriya qoidasining tasdiqlangan dalili ulanmaguncha rasmiy qiymat hujjati yaratilmaydi.</p>
       {model.reconciliation.length>0&&<p role="alert" className="text-red-300">Tekshiruvda {model.reconciliation.length} ta nomuvofiqlik bor: {model.reconciliation.map(x=>errorLabel[x.code] ?? 'Qator ma’lumoti mos emas').join(', ')}</p>}
     </section>
   );

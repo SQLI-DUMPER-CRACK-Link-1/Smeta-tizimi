@@ -18,7 +18,7 @@ export async function generateForma2(
   const worksheet = workbook.addWorksheet('Forma-2');
 
   // Header meta
-  worksheet.mergeCells('A1', 'I1');
+  worksheet.mergeCells('A1', 'J1');
   const titleCell = worksheet.getCell('A1');
   titleCell.value = `Bajarilgan ishlar dalolatnomasi (Forma-2)`;
   titleCell.font = { bold: true, size: 14 };
@@ -30,7 +30,7 @@ export async function generateForma2(
   worksheet.getCell('A5').value = `Davr: ${options.periodLabel}`;
   
   for(let i=2; i<=5; i++) {
-    worksheet.mergeCells(`A${i}`, `I${i}`);
+    worksheet.mergeCells(`A${i}`, `J${i}`);
   }
 
   worksheet.addRow([]); // empty row
@@ -72,12 +72,21 @@ export async function generateForma2(
     if (row.currentQuantity === 0 && !row.currentCertifiedValue) return;
 
     const certValNoaniq = row.currentCertifiedValue == null;
-    const calcValNoaniq = row.f2ValuationValue == null;
+    // Bu faqat analitik tekshiruv. Asl sertifikatlangan summa hech qachon
+    // shu ko'paytmaga almashtirilmaydi. Muhimi: hisob JORIY davr miqdoridan
+    // quriladi; kumulyativ F2 qiymatini joriy oy bilan solishtirish xato.
+    const currentCalculatedValue = row.currentF2ValuationPrice == null
+      ? null
+      : Math.round((row.currentQuantity * row.currentF2ValuationPrice + Number.EPSILON) * 100) / 100;
+    const calcValNoaniq = currentCalculatedValue == null;
     const narxNoaniq = row.currentF2ValuationPrice == null;
-    const farqNoaniq = row.variance == null;
+    const currentArithmeticDifference = certValNoaniq || calcValNoaniq
+      ? null
+      : Math.round(((row.currentCertifiedValue as number) - (currentCalculatedValue as number) + Number.EPSILON) * 100) / 100;
+    const farqNoaniq = currentArithmeticDifference == null;
     if (certValNoaniq || calcValNoaniq) jamiNoaniq = true;
     if (!certValNoaniq) totalSertSum += row.currentCertifiedValue as number;
-    if (!calcValNoaniq) totalHisobSum += row.f2ValuationValue as number;
+    if (!calcValNoaniq) totalHisobSum += currentCalculatedValue as number;
 
     const dataRow = worksheet.addRow([
       index++,
@@ -86,8 +95,8 @@ export async function generateForma2(
       narxNoaniq ? NOANIQ : row.currentF2ValuationPrice,
       row.currentQuantity,
       certValNoaniq ? NOANIQ : row.currentCertifiedValue,
-      calcValNoaniq ? NOANIQ : row.f2ValuationValue,
-      farqNoaniq ? NOANIQ : row.variance,
+      calcValNoaniq ? NOANIQ : currentCalculatedValue,
+      farqNoaniq ? NOANIQ : currentArithmeticDifference,
       row.previousQuantity,
       row.cumulativeQuantity
     ]);
@@ -98,7 +107,7 @@ export async function generateForma2(
       if (cell.value === NOANIQ) cell.font = { color: { argb: 'FFFF0000' }, italic: true };
     });
 
-    if ((row.variance && Math.abs(row.variance) > 0.01) || row.warnings.includes('PRICE_VARIANCE')) {
+    if (currentArithmeticDifference !== null && Math.abs(currentArithmeticDifference) > 0.01) {
       dataRow.getCell(8).font = { color: { argb: 'FFFF0000' }, bold: true };
     }
   });
