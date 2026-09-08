@@ -64,7 +64,7 @@ describe('resursVedomostKategoriyalarga', () => {
       qator({ tur: 'mat', kat: 'МАШ', nom: 'Yog\'', smeta_summa: 100000, f2_summa: 0, qoldiq_summa: 100000 }),
     ];
     const kats = resursVedomostKategoriyalarga(rows);
-    expect(kats.map(k => k.kat)).toEqual(['МАШ', 'ЧЕЛ']);
+    expect(kats.map(k => k.kat)).toEqual(['ЧЕЛ', 'МАШ']);
     const mash = kats.find(k => k.kat === 'МАШ')!;
     expect(mash.qatorlar).toHaveLength(2);
     expect(mash.jamiSmetaSumma).toBe(2100000);
@@ -74,5 +74,17 @@ describe('resursVedomostKategoriyalarga', () => {
 
   it('bo\'sh kirish uchun bo\'sh natija qaytaradi (xato tashlamaydi)', () => {
     expect(resursVedomostKategoriyalarga([])).toEqual([]);
+  });
+
+  it('owner: ЧЕЛ, МАШ, МАТ, ОБ tartibida -- alifbo bo\'yicha EMAS', () => {
+    const rows = [
+      qator({ tur: 'ob', kat: 'ОБ', nom: 'Kran', smeta_summa: 1 }),
+      qator({ tur: 'mat', kat: 'МАТ', nom: 'Beton', smeta_summa: 1 }),
+      qator({ tur: 'rs', kat: 'МАШ', nom: 'Ekskavator', smeta_summa: 1 }),
+      qator({ tur: 'rs', kat: 'ЧЕЛ', nom: 'Ishchi', smeta_summa: 1 }),
+      qator({ tur: 'rs', kat: 'КАБ', nom: 'Kabel', smeta_summa: 1 }),
+    ];
+    const kats = resursVedomostKategoriyalarga(rows);
+    expect(kats.map(k => k.kat)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ']);
   });
 });

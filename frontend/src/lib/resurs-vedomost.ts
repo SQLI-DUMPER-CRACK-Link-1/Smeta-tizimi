@@ -36,6 +36,26 @@ export type ResursVedomostQator = {
 
 const RESURS_TUR = new Set(['rs', 'mat', 'ob']);
 
+/**
+ * Owner (2026-09-08): "resurs vedemostda birinchi chel chas, keyin mash
+ * chas keyin material keyin oborudovaniya shaklida taxlab berilishi
+ * kerak" -- kategoriyalar ALIFBO tartibida emas, shu ANIQ ma'noli
+ * tartibda ko'rsatilishi kerak (aynan nakrutka kaskadining o'zi ham shu
+ * tartibda ishlaydi -- t2_nakrutka_hisobla_v1: ЧЕЛ+МАШ+МАТ+ОБ). Ro'yxatda
+ * yo'q har qanday kategoriya (masalan КАБ/М/К/BOSHQA) oxirida, o'zaro
+ * alifbo tartibida qoladi.
+ */
+const KATEGORIYA_TARTIB = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'];
+
+function katTartibRaqami(kat: string): number {
+  const i = KATEGORIYA_TARTIB.indexOf(kat);
+  return i < 0 ? KATEGORIYA_TARTIB.length : i;
+}
+
+function katTaqqosla(a: string, b: string): number {
+  return katTartibRaqami(a) - katTartibRaqami(b) || a.localeCompare(b);
+}
+
 function son(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -69,7 +89,7 @@ export function resursVedomostQur(qatorlar: readonly T2QatorHolat[]): ResursVedo
     r.qatorSoni += 1;
     if (!r.kod && q.kod) r.kod = q.kod;
   }
-  return [...guruh.values()].sort((a, b) => a.kat.localeCompare(b.kat) || a.nom.localeCompare(b.nom));
+  return [...guruh.values()].sort((a, b) => katTaqqosla(a.kat, b.kat) || a.nom.localeCompare(b.nom));
 }
 
 export type ResursVedomostKategoriya = {
@@ -89,7 +109,7 @@ export function resursVedomostKategoriyalarga(qatorlar: readonly T2QatorHolat[])
     if (a) a.push(r); else guruh.set(r.kat, [r]);
   }
   return [...guruh.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => katTaqqosla(a, b))
     .map(([kat, list]) => ({
       kat, qatorlar: list,
       jamiSmetaSumma: list.reduce((s, r) => s + r.smetaSumma, 0),
