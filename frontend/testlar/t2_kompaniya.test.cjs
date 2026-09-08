@@ -90,7 +90,7 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       't2_catalog_observation_yoz_v1',
                       /* RES narxlash: faqat server tekshirgan, exact-match-only
                          narx kiritish; mavjud narxlar va F2 tarixi o'zgarmaydi. */
-                      't2_smeta_narxla_res_v1'].sort();
+                      't2_smeta_narxla_res_v2'].sort();
     T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));

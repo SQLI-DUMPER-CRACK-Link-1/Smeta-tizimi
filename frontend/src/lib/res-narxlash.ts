@@ -1,10 +1,13 @@
 import type { SheetGrid, XlsxWorkbook } from './f2-import-parse';
 
-export type ResNarx = { kod?: string; nom: string; birlik: string; narx: number };
+/** `sourceRef` fayldagi satrning vaqtinchalik, faqat shu import uchun IDsi.
+ * U Sheet qator raqami emas va kanonik identity ham emas: qo'lda tanlangan
+ * RES satrini serverda aynan tekshirish uchun ishlatiladi. */
+export type ResNarx = { sourceRef?: string; kod?: string; nom: string; birlik: string; narx: number };
 export type ResUstunlar = { kod: number; nom: number; birlik: number; narx: number; sarlavha: number };
 export type NarxsizQator = { id: number; tur: string | null; kod: string | null; nom: string | null; birlik: string | null; narx: number | null };
 export type ResMoslashmaganSabab = 'QATOR_IDENTIYASI_YOQ' | 'RES_MANBASI_TOPILMADI' | 'RES_MANBA_ZIDDIYATI' | 'BIR_NECHTA_NARX_VARIANTI';
-export type ResMoslashmagan = { tur: string; kod: string | null; nom: string | null; birlik: string | null; sabab: ResMoslashmaganSabab };
+export type ResMoslashmagan = { id: number; tur: string; kod: string | null; nom: string | null; birlik: string | null; sabab: ResMoslashmaganSabab };
 export type ResPreview = {
   narxsiz: number; mos: number; narxsizQoldi: number; ziddiyatliManba: number;
   qatorNarxlari: Map<number, number>; moslashmagan: ResMoslashmagan[];
@@ -125,7 +128,7 @@ export function resNarxlashPreview(qatorlar: NarxsizQator[], reslar: ResNarx[]):
     const birlik = resBirlikKalit(q.birlik);
     const code = resKodKalit(q.kod);
     if (!nom || !birlik) {
-      moslashmagan.push({ tur, kod: q.kod, nom: q.nom, birlik: q.birlik, sabab: 'QATOR_IDENTIYASI_YOQ' });
+      moslashmagan.push({ id: q.id, tur, kod: q.kod, nom: q.nom, birlik: q.birlik, sabab: 'QATOR_IDENTIYASI_YOQ' });
       continue;
     }
     const candidates = new Set<number>();
@@ -143,7 +146,7 @@ export function resNarxlashPreview(qatorlar: NarxsizQator[], reslar: ResNarx[]):
       const [sourceCode, sourceNom, sourceBirlik] = key.split('|');
       return sourceNom === nom && sourceBirlik === birlik && (!sourceCode || sourceCode === code);
     });
-    moslashmagan.push({
+    moslashmagan.push({ id: q.id,
       tur, kod: q.kod, nom: q.nom, birlik: q.birlik,
       sabab: ziddiyatliManba ? 'RES_MANBA_ZIDDIYATI' : candidates.size > 1 ? 'BIR_NECHTA_NARX_VARIANTI' : 'RES_MANBASI_TOPILMADI',
     });

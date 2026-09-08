@@ -49,5 +49,15 @@ describe('RES narxlash kalitlari', () => {
     expect(result.turBoyicha.rs).toEqual({ narxsiz: 1, mos: 0 });
     expect(result.turBoyicha.ob).toEqual({ narxsiz: 1, mos: 0 });
     expect(result.moslashmagan.map((x) => x.sabab)).toEqual(['RES_MANBASI_TOPILMADI', 'QATOR_IDENTIYASI_YOQ']);
+    expect(result.moslashmagan.map((x) => x.id)).toEqual([1, 2]);
+  });
+
+  it('bir xil kodli, lekin turli narxli RESni avtomatik bog‘lamaydi', () => {
+    const result = resNarxlashPreview(
+      [{ id: 40, tur: 'mat', kod: 'C', nom: 'Maxsus kabel', birlik: 'm', narx: 0 }],
+      [{ sourceRef: 'RES:1', kod: 'C', nom: 'Maxsus kabel', birlik: 'm', narx: 100 }, { sourceRef: 'RES:2', kod: 'C', nom: 'Maxsus kabel', birlik: 'm', narx: 120 }],
+    );
+    expect(result.mos).toBe(0);
+    expect(result.moslashmagan).toEqual([expect.objectContaining({ id: 40, sabab: 'RES_MANBA_ZIDDIYATI' })]);
   });
 });

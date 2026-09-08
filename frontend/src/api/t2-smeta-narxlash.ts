@@ -1,10 +1,12 @@
 import { yozAmali } from './supabase';
 
-export type ResNarxYuk = { kod?: string; nom: string; birlik: string; narx: number };
+export type ResNarxYuk = { sourceRef: string; kod?: string; nom: string; birlik: string; narx: number };
+export type ResQoldaMoslash = { qatorId: number; sourceRef: string };
 export type SmetaNarxlashNatija = {
   ok: boolean; error?: string; code?: string; takror?: boolean;
   kiritilgan?: number; yaroqli_manba?: number; ziddiyatli_manba?: number;
-  narxsiz?: number; mos?: number; yozildi?: number; narxsiz_qoldi?: number;
+  narxsiz?: number; mos?: number; avto_mos?: number; qolda_mos?: number;
+  yozildi?: number; narxsiz_qoldi?: number;
 };
 
 /**
@@ -13,9 +15,10 @@ export type SmetaNarxlashNatija = {
  */
 export function sbT2SmetaNarxlaRes(p: {
   kompaniyaId: number; obyektId: number; operationId: string; narxlar: ResNarxYuk[];
+  qoldaMoslash?: ResQoldaMoslash[];
 }): Promise<SmetaNarxlashNatija> {
   return yozAmali({
-    amal: 'smeta_narxla_res', kompaniya_id: p.kompaniyaId, obyekt_id: p.obyektId,
-    operation_id: p.operationId, narxlar: p.narxlar,
+    amal: 'smeta_narxla_res_v2', kompaniya_id: p.kompaniyaId, obyekt_id: p.obyektId,
+    operation_id: p.operationId, narxlar: p.narxlar, qolda_moslash: p.qoldaMoslash ?? [],
   }) as Promise<SmetaNarxlashNatija>;
 }

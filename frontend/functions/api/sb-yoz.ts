@@ -30,7 +30,7 @@ const AMALLAR = {
   zamena_ish_yarat_v1: { rpc: 't2_zamena_ish_yarat_v1' },
   resurs_bola_qosh_v1: { rpc: 't2_resurs_bola_qosh_v1' },
   catalog_observation_yoz_v1: { rpc: 't2_catalog_observation_yoz_v1' },
-  smeta_narxla_res: { rpc: 't2_smeta_narxla_res_v1' },
+  smeta_narxla_res_v2: { rpc: 't2_smeta_narxla_res_v2' },
   qator_tahrir:   { rpc: 't2_qator_tahrir' },
   qator_qosh:     { rpc: 't2_qator_qosh' },
   akt_yarat:      { rpc: 't2_akt_yarat' },
@@ -206,7 +206,7 @@ export const onRequestPost: PagesFunction<{
     }
     /* Rahbar rejimi odatda faqat o'qiydi. RES narxlash esa alohida PTO
        kontrakti: RPC tenant, faol a'zolik va aniq rolni qayta tekshiradi. */
-    if (sess.rol === 'rahbar' || (sess.rol === 'boss' && amal !== 'smeta_narxla_res')) {
+    if (sess.rol === 'rahbar' || (sess.rol === 'boss' && amal !== 'smeta_narxla_res_v2')) {
       return Response.json({ ok: false, error: 'Раҳбар режимида ёзиш мумкин эмас' },
                            { status: 403 });
     }
@@ -232,7 +232,7 @@ export const onRequestPost: PagesFunction<{
         return Response.json({ ok: false, error: 'expected_version noto\'g\'ri' });
       }
     }
-    if (amal === 'smeta_narxla_res') {
+    if (amal === 'smeta_narxla_res_v2') {
       const kompaniyaId = Number(so.kompaniya_id);
       const obyektId = Number(so.obyekt_id);
       if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
@@ -282,7 +282,7 @@ export const onRequestPost: PagesFunction<{
          * faqat rahbar (ko'ruvchi) bo'lishi mumkin — bu haqiqiy
          * maqsad. Shu kompaniyaga xos rol boss/rahbar bo'lsa, global
          * rol boshqacha bo'lsa ham bu YOZUV rad etiladi. */
-        if ((azolik.rol === 'boss' && amal !== 'smeta_narxla_res') || azolik.rol === 'rahbar') {
+        if ((azolik.rol === 'boss' && amal !== 'smeta_narxla_res_v2') || azolik.rol === 'rahbar') {
           return Response.json({ ok: false,
             error: 'Bu kompaniyada rahbar rolida yozish mumkin emas' },
             { status: 403 });
@@ -293,20 +293,32 @@ export const onRequestPost: PagesFunction<{
     let yuk: Record<string, unknown>;
 
     /* ══════════ QATOR TAHRIRI ══════════ */
-    if (amal === 'smeta_narxla_res') {
+    if (amal === 'smeta_narxla_res_v2') {
       const narxlar = so.narxlar.map((q: any) => ({
+        source_ref: q.sourceRef == null ? '' : String(q.sourceRef).slice(0, 240),
         kod: q.kod == null ? null : String(q.kod).slice(0, 160),
         nom: q.nom == null ? null : String(q.nom).slice(0, 1500),
         birlik: q.birlik == null ? null : String(q.birlik).slice(0, 80),
         narx: Number(q.narx),
       }));
-      if (narxlar.some((q: { nom: unknown; birlik: unknown; narx: number }) =>
-        !String(q.nom ?? '').trim() || !String(q.birlik ?? '').trim() || !Number.isFinite(q.narx) || q.narx <= 0)) {
-        return Response.json({ ok: false, error: 'Har RES qatorida nom, birlik va musbat narx bo\'lishi shart' });
+      if (narxlar.some((q: { source_ref: string; nom: unknown; birlik: unknown; narx: number }) =>
+        !q.source_ref || !String(q.nom ?? '').trim() || !String(q.birlik ?? '').trim() || !Number.isFinite(q.narx) || q.narx <= 0)) {
+        return Response.json({ ok: false, error: 'Har RES qatorida manba IDsi, nom, birlik va musbat narx bo\'lishi shart' });
+      }
+      if (new Set(narxlar.map((q: { source_ref: string }) => q.source_ref)).size !== narxlar.length) {
+        return Response.json({ ok: false, error: 'RES manba satri IDlari takrorlangan.' });
+      }
+      const qoldaMoslash: Array<{ qator_id: number; source_ref: string }> | null = Array.isArray(so.qolda_moslash) ? so.qolda_moslash.map((q: any) => ({
+        qator_id: Number(q.qatorId), source_ref: q.sourceRef == null ? '' : String(q.sourceRef).slice(0, 240),
+      })) : null;
+      if (!qoldaMoslash || qoldaMoslash.length > 10000 || qoldaMoslash.some((q) => !Number.isSafeInteger(q.qator_id) || q.qator_id <= 0 || !q.source_ref)
+        || new Set(qoldaMoslash.map((q) => q.qator_id)).size !== qoldaMoslash.length) {
+        return Response.json({ ok: false, error: 'Qo\'lda bog\'lash satrlari noto\'g\'ri.' });
       }
       yuk = {
         p_kompaniya_id: Number(so.kompaniya_id), p_actor_id: sess.foydalanuvchi_id,
         p_obyekt_id: Number(so.obyekt_id), p_operation_id: operationId, p_narxlar: narxlar,
+        p_qolda_moslash: qoldaMoslash,
       };
 
     /* ══════════ QATOR TAHRIRI ══════════ */

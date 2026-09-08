@@ -24,6 +24,27 @@ moslashmagan qatorni ko‘rsatadi. Bu foydalanuvchiga RESni tuzatish uchun
 aniq ro‘yxat beradi; hech qachon pozitsiya, qator raqami yoki “birinchi topilgan”
 narxdan foydalanmaydi.
 
+## V2: haqiqiy RES farqlari uchun qo‘lda, isbotli bog‘lash
+
+2026-09-08 dagi read-only production inventory shuni ko‘rsatdi:
+`t2_smeta_narxla_res_v1(bigint,bigint,bigint,uuid,jsonb)` jonli bazada
+allaqachon bor. Shuning uchun V1 imzosi o‘zgartirilmadi va overload ham
+yaratilmadi. PostgREST uchun xavfsiz yo‘l — yangi V2 nomli funksiya:
+
+`supabase/migrations/20261011140000_t2_smeta_narxla_res_v2.sql`
+
+- avtomatik yo‘l o‘sha qat’iy `kod + nom + birlik` qoidasini saqlaydi;
+- mos kelmagan satr uchun PTO aynan yuklangan RES satrini qo‘lda tanlaydi;
+- browser narxni erkin kiritmaydi: faqat `source_ref` yuboradi;
+- server `source_ref` aynan import ichida borligini, satr obyekt/tenantniki,
+  `rs/mat/ob`, narxi `NULL/0` ekanini qayta tekshiradi;
+- qo‘lda bog‘lash avtomatik aniq moslikni bosib o‘ta olmaydi;
+- bir target yoki source ref takrorlansa rad etiladi;
+- audit, idempotent `operation_id`, F2 va nom daxlsizligi saqlanadi.
+
+V2 uchun `.acceptance.sql` va post-use holatda rad etuvchi
+`.rollback.sql` ham bor. Bu branch productionga hech narsa qo‘llamadi.
+
 ## Server contract
 
 Manba migratsiya:
@@ -47,7 +68,9 @@ xavfsiz muhitda yoki release qoidalariga muvofiq tekshirilishi kerak.
 
 ## Validatsiya
 
-- `res-narxlash.test.ts`: **5/5 PASS**.
+- `res-narxlash.test.ts`: **6/6 PASS**.
+- `t2_res_narxlash_v2.test.cjs`: **9/9 PASS**.
+- Cloudflare Functions TypeScript gate: **PASS**.
 - `npm run tekshir`: **PASS**.
 - lint: **0 error**, avvaldan mavjud warninglar saqlangan.
 - `git diff --check`: **PASS**.
