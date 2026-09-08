@@ -59,3 +59,91 @@ describe('company -- member_password_set', () => {
     expect(res.status).toBe(403);
   });
 });
+
+/**
+ * T2-COMPANY-CREATE-GATE-001 — real hodisa: a'zoligi yo'q foydalanuvchi
+ * ("prorab") o'zi uchun kompaniya ochib, uning direktori bo'lib olgan.
+ * Transport qatlami bu RPC'larni RPC nomiga TO'G'RI moslashtirishi va
+ * `royxat_royxat` ni POST orqali ishlatib bo'lmasligi shart (u FAQAT
+ * o'qish uchun, GET yo'lidan).
+ */
+describe('company -- kompaniya yaratish/so\'rov (T2-COMPANY-CREATE-GATE-001)', () => {
+  it('"create" -> t2_kompaniya_yarat_v1 ga aktyor sessiyadan bilan boradi', async () => {
+    const fetchSpy = vi.fn(async (url: string, init: { body: string }) => {
+      expect(url).toContain('/rpc/t2_kompaniya_yarat_v1');
+      const sent = JSON.parse(init.body);
+      expect(sent).toMatchObject({ p_actor_id: 3, p_nom: 'Mening firmam' });
+      return { ok: true, text: async () => JSON.stringify({ ok: true, kompaniya_id: 7, kod: 'MF', rol: 'boss' }) } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await onRequestPost(await ctxOf({ action: 'create', nom: 'Mening firmam' }));
+    expect(res.status).toBe(200);
+  });
+
+  it('RPC SUPERADMIN_REQUIRED qaytarsa -> 403 (oddiy foydalanuvchi to‘g‘ridan-to‘g‘ri yarata olmaydi)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, text: async () => JSON.stringify({ ok: false, code: 'SUPERADMIN_REQUIRED' }) } as Response)));
+    const res = await onRequestPost(await ctxOf({ action: 'create', nom: 'Mening firmam' }));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ code: 'SUPERADMIN_REQUIRED' });
+  });
+
+  it('"royxat_soraw" -> t2_kompaniya_royxat_soraw_v1 ga to‘g‘ri parametrlar bilan boradi', async () => {
+    const fetchSpy = vi.fn(async (url: string, init: { body: string }) => {
+      expect(url).toContain('/rpc/t2_kompaniya_royxat_soraw_v1');
+      const sent = JSON.parse(init.body);
+      expect(sent).toMatchObject({ p_actor_id: 3, p_nom: 'Mening firmam' });
+      return { ok: true, text: async () => JSON.stringify({ ok: true, royxat_id: 11, holat: 'kutilmoqda' }) } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await onRequestPost(await ctxOf({ action: 'royxat_soraw', nom: 'Mening firmam' }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, royxat_id: 11, holat: 'kutilmoqda' });
+  });
+
+  it('"royxat_tasdiqla" faqat royxat_id va aktyor sessiyadan uzatadi', async () => {
+    const fetchSpy = vi.fn(async (url: string, init: { body: string }) => {
+      expect(url).toContain('/rpc/t2_kompaniya_royxat_tasdiqla_v1');
+      const sent = JSON.parse(init.body);
+      expect(sent).toMatchObject({ p_actor_id: 3, p_royxat_id: 11 });
+      return { ok: true, text: async () => JSON.stringify({ ok: true, kompaniya_id: 7, royxat_id: 11 }) } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await onRequestPost(await ctxOf({ action: 'royxat_tasdiqla', royxat_id: 11 }));
+    expect(res.status).toBe(200);
+  });
+
+  it('"royxat_tasdiqla" superadmin bo‘lmagan aktyordan -> 403', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, text: async () => JSON.stringify({ ok: false, code: 'SUPERADMIN_REQUIRED' }) } as Response)));
+    const res = await onRequestPost(await ctxOf({ action: 'royxat_tasdiqla', royxat_id: 11 }));
+    expect(res.status).toBe(403);
+  });
+
+  it('REQUEST_NOT_PENDING (qayta tasdiqlash/rad etish) -> 409', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, text: async () => JSON.stringify({ ok: false, code: 'REQUEST_NOT_PENDING', holat: 'tasdiqlandi' }) } as Response)));
+    const res = await onRequestPost(await ctxOf({ action: 'royxat_tasdiqla', royxat_id: 11 }));
+    expect(res.status).toBe(409);
+  });
+
+  it('"royxat_rad_et" sabab bilan to‘g‘ri RPC ga boradi', async () => {
+    const fetchSpy = vi.fn(async (url: string, init: { body: string }) => {
+      expect(url).toContain('/rpc/t2_kompaniya_royxat_rad_et_v1');
+      const sent = JSON.parse(init.body);
+      expect(sent).toMatchObject({ p_actor_id: 3, p_royxat_id: 11, p_sabab: 'STIR noto‘g‘ri' });
+      return { ok: true, text: async () => JSON.stringify({ ok: true, royxat_id: 11, holat: 'rad_etildi' }) } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await onRequestPost(await ctxOf({ action: 'royxat_rad_et', royxat_id: 11, sabab: 'STIR noto‘g‘ri' }));
+    expect(res.status).toBe(200);
+  });
+
+  it('"royxat_royxat" (faqat o‘qish) POST orqali RAD ETILADI — 400', async () => {
+    const res = await onRequestPost(await ctxOf({ action: 'royxat_royxat' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('nom bo‘lmasa RPC BAD payloadni qaytaradi (transport buni majburlamaydi, RPC o‘zi tekshiradi)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, text: async () => JSON.stringify({ ok: false, code: 'COMPANY_NAME_REQUIRED' }) } as Response)));
+    const res = await onRequestPost(await ctxOf({ action: 'royxat_soraw' }));
+    expect(res.status).toBe(400);
+  });
+});

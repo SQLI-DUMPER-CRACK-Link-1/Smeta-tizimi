@@ -16,8 +16,9 @@ import { useMemo, useState } from 'react';
 import {
   Building2, Crown, ShieldCheck, Loader2, AlertTriangle, Trash2, Users, LogOut,
   User, KeyRound, Layers, FolderKanban, Plug, History, Save, RefreshCw,
+  Send, Clock, CheckCircle2, XCircle,
 } from 'lucide-react';
-import { useMen, useOnboardingCommands, useKompaniyaAzolari, useKompaniyaProfil, useProfilYangila, type Azolik, type KompaniyaProfil } from '../../api/t2-men';
+import { useMen, useOnboardingCommands, useKompaniyaAzolari, useKompaniyaProfil, useProfilYangila, useKompaniyaRoyxatlar, type Azolik, type KompaniyaProfil, type KompaniyaRoyxat } from '../../api/t2-men';
 import { useSystemControl } from '../../api/t2-control';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { KompaniyaKerak } from '../../umumiy/kontekst/KompaniyaKerak';
@@ -40,6 +41,9 @@ function xatoMatn(code?: string): string {
     case 'STALE_VERSION': return 'Ma’lumot boshqa joyda yangilangan. Sahifani qayta yuklang.';
     case 'PAROL_QISQA': return 'Parol kamida 8 belgi bo‘lishi kerak.';
     case 'AZOLIK_TOPILMADI': return 'Bu foydalanuvchi shu kompaniyaning a‘zosi emas.';
+    case 'SUPERADMIN_REQUIRED': return 'Yangi kompaniyani to‘g‘ridan-to‘g‘ri faqat superadmin ochadi. Iltimos, so‘rov yuboring.';
+    case 'REQUEST_NOT_PENDING': return 'Bu so‘rov allaqachon ko‘rib chiqilgan.';
+    case 'REQUEST_NOT_FOUND': return 'So‘rov topilmadi.';
     default: return 'Amalni bajarib bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.';
   }
 }
@@ -329,6 +333,86 @@ function AuditTab({ kompaniyaId }: { kompaniyaId: number }) {
   );
 }
 
+const ROYXAT_HOLAT_BELGI: Record<KompaniyaRoyxat['holat'], { Ikonka: typeof Clock; matn: string; rang: string }> = {
+  kutilmoqda: { Ikonka: Clock, matn: 'Kutilmoqda', rang: 'text-amber-300' },
+  tasdiqlandi: { Ikonka: CheckCircle2, matn: 'Tasdiqlandi', rang: 'text-emerald-400' },
+  rad_etildi: { Ikonka: XCircle, matn: 'Rad etildi', rang: 'text-rose-400' },
+};
+
+/**
+ * T2-COMPANY-CREATE-GATE-001: kompaniya ochish so'rovlari.
+ *
+ * `superadmin=true` bo'lsa — BARCHA so'rovlar, tasdiqlash/rad etish
+ * tugmalari bilan. `superadmin=false` bo'lsa — server FAQAT so'rovchining
+ * o'z so'rovlarini qaytaradi (RPC ichida ajratilgan), shuning uchun bu
+ * yerda faqat holat ko'rsatiladi — boshqa hech kim ko'rinmaydi.
+ */
+function KompaniyaRoyxatlari() {
+  const q = useKompaniyaRoyxatlar();
+  const cmd = useOnboardingCommands();
+  const [radSababId, setRadSababId] = useState<number | null>(null);
+  const [sabab, setSabab] = useState('');
+
+  if (q.isLoading) return <div className="p-3 text-[12px] text-text-dim flex items-center gap-2"><Loader2 className="animate-spin" size={13} /> yuklanmoqda…</div>;
+  if (q.isError || !q.data) return <div className="p-3 text-[12px] text-rose-300">So‘rovlar ro‘yxatini o‘qib bo‘lmadi.</div>;
+
+  const { superadmin, royxatlar } = q.data;
+  if (!royxatlar.length) return <div className="p-3 text-[12px] text-text-dim">— so‘rov yo‘q —</div>;
+
+  return (
+    <div className="mt-2 divide-y divide-border/60">
+      {royxatlar.map((ro) => {
+        const belgi = ROYXAT_HOLAT_BELGI[ro.holat];
+        return (
+          <div key={ro.id} className="py-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[13px] font-medium truncate">{ro.nom}</div>
+                <div className="text-[11px] text-text-dim">
+                  @{ro.login}{ro.inn ? ` · STIR ${ro.inn}` : ''}{ro.telefon ? ` · ${ro.telefon}` : ''}
+                  {' · '}{new Date(ro.created_at).toLocaleString('uz-UZ')}
+                </div>
+                {ro.holat === 'rad_etildi' && ro.sabab && (
+                  <div className="text-[11px] text-rose-300 mt-0.5">Sabab: {ro.sabab}</div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[11px] flex items-center gap-1 ${belgi.rang}`}><belgi.Ikonka size={13} /> {belgi.matn}</span>
+                {superadmin && ro.holat === 'kutilmoqda' && (
+                  <>
+                    <button className="text-[12px] text-emerald-400 hover:text-emerald-300" disabled={cmd.royxatTasdiqla.isPending}
+                      onClick={() => cmd.royxatTasdiqla.mutate({ royxat_id: ro.id })}>
+                      Tasdiqlash
+                    </button>
+                    <button className="text-[12px] text-rose-400 hover:text-rose-300"
+                      onClick={() => { setRadSababId(ro.id); setSabab(''); }}>
+                      Rad etish
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            {radSababId === ro.id && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input className="input flex-1 min-w-[160px] text-[12px]" placeholder="Rad etish sababi (ixtiyoriy)"
+                  value={sabab} onChange={(e) => setSabab(e.target.value)} />
+                <button className="text-[12px] text-rose-400" disabled={cmd.royxatRadEt.isPending}
+                  onClick={() => cmd.royxatRadEt.mutate({ royxat_id: ro.id, sabab: sabab.trim() || undefined }, { onSuccess: () => setRadSababId(null) })}>
+                  {cmd.royxatRadEt.isPending ? <Loader2 className="animate-spin" size={13} /> : 'Tasdiqlash (rad etish)'}
+                </button>
+                <button className="text-[12px] text-text-dim" onClick={() => setRadSababId(null)}>bekor</button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {(cmd.royxatTasdiqla.isError || cmd.royxatRadEt.isError) && (
+        <p className="pt-2 text-[12px] text-rose-300">{xatoMatn(((cmd.royxatTasdiqla.error || cmd.royxatRadEt.error) as any)?.code)}</p>
+      )}
+    </div>
+  );
+}
+
 function LoyihaObyektTab() {
   return (
     <div className="karta p-4 max-w-lg text-[13px] text-text-dim">
@@ -396,6 +480,17 @@ export default function KompaniyaPage() {
     () => (q.data?.azoliklar ?? []).filter((a) => a.is_director),
     [q.data],
   );
+  /* T2-COMPANY-CREATE-GATE-001: "direktor" (boss+superadmin) bilan
+     PLATFORMA superadmini bir xil narsa emas — boss faqat o'z
+     kompaniyasining direktori, superadmin esa yangi kompaniyani
+     to'g'ridan-to'g'ri ochishga (va boshqa so'rovlarni ko'rib chiqishga)
+     haqli. Server ham aynan shu farqni tekshiradi (`t2_platforma_
+     superadmin`) — bu yerdagi tekshiruv faqat UI uchun, xavfsizlik
+     RPC darajasida. */
+  const menSuperadmin = useMemo(
+    () => (q.data?.azoliklar ?? []).some((a) => a.rol === 'superadmin'),
+    [q.data],
+  );
 
   if (q.isLoading) return <div className="p-6 text-sm text-text-dim flex items-center gap-2"><Loader2 className="animate-spin" size={16} /> Yuklanmoqda…</div>;
   if (q.isError) {
@@ -461,21 +556,51 @@ export default function KompaniyaPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-sm font-semibold text-text-dim uppercase tracking-wide flex items-center gap-2"><Building2 size={14} /> Yangi kompaniya ochish</h2>
+        <h2 className="text-sm font-semibold text-text-dim uppercase tracking-wide flex items-center gap-2">
+          <Building2 size={14} /> {menSuperadmin ? 'Yangi kompaniya ochish' : 'Yangi kompaniya — so‘rov yuborish'}
+        </h2>
+        {!menSuperadmin && (
+          <p className="mt-1 text-[12px] text-text-dim">
+            Yangi kompaniyani to‘g‘ridan-to‘g‘ri ochib bo‘lmaydi — so‘rovingiz platforma administratoriga
+            yuboriladi va tasdiqlangandan keyin siz o‘sha kompaniyaning direktori bo‘lasiz.
+          </p>
+        )}
         <div className="mt-2 karta p-4 grid gap-3 sm:grid-cols-3">
           <input className="input col-span-3 sm:col-span-1" placeholder="Kompaniya nomi *" value={nom} onChange={(e) => setNom(e.target.value)} />
           <input className="input" placeholder="STIR (9 raqam)" value={inn} onChange={(e) => setInn(e.target.value)} />
           <input className="input" placeholder="Telefon" value={telefon} onChange={(e) => setTelefon(e.target.value)} />
-          <button
-            className="tugma-asosiy col-span-3 sm:col-auto"
-            disabled={cmd.yarat.isPending || nom.trim().length < 2}
-            onClick={() => cmd.yarat.mutate({ nom: nom.trim(), inn: inn.trim() || undefined, telefon: telefon.trim() || undefined },
-              { onSuccess: () => { setNom(''); setInn(''); setTelefon(''); } })}
-          >
-            {cmd.yarat.isPending ? <Loader2 className="animate-spin" size={15} /> : 'Ochish — men direktor bo‘laman'}
-          </button>
+          {menSuperadmin ? (
+            <button
+              className="tugma-asosiy col-span-3 sm:col-auto"
+              disabled={cmd.yarat.isPending || nom.trim().length < 2}
+              onClick={() => cmd.yarat.mutate({ nom: nom.trim(), inn: inn.trim() || undefined, telefon: telefon.trim() || undefined },
+                { onSuccess: () => { setNom(''); setInn(''); setTelefon(''); } })}
+            >
+              {cmd.yarat.isPending ? <Loader2 className="animate-spin" size={15} /> : 'Ochish — men direktor bo‘laman'}
+            </button>
+          ) : (
+            <button
+              className="tugma-asosiy col-span-3 sm:col-auto inline-flex items-center justify-center gap-1.5"
+              disabled={cmd.royxatSoraw.isPending || nom.trim().length < 2}
+              onClick={() => cmd.royxatSoraw.mutate({ nom: nom.trim(), inn: inn.trim() || undefined, telefon: telefon.trim() || undefined },
+                { onSuccess: () => { setNom(''); setInn(''); setTelefon(''); } })}
+            >
+              {cmd.royxatSoraw.isPending ? <Loader2 className="animate-spin" size={15} /> : <><Send size={14} /> So‘rov yuborish</>}
+            </button>
+          )}
         </div>
         {cmd.yarat.isError && <p className="mt-1 text-[12px] text-rose-300">{xatoMatn((cmd.yarat.error as any)?.code)}</p>}
+        {cmd.royxatSoraw.isError && <p className="mt-1 text-[12px] text-rose-300">{xatoMatn((cmd.royxatSoraw.error as any)?.code)}</p>}
+        {cmd.royxatSoraw.isSuccess && <p className="mt-1 text-[12px] text-emerald-400">So‘rov yuborildi — administrator ko‘rib chiqadi.</p>}
+
+        {/* Superadmin uchun — barcha so'rovlarni ko'rish/tasdiqlash/rad
+            etish. Oddiy foydalanuvchi uchun — faqat o'z so'rovi holati. */}
+        <div className="mt-3">
+          <h3 className="text-[12px] font-semibold text-text-dim uppercase tracking-wide">
+            {menSuperadmin ? 'Kompaniya so‘rovlari' : 'Mening so‘rovlarim'}
+          </h3>
+          <KompaniyaRoyxatlari />
+        </div>
       </section>
 
       <section className="mt-8">

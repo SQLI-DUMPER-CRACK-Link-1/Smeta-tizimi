@@ -112,7 +112,37 @@ export function useProfilYangila(kompaniyaId: number | null | undefined) {
   });
 }
 
+/**
+ * T2-COMPANY-CREATE-GATE-001 (haqiqiy hodisa): a'zoligi yo'q HAR QANDAY
+ * foydalanuvchi (masalan a'zoligi bekor qilingan "prorab") o'zi uchun
+ * kompaniya ochib, uning direktori bo'lib olardi — server hech qanday
+ * rol tekshiruvi qilmasdi. Endi to'g'ridan-to'g'ri yaratish (`create`)
+ * FAQAT platforma superadmini uchun; oddiy foydalanuvchi SO'ROV yuboradi
+ * (`royxat_soraw`) va superadmin uni ko'rib chiqib tasdiqlaydi/rad etadi.
+ */
+export type KompaniyaRoyxat = {
+  id: number; actor_id: number; login: string; nom: string; inn: string | null;
+  telefon: string | null; holat: 'kutilmoqda' | 'tasdiqlandi' | 'rad_etildi';
+  kompaniya_id: number | null; sabab: string | null; created_at: string; decided_at: string | null;
+};
+export async function kompaniyaRoyxatlarOl(): Promise<{ superadmin: boolean; royxatlar: KompaniyaRoyxat[] }> {
+  const r = await fetch('/api/company?royxatlar=1');
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || j.ok !== true) throw toErr(j, r.status);
+  return { superadmin: !!j.superadmin, royxatlar: (j.royxatlar as KompaniyaRoyxat[]) || [] };
+}
+export function useKompaniyaRoyxatlar() {
+  return useQuery({
+    queryKey: ['kompaniyaRoyxatlar'],
+    queryFn: kompaniyaRoyxatlarOl,
+    staleTime: 15_000,
+  });
+}
+
 export type KompaniyaYaratInput = { nom: string; inn?: string; telefon?: string; operation_id?: string };
+export type RoyxatSorawInput = { nom: string; inn?: string; telefon?: string; operation_id?: string };
+export type RoyxatTasdiqlaInput = { royxat_id: number; operation_id?: string };
+export type RoyxatRadEtInput = { royxat_id: number; sabab?: string; operation_id?: string };
 export type MemberAddInput = { kompaniya_id: number; login: string; rol: string; email?: string; ism?: string; operation_id?: string };
 export type MemberRoleInput = { azolik_id: number; rol: string; operation_id?: string };
 export type MemberRemoveInput = { azolik_id: number; operation_id?: string };
@@ -122,7 +152,11 @@ export type MemberRemoveInput = { azolik_id: number; operation_id?: string };
  *  GAS'ning eski _XODIMLAR varag'ida ham yo'q. */
 export type MemberPasswordSetInput = { kompaniya_id: number; foydalanuvchi_id: number; yangi_parol: string; operation_id?: string };
 
+/** Faqat superadmin uchun — server rolni qayta tekshiradi. */
 export const kompaniyaYarat = (i: KompaniyaYaratInput) => post('create', i);
+export const kompaniyaRoyxatSoraw = (i: RoyxatSorawInput) => post('royxat_soraw', i);
+export const kompaniyaRoyxatTasdiqla = (i: RoyxatTasdiqlaInput) => post('royxat_tasdiqla', i);
+export const kompaniyaRoyxatRadEt = (i: RoyxatRadEtInput) => post('royxat_rad_et', i);
 export const azoQosh = (i: MemberAddInput) => post('member_add', i);
 export const azoRol = (i: MemberRoleInput) => post('member_role', i);
 export const azoOchir = (i: MemberRemoveInput) => post('member_remove', i);
@@ -134,8 +168,15 @@ export function useOnboardingCommands() {
     qc.invalidateQueries({ queryKey: ['men'] });
     qc.invalidateQueries({ queryKey: ['kompaniyaAzolari'] });
   };
+  const royxatDone = () => {
+    done();
+    qc.invalidateQueries({ queryKey: ['kompaniyaRoyxatlar'] });
+  };
   return {
     yarat: useMutation({ mutationFn: kompaniyaYarat, onSuccess: done }),
+    royxatSoraw: useMutation({ mutationFn: kompaniyaRoyxatSoraw, onSuccess: () => qc.invalidateQueries({ queryKey: ['kompaniyaRoyxatlar'] }) }),
+    royxatTasdiqla: useMutation({ mutationFn: kompaniyaRoyxatTasdiqla, onSuccess: royxatDone }),
+    royxatRadEt: useMutation({ mutationFn: kompaniyaRoyxatRadEt, onSuccess: () => qc.invalidateQueries({ queryKey: ['kompaniyaRoyxatlar'] }) }),
     azoQosh: useMutation({ mutationFn: azoQosh, onSuccess: done }),
     azoRol: useMutation({ mutationFn: azoRol, onSuccess: done }),
     azoOchir: useMutation({ mutationFn: azoOchir, onSuccess: done }),

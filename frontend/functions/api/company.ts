@@ -24,7 +24,15 @@ type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string }
 
 const RPC = {
   me: 't2_men_v1',
+  /* T2-COMPANY-CREATE-GATE-001: to'g'ridan-to'g'ri yaratish endi FAQAT
+     platforma superadmini uchun (RPC o'zi tekshiradi). Oddiy foydalanuvchi
+     `royxat_soraw` orqali so'rov yuboradi -- kompaniya/a'zolik superadmin
+     tasdiqlagandan keyingina paydo bo'ladi. */
   create: 't2_kompaniya_yarat_v1',
+  royxat_soraw: 't2_kompaniya_royxat_soraw_v1',
+  royxat_royxat: 't2_kompaniya_royxat_royxat_v1',
+  royxat_tasdiqla: 't2_kompaniya_royxat_tasdiqla_v1',
+  royxat_rad_et: 't2_kompaniya_royxat_rad_et_v1',
   member_add: 't2_azolik_qosh_v1',
   member_role: 't2_azolik_rol_ozgartir_v1',
   member_remove: 't2_azolik_ochir_v1',
@@ -56,9 +64,11 @@ async function callRpc(env: Env, name: string, body: unknown) {
 
 function statusFor(code: string, raw: string): number {
   if (code === 'ACTOR_NOT_FOUND' || code === 'COMPANY_NOT_FOUND' || code === 'MEMBERSHIP_NOT_FOUND' || code === 'REQUEST_NOT_FOUND' || code === 'AZOLIK_TOPILMADI') return 404;
-  if (code === 'AUTHORIZATION_DENIED' || /42501|direktor|a'zo|azo|membership|PERMISSION/i.test(code + raw)) return 403;
+  if (code === 'AUTHORIZATION_DENIED' || code === 'SUPERADMIN_REQUIRED' || /42501|direktor|a'zo|azo|membership|PERMISSION/i.test(code + raw)) return 403;
   if (code === 'OPERATION_ID_REQUIRED' || code === 'PAROL_QISQA' || /INVALID|REQUIRED/.test(code)) return 400;
   if (code === 'ALREADY_MEMBER' || code === 'LAST_DIRECTOR' || code === 'STALE_VERSION') return 409;
+  // T2-COMPANY-CREATE-GATE-001: so'rov allaqachon ko'rib chiqilgan (qayta tasdiqlash/rad etish).
+  if (code === 'REQUEST_NOT_PENDING') return 409;
   return 502;
 }
 
@@ -96,6 +106,17 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
       });
       if (!r.ok || !j) {
         console.error('[company authorize] t2_effective_authorization_v1', r.status, text.slice(0, 300));
+        return Response.json({ ok: false, code: 'CONFIG' }, { status: 502 });
+      }
+      return Response.json(j);
+    }
+
+    // ── Kompaniya so'rovlari (T2-COMPANY-CREATE-GATE-001): superadmin —
+    // hammasi; oddiy foydalanuvchi — faqat o'zinikilar (RPC ichida ajratiladi). ──
+    if (url.searchParams.get('royxatlar') === '1') {
+      const { r, j, text } = await callRpc(ctx.env, RPC.royxat_royxat, { p_actor_id: a.id });
+      if (!r.ok || !j || j.ok !== true) {
+        console.error('[company royxatlar] t2_kompaniya_royxat_royxat_v1', r.status, text.slice(0, 300));
         return Response.json({ ok: false, code: 'CONFIG' }, { status: 502 });
       }
       return Response.json(j);
@@ -151,14 +172,18 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     if (a instanceof Response) return a;
     const b: any = await ctx.request.json().catch(() => ({}));
     const action: string = b?.action;
-    if (!action || !(action in RPC) || action === 'me') {
+    if (!action || !(action in RPC) || action === 'me' || action === 'royxat_royxat') {
       return Response.json({ ok: false, code: 'COMPANY_ACTION_INVALID' }, { status: 400 });
     }
     const opId: string = typeof b.operation_id === 'string' && b.operation_id ? b.operation_id : crypto.randomUUID();
 
     let body: Record<string, unknown>;
-    if (action === 'create') {
+    if (action === 'create' || action === 'royxat_soraw') {
       body = { p_actor_id: a.id, p_nom: String(b.nom ?? ''), p_inn: b.inn == null ? null : String(b.inn), p_telefon: b.telefon == null ? null : String(b.telefon), p_operation_id: opId };
+    } else if (action === 'royxat_tasdiqla') {
+      body = { p_actor_id: a.id, p_royxat_id: Number(b.royxat_id), p_operation_id: opId };
+    } else if (action === 'royxat_rad_et') {
+      body = { p_actor_id: a.id, p_royxat_id: Number(b.royxat_id), p_sabab: b.sabab == null ? null : String(b.sabab), p_operation_id: opId };
     } else if (action === 'member_add') {
       body = { p_actor_id: a.id, p_kompaniya_id: Number(b.kompaniya_id), p_login: String(b.login ?? ''), p_rol: String(b.rol ?? ''), p_email: b.email == null ? null : String(b.email), p_ism: b.ism == null ? null : String(b.ism), p_operation_id: opId };
     } else if (action === 'member_role') {
