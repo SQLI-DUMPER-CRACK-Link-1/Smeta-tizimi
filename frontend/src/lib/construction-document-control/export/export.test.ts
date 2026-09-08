@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { generateNakopitelniy } from './nakopitelniy-export';
 import { generateForma2 } from './forma2-export';
 import { generateForma3 } from './forma3-export';
+import { generateSlichitelniy, slichitelniyQatorlariQur } from './slichitelniy-export';
 import { type ProgressLineResult, type ProgressValuationResult } from '../types';
 
 describe('Document Export Generators', () => {
@@ -69,7 +70,9 @@ describe('Document Export Generators', () => {
     const dataRow = ws!.getRow(6);
     expect(dataRow.getCell(1).value).toBe('Test ish');
     expect(dataRow.getCell(3).value).toBe(100);
-    expect(dataRow.getCell(7).value).toBe(30); // Joriy F-2
+    expect(dataRow.getCell(7).value).toBe(30); // Joriy F-2 hajmi
+    expect(dataRow.getCell(11).value).toBe(15000); // Joriy F-2 original manba summasi
+    expect(dataRow.getCell(13).value).toBe(20000); // Qoldiq summa (smeta nazorati)
   });
 
   it('generates Forma-2 (TPL-05/06)', async () => {
@@ -91,6 +94,27 @@ describe('Document Export Generators', () => {
     expect(dataRow.getCell(2).value).toBe('Test ish');
     expect(dataRow.getCell(5).value).toBe(30); // Joriy oy miqdori
     expect(dataRow.getCell(6).value).toBe(15000); // Sertifikatlangan summa
+    expect(dataRow.getCell(7).value).toBe(15000); // Joriy oy uchun analitik hisob
+  });
+
+  it('keeps a current Forma-2 source amount exact and compares it only with the current-period arithmetic', async () => {
+    const exactSourceRow: ProgressLineResult = {
+      ...dummyRow,
+      currentQuantity: 10,
+      currentF2ValuationPrice: 123.45,
+      currentCertifiedValue: 1234.49,
+      // Bu qasddan kumulyativ qiymat: eksport uni joriy oy farqiga ishlatmasligi kerak.
+      f2ValuationValue: 9876.54,
+    };
+    const buffer = await generateForma2([exactSourceRow], {
+      projectName: 'Test Project', objectName: 'Test Object', periodLabel: '2026-09', documentNumber: 'F2-exact',
+    });
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer.buffer as ArrayBuffer);
+    const dataRow = wb.getWorksheet(1)!.getRow(8);
+    expect(dataRow.getCell(6).value).toBe(1234.49);
+    expect(dataRow.getCell(7).value).toBe(1234.5);
+    expect(dataRow.getCell(8).value).toBe(-0.01);
   });
 
   it('Forma-2 does not fabricate 0 for unknown price/value -- writes NOANIQ instead', async () => {
@@ -129,40 +153,53 @@ describe('Document Export Generators', () => {
     await wb.xlsx.load(buffer.buffer as ArrayBuffer);
     const ws = wb.getWorksheet(1);
     const dataRow = ws!.getRow(6);
-    expect(dataRow.getCell(10).value).toBe('NOANIQ');
+    expect(dataRow.getCell(12).value).toBe('NOANIQ');
   });
 
-  it('generates Forma-3 with unresolved taxes (TPL-12)', async () => {
+  it('blocks Forma-3 until the legal pricing rule has an authoritative evidence link', async () => {
+    await expect(generateForma3(dummyValuation, {
+      projectName: 'Test Project',
+      objectName: 'Test Object',
+      periodLabel: '2026-09',
+      documentNumber: 'F3-1',
+    })).rejects.toThrow('FORMA3_RULE_UNRESOLVED');
+  });
+
+  it('generates Forma-3 only from a named legal rule and evidence', async () => {
     const buffer = await generateForma3(dummyValuation, {
       projectName: 'Test Project',
       objectName: 'Test Object',
       periodLabel: '2026-09',
       documentNumber: 'F3-1',
-      vatRatePercent: null
+      legalRuleEvidence: { documentId: 'contract-rule-17', ruleVersion: 'v1', vatRatePercent: 12 }
     });
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buffer.buffer as ArrayBuffer);
     const ws = wb.getWorksheet(1);
     
     const vatRow = ws!.getRow(9);
-    expect(vatRow.getCell(2).value).toContain('QQS (Aniqlanmagan)');
-    expect(vatRow.getCell(3).value).toBe('FORMA3_RULE_UNRESOLVED');
-  });
-
-  it('generates Forma-3 with resolved taxes (TPL-12)', async () => {
-    const buffer = await generateForma3(dummyValuation, {
-      projectName: 'Test Project',
-      objectName: 'Test Object',
-      periodLabel: '2026-09',
-      documentNumber: 'F3-1',
-      vatRatePercent: 12
-    });
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer.buffer as ArrayBuffer);
-    const ws = wb.getWorksheet(1);
-    
-    const vatRow = ws!.getRow(9);
-    expect(vatRow.getCell(2).value).toContain('QQS (12%)');
+    expect(vatRow.getCell(2).value).toContain('QQS (12%, asos: contract-rule-17');
     expect(vatRow.getCell(4).value).toBe(15000 * 0.12); // QQS joriy davr
+  });
+
+  it('generates a stable-ID reconciliation without positional matching or silent repair', async () => {
+    const qator = slichitelniyQatorlariQur([dummyRow])[0];
+    expect(qator.lineId).toBe('l1');
+    expect(qator.quantityDifference).toBe(40);
+    expect(qator.amountDifference).toBe(20000);
+    expect(qator.holat).toBe('farq');
+    expect(qator.decision).toBe('OCHIQ');
+
+    const buffer = await generateSlichitelniy([dummyRow], {
+      projectName: 'Test Project', objectName: 'Test Object', periodLabel: '2026-09', documentNumber: 'SLC-1',
+    });
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer.buffer as ArrayBuffer);
+    const ws = wb.getWorksheet(1)!;
+    const dataRow = ws.getRow(7);
+    expect(dataRow.getCell(1).value).toBe('l1');
+    expect(dataRow.getCell(8).value).toBe(40000);
+    expect(dataRow.getCell(10).value).toBe('FARQ');
+    expect(dataRow.getCell(12).value).toBe('OCHIQ');
   });
 });

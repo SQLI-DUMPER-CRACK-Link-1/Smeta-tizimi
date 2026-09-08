@@ -7,13 +7,26 @@ export interface Forma3ExportOptions {
   periodLabel: string;
   documentNumber: string;
   contractNumber?: string;
-  vatRatePercent?: number | null; // e.g. 12 for 12%
+  /**
+   * Shartnoma/buxgalteriya tomonidan tasdiqlangan qoida dalilisiz Forma-3
+   * hisoblanmaydi. Oddiy QQS foizi yetarli emas: u qaysi hujjatga tegishli
+   * ekanini ham ko'rsatish shart.
+   */
+  legalRuleEvidence?: {
+    documentId: string;
+    ruleVersion: string;
+    vatRatePercent: number;
+  };
 }
 
 export async function generateForma3(
   valuation: ProgressValuationResult,
   options: Forma3ExportOptions
 ): Promise<Uint8Array> {
+  if (!options.legalRuleEvidence) throw new Error('FORMA3_RULE_UNRESOLVED');
+  if (!Number.isFinite(options.legalRuleEvidence.vatRatePercent) || options.legalRuleEvidence.vatRatePercent < 0) {
+    throw new Error('FORMA3_RULE_INVALID');
+  }
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Smeta tizimi';
   const worksheet = workbook.addWorksheet('Forma-3');
@@ -75,8 +88,8 @@ export async function generateForma3(
   let curTotal: number | string = 'FORMA3_RULE_UNRESOLVED';
   let cumTotal: number | string = 'FORMA3_RULE_UNRESOLVED';
 
-  if (options.vatRatePercent != null && !valuationUnknown) {
-    const rate = options.vatRatePercent / 100;
+  if (!valuationUnknown) {
+    const rate = options.legalRuleEvidence.vatRatePercent / 100;
     prevVat = previousValue! * rate;
     curVat = currentValue! * rate;
     cumVat = cumulativeValue! * rate;
@@ -88,7 +101,7 @@ export async function generateForma3(
 
   const vatRow = worksheet.addRow([
     '2',
-    `QQS (${options.vatRatePercent != null ? options.vatRatePercent + '%' : 'Aniqlanmagan'})`,
+    `QQS (${options.legalRuleEvidence.vatRatePercent}%, asos: ${options.legalRuleEvidence.documentId}, qoida: ${options.legalRuleEvidence.ruleVersion})`,
     prevVat,
     curVat,
     cumVat
