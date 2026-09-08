@@ -10,8 +10,8 @@ CAPTCHA, token entry, or confirmation prompt was awaited.
 - **Attempted operation:** `GIT_TERMINAL_PROMPT=0 git ls-remote --heads origin`.
 - **Result:** succeeded and returned 70 remote heads. The night branch was not
   present before integration.
-- **Limit:** push authentication is not proven until the dedicated branch push
-  is attempted with `GIT_TERMINAL_PROMPT=0`.
+- **Limit:** no limitation remains for this branch push; the dedicated branch
+  push was verified against the returned remote SHA.
 
 ### Supabase MCP — CONNECTED_READ_ONLY
 

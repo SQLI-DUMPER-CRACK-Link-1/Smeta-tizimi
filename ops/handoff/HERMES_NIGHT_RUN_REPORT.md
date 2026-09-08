@@ -1,8 +1,8 @@
 BASE_SHA=806b2955ff00932c25b327991fa2d89a2048064e
 INTEGRATION_BRANCH=hermes/pto-revolution-2026-09
-LATEST_PUSHED_SHA=NOT_PUSHED
-LATEST_LOCAL_SHA=806b2955ff00932c25b327991fa2d89a2048064e
-GITHUB_PUSH_STATUS=REMOTE_READ_OK_PUSH_PENDING
+LATEST_PUSHED_SHA=c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6
+LATEST_LOCAL_SHA=c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6
+GITHUB_PUSH_STATUS=PUSHED_AND_REMOTE_VERIFIED
 SUPABASE_AUTH_STATUS=CONNECTED_READ_ONLY_MCP; CLI_NOT_INSTALLED
 CLOUDFLARE_AUTH_STATUS=MCP_CONFIGURED_BUT_RUNTIME_UNVERIFIED; WRANGLER_NOT_INSTALLED
 DRIVE_AUTH_STATUS=TOOL_UNAVAILABLE_IN_HEADLESS_SESSION
@@ -38,8 +38,8 @@ OWNER_SMOKE_STATUS=NOT_RUN
 
 ## IN_PROGRESS
 
-- Release/integration: explicit staging, secret scan, commit, non-interactive
-  push and post-push verification.
+- Release/integration: handoff metadata update remains to be committed/pushed;
+  the substantial code/docs milestone is already pushed and remote-verified.
 - Reconciliation of local branch with pre-existing dirty owner/agent work is
   intentionally limited to the night-run write scope.
 
@@ -105,7 +105,8 @@ parity, approval/history/export, Forma-3/KS-3 rules and owner smoke.
 
 ## RELEASE / HANDOFF
 
-No commit or push has been made at the time of this update. Before commit, stage
-only the night-run write scope, inspect the staged diff and secret patterns, run
-focused gates, commit to this branch, push only this branch with
-`GIT_TERMINAL_PROMPT=0`, then verify the remote SHA. Never merge or push main.
+Validated commit `c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6` exists locally and
+matches `origin/hermes/pto-revolution-2026-09`. The staged diff/check, secret
+scan and push verification passed. This final metadata update is the only
+remaining handoff commit; push only this branch with `GIT_TERMINAL_PROMPT=0`.
+Never merge or push main.
