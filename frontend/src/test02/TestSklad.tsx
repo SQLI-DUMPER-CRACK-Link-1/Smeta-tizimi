@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Box, ArrowDownToLine, ArrowUpFromLine, RefreshCcw, Search, Barcode, ClipboardCheck, QrCode, Building2, PackageOpen, AlertTriangle } from 'lucide-react';
 import { useKompaniya } from './KompaniyaTanlov';
 import { FmtN } from '../lib/format';
 import { toast } from '../umumiy/ui/Toast';
-import { sbT2ObyektlarOl, sbSkladQoldiqOl, sbSkladgaYozish, yangiOperationId, type T2Obyekt, type T2SkladQoldiq } from '../api/supabase';
+import { sbT2ObyektlarOlKomp, sbSkladQoldiqOl, sbSkladgaYozish, yangiOperationId, type T2Obyekt, type T2SkladQoldiq } from '../api/supabase';
 import { sbSkladlarOl } from '../api/t2-resurs';
 import { sbSkladKonsolidatsiyaOl, type SkladKonsolidatsiya } from '../api/t2-sklad-konsolidatsiya';
 
 export default function TestSklad() {
-  const [params] = useSearchParams();
   const { joriy } = useKompaniya();
   const aktKomp = joriy?.id ?? 0;
   
@@ -37,12 +35,17 @@ export default function TestSklad() {
   const [formBirligi, setFormBirligi] = useState('dona');
 
   useEffect(() => {
-    sbT2ObyektlarOl().then(r => {
+    setObyektlar([]);
+    setObyektId(null);
+    setSkladQoldiq([]);
+    if (!aktKomp) return;
+    sbT2ObyektlarOlKomp(aktKomp).then(r => {
       if (r.ok && r.qatorlar) {
-        setObyektlar(r.qatorlar);
-        if (r.qatorlar.length > 0 && !obyektId) {
-          setObyektId(r.qatorlar[0].id);
-        }
+        const next = r.qatorlar as T2Obyekt[];
+        setObyektlar(next);
+        setObyektId(next[0]?.id ?? null);
+      } else {
+        setObyektlar([]);
       }
     });
     if (aktKomp) {

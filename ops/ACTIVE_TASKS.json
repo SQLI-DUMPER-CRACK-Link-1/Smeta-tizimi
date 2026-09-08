@@ -1,0 +1,46 @@
+{
+  "umbrella_task": {
+    "id": "HERMES-PTO-REVOLUTION-001",
+    "title": "TIZIM_02 PTO revolution / full system audit / unattended night run",
+    "branch": "hermes/pto-revolution-2026-09",
+    "base_sha": "806b2955ff00932c25b327991fa2d89a2048064e",
+    "owner": "Hermes integration lane",
+    "status": "INTEGRATION_READY_PENDING_REVIEW",
+    "write_scope": [
+      "docs/audit/",
+      "docs/product/",
+      "docs/migration/",
+      "docs/research/",
+      "docs/ui/",
+      "docs/ai/",
+      "ops/handoff/",
+      "frontend/src/App.tsx",
+      "frontend/src/test02/TestShell.tsx",
+      "frontend/src/test02/TestSklad.tsx"
+    ]
+  },
+  "lanes": [
+    {"id":"HERMES-PTO-REVOLUTION-001-A","role":"current-state-auditor","scope":"read-only repository/routes/API/DB/tests","status":"COMPLETE"},
+    {"id":"HERMES-PTO-REVOLUTION-001-B","role":"pto-domain-auditor","scope":"read-only PTO chain and invariants","status":"COMPLETE_WITH_RUNTIME_GAPS"},
+    {"id":"HERMES-PTO-REVOLUTION-001-C","role":"ui-ai-security-auditor","scope":"read-only UI/agent/security review","status":"COMPLETE_WITH_RUNTIME_GAPS"},
+    {"id":"HERMES-PTO-REVOLUTION-001-D","role":"audit-synthesis","scope":"docs/audit docs/product docs/migration","status":"COMPLETE"},
+    {"id":"HERMES-PTO-REVOLUTION-001-E","role":"document-profiler","scope":"ops/handoff/profile_document_corpus.py and sanitized profile","status":"COMPLETE"},
+    {"id":"HERMES-PTO-REVOLUTION-001-F","role":"safe-ui-context","scope":"App.tsx TestShell.tsx TestSklad.tsx only","status":"IMPLEMENTED_AND_TESTED"},
+    {"id":"HERMES-PTO-REVOLUTION-001-G","role":"security-hardening","scope":"server/RLS/upload","status":"BLOCKED_APPROVAL_QUEUE"},
+    {"id":"HERMES-PTO-REVOLUTION-001-H","role":"runtime-owner-smoke","scope":"authenticated Supabase/Cloudflare/Drive/browser","status":"BLOCKED_RUNTIME_AUTH_OR_TOOL"},
+    {"id":"HERMES-PTO-REVOLUTION-001-I","role":"release-integration","scope":"review, secret scan, focused gates, branch push","status":"IN_PROGRESS"}
+  ],
+  "conflict_policy": "Do not stage or overwrite pre-existing dirty files/untracked agent files outside write_scope.",
+  "last_measured": {
+    "codebase_memory": {"project":"smeta-tizimi","nodes":7321,"edges":22335,"status":"ready"},
+    "frontend_vitest": {"files":9,"tests":33,"status":"pass"},
+    "tekshir_assertions": {"suites":12,"assertions":296,"status":"pass"},
+    "typescript":"pass",
+    "lint":"exit 0 with existing warnings",
+    "build":"pass with chunk/runtime-path warnings",
+    "github_remote_read":"pass",
+    "supabase_mcp":"connected read-only",
+    "drive_headless":"tool unavailable",
+    "owner_smoke":"not run"
+  }
+}

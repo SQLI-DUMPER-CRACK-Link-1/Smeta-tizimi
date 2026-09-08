@@ -1,0 +1,887 @@
+{
+  "schema": "pto-document-profile-v1",
+  "read_only": true,
+  "raw_cell_values_stored": false,
+  "record_count": 38,
+  "kind_counts": {
+    "xlsx": 33,
+    "csv": 1,
+    "pdf": 2,
+    "docx": 2
+  },
+  "records": [
+    {
+      "path": "_f2lab/_unz/____________.xlsx",
+      "sha256": "a1b00d25e58e52cdc1a06032bc426fc5b388534221ef9d826412a9469f3abb94",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "СТЕЛЛА-3",
+          "dimension": "A1:S373",
+          "rows": 369,
+          "cells": 4861,
+          "formula_count": 1516,
+          "merged_range_count": 13
+        },
+        {
+          "name": "ф2 (АМФИТЕАТР бузиладигани)",
+          "dimension": "A1:L468",
+          "rows": 465,
+          "cells": 4066,
+          "formula_count": 969,
+          "merged_range_count": 93
+        },
+        {
+          "name": "Водопровод",
+          "dimension": "A1:T204",
+          "rows": 201,
+          "cells": 2607,
+          "formula_count": 717,
+          "merged_range_count": 12
+        },
+        {
+          "name": "Полив",
+          "dimension": "A1:T215",
+          "rows": 212,
+          "cells": 2812,
+          "formula_count": 809,
+          "merged_range_count": 12
+        },
+        {
+          "name": "ф2 (АМФИТЕАТР Отопления)",
+          "dimension": "A1:L161",
+          "rows": 158,
+          "cells": 1329,
+          "formula_count": 249,
+          "merged_range_count": 61
+        },
+        {
+          "name": "1 (2)",
+          "dimension": "A1:M2496",
+          "rows": 2476,
+          "cells": 13297,
+          "formula_count": 1300,
+          "merged_range_count": 16
+        }
+      ],
+      "sheet_count": 6
+    },
+    {
+      "path": "_f2lab/_unz/___________kiritilgan.xlsx",
+      "sha256": "92640445232f45a5118cfae58caf564df2cf89dd147712611ff4c46e33ce7d37",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "ОБЛОЖКА тер)",
+          "dimension": "A1:N16",
+          "rows": 11,
+          "cells": 97,
+          "formula_count": 0,
+          "merged_range_count": 10
+        },
+        {
+          "name": "ф2 Водопровод (2)",
+          "dimension": "A1:S246",
+          "rows": 246,
+          "cells": 2225,
+          "formula_count": 548,
+          "merged_range_count": 65
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/__________kiritilgan.xlsx",
+      "sha256": "145fcaa7b6aa738593ddef0d5e35eb7de1c15de6c6704a3eaa1875fbddad0df3",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "ф2 Амфитеатр (fakt) (2)",
+          "dimension": "A1:BD2021",
+          "rows": 2018,
+          "cells": 64392,
+          "formula_count": 7688,
+          "merged_range_count": 293
+        },
+        {
+          "name": "ОБЛОЖКА тер)",
+          "dimension": "A1:N16",
+          "rows": 11,
+          "cells": 95,
+          "formula_count": 0,
+          "merged_range_count": 10
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109971_ALL_01-07______________________LRV_PLUS.xlsx",
+      "sha256": "6ab4adf11ccd007d69a59b92c1e31b775f683300dcfde4ac08b28652edfc4afa",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 9,
+          "cells": 72,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 1345,
+          "merged_range_count": 32
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109972_ALL_01-08________________________LRV_PLUS.xlsx",
+      "sha256": "84096298352f36269995317a83f471f0df749a979c39b3b2887f265ddaf81098",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 20,
+          "cells": 160,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 994,
+          "cells": 30784,
+          "formula_count": 2676,
+          "merged_range_count": 105
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109973_ALL_01-09____________________________LRV_PLUS.xlsx",
+      "sha256": "869ef50a912328153fac1f3a1ec31aeab8a1be721291d80153313164ad8600a1",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 6,
+          "cells": 48,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 993,
+          "cells": 30753,
+          "formula_count": 1006,
+          "merged_range_count": 33
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109974_ALL_01-10____________________LRV_PLUS.xlsx",
+      "sha256": "4737f5b3d29e3dd988567372fbb95bd581d59b82b82f7c1f74ed12555555f18a",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 15,
+          "cells": 120,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 1718,
+          "merged_range_count": 96
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109975_ALL_01-11________________________LRV_PLUS.xlsx",
+      "sha256": "c62deedf248e2e3199c3f0fdb560c6d10c97140ee97a3818cfd79aa80296257b",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 19,
+          "cells": 152,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 994,
+          "cells": 30784,
+          "formula_count": 2559,
+          "merged_range_count": 106
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109976_ALL_01-12________-____________________________________LRV_PLUS.xlsx",
+      "sha256": "f7f4989934e62d5140949a2d87b0f9ead0e8a5a6888b449eed05649b90e87983",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 9,
+          "cells": 72,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 994,
+          "cells": 30784,
+          "formula_count": 1021,
+          "merged_range_count": 31
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109977_ALL_01-06_____________________LRV_PLUS.xlsx",
+      "sha256": "8b5457a36d6af34cd9d7e0cdabbc3da836be2d8cf49e9ea4a637836109d9b272",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 8,
+          "cells": 64,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 1075,
+          "merged_range_count": 35
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109978_ALL_01-03___________LRV_PLUS.xlsx",
+      "sha256": "880d2328e5c96e9d40a53e4f9a1e7a7c82e4b1ebf7fa5466601172476eff3549",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 15,
+          "cells": 120,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 1483,
+          "merged_range_count": 74
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109979_ALL_01-05___________________LRV_PLUS.xlsx",
+      "sha256": "4d7d8d66a275aecac68ec901ff5d3568621e274995f2fab2d0e80c7390df74cc",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 3,
+          "cells": 24,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 993,
+          "cells": 30753,
+          "formula_count": 309,
+          "merged_range_count": 18
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109980_ALL_01-04______________________-1..._-9__LRV_PLUS.xlsx",
+      "sha256": "5e08ee050b0f655c8209c1f927ada3e83c90a27c521834b030c66fa602adc95b",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 3,
+          "cells": 24,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 987,
+          "cells": 30567,
+          "formula_count": 5055,
+          "merged_range_count": 124
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109981_ALL_01-13__________________LRV_PLUS.xlsx",
+      "sha256": "0c898172727b510ee24f6317ccde68dbdf4a39ef6d6d3d037e810b1f8372b7ef",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 12,
+          "cells": 96,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 2003,
+          "merged_range_count": 52
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109982_ALL_01-14_____________________LRV_PLUS.xlsx",
+      "sha256": "b2cbaba6e94bd06ccaff154df29d7b58b0544244552dfdf08a4d8136edbf02cf",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 15,
+          "cells": 120,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 994,
+          "cells": 30784,
+          "formula_count": 4342,
+          "merged_range_count": 98
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109983_ALL_01-02_____________________LRV_PLUS.xlsx",
+      "sha256": "69964dcc1e10217e8a3508bd023f25e0e57dc4749a5efb074e33dd3ba12bdbd8",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 102,
+          "cells": 816,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 1724,
+          "cells": 53414,
+          "formula_count": 133,
+          "merged_range_count": 425
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109984_ALL_01-19______________________________LRV_PLUS.xlsx",
+      "sha256": "854064d8b06d446ee3199297572a73563f2b095c074cb5faa672b55587521d34",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 5,
+          "cells": 40,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 991,
+          "cells": 30691,
+          "formula_count": 1392,
+          "merged_range_count": 78
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109986_ALL_01-15_______________________LRV_PLUS.xlsx",
+      "sha256": "d394b7b3d171751931d9d9c7e365fee15cdced4cb39d15ab63530ffc68e75718",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 10,
+          "cells": 80,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 1063,
+          "merged_range_count": 46
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109987_ALL_01-16____________________LRV_PLUS.xlsx",
+      "sha256": "f6c768d6c81c20dff782e8d30d0a50ae344115721b492f1edd75af566e1a4943",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 5,
+          "cells": 40,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 478,
+          "merged_range_count": 30
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109988_ALL_01-17_________________LRV_PLUS.xlsx",
+      "sha256": "992249ffaaec99d3ed634603695a3006859ac234587528ebc1d187d63e674bf3",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 3,
+          "cells": 24,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 423,
+          "merged_range_count": 31
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109989_ALL_01-18_____________________________________________LRV_PLUS.xlsx",
+      "sha256": "cc79fce13b4f9714ef5b387a793d9ba5f9668ad7576f191159a88ec435aadd5e",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 7,
+          "cells": 56,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 991,
+          "cells": 30691,
+          "formula_count": 1362,
+          "merged_range_count": 75
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109990_ALL_01-21____________________________________1000___V_LRV_PLUS.xlsx",
+      "sha256": "416df176770ecdffca07b40572a041f69d21c25f14075dcf7dd9d28e6466c2ee",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 7,
+          "cells": 56,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 568,
+          "merged_range_count": 15
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109993_ALL_01-01______________________LRV_PLUS.xlsx",
+      "sha256": "561ae0fed68e1002532489aa1a9562f70cfef41d18d6651b990dc280ad379301",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 177,
+          "cells": 1416,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 4999,
+          "cells": 154939,
+          "formula_count": 51682,
+          "merged_range_count": 858
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_109994_ALL_01-24___________________________________LRV_PLUS.xlsx",
+      "sha256": "523ccaa2d1054837a6a677f15d3afe4d2f857000ba4fd6ac793f14616f44c6ae",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 3,
+          "cells": 24,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 114,
+          "merged_range_count": 21
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_110080_ALL_01-02______________________-______________________LRV_PLUS.xlsx",
+      "sha256": "1723f680748a44371417edff308cf2981f007b313fd5b3a3e11b538733c52be7",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 14,
+          "cells": 112,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 988,
+          "cells": 30598,
+          "formula_count": 3834,
+          "merged_range_count": 66
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_110081_ALL_01-02-1_____________________-_______LRV_PLUS.xlsx",
+      "sha256": "5867c13b46f2851a44da47b55b5592aa28cabaf88ea746ecf7c9c9a409381e7c",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 10,
+          "cells": 80,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 637,
+          "merged_range_count": 18
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_110082_ALL_01-23____________________________._LRV_PLUS.xlsx",
+      "sha256": "8f8bc6ae5735539ca0233edb89a4da855c77eb81b23b8c3e51d752a85b232ecc",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 15,
+          "cells": 120,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 988,
+          "cells": 30598,
+          "formula_count": 3040,
+          "merged_range_count": 133
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_110083_ALL_02-08__________________________LRV_PLUS.xlsx",
+      "sha256": "8993663fc00ff386f379f124e5f1af94d11ed7323be32d1bc5ecf9c66f6f079c",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 7,
+          "cells": 56,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 995,
+          "cells": 30815,
+          "formula_count": 859,
+          "merged_range_count": 41
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-_110441_ALL_01-20______________________________LRV_PLUS.xlsx",
+      "sha256": "f4200dfd84ce641b6dbf813ee4d63cf7f1442f75cfe9bac70ab22dbbdac2dd94",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 3,
+          "cells": 24,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 994,
+          "cells": 30784,
+          "formula_count": 775,
+          "merged_range_count": 78
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_-___________18.12.2025___1___2025_LRV_PLUS.xlsx",
+      "sha256": "2617f30fe9d52fef79108207b031f0aab732d8a8d8272926958aa8f4179936fb",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "dimension": "",
+          "rows": 0,
+          "cells": 0,
+          "formula_count": 0,
+          "merged_range_count": 0
+        }
+      ],
+      "sheet_count": 1
+    },
+    {
+      "path": "_f2lab/_unz/Amfiteatr_LRV_PLUS.xlsx",
+      "sha256": "608eeeabaa51f5fab4013178898094466dd85cbee101a5f1385ba4efe21c667f",
+      "is_directory_container": true,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "_NARX_LOG",
+          "dimension": "",
+          "rows": 5,
+          "cells": 40,
+          "formula_count": 0,
+          "merged_range_count": 0
+        },
+        {
+          "name": "LRV",
+          "dimension": "",
+          "rows": 991,
+          "cells": 32673,
+          "formula_count": 1693,
+          "merged_range_count": 78
+        }
+      ],
+      "sheet_count": 2
+    },
+    {
+      "path": "abc_resurs.csv",
+      "sha256": "97fb37f49e1883540eea9383347f63d2c88a8063cdebcb83b5ac4bb711b821a9",
+      "is_directory_container": false,
+      "kind": "csv",
+      "rows": 123573,
+      "max_columns": 41
+    },
+    {
+      "path": "frontend/test_invoice.pdf",
+      "sha256": "a631e0acb07b98221d777604fd38f37fd420ab867fbd38a1327dbfa30950dc10",
+      "is_directory_container": false,
+      "kind": "pdf",
+      "bytes": 40748,
+      "page_marker_count": 0
+    },
+    {
+      "path": "GitHub smeta tizimi.pdf",
+      "sha256": "641c88c64a500408f949ec74a30b0ff85a706266b67358c429e4166f944a182e",
+      "is_directory_container": false,
+      "kind": "pdf",
+      "bytes": 973784,
+      "page_marker_count": 0
+    },
+    {
+      "path": "Jihozlar_Katalogi.docx",
+      "sha256": "c8f878d3339de8c30cf84049a7757e10d74a7ea7d7cb49645139e7683dd8bd94",
+      "is_directory_container": false,
+      "kind": "docx",
+      "paragraph_count": 73,
+      "table_count": 1
+    },
+    {
+      "path": "Jihozlar_Katalogi_Yangi.docx",
+      "sha256": "e90b1b988cb0525e34427e135e21ec4a55401ac0128453298e10c4055185667c",
+      "is_directory_container": false,
+      "kind": "docx",
+      "paragraph_count": 73,
+      "table_count": 1
+    },
+    {
+      "path": "Jihozlar_Smetasi.xlsx",
+      "sha256": "3e5730b94c3a42b74b02e04b0ab89c1ef95d2834f7d8e016aeed5c5661a8b5de",
+      "is_directory_container": false,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "Смета с изображениями",
+          "dimension": "A1:G11",
+          "rows": 11,
+          "cells": 77,
+          "formula_count": 10,
+          "merged_range_count": 0
+        }
+      ],
+      "sheet_count": 1
+    },
+    {
+      "path": "Jihozlar_Smetasi_Yangi.xlsx",
+      "sha256": "0fb7f940ae2c2e8c950d814ba97e3f47af562cc469f5b5184d5f341ec923ff03",
+      "is_directory_container": false,
+      "kind": "xlsx",
+      "sheets": [
+        {
+          "name": "Смета с изображениями",
+          "dimension": "A1:G11",
+          "rows": 11,
+          "cells": 77,
+          "formula_count": 10,
+          "merged_range_count": 0
+        }
+      ],
+      "sheet_count": 1
+    }
+  ]
+}

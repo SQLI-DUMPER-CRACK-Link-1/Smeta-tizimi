@@ -31,24 +31,16 @@ const WrapperMoliya = lazy(() => import('./test02/WrapperMoliya'));
 const WrapperLogistika = lazy(() => import('./test02/WrapperLogistika'));
 const WrapperCRM = lazy(() => import('./test02/WrapperCRM'));
 const TestSmetaBirlashgan = lazy(() => import('./test02/TestSmetaBirlashgan'));
-const TestNarxlar   = lazy(() => import('./test02/TestNarxlar'));
-const TestF2Import  = lazy(() => import('./test02/TestF2Import'));
-const TestF2        = lazy(() => import('./test02/TestF2'));
 const TestSklad     = lazy(() => import('./test02/TestSklad'));
 const TestZayavka   = lazy(() => import('./test02/TestZayavka'));
-const TestBirja     = lazy(() => import('./test02/TestBirja'));
-const TestInvite    = lazy(() => import('./test02/TestInvite'));
 const TestTolov     = lazy(() => import('./test02/TestTolov'));
 const TestFaktura   = lazy(() => import('./test02/TestFaktura'));
-const TestHujjat    = lazy(() => import('./test02/TestHujjat'));
 const TestHisobot   = lazy(() => import('./test02/TestHisobot'));
 const TestErp       = lazy(() => import('./test02/TestErp'));
 const TestSozlama   = lazy(() => import('./test02/TestSozlama'));
 const TestShartnoma = lazy(() => import('./test02/TestShartnoma'));
 const TestTizim     = lazy(() => import('./test02/TestTizim'));
 const TestAosr      = lazy(() => import('./test02/TestAosr'));
-const TestGrafik    = lazy(() => import('./test02/TestGrafik'));
-const TestSpravochnik = lazy(() => import('./test02/TestSpravochnik'));
 const TestDaraxt    = lazy(() => import('./test02/TestDaraxt'));
 import TestXodimlarRollar from './test02/TestXodimlarRollar';
  import { F2Import } from './admin/sahifalar/F2Import';
@@ -138,7 +130,6 @@ export default function App() {
             <Route path="faktura" element={<TestFaktura />} />
             <Route path="erp" element={<TestErp />} />
             <Route path="hisobot" element={<TestHisobot />} />
-            <Route path="sozlama" element={<TestSozlama />} />
             <Route path="tizim" element={<TestTizim />} />
             <Route path="aosr" element={<TestAosr />} />
           </Route>
