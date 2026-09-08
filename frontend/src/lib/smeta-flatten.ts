@@ -21,16 +21,25 @@ export interface SmetaFlatQator {
   hajm: number | null;
   narx: number | null;
   summa: number | null;
+  /** T2-SMETA-NORMA-CASCADE-001: ish (bl) hajmiga nisbatan resurs sarfi
+   *  normasi (T1 LRV faylining "Норма на единицу" ustuni, `treeBuild.ts`
+   *  tomonidan node'ga tashib qo'yiladi). FAQAT 'rs' qatorlarida ma'noli
+   *  -- boshqa turlarda backend buni baribir e'tiborsiz qoldiradi
+   *  (`t2_smeta_import_yakunla_v1`/`_bulk_v1`), chunki `treeBuild.ts` rs
+   *  bo'lmagan tugunlarga 0 qo'yadi, bu esa haqiqiy nol emas. */
+  norma: number | null;
 }
 
 export function smetaDaraxtniYoy(
   nodes: AktNode[], parentLocalId: string | null = null, out: SmetaFlatQator[] = [],
 ): SmetaFlatQator[] {
   for (const node of nodes) {
+    const norma = (node as unknown as { norma?: number }).norma;
     out.push({
       local_id: node.uid, parent_local_id: parentLocalId, tur: node.type,
       kod: node.kod ?? null, nom: node.nom ?? null, birlik: node.bir ?? null,
       hajm: node.hajm ?? null, narx: node.narx ?? null, summa: node.summa ?? null,
+      norma: node.type === 'rs' && norma ? norma : null,
     });
     if (node.children && node.children.length) smetaDaraxtniYoy(node.children, node.uid, out);
   }

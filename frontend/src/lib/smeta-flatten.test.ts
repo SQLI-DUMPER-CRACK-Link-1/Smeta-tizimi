@@ -26,11 +26,21 @@ describe('smetaDaraxtniYoy', () => {
     expect(rows[0]).toMatchObject({ kod: null, birlik: null, hajm: 0, narx: 0, summa: null });
   });
 
+  it('T2-SMETA-NORMA-CASCADE-001: rs qatorida norma tashiladi, boshqa turlarda YO‘Q (treeBuild.ts 0 qo‘yadi, bu haqiqiy emas)', () => {
+    const rsBilan = { uid: 'a', type: 'rs' as const, nom: 'Ishchi', hajm: 9.5 };
+    (rsBilan as unknown as { norma: number }).norma = 0.095;
+    const blNolBilan = { uid: 'b', type: 'bl' as const, nom: 'Qazish', hajm: 100 };
+    (blNolBilan as unknown as { norma: number }).norma = 0; // treeBuild.ts har doim bl/rz uchun shunday qo'yadi
+    const rows = smetaDaraxtniYoy([blNolBilan, rsBilan]);
+    expect(rows[0].norma).toBeNull(); // bl -- e'tiborsiz qoldirilishi kerak
+    expect(rows[1].norma).toBe(0.095); // rs -- saqlanishi kerak
+  });
+
   it('AktNode maydonlarini kanonik nomlarga o‘giradi (bir -> birlik)', () => {
     const rows = smetaDaraxtniYoy(daraxt);
     expect(rows[2]).toEqual({
       local_id: 'rs1', parent_local_id: 'bl1', tur: 'rs', kod: '1',
-      nom: 'Ishchi', birlik: 'chel-ch', hajm: 9.5, narx: 20000, summa: 190000,
+      nom: 'Ishchi', birlik: 'chel-ch', hajm: 9.5, narx: 20000, summa: 190000, norma: null,
     });
   });
 });
