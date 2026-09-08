@@ -104,7 +104,7 @@ export function HolatNative() {
           </section>
         )}
         {validId && !loading && !error && tree.length === 0 && <section className="karta p-5 text-[13px] text-text-dim">Bu obyektda kanonik smeta qatorlari yo‘q.</section>}
-        {tree.length > 0 && !loading && <div className="min-h-0 flex-1"><SmetaTree data={tree} priceControlLines={priceControlLines} /></div>}
+        {tree.length > 0 && !loading && <div className="min-h-0 flex-1"><SmetaTree data={tree} priceControlLines={priceControlLines} onQatorTahrirlandi={yuklash} /></div>}
         {selected && !loading && !error && (
           <div className="shrink-0 space-y-3" aria-label="LRV kundalik boshqaruv panellari">
             <details className="karta group p-3" open={ochiqPanel === 'smeta'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'smeta' : null)}>

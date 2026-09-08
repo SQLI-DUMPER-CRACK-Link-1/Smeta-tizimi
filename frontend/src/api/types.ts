@@ -1,5 +1,8 @@
 export type TreeNode = {
   id?: number;
+  /** Optimistic-lock versiyasi — faqat kanonik (`t2_qator.id`) qatorlarda
+   *  bor. `t2_qator_tahrir` shu bilan ziddiyatni aniqlaydi. */
+  versiya?: number;
   type: 'rz' | 'bl' | 'rs' | 'mat' | 'ob';
   nom: string;
   varaq: string;

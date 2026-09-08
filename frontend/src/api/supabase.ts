@@ -402,6 +402,7 @@ export function sbT2TreeQur(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): Tre
     const h = hMap.get(r.id);
     xarita.set(r.id, {
       id: r.id,
+      versiya: r.versiya,
       type: (r.tur as TreeNode['type']) || 'rs',
       nom: r.nom || '',
       varaq: r.obyekt || '',

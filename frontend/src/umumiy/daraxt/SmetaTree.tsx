@@ -4,8 +4,9 @@ import type { TreeNode } from '../../api/types';
 import { flattenTree, getAllKeys } from './utils';
 import { FmtN } from '../../lib/format';
 import { Badge } from '../ui/Badge';
-import { ChevronRight, ChevronDown, RefreshCcw, Plus, Search, X, Layers, Package, Pickaxe, Box } from 'lucide-react';
+import { ChevronRight, ChevronDown, RefreshCcw, Plus, Search, X, Layers, Package, Pickaxe, Box, Pencil } from 'lucide-react';
 import { PRICE_STATE_BADGE, type PriceControlLine } from '../../api/t2-price-control';
+import { QatorTahrirModal } from '../ui/QatorTahrirModal';
 
 interface SmetaTreeProps {
   data: TreeNode[];
@@ -16,6 +17,11 @@ interface SmetaTreeProps {
   onNodeDrop?: (source: TreeNode, target?: TreeNode) => void;
   /** `t2_price_control_v1` read-modelining aynan shu object uchun natijasi. */
   priceControlLines?: readonly PriceControlLine[];
+  /** Har bir muvaffaqiyatli `t2_qator_tahrir` saqlashidan keyin chaqiriladi
+   *  (chaqiruvchi daraxtni qayta yuklashi uchun). Faqat kanonik qatorlarda
+   *  (`node.id` va `node.versiya` mavjud bo'lganda) tahrirlash tugmasi
+   *  ko'rinadi — GAS-nom asosidagi eski daraxtda bu maydonlar yo'q. */
+  onQatorTahrirlandi?: () => void;
 }
 
 function TreeTypeIcon({ type }: { type: TreeNode['type'] }) {
@@ -25,10 +31,11 @@ function TreeTypeIcon({ type }: { type: TreeNode['type'] }) {
   return <Pickaxe size={14} aria-hidden="true" />;
 }
 
-export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, setEdits, onNodeDrop, priceControlLines }: SmetaTreeProps) {
+export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, setEdits, onNodeDrop, priceControlLines, onQatorTahrirlandi }: SmetaTreeProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null);
+  const [tahrirNode, setTahrirNode] = useState<TreeNode | null>(null);
   const [qidiruv, setQidiruv] = useState('');
   const [density, setDensity] = useState<'compact' | 'comfort'>(() =>
     localStorage.getItem('t2-smeta-tree-density') === 'comfort' ? 'comfort' : 'compact');
@@ -280,6 +287,21 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                     
                     {/* Birlik */}
                     <span className="text-text-dim w-12 text-center flex-shrink-0">{node.birlik}</span>
+
+                    {/* Kanonik qatorni to'g'ridan-to'g'ri tahrirlash. GAS-nom
+                        asosidagi eski daraxtda `id`/`versiya` yo'q — u yerda
+                        tugma ko'rinmaydi (Drive orqali emas, saytning o'zida
+                        tahrirlash faqat kanonik qatorlarda mumkin). */}
+                    {node.id != null && node.versiya != null && (
+                      <button
+                        aria-label="Qatorni tahrirlash"
+                        title="Qatorni tahrirlash"
+                        onClick={(e) => { e.stopPropagation(); setTahrirNode(node); }}
+                        className="shrink-0 p-1 rounded text-text-mute opacity-0 group-hover:opacity-100 hover:bg-surface-2 hover:text-accent transition-opacity"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -412,7 +434,18 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
         <aside className="absolute inset-y-0 right-0 z-40 w-[min(460px,90vw)] overflow-auto border-l border-border bg-surface p-4 shadow-2xl" aria-label="Qator tafsilotlari">
           <button onClick={() => setSelectedKey(null)} className="float-right text-text-dim"><X size={18}/></button>
           <p className="pr-8 text-xs text-text-mute">{selected.lineage.join(' › ')}</p>
-          <h3 className="mt-2 font-semibold">{selected.node.nom || 'Nomsiz'}</h3>
+          <div className="mt-2 flex items-center gap-2">
+            <h3 className="font-semibold">{selected.node.nom || 'Nomsiz'}</h3>
+            {selected.node.id != null && selected.node.versiya != null && (
+              <button
+                onClick={() => setTahrirNode(selected.node)}
+                title="Qatorni tahrirlash"
+                className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-text-dim hover:bg-surface-2 hover:text-accent"
+              >
+                <Pencil size={12} /> Tahrirlash
+              </button>
+            )}
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
             {[
               ['Asosiy', 'Kod, birlik va hajmlar'],
@@ -424,6 +457,24 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
             ].map(([title, value]) => <div key={title} className="rounded border border-border p-3"><b>{title}</b><p className="mt-1 text-text-dim">{value}</p></div>)}
           </div>
         </aside>
+      )}
+      {tahrirNode && tahrirNode.id != null && tahrirNode.versiya != null && (
+        <QatorTahrirModal
+          nishon={{
+            qatorId: tahrirNode.id,
+            versiya: tahrirNode.versiya,
+            nom: tahrirNode.nom || 'Nomsiz',
+            maydonlar: {
+              nom: tahrirNode.nom,
+              hajm: tahrirNode.smetaHajm,
+              narx: tahrirNode.narx,
+              birlik: tahrirNode.birlik,
+              kat: tahrirNode.kat,
+            },
+          }}
+          yop={() => setTahrirNode(null)}
+          saqlandi={() => onQatorTahrirlandi?.()}
+        />
       )}
     </div>
   );
