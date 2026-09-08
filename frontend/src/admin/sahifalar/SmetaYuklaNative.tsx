@@ -3,6 +3,7 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { sbT2ObyektlarOlKomp, sbT2ResursKategoriyaBelgila, yangiOperationId, type T2Obyekt, type T2ResursKategoriya } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { readXlsx, f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
+import { smetaDaraxtniYoy, bolaklarga } from '../../lib/smeta-flatten';
 import type { AktNode } from '../../lib/f2-match-engine';
 
 /**
@@ -18,6 +19,33 @@ import type { AktNode } from '../../lib/f2-match-engine';
  */
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
+/** Bitta so'rovda yuboriladigan qatorlar soni. 4000 qator ~ 800 KB JSON --
+ *  Pages Function uchun ham, Postgres uchun ham arzon (o'lchandi: bitta
+ *  bo'lak ~70 ms). Serverdagi qattiq chegara 10 000. */
+const BOLAK_HAJMI = 4000;
+
+type SmetaYuklaJavob = {
+  ok: boolean; code?: string; xato?: string; xabar?: string;
+  qator_soni?: number; sessiya_id?: number; takror?: boolean;
+  bolak?: number; jami?: number; obyekt_id?: number;
+};
+
+/** `/api/smeta-yukla` ga bitta so'rov. Tarmoq uzilishi ham `ok:false`
+ *  bo'lib qaytadi -- chaqiruvchi hamma joyda bir xil ishlashi uchun. */
+async function smetaSorov(yuk: Record<string, unknown>): Promise<SmetaYuklaJavob> {
+  try {
+    const r = await fetch('/api/smeta-yukla', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(yuk),
+    });
+    const j = await r.json().catch(() => null) as SmetaYuklaJavob | null;
+    if (!j) return { ok: false, code: 'BAD_RESPONSE', xato: 'Server javobi o‘qilmadi.' };
+    return j;
+  } catch {
+    return { ok: false, code: 'NETWORK', xato: 'Tarmoq uzildi. Qayta urinib ko‘ring.' };
+  }
+}
+
 /**
  * T2-PTO-OWNER-CRITICAL-CLOSURE: a real Smeta is normally TWO documents --
  * LRV (lokal resurs vedomosti / lokal smeta: ish/hajm ierarxiyasi, ko'pincha
@@ -28,8 +56,15 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
  * bargiga ulaydi. LRV faylida allaqachon narx bo'lgan qatorlar ustidan
  * YOZILMAYDI -- RES faqat YETISHMAGAN narxni to'ldiradi.
  */
-export type ResNarxYozuv = { kod?: string; nom?: string; birlik?: string; narx: number };
-export type ResNarxIndeks = { byKod: Map<string, number>; byNomBir: Map<string, number> };
+export type ResNarxYozuv = {
+  kod?: string; nom?: string; birlik?: string; narx: number;
+  /** RES faylining BO'LIM sarlavhasidan aniqlangan kategoriya (quyiga qarang). */
+  kat?: T2ResursKategoriya;
+};
+export type ResNarxIndeks = {
+  byKod: Map<string, number>; byNomBir: Map<string, number>;
+  katByKod: Map<string, T2ResursKategoriya>; katByNomBir: Map<string, T2ResursKategoriya>;
+};
 
 export type ImportQadam = { kalit: string; nom: string; holat: 'ishlamoqda' | 'tayyor' | 'xato'; tafsilot?: string };
 
@@ -44,9 +79,61 @@ function son(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** RES varag'ini {kod,nom,birlik,narx} tekis ro'yxatiga o'giradi -- ierarxiya yo'q, RES odatda tekis narx katalogi. */
+/**
+ * RES faylidagi BO'LIM SARLAVHASINI kategoriyaga o'giradi.
+ *
+ * NIMA UCHUN SHART: МАТ va ОБ ni birlikdan (m3, sht, kompl, m2...) ajratib
+ * BO'LMAYDI -- egasining haqiqiy fayllarida «РЕКЛАМНЫЙ БАННЕР, М2» ham,
+ * «КОНЦЕВАЯ КАБЕЛЬНАЯ МУФТА, КОМПЛ» ham ОБОРУДОВАНИЕ bo'limida turadi,
+ * «КИРПИЧ, ШТ» esa МАТЕРИАЛЬНЫЕ РЕСУРСЫ da. Ya'ni birlik hech narsa
+ * demaydi -- yagona ishonchli manba bo'lim sarlavhasi.
+ *
+ * Drive'dagi RES fayllari (Karting, Navoiy KL-10 kV va b.) o'rganildi --
+ * tuzilma hamma joyda bir xil:
+ *     ТРУДОВЫЕ РЕСУРСЫ                    -> ЧЕЛ
+ *     СТРОИТЕЛЬНЫЕ МАШИНЫ И МЕХАНИЗМЫ     -> МАШ
+ *     МАТЕРИАЛЬНЫЕ РЕСУРСЫ                -> МАТ
+ *     КОНСТРУКЦИИ ЗАВОДСКОГО ИЗГОТОВЛЕНИЯ -> М/К (kabel bo'lsa КАБ)
+ *     ОБОРУДОВАНИЕ                        -> ОБ
+ * va har biri «ИТОГО ...» qatori bilan yopiladi.
+ *
+ * T1 (10_Engine.js) ham aynan shu naqshdan foydalanardi, lekin sozlama
+ * varag'idagi ANIQ iboralar bilan ('СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ') -- ular
+ * haqiqiy sarlavha 'МАТЕРИАЛЬНЫЕ РЕСУРСЫ' ga mos kelmaydi. Shuning uchun
+ * bu yerda ANIQ ibora emas, O'ZAK bo'yicha tekshiriladi.
+ *
+ * @returns kategoriya, yoki 'YAKUN' (ИТОГО/ЖАМИ -- bo'lim tugadi), yoki
+ *          null (bu sarlavha emas).
+ */
+export function resBolimKategoriya(nom: string): T2ResursKategoriya | 'YAKUN' | null {
+  const s = String(nom || '').toUpperCase().replace(/Ё/g, 'Е');
+  if (!s) return null;
+  if (s.includes('ИТОГО') || s.includes('ЖАМИ') || s.includes('ВСЕГО')) return 'YAKUN';
+  /* «ЗАТРАТЫ ТРУДА МАШИНИСТОВ» -- bu RESURS, sarlavha emas; lekin sarlavha
+     sifatida kelib qolsa ham МАШ. T1 da ham shu birinchi tekshiriladi. */
+  if (s.includes('МАШИНИСТ')) return 'МАШ';
+  if (s.includes('ОБОРУДОВАНИ')) return 'ОБ';
+  if (s.includes('КОНСТРУКЦИИ')) return s.includes('КАБЕЛ') ? 'КАБ' : 'М/К';
+  if (s.includes('ТРУДОВЫЕ РЕСУРС') || s.includes('ЗАТРАТЫ ТРУДА')) return 'ЧЕЛ';
+  if (s.includes('МАШИНЫ') || s.includes('МЕХАНИЗМ')) return 'МАШ';
+  if (s.includes('МАТЕРИАЛ')) return 'МАТ';
+  return null;
+}
+
+/**
+ * RES varag'ini {kod,nom,birlik,narx,kat} tekis ro'yxatiga o'giradi.
+ *
+ * Ierarxiya yo'q, lekin BO'LIM sarlavhalari bor va ular yagona joy bo'lib,
+ * МАТ/ОБ/КАБ/М-К farqi shu yerdan olinadi (resBolimKategoriya ga qarang).
+ *
+ * ⚠️ Sarlavha faqat NARXSIZ qatorda bo'ladi -- bu shart MAJBURIY. Aks
+ * holda «ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ» degan RESURS «ЗАТРАТЫ ТРУДА»
+ * sarlavhasi deb o'qilib, narxi yo'qolardi (T1 10_Engine.js da aynan shu
+ * xato bir marta bo'lgan va o'sha yerda izohlab qo'yilgan).
+ */
 export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxYozuv[] {
   const out: ResNarxYozuv[] = [];
+  let joriyKat: T2ResursKategoriya | undefined;
   for (const row of rows) {
     const kod = cols.kod >= 0 ? String(row[cols.kod] ?? '').trim() : '';
     const nom = cols.nom >= 0 ? String(row[cols.nom] ?? '').trim() : '';
@@ -54,8 +141,17 @@ export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxY
     const narx = cols.narx >= 0 ? son(row[cols.narx]) : undefined;
     if (!nom && !kod) continue;
     if (/^\d+$/.test(nom) && /^\d+$/.test(bir)) continue; // ustun-raqamlash qatori
-    if (narx == null || narx <= 0) continue;
-    out.push({ kod: kod || undefined, nom: nom || undefined, birlik: bir || undefined, narx });
+    if (narx == null || narx <= 0) {
+      // Narxsiz matnli qator -- bo'lim sarlavhasi bo'lishi mumkin.
+      const b = resBolimKategoriya(nom);
+      if (b === 'YAKUN') joriyKat = undefined;
+      else if (b) joriyKat = b;
+      continue;
+    }
+    out.push({
+      kod: kod || undefined, nom: nom || undefined, birlik: bir || undefined, narx,
+      kat: joriyKat,
+    });
   }
   return out;
 }
@@ -110,26 +206,74 @@ export function varaqTuriTaxmin(rows: SheetGrid): 'lrv' | 'res' | 'nomalum' {
   return 'nomalum';
 }
 
+/**
+ * Moslashtirish kaliti.
+ *
+ * ⚠️ 2026-09-08: avval bu yerda faqat `.toUpperCase()` bor edi. Ikki
+ * MUSTAQIL hujjat (LRV va RES) bir xil resursni bir xil harflar bilan
+ * yozishiga tayanish real Excel fayllarida ishlamaydi: qo'shimcha bo'sh
+ * joy, nuqta («ЧЕЛ.-Ч» vs «ЧЕЛ-Ч»), tirnoq belgisi, «м³» vs «м3»,
+ * «Ё» vs «Е» -- har biri mos kelmaslikka olib keladi.
+ *
+ * Bazada shu muammo uchun allaqachon `t2_resurs_nom_kalit` /
+ * `t2_resurs_birlik_kalit` bor (registr + `Ё→Е` + `³→3` + faqat harf/raqam).
+ * Bu -- o'sha g'oyaning klient nusxasi: kalit ikkala tomonda ham bir xil
+ * hosil qilinadi, shuning uchun moslashtirish o'z-o'ziga izchil.
+ */
+export function resKalit(v?: string | null): string {
+  return String(v ?? '').toUpperCase()
+    .replace(/Ё/g, 'Е').replace(/³/g, '3').replace(/²/g, '2')
+    .replace(/[^0-9A-ZА-Я]/g, '');
+}
+
 export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
   const byKod = new Map<string, number>();
   const byNomBir = new Map<string, number>();
+  const katByKod = new Map<string, T2ResursKategoriya>();
+  const katByNomBir = new Map<string, T2ResursKategoriya>();
   for (const r of rows) {
-    if (r.kod) { const k = r.kod.toUpperCase(); if (!byKod.has(k)) byKod.set(k, r.narx); }
-    if (r.nom) { const k = (r.nom + '|' + (r.birlik || '')).toUpperCase(); if (!byNomBir.has(k)) byNomBir.set(k, r.narx); }
+    const kk = resKalit(r.kod);
+    if (kk) {
+      if (!byKod.has(kk)) byKod.set(kk, r.narx);
+      if (r.kat && !katByKod.has(kk)) katByKod.set(kk, r.kat);
+    }
+    const nk = resKalit(r.nom);
+    if (nk) {
+      const k = nk + '|' + resKalit(r.birlik);
+      if (!byNomBir.has(k)) byNomBir.set(k, r.narx);
+      if (r.kat && !katByNomBir.has(k)) katByNomBir.set(k, r.kat);
+    }
   }
-  return { byKod, byNomBir };
+  return { byKod, byNomBir, katByKod, katByNomBir };
 }
 
-/** LRV daraxtiga RES narxlarini qo'llaydi. Faqat narx YO'Q rs/mat/ob barglariga tegadi -- LRV o'z narxini yozgan bo'lsa ustidan yozilmaydi. */
+/**
+ * LRV daraxtiga RES narxlarini qo'llaydi. Faqat narxi YO'Q rs/mat/ob
+ * barglariga tegadi -- LRV o'z haqiqiy narxini yozgan bo'lsa ustidan
+ * YOZILMAYDI.
+ *
+ * ⚠️ 2026-09-08 (haqiqiy nosozlik, bazada tasdiqlangan): shart avval
+ * `if (n.narx != null) return n;` edi. Lekin narxsiz LRV faylida narx
+ * ustuni bo'sh emas, `0` bo'lib keladi (bo'sh katak 0 ga aylanadi) --
+ * ya'ni `0 != null` bo'lgani uchun HAR BIR resurs «allaqachon narxlangan»
+ * deb hisoblanib, sanoqqa ham tushmasdan tashlab ketilardi. Natijada
+ * ekranda «0 ta mos, 0 ta narxsiz qoldi» chiqardi (ikkala hisoblagich
+ * ham nol -- chunki sikl ularga umuman yetib bormasdi), smeta esa
+ * butunlay narxsiz (`narx = 0`) import bo'lardi. Obyekt 26 («Fast Food
+ * 1etaj») aynan shu holatda: 1262 ta resursning HAMMASIDA narx = 0.
+ * Endi 0 ham «narx yo'q» deb hisoblanadi.
+ */
 export function narxlarniDaraxtgaQoll(tree: AktNode[], idx: ResNarxIndeks): { tree: AktNode[]; mosSoni: number; mosEmasSoni: number } {
   let mosSoni = 0, mosEmasSoni = 0;
   function walk(n: AktNode): AktNode {
     if (n.children && n.children.length) return { ...n, children: n.children.map(walk) };
     if (n.type !== 'rs' && n.type !== 'mat' && n.type !== 'ob') return n;
-    if (n.narx != null) return n;
+    if (n.narx != null && n.narx !== 0) return n;
     let narx: number | undefined;
-    if (n.kod) narx = idx.byKod.get(n.kod.toUpperCase());
-    if (narx == null && n.nom) narx = idx.byNomBir.get((n.nom + '|' + (n.bir || '')).toUpperCase());
+    const kk = resKalit(n.kod);
+    if (kk) narx = idx.byKod.get(kk);
+    const nk = resKalit(n.nom);
+    if (narx == null && nk) narx = idx.byNomBir.get(nk + '|' + resKalit(n.bir));
     if (narx == null) { mosEmasSoni++; return n; }
     mosSoni++;
     const summa = n.hajm != null ? Math.round(n.hajm * narx * 100) / 100 : undefined;
@@ -366,35 +510,52 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     return out;
   }
 
+  /**
+   * RES narxlarini indekslaydi VA kategoriya registriga yoziladigan
+   * nomzodlarni tayyorlaydi.
+   *
+   * Kategoriya endi RES faylining BO'LIM sarlavhasidan aniqlanadi
+   * (resBolimKategoriya) -- ya'ni ОБ/КАБ/М-К endi «taxmin qilib
+   * bo'lmaydigan» narsa emas. Registrga faqat serverning o'z zaxira
+   * mantiqidan (t2_kat_birlik ~ katTaxmini) FARQ QILADIGAN qatorlar
+   * yoziladi: server МАТ deb hisoblaydigan, aslida esa ОБ/КАБ/М-К
+   * bo'lganlari. Boshqalarini yozish ortiqcha -- server o'zi to'g'ri
+   * topadi.
+   */
   function resNarxlarniUlash() {
     const satrlar = resSatrlariBarchaManbadan();
     if (!satrlar.length) return;
     setResIndex(resNarxIndeksiQur(satrlar));
     setResIndexSize(satrlar.length);
-    // "МАТ" (standart) chiqqan noyob nom+birlik juftlari -- aynan shular
-    // haqiqatda ОБ/КАБ/М/К bo'lishi mumkin (T1 GAS ham buni faqat registr
-    // orqali hal qilardi, hech qachon avtomatik taxmin qilmagan).
     const korilgan = new Set<string>();
     const kandidatlar: Array<{ nom: string; birlik: string; tanlangan: T2ResursKategoriya }> = [];
     for (const s of satrlar) {
       if (!s.nom || !s.birlik) continue;
-      if (katTaxmini(s.nom, s.birlik) !== 'МАТ') continue;
-      const key = s.nom.toUpperCase() + '|' + s.birlik.toUpperCase();
+      const serverTaxmini = katTaxmini(s.nom, s.birlik);
+      const haqiqiy = s.kat ?? serverTaxmini;
+      if (haqiqiy === serverTaxmini) continue; // server o'zi to'g'ri topadi
+      const key = resKalit(s.nom) + '|' + resKalit(s.birlik);
       if (korilgan.has(key)) continue;
       korilgan.add(key);
-      kandidatlar.push({ nom: s.nom, birlik: s.birlik, tanlangan: 'МАТ' });
+      kandidatlar.push({ nom: s.nom, birlik: s.birlik, tanlangan: haqiqiy });
     }
     setKatKorib(kandidatlar);
   }
 
-  /** O'zgartirilgan (МАТ'dan boshqa) kategoriyalarni registrga yozadi --
-   *  best-effort, muvaffaqiyatsizlik importni to'xtatmaydi. */
+  /** Ro'yxatdagi kategoriyalarni registrga yozadi -- best-effort,
+   *  muvaffaqiyatsizlik importni to'xtatmaydi.
+   *
+   *  ⚠️ Avval bu yerda `!== 'МАТ'` filtri bor edi. Endi ro'yxatning O'ZI
+   *  faqat serverning zaxira mantiqidan farq qiladigan qatorlardan iborat
+   *  (resNarxlarniUlash ga qarang), va ular orasida МАТ ham bo'lishi
+   *  mumkin: masalan birligi «МАШ.-Ч» bo'lgani uchun server МАШ deydi,
+   *  RES bo'limi esa МАТЕРИАЛЬНЫЕ РЕСУРСЫ. Shuning uchun filtr olib
+   *  tashlandi -- aks holda aynan shunday tuzatishlar yo'qolardi. */
   async function katlarniSaqla() {
-    const ozgarganlar = katKorib.filter(k => k.tanlangan !== 'МАТ');
-    if (!ozgarganlar.length) return;
+    if (!katKorib.length) return;
     setKatSaqlanmoqda(true);
     try {
-      await Promise.all(ozgarganlar.map(k =>
+      await Promise.all(katKorib.map(k =>
         sbT2ResursKategoriyaBelgila({ kompaniyaId: companyId, nom: k.nom, birlik: k.birlik, kategoriya: k.tanlangan }).catch(() => null)));
     } finally { setKatSaqlanmoqda(false); }
   }
@@ -406,6 +567,17 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     const jonli = () => generation.current === token;
     /** Yangi qadam boshlanganini ko'rsatadi -- ro'yxatga qo'shiladi, holati "ishlamoqda". */
     const qadam = (nom: string) => { if (jonli()) setImportQadamlari(prev => [...prev, { kalit: String(prev.length), nom, holat: 'ishlamoqda' }]); };
+    /** Hozir ishlayotgan qadamning tafsilotini yangilaydi (uni yakunlamasdan)
+     *  -- bo'laklar yuborilayotganda «7/13 bo'lak» kabi jonli hisob uchun. */
+    const tafsilotYangila = (tafsilot: string) => {
+      if (!jonli()) return;
+      setImportQadamlari(prev => {
+        if (!prev.length) return prev;
+        const c = prev.slice();
+        c[c.length - 1] = { ...c[c.length - 1], tafsilot };
+        return c;
+      });
+    };
     /** Oxirgi (hozir ishlayotgan) qadamni yakunlaydi -- muvaffaqiyat yoki xato, tafsilot bilan. */
     const yakunla = (holat: 'tayyor' | 'xato', tafsilot?: string) => {
       if (!jonli()) return;
@@ -419,10 +591,10 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     try {
       // Kategoriya tuzatishlar (agar bo'lsa) importdan OLDIN registrga
       // yoziladi -- shu import ham ulardan darhol foydalanishi uchun.
-      if (katKorib.some(k => k.tanlangan !== 'МАТ')) {
-        qadam('Kategoriya tuzatishlari saqlanmoqda');
+      if (katKorib.length) {
+        qadam('Resurs kategoriyalari saqlanmoqda');
         await katlarniSaqla();
-        yakunla('tayyor');
+        yakunla('tayyor', katKorib.length + ' ta resurs turi registrga yozildi');
       }
 
       qadam('Fayl tuzilishi (bo‘lim/ish/resurs) qurilmoqda');
@@ -451,15 +623,59 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       if (!jonli()) return;
       yakunla('tayyor', 'hujjat №' + sourceDocumentId);
 
-      qadam('Kanonik bazaga yozilmoqda');
-      const r = await fetch('/api/smeta-yukla', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amal: 'import', kompaniyaId: companyId, obyektId: Number(objectId),
-          operationId: importOperationId.current || (importOperationId.current = yangiOperationId()), sourceDocumentId, tree: importTree,
-        }),
+      /* ══ BO'LAKLI IMPORT (T2-SMETA-IMPORT-50K-003) ══════════════════
+         50 000 qatorli smeta bitta so'rovga sig'maydi (~10 MB JSON, va
+         Pages Function izolyati 128 MB xotira bilan cheklangan). Shuning
+         uchun daraxt SHU YERDA yoyiladi va bo'laklab yuboriladi: har
+         so'rov kichik va tez, oxirida bitta «yakunla» hammasini birdan
+         bazaga yozadi. Ota-bola aloqasi bo'lak chegarasidan o'tsa ham
+         buziladigan joyi yo'q -- bog'lash yakunlashda, to'liq to'plam
+         ustida bajariladi. */
+      const flatRows = smetaDaraxtniYoy(importTree);
+      const opId = importOperationId.current || (importOperationId.current = yangiOperationId());
+
+      qadam('Import sessiyasi ochilmoqda');
+      const bosh = await smetaSorov({
+        amal: 'import_boshla', kompaniyaId: companyId, obyektId: Number(objectId),
+        operationId: opId, sourceDocumentId,
       });
-      const j = await r.json() as { ok: boolean; code?: string; xato?: string; qator_soni?: number };
+      if (!jonli()) return;
+      if (!bosh.ok) {
+        if (bosh.code === 'SMETA_ALREADY_EXISTS') {
+          yakunla('xato', 'smeta allaqachon mavjud');
+          throw new Error('Bu obyektda smeta allaqachon mavjud — ustidan yozilmaydi (xavfsizlik uchun).');
+        }
+        yakunla('xato', bosh.xato || bosh.code || 'noma’lum xato');
+        throw new Error('Import boshlanmadi (' + (bosh.code || 'xato') + ')' + (bosh.xato ? ': ' + bosh.xato : '') + '.');
+      }
+      /* Allaqachon yakunlangan sessiya (masalan tarmoq uzilib, javob
+         yetib kelmagan holat) -- ikkinchi smeta yaratilmaydi. */
+      if (bosh.qator_soni != null && bosh.sessiya_id == null) {
+        yakunla('tayyor', bosh.qator_soni + ' qator (avval yozilgan)');
+        setResult({ qator_soni: bosh.qator_soni }); setPhase('Tayyor');
+        onImportlandi?.();
+        return;
+      }
+      const sessiyaId = Number(bosh.sessiya_id);
+      yakunla('tayyor', 'sessiya №' + sessiyaId);
+
+      const bolaklar = bolaklarga(flatRows, BOLAK_HAJMI);
+      qadam(`Qatorlar yuborilmoqda (${flatRows.length} ta, ${bolaklar.length} bo‘lak)`);
+      for (let i = 0; i < bolaklar.length; i++) {
+        const b = await smetaSorov({
+          amal: 'import_bolak', kompaniyaId: companyId, sessiyaId, bolak: i, qatorlar: bolaklar[i],
+        });
+        if (!jonli()) return;
+        if (!b.ok) {
+          yakunla('xato', `${i + 1}-bo‘lak: ` + (b.xato || b.code || 'noma’lum xato'));
+          throw new Error('Bo‘lak yuborilmadi (' + (b.code || 'xato') + ').');
+        }
+        tafsilotYangila(`${i + 1}/${bolaklar.length} bo‘lak — ${b.jami ?? 0} qator qabul qilindi`);
+      }
+      yakunla('tayyor', `${bolaklar.length} bo‘lak, ${flatRows.length} qator qabul qilindi`);
+
+      qadam('Kanonik bazaga yozilmoqda');
+      const j = await smetaSorov({ amal: 'import_yakunla', kompaniyaId: companyId, sessiyaId });
       if (!jonli()) return;
       if (!j.ok) {
         if (j.code === 'SMETA_ALREADY_EXISTS') {
@@ -632,9 +848,17 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             {katKorib.length > 0 && (
               <div className="karta p-2 space-y-1.5 border-amber-500/30">
                 <p className="text-[11px] text-text-mute">
-                  {katKorib.length} ta resurs standart МАТ (material) deb belgilangan — agar ular aslida
-                  ОБ (uskuna), КАБ (kabel) yoki М/К bo‘lsa, shu yerda tuzating. Belgilangan tur keyingi
-                  importlarda ham eslab qolinadi.
+                  RES faylining bo‘limlaridan ({'«'}ОБОРУДОВАНИЕ{'»'}, {'«'}МАТЕРИАЛЬНЫЕ РЕСУРСЫ{'»'},
+                  {' '}{'«'}КОНСТРУКЦИИ ЗАВОДСКОГО ИЗГОТОВЛЕНИЯ{'»'} …) <b>{katKorib.length} ta</b> resursning
+                  turi aniqlandi — bularni birlikdan (шт, м2, компл) topib bo‘lmaydi, shuning uchun aynan
+                  bo‘lim sarlavhasiga qaraldi. Noto‘g‘ri bo‘lsa shu yerda tuzating; belgilangan tur registrga
+                  yozilib, keyingi importlarda ham eslab qolinadi.
+                </p>
+                <p className="text-[11px] text-text-mute">
+                  {(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'] as const)
+                    .map(k => ({ k, n: katKorib.filter(x => x.tanlangan === k).length }))
+                    .filter(x => x.n > 0)
+                    .map(x => `${x.k}: ${x.n}`).join(' · ')}
                 </p>
                 <div className="overflow-auto max-h-48 text-[12px]">
                   <table className="w-full">
@@ -644,7 +868,10 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                           <td className="py-0.5 pr-2">{k.nom} <span className="text-text-mute">({k.birlik})</span></td>
                           <td className="py-0.5 text-right">
                             <select className="border rounded px-1 py-0.5" value={k.tanlangan}
+                              aria-label={`${k.nom} kategoriyasi`}
                               onChange={e => setKatKorib(prev => prev.map((p, pi) => pi === i ? { ...p, tanlangan: e.target.value as T2ResursKategoriya } : p))}>
+                              <option value="ЧЕЛ">ЧЕЛ</option>
+                              <option value="МАШ">МАШ</option>
                               <option value="МАТ">МАТ</option>
                               <option value="ОБ">ОБ</option>
                               <option value="КАБ">КАБ</option>
@@ -656,6 +883,11 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                     </tbody>
                   </table>
                 </div>
+                {katKorib.length > 300 && (
+                  <p className="text-[11px] text-text-mute">
+                    …va yana {katKorib.length - 300} ta (hammasi saqlanadi, ro‘yxatda faqat birinchi 300 tasi ko‘rsatilgan).
+                  </p>
+                )}
                 {katSaqlanmoqda && <p role="status" className="text-[11px]">Kategoriyalar saqlanmoqda…</p>}
               </div>
             )}

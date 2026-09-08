@@ -23,12 +23,16 @@
 import type { AktNode } from '../../src/lib/f2-match-engine';
 import { handleFaylOqi } from './f2-moslash';
 import type { F2ColumnConfig } from '../../src/lib/f2-import-parse';
+import { smetaDaraxtniYoy, type SmetaFlatQator } from '../../src/lib/smeta-flatten';
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 type Env = { SUPABASE_URL: string; SUPABASE_KEY: string; SESSIYA_KALIT: string };
 
 const MAX_ROWS = 60000;
+/** Bitta bo'lakdagi eng ko'p qator -- `t2_smeta_import_bolak_v1` ning
+ *  o'z chegarasi bilan bir xil (undan katta bo'lak BAD_CHUNK_SIZE beradi). */
+const MAX_BOLAK_ROWS = 10000;
 
 interface FaylOqiBody {
   amal: 'fayl_oqi';
@@ -44,25 +48,35 @@ interface ImportBody {
   sourceDocumentId?: number | null;
   tree: AktNode[];
 }
-type SmetaYuklaBody = FaylOqiBody | ImportBody;
-
-interface FlatRow {
-  local_id: string; parent_local_id: string | null; tur: string;
-  kod: string | null; nom: string | null; birlik: string | null;
-  hajm: number | null; narx: number | null; summa: number | null;
+/* ── Bo'lakli import (T2-SMETA-IMPORT-50K-003) ────────────────────────
+ * 50 000 qatorli smeta bitta so'rovga sig'maydi: ~10 MB JSON ni Pages
+ * Function izolyatida (128 MB xotira) parse qilib, yoyib, qayta
+ * stringify qilish xavfli. Shuning uchun klient qatorlarni O'ZI yoyadi
+ * va bo'laklab yuboradi; bu yerda har bo'lak to'g'ridan-to'g'ri
+ * tegishli RPC ga uzatiladi (Function hech qachon butun smetani
+ * xotirada ushlab turmaydi). */
+interface ImportBoshlaBody {
+  amal: 'import_boshla';
+  kompaniyaId: number;
+  obyektId: number;
+  operationId: string;
+  sourceDocumentId?: number | null;
 }
-
-/** AktNode tree -> flat local_id/parent_local_id rows, in document order (pre-order), matching t2_smeta_import_bulk_v1's expected payload shape. */
-function flattenTree(nodes: AktNode[], parentLocalId: string | null, out: FlatRow[]): void {
-  for (const node of nodes) {
-    out.push({
-      local_id: node.uid, parent_local_id: parentLocalId, tur: node.type,
-      kod: node.kod ?? null, nom: node.nom ?? null, birlik: node.bir ?? null,
-      hajm: node.hajm ?? null, narx: node.narx ?? null, summa: node.summa ?? null,
-    });
-    if (node.children && node.children.length) flattenTree(node.children, node.uid, out);
-  }
+interface ImportBolakBody {
+  amal: 'import_bolak';
+  kompaniyaId: number;
+  sessiyaId: number;
+  bolak: number;
+  qatorlar: SmetaFlatQator[];
 }
+interface ImportYakunlaBody {
+  amal: 'import_yakunla';
+  kompaniyaId: number;
+  sessiyaId: number;
+}
+type SmetaYuklaBody = FaylOqiBody | ImportBody | ImportBoshlaBody | ImportBolakBody | ImportYakunlaBody;
+
+type FlatRow = SmetaFlatQator;
 
 async function rpc(env: Env, name: string, args: Record<string, unknown>) {
   const r = await fetch(supabaseBaseUrl(env.SUPABASE_URL) + '/rest/v1/rpc/' + name, {
@@ -94,8 +108,7 @@ async function handleImport(env: Env, actorId: number, body: ImportBody) {
     return Response.json({ ok: false, code: 'MISSING_TREE' }, { status: 400 });
   }
 
-  const rows: FlatRow[] = [];
-  flattenTree(body.tree, null, rows);
+  const rows: FlatRow[] = smetaDaraxtniYoy(body.tree, null, []);
   if (rows.length > MAX_ROWS) {
     return Response.json({ ok: false, code: 'TOO_MANY_ROWS', xabar: `${rows.length} qator (limit ${MAX_ROWS})` }, { status: 422 });
   }
@@ -126,6 +139,60 @@ async function handleImport(env: Env, actorId: number, body: ImportBody) {
   return Response.json(res.body, { status: res.body.ok ? 200 : 409 });
 }
 
+/** Bo'lakli oqimning har uch qadami bir xil shaklda: RPC ni chaqir, xom
+ *  javobni serverga logla, mijozga esa qisqa kod bilan javob ber. */
+async function bolakliRpc(env: Env, nom: string, args: Record<string, unknown>) {
+  let res: Awaited<ReturnType<typeof rpc>>;
+  try {
+    res = await rpc(env, nom, args);
+  } catch (err) {
+    console.error('[smeta-yukla] ' + nom + ' unreachable:', err);
+    return importRpcFailure('IMPORT_RPC_UNREACHABLE');
+  }
+  if (!res.httpOk || !res.body) {
+    console.error('[smeta-yukla] ' + nom + ' failed:', res.raw.slice(0, 2000));
+    const kod = res.body && typeof res.body.code === 'string' ? res.body.code : undefined;
+    return importRpcFailure('IMPORT_RPC_FAILED', 502, kod);
+  }
+  return Response.json(res.body, { status: res.body.ok ? 200 : 409 });
+}
+
+async function handleImportBoshla(env: Env, actorId: number, body: ImportBoshlaBody) {
+  if (!body.kompaniyaId || !body.obyektId || !body.operationId) {
+    return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
+  }
+  return bolakliRpc(env, 't2_smeta_import_boshla_v1', {
+    p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_obyekt_id: body.obyektId,
+    p_operation_id: body.operationId, p_source_document_id: body.sourceDocumentId ?? null,
+  });
+}
+
+async function handleImportBolak(env: Env, actorId: number, body: ImportBolakBody) {
+  if (!body.kompaniyaId || !body.sessiyaId || !Number.isInteger(body.bolak) || body.bolak < 0) {
+    return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
+  }
+  if (!Array.isArray(body.qatorlar) || body.qatorlar.length === 0) {
+    return Response.json({ ok: false, code: 'MISSING_ROWS' }, { status: 400 });
+  }
+  if (body.qatorlar.length > MAX_BOLAK_ROWS) {
+    return Response.json({ ok: false, code: 'BAD_CHUNK_SIZE',
+      xabar: `${body.qatorlar.length} qator (bo‘lak chegarasi ${MAX_BOLAK_ROWS})` }, { status: 422 });
+  }
+  return bolakliRpc(env, 't2_smeta_import_bolak_v1', {
+    p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_sessiya_id: body.sessiyaId,
+    p_bolak: body.bolak, p_qatorlar: body.qatorlar,
+  });
+}
+
+async function handleImportYakunla(env: Env, actorId: number, body: ImportYakunlaBody) {
+  if (!body.kompaniyaId || !body.sessiyaId) {
+    return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
+  }
+  return bolakliRpc(env, 't2_smeta_import_yakunla_v1', {
+    p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_sessiya_id: body.sessiyaId,
+  });
+}
+
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (!ctx.env.SUPABASE_URL || !ctx.env.SUPABASE_KEY || !ctx.env.SESSIYA_KALIT) {
     return Response.json({ ok: false, code: 'CONFIG' }, { status: 500 });
@@ -140,9 +207,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   catch { return Response.json({ ok: false, code: 'BAD_JSON' }, { status: 400 }); }
 
   if (body.amal === 'fayl_oqi') return handleFaylOqi(body);
-  // Tenant membership/role for 'import' is enforced inside t2_smeta_import_bulk_v1
-  // itself (t2_actor_kompaniya_azo_tekshir + write-role check) — same law as
-  // every other canonical write RPC called from a Function via service role.
+  // Tenant membership/role for every import path is enforced inside the RPCs
+  // themselves (t2_actor_kompaniya_azo_tekshir + write-role check) — same law
+  // as every other canonical write RPC called from a Function via service role.
   if (body.amal === 'import') return handleImport(ctx.env, actorId, body);
+  if (body.amal === 'import_boshla') return handleImportBoshla(ctx.env, actorId, body);
+  if (body.amal === 'import_bolak') return handleImportBolak(ctx.env, actorId, body);
+  if (body.amal === 'import_yakunla') return handleImportYakunla(ctx.env, actorId, body);
   return Response.json({ ok: false, code: 'BAD_AMAL' }, { status: 400 });
 };
