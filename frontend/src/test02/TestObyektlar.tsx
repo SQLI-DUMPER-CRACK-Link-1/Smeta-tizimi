@@ -89,7 +89,7 @@ export default function TestObyektlar() {
     setYaratilmoqda(true);
     try {
       const r = await sbT2ObyektYarat({ kompaniyaId: joriy.id, loyihaId: yangiLoyihaId ? Number(yangiLoyihaId) : null, nom: yangiNom.trim() });
-      if (!r.ok) { toast(r.error || r.code || 'Obyekt yaratilmadi', 'danger'); return; }
+      if (!r.ok) { toast(r.xato || r.error || r.code || 'Obyekt yaratilmadi', 'danger'); return; }
       toast('Obyekt yaratildi', 'ok');
       setYaratishOchiq(false); setYangiNom(''); setYangiLoyihaId('');
       yukla();
