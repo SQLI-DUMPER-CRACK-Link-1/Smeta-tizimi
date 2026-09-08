@@ -28,7 +28,7 @@
     {"id":"HERMES-PTO-REVOLUTION-001-F","role":"safe-ui-context","scope":"App.tsx TestShell.tsx TestSklad.tsx only","status":"IMPLEMENTED_AND_TESTED"},
     {"id":"HERMES-PTO-REVOLUTION-001-G","role":"security-hardening","scope":"server/RLS/upload","status":"BLOCKED_APPROVAL_QUEUE"},
     {"id":"HERMES-PTO-REVOLUTION-001-H","role":"runtime-owner-smoke","scope":"authenticated Supabase/Cloudflare/Drive/browser","status":"BLOCKED_RUNTIME_AUTH_OR_TOOL"},
-    {"id":"HERMES-PTO-REVOLUTION-001-I","role":"release-integration","scope":"review, secret scan, focused gates, branch push","status":"IN_PROGRESS"}
+    {"id":"HERMES-PTO-REVOLUTION-001-I","role":"release-integration","scope":"review, secret scan, focused gates, branch push","status":"COMPLETE"}
   ],
   "conflict_policy": "Do not stage or overwrite pre-existing dirty files/untracked agent files outside write_scope.",
   "last_measured": {
@@ -39,6 +39,7 @@
     "lint":"exit 0 with existing warnings",
     "build":"pass with chunk/runtime-path warnings",
     "github_remote_read":"pass",
+    "github_branch_push":"pass; remote SHA verified",
     "supabase_mcp":"connected read-only",
     "drive_headless":"tool unavailable",
     "owner_smoke":"not run"

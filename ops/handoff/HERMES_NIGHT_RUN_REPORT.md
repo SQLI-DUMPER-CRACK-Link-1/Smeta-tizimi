@@ -38,8 +38,8 @@ OWNER_SMOKE_STATUS=NOT_RUN
 
 ## IN_PROGRESS
 
-- Release/integration: handoff metadata update remains to be committed/pushed;
-  the substantial code/docs milestone is already pushed and remote-verified.
+- No night-run-owned implementation lane remains in progress. Future work is
+  limited to the approval/runtime gates listed below.
 - Reconciliation of local branch with pre-existing dirty owner/agent work is
   intentionally limited to the night-run write scope.
 
@@ -105,8 +105,8 @@ parity, approval/history/export, Forma-3/KS-3 rules and owner smoke.
 
 ## RELEASE / HANDOFF
 
-Validated commit `c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6` exists locally and
-matches `origin/hermes/pto-revolution-2026-09`. The staged diff/check, secret
-scan and push verification passed. This final metadata update is the only
-remaining handoff commit; push only this branch with `GIT_TERMINAL_PROMPT=0`.
-Never merge or push main.
+Validated implementation commit `c0d6eac72bdde77fd7fe93a0e94fd47a9a08fcb6`
+and handoff commit `05bc3e4149078455d89c618686bcbf981dd6609e` exist locally and
+the latter matches `origin/hermes/pto-revolution-2026-09`. Staged diff/check,
+secret scan and non-interactive push verification passed. Never merge or push
+main.
