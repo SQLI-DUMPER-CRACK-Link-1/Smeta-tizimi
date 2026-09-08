@@ -68,6 +68,7 @@ import { F2TayyorlashNative } from './admin/sahifalar/F2TayyorlashNative';
 import NakopitelniyVedomost from './admin/sahifalar/NakopitelniyVedomost';
 import NakrutkaNative from './admin/sahifalar/NakrutkaNative';
 import F2TarixNative from './admin/sahifalar/F2TarixNative';
+import SmetaNarxlashResNative from './admin/sahifalar/SmetaNarxlashResNative';
 import { Narxlar } from './admin/sahifalar/Narxlar';
 import { Ierarxiya } from './admin/sahifalar/Ierarxiya';
 import { Fakturalar } from './admin/sahifalar/Fakturalar';
@@ -127,6 +128,7 @@ export default function App() {
           <Route path="nakopitelniy" element={<NakopitelniyVedomost />} />
           <Route path="nakrutka" element={<NakrutkaNative />} />
           <Route path="f2-tarix" element={<F2TarixNative />} />
+          <Route path="smeta-narxlash" element={<SmetaNarxlashResNative />} />
           <Route path="buxgalteriya" element={<Buxgalteriya />} />
           <Route path="shartnomalar" element={<Shartnoma />} />
           <Route path="fakturalar" element={<Fakturalar />} />
