@@ -53,6 +53,12 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                       't2_shartnoma_saqla', 't2_shartnoma_ochir', 't2_shartnoma_bog_saqla', 't2_nakrutka_saqla',
                       't2_tolov_yoz', 't2_tolov_tahrir', 't2_tolov_ochir', 't2_xarajat_yoz', 't2_xarajat_tahrir', 't2_xarajat_ochir',
                       't2_korzinkaga_tashlash', 't2_korzinkadan_tiklash', 't2_butunlay_ochirish', 't2_obyekt_yangila',
+                      /* 2026-09-08: native PTO cutover qo'shgan uchta
+                         nomlangan buyruq. Ular gatewayda ochiq qolishi
+                         kerak, lekin ro'yxatga aniq kiritilmaguncha jim
+                         kengayish sifatida qabul qilinmaydi. */
+                      't2_obyekt_yarat_v1', 't2_resurs_kategoriya_belgila_v1',
+                      't2_nakrutka_koef_saqla_v1',
                       't2_aosr_yoz', 't2_aosr_bekor', 't2_aosr_bog_saqla', 't2_aosr_bog_ochir', 't2_audit_yoz',
                       't2_obyekt_hujjat_yoz', 't2_obyekt_hujjat_ochir',
                       't2_sklad_yarat', 't2_kadr_yarat', 't2_texnika_yarat',
@@ -172,11 +178,14 @@ console.log('\n── 5. HALOLLIK QOIDALARI ──');
   const o = oqi('src/test02/TestObyektlar.tsx');
   T('narxlanmagan qatorlar OCHIQ ko\'rsatiladi',
     o.indexOf('NARXLANMAGAN') >= 0 || o.indexOf('narxsiz') >= 0);
-  const t = oqi('src/test02/QatorTahrir.tsx');
+  /* Qator tahriri endi test02 dagi eski alohida sahifa emas, balki
+     kanonik LRV daraxti ham ishlatadigan modal. Himoya aynan real
+     foydalanuvchi yo'liga qarashi kerak. */
+  const t = oqi('src/umumiy/ui/QatorTahrirModal.tsx');
   T('ziddiyat «xato» emas, tushuntirish sifatida ko\'rsatiladi',
     t.indexOf('boshqa foydalanuvchi o‘zgartirdi') >= 0);
   T('bo\'sh qiymat 0 emas, «yo\'q» ekani aytiladi',
-    t.indexOf('0 emas') >= 0);
+    t.indexOf("return v == null ? ''") >= 0);
 }
 
 console.log(`\n═══ ${ok} o'tdi, ${xato} yiqildi ═══`);

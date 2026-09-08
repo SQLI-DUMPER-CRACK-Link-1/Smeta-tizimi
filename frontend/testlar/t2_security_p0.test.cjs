@@ -29,12 +29,21 @@ must('/api/sessiya still reports zaxira_kalit (unset-key visibility)', /zaxira_k
 
 console.log('\n── 2. Service-role RPCs: actor / membership / lineage guarded ──');
 const migs = glob('supabase/migrations', /^(20260904|20260905|20260906|20260907|20260908)\d+_.*\.sql$/).filter((f) => !/rollback|acceptance/.test(f));
+/* PostgreSQL `CREATE OR REPLACE FUNCTION` mavjud EXECUTE ruxsatlarini
+   o'zgartirmaydi. 20260907130000 faqat avval ruxsati yopilgan mindmap
+   tekshiruvchining rol shartini tuzatadi; uning ruxsatlari esa asl command
+   contractda qat'iy yopilgan. Ikkala dalil bo'lmasa test baribir yiqiladi. */
+const mindmapPermissionOrigin = R('supabase', 'migrations', '20260829051320_t2_mindmap_command_contract_hardening.sql');
 for (const m of migs) {
   const s = R(...m.split('/'));
   const funcs = (s.match(/create or replace function public\.(t2_\w+)/g) || []);
   const guarded = /t2_actor_kompaniya_azo_tekshir|t2_azo_actor_director_tekshir|rol in \('boss','superadmin'\)|t2_control_actor_home_company/.test(s);
+  const mindmapReplaceKeepsLockedPermissions = m.endsWith('20260907130000_t2_mindmap_actor_boss_fix.sql')
+    && /create or replace function public\.t2_mindmap_actor_tekshir/.test(s)
+    && /revoke all on function public\.t2_mindmap_actor_tekshir\(bigint,bigint\) from public, anon, authenticated;/.test(mindmapPermissionOrigin);
   must(m.split('/').pop() + ': every function guards the actor', funcs.length === 0 || guarded);
-  must(m.split('/').pop() + ': revokes execute from anon/authenticated', !funcs.length || /revoke all on function/.test(s));
+  must(m.split('/').pop() + ': revokes execute from anon/authenticated',
+    !funcs.length || /revoke all on function/.test(s) || mindmapReplaceKeepsLockedPermissions);
 }
 must('CTRL global scope / kill-switch restricted to boss|superadmin', /rol in \('boss','superadmin'\)/.test(R('supabase','migrations','20260904120000_t2_capability_registry_v1.sql')));
 must('company member commands reject superadmin grants', /ROLE_INVALID/.test(R('supabase','migrations','20260905120000_t2_company_onboarding_v1.sql')));
