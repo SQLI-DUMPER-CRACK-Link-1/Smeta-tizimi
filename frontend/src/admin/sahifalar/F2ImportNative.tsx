@@ -326,6 +326,26 @@ function NativeSession({ companyId }: { companyId: number }) {
     }
   }
   const payload = useMemo(() => { try { return { rows: exactWrite(source, mapping), error: '' }; } catch (e) { return { rows: [], error: e instanceof Error ? e.message : 'Tekshiruv kerak.' }; } }, [source, mapping]);
+
+  /**
+   * Tekshiruv xulosasi — operator xom qatorlarni birma-bir sanab
+   * chiqmasligi uchun. Codex'ning `premium-pto-ui-ux-v1` shoxchasidagi
+   * to'g'ri g'oyasi; u yerda o'z F2 ekraniga qilingan edi, bu yerda esa
+   * egasi talab qilgan drag-drop 2 oynali workbench ustiga qo'yildi.
+   *
+   * «Arifmetik farq» — fayldagi hajm×narx ≠ fayldagi summa. Bu import
+   * uchun to'siq emas, lekin manba hujjatda xato borligini bildiradi va
+   * yozishdan OLDIN ko'rinishi kerak.
+   */
+  const xulosa = useMemo(() => {
+    let mos = 0, mosEmas = 0, arifmetik = 0, qiymatsiz = 0;
+    for (const n of source) {
+      if (mapping.has(n.uid)) mos++; else mosEmas++;
+      if (n.narx == null || n.summa == null) qiymatsiz++;
+      else if (Math.abs(n.hajm * n.narx - n.summa) > 0.005) arifmetik++;
+    }
+    return { jami: source.length, mos, mosEmas, arifmetik, qiymatsiz };
+  }, [source, mapping]);
   async function save() {
     if (writing.current || done || !reviewed || payload.error || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
     writing.current = true; setBusy(true); setPhase('Yozilmoqda'); setError('');
@@ -370,6 +390,20 @@ function NativeSession({ companyId }: { companyId: number }) {
     {cols && <fieldset disabled={busy || done} className="karta p-3 flex flex-wrap gap-3"><legend>Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>{(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => <label key={k}>{k}<input className="w-16 border" type="number" min="1" value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} /></label>)}<button onClick={() => void match()} disabled={!objectId || !month}>Moslashtirish</button></fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
     {source.length > 0 && <>
+      <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5" aria-label="F2 import tekshiruv xulosasi">
+        {([
+          ['Manba qatori', xulosa.jami, 'text-text'],
+          ['Aniq mos', xulosa.mos, xulosa.mos ? 'text-ok' : 'text-text'],
+          ['Moslashmagan', xulosa.mosEmas, xulosa.mosEmas ? 'text-danger' : 'text-text'],
+          ['Arifmetik farq', xulosa.arifmetik, xulosa.arifmetik ? 'text-warn' : 'text-text'],
+          ['Qiymat yo‘q', xulosa.qiymatsiz, xulosa.qiymatsiz ? 'text-warn' : 'text-text'],
+        ] as const).map(([label, value, tone]) => (
+          <div key={label} className="karta px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-mute">{label}</p>
+            <p className={`mt-1 text-lg font-semibold tabular-nums ${tone}`}>{value}</p>
+          </div>
+        ))}
+      </section>
       <F2TwoPaneWorkbench
         sourceTree={sourceTree} sourceFlat={source} labels={labels}
         smetaRoots={smetaRoots} targets={targets}

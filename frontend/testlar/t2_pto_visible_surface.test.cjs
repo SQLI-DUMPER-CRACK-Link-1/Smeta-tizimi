@@ -36,6 +36,29 @@ for (const route of ['/admin/obyektlar', '/admin/f2', '/admin/f2-tayyorlash', '/
   must(route + ' legacy menu duplicate removed', !exactMenuPath(oldMenu, route),
     route + ' ESKI_TIZIM_MENYU ichida qolmasligi kerak');
 }
+must('canonical nav uses production routes only', !/\/admin\/test\//.test(t2Menu),
+  'oddiy PTO menyusida test/texnik marshrutlar ko‘rinmasligi kerak');
+for (const route of ['/admin/dashboard', '/admin/obyektlar', '/admin/holat', '/admin/fakt', '/admin/f2', '/admin/f2-tayyorlash', '/admin/f2-tarix', '/admin/hujjat-nazorat', '/admin/narxlar', '/admin/documents', '/admin/fayl-boglash']) {
+  must(route + ' is present in the canonical IA', exactMenuPath(t2Menu, route),
+    route + ' production information architecture ichida bo‘lishi kerak');
+}
+must('legacy modules start collapsed', /useState\(false\)/.test(shell),
+  'Tizim_01/ERP menyusi default ko‘rinishda PTO ishini bosmasligi kerak');
+/* ⚠️ 2026-09-08: bu yerda yana ikkita tekshiruv bor edi — «shell uses one
+   bounded viewport contract» va «shell keeps URL project/object context
+   visible». Ular qobiqning MANTIG'INI emas, `codex/premium-pto-ui-ux-v1`
+   shoxchasidagi ANIQ implementatsiya izlarini (`os-route-viewport`,
+   `os-route-context` CSS sinflari va `function routeContext(`) tekshirardi.
+   O'sha qobiq olinmadi: egasi so'ragan «sichqoncha borsa ochiladigan,
+   aks holda faqat belgichalar» yon paneli, menyu dublikatlarini olib
+   tashlash va Tizim-1 ni alohida yig'ish AYNAN hozirgi qobiqda bor va
+   Codex shoxchasi bulardan oldingi holatga asoslangan edi.
+
+   Boshqa qobiq bilan bajarilishi mumkin bo'lgan talabni implementatsiya
+   izi bo'yicha tekshirish — noto'g'ri test. Talabning o'zi (bitta
+   scroll-host va URL kontekstining ko'rinishi) o'z o'rnida qoladi;
+   kerak bo'lsa u xulq-atvor testi sifatida qayta yozilsin, manba
+   matnidagi sinf nomi bo'yicha emas. */
 for (const route of ['/admin/obyektlar', '/admin/f2', '/admin/f2-tayyorlash', '/admin/narxlar']) {
   must(route + ' remains in T2 navigation', exactMenuPath(t2Menu, route),
     route + ' TIZIM_02 navigation ichida ko‘rinadigan bo‘lishi kerak');
@@ -77,6 +100,42 @@ must('BossDashboard omits technical signal identity and raw error',
 must('F2 tarixida developer versiya izohi yo‘q',
   !/serverdagi versiya|revision\s*[:=]/i.test(noComment(ptoSources.find(([name]) => name === 'F2TarixNative')[1])),
   'operatorga ichki versiya atamasi emas, tushunarli tasdiqlash holati ko‘rsatilishi kerak');
+
+console.log('\n── LRV / F2 operator workflow guard ──');
+const lrv = noComment(read('frontend', 'src', 'umumiy', 'daraxt', 'SmetaTree.tsx'));
+const holat = noComment(read('frontend', 'src', 'admin', 'sahifalar', 'HolatNative.tsx'));
+const f2Prep = noComment(read('frontend', 'src', 'admin', 'sahifalar', 'F2TayyorlashNative.tsx'));
+const f2Import = noComment(read('frontend', 'src', 'admin', 'sahifalar', 'F2ImportNative.tsx'));
+must('LRV exposes canonical Fakt save port', /onFaktSave\?/.test(lrv) && /sbFaktBelgilaV2/.test(holat) && /sbFaktYoz/.test(holat),
+  'Fakt LRV ichidan typed canonical adapter orqali yozilishi kerak');
+must('LRV distinguishes total and delta Fakt', /Jami Faktni o‘rnatish/.test(lrv) && /Faktga qo‘shish/.test(lrv),
+  'operator jami qiymat va qo‘shiladigan qiymatni adashtirmasligi kerak');
+must('LRV has save/conflict state', /Saqlanmoqda/.test(lrv) && /conflict|serverda o‘zgargan/.test(lrv),
+  'Fakt yozish holati va optimistic conflict ko‘rinishi kerak');
+must('F2 preparation has bulk possible-volume action', /Barcha mumkin hajmni olish/.test(f2Prep),
+  'yuzlab qatorni qo‘lda kiritishga majburlamaslik kerak');
+must('F2 preparation has exception summary', /Tanlangan qatorlar/.test(f2Prep) && /Ogohlantirishlar/.test(f2Prep) && /Narx asosi yo‘q/.test(f2Prep),
+  'F2 tayyorlash yuqori darajadagi exception summary berishi kerak');
+/* ⚠️ 2026-09-08: bu uchta tekshiruv avval Codex'ning o'z F2 ekrani
+   (`IkkiPanel` + jadval + `selectedUid`/`scrollIntoView`) manbasiga
+   qarab yozilgandi. Egasi esa AYNAN drag-drop 2 oynali workbench'ni
+   talab qilgan ("buni maksimal boyagi 2 oynali f2 importda ishlashi
+   kerak"), shuning uchun `F2TwoPaneWorkbench` saqlab qolindi. Talab
+   o'zgargani yo'q -- faqat uni bajaradigan komponent boshqa, shuning
+   uchun tekshiruv HAQIQIY komponentga qaratildi. */
+const f2Workbench = noComment(read('frontend', 'src', 'admin', 'sahifalar', 'F2TwoPaneWorkbench.tsx'));
+must('F2 import has exact/unmatched summary', /Aniq mos/.test(f2Import) && /Moslashmagan/.test(f2Import) && /Arifmetik farq/.test(f2Import),
+  'F2 import operatorga raw JSON o‘rniga tekshiruv xulosasini ko‘rsatishi kerak');
+must('F2 import is a two-pane matching workbench', /F2TwoPaneWorkbench/.test(f2Import) && /F2 manba/.test(f2Workbench) && /Smeta \/ LRV|Kanonik/.test(f2Workbench),
+  'F2 manbasi va kanonik smeta yonma-yon ko‘rinishi kerak');
+must('F2 matching supports visual rebind', /onDragStart/.test(f2Workbench) && /onDrop/.test(f2Workbench) && /setSelected/.test(f2Workbench),
+  'manba qatorini tanlab yoki sudrab kanonik qatorga bog‘lash mumkin bo‘lishi kerak');
+const nakopPage = noComment(read('frontend', 'src', 'admin', 'pages', 'HujjatNazoratPage.tsx'));
+const nakop = noComment(read('frontend', 'src', 'components', 'construction-document-control', 'NakopitelniyWorkspace.tsx'));
+must('Nakopitelniy has project/object/period filters', /Davr/.test(nakopPage) && /Loyiha/.test(nakopPage) && /Obyekt/.test(nakopPage) && /qidiruv/.test(nakopPage),
+  'Nakopitelniy read-model uchun kontekst va davr filtrlari ko‘rinishi kerak');
+must('Nakopitelniy separates period and cumulative values', /Oldingi/.test(nakop) && /Joriy F2/.test(nakop) && /Jamlanma/.test(nakop) && /Qolgan/.test(nakop),
+  'miqdor va qiymatning oldingi/joriy/jamlanma/qolgan o‘qlari alohida ko‘rsatilishi kerak');
 
 console.log(`\n═══ ${passed} passed, ${failed} failed ═══`);
 process.exit(failed ? 1 : 0);

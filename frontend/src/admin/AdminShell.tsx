@@ -36,7 +36,7 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/f2-tarix', nom: 'F2 tarixi / tasdiqlash', Ikonka: ClipboardList },
       { yol: '/admin/fakt', nom: 'Bajarilgan ishlar (Fakt)', Ikonka: ClipboardList },
         { yol: '/admin/mindmap', nom: 'Mindmap (Xarita)', Ikonka: Map },
-      { yol: '/admin/test/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
+      { yol: '/admin/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
     ]
   },
   {
@@ -50,11 +50,11 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/nakopitelniy', nom: 'Nakopitelniy vedomost', Ikonka: NotebookPen },
       { yol: '/admin/narxlar', nom: 'Narxlar nazorati', Ikonka: Tags },
       { yol: '/admin/nakrutka', nom: 'Nakrutka (ustama) hisobi', Ikonka: Calculator },
-        { yol: '/admin/test/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
-      { yol: '/admin/test/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
-        { yol: '/admin/test/zayavka', nom: 'Zayavkalar (PTO)', Ikonka: ClipboardList },
-        { yol: '/admin/test/aosr', nom: 'QA/QC (AOSR/APPOK)', Ikonka: ShieldCheck },
-      { yol: '/admin/test/erp', nom: 'Kadrlar, Texnika (ERP)', Ikonka: Users },
+        { yol: '/admin/moliya', nom: 'Moliya va Shartnomalar', Ikonka: Briefcase },
+      { yol: '/admin/logistika', nom: 'Ta\'minot va Sklad', Ikonka: Box },
+        { yol: '/admin/zayavka', nom: 'Zayavkalar (PTO)', Ikonka: ClipboardList },
+        { yol: '/admin/aosr', nom: 'QA/QC (AOSR/APPOK)', Ikonka: ShieldCheck },
+      { yol: '/admin/erp', nom: 'Kadrlar, Texnika (ERP)', Ikonka: Users },
     ]
   },
   {
@@ -62,9 +62,10 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: Settings,
     id: 'tizim',
     menyular: [
-      { yol: '/admin/test/sozlama', nom: 'Sozlamalar', Ikonka: Settings },
+      { yol: '/admin/tizim-sozlama', nom: 'Sozlamalar', Ikonka: Settings },
       { yol: '/admin/storage', nom: 'Fayl saqlash (Storage)', Ikonka: HardHat },
-      { yol: '/admin/test/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
+      { yol: '/admin/fayl-boglash', nom: 'Fayl bog’lash / sinxronizatsiya', Ikonka: Link2 },
+      { yol: '/admin/korzinka', nom: 'Korzinka', Ikonka: Trash2 },
     ]
   }
 ];

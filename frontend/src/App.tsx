@@ -197,6 +197,22 @@ export default function App() {
           <Route path="taminot" element={<ErpTaminot />} />
           <Route path="sifat" element={<ErpSifat />} />
 
+          {/* T2-IA-PROD-URL-001 (2026-09-08): bu sahifalar allaqachon ishlab
+              turgan mahsulot qismlari, lekin manzillari tarixiy sabab bilan
+              `/admin/test/...` edi — ya'ni foydalanuvchi kundalik menyuda
+              «test» so'zini ko'rib turardi. Endi ularning PRODUCTION manzili
+              bor; eski `/admin/test/*` YO'Q QILINMADI (eski havolalar,
+              xatcho'plar va boshqa agentlarning shoxchalari buzilmasin). */}
+          <Route path="moliya" element={<WrapperMoliya />} />
+          <Route path="logistika" element={<WrapperLogistika />} />
+          <Route path="crm" element={<WrapperCRM />} />
+          <Route path="zayavka" element={<TestZayavka />} />
+          <Route path="aosr" element={<TestAosr />} />
+          <Route path="korzinka" element={<TestKorzinka />} />
+          <Route path="erp" element={<TestErp />} />
+          {/* `sozlamalar` (T1) allaqachon band — bu T2 sozlamalari. */}
+          <Route path="tizim-sozlama" element={<TestSozlama />} />
+
           {/* WARN 2026-08-17 — ESKI MANZILLAR UCHUN KO’PRIK.
               Menyudagi `shartnoma` → `shartnomalar` xatosi tuzatilgach ham
               muammo qaytdi, chunki eski manzil FOYDALANUVCHIDA qolgan

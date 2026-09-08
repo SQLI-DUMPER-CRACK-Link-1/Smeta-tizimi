@@ -13,16 +13,17 @@ import {
 } from 'lucide-react';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { KompaniyaKerak } from '../../umumiy/kontekst/KompaniyaKerak';
+import { Skelet } from '../../umumiy/ui/Sahifa';
 import { useBossDashboard } from '../../api/t2-boss';
 
 const nf = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 });
 const som = (n: number | null | undefined) => (n == null ? '—' : nf.format(Math.round(n)) + ' so‘m');
 
 const SEV: Record<string, string> = {
-  critical: 'text-rose-300 bg-rose-500/10 border-rose-500/30',
-  high: 'text-amber-300 bg-amber-500/10 border-amber-500/30',
-  medium: 'text-sky-300 bg-sky-500/10 border-sky-500/30',
-  low: 'text-zinc-300 bg-zinc-500/10 border-zinc-500/30',
+  critical: 'text-danger bg-danger/10 border-danger/30',
+  high: 'text-warn bg-warn/10 border-warn/30',
+  medium: 'text-accent bg-accent/10 border-accent/30',
+  low: 'text-text-dim bg-surface-2 border-border',
 };
 const SIGNAL_ENTITY_LABEL: Record<string, string> = {
   loyiha: 'Loyiha',
@@ -60,7 +61,7 @@ export default function BossDashboard() {
   if (!joriy?.id) return <KompaniyaKerak nima="Rahbar paneli" />;
 
   return (
-    <div className="p-6 bg-bg min-h-screen text-text overflow-y-auto">
+    <div className="os-workbench min-h-0 overflow-auto p-6 text-text">
       <div className="flex items-start justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -76,10 +77,10 @@ export default function BossDashboard() {
         </button>
       </div>
 
-      {q.isLoading && <div className="text-text-dim text-sm">Yuklanmoqda…</div>}
+      {q.isLoading && <Skelet qatorlar={6} />}
       {q.isError && (
-        <div className="rounded-lg bg-rose-500/8 border border-rose-500/25 px-4 py-3 text-[13px] text-rose-200 flex items-center gap-2">
-          <AlertTriangle size={16} /> Rahbar paneli yuklanmadi. Birozdan so‘ng qayta urinib ko‘ring.
+        <div role="alert" className="rounded-lg border border-danger/25 bg-danger/5 px-4 py-3 text-[13px] text-danger flex items-center gap-3">
+          <AlertTriangle size={16} /> <span className="flex-1">Rahbar paneli yuklanmadi. Birozdan so‘ng qayta urinib ko‘ring.</span><button type="button" onClick={() => void q.refetch()} className="rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-semibold hover:bg-danger/10">Qayta urinish</button>
         </div>
       )}
 
