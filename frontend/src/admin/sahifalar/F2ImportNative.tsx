@@ -76,6 +76,41 @@ export function sourceLeaves(tree: AktNode[], grid: SheetGrid, cols: F2ColumnCon
 
 /** t2_qator flat rows -> LrvNode tree, by canonical parent id (`ota_id`) --
  *  never by row number. Shared between a fresh match() and a resumed session. */
+/**
+ * F2 faylidan o'qilgan daraxtni ko'rsatadi (moslashtirishdan OLDIN).
+ *
+ * Faqat ko'rish uchun — hech narsa bog'lamaydi. Katta faylda butun
+ * daraxtni chizib o'tirmaymiz: har bo'limda dastlabki qatorlar
+ * ko'rsatiladi, qolgani soni bilan aytiladi.
+ */
+const DARAXT_KORSATISH_CHEGARASI = 400;
+function F2FaylDaraxti({ nodes }: { nodes: AktNode[] }) {
+  const budget = { left: DARAXT_KORSATISH_CHEGARASI, kesildi: false };
+  const chiz = (list: AktNode[], depth: number): React.ReactNode[] => list.map((n, i) => {
+    if (budget.left <= 0) { budget.kesildi = true; return null; }
+    budget.left--;
+    const bolalar = n.children && n.children.length ? chiz(n.children, depth + 1) : null;
+    const belgi = n.type === 'rz' ? '📁' : (n.children && n.children.length ? '🔧' : '•');
+    return (
+      <div key={n.uid || `${depth}-${i}`}>
+        <div style={{ marginLeft: depth * 14 }}
+          className={'py-0.5 text-[12px] ' + (n.type === 'rz' ? 'font-semibold text-text' : n.children?.length ? 'font-medium text-text-dim' : 'text-text-mute')}>
+          {belgi} {n.kod ? n.kod + ' ' : ''}{n.nom || '—'}{n.bir ? ` (${n.bir})` : ''}
+          {n.children?.length ? <span className="ml-1.5 text-text-mute">— {n.children.length} ta</span> : null}
+        </div>
+        {bolalar}
+      </div>
+    );
+  });
+  const chizilgan = chiz(nodes, 0);
+  return <>
+    {chizilgan}
+    {budget.kesildi && <p className="mt-1 text-[11px] text-text-mute">
+      … {DARAXT_KORSATISH_CHEGARASI} qatordan ko‘pi ko‘rsatilmadi (bu faqat ko‘rish uchun; moslashtirish butun faylni oladi).
+    </p>}
+  </>;
+}
+
 export function smetaRootsFromRows(rows: T2Qator[]): LrvNode[] {
   const index = new Map<number, LrvNode>(rows.map(q => [q.id, { type: q.tur as LrvNode['type'], kod: q.kod || undefined, nom: q.nom || undefined, birlik: q.birlik || undefined, row: q.id, varaq: 'SB', children: [] }]));
   const roots: LrvNode[] = [];
@@ -337,6 +372,36 @@ function NativeSession({ companyId }: { companyId: number }) {
    * uchun to'siq emas, lekin manba hujjatda xato borligini bildiradi va
    * yozishdan OLDIN ko'rinishi kerak.
    */
+  /**
+   * Moslashtirishdan OLDIN ko'riladigan fayl tuzilishi.
+   *
+   * Egasi: "birinchi daraxtlar ochilib keyin moslashtirilishi kerak".
+   * Avval fayl yuklangach darhol moslashtirishga o'tib ketilardi —
+   * operator ustunlar to'g'ri o'qilganini, bo'lim/ish/resurs ierarxiyasi
+   * haqiqatan qurilganini KO'RMASDAN "Moslashtirish"ni bosardi. Ustun
+   * raqami bitta xato bo'lsa ham butun daraxt axlat chiqadi va buni
+   * faqat natijadan keyin bilib olinardi. */
+  const faylTuzilishi = useMemo(() => {
+    if (!book || !cols || !sheetName) return null;
+    const sheet = book.sheet(sheetName);
+    if (!sheet) return null;
+    try {
+      const built = f2FaylOqiCore(sheet.rows, cols);
+      if (!('tree' in built)) return null;
+      let bolim = 0, ish = 0, resurs = 0;
+      const yur = (list: AktNode[]) => {
+        for (const n of list) {
+          if (n.type === 'rz') bolim++;
+          else if (n.children && n.children.length) ish++;
+          else resurs++;
+          if (n.children) yur(n.children);
+        }
+      };
+      yur(built.tree);
+      return { tree: built.tree, bolim, ish, resurs };
+    } catch { return null; }
+  }, [book, cols, sheetName]);
+
   const xulosa = useMemo(() => {
     let mos = 0, mosEmas = 0, arifmetik = 0, qiymatsiz = 0;
     for (const n of source) {
@@ -422,6 +487,28 @@ function NativeSession({ companyId }: { companyId: number }) {
       </div>
     </fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
+
+    {/* Fayl tuzilishi — moslashtirishdan OLDIN. Ustunlar noto'g'ri
+        o'qilgan bo'lsa bu yerda darhol ko'rinadi (bo'lim/ish/resurs soni
+        va daraxtning o'zi), natijani kutib o'tirmasdan. */}
+    {faylTuzilishi && source.length === 0 && <section className="karta p-3" aria-label="Fayl tuzilishi">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
+        <span className="font-semibold text-text">Fayl tuzilishi</span>
+        <span className="text-text-dim">Bo‘lim: <b className="text-text tabular-nums">{faylTuzilishi.bolim}</b></span>
+        <span className="text-text-dim">Ish: <b className="text-text tabular-nums">{faylTuzilishi.ish}</b></span>
+        <span className="text-text-dim">Resurs: <b className="text-text tabular-nums">{faylTuzilishi.resurs}</b></span>
+        {faylTuzilishi.ish === 0 && faylTuzilishi.resurs === 0 && (
+          <span className="text-danger">Daraxt bo‘sh chiqdi — ustun raqamlarini tekshiring.</span>
+        )}
+      </div>
+      <details className="mt-2">
+        <summary className="cursor-pointer text-[12px] text-text-dim">Daraxtni ochib ko‘rish</summary>
+        <div className="mt-2 max-h-72 overflow-auto rounded-md border border-border/60 p-2">
+          <F2FaylDaraxti nodes={faylTuzilishi.tree} />
+        </div>
+      </details>
+    </section>}
+
     {source.length > 0 && <>
       <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5" aria-label="F2 import tekshiruv xulosasi">
         {([

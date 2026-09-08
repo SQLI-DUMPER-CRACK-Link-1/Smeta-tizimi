@@ -4,6 +4,7 @@ import type { AktNode, LrvNode } from '../../lib/f2-match-engine';
 import type { F2ExactManbaTugun } from '../../test02/f2-exact-payload';
 import type { T2Qator } from '../../api/supabase';
 import { F2AddReplModal, type DropAction } from './F2AddReplModal';
+import { ishResurslariniBogla, ishMi } from '../../lib/f2-ish-bogla';
 
 /**
  * T2-PTO-OWNER-CRITICAL-CLOSURE P0-2: professional two-pane F2<->Smeta
@@ -59,6 +60,9 @@ function flatSourceNodes(flat: F2ExactManbaTugun[], labels: Map<string, string>)
 
 export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  /* Butun ishni (resurslari bilan) bog'lash uchun tanlangan akt tuguni. */
+  const [tanlanganIsh, setTanlanganIsh] = useState<AktNode | null>(null);
+  const [ishNatija, setIshNatija] = useState<string | null>(null);
   const [srcQ, setSrcQ] = useState('');
   const [tgtQ, setTgtQ] = useState('');
   const [faqatMoslashmagan, setFaqatMoslashmagan] = useState(false);
@@ -121,6 +125,19 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
     p.onMappingChange(next);
     setSelected(null);
   }
+
+  /* Ishni RESURSLARI BILAN BIRGA bog'lash — T1 dagi avtomatik moslashning
+     aynan o'sha qoidasi (kod → kanonik kod → nom+birlik, faqat SHU ish
+     ichida, taxminsiz), lekin operator qo'l bilan chaqirganda. */
+  function ishniBogla(fIsh: AktNode, sIsh: LrvNode) {
+    const r = ishResurslariniBogla(fIsh, sIsh, p.mapping);
+    p.onMappingChange(r.mapping);
+    setTanlanganIsh(null);
+    setSelected(null);
+    setIshNatija(r.qoldi === 0
+      ? `«${nom(fIsh.nom, 'Ish')}» — ${r.bogland} ta resurs bog'landi.`
+      : `«${nom(fIsh.nom, 'Ish')}» — ${r.bogland} ta bog'landi, ${r.qoldi} tasiga aniq nomzod topilmadi (ular qo'lda bog'lanadi).`);
+  }
   function unlink(sourceUid: string) {
     const next = new Map(p.mapping);
     next.delete(sourceUid);
@@ -180,10 +197,28 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
     }
     const children = (n.children || []).map(c => renderSourceNode(c, depth + 1, budget)).filter(Boolean);
     if (n.type === 'rz' && children.length === 0) return null;
+    /* ISH tuguni (resurslari bor) — o'zi ham tanlanadi: shunda o'ng
+       tomondan smeta ishini bosib, BUTUN ishni resurslari bilan birga
+       bog'lash mumkin (avval faqat barg-bargdan bog'lanardi). */
+    const buIsh = ishMi(n);
+    const ishTanlangan = buIsh && tanlanganIsh?.uid === n.uid;
     return (
       <div key={n.uid}>
-        <div style={{ marginLeft: depth * 14 }} className="px-2 py-1 text-[12px] font-semibold text-text-dim">
+        <div
+          style={{ marginLeft: depth * 14 }}
+          {...(buIsh && !p.disabled ? {
+            role: 'button' as const, tabIndex: 0,
+            onClick: () => { setSelected(null); setIshNatija(null); setTanlanganIsh(ishTanlangan ? null : n); },
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(null); setIshNatija(null); setTanlanganIsh(ishTanlangan ? null : n); }
+            },
+            title: 'Butun ishni resurslari bilan birga bog‘lash uchun tanlang',
+          } : {})}
+          className={'px-2 py-1 text-[12px] font-semibold rounded-md ' +
+            (buIsh && !p.disabled ? 'cursor-pointer hover:bg-accent/10 ' : '') +
+            (ishTanlangan ? 'bg-accent/15 text-text ring-1 ring-accent/50' : 'text-text-dim')}>
           {TUR_BELGI[n.type as Tur] || '📁'} {nom(n.nom, 'Bo‘lim')}
+          {buIsh && <span className="ml-1.5 font-normal text-text-mute">({(n.children || []).length} resurs)</span>}
         </div>
         {children}
       </div>
@@ -241,6 +276,9 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
     if (n.type === 'rz' && children.length === 0) return null;
     const dropKey = 'container:' + n.row;
     const isDropTarget = dragDropEnabled && dropOverKey === dropKey && (n.type === 'rz' || n.type === 'bl');
+    /* Akt tomonda ish tanlangan bo'lsa — smeta ISHLARI bosiladigan
+       nishonga aylanadi (bo'lim emas: resurslar ish ostida turadi). */
+    const ishniQabulQiladi = !!tanlanganIsh && n.type !== 'rz' && !p.disabled;
     return (
       <div key={(n.row ?? 0) + '-' + (n.nom || '')}>
         <div style={{ marginLeft: depth * 14 }}
@@ -252,14 +290,25 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
             const uid = e.dataTransfer.getData('text/plain');
             if (uid) handleDropOnContainer(uid, n.row);
           }}
-          title={dragDropEnabled && (n.type === 'rz' || n.type === 'bl')
-            ? (n.type === 'rz' ? 'Yangi ish (BL) qo‘shish uchun shu yerga tashlang' : 'Yangi resurs qo‘shish uchun shu yerga tashlang')
-            : undefined}
+          {...(ishniQabulQiladi ? {
+            role: 'button' as const, tabIndex: 0,
+            onClick: () => ishniBogla(tanlanganIsh!, n),
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ishniBogla(tanlanganIsh!, n); }
+            },
+          } : {})}
+          title={ishniQabulQiladi
+            ? 'Tanlangan akt ishini shu smeta ishiga resurslari bilan birga bog‘lash'
+            : dragDropEnabled && (n.type === 'rz' || n.type === 'bl')
+              ? (n.type === 'rz' ? 'Yangi ish (BL) qo‘shish uchun shu yerga tashlang' : 'Yangi resurs qo‘shish uchun shu yerga tashlang')
+              : undefined}
           className={
-            'px-2 py-1 text-[12px] font-semibold text-text-dim rounded-md border ' +
-            (isDropTarget ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500' : 'border-transparent')
+            'px-2 py-1 text-[12px] font-semibold rounded-md border ' +
+            (ishniQabulQiladi ? 'cursor-pointer border-accent/40 text-text hover:bg-accent/10 ' : 'text-text-dim ') +
+            (isDropTarget ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500' : ishniQabulQiladi ? '' : 'border-transparent')
           }>
           {TUR_BELGI[n.type as Tur] || '📁'} {nom(n.nom, 'Bo‘lim')}
+          {ishniQabulQiladi && <span className="ml-1.5 font-normal text-accent">← shu yerga bog‘lash</span>}
         </div>
         {children}
       </div>
@@ -284,6 +333,21 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
         {selected && (
           <span className="text-accent inline-flex items-center gap-1">
             <ArrowRight size={13} /> "{p.labels.get(selected)}" tanlandi — o‘ng tomondan smeta qatorini bosing
+          </span>
+        )}
+        {tanlanganIsh && (
+          <span className="inline-flex flex-wrap items-center gap-1 text-accent">
+            <ArrowRight size={13} /> «{nom(tanlanganIsh.nom, 'Ish')}» ({(tanlanganIsh.children || []).length} resurs) tanlandi
+            — o‘ng tomondan MOS SMETA ISHINI bosing, resurslari birga bog‘lanadi
+            <button type="button" onClick={() => setTanlanganIsh(null)}
+              className="ml-1 rounded px-1 text-text-mute hover:text-text">bekor</button>
+          </span>
+        )}
+        {ishNatija && (
+          <span className="inline-flex flex-wrap items-center gap-1 text-text-dim">
+            {ishNatija}
+            <button type="button" onClick={() => setIshNatija(null)}
+              className="ml-1 rounded px-1 text-text-mute hover:text-text">×</button>
           </span>
         )}
       </div>
