@@ -52,9 +52,26 @@ async function smetaSorov(yuk: Record<string, unknown>): Promise<SmetaYuklaJavob
  * narxsiz) and RES (resursniy vedomost: kod/nom/birlik bo'yicha resurs narx
  * indeksi). Bitta faylda hajm VA narx bo'lmasa, LRV o'zi narxsiz import
  * qilinadi -- bu quyidagi yordamchilar RES faylini o'qib, uning narxlarini
- * kod (birinchi ustuvor) yoki nom+birlik bo'yicha LRV daraxtining rs/mat/ob
- * bargiga ulaydi. LRV faylida allaqachon narx bo'lgan qatorlar ustidan
- * YOZILMAYDI -- RES faqat YETISHMAGAN narxni to'ldiradi.
+ * nom+birlik bo'yicha LRV daraxtining rs/mat/ob bargiga ulaydi (kod, bo'lsa,
+ * FAQAT qo'shimcha aniqlashtirish sifatida). LRV faylida allaqachon narx
+ * bo'lgan qatorlar ustidan YOZILMAYDI -- RES faqat YETISHMAGAN narxni
+ * to'ldiradi.
+ *
+ * ⚠️ 2026-09-09 (haqiqiy falokat, egasining "Karting2" obyektida
+ * tasdiqlangan): avval bu yerda `kod` BIRINCHI USTUVOR sifatida ishlatilardi
+ * (nom+birlik faqat kod topilmasa). Egasining haqiqiy Drive faylida
+ * (Karting_LRV_PLUS) `kod` UMUMAN NOYOB EMAS -- masalan `kod='С'` 388 xil,
+ * bir-biriga aloqasi yo'q material qatorida (220 xil haqiqiy narx bilan)
+ * takrorlanadi; bu T1 dagi odatiy, meros qolgan konventsiya, xato emas.
+ * Natijada bitta tasodifiy narx (birinchi indekslangani) o'sha `kod`ga ega
+ * BARCHA boshqa materiallarga yopishtirilib chiqdi -- masalan
+ * «САМОСВЕРЛЯЮЩИЙ ШУРУП 250 ММ» (haqiqiy narx 450) ga butunlay boshqa
+ * resursning («АРМАТУРА... 12 ММ») narxi (8 295 844) yozilib, bitta qator
+ * summasi 581+ mlrd, butun obyekt esa ~980 mlrd so'mga shishib ketdi.
+ * Endi `nom+birlik` MAJBURIY asosiy kalit (xuddi `res-narxlash.ts`dagi
+ * xavfsiz, tasdiqlangan mantiq kabi); `kod` mavjud bo'lsa ham, faqat
+ * `nom+birlik` allaqachon topilgan holatni ANIQLASHTIRISH uchun ishlatiladi
+ * -- hech qachon yolg'iz/mustaqil qidiruv kaliti sifatida emas.
  */
 export type ResNarxYozuv = {
   kod?: string; nom?: string; birlik?: string; narx: number;
@@ -62,8 +79,8 @@ export type ResNarxYozuv = {
   kat?: T2ResursKategoriya;
 };
 export type ResNarxIndeks = {
-  byKod: Map<string, number>; byNomBir: Map<string, number>;
-  katByKod: Map<string, T2ResursKategoriya>; katByNomBir: Map<string, T2ResursKategoriya>;
+  byNomBir: Map<string, number>; byKodNomBir: Map<string, number>;
+  katByNomBir: Map<string, T2ResursKategoriya>; katByKodNomBir: Map<string, T2ResursKategoriya>;
 };
 
 export type ImportQadam = { kalit: string; nom: string; holat: 'ishlamoqda' | 'tayyor' | 'xato'; tafsilot?: string };
@@ -227,24 +244,24 @@ export function resKalit(v?: string | null): string {
 }
 
 export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
-  const byKod = new Map<string, number>();
   const byNomBir = new Map<string, number>();
-  const katByKod = new Map<string, T2ResursKategoriya>();
+  const byKodNomBir = new Map<string, number>();
   const katByNomBir = new Map<string, T2ResursKategoriya>();
+  const katByKodNomBir = new Map<string, T2ResursKategoriya>();
   for (const r of rows) {
+    const nk = resKalit(r.nom);
+    if (!nk) continue; // `kod` yolg'iz hech narsani aniqlamaydi -- yuqoridagi izohga q.
+    const nb = nk + '|' + resKalit(r.birlik);
+    if (!byNomBir.has(nb)) byNomBir.set(nb, r.narx);
+    if (r.kat && !katByNomBir.has(nb)) katByNomBir.set(nb, r.kat);
     const kk = resKalit(r.kod);
     if (kk) {
-      if (!byKod.has(kk)) byKod.set(kk, r.narx);
-      if (r.kat && !katByKod.has(kk)) katByKod.set(kk, r.kat);
-    }
-    const nk = resKalit(r.nom);
-    if (nk) {
-      const k = nk + '|' + resKalit(r.birlik);
-      if (!byNomBir.has(k)) byNomBir.set(k, r.narx);
-      if (r.kat && !katByNomBir.has(k)) katByNomBir.set(k, r.kat);
+      const kb = kk + '|' + nb;
+      if (!byKodNomBir.has(kb)) byKodNomBir.set(kb, r.narx);
+      if (r.kat && !katByKodNomBir.has(kb)) katByKodNomBir.set(kb, r.kat);
     }
   }
-  return { byKod, byNomBir, katByKod, katByNomBir };
+  return { byNomBir, byKodNomBir, katByNomBir, katByKodNomBir };
 }
 
 /**
@@ -269,11 +286,13 @@ export function narxlarniDaraxtgaQoll(tree: AktNode[], idx: ResNarxIndeks): { tr
     if (n.children && n.children.length) return { ...n, children: n.children.map(walk) };
     if (n.type !== 'rs' && n.type !== 'mat' && n.type !== 'ob') return n;
     if (n.narx != null && n.narx !== 0) return n;
+    const nk = resKalit(n.nom);
+    if (!nk) { mosEmasSoni++; return n; }
+    const nb = nk + '|' + resKalit(n.bir);
     let narx: number | undefined;
     const kk = resKalit(n.kod);
-    if (kk) narx = idx.byKod.get(kk);
-    const nk = resKalit(n.nom);
-    if (narx == null && nk) narx = idx.byNomBir.get(nk + '|' + resKalit(n.bir));
+    if (kk) narx = idx.byKodNomBir.get(kk + '|' + nb);
+    if (narx == null) narx = idx.byNomBir.get(nb);
     if (narx == null) { mosEmasSoni++; return n; }
     mosSoni++;
     const summa = n.hajm != null ? Math.round(n.hajm * narx * 100) / 100 : undefined;
@@ -871,7 +890,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             )}
             {resIndex && (
               <p className="text-[12px] text-success">
-                {resIndexSize} ta resurs narxi o‘qildi ({resIndex.byKod.size} ta kod bo‘yicha, {resIndex.byNomBir.size} ta nom+birlik bo‘yicha).
+                {resIndexSize} ta resurs narxi o‘qildi ({resIndex.byNomBir.size} ta nom+birlik bo‘yicha, shundan {resIndex.byKodNomBir.size} tasi kod bilan aniqlashtirilgan).
                 Import bosilganda mos keluvchi narxsiz qatorlarga qo‘llanadi.
               </p>
             )}

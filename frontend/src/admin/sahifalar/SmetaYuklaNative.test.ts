@@ -20,13 +20,40 @@ describe('RES (resursniy vedomost) narx moslashtirish', () => {
     ]);
   });
 
-  it('kod ustuvor, topilmasa nom+birlik bo‘yicha moslashadi', () => {
+  it('nom+birlik asosiy kalit, kod bo‘lsa qo‘shimcha aniqlashtirish sifatida ham indekslanadi', () => {
     const idx = resNarxIndeksiQur([
       { kod: 'B25', nom: 'Beton B25', birlik: 'm3', narx: 500000 },
       { nom: 'Armatura', birlik: 'kg', narx: 12000 },
     ]);
-    expect(idx.byKod.get('B25')).toBe(500000);
+    expect(idx.byNomBir.get('BETONB25|M3')).toBe(500000);
+    expect(idx.byKodNomBir.get('B25|BETONB25|M3')).toBe(500000);
     expect(idx.byNomBir.get('ARMATURA|KG')).toBe(12000);
+  });
+
+  /* ⚠️ Haqiqiy falokat, egasining "Karting2" obyektida (980+ mlrd so'm
+     xato smeta) tasdiqlangan: egasining haqiqiy Drive faylida (Karting_
+     LRV_PLUS) `kod='С'` 388 xil, bir-biriga aloqasi yo'q materialda
+     takrorlangan -- T1 dagi meros konventsiya, xato emas. `kod`ni birinchi
+     ustuvor sifatida ishlatish bitta tasodifiy narxni o'sha kodga ega
+     BARCHA boshqa materiallarga yopishtirib chiqargan. Bu test aynan shu
+     ssenariyni qayta hosil qiladi va har bir material o'z HAQIQIY (nom
+     bo‘yicha) narxini olishini tasdiqlaydi -- kodning umumiyligidan
+     qat'i nazar. */
+  it('T1dagi umumiy/noyob bo‘lmagan kod (masalan bitta harfli "С") turli materiallarni bir-biriga ARALASHTIRMAYDI', () => {
+    const idx = resNarxIndeksiQur([
+      { kod: 'С', nom: 'САМОСВЕРЛЯЮЩИЙ ШУРУП 250 ММ', birlik: 'ШТ', narx: 450 },
+      { kod: 'С', nom: 'АРМАТУРА КЛАССА АIII ДИАМЕТРОМ 12 ММ', birlik: 'КГ', narx: 8295844 },
+    ]);
+    const tree: AktNode[] = [
+      { uid: '1', type: 'rs', kod: 'С', nom: 'САМОСВЕРЛЯЮЩИЙ ШУРУП 250 ММ', bir: 'ШТ', hajm: 70140 },
+      { uid: '2', type: 'rs', kod: 'С', nom: 'АРМАТУРА КЛАССА АIII ДИАМЕТРОМ 12 ММ', bir: 'КГ', hajm: 10 },
+    ];
+    const { tree: out, mosSoni, mosEmasSoni } = narxlarniDaraxtgaQoll(tree, idx);
+    expect(out[0].narx).toBe(450); // shuruplarga faqat shuruplarning narxi
+    expect(out[0].summa).toBe(31563000);
+    expect(out[1].narx).toBe(8295844); // armaturaga faqat armaturaning narxi
+    expect(mosSoni).toBe(2);
+    expect(mosEmasSoni).toBe(0);
   });
 
   it('LRV daraxtidagi narxsiz rs bargiga RES narxini qo‘llaydi va summa=hajm*narx hisoblaydi', () => {
@@ -185,9 +212,9 @@ describe('RES bo‘lim sarlavhalari — МАТ/ОБ/КАБ/М-К ni ajratish', (
       { kod: '10-6', nom: 'МУФТА', birlik: 'КОМПЛ', narx: 3000000, kat: 'ОБ' },
       { kod: '30-2', nom: 'КИРПИЧ', birlik: 'ШТ', narx: 1200, kat: 'МАТ' },
     ]);
-    expect(idx.katByKod.get('106')).toBe('ОБ');
+    expect(idx.katByKodNomBir.get('106|МУФТА|КОМПЛ')).toBe('ОБ');
     expect(idx.katByNomBir.get('МУФТА|КОМПЛ')).toBe('ОБ');
-    expect(idx.katByKod.get('302')).toBe('МАТ');
+    expect(idx.katByKodNomBir.get('302|КИРПИЧ|ШТ')).toBe('МАТ');
   });
 });
 
