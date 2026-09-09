@@ -118,16 +118,42 @@ export function smetaRootsFromRows(rows: T2Qator[]): LrvNode[] {
   return roots;
 }
 
+/**
+ * T2-F2-IMPORT-NARXSIZ-BLOK-001 — bu funksiya avval HAR QANDAY narxi
+ * nol/yo'q qator uchraganda BUTUN faylni rad etardi:
+ *
+ *   if (nodes.some(n => n.narx == null || n.narx <= 0 || ...)) throw ...
+ *
+ * Amalda bu F2 importini butunlay o'lik qilgan edi. Haqiqiy Amfiteatr
+ * faylida 1054 qatordan 164 tasi aynan shunday: `000003` ЗАТРАТЫ ТРУДА
+ * МАШИНИСТОВ (782/782 = 100% narxsiz -- mashinist soatlari mashina
+ * narxi ichida, alohida puli yo'q), `009219` ВОДА, `035567` ОЧЕС
+ * ЛЬНЯНОЙ. Ular SMETAning o'zida ham narxsiz -- ya'ni bu buzuq
+ * ma'lumot emas, tuzilmaning normal qismi. Natijada 2 ta import
+ * (06.09 va 08.09) "review" bosqichida qotib qolgan, `t2_akt_qator`
+ * butun bazada 0 qator -- shuning uchun FAKT/F2 hamma joyda nol.
+ *
+ * Narxsiz qator uchun to'g'ri yo'l ALLAQACHON qurilgan va testlar bilan
+ * qoplangan: `f2AggregatsiyaQator` narxni `undefined` qiladi,
+ * `f2ExactPayloadQur` `priceIntentionallyAbsent: true` qo'yadi,
+ * `t2_akt_yarat_v2` esa uni `provenance_status='price_intentionally_
+ * absent'` bilan yozadi (hajm yoziladi, pul yozilmaydi). Ya'ni bu
+ * to'siq o'zi chaqiradigan kontraktga zid edi.
+ *
+ * Haqiqiy himoyalar SAQLANADI: moslashmagan qator, bir qatorga ikki xil
+ * narx, narxi bor-u summasi yo'q (NEEDS_REVIEW) va summasi bor-u narxi
+ * yo'q (AMOUNT_WITHOUT_PRICE -- RPC uni null qilib pulni yo'qotardi).
+ */
 export function exactWrite(nodes: F2ExactManbaTugun[], mapping: Map<string, number>) {
   if (!nodes.length || nodes.some(n => !mapping.has(n.uid))) throw new Error('Barcha manba qatorlari moslashtirilishi kerak.');
-  // Shared helper nol summani yo'q deb hisoblaydi; shu holatni jim o'tkazmaymiz.
-  if (nodes.some(n => n.narx == null || n.narx <= 0 || n.summa == null || n.summa === 0)) {
-    throw new Error('Narx yoki summa yo‘q/nol. Bu holat uchun manba kontrakti aniqlashtirilmaguncha yozish yopiq.');
-  }
   const rows = f2AggregatsiyaQator(nodes, uid => mapping.get(uid));
   if (rows.some(r => r.barchaNarxlar.length > 1)) throw new Error('Bir smeta qatoriga turli narxlar tushdi. Bog‘lanishni tekshiring.');
   const result = f2ExactPayloadQur(rows);
-  if (!result.ok) throw new Error('Hujjat summasi noaniq. Yozish to‘xtatildi.');
+  if (!result.ok) {
+    throw new Error(result.sabab === 'AMOUNT_WITHOUT_PRICE'
+      ? `${result.noaniqSoni} qatorda summa bor, lekin birlik narxi yo‘q — bunday qator yozilsa summa yo‘qoladi. Narxni to‘ldiring yoki manbani tekshiring.`
+      : 'Hujjat summasi noaniq. Yozish to‘xtatildi.');
+  }
   return result.qatorlar;
 }
 
@@ -406,7 +432,9 @@ function NativeSession({ companyId }: { companyId: number }) {
     let mos = 0, mosEmas = 0, arifmetik = 0, qiymatsiz = 0;
     for (const n of source) {
       if (mapping.has(n.uid)) mos++; else mosEmas++;
-      if (n.narx == null || n.summa == null) qiymatsiz++;
+      // Narxsiz qator YOZILADI (hajm bilan, pulsiz) -- shuning uchun bu
+      // "xato" emas, lekin operator sonini KO'RISHI kerak.
+      if (n.narx == null || n.narx <= 0 || n.summa == null) qiymatsiz++;
       else if (Math.abs(n.hajm * n.narx - n.summa) > 0.005) arifmetik++;
     }
     return { jami: source.length, mos, mosEmas, arifmetik, qiymatsiz };
@@ -516,7 +544,7 @@ function NativeSession({ companyId }: { companyId: number }) {
           ['Aniq mos', xulosa.mos, xulosa.mos ? 'text-ok' : 'text-text'],
           ['Moslashmagan', xulosa.mosEmas, xulosa.mosEmas ? 'text-danger' : 'text-text'],
           ['Arifmetik farq', xulosa.arifmetik, xulosa.arifmetik ? 'text-warn' : 'text-text'],
-          ['Qiymat yo‘q', xulosa.qiymatsiz, xulosa.qiymatsiz ? 'text-warn' : 'text-text'],
+          ['Narxsiz — faqat hajm yoziladi', xulosa.qiymatsiz, xulosa.qiymatsiz ? 'text-warn' : 'text-text'],
         ] as const).map(([label, value, tone]) => (
           <div key={label} className="karta px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-mute">{label}</p>

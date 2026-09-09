@@ -111,6 +111,62 @@ describe('F2 exact payload — NEEDS_REVIEW ambiguity guard (never fabricates qt
     }
   });
 
+  /* T2-F2-IMPORT-NARXSIZ-BLOK-001 — haqiqiy Amfiteatr F2 faylining shakli:
+     1054 qatordan 164 tasi narxsiz (ЗАТРАТЫ ТРУДА МАШИНИСТОВ, ВОДА...),
+     890 tasi to'liq narxlangan. Ilgari `exactWrite` shu 164 tasi uchun
+     BUTUN faylni rad etardi. Endi fayl yozilishi SHART. */
+  it('haqiqiy fayl naqshi: narxsiz qatorlar aralashgan to\'plam bloklanmaydi, hammasi yoziladi', () => {
+    const nodes: F2ExactManbaTugun[] = [
+      ...Array.from({ length: 890 }, (_, i) => ({ uid: `narxli${i}`, hajm: 2, narx: 100, summa: 200 })),
+      ...Array.from({ length: 164 }, (_, i) => ({ uid: `narxsiz${i}`, hajm: 3.5, narx: 0, summa: 0 })),
+    ];
+    const rows = f2AggregatsiyaQator(nodes, (uid) => Number(uid.replace(/\D/g, '')) + (uid.startsWith('narxsiz') ? 10000 : 1));
+    const natija = f2ExactPayloadQur(rows);
+    expect(natija.ok).toBe(true);
+    if (natija.ok) {
+      expect(natija.qatorlar).toHaveLength(1054);
+      const narxsiz = natija.qatorlar.filter((q) => q.priceIntentionallyAbsent);
+      expect(narxsiz).toHaveLength(164);
+      // Hajm SAQLANADI, pul esa to'qilmaydi.
+      expect(narxsiz.every((q) => q.certifiedQuantity === 3.5 && q.certifiedAmount === undefined)).toBe(true);
+      expect(natija.qatorlar.filter((q) => q.certifiedAmount === 200)).toHaveLength(890);
+    }
+  });
+
+  /* Hajm HAR IKKALA bo'lakdan qo'shiladi (10+10=20), pul esa faqat
+     birinchisidan (1234.49) -- yig'indi "to'liq"dek ko'rinadi, aslida
+     20 birlik uchun 10 birlikning puli. Yozilmasligi shart. */
+  it('qisman summa: bo\'laklarning birida pul yo\'q bo\'lsa, yig\'indi buni yashirmaydi', () => {
+    const rows = f2AggregatsiyaQator(
+      [
+        { uid: 'a', hajm: 10, narx: 123.45, summa: 1234.49 },
+        { uid: 'b', hajm: 10, narx: 123.45, summa: undefined },
+      ],
+      () => 123,
+    );
+    expect(rows[0]).toMatchObject({ hajm: 20, summa: 1234.49, summaBor: true, summasizBolak: 1 });
+    const natija = f2ExactPayloadQur(rows);
+    expect(natija.ok).toBe(false);
+    if (!natija.ok) expect(natija.sabab).toBe('NEEDS_REVIEW');
+    expect(f2IstisnolarniAniqla(rows)).toContainEqual({ turi: 'NEEDS_REVIEW', qatorId: 123 });
+  });
+
+  it('AMOUNT_WITHOUT_PRICE: summasi bor-u narxi yo\'q qator yozilmaydi (RPC uni null qilib pulni yo\'qotardi)', () => {
+    const rows = f2AggregatsiyaQator(
+      [
+        { uid: 'ok', hajm: 10, narx: 100, summa: 1000 },
+        { uid: 'summali-narxsiz', hajm: 5, narx: 0, summa: 750 },
+      ],
+      (uid) => (uid === 'ok' ? 1 : 2),
+    );
+    const natija = f2ExactPayloadQur(rows);
+    expect(natija.ok).toBe(false);
+    if (!natija.ok) {
+      expect(natija.sabab).toBe('AMOUNT_WITHOUT_PRICE');
+      expect(natija.noaniqQatorIdlar).toEqual([2]);
+    }
+  });
+
   it('an all-clear batch maps every row into the v2 RPC shape', () => {
     const rows = f2AggregatsiyaQator(
       [

@@ -38,6 +38,13 @@ export type F2ExactQator = {
   /** F2 faylda haqiqatan SUMMA yozilganmi (0 ham "bor" bo'lishi mumkin — shuning uchun alohida flag) */
   summaBor: boolean;
   /**
+   * Shu qatorga birlashgan manba bo'laklaridan NECHTASIDA summa yo'q edi.
+   * Muhim: bo'laklarning BIRIDA summa bo'lsa `summaBor` true bo'ladi va
+   * yig'indi "to'liq"dek ko'rinadi — aslida hajm hamma bo'lakdan qo'shilgan,
+   * pul esa faqat bir qismidan. Shuning uchun alohida sanaladi.
+   */
+  summasizBolak?: number;
+  /**
    * Shu qatorga birlashgan barcha manba tugunlarida uchragan (nol/manfiy
    * bo'lmagan) narxlar, birinchi ko'rilgan tartibda, TAKRORLANMAY. Odatda
    * bitta element (F2'da bir qator uchun narx bitta bo'ladi). Bir nechtasi
@@ -68,7 +75,7 @@ export function f2AggregatsiyaQator(
     if (existing) {
       existing.hajm += h;
       existing.summa += s;
-      if (s) existing.summaBor = true;
+      if (s) existing.summaBor = true; else existing.summasizBolak = (existing.summasizBolak ?? 0) + 1;
       if (yangiNarx != null && !existing.barchaNarxlar.includes(yangiNarx)) {
         existing.barchaNarxlar.push(yangiNarx);
       }
@@ -79,6 +86,7 @@ export function f2AggregatsiyaQator(
         narx: yangiNarx,
         summa: s,
         summaBor: !!s,
+        summasizBolak: s ? 0 : 1,
         barchaNarxlar: yangiNarx != null ? [yangiNarx] : [],
       });
     }
@@ -97,21 +105,45 @@ export type F2ExactPayloadQatori = {
 export type F2ExactPayloadNatija =
   | { ok: true; qatorlar: F2ExactPayloadQatori[] }
   /** Narxi bor-yu F2 faylning o'z summasi yo'q qatorlar bor — qty*narx TO'QILMAYDI, foydalanuvchi ko'rib chiqishi kerak. */
-  | { ok: false; sabab: 'NEEDS_REVIEW'; noaniqSoni: number; noaniqQatorIdlar: number[] };
+  | { ok: false; sabab: 'NEEDS_REVIEW'; noaniqSoni: number; noaniqQatorIdlar: number[] }
+  /**
+   * T2-F2-IMPORT-NARXSIZ-BLOK-001: summasi BOR, lekin birlik narxi YO'Q
+   * qator. Bu jim yozib bo'lmaydigan holat: `priceIntentionallyAbsent`
+   * bayrog'i bilan yuborilsa, `t2_akt_yarat_v2` shartnomaga ko'ra
+   * `certified_amount`ni ATAYLAB `null` qiladi — ya'ni qatordagi PUL
+   * yo'qoladi. Shuning uchun yozish to'xtatiladi.
+   */
+  | { ok: false; sabab: 'AMOUNT_WITHOUT_PRICE'; noaniqSoni: number; noaniqQatorIdlar: number[] };
 
 /**
  * Aggregatsiyalangan qatorlardan `t2_akt_yarat_v2` uchun aniq (exact)
  * to'lov payload'ini quradi. Ambiguous qator topilsa — RAD ETADI (bo'sh
  * payload yozmaydi), chaqiruvchi buni ko'rsatishi kerak.
  */
+/** Summasi qisman: bo'laklarning birida pul bor, boshqasida yo'q -- hajm
+ *  hammasidan qo'shilgan, pul esa emas. Yig'indi "to'liq"dek ko'rinadi. */
+const qismanSumma = (r: F2ExactQator) => r.summaBor && (r.summasizBolak ?? 0) > 0;
+
 export function f2ExactPayloadQur(rows: F2ExactQator[]): F2ExactPayloadNatija {
-  const noaniq = rows.filter((r) => r.narx != null && !r.summaBor);
+  const noaniq = rows.filter((r) => (r.narx != null && !r.summaBor) || qismanSumma(r));
   if (noaniq.length > 0) {
     return {
       ok: false,
       sabab: 'NEEDS_REVIEW',
       noaniqSoni: noaniq.length,
       noaniqQatorIdlar: noaniq.map((r) => r.qator_id),
+    };
+  }
+  // Narxsiz-u summali qator: pastda `priceIntentionallyAbsent: true` bo'lib
+  // ketadi, RPC esa o'sha bayroq bilan `certified_amount`ni null qiladi --
+  // summa jimgina yo'qolardi. Yozishdan oldin to'xtatamiz.
+  const summaliNarxsiz = rows.filter((r) => r.narx == null && r.summaBor);
+  if (summaliNarxsiz.length > 0) {
+    return {
+      ok: false,
+      sabab: 'AMOUNT_WITHOUT_PRICE',
+      noaniqSoni: summaliNarxsiz.length,
+      noaniqQatorIdlar: summaliNarxsiz.map((r) => r.qator_id),
     };
   }
   return {
@@ -174,9 +206,9 @@ export function f2IstisnolarniAniqla(rows: F2ExactQator[]): F2Exception[] {
     if (row.barchaNarxlar.length > 1) {
       out.push({ turi: 'CONFLICTING_PRICES', qatorId: row.qator_id, narxlar: row.barchaNarxlar });
     }
-    if (row.narx != null && !row.summaBor) {
+    if ((row.narx != null && !row.summaBor) || qismanSumma(row)) {
       out.push({ turi: 'NEEDS_REVIEW', qatorId: row.qator_id });
-      continue; // summa yo'q -- arifmetika solishtirib bo'lmaydi, keyingi tekshiruvlar ma'nosiz
+      continue; // summa yo'q/qisman -- arifmetika solishtirib bo'lmaydi
     }
     if (row.narx != null && row.summaBor) {
       const hisoblangan = row.hajm * row.narx;
