@@ -48,9 +48,9 @@ describe('lrvPlusQatorlarniHisobla — smeta kaskadi', () => {
     const h = lrvPlusQatorlarniHisobla(DARAXT);
     const ishchi = h.find((r) => r.nom === 'Ishchi')!;
     const bl = h.find((r) => r.nom === 'Qazish')!;
-    expect(ishchi.obyomFormula).toBe(`F${ishchi.row}*G${bl.row}`);
-    expect(ishchi.norma).toBe(0.095);
-    expect(ishchi.summaFormula).toBe(`G${ishchi.row}*H${ishchi.row}`);
+    expect(ishchi.obyomFormula).toBe(`E${ishchi.row}*F${bl.row}`);
+    expect(ishchi.birlikHajm).toBe(0.095);
+    expect(ishchi.summaFormula).toBe(`F${ishchi.row}*G${ishchi.row}`);
   });
 
   it('bl ustunidagi ОБЪЁМ -- literal qiymat (formula emas), tahrirlanadigan katak', () => {
@@ -65,7 +65,7 @@ describe('lrvPlusQatorlarniHisobla — smeta kaskadi', () => {
     const bl = h.find((r) => r.nom === 'Qazish')!;
     const rs = h.filter((r) => r.tur === 'rs');
     const c1 = Math.min(...rs.map((r) => r.row)), c2 = Math.max(...rs.map((r) => r.row));
-    expect(bl.summaFormula).toBe(`SUMIF($Z$${c1}:$Z$${c2},${bl.daraja + 1},$I$${c1}:$I$${c2})`);
+    expect(bl.summaFormula).toBe(`SUMIF($X$${c1}:$X$${c2},${bl.daraja + 1},$H$${c1}:$H$${c2})`);
     expect(bl.summaQiymat).toBe(190000 + 235000);
   });
 
@@ -91,27 +91,51 @@ describe('lrvPlusQatorlarniHisobla — FAKT / F2 (egasining talabi: har bir qato
     expect(h.every((r) => r.faktHajm === 0 && r.f2Hajm === 0 && r.faktSumma === 0)).toBe(true);
   });
 
-  it('kontekst ustunlari -- eng yaqin rz/bl ota nomi', () => {
+  it('bo\'sh ro\'yxatda null qaytaradi', () => {
+    expect(lrvPlusJamiFormula([], 'H')).toBeNull();
+  });
+
+  it('ЖАМИ formulasi berilgan ustun bo\'yicha faqat ildiz (daraja=0) qatorlarni yig\'adi', () => {
     const h = lrvPlusQatorlarniHisobla(DARAXT);
-    const ishchi = h.find((r) => r.nom === 'Ishchi')!;
-    expect(ishchi.razdel).toBe('Yer ishlari');
-    expect(ishchi.vidRabot).toBe('Qazish');
-    const bl = h.find((r) => r.tur === 'bl')!;
-    expect(bl.razdel).toBe('Yer ishlari');
-    expect(bl.vidRabot).toBe(''); // o'zi bl -- ustida bl yo'q
+    const c1 = h[0].row, c2 = h[h.length - 1].row;
+    expect(lrvPlusJamiFormula(h, 'H')).toBe(`SUMIF($X$${c1}:$X$${c2},0,$H$${c1}:$H$${c2})`);
+    expect(lrvPlusJamiFormula(h, 'T')).toBe(`SUMIF($X$${c1}:$X$${c2},0,$T$${c1}:$T$${c2})`);
   });
 });
 
-describe('lrvPlusJamiFormula', () => {
-  it('berilgan ustun bo\'yicha daraja=0 (ildiz) qatorlarni SUMIF bilan yig\'adi', () => {
-    const h = lrvPlusQatorlarniHisobla(DARAXT);
-    const c1 = h[0].row, c2 = h[h.length - 1].row;
-    expect(lrvPlusJamiFormula(h, 'I')).toBe(`SUMIF($Z$${c1}:$Z$${c2},0,$I$${c1}:$I$${c2})`);
-    expect(lrvPlusJamiFormula(h, 'Q')).toBe(`SUMIF($Z$${c1}:$Z$${c2},0,$Q$${c1}:$Q$${c2})`);
+/* Egasining 2026-09-09 dagi tuzatishlari. */
+describe('LRV eksport — egasi so\'ragan tuzatishlar', () => {
+  it('ustun tartibi haqiqiy T1 LRV_PLUS bilan bir xil: H gacha asosiy zona, ТИП I da', () => {
+    expect(LRV_PLUS_USTUNLAR[4]).toBe('ҲАЖМ (ед)');   // E
+    expect(LRV_PLUS_USTUNLAR[5]).toBe('ҲАЖМ (жами)'); // F
+    expect(LRV_PLUS_USTUNLAR[6]).toBe('НАРХ');        // G
+    expect(LRV_PLUS_USTUNLAR[7]).toBe('СУММА');       // H
+    expect(LRV_PLUS_USTUNLAR[8]).toBe('ТИП');         // I — markirovka
+    expect(LRV_PLUS_USTUNLAR.slice(9, 15)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К']); // J..O
   });
 
-  it('bo\'sh ro\'yxatda null qaytaradi', () => {
-    expect(lrvPlusJamiFormula([], 'I')).toBeNull();
+  it('РАЗДЕЛ va ВИД РАБОТ ustunlari yo\'q — ierarxiya endi guruhlash orqali', () => {
+    expect(LRV_PLUS_USTUNLAR).not.toContain('РАЗДЕЛ');
+    expect(LRV_PLUS_USTUNLAR).not.toContain('ВИД РАБОТ');
+  });
+
+  it('faylda qatorlar guruhlanadi (rz > bl > resurs) va H gacha chegara chiziladi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Guruh sinovi', HOLATLAR);
+    const XLSX = await import('xlsx-js-style');
+    const wb = XLSX.read(bytes, { type: 'array', bookFiles: true });
+    const oqi = (nom: string) => {
+      const e = (wb as unknown as { files: Record<string, { content: Uint8Array | string }> }).files[nom];
+      return typeof e.content === 'string' ? e.content : new TextDecoder().decode(Uint8Array.from(e.content));
+    };
+    const sheet = oqi('xl/worksheets/sheet1.xml');
+    // rz (daraja 0) guruh boshi, bl (1) va resurslar (2) ichida yig'iladi.
+    expect(sheet).toMatch(/<row r="5"[^>]*outlineLevel="1"/); // bl
+    expect(sheet).toMatch(/<row r="6"[^>]*outlineLevel="2"/); // rs
+    expect(sheet).toMatch(/<row r="7"[^>]*outlineLevel="2"/); // rs
+    // Chegara: A..H uchun `medium`, undan keyingilar uchun `thin`.
+    const styles = oqi('xl/styles.xml');
+    expect(styles).toContain('medium');
+    expect(styles).toContain('thin');
   });
 });
 
@@ -129,41 +153,37 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
     const rz = h.find((r) => r.tur === 'rz')!;
 
     // Smeta kaskadi -- Excelning O'ZIDA jonli
-    expect(ws[`G${ishchi.row}`].f).toBe(`F${ishchi.row}*G${bl.row}`);
-    expect(ws[`I${ishchi.row}`].f).toBe(`G${ishchi.row}*H${ishchi.row}`);
-    expect(ws[`I${ishchi.row}`].v).toBe(190000);
-    expect(ws[`I${bl.row}`].f).toContain('SUMIF');
-    expect(ws[`I${bl.row}`].v).toBe(425000);
-    expect(ws[`I${rz.row}`].v).toBe(425000);
+    expect(ws[`F${ishchi.row}`].f).toBe(`E${ishchi.row}*F${bl.row}`);
+    expect(ws[`H${ishchi.row}`].f).toBe(`F${ishchi.row}*G${ishchi.row}`);
+    expect(ws[`H${ishchi.row}`].v).toBe(190000);
+    expect(ws[`H${bl.row}`].f).toContain('SUMIF');
+    expect(ws[`H${bl.row}`].v).toBe(425000);
+    expect(ws[`H${rz.row}`].v).toBe(425000);
 
     // Egasining talabi: fakt / ostatka / f2 olingan / f2 olinishi mumkin
-    expect(ws[`P${ishchi.row}`].v).toBe(3.8); // ФАКТ ОБЪЁМ
-    expect(ws[`Q${ishchi.row}`].v).toBe(76000); // ФАКТ СУММА
-    expect(ws[`R${ishchi.row}`].f).toBe(`G${ishchi.row}-P${ishchi.row}`); // ОСТАТКА = smeta - fakt
-    expect(ws[`R${ishchi.row}`].v).toBeCloseTo(9.5 - 3.8, 6);
-    expect(ws[`T${ishchi.row}`].v).toBe(1.9); // F2 ОЛИНГАН
-    expect(ws[`V${ishchi.row}`].f).toBe(`P${ishchi.row}-T${ishchi.row}`); // F2 МУМКИН = fakt - olingan
-    expect(ws[`V${ishchi.row}`].v).toBeCloseTo(1.9, 6);
+    expect(ws[`P${ishchi.row}`].v).toBe(3.8); // ФАКТ ҳажм
+    expect(ws[`T${ishchi.row}`].v).toBe(76000); // ФАКТ сумма
+    expect(ws[`Q${ishchi.row}`].f).toBe(`F${ishchi.row}-P${ishchi.row}`); // ОСТАТКА = smeta - fakt
+    expect(ws[`Q${ishchi.row}`].v).toBeCloseTo(9.5 - 3.8, 6);
+    expect(ws[`R${ishchi.row}`].v).toBe(1.9); // F2 ОЛИНГАН
+    expect(ws[`S${ishchi.row}`].f).toBe(`P${ishchi.row}-R${ishchi.row}`); // F2 МУМКИН = fakt - olingan
+    expect(ws[`S${ishchi.row}`].v).toBeCloseTo(1.9, 6);
     expect(ws[`W${ishchi.row}`].v).toBe(76000 - 38000);
 
     // Kategoriya ustunlari faqat bargda va faqat MOS ustunda
-    expect(ws[`J${ishchi.row}`].v).toBe(190000); // ЧЕЛ
+    expect(ws[`J${ishchi.row}`].f).toBe(`$H${ishchi.row}`); // ЧЕЛ -- formula bilan
     expect(ws[`K${ishchi.row}`]?.v ?? '').toBe(''); // МАШ -- bo'sh
     const ekskavator = h.find((r) => r.nom === 'Ekskavator')!;
-    expect(ws[`K${ekskavator.row}`].v).toBe(235000); // МАШ
+    expect(ws[`K${ekskavator.row}`].f).toBe(`$H${ekskavator.row}`); // МАШ
     expect(ws[`J${bl.row}`]?.v ?? '').toBe(''); // bl'da kategoriya bo'lmaydi
-
-    // Kontekst
-    expect(ws[`X${ishchi.row}`].v).toBe('Yer ishlari');
-    expect(ws[`Y${ishchi.row}`].v).toBe('Qazish');
 
     // Sarlavha va jami
     expect(ws['A1'].v).toBe('Sinov Obyekti');
-    expect(ws['I3'].f).toContain('SUMIF');
-    expect(ws['I3'].v).toBe(425000);
-    expect(ws['Q3'].v).toBe(170000);
-    expect(ws['U3'].v).toBe(85000);
-    expect(ws['S3'].v).toBe(425000 - 170000); // ЖАМИ ОСТАТКА
+    expect(ws['H3'].f).toContain('SUMIF');
+    expect(ws['H3'].v).toBe(425000);
+    expect(ws['T3'].v).toBe(170000);
+    expect(ws['V3'].v).toBe(85000);
+    expect(ws['U3'].v).toBe(425000 - 170000); // ЖАМИ ОСТАТКА
     expect(ws['W3'].v).toBe(170000 - 85000); // ЖАМИ F2 ОЛИНИШИ МУМКИН
 
   });

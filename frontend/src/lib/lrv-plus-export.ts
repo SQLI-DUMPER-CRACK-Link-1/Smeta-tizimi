@@ -1,47 +1,40 @@
 /**
- * lrv-plus-export.ts — T2-LRV-PLUS-EXPORT-002: T1'ning haqiqiy LRV_PLUS
- * Google Sheets faylini (bevosita Drive'dan yuklab olib, bayt darajasida
- * o'rganilgan) va egasining aniq talabini birlashtiradi:
+ * lrv-plus-export.ts — T2-LRV-PLUS-EXPORT-003
  *
- *   "smeta strukturasi shaklida ... narxlangan f2 kiritilsa hammasi
- *   kiritilgan ... butun obyektni to'liq nazorat qilinayotganini
- *   ko'rsata oladigan, xuddi LRV kabi ranglangan dizaynda ... fakt smeta
- *   ostatka f2 olingan f2 olinishi mumkin har biri uchun har bir qatorda
- *   aniq qiymat bo'lishi kerak."
+ * Ustun tartibi HAQIQIY Tizim-1 LRV_PLUS fayli bilan bir xil (Drive'dan
+ * yuklab olinib, formulalari bayt darajasida o'rganilgan). Egasining
+ * v2 ustidan bergan tuzatishlari (2026-09-09) shu yerda yopilgan:
  *
- * V1 (T2-LRV-PLUS-EXPORT-001, endi eskirgan) faqat 9 ustunli MVP edi —
- * FAKT/F2/OSTATKA umuman yo'q, rang yo'q. Bu haqiqiy T1 LRV_PLUS bilan
- * solishtirilganda ("San qilib bergan tizim umuman unaqa ishlamayapdi")
- * yetarli emas edi.
+ *   - «MARKIROVKA I GA KO'CHISHI KERAK»  → ТИП endi I ustunida (T1 dagidek).
+ *   - «J K L M N O ham qiymatlarni formula bilan olishi kerak»
+ *                                        → kategoriya ustunlari `=$H{qator}`.
+ *   - «eng keraklisi H gacha, shu yergacha jadval aniqroq chizilsin»
+ *                                        → A..H chegaralari qalinroq.
+ *   - «har bir ish turi va razdellar ichidagi bolachalari bilan
+ *      gruppirovka bo'lsin»              → Excel outline (yig'iladigan qator).
+ *   - «X va Y kerak emas — eski tizim shundan ierarxiya ko'rgan»
+ *                                        → РАЗДЕЛ/ВИД РАБОТ ustunlari olib
+ *                                          tashlandi; ierarxiya endi guruhlash.
  *
- * Haqiqiy T1 formulasi (real fayldan tasdiqlangan, `Amfiteatr` obyekti):
- *   ОБЪЁМ(rs, bl ostida) = НОРМА(rs) × ОБЪЁМ(ota bl)      — E{row}*E{bl}
- *   СУММА(barg)          = ОБЪЁМ × ЦЕНА                    — F*G
- *   СУММА(bl/rz)         = SUM(bevosita bolalar SUMMASI)   — SUMIF daraja bo'yicha
- *   ФАКТ(rs)              = НОРМА(rs) × ФАКТ(ota bl)        — Q{row}=Q{bl}*E{row}
- *   ОСТАТКА              = SMETA − ФАКТ                    — R=E-Q
- *   ОСТАТКА Ф2           = ФАКТ − ЗАБРАН(Ф2)                — T=Q-S
- * Rang (T1 `00_Config.js` CFG.RANG): rz=sariq, bl=ko'k+oq shrift,
- * mat=yashil, rs=rangsiz.
+ * Ustunlar:
+ *   A №  B КОД  C НАИМЕНОВАНИЕ  D ЕД.ИЗМ.  E ҲАЖМ(ед)  F ҲАЖМ(жами)
+ *   G НАРХ  H СУММА  I ТИП  J ЧЕЛ  K МАШ  L МАТ  M ОБ  N КАБ  O М/К
+ *   P ФАКТ ҳажм  Q ОСТАТКА ҳажм  R F2 ОЛИНГАН ҳажм  S F2 МУМКИН ҳажм
+ *   T ФАКТ сумма  U ОСТАТКА сумма  V F2 ОЛИНГАН сумма  W F2 МУМКИН сумма
+ *   X Даража (yashirin — SUMIF ota-bola filtri uchun)
  *
- * T2'da ФАКТ/Ф2/ОСТАТКА uchun serverda ALLAQACHON to'liq (har bir
- * daraja — rs/mat/ob VA bl/rz — uchun) yig'ilgan qiymat bor
- * (`t2_qator_holat` view'i, `T2QatorHolat`). Shuning uchun bu ustunlar
- * uchun kaskadni JS'da qayta hisoblash SHART EMAS — faqat literal
- * qiymat sifatida yoziladi; faqat ОСТАТКА/ОСТАТКА-Ф2 Excelning o'zida
- * jonli formula (haqiqiy T1 R=E-Q, T=Q-S naqshi) — shu bilan SMETA
- * ustunini Excelda o'zgartirsa, ОСТАТКА avtomatik yangilanadi.
+ * Formulalar (T1 naqshi):
+ *   F(rs, bl ostida) = E(norma) × F(ota bl)
+ *   H(barg)          = F × G
+ *   H(bl/rz)         = bevosita bolalar yig'indisi (SUMIF, yashirin X bo'yicha)
+ *   J..O             = `=$H{qator}` — faqat mos kategoriyada, faqat bargda
+ *   Q = F − P        (ostatka ҳажм)
+ *   S = P − R        (F2 olinishi mumkin = fakt − olingan)
+ *   U = H − T        (ostatka сумма)
+ *   W = T − V        (F2 mumkin сумма)
  *
- * Bu modul ATAYLAB ikkiga bo'lingan (v1'dagi kabi):
- *   - `lrvPlusQatorlarniHisobla` — sof funksiya, xlsx kutubxonasisiz test
- *     qilinadi (formulalar/qiymatlar TO'G'RI ekanini tekshirish uchun).
- *   - `lrvPlusFaylBaytlari` / `lrvPlusYuklab` — `xlsx-js-style`ni FAQAT
- *     shu eksport tugmasi bosilganda dinamik import qiladi (og'ir
- *     kutubxona har sahifa yuklanishida emas). `xlsx-js-style` oddiy
- *     `xlsx` (SheetJS Community)dan farqli — Community versiya yozishda
- *     katak rangini/shriftini UMUMAN qo'llab-quvvatlamaydi (bu Pro
- *     xususiyat); `xlsx-js-style` xuddi shu API'ga ega, ranglash
- *     qo'shilgan, bepul fork.
+ * `xlsx-js-style` ishlatiladi: oddiy SheetJS Community yozishda katak
+ * rangini/chegarasini UMUMAN qo'llab-quvvatlamaydi (Pro xususiyat).
  */
 import type { T2Qator, T2QatorHolat } from '../api/supabase';
 
@@ -54,48 +47,36 @@ export interface LrvPlusQator {
   birlik: string;
   tur: string;
   kat: string;
-  /** F ustuni — faqat bl ota ostidagi rs uchun sarf normasi. */
-  norma: number | null;
-  /** G ustuni — formula bo'lsa (norma bilan bog'langan rs), '=' siz matn. */
+  /** E — bir birlikka: rs uchun NORMA, qolganlar uchun o'z hajmi. */
+  birlikHajm: number | null;
+  /** F — jami hajm. Formula bo'lsa '=' siz matn. */
   obyomFormula: string | null;
   obyomQiymat: number | null;
-  /** H ustuni — birlik narxi (faqat rs/mat/ob barglarida). */
+  /** G — birlik narxi (faqat barglarda). */
   narx: number | null;
-  /** I ustuni — formula ('=' siz matn), bo'sh bo'lsa qiymat ishlatiladi. */
+  /** H — formula ('=' siz), bo'sh bo'lsa qiymat ishlatiladi. */
   summaFormula: string | null;
   summaQiymat: number | null;
-  /** ФАКТ/Ф2 — serverda (`t2_qator_holat`) allaqachon har daraja uchun
-   *  yig'ilgan, literal qiymat sifatida yoziladi. */
   faktHajm: number;
   faktSumma: number;
   f2Hajm: number;
   f2Summa: number;
-  /** Kontekst — eng yaqin rz/bl ota nomi (izlash/filtr uchun qulay). */
-  razdel: string;
-  vidRabot: string;
-  /** Z ustuni (yashirin) — SUMIF ota-bola aloqasini rz/bl darajasida ajratish uchun. */
+  /** X (yashirin) va Excel outline darajasi. */
   daraja: number;
 }
 
 const LEAF_TUR = new Set(['rs', 'mat', 'ob']);
-/** rz/bl kabi "ota" turlar -- SUMIF orqali bevosita bolalarini yig'adi. */
 const OTA_TUR = new Set(['rz', 'bl']);
 
-/** T2 `t2_qator.kat` — CHECK constraint bilan tasdiqlangan aniq qiymatlar
- *  (`20261013090000_t2_resurs_kategoriya_registry_v1.sql`). */
-const KATEGORIYA_USTUN: Record<string, number> = { 'ЧЕЛ': 0, 'МАШ': 1, 'МАТ': 2, 'ОБ': 3, 'КАБ': 4, 'М/К': 5 };
-const KATEGORIYA_SONI = 6;
+/** `t2_qator.kat` — migration CHECK bilan tasdiqlangan aniq qiymatlar. */
+const KAT_USTUN: Record<string, string> = {
+  'ЧЕЛ': 'J', 'МАШ': 'K', 'МАТ': 'L', 'ОБ': 'M', 'КАБ': 'N', 'М/К': 'O',
+};
+const KAT_TARTIB = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'];
 
-/**
- * `qatorlar` allaqachon `tartib` bo'yicha (hujjat tartibi -- ota har doim
- * bolasidan oldin) tartiblangan bo'lishi kerak; xavfsizlik uchun shu
- * yerda ham saralanadi. `holatlar` — `sbT2QatorHolatOl` natijasi,
- * `qator_id` bo'yicha bog'lanadi (ixtiyoriy — berilmasa FAKT/Ф2 nolga
- * tushadi).
- */
 export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): LrvPlusQator[] {
   const rows = [...qatorlar].sort((a, b) => (a.tartib ?? 0) - (b.tartib ?? 0));
-  const DATA_START = 4; // 1: obyekt nomi, 2: ustun sarlavhalari, 3: ЖАМИ, 4+: ma'lumot
+  const DATA_START = 4; // 1: obyekt nomi, 2: sarlavhalar, 3: ЖАМИ, 4+: ma'lumot
 
   const byId = new Map<number, T2Qator>();
   for (const q of rows) byId.set(q.id, q);
@@ -106,25 +87,14 @@ export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2Qator
   const rowOf = new Map<number, number>();
   rows.forEach((q, i) => rowOf.set(q.id, DATA_START + i));
 
-  /** Har bir ota (rz/bl) uchun TO'LIQ nasl oralig'i [c1,c2] (o'zidan keyingi,
-   *  chuqurligi undan katta bo'lgan barcha qatorlar). SUMIF shu oraliqda
-   *  ishlaydi, keyin `daraja+1` filtri orqali faqat bevosita bolalarni oladi. */
+  /** Ota (rz/bl) uchun to'liq nasl oralig'i; SUMIF shu oraliqda ishlaydi,
+   *  `daraja+1` filtri faqat bevosita bolalarni oladi. */
   const span = new Map<number, { c1: number; c2: number }>();
   for (let i = 0; i < rows.length; i++) {
     const daraja = rows[i].daraja ?? 0;
     let j = i + 1;
     while (j < rows.length && (rows[j].daraja ?? 0) > daraja) j++;
     if (j > i + 1) span.set(rows[i].id, { c1: DATA_START + i + 1, c2: DATA_START + j - 1 });
-  }
-
-  /** Eng yaqin ota (rz yoki bl) nomi — kontekst ustunlari uchun. */
-  function ajdodNomi(q: T2Qator, turlar: Set<string>): string {
-    let cur = q.ota_id != null ? byId.get(q.ota_id) : undefined;
-    while (cur) {
-      if (cur.tur && turlar.has(cur.tur)) return cur.nom ?? '';
-      cur = cur.ota_id != null ? byId.get(cur.ota_id) : undefined;
-    }
-    return '';
   }
 
   const out: LrvPlusQator[] = [];
@@ -137,7 +107,7 @@ export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2Qator
     const parentRow = q.ota_id != null ? rowOf.get(q.ota_id) : undefined;
     const h = holatById.get(q.id);
 
-    let norma: number | null = null;
+    let birlikHajm: number | null = q.hajm ?? null;
     let obyomFormula: string | null = null;
     let obyomQiymat: number | null = q.hajm ?? null;
     let narx: number | null = null;
@@ -145,41 +115,34 @@ export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2Qator
     let summaQiymat: number | null = q.summa ?? null;
 
     if (tur === 'rs' && parent?.tur === 'bl' && parentRow != null && q.norma != null && q.norma > 0) {
-      // T1 formulasi: ОБЪЁМ(rs) = НОРМА(rs) × ОБЪЁМ(ota bl).
-      norma = q.norma;
-      obyomFormula = `F${r}*G${parentRow}`;
+      // T1: ҲАЖМ(жами) = НОРМА × ota bl ning ҲАЖМ(жами)si.
+      birlikHajm = q.norma;
+      obyomFormula = `E${r}*F${parentRow}`;
     }
 
     if (LEAF_TUR.has(tur)) {
       narx = q.narx ?? null;
-      summaFormula = `G${r}*H${r}`;
-      // Keshlangan qiymat DOIM formuladan hisoblanadi (bazadagi `summa`ga
-      // ishonilmaydi) -- shunda .xlsx faylni ochmasdan oldin ham (masalan
-      // preview'da) ko'rsatiladigan son formulaning o'zi bilan bir xil bo'ladi.
+      summaFormula = `F${r}*G${r}`;
+      // Keshlangan qiymat DOIM formuladan hisoblanadi -- faylni ochmasdan
+      // ko'rinadigan son formulaning natijasi bilan bir xil bo'lsin.
       summaQiymat = (obyomQiymat ?? 0) * (narx ?? 0);
     } else if (OTA_TUR.has(tur)) {
       const sp = span.get(q.id);
-      if (sp) summaFormula = `SUMIF($Z$${sp.c1}:$Z$${sp.c2},${daraja + 1},$I$${sp.c1}:$I$${sp.c2})`;
+      if (sp) summaFormula = `SUMIF($X$${sp.c1}:$X$${sp.c2},${daraja + 1},$H$${sp.c1}:$H$${sp.c2})`;
       else summaQiymat = 0;
     }
 
     out.push({
       row: r, no: i + 1, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', tur,
-      kat: q.kat ?? '',
-      norma, obyomFormula, obyomQiymat, narx, summaFormula, summaQiymat,
+      kat: q.kat ?? '', birlikHajm, obyomFormula, obyomQiymat, narx, summaFormula, summaQiymat,
       faktHajm: h ? h.fakt_hajm : 0, faktSumma: h ? h.fakt_summa : 0,
       f2Hajm: h ? h.f2_hajm : 0, f2Summa: h ? h.f2_summa : 0,
-      razdel: ajdodNomi(q, new Set(['rz'])), vidRabot: ajdodNomi(q, new Set(['bl'])),
       daraja,
     });
   }
 
-  // Ikkinchi (TESKARI) o'tish: rz/bl'ning keshlangan SUMMASI bazadagi
-  // `summa`ga emas, balki O'ZI hisoblangan bolalar yig'indisiga tayanadi --
-  // shu bilan fayldagi ko'rsatiladigan son formulaning natijasi bilan
-  // DOIM bir xil bo'ladi (bazadagi rollup vaqtincha eskirgan bo'lsa ham).
-  // Oxiridan boshiga o'tish -- har bir ota o'z bolalarining YAKUNIY
-  // (allaqachon hisoblangan) qiymatini topadi.
+  // Teskari o'tish: rz/bl ning keshlangan SUMMASI bazadagi `summa`ga emas,
+  // o'zi hisoblangan bolalar yig'indisiga tayanadi.
   for (let i = rows.length - 1; i >= 0; i--) {
     const item = out[i];
     if (!OTA_TUR.has(item.tur) || !item.summaFormula) continue;
@@ -193,45 +156,49 @@ export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2Qator
   return out;
 }
 
-/** Butun smeta jami — ildiz (daraja=0) qatorlar (odatda rz) yig'indisi.
- *  `ustun` — qaysi ustundagi qiymatlarni yig'ish kerak (I=СУММА,
- *  P=ФАКТ СУММА va h.k.); ildiz qatorlar allaqachon o'z butun
- *  naslining to'liq yig'indisi bo'lgani uchun bu ODDIY SUMIF (butun
- *  qator oralig'ida, daraja=0 filtri bilan) — ikki marta qo'shmaydi. */
+/** Ildiz (daraja=0) qatorlar yig'indisi — ular allaqachon butun naslning
+ *  jami qiymati, shuning uchun ikki marta sanalmaydi. */
 export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string): string | null {
   if (!qatorlar.length) return null;
   const c1 = qatorlar[0].row, c2 = qatorlar[qatorlar.length - 1].row;
-  return `SUMIF($Z$${c1}:$Z$${c2},0,$${ustun}$${c1}:$${ustun}$${c2})`;
+  return `SUMIF($X$${c1}:$X$${c2},0,$${ustun}$${c1}:$${ustun}$${c2})`;
 }
 
 export const LRV_PLUS_USTUNLAR = [
-  '№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.', 'ТИП', 'НОРМА', 'ОБЪЁМ', 'ЦЕНА', 'СУММА',
-  'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К',
-  'ФАКТ ОБЪЁМ', 'ФАКТ СУММА', 'ОСТАТКА ОБЪЁМ', 'ОСТАТКА СУММА',
-  'F2 ОЛИНГАН ОБЪЁМ', 'F2 ОЛИНГАН СУММА', 'F2 ОЛИНИШИ МУМКИН ОБЪЁМ', 'F2 ОЛИНИШИ МУМКИН СУММА',
-  'РАЗДЕЛ', 'ВИД РАБОТ', 'Даража',
+  '№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.', 'ҲАЖМ (ед)', 'ҲАЖМ (жами)', 'НАРХ', 'СУММА',
+  'ТИП', 'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К',
+  'ФАКТ ҳажм', 'ОСТАТКА ҳажм', 'F2 ОЛИНГАН ҳажм', 'F2 ОЛИНИШИ МУМКИН ҳажм',
+  'ФАКТ сумма', 'ОСТАТКА сумма', 'F2 ОЛИНГАН сумма', 'F2 ОЛИНИШИ МУМКИН сумма',
+  'Даража',
 ] as const;
 
-/** T1 `00_Config.js` `CFG.RANG`dan tasdiqlangan rang sxemasi. */
-const RANG = {
-  rz: { fill: { patternType: 'solid', fgColor: { rgb: 'FFFF00' } } },
-  bl: { fill: { patternType: 'solid', fgColor: { rgb: '4A86E8' } }, font: { color: { rgb: 'FFFFFF' }, bold: true } },
-  mat: { fill: { patternType: 'solid', fgColor: { rgb: 'D9EAD3' } } },
-} as const;
+/** «H gacha» — egasi uchun eng muhim zona; chegarasi qalinroq. */
+const ASOSIY_ZONA_OXIRI = 7; // 0-indeks: A..H
 
-/**
- * Haqiqiy .xlsx bayt oqimini quradi. `xlsx-js-style` FAQAT shu funksiya
- * chaqirilganda dinamik yuklanadi -- `xlsxReader.ts`dagi legacy .xls
- * o'qish bilan bir xil naqsh (og'ir kutubxona har sahifa yuklanishida
- * emas, faqat eksport tugmasi bosilganda kiradi).
- */
+const CHIZIQ = { style: 'thin', color: { rgb: 'B0B0B0' } } as const;
+const QALIN = { style: 'medium', color: { rgb: '606060' } } as const;
+
+function chegara(c: number) {
+  const asosiy = c <= ASOSIY_ZONA_OXIRI;
+  const v = asosiy ? QALIN : CHIZIQ;
+  return { top: v, bottom: v, left: v, right: v };
+}
+
+/** T1 `00_Config.js` CFG.RANG: rz sariq, bl ko'k + oq shrift, mat yashil. */
+const RANG: Record<string, { fill?: { patternType: string; fgColor: { rgb: string } }; font?: { bold?: boolean; color?: { rgb: string } } }> = {
+  rz: { fill: { patternType: 'solid', fgColor: { rgb: 'FFFF00' } }, font: { bold: true } },
+  bl: { fill: { patternType: 'solid', fgColor: { rgb: '4A86E8' } }, font: { bold: true, color: { rgb: 'FFFFFF' } } },
+  mat: { fill: { patternType: 'solid', fgColor: { rgb: 'D9EAD3' } } },
+};
+
 export async function lrvPlusFaylBaytlari(
   qatorlar: T2Qator[], obyektNomi: string, holatlar?: T2QatorHolat[],
 ): Promise<Uint8Array> {
   const hisob = lrvPlusQatorlarniHisobla(qatorlar, holatlar);
-  const jamiSumma = hisob.filter((q) => q.daraja === 0).reduce((s, q) => s + (q.summaQiymat ?? 0), 0);
-  const jamiFakt = hisob.filter((q) => q.daraja === 0).reduce((s, q) => s + q.faktSumma, 0);
-  const jamiF2 = hisob.filter((q) => q.daraja === 0).reduce((s, q) => s + q.f2Summa, 0);
+  const ildiz = hisob.filter((q) => q.daraja === 0);
+  const jamiSumma = ildiz.reduce((s, q) => s + (q.summaQiymat ?? 0), 0);
+  const jamiFakt = ildiz.reduce((s, q) => s + q.faktSumma, 0);
+  const jamiF2 = ildiz.reduce((s, q) => s + q.f2Summa, 0);
 
   const XLSX = await import('xlsx-js-style');
   const NCOLS = LRV_PLUS_USTUNLAR.length;
@@ -242,90 +209,95 @@ export async function lrvPlusFaylBaytlari(
     Array.from({ length: NCOLS }, () => '' as string | number),
   ];
   aoa[2][2] = 'ЖАМИ';
-  aoa[2][8] = jamiSumma; // I — СУММА
-  aoa[2][16] = jamiFakt; // Q — ФАКТ СУММА
-  aoa[2][20] = jamiF2; // U — F2 ОЛИНГАН СУММА
 
   for (const q of hisob) {
-    const ostatkaHajm = (q.obyomQiymat ?? 0) - q.faktHajm;
-    const ostatkaSumma = (q.summaQiymat ?? 0) - q.faktSumma;
-    const f2MumkinHajm = q.faktHajm - q.f2Hajm;
-    const f2MumkinSumma = q.faktSumma - q.f2Summa;
-    const katIdx = KATEGORIYA_USTUN[q.kat];
-    const katVal = LEAF_TUR.has(q.tur) && katIdx != null ? (q.summaQiymat ?? 0) : '';
-    const kat: (string | number)[] = Array.from({ length: KATEGORIYA_SONI }, () => '');
-    if (LEAF_TUR.has(q.tur) && katIdx != null) kat[katIdx] = katVal;
-
+    const kat: (string | number)[] = Array.from({ length: 6 }, () => '');
+    if (LEAF_TUR.has(q.tur)) {
+      const idx = KAT_TARTIB.indexOf(q.kat);
+      if (idx >= 0) kat[idx] = q.summaQiymat ?? 0;
+    }
     aoa.push([
-      q.no, q.kod, q.nom, q.birlik, q.tur,
-      q.norma ?? '',
-      q.obyomFormula ? (q.obyomQiymat ?? 0) : (q.obyomQiymat ?? ''),
-      q.narx ?? '',
-      q.summaFormula ? (q.summaQiymat ?? 0) : (q.summaQiymat ?? ''),
+      q.no, q.kod, q.nom, q.birlik,
+      q.birlikHajm ?? '', q.obyomQiymat ?? '', q.narx ?? '', q.summaQiymat ?? '',
+      q.tur,
       ...kat,
-      q.faktHajm, q.faktSumma,
-      ostatkaHajm, ostatkaSumma,
-      q.f2Hajm, q.f2Summa,
-      f2MumkinHajm, f2MumkinSumma,
-      q.razdel, q.vidRabot,
+      q.faktHajm, (q.obyomQiymat ?? 0) - q.faktHajm, q.f2Hajm, q.faktHajm - q.f2Hajm,
+      q.faktSumma, (q.summaQiymat ?? 0) - q.faktSumma, q.f2Summa, q.faktSumma - q.f2Summa,
       q.daraja,
     ]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
+
   for (const q of hisob) {
-    if (q.obyomFormula) ws[`G${q.row}`] = { t: 'n', f: q.obyomFormula, v: q.obyomQiymat ?? 0 };
-    if (q.summaFormula) ws[`I${q.row}`] = { t: 'n', f: q.summaFormula, v: q.summaQiymat ?? 0 };
-    // T1 haqiqiy formulasi: R(ОСТАТКА)=E(smeta)-Q(fakt), T(ОСТАТКА Ф2)=Q(fakt)-S(f2 olingan).
-    ws[`R${q.row}`] = { t: 'n', f: `G${q.row}-P${q.row}`, v: (q.obyomQiymat ?? 0) - q.faktHajm };
-    ws[`S${q.row}`] = { t: 'n', f: `I${q.row}-Q${q.row}`, v: (q.summaQiymat ?? 0) - q.faktSumma };
-    ws[`V${q.row}`] = { t: 'n', f: `P${q.row}-T${q.row}`, v: q.faktHajm - q.f2Hajm };
-    ws[`W${q.row}`] = { t: 'n', f: `Q${q.row}-U${q.row}`, v: q.faktSumma - q.f2Summa };
+    if (q.obyomFormula) ws[`F${q.row}`] = { t: 'n', f: q.obyomFormula, v: q.obyomQiymat ?? 0 };
+    if (q.summaFormula) ws[`H${q.row}`] = { t: 'n', f: q.summaFormula, v: q.summaQiymat ?? 0 };
+    // Kategoriya ustunlari — T1 dagidek H ga havola (faqat bargda).
+    if (LEAF_TUR.has(q.tur)) {
+      const ustun = KAT_USTUN[q.kat];
+      if (ustun) ws[`${ustun}${q.row}`] = { t: 'n', f: `$H${q.row}`, v: q.summaQiymat ?? 0 };
+    }
+    ws[`Q${q.row}`] = { t: 'n', f: `F${q.row}-P${q.row}`, v: (q.obyomQiymat ?? 0) - q.faktHajm };
+    ws[`S${q.row}`] = { t: 'n', f: `P${q.row}-R${q.row}`, v: q.faktHajm - q.f2Hajm };
+    ws[`U${q.row}`] = { t: 'n', f: `H${q.row}-T${q.row}`, v: (q.summaQiymat ?? 0) - q.faktSumma };
+    ws[`W${q.row}`] = { t: 'n', f: `T${q.row}-V${q.row}`, v: q.faktSumma - q.f2Summa };
   }
-  /* ЖАМИ qatori HAR BIR pul ustuni uchun -- egasi butun obyekt nazorat
-     ostidaligini bitta qatordan ko'rishi kerak. Hajm ustunlari
-     yig'ilmaydi: turli birliklarni (М3, ШТ, ЧЕЛ-Ч) qo'shish ma'nosiz. */
-  const jamiOstatka = jamiSumma - jamiFakt;
-  const jamiF2Mumkin = jamiFakt - jamiF2;
-  for (const [ustun, katak, qiymat] of [
-    ['I', 'I3', jamiSumma], ['Q', 'Q3', jamiFakt], ['S', 'S3', jamiOstatka],
-    ['U', 'U3', jamiF2], ['W', 'W3', jamiF2Mumkin],
-  ] as Array<[string, string, number]>) {
+
+  // ЖАМИ — har bir pul ustuni uchun (hajm ustunlari yig'ilmaydi: turli birlik).
+  for (const [ustun, qiymat] of [
+    ['H', jamiSumma], ['T', jamiFakt], ['U', jamiSumma - jamiFakt],
+    ['V', jamiF2], ['W', jamiFakt - jamiF2],
+  ] as Array<[string, number]>) {
     const f = lrvPlusJamiFormula(hisob, ustun);
-    if (f) ws[katak] = { t: 'n', f, v: qiymat };
+    if (f) ws[`${ustun}3`] = { t: 'n', f, v: qiymat };
   }
   if (hisob.length) {
     const c1 = hisob[0].row, c2 = hisob[hisob.length - 1].row;
-    for (const col of ['J', 'K', 'L', 'M', 'N', 'O']) ws[`${col}3`] = { t: 'n', f: `SUM(${col}${c1}:${col}${c2})`, v: 0 };
+    // Kategoriya ustunlari faqat barglarda to'ladi -> butun ustunni yig'ish xavfsiz.
+    for (const col of ['J', 'K', 'L', 'M', 'N', 'O']) {
+      ws[`${col}3`] = { t: 'n', f: `SUM(${col}${c1}:${col}${c2})`, v: 0 };
+    }
   }
 
-  // Rang: T1'ning CFG.RANG sxemasi — rz=sariq, bl=ko'k+oq shrift, mat=yashil.
+  // ── Uslub: chegara + qator turi rangi ──────────────────────────────
   for (const q of hisob) {
-    const style = RANG[q.tur as keyof typeof RANG];
-    if (!style) continue;
+    const rang = RANG[q.tur];
     for (let c = 0; c < NCOLS; c++) {
       const ref = XLSX.utils.encode_cell({ r: q.row - 1, c });
       const cell = ws[ref];
-      if (cell) cell.s = style;
+      if (!cell) continue;
+      cell.s = { border: chegara(c), ...(rang || {}) };
     }
   }
-  // Sarlavha va ЖАМИ qatorlarini ham ajratib ko'rsatish.
-  for (let c = 0; c < NCOLS; c++) {
-    const header = ws[XLSX.utils.encode_cell({ r: 1, c })];
-    if (header) header.s = { font: { bold: true }, fill: { patternType: 'solid', fgColor: { rgb: 'EFEFEF' } } };
-    const jami = ws[XLSX.utils.encode_cell({ r: 2, c })];
-    if (jami) jami.s = { font: { bold: true } };
+  for (const r of [1, 2]) { // sarlavha va ЖАМИ
+    for (let c = 0; c < NCOLS; c++) {
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if (!cell) continue;
+      cell.s = {
+        border: chegara(c),
+        font: { bold: true },
+        fill: { patternType: 'solid', fgColor: { rgb: r === 1 ? 'EFEFEF' : 'FFF2CC' } },
+        alignment: r === 1 ? { wrapText: true, vertical: 'center', horizontal: 'center' } : undefined,
+      };
+    }
   }
 
+  // ── Guruhlash: rz > bl > resurs (yig'iladigan qatorlar) ─────────────
+  const rowInfo: Array<{ level?: number; hpt?: number }> = [];
+  rowInfo[1] = { hpt: 30 }; // sarlavha balandroq (wrapText)
+  for (const q of hisob) rowInfo[q.row - 1] = { level: Math.min(q.daraja, 7) };
+  ws['!rows'] = rowInfo;
+
   ws['!cols'] = [
-    { wch: 5 }, { wch: 12 }, { wch: 42 }, { wch: 9 }, { wch: 6 }, { wch: 8 },
-    { wch: 11 }, { wch: 11 }, { wch: 13 },
-    { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 11 },
-    { wch: 11 }, { wch: 13 }, { wch: 11 }, { wch: 13 },
-    { wch: 11 }, { wch: 13 }, { wch: 13 }, { wch: 15 },
-    { wch: 22 }, { wch: 22 },
+    { wch: 5 }, { wch: 14 }, { wch: 46 }, { wch: 9 },
+    { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 },
+    { wch: 6 },
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+    { wch: 11 }, { wch: 12 }, { wch: 13 }, { wch: 15 },
+    { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
     { wch: 7, hidden: true },
   ];
+  ws['!autofilter'] = { ref: `A2:${XLSX.utils.encode_col(NCOLS - 1)}${3 + hisob.length}` };
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'LRV_PLUS');
