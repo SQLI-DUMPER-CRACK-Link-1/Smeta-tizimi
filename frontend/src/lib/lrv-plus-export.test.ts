@@ -279,3 +279,110 @@ describe('eksport ↔ qayta import halqasi', () => {
     expect(n2.xatolar[0].turi).toBe('DUBLIKAT_ID');
   });
 });
+
+/* Egasining tuzatishi (2026-09-09): «bu nakrutka qatorlari aslida lrv
+   plusda ham bo'lishi hisoblanishi kerak, bo'lmasa butun tizimda summalar
+   faqat primoy zatratda hisoblanib qoladi.» Kaskad `t2_nakrutka_hisobla_v1`
+   (supabase/migrations/20261014090000) bilan BAYT-BAYTIGA bir xil bo'lishi
+   qo'lda hisoblangan misol bilan tekshiriladi. */
+describe('Nakrutka kaskadi — t2_nakrutka_hisobla_v1 bilan bir xil formulalar', () => {
+  const KAT_DARAXT: T2Qator[] = [
+    qator({ id: 1, tartib: 1, tur: 'rz', daraja: 0, nom: 'Bo\'lim' }),
+    qator({ id: 2, tartib: 2, tur: 'mat', daraja: 1, ota_id: 1, kod: 'M1', nom: 'Chel', birlik: 'chel-ch', hajm: 1, narx: 100000, summa: 100000, kat: 'ЧЕЛ' }),
+    qator({ id: 3, tartib: 3, tur: 'mat', daraja: 1, ota_id: 1, kod: 'M2', nom: 'Mash', birlik: 'mash-ch', hajm: 1, narx: 50000, summa: 50000, kat: 'МАШ' }),
+    qator({ id: 4, tartib: 4, tur: 'mat', daraja: 1, ota_id: 1, kod: 'M3', nom: 'Mat', birlik: 'kg', hajm: 1, narx: 200000, summa: 200000, kat: 'МАТ' }),
+    qator({ id: 5, tartib: 5, tur: 'ob', daraja: 1, ota_id: 1, kod: 'M4', nom: 'Ob', birlik: 'dona', hajm: 1, narx: 80000, summa: 80000, kat: 'ОБ' }),
+    qator({ id: 6, tartib: 6, tur: 'mat', daraja: 1, ota_id: 1, kod: 'M5', nom: 'Kab', birlik: 'm', hajm: 1, narx: 20000, summa: 20000, kat: 'КАБ' }),
+    qator({ id: 7, tartib: 7, tur: 'mat', daraja: 1, ota_id: 1, kod: 'M6', nom: 'Mk', birlik: 'kg', hajm: 1, narx: 30000, summa: 30000, kat: 'М/К' }),
+  ];
+  const KOEF = {
+    ЗТР_СОЦСТРАХ: 0, ТРАНСПОРТ_МАТЕРИАЛ: 5, СКЛАДСКИЕ_МАТЕРИАЛ: 3, СКЛАДСКИЕ_МК: 2,
+    ТРАНСПОРТ_КАБЕЛЬ: 4, ПРОЧИЕ_ПОДРЯДЧИК: 10, ТРАНСПОРТ_ОБОРУД: 6, ЗАГОТ_СКЛАД_ОБОРУД: 1,
+    СТРАХОВАНИЕ: 0.5, РИСК: 0, НДС: 12,
+  };
+  // Qo'lda hisoblangan (SQL kaskadi bilan bir xil qadamlar):
+  // pryamye=480000; tr_mat=11500; skl_mat=7200; tr_kab=800;
+  // itogo1=419500; prochie=41950; itogo2=461450;
+  // tr_ob=4800; zag_ob=800; itogo3=547050;
+  // strax=2735.25; risk=0; itogo4=549785.25; nds=65974.23; vsego=615759.48
+
+  it('ЖАМИ (H3) endi TO\'G\'RI keshlangan qiymatga ega (avval 0 edi)', async () => {
+    const bytes = await lrvPlusFaylBaytlari(KAT_DARAXT, 'Nakrutka sinovi');
+    const XLSX = await import('xlsx-js-style');
+    const ws = XLSX.read(bytes, { type: 'array' }).Sheets['LRV_PLUS'];
+    expect(ws['J3'].v).toBe(100000); // ЧЕЛ
+    expect(ws['K3'].v).toBe(50000);  // МАШ
+    expect(ws['L3'].v).toBe(200000); // МАТ
+    expect(ws['M3'].v).toBe(80000);  // ОБ
+    expect(ws['N3'].v).toBe(20000);  // КАБ
+    expect(ws['O3'].v).toBe(30000);  // М/К
+  });
+
+  it('kaskad Excelning o\'zida ROUND bilan qayta hisoblanadigan formulalarga ega va keshlangan qiymatlar qo\'lda hisoblangan bilan mos', async () => {
+    const bytes = await lrvPlusFaylBaytlari(KAT_DARAXT, 'Nakrutka sinovi', undefined, { nakrutka: KOEF });
+    const XLSX = await import('xlsx-js-style');
+    const ws = XLSX.read(bytes, { type: 'array' }).Sheets['LRV_PLUS'];
+
+    // oxirgiMalumotQator = 3 + hisob.length (rz + 6 barg = 7 qator);
+    // nakrutka sarlavhasi shundan +2, jadval sarlavhasi +3, 1-ma'lumot qatori +4.
+    const oxirgiMalumot = 3 + 7;
+    const r0 = oxirgiMalumot + 4;
+    expect(ws[`F${r0}`].f).toContain('ROUND(');
+    expect(ws[`F${r0}`].v).toBe(480000);
+    expect(ws[`F${r0 + 5}`].v).toBe(419500);  // ИТОГО-1
+    expect(ws[`F${r0 + 7}`].v).toBe(461450);  // ИТОГО-2
+    expect(ws[`F${r0 + 10}`].v).toBe(547050); // ИТОГО-3
+    expect(ws[`F${r0 + 13}`].v).toBe(549785.25); // ИТОГО-4
+    expect(ws[`F${r0 + 15}`].v).toBe(615759.48); // ВСЕГО
+    expect(ws[`E${r0 + 14}`].v).toBe(12); // НДС foizi -- tahrirlanadigan literal
+  });
+
+  it('nakrutka berilmasa jadval umuman qo\'shilmaydi (o\'ylab topilgan son yo\'q)', async () => {
+    const bytes = await lrvPlusFaylBaytlari(KAT_DARAXT, 'Nakrutkasiz');
+    const XLSX = await import('xlsx-js-style');
+    const ws = XLSX.read(bytes, { type: 'array' }).Sheets['LRV_PLUS'];
+    const oxirgiMalumot = 3 + 7;
+    expect(ws[`B${oxirgiMalumot + 3}`]).toBeUndefined();
+  });
+});
+
+describe('Forma-2 rejimi — LRV_PLUS ning O ustunigacha bo\'lgan qismi bilan aynan bir xil', () => {
+  it('faqat A..O + ЗАМЕЧАНИЕ + yashirin Даража/КАЛИТ, sarlavha o\'zgaradi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Amfiteatr', HOLATLAR, {
+      rejim: 'forma2', davr: '2026-07', raqam: 'Ф2-07',
+    });
+    const XLSX = await import('xlsx-js-style');
+    const wb = XLSX.read(bytes, { type: 'array' });
+    expect(wb.SheetNames).toEqual(['FORMA_2']);
+    const ws = wb.Sheets['FORMA_2'];
+
+    expect(ws['A1'].v).toContain('ФОРМА-2');
+    expect(ws['A1'].v).toContain('Ф2-07');
+    expect(ws['A1'].v).toContain('2026-07');
+
+    // Ustun 15 (0-indeks) = ЗАМЕЧАНИЕ (P), keyin Даража (Q, yashirin), КАЛИТ (R, yashirin).
+    expect(ws['P2'].v).toBe('ЗАМЕЧАНИЕ');
+    expect(ws['Q2'].v).toBe('Даража');
+    expect(ws['R2'].v).toBe('КАЛИТ');
+
+    // FAKT/OSTATKA/F2 ustunlari (P..W to'liq rejimda) forma2 da YO'Q.
+    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR, 'Q');
+    const ishchi = h.find((r) => r.nom === 'Ishchi')!;
+    expect(ws[`H${ishchi.row}`].f).toContain('F'); // СУММА hali A..O ichida, bor
+    // Lekin to'liq rejimdagi FAKT sumasi ustuni (odatda T) forma2'da mavjud emas.
+    expect(ws[`T${ishchi.row}`]).toBeUndefined();
+  });
+
+  it('formulalar va ranglar LRV_PLUS bilan bir xil (guruhlash, SUMIF, T1 rang sxemasi)', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Amfiteatr', HOLATLAR, { rejim: 'forma2' });
+    const XLSX = await import('xlsx-js-style');
+    const ws = XLSX.read(bytes, { type: 'array' }).Sheets['FORMA_2'];
+    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR, 'Q');
+    const ishchi = h.find((r) => r.nom === 'Ishchi')!;
+    const bl = h.find((r) => r.tur === 'bl')!;
+    expect(ws[`F${ishchi.row}`].f).toBe(`E${ishchi.row}*F${bl.row}`);
+    expect(ws[`H${bl.row}`].f).toContain('SUMIF');
+    expect(ws[`H${bl.row}`].f).toContain('$Q$'); // forma2 rejimida yashirin Даража ustuni Q
+  });
+});
+

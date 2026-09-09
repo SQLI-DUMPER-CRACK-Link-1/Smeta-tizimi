@@ -9,8 +9,9 @@ import {
   sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur,
   yangiOperationId, type T2Obyekt, type T2Qator, type T2QatorHolat,
 } from '../../api/supabase';
-import { lrvPlusFaylBaytlari, lrvPlusYuklab } from '../../lib/lrv-plus-export';
+import { lrvPlusFaylBaytlari, lrvPlusYuklab, type LrvPlusRejim } from '../../lib/lrv-plus-export';
 import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
+import { t2ObyektNakrutka } from '../../api/t2-nakrutka';
 import type { TreeNode } from '../../api/types';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
 import SmetaYuklaNative from './SmetaYuklaNative';
@@ -78,17 +79,29 @@ export function HolatNative() {
   /* T2-LRV-PLUS-EXPORT-001: owner talabi -- T1'ning LRV_PLUS'idagi kabi,
    * lekin Excelning O'ZIDA ishlaydigan formula bilan: bl'ning ОБЪЁМини
    * o'zgartirsa, ostidagi resurslar va summalar Exceldagi SUMIF/formula
-   * orqali avtomatik qayta hisoblanadi -- ilovaga qaytmasdan ham. */
-  const excelgaYuklab = useCallback(async () => {
+   * orqali avtomatik qayta hisoblanadi -- ilovaga qaytmasdan ham.
+   *
+   * T2-LRV-PLUS-EXPORT-004: owner "bu nakrutka qatorlari aslida lrv
+   * plusda ham bo'lishi hisoblanishi kerak, bo'lmasa butun tizimda
+   * summalar faqat primoy zatratda hisoblanib qoladi" -- shuning uchun
+   * nakrutka koeffitsientlari HAR IKKI rejimda (`toliq`, `forma2`) ham
+   * so'raladi va kaskad jadvali qo'shiladi. Nakrutka o'qish muvaffaqiyatsiz
+   * bo'lsa (masalan shartnoma sozlanmagan) -- eksport BLOKLANMAYDI, faqat
+   * kaskad jadvalisiz chiqadi (best-effort, hujjatning o'zi muhimroq). */
+  const eksportQil = useCallback(async (rejim: LrvPlusRejim) => {
     if (!selected || !daraxtXom.length) return;
     setEksportBolmoqda(true);
     try {
-      const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom);
-      lrvPlusYuklab(bytes, selected.nom);
+      const nakr = await t2ObyektNakrutka(obyektId).catch(() => null);
+      const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom, {
+        rejim,
+        nakrutka: nakr?.ok ? nakr.koeffitsientlar : undefined,
+      });
+      lrvPlusYuklab(bytes, selected.nom + (rejim === 'forma2' ? '_FORMA2' : ''));
     } catch {
       setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom]);
+  }, [selected, daraxtXom, holatXom, obyektId]);
 
   useEffect(() => { void yuklash(); }, [yuklash]);
 
@@ -141,13 +154,18 @@ export function HolatNative() {
             </select>
           </label>
           <button onClick={() => void yuklash()} disabled={!validId || loading} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40"><RefreshCw size={14} /> Yangilash</button>
-          {validId && tree.length > 0 && (
-            <button onClick={() => void excelgaYuklab()} disabled={eksportBolmoqda}
-              title="Excel'da: bl ОБЪЁМини o'zgartirsangiz, resurslar va summalar formula orqali avtomatik qayta hisoblanadi"
+          {validId && tree.length > 0 && (<>
+            <button onClick={() => void eksportQil('toliq')} disabled={eksportBolmoqda}
+              title="Excel'da: bl ОБЪЁМини o'zgartirsangiz, resurslar va summalar formula orqali avtomatik qayta hisoblanadi. Nakrutka kaskadi ham qo'shiladi."
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
-              <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Excel (formula bilan)'}
+              <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'LRV Excel'}
             </button>
-          )}
+            <button onClick={() => void eksportQil('forma2')} disabled={eksportBolmoqda}
+              title="Forma-2 -- LRV'ning O ustunigacha bo'lgan qismi + nakrutka kaskadi. Buyurtmachiga tasdiqlash uchun yuboriladigan shakl."
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
+              <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Forma-2 Excel'}
+            </button>
+          </>)}
           {validId && <button onClick={() => navigate(`/admin/fakt?obyekt=${obyektId}`)} className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white">Fakt kiritish</button>}
         </section>
 
