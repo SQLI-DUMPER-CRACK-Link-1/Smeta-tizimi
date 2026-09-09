@@ -1,3 +1,24 @@
+# 2026-09-09 — T2 PTO audit, F2 zanjiri va agent liniyasi
+
+Ushbu addendum quyidagi eski yozuvlardan ustun bo'lgan eng so'nggi o'lchangan
+holat. Avvalgilar tarixiy dalil sifatida saqlanadi.
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `12a96296e008d43619fa3e60bfbf54344b4ac68f` |
+| `main_sha_izoh` | Addendum commit qilingach bir commitga orqada qoladi — bu normal. |
+| `f2_chain` | **Kodda tuzatildi, jonli rollback bilan isbotlandi.** `exactWrite` narxi nol qator uchrasa BUTUN F2 faylini rad etardi; haqiqiy faylda 1054 qatordan 164 tasi narxsiz (`000003` МАШИНИСТОВ obyekt 6 da 782/782 = 100 % narxsiz — bu qoida, buzuq ma'lumot emas), ulardan 159 tasi allaqachon moslashgan edi. Natijada 2 ta import (06.09, 08.09) `review` da qotgan va `t2_akt_qator` butun bazada **0 qator**. Tuzatish `da26170`. |
+| `f2_rollback_proof` | Jonli bazada `raise exception` bilan majburiy rollback: 1020 qator yozildi, akt summasi **1 633 694 097.50**, read-modeldagi barglar summasi aynan shu, **farq 0.00**; 79 manfiy (storno) qator saqlandi; nol hajmli-lekin-summali (fantom pul) qator 0. Bazaga hech narsa yozilmadi. |
+| `f2_real_import` | **APPROVAL_REQUIRED** — haqiqiy import productionga 1.63 mlrd so'mlik hujjat yozadi. Bajarilmadi. |
+| `unauth_endpoints` | **Tuzatildi (`edc3977`).** `/api/payment` (auth/signature/replay/reconciliationSIZ moliyaviy RPC, frontendda 0 chaqiruvchi) va `/api/upload` (auth yo'q, klient bergan `kompaniya_id` R2 kalitiga tozalanmasdan, o'lcham/MIME/overwrite himoyasi yo'q, ustiga bog'lanmagan `R2_ARCHIVE` ga yozardi — ya'ni allaqachon buzuq) o'chirildi. `uploadFayl` kanonik `/api/hujjat-yukla` ga o'tkazildi. |
+| `lrv_export` | `frontend/src/lib/lrv-plus-export.ts` — ustun tartibi haqiqiy T1 LRV_PLUS bilan bir xil (ТИП **I** da, kategoriyalar J..O `=$H{qator}` formulasi), A..H qalin chegara, rz/bl/resurs Excel outline bilan **guruhlanadi**, РАЗДЕЛ/ВИД РАБОТ olib tashlandi. Har qatorda FAKT/OSTATKA/F2 OLINGAN/F2 MUMKIN. Egasi 2026-09-09 da sinab ko'rib tasdiqladi. Yopilmagan 7 band `docs/audit/T2_PTO_CLOSURE_AUDIT_2026-09-09.md` da. |
+| `agent_comms` | **`docs/governance/AGENT_COMMS_PROTOCOL.md` endi `main` da (v2).** Ilgari u faqat `codex/agent-comms-protocol-v1` branchida turardi (branch 52k qator orqada — merge qilinmadi, hujjat ko'chirildi). v2: Hermes roli + §11 ko'p mashina qoidasi (noutbuk va ishxona PC yagona liniya = git remote; push qilinmagan ish — aloqa emas; har mailbox fayli agent VA mashinani nomlaydi; bitta task — bitta mashina). `ops/mailbox/INBOX.md` yaratildi. |
+| `active_task_HERM_001` | `HERM-001` — Hermes uchun PTO yopish (6 ta ish paketi), branch `hermes/t2-pto-closure-v1`, `owns` ataylab tor, `machine` hali bo'sh. Topshiriq: `docs/ai/HERMES_T2_PTO_TOPSHIRIQ_2026-09-09.md`. |
+| `pto_audit` | `docs/audit/T2_PTO_CLOSURE_AUDIT_2026-09-09.md` — Bosqich 0 gap matrix. Ochiq: `PTOWorkspaceContext` **yo'q**, targeted re-import **yo'q**, cross-tenant negative testlar **yo'q**, schema bootstrap testi **UNPROVEN**, `didox-webhook` to'qilgan son qaytaradi. |
+| `missing_authority_docs` | `docs/product/PTO_TARGET_STATE.md`, `docs/product/PTO_ACCEPTANCE_MATRIX.md`, `docs/audit/HERMES_FULL_SYSTEM_AUDIT_2026_09.md` — topshiriq ularga murojaat qiladi, repoda **yo'q**. |
+| `verification` | `tsc -b` exit 0 · `tsc -p tsconfig.functions.json` exit 0 · Vitest **377/377** · `tekshir` PASS · `build` PASS · `lint` **0 error** (161 warning, eskidan) · `governance-check` PASS (31 task). |
+| `authenticated_smoke` | Hamon **UNPROVEN** — egasining haqiqiy sessiyasi kerak; agent parol/cookie so'ramaydi. |
+
 # 2026-09-07 — T2 safe release reconciliation: amaldagi holat
 
 Quyidagi addendum oldingi yozuvlarni tarixiy dalil sifatida saqlagan holda
