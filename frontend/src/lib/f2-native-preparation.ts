@@ -1,7 +1,14 @@
 /** Native F2 tayyorlash: faqat kanonik Fakt qoldig'i + hujjatning aniq qiymatlari. */
 export type F2NativeCandidate = {
   qatorId: number;
+  /** Chegara — FAKTdan olinadi: fakt − allaqachon olingan F2. */
   f2Mumkin: number;
+  /** Smeta hajmi. Berilsa, smetadan oshgan qism uchun OGOHLANTIRISH beriladi
+   *  (bloklamaydi). Egasining qoidasi: smeta 10 m³, fakt 12 m³ bo'lsa
+   *  Forma-2 ham 12 bo'lishi mumkin — faqat 2 m³ uchun ogohlantirish. */
+  smetaHajm?: number;
+  /** Shu qator bo'yicha ilgari olingan F2 (kumulyativ ogohlantirish uchun). */
+  f2Olingan?: number;
 };
 
 export type F2NativeInput = {
@@ -15,8 +22,11 @@ export type F2NativeInput = {
 
 export type F2NativeIssue = {
   qatorId: number;
-  code: 'QTY_INVALID' | 'QTY_EXCEEDS_FAKT' | 'SOURCE_REQUIRED' | 'PRICE_REQUIRED' | 'AMOUNT_REQUIRED' | 'ARITHMETIC_MISMATCH';
+  code: 'QTY_INVALID' | 'QTY_EXCEEDS_FAKT' | 'SOURCE_REQUIRED' | 'PRICE_REQUIRED' | 'AMOUNT_REQUIRED'
+    | 'ARITHMETIC_MISMATCH' | 'QTY_EXCEEDS_SMETA';
   blocking: boolean;
+  /** `QTY_EXCEEDS_SMETA` uchun — smetadan qancha oshgani (ogohlantirishda ko'rsatiladi). */
+  oshiq?: number;
 };
 
 export type F2NativePayloadRow = {
@@ -41,6 +51,7 @@ const numberOrUndefined = (value: string) => {
  */
 export function f2NativePayloadQur(inputs: F2NativeInput[], candidates: F2NativeCandidate[]) {
   const limits = new Map(candidates.map((candidate) => [candidate.qatorId, candidate.f2Mumkin]));
+  const nomzod = new Map(candidates.map((candidate) => [candidate.qatorId, candidate]));
   const qatorlar: F2NativePayloadRow[] = [];
   const issues: F2NativeIssue[] = [];
   for (const input of inputs) {
@@ -56,6 +67,18 @@ export function f2NativePayloadQur(inputs: F2NativeInput[], candidates: F2Native
     if (!input.priceIntentionallyAbsent && Math.abs(quantity * unitPrice! - amount!) > 0.005) {
       // Bu analitik istisno: hujjat summasi aynan o'z holicha saqlanadi.
       issues.push({ qatorId: input.qatorId, code: 'ARITHMETIC_MISMATCH', blocking: false });
+    }
+    /* Smetadan oshgan hajm — BLOKLAMAYDI. Egasining qoidasi: smeta 10 m³,
+       fakt 12 m³ bo'lsa Forma-2 ham 12 bo'lishi mumkin, lekin 2 m³ uchun
+       ogohlantirish chiqadi. Chegara FAKTdan olinadi (yuqorida), smeta esa
+       faqat ogohlantirish uchun. Ilgari olingan F2 ham qo'shib hisoblanadi. */
+    const nz = nomzod.get(input.qatorId);
+    if (nz?.smetaHajm != null) {
+      const jami = quantity + (nz.f2Olingan ?? 0);
+      const oshiq = jami - nz.smetaHajm;
+      if (oshiq > 1e-9) {
+        issues.push({ qatorId: input.qatorId, code: 'QTY_EXCEEDS_SMETA', blocking: false, oshiq });
+      }
     }
     qatorlar.push({
       qatorId: input.qatorId,

@@ -22,6 +22,8 @@
     "exceljs": "^4.4.0",
     "framer-motion": "^12.43.0",
     "idb-keyval": "^6.3.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.27.0",
     "pdf-parse": "^2.4.5",
