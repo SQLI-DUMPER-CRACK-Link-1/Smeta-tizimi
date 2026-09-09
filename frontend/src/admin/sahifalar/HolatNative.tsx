@@ -7,7 +7,7 @@ import { FmtN } from '../../lib/format';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
 import {
   sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur,
-  yangiOperationId, type T2Obyekt, type T2Qator,
+  yangiOperationId, type T2Obyekt, type T2Qator, type T2QatorHolat,
 } from '../../api/supabase';
 import { lrvPlusFaylBaytlari, lrvPlusYuklab } from '../../lib/lrv-plus-export';
 import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
@@ -29,6 +29,9 @@ export function HolatNative() {
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [daraxtXom, setDaraxtXom] = useState<T2Qator[]>([]);
+  /* Eksport FAKT/OSTATKA/F2 ustunlarini shundan oladi -- daraxt qurish
+     uchun allaqachon o'qilyapti, qayta so'rov yo'q. */
+  const [holatXom, setHolatXom] = useState<T2QatorHolat[]>([]);
   const [priceControlLines, setPriceControlLines] = useState<PriceControlLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -59,15 +62,16 @@ export function HolatNative() {
       ]);
       if (!daraxt.ok || !holat.ok) {
         setError(daraxt.error || holat.error || 'Kanonik LRV o‘qilmadi.');
-        setTree([]); setDaraxtXom([]);
+        setTree([]); setDaraxtXom([]); setHolatXom([]);
         return;
       }
       setTree(sbT2TreeQur(daraxt.qatorlar || [], holat.qatorlar || []));
       setDaraxtXom(daraxt.qatorlar || []);
+      setHolatXom(holat.qatorlar || []);
       setPriceControlLines(nazorat.ok ? nazorat.qatorlar : []);
     } catch {
       setError('Kanonik LRV o‘qilmadi. Tarmoq yoki ruxsatni tekshiring.');
-      setTree([]); setDaraxtXom([]);
+      setTree([]); setDaraxtXom([]); setHolatXom([]);
     } finally { setLoading(false); }
   }, [obyektId, validId]);
 
@@ -79,12 +83,12 @@ export function HolatNative() {
     if (!selected || !daraxtXom.length) return;
     setEksportBolmoqda(true);
     try {
-      const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom);
+      const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom);
       lrvPlusYuklab(bytes, selected.nom);
     } catch {
       setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom]);
+  }, [selected, daraxtXom, holatXom]);
 
   useEffect(() => { void yuklash(); }, [yuklash]);
 
