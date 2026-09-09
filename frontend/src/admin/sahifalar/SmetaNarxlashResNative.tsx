@@ -1,12 +1,96 @@
 import { useEffect, useRef, useState } from 'react';
-import { readXlsx, type XlsxWorkbook } from '../../lib/f2-import-parse';
-import { resNarxlashPreview, resQatorlariniOl, resVaraqlariniTop, type ResNarx, type ResPreview } from '../../lib/res-narxlash';
+import { readXlsx, type SheetGrid, type XlsxWorkbook } from '../../lib/f2-import-parse';
+import { resNarxlashPreview, resQatorlariniOl, resVaraqlariniTop, type ResNarx, type ResPreview, type ResUstunlar } from '../../lib/res-narxlash';
 import { sbT2SmetaNarxlaRes } from '../../api/t2-smeta-narxlash';
 import { yangiOperationId, sbT2DaraxtOl, sbT2ObyektlarOlKomp, type T2Obyekt, type T2Qator } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+/** 0 -> A, 25 -> Z, 26 -> AA — Exceldagi ustun harfi. */
+function ustunHarfi(i: number): string {
+  let s = '';
+  for (let n = i; n >= 0; n = Math.floor(n / 26) - 1) s = String.fromCharCode(65 + (n % 26)) + s;
+  return s;
+}
+
+const USTUN_YORLIQ: Array<[keyof ResUstunlar, string, string]> = [
+  ['kod', 'КОД', 'bg-info/15 text-info'],
+  ['nom', 'НАИМЕНОВАНИЕ', 'bg-ok/15 text-ok'],
+  ['birlik', 'ЕД.ИЗМ.', 'bg-warn/15 text-warn'],
+  ['narx', 'НАРХ', 'bg-accent/15 text-accent'],
+];
+
+/**
+ * Egasi (2026-09-09): «res va lrv yuklanganda belgilangan sahifadan biroz
+ * ko'rsatilishi kerak, ustunlarni tushunib aniqlashtirish uchun».
+ *
+ * Ilgari faqat SONLAR ko'rinardi (nechta narx topildi) — operator qaysi
+ * ustun nima deb tanilganini KO'RMASDAN «tasdiqlab narxlash»ni bosardi.
+ * Ustun bittaga surilgan bo'lsa, butun narxlash noto'g'ri ketardi va buni
+ * faqat keyin bilib olinardi.
+ */
+function VaraqKorinishi({ nom, rows, cols }: { nom: string; rows: SheetGrid; cols: ResUstunlar }) {
+  const belgi = new Map<number, [string, string]>();
+  for (const [kalit, yorliq, rang] of USTUN_YORLIQ) {
+    const i = cols[kalit];
+    if (typeof i === 'number' && i >= 0) belgi.set(i, [yorliq, rang]);
+  }
+  const bosh = Math.max(0, cols.sarlavha);
+  const korinish = rows.slice(bosh, bosh + 7);
+  if (!korinish.length) return null;
+  const ustunSoni = Math.min(14, Math.max(...korinish.map((r) => r.length), 0));
+  const idx = Array.from({ length: ustunSoni }, (_, i) => i);
+
+  return (
+    <div className="karta p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[12px] font-semibold text-text">«{nom}» — tanilgan ustunlar</p>
+        <p className="text-[11px] text-text-mute">{bosh + 1}-qatordan boshlab, dastlabki {korinish.length} qator</p>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {USTUN_YORLIQ.map(([kalit, yorliq, rang]) => {
+          const i = cols[kalit];
+          const bor = typeof i === 'number' && i >= 0;
+          return (
+            <span key={yorliq} className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${bor ? rang : 'bg-danger/15 text-danger'}`}>
+              {yorliq}: {bor ? ustunHarfi(i as number) : 'topilmadi'}
+            </span>
+          );
+        })}
+      </div>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full border-collapse text-[11px]">
+          <thead>
+            <tr>
+              {idx.map((i) => {
+                const b = belgi.get(i);
+                return (
+                  <th key={i} className={`border border-border px-1.5 py-1 text-left font-semibold ${b ? b[1] : 'text-text-mute'}`}>
+                    {ustunHarfi(i)}{b ? ` · ${b[0]}` : ''}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {korinish.map((r, ri) => (
+              <tr key={ri}>
+                {idx.map((i) => (
+                  <td key={i} className={`max-w-[220px] truncate border border-border/60 px-1.5 py-1 ${belgi.has(i) ? 'font-medium text-text' : 'text-text-dim'}`}
+                    title={String(r[i] ?? '')}>
+                    {String(r[i] ?? '')}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectId?: number }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
@@ -122,6 +206,13 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
         ))}
       </div>
     </div>}
+
+    {/* Varaqning O'ZI — operator ustun moslashuvini ko'z bilan tasdiqlashi
+        uchun. Faqat TANLANGAN varaqlar ko'rsatiladi. */}
+    {book && topilgan.filter((x) => tanlanganVaraqlar.includes(x.nom)).map((x) => {
+      const sheet = book.sheet(x.nom);
+      return sheet ? <VaraqKorinishi key={x.nom} nom={x.nom} rows={sheet.rows} cols={x.cols} /> : null;
+    })}
 
     {/* Oldindan ko'rish — yozishdan OLDIN ko'riladigan yagona joy,
         shuning uchun raqamlar matn ichida emas, alohida kartochkalarda. */}
