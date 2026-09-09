@@ -98,8 +98,24 @@ Har biri jonli (production) ma'lumotda tekshirilgan va `main`ga push qilingan.
 
 ## 2. HOZIR OCHIQ (HAL QILINMAGAN) MUAMMOLAR
 
-### 2.0 ⭐ F2 ni oxirigacha yurgizish — HALI TEKSHIRILMAGAN
-- 1.8-banddagi to'siq olib tashlandi, lekin **jonli import hali qaytadan yurgizilmadi**. `t2_akt_qator` hozircha hamon 0 qator. Bu tasdiqlanmaguncha FAKT/F2 ustunlari real ma'lumot bilan to'lmaydi.
+### 2.0 ⭐ F2 ni oxirigacha yurgizish — ZANJIR TEKSHIRILDI, EGASINING TASDIG'I KUTILMOQDA
+
+**Jonli bazada, orqaga qaytariladigan tranzaksiyada (`rollback`) uchidan-uchiga tekshirildi** — qotib qolgan haqiqiy qoralamaning (job 2, obyekt 6 «Amfiteatr») o'zi bilan. Bazada hech narsa o'zgarmadi.
+
+| Tekshiruv | Natija |
+|---|---|
+| Payload | 1020 qator, shundan **159 tasi narxsiz** |
+| `t2_akt_yarat_v2` javobi | `ok: true` — ilgari bu chaqiruvgacha ham yetib borilmasdi |
+| `t2_akt_qator` | **1020 qator** yozildi, jami `certified_amount` = **1 633 694 097.50** |
+| Narxsiz qatorlar | **159 tasi** `provenance_status='price_intentionally_absent'` bilan (hajm bor, pul yo'q) |
+| Read-model (`t2_qator_holat`, faqat barglar) | 1020 qator, jami `f2_summa` = **1 633 694 097.50** |
+| **Kirgan = tushdi farqi** | **0.00** ✅ |
+| Manfiy (storno) qatorlar | 79 tasi saqlandi, jim tashlanmadi |
+| Nol hajm — lekin summasi bor (fantom pul) | 0 ✅ |
+
+Ya'ni zanjir **butunlay ishlaydi**: qoralama → `t2_akt` → `t2_akt_qator` → `t2_qator_holat` → LRVdagi FAKT/F2 ustunlari, tiyinigacha aniq.
+
+**⛔ QOLGAN YAGONA QADAM — EGASINING TASDIG'I:** haqiqiy (rollback'siz) importni bajarish 1.63 mlrd so'mlik moliyaviy hujjatni productionga yozadi. Bu topshiriqdagi «hard safety boundary» ostiga tushadi, shuning uchun avtomatik bajarilmadi. Egasi tasdiqlasa — F2 import ekranidan qaytadan yurgizilsa yetarli (kod tuzatilgan), yoki shu payload bilan RPC to'g'ridan-to'g'ri chaqiriladi.
 - Shuningdek `t2_akt` da bitta g'alati yozuv bor: `id=19`, `tur='f2'`, `holat='tasdiqlangan'` (26.08 da yaratilgan) — lekin **ichida bironta qator yo'q**. Tasdiqlangan, lekin bo'sh hujjat. Buni alohida ko'rib chiqish kerak.
 
 ### 2.1 ~~ENG SO'NGGI TALAB~~ — LRV_PLUS Excel eksporti (1.9-bandda BAJARILDI, egasi ko'rib chiqmoqda)
