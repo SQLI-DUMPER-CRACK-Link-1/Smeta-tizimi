@@ -225,3 +225,57 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
     });
   });
 });
+
+/* Egasi (2026-09-09): «qatorlarda id lar foydalanilsa, f2 zamechaniya va
+   o'zgarishlar bilan tasdiqlanganidan keyin import uchun osonlashardi» —
+   va uning xavfi: «o'sha id bilan ko'chirilib boshqa obyom berilishi mumkin».
+   Quyida EKSPORT → TAHRIR → QAYTA IMPORT halqasi haqiqiy fayl ustida. */
+describe('eksport ↔ qayta import halqasi', () => {
+  it('yashirin КАЛИТ har qatorga yoziladi va yashirilgan', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Halqa', HOLATLAR);
+    const XLSX = await import('xlsx-js-style');
+    const ws = XLSX.read(bytes, { type: 'array' }).Sheets['LRV_PLUS'];
+    const { lrvKalitOqi } = await import('./lrv-qayta-import');
+    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR);
+    const ishchi = h.find((r) => r.nom === 'Ishchi')!;
+    const kalit = lrvKalitOqi(ws[`Y${ishchi.row}`]?.v);
+    expect(kalit?.id).toBe(3);                       // kanonik t2_qator.id
+    // КАЛИТ ustuni yashirin — haqiqiy fayl XML'idan tekshiriladi
+    const wb2 = XLSX.read(bytes, { type: 'array', bookFiles: true });
+    const e = (wb2 as unknown as { files: Record<string, { content: Uint8Array | string }> }).files['xl/worksheets/sheet1.xml'];
+    const xml = typeof e.content === 'string' ? e.content : new TextDecoder().decode(Uint8Array.from(e.content));
+    expect(xml).toMatch(/<col[^>]*min="25"[^>]*hidden="true"/);
+  });
+
+  it('faylni tahrirlab qaytarish: hajm o\'zgarsa qabul, nusxalansa RAD', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Halqa', HOLATLAR);
+    const XLSX = await import('xlsx-js-style');
+    const ws = XLSX.read(bytes, { type: 'array' }).Sheets['LRV_PLUS'];
+    const { lrvQaytaImportTekshir } = await import('./lrv-qayta-import');
+
+    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR);
+    const kanonik = DARAXT.map((q) => ({ id: q.id, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', hajm: q.hajm }));
+    const oqi = (r: number) => ({
+      satr: r,
+      kalit: String(ws[`Y${r}`]?.v ?? ''),
+      kod: String(ws[`B${r}`]?.v ?? ''),
+      nom: String(ws[`C${r}`]?.v ?? ''),
+      birlik: String(ws[`D${r}`]?.v ?? ''),
+      hajm: Number(ws[`F${r}`]?.v ?? 0),
+    });
+
+    // 1) Buyurtmachi bitta qator hajmini o'zgartirdi -> QABUL
+    const ishchi = h.find((r) => r.nom === 'Ishchi')!;
+    const oddiy = h.map((r) => oqi(r.row));
+    oddiy[h.indexOf(ishchi)].hajm = 12;
+    const n1 = lrvQaytaImportTekshir(oddiy, kanonik);
+    expect(n1.ok).toBe(true);
+    expect(n1.mos.find((m) => m.id === 3)?.ozgardi).toBe(true);
+
+    // 2) O'sha qator nusxalanib, boshqa hajm berildi -> RAD
+    const nusxa = [...oddiy, { ...oqi(ishchi.row), satr: 99, hajm: 999 }];
+    const n2 = lrvQaytaImportTekshir(nusxa, kanonik);
+    expect(n2.ok).toBe(false);
+    expect(n2.xatolar[0].turi).toBe('DUBLIKAT_ID');
+  });
+});

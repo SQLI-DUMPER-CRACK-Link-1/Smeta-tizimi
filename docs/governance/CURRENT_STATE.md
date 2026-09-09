@@ -5,7 +5,7 @@ holat. Avvalgilar tarixiy dalil sifatida saqlanadi.
 
 | Field | Current value |
 |---|---|
-| `main_sha` | `12a96296e008d43619fa3e60bfbf54344b4ac68f` |
+| `main_sha` | `be800d0dfeb356521284a614ae1d09764a28353d` |
 | `main_sha_izoh` | Addendum commit qilingach bir commitga orqada qoladi — bu normal. |
 | `f2_chain` | **Kodda tuzatildi, jonli rollback bilan isbotlandi.** `exactWrite` narxi nol qator uchrasa BUTUN F2 faylini rad etardi; haqiqiy faylda 1054 qatordan 164 tasi narxsiz (`000003` МАШИНИСТОВ obyekt 6 da 782/782 = 100 % narxsiz — bu qoida, buzuq ma'lumot emas), ulardan 159 tasi allaqachon moslashgan edi. Natijada 2 ta import (06.09, 08.09) `review` da qotgan va `t2_akt_qator` butun bazada **0 qator**. Tuzatish `da26170`. |
 | `f2_rollback_proof` | Jonli bazada `raise exception` bilan majburiy rollback: 1020 qator yozildi, akt summasi **1 633 694 097.50**, read-modeldagi barglar summasi aynan shu, **farq 0.00**; 79 manfiy (storno) qator saqlandi; nol hajmli-lekin-summali (fantom pul) qator 0. Bazaga hech narsa yozilmadi. |

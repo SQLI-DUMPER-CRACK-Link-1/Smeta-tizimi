@@ -37,8 +37,36 @@
  * rangini/chegarasini UMUMAN qo'llab-quvvatlamaydi (Pro xususiyat).
  */
 import type { T2Qator, T2QatorHolat } from '../api/supabase';
+import type { NakrutkaKaskad } from '../api/t2-nakrutka';
+import { lrvKalitYoz } from './lrv-qayta-import';
+
+/**
+ * `toliq` — butun LRV_PLUS (A..W + yashirin Даража).
+ * `forma2` — egasining talabi (2026-09-09): «forma 2 xuddi lrv plusni O
+ * ustunigacha bo'lgan qismi bilan bir xil bo'lishi shart, faqat sarlavha
+ * o'zgaradi va tagida nakrutkalarni hisoblangan jadvali qo'shilishi kerak.
+ * qolgan hammasi — formuladan tortib shakl-shamoyilgacha — LRV_PLUS bilan
+ * bir xil.» Ya'ni bu ALOHIDA hujjat emas, LRV_PLUSning O gacha kesilgani.
+ */
+export type LrvPlusRejim = 'toliq' | 'forma2';
+
+export type LrvPlusOptions = {
+  rejim?: LrvPlusRejim;
+  /** Sarlavha matni. Berilmasa — obyekt nomi (LRV_PLUS odatiy holati). */
+  sarlavha?: string;
+  davr?: string;
+  raqam?: string;
+  buyurtmachi?: string;
+  pudratchi?: string;
+  /** Berilsa, ma'lumot qatorlari ostiga nakrutka kaskadi jadvali qo'shiladi. */
+  nakrutka?: NakrutkaKaskad;
+};
 
 export interface LrvPlusQator {
+  /** Kanonik `t2_qator.id` — fayl qaytib kelganda ANIQ moslashtirish uchun.
+   *  Kod bo'yicha moslashtirib bo'lmaydi: `000001` bitta obyektda 852 marta
+   *  uchraydi. Faylga yashirin ustun sifatida yoziladi. */
+  id: number;
   /** 1-indeksli chiqish (sheet) qatori. */
   row: number;
   no: number;
@@ -74,7 +102,13 @@ const KAT_USTUN: Record<string, string> = {
 };
 const KAT_TARTIB = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'];
 
-export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): LrvPlusQator[] {
+/** Yashirin Даража ustuni har doim OXIRGI ustun: to'liq rejimda `X`,
+ *  Forma-2 (O gacha kesilgan) rejimda `P`. SUMIF shu ustunga tayanadi. */
+export const LRV_DARAJA_USTUN: Record<LrvPlusRejim, string> = { toliq: 'X', forma2: 'Q' };
+
+export function lrvPlusQatorlarniHisobla(
+  qatorlar: T2Qator[], holatlar?: T2QatorHolat[], darajaUstun = 'X',
+): LrvPlusQator[] {
   const rows = [...qatorlar].sort((a, b) => (a.tartib ?? 0) - (b.tartib ?? 0));
   const DATA_START = 4; // 1: obyekt nomi, 2: sarlavhalar, 3: ЖАМИ, 4+: ma'lumot
 
@@ -128,12 +162,12 @@ export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2Qator
       summaQiymat = (obyomQiymat ?? 0) * (narx ?? 0);
     } else if (OTA_TUR.has(tur)) {
       const sp = span.get(q.id);
-      if (sp) summaFormula = `SUMIF($X$${sp.c1}:$X$${sp.c2},${daraja + 1},$H$${sp.c1}:$H$${sp.c2})`;
+      if (sp) summaFormula = `SUMIF($${darajaUstun}$${sp.c1}:$${darajaUstun}$${sp.c2},${daraja + 1},$H$${sp.c1}:$H$${sp.c2})`;
       else summaQiymat = 0;
     }
 
     out.push({
-      row: r, no: i + 1, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', tur,
+      id: q.id, row: r, no: i + 1, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', tur,
       kat: q.kat ?? '', birlikHajm, obyomFormula, obyomQiymat, narx, summaFormula, summaQiymat,
       faktHajm: h ? h.fakt_hajm : 0, faktSumma: h ? h.fakt_summa : 0,
       f2Hajm: h ? h.f2_hajm : 0, f2Summa: h ? h.f2_summa : 0,
@@ -158,10 +192,10 @@ export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2Qator
 
 /** Ildiz (daraja=0) qatorlar yig'indisi — ular allaqachon butun naslning
  *  jami qiymati, shuning uchun ikki marta sanalmaydi. */
-export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string): string | null {
+export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string, darajaUstun = 'X'): string | null {
   if (!qatorlar.length) return null;
   const c1 = qatorlar[0].row, c2 = qatorlar[qatorlar.length - 1].row;
-  return `SUMIF($X$${c1}:$X$${c2},0,$${ustun}$${c1}:$${ustun}$${c2})`;
+  return `SUMIF($${darajaUstun}$${c1}:$${darajaUstun}$${c2},0,$${ustun}$${c1}:$${ustun}$${c2})`;
 }
 
 export const LRV_PLUS_USTUNLAR = [
@@ -169,8 +203,31 @@ export const LRV_PLUS_USTUNLAR = [
   'ТИП', 'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К',
   'ФАКТ ҳажм', 'ОСТАТКА ҳажм', 'F2 ОЛИНГАН ҳажм', 'F2 ОЛИНИШИ МУМКИН ҳажм',
   'ФАКТ сумма', 'ОСТАТКА сумма', 'F2 ОЛИНГАН сумма', 'F2 ОЛИНИШИ МУМКИН сумма',
-  'Даража',
+  'Даража', 'КАЛИТ',
 ] as const;
+
+/** Forma-2: A..O — LRV_PLUS bilan AYNAN bir xil; keyin hujjatning o'z
+ *  ustunlari. `ЗАМЕЧАНИЕ` — buyurtmachi qo'lda yozadigan ustun; `Даража` va
+ *  `ID` yashirin (`ID` qaytib kelgan faylni aniq moslashtirish uchun). */
+export const LRV_FORMA2_USTUNLAR = [
+  ...LRV_PLUS_USTUNLAR.slice(0, 15), 'ЗАМЕЧАНИЕ', 'Даража', 'КАЛИТ',
+] as const;
+
+/** Fayl qaysi obyekt/davrga tegishli ekanini mashina o'qiy oladigan belgi —
+ *  tahrirlangan fayl BOSHQA obyektga import qilinib ketmasligi uchun. */
+export const LRV_BELGI_PREFIKS = 'T2-LRV/';
+export function lrvBelgiYoz(obyektId: number, davr: string, rejim: LrvPlusRejim): string {
+  return `${LRV_BELGI_PREFIKS}${rejim};obyekt=${obyektId};davr=${davr || '-'};v=1`;
+}
+export function lrvBelgiOqi(matn: unknown): { rejim: string; obyektId: number; davr: string } | null {
+  const s = String(matn ?? '');
+  if (!s.startsWith(LRV_BELGI_PREFIKS)) return null;
+  const q = s.slice(LRV_BELGI_PREFIKS.length);
+  const rejim = q.split(';')[0] || '';
+  const obyekt = Number(/obyekt=(\d+)/.exec(q)?.[1] ?? NaN);
+  const davr = /davr=([^;]*)/.exec(q)?.[1] ?? '';
+  return Number.isFinite(obyekt) ? { rejim, obyektId: obyekt, davr } : null;
+}
 
 /** «H gacha» — egasi uchun eng muhim zona; chegarasi qalinroq. */
 const ASOSIY_ZONA_OXIRI = 7; // 0-indeks: A..H
@@ -224,6 +281,9 @@ export async function lrvPlusFaylBaytlari(
       q.faktHajm, (q.obyomQiymat ?? 0) - q.faktHajm, q.f2Hajm, q.faktHajm - q.f2Hajm,
       q.faktSumma, (q.summaQiymat ?? 0) - q.faktSumma, q.f2Summa, q.faktSumma - q.f2Summa,
       q.daraja,
+      // Yashirin himoyalangan kalit: `<id>:<barmoq izi>`. Tasdiqlashdan
+      // qaytgan faylni ANIQ moslashtirish uchun (`lrv-qayta-import.ts`).
+      lrvKalitYoz(q.id, q.kod, q.nom, q.birlik),
     ]);
   }
 
@@ -295,7 +355,8 @@ export async function lrvPlusFaylBaytlari(
     { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
     { wch: 11 }, { wch: 12 }, { wch: 13 }, { wch: 15 },
     { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
-    { wch: 7, hidden: true },
+    { wch: 7, hidden: true },   // Даража
+    { wch: 18, hidden: true },  // КАЛИТ
   ];
   ws['!autofilter'] = { ref: `A2:${XLSX.utils.encode_col(NCOLS - 1)}${3 + hisob.length}` };
 
