@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Database, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Database, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
 import {
   sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur,
-  yangiOperationId, type T2Obyekt,
+  yangiOperationId, type T2Obyekt, type T2Qator,
 } from '../../api/supabase';
+import { lrvPlusFaylBaytlari, lrvPlusYuklab } from '../../lib/lrv-plus-export';
 import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
 import type { TreeNode } from '../../api/types';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
@@ -27,10 +28,12 @@ export function HolatNative() {
   const { joriy } = useKompaniya();
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [tree, setTree] = useState<TreeNode[]>([]);
+  const [daraxtXom, setDaraxtXom] = useState<T2Qator[]>([]);
   const [priceControlLines, setPriceControlLines] = useState<PriceControlLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [ochiqPanel, setOchiqPanel] = useState<string | null>(null);
+  const [eksportBolmoqda, setEksportBolmoqda] = useState(false);
 
   const obyektId = Number(id);
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
@@ -56,16 +59,32 @@ export function HolatNative() {
       ]);
       if (!daraxt.ok || !holat.ok) {
         setError(daraxt.error || holat.error || 'Kanonik LRV o‘qilmadi.');
-        setTree([]);
+        setTree([]); setDaraxtXom([]);
         return;
       }
       setTree(sbT2TreeQur(daraxt.qatorlar || [], holat.qatorlar || []));
+      setDaraxtXom(daraxt.qatorlar || []);
       setPriceControlLines(nazorat.ok ? nazorat.qatorlar : []);
     } catch {
       setError('Kanonik LRV o‘qilmadi. Tarmoq yoki ruxsatni tekshiring.');
-      setTree([]);
+      setTree([]); setDaraxtXom([]);
     } finally { setLoading(false); }
   }, [obyektId, validId]);
+
+  /* T2-LRV-PLUS-EXPORT-001: owner talabi -- T1'ning LRV_PLUS'idagi kabi,
+   * lekin Excelning O'ZIDA ishlaydigan formula bilan: bl'ning ОБЪЁМини
+   * o'zgartirsa, ostidagi resurslar va summalar Exceldagi SUMIF/formula
+   * orqali avtomatik qayta hisoblanadi -- ilovaga qaytmasdan ham. */
+  const excelgaYuklab = useCallback(async () => {
+    if (!selected || !daraxtXom.length) return;
+    setEksportBolmoqda(true);
+    try {
+      const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom);
+      lrvPlusYuklab(bytes, selected.nom);
+    } catch {
+      setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
+    } finally { setEksportBolmoqda(false); }
+  }, [selected, daraxtXom]);
 
   useEffect(() => { void yuklash(); }, [yuklash]);
 
@@ -118,6 +137,13 @@ export function HolatNative() {
             </select>
           </label>
           <button onClick={() => void yuklash()} disabled={!validId || loading} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40"><RefreshCw size={14} /> Yangilash</button>
+          {validId && tree.length > 0 && (
+            <button onClick={() => void excelgaYuklab()} disabled={eksportBolmoqda}
+              title="Excel'da: bl ОБЪЁМини o'zgartirsangiz, resurslar va summalar formula orqali avtomatik qayta hisoblanadi"
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
+              <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Excel (formula bilan)'}
+            </button>
+          )}
           {validId && <button onClick={() => navigate(`/admin/fakt?obyekt=${obyektId}`)} className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white">Fakt kiritish</button>}
         </section>
 
