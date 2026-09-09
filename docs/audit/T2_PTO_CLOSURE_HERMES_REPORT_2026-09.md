@@ -4,7 +4,8 @@
 **Date:** 2026-09-10
 **Branch:** `hermes/t2-pto-closure-v1`
 **Worktree:** `C:\Temp\GAS-t2-pto-closure-v1`
-**HEAD:** `55ce1c0f28f264984c4a7ecd197c8c393527618d`
+**Pre-commit merge tree:** `55ce1c0f28f264984c4a7ecd197c8c393527618d`
+**Source checkpoint commit:** `327909ec85a88d7ff4a5ae8134979074ed43a617`
 **Base:** `origin/main` at `6ebae58914fce627539aa4fcecc2461ec188c5a3`
 **Production write:** `false`
 
