@@ -70,9 +70,39 @@ Har biri jonli (production) ma'lumotda tekshirilgan va `main`ga push qilingan.
 
 ---
 
+### 1.8 T2-F2-IMPORT-NARXSIZ-BLOK-001 — ⚠️ ENG KATTA TOPILMA: F2 zanjiri UMUMAN ishlamayotgan edi
+- **Qanday topildi:** LRV eksportiga FAKT/F2 ustunlarini qo'shayotib, bazani tekshirdim — butun bazada FAKT va F2 **mutlaqo nol** (36 654 qatorning hammasida). Sabab read-model emas: `t2_akt_qator` jadvali **butunlay bo'sh**.
+- **Ildiz sabab:** `F2ImportNative.tsx`dagi `exactWrite` funksiyasi bitta ham narxi nol/yo'q qator uchrasa BUTUN faylni rad etardi:
+  ```js
+  if (nodes.some(n => n.narx == null || n.narx <= 0 || n.summa == null || n.summa === 0)) throw ...
+  ```
+- **Nega bu halokatli:** haqiqiy Amfiteatr F2 faylida 1054 qatordan **164 tasi** aynan shunday, va ular **buzuq emas**:
+  - `000003` ЗАТРАТЫ ТРУДА МАШИНИСТОВ — obyektdagi **782 tadan 782 tasi (100 %) narxsiz**. Bu qoida: mashinist soati mashina narxi ichida, alohida puli yo'q. (Taqqoslang: `000001` ЗАТРАТЫ ТРУДА РАБОЧИХ — 852/852 = 100 % **narxlangan**.)
+  - `009219` ВОДА, `035567` ОЧЕС ЛЬНЯНОЙ, `064848` — hammasi smetada ham narxsiz.
+  - Bu 164 tadan **159 tasi allaqachon moslashgan** edi — ya'ni operator 34 ta noaniq qatorni qo'lda hal qilsa ham tugma o'lik qolaverardi. Faylni **hech qachon** yozib bo'lmasdi.
+- **Oqibati (jonli izlar):** `t2_f2_import_job` da 2 ta ish — 06.09 (obyekt 6, 1.63 mlrd so'm) va 08.09 (obyekt 56, 1.75 mlrd so'm) — ikkalasi ham `status='running'`, `cursor.phase='review'`, `completed_at=null`. Ya'ni ikki marta oxirigacha borib, jim to'xtab qolgan.
+- **Tuzatish:** to'siq olib tashlandi. To'g'ri yo'l ALLAQACHON qurilgan va testlar bilan qoplangan edi: `f2ExactPayloadQur` narxsiz qatorga `priceIntentionallyAbsent: true` qo'yadi, `t2_akt_yarat_v2` esa uni `provenance_status='price_intentionally_absent'` bilan yozadi (hajm yoziladi, pul yozilmaydi). Ya'ni to'siq o'zi chaqiradigan kontraktga zid edi.
+- **Himoyalar KUCHAYTIRILDI, kamaytirilmadi:**
+  - `AMOUNT_WITHOUT_PRICE` — summasi bor-u birlik narxi yo'q qator endi aniq to'xtatiladi (RPC uni `null` qilib **pulni yo'qotardi**).
+  - Qisman summa — bir smeta qatoriga birlashgan bo'laklarning birida pul bo'lmasa, yig'indi buni yashirmasin (hajm hammasidan qo'shiladi, pul esa emas). `summasizBolak` sanaladi → `NEEDS_REVIEW`. **Bu regressiyani mavjud test tutdi.**
+- Commit: `da26170`
+- **⚠️ Hermes/egasi uchun keyingi qadam:** endi F2 importini qaytadan yurgizib ko'rish kerak. Qolgan 34 ta noaniq qator — bular yangi ish EMAS, balki kodi smetada juda ko'p marta uchraydigan (`000001` 852 marta, `000762` 408 marta) resurslar, ya'ni ko'p nomzodli qatorlar; ular workbench'da qo'lda bog'lanadi.
+
+### 1.9 T2-LRV-PLUS-EXPORT-002 — LRV_PLUS eksporti haqiqiy tuzilishga keltirildi
+- v1 atigi 9 ustunli MVP edi. Endi **26 ustun**, haqiqiy T1 fayl tartibida, T1 rang sxemasi bilan (rz sariq, bl ko'k+oq shrift, mat yashil), va HAR BIR qatorda FAKT / OSTATKA / F2 ОЛИНГАН / F2 ОЛИНИШИ МУМКИН.
+- Excelning O'ZIDA jonli formulalar (T1 naqshi): `ОБЪЁМ(rs)=НОРМА×ОБЪЁМ(bl)`, `СУММА=ОБЪЁМ×ЦЕНА`, bl/rz uchun SUMIF, `ОСТАТКА=SMETA−ФАКТ`, `ОСТАТКА Ф2=ФАКТ−ЗАБРАН`.
+- Rang uchun `xlsx-js-style` qo'shildi — oddiy SheetJS Community yozishda katak rangini **umuman** qo'llab-quvvatlamaydi (Pro xususiyat).
+- Commit: `cb5075e`
+
+---
+
 ## 2. HOZIR OCHIQ (HAL QILINMAGAN) MUAMMOLAR
 
-### 2.1 ⭐ ENG SO'NGGI TALAB — LRV_PLUS Excel eksporti haqiqiy Tizim-1 tuzilishiga mos EMAS
+### 2.0 ⭐ F2 ni oxirigacha yurgizish — HALI TEKSHIRILMAGAN
+- 1.8-banddagi to'siq olib tashlandi, lekin **jonli import hali qaytadan yurgizilmadi**. `t2_akt_qator` hozircha hamon 0 qator. Bu tasdiqlanmaguncha FAKT/F2 ustunlari real ma'lumot bilan to'lmaydi.
+- Shuningdek `t2_akt` da bitta g'alati yozuv bor: `id=19`, `tur='f2'`, `holat='tasdiqlangan'` (26.08 da yaratilgan) — lekin **ichida bironta qator yo'q**. Tasdiqlangan, lekin bo'sh hujjat. Buni alohida ko'rib chiqish kerak.
+
+### 2.1 ~~ENG SO'NGGI TALAB~~ — LRV_PLUS Excel eksporti (1.9-bandda BAJARILDI, egasi ko'rib chiqmoqda)
 - **Egasining so'zi (aynan):** "San qilib bergan tizim umuman unaqa ishlamayapdi jigar" — keyin aniq talab: smeta strukturasi shaklida, narxlangan F2 kiritilgan, butun obyektni to'liq nazorat qilinayotganini ko'rsatadigan, **LRV kabi ranglangan dizayndagi** hujjat kerak. **Har bir qatorda** aniq qiymat: FAKT, SMETA, OSTATKA, F2 OLINGAN, F2 OLINISHI MUMKIN.
 - **Holat:** ishlanmoqda, TUGALLANMAGAN.
   - Tadqiqot bosqichi tugallangan: real Tizim-1 LRV_PLUS fayli (Google Drive'dan) yuklab olinib, ustunlar/formulalar bayt darajasida o'rganilgan (36 ustun, rz/bl/rs/mat kaskad formulalari, oylik F2 ustunlari, rang sxemasi: rz=sariq, bl=ko'k+oq shrift, mat=yashil).
