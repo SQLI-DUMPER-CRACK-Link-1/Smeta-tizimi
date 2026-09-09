@@ -895,22 +895,11 @@ export function sbFakturaYoz(item: T2Faktura) {
   });
 }
 
-/* ⚠️ 2026-08-27 (Claude): avval haqiqatda YUKLAMASDAN `ok:true` va
- * SOXTA URL qaytarardi (`r2.milliy-os.uz` — mavjud bo'lmagan domen).
- * Hech kim chaqirmasdi hozircha, lekin fake-success stub qoldirish
- * xavfli — chaqirilganda "muvaffaqiyatli" deb yolg'on ko'rsatardi.
- * Endi HAQIQIY `/api/upload` (R2) ga yuklaydi. */
-export async function sbFakturaFaylYoz(file: File, faktura_id: number): Promise<{ok: boolean, url?: string, error?: string}> {
-  const formData = new FormData();
-  formData.append('fayl', file);
-  formData.append('rfq_id', 'faktura-' + faktura_id);
-  try {
-    const res = await fetch('/api/upload', { method: 'POST', body: formData });
-    return await res.json();
-  } catch (e: any) {
-    return { ok: false, error: 'Tarmoq: ' + (e?.message || String(e)) };
-  }
-}
+/* T2-PTO-P0A-UNAUTH-ENDPOINTS-001: `sbFakturaFaylYoz` shu yerdan olib
+ * tashlandi. U authsiz `/api/upload` ga yozardi (endpoint o'chirildi) va
+ * butun kodda birorta chaqiruvchisi yo'q edi. Faktura fayli kerak bo'lsa
+ * kanonik `/api/hujjat-yukla` yo'li ishlatilsin (`t2-hujjat.ts`
+ * `uploadFayl` kabi) — u a'zolikni tekshiradi va hash bilan yozadi. */
 
 // --- SPRAVOCHNIK (Ish turlari va Shaxsiy smetalar) ---
 

@@ -1,4 +1,4 @@
-import { yozAmali, sbOqi } from './supabase';
+import { yozAmali, sbOqi, yangiOperationId } from './supabase';
 
 /* ⚠️ 2026-08-27 (Claude): «Arxiv (R2)» sahifasi avval obyektga UMUMAN
  * bog'lanmagan edi — bitta fayl yuklab, xom URL ko'rsatardi, ro'yxat
@@ -34,23 +34,42 @@ export function sbHujjatOchir(id: number) {
   return yozAmali({ amal: 'hujjat_ochir', id });
 }
 
-/* ⚡ 2026-08-27 (Claude, foydalanuvchi ko'rsatmasi — "DUAL-STORAGE"):
- * fayl endi R2 ichida `Kompaniya_ID/Obyekt_ID/Hujjat_turi/asl_nom.ext`
- * manzilida saqlanadi (tartibli, obyektga bog'liq — avval tasodifiy
- * nom bilan tartibsiz tushardi). */
+/**
+ * T2-PTO-P0A-UNAUTH-ENDPOINTS-001 — avval bu funksiya `/api/upload` ga
+ * yozardi. O'sha endpoint:
+ *   - sessiyani UMUMAN tekshirmasdi (anonim yuklash mumkin edi);
+ *   - `kompaniya_id`/`obyekt_id` ni KLIENTdan olib, R2 kalitiga
+ *     tozalamasdan qo'yardi (boshqa kompaniya papkasiga chiqish mumkin edi);
+ *   - o'lcham/MIME chegarasi, overwrite himoyasi, hash va auditsiz edi;
+ *   - ustiga `R2_ARCHIVE` bindingiga murojaat qilardi, u esa
+ *     `wrangler.toml` da yo'q — ya'ni amalda allaqachon BUZUQ edi.
+ * Endpoint o'chirildi; endi kanonik `/api/hujjat-yukla` ishlatiladi:
+ * server actorni sessiyadan oladi, a'zolikni tekshiradi, R2 kalitini
+ * O'ZI yasaydi, sha256 ni tasdiqlaydi, ikki fazali reserve→put→finalize.
+ *
+ * Kanonik bucket PRIVATE — public URL yo'q; shuning uchun `url` sifatida
+ * ruxsat tekshiradigan yuklab olish yo'li qaytariladi.
+ */
 export async function uploadFayl(
   file: File,
-  ctx?: { kompaniyaId: number; obyektId: number; turi: 'loyiha' | 'hujjat' }
-) {
+  ctx: { kompaniyaId: number; obyektId: number; turi: 'loyiha' | 'hujjat' }
+): Promise<{ ok: boolean; url?: string; document_id?: number; error?: string }> {
+  const hash = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  const sha256 = Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
+
   const formData = new FormData();
   formData.append('fayl', file);
-  if (ctx) {
-    formData.append('kompaniya_id', String(ctx.kompaniyaId));
-    formData.append('obyekt_id', String(ctx.obyektId));
-    formData.append('turi', ctx.turi);
-  }
-  const res = await fetch('/api/upload', { method: 'POST', body: formData });
-  return await res.json();
+  formData.append('kompaniya_id', String(ctx.kompaniyaId));
+  formData.append('obyekt_id', String(ctx.obyektId));
+  formData.append('turi', ctx.turi);
+  formData.append('operation_id', yangiOperationId());
+  formData.append('sha256', sha256);
+  formData.append('size', String(file.size));
+
+  const res = await fetch('/api/hujjat-yukla', { method: 'POST', body: formData });
+  const j = await res.json().catch(() => null);
+  if (!j || j.ok !== true) return { ok: false, error: (j && (j.xato || j.code)) || 'Fayl yuklanmadi' };
+  return { ok: true, document_id: j.document_id, url: '/api/hujjat-ol?id=' + j.document_id };
 }
 
 /** Fayl base64 sifatida o'qiladi — Drive'ga nusxa yuborish uchun. */

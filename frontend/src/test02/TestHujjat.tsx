@@ -57,7 +57,7 @@ export default function TestHujjat() {
     try {
       /* 1) R2 — asosiy nusxa, tartibli manzilda: kompaniya/obyekt/turi/asl_nom */
       const yuk = await uploadFayl(fayl, { kompaniyaId: joriy.id, obyektId, turi });
-      if (!yuk.ok) { toast('Fayl yuklanmadi: ' + (yuk.error || ''), 'danger'); setYozilmoqda(false); return; }
+      if (!yuk.ok || !yuk.url) { toast('Fayl yuklanmadi: ' + (yuk.error || ''), 'danger'); setYozilmoqda(false); return; }
 
       const r = await sbHujjatYoz({ obyektId, turi, nom: fayl.name, url: yuk.url, izoh: izoh || undefined });
       if (!r.ok) { toast('Saqlanmadi: ' + (r.error || ''), 'danger'); setYozilmoqda(false); return; }
