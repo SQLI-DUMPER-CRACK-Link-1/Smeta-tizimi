@@ -23,7 +23,7 @@ describe('F2 kanonik manba kontrakti', () => {
   });
   it('parserdagi nol o‘rniga asl bo‘sh katakni taniydi', () => {
     const rows = sourceLeaves([{ ...n, type: 'mat' }], [[10, '', '']], { kod: -1, nom: -1, bir: -1, norma: -1, obyom: 0, narx: 1, sum: 2 });
-    expect(rows[0]).toEqual({ uid: 'f2_0', hajm: 10, narx: undefined, summa: undefined });
+    expect(rows[0]).toEqual({ uid: 'f2_0', hajm: 10, narx: undefined, summa: undefined, tur: 'mat' });
   });
   it('noto‘liq raqam matnini narx deb qabul qilmaydi', () => {
     const rows = sourceLeaves([{ ...n, type: 'mat' }], [[10, '123abc', 1234.49]], { kod: -1, nom: -1, bir: -1, norma: -1, obyom: 0, narx: 1, sum: 2 });

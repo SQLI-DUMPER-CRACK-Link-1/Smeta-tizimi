@@ -22,6 +22,12 @@ export type F2ExactManbaTugun = {
   narx: number | null | undefined;
   /** F2 faylning o'z SUMMA ustunidan (hajm*narx dan EMAS) */
   summa: number | null | undefined;
+  /** T2-F2-IMPORT-TUR-CASCADE-001: asl qator turi (rz/bl/rs/mat/ob) --
+   *  resumable qoralama orqali tiklanganda ham rs/ob/mat vizual farqi
+   *  yo'qolmasligi uchun (`F2TwoPaneWorkbench`ning `flatSourceNodes`
+   *  fallback'i shu maydonga tayanadi). Eski (bu maydon qo'shilishidan
+   *  oldingi) qoralamalarda undefined bo'lishi mumkin. */
+  tur?: string;
 };
 
 export type F2ExactQator = {

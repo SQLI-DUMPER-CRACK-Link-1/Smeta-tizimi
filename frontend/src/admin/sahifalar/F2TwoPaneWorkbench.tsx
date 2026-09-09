@@ -51,11 +51,23 @@ export interface F2TwoPaneWorkbenchProps {
 
 function nom(n: string | undefined, fallback: string) { return n && n.trim() ? n : fallback; }
 
+const REAL_TUR = new Set<Tur>(['rz', 'bl', 'rs', 'mat', 'ob']);
+
 /** Fallback: build a flat, unnested pseudo-tree from sourceFlat when the real
  *  hierarchy isn't available (e.g. a resumed session -- the draft only
- *  persisted flat leaves, not the original file's rz/bl grouping). */
-function flatSourceNodes(flat: F2ExactManbaTugun[], labels: Map<string, string>): AktNode[] {
-  return flat.map(n => ({ uid: n.uid, type: 'rs' as const, nom: labels.get(n.uid) || n.uid, hajm: n.hajm, narx: n.narx ?? undefined, summa: n.summa ?? undefined }));
+ *  persisted flat leaves, not the original file's rz/bl grouping).
+ *
+ * T2-F2-IMPORT-TUR-CASCADE-001: haqiqiy hodisa -- avval bu yerda HAMMA
+ * qator majburan 'rs' deb belgilanardi, shuning uchun tiklangan
+ * sessiyada rs/mat/ob (masalan jihoz, ⚙️) vizual farqi yo'qolib qolardi.
+ * Endi qoralamada saqlangan haqiqiy `tur` ishlatiladi; faqat ESKI (bu
+ * maydon qo'shilishidan oldin saqlangan) qoralamalarda `tur` yo'q --
+ * o'shandagina 'rs'ga qaytiladi. */
+export function flatSourceNodes(flat: F2ExactManbaTugun[], labels: Map<string, string>): AktNode[] {
+  return flat.map(n => ({
+    uid: n.uid, type: (n.tur && REAL_TUR.has(n.tur as Tur) ? n.tur as Tur : 'rs'),
+    nom: labels.get(n.uid) || n.uid, hajm: n.hajm, narx: n.narx ?? undefined, summa: n.summa ?? undefined,
+  }));
 }
 
 export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {

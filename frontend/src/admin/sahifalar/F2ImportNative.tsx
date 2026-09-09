@@ -33,13 +33,13 @@ type Resumable = { jobId: number; matched: number; total: number | null; updated
  *  original faylga qaytish shart emas. Dastlabki sessiyada esa fayl avval
  *  canonical R2 registry'ga yoziladi; resume mavjud jobning saqlangan
  *  source_document_id bog'lanishiga tayanadi. */
-function draftdanTiklash(qatorlar: { uid: string; hajm: number | null; narx: number | null; summa: number | null; lrv_row: number | null; kod: string | null }[]) {
+function draftdanTiklash(qatorlar: { uid: string; hajm: number | null; narx: number | null; summa: number | null; lrv_row: number | null; kod: string | null; tur?: string | null }[]) {
   const source: F2ExactManbaTugun[] = [];
   const mapping = new Map<string, number>();
   const labels = new Map<string, string>();
   for (const q of qatorlar) {
     if (q.hajm == null) continue; // hal_qilinmagan/otkazib_yuborildi -- moslashmagan, exactWrite baribir rad etadi
-    source.push({ uid: q.uid, hajm: q.hajm, narx: q.narx, summa: q.summa });
+    source.push({ uid: q.uid, hajm: q.hajm, narx: q.narx, summa: q.summa, tur: q.tur ?? undefined });
     if (q.lrv_row != null) mapping.set(q.uid, q.lrv_row);
     labels.set(q.uid, (q.kod || q.uid) + ' (davom ettirilgan sessiya)');
   }
@@ -69,7 +69,7 @@ export function sourceLeaves(tree: AktNode[], grid: SheetGrid, cols: F2ColumnCon
     if (!raw) throw new Error('Manba qator topilmadi.');
     const qty = son(raw[cols.obyom] == null || String(raw[cols.obyom]).trim() === '' ? raw[cols.norma] : raw[cols.obyom]);
     if (qty === undefined) throw new Error('Hujjat hajmi noaniq. Ustunlarni tekshiring.');
-    out.push({ uid: n.uid, hajm: qty, narx: son(raw[cols.narx]), summa: son(raw[cols.sum]) });
+    out.push({ uid: n.uid, hajm: qty, narx: son(raw[cols.narx]), summa: son(raw[cols.sum]), tur: n.type });
   }
   return out;
 }
@@ -340,7 +340,7 @@ function NativeSession({ companyId }: { companyId: number }) {
             uid: n.uid,
             holat: bindings.has(n.uid) ? 'avto_moslashti' : 'hal_qilinmagan',
             lrvRow: bindings.get(n.uid), kod: (names.get(n.uid) || '').split(' ')[0] || undefined,
-            hajm: n.hajm, narx: n.narx ?? undefined, summa: n.summa ?? undefined,
+            hajm: n.hajm, narx: n.narx ?? undefined, summa: n.summa ?? undefined, tur: n.tur,
           })),
         });
         if (!d.ok) throw new Error(d.error || d.code || 'qoralama saqlanmadi');

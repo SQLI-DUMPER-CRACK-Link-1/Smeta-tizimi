@@ -675,7 +675,11 @@ export type T2F2ImportDraftHolat = 'avto_moslashti' | 'qolda_moslashtirildi' | '
 export type T2F2ImportDraftQator = {
   uid: string; holat: T2F2ImportDraftHolat; lrv_varaq: string | null; lrv_row: number | null;
   kod: string | null; hajm: number | null; narx: number | null; summa: number | null;
-  sabab: string | null; versiya: number; yangilandi: string;
+  sabab: string | null;
+  /** T2-F2-IMPORT-TUR-CASCADE-001: asl qator turi (rz/bl/rs/mat/ob) --
+   *  eski (bu maydon qo'shilishidan oldingi) qoralamalarda null. */
+  tur: string | null;
+  versiya: number; yangilandi: string;
 };
 
 /** Bir chaqiruvda eng ko'p 5000 qator (RPC o'zi shuni majburlaydi) — kattaroq to'plam chaqiruvchi tomonidan bo'laklarga bo'linadi. */
@@ -684,7 +688,7 @@ export function sbT2F2ImportDraftSaqla(p: {
   qatorlar: Array<{
     uid: string; holat: T2F2ImportDraftHolat; expectedVersiya?: number;
     lrvVaraq?: string; lrvRow?: number; kod?: string;
-    hajm?: number; narx?: number; summa?: number; sabab?: string;
+    hajm?: number; narx?: number; summa?: number; sabab?: string; tur?: string;
   }>;
 }): Promise<{ ok: boolean; error?: string; code?: string; job_id?: number; saqlandi?: number }> {
   return yozAmali({
@@ -693,6 +697,7 @@ export function sbT2F2ImportDraftSaqla(p: {
       uid: q.uid, holat: q.holat, expected_versiya: q.expectedVersiya,
       lrv_varaq: q.lrvVaraq ?? null, lrv_row: q.lrvRow ?? null, kod: q.kod ?? null,
       hajm: q.hajm ?? null, narx: q.narx ?? null, summa: q.summa ?? null, sabab: q.sabab ?? null,
+      tur: q.tur ?? null,
     })),
   });
 }
