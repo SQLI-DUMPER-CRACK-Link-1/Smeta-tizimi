@@ -3,6 +3,8 @@ import { gas } from './client';
 import { navbatgaQoshish } from '../_shared/navbat';
 import { yangiUid } from '../_shared/idempotent';
 import { t2AiFakturaParse } from './t2-ai';
+import { sbT2ObyektlarOlKomp } from './supabase';
+import { useKompaniya } from '../umumiy/kontekst/KompaniyaKontekst';
 import type {
   BossData, TreeNode, PapkaObyekt, Edit, BlQosh, RsQosh,
   Shartnoma, SkladQoldiq, ApiLogYozuv, Tolov,
@@ -118,10 +120,67 @@ export function useNavbatToxtat() {
   });
 }
 
+/**
+ * ⚠️ T2-LEGACY-DRIVE-SCAN-COMPANY-LEAK-001 (haqiqiy hodisa, owner:
+ * "butun tizimdagi ... smetalar ro'yxati chiqib ketdi"): `apiPapkaSkan`
+ * (GAS) BUTUN (bitta, umumiy) Drive ROOT papkasini skanerlaydi -- unda
+ * kompaniya tushunchasi UMUMAN yo'q (`PapkaObyekt`da `kompaniya`
+ * maydoni ham yo'q). GAS backend BARCHA kompaniyalar uchun BITTA
+ * umumiy deployment/Drive'ga ega, shuning uchun bu chaqiruv sukut
+ * bo'yicha BOSHQA kompaniyalarning obyektlarini ham qaytaradi --
+ * eski (Tizim_1) sahifalarning barchasi (Obyektlar/Holat/Narxlar/
+ * Hujjatlar/F2Tayyorlash va h.k, `useObyektlar` orqali) shu ro'yxatni
+ * ko'rsatardi.
+ *
+ * Tuzatish: GAS javobi kanonik (Supabase, haqiqiy kompaniya-scoped)
+ * `t2_obyekt` nomlar ro'yxatiga qarshi FILTRLANADI. Kompaniya konteksti
+ * hali aniqlanmagan bo'lsa -- BO'SH ro'yxat (fail-closed): boshqa
+ * kompaniya ma'lumoti hech qachon "sukut bo'yicha" ko'rinmasin.
+ */
+/** Sof funksiya (testlanadigan) -- GAS'ning umumiy, kompaniyasiz Drive
+ *  skanini kanonik (Supabase, haqiqiy kompaniya-scoped) obyekt nomlariga
+ *  qarshi filtrlaydi. Nom solishtirish trim+lowercase bilan (Drive papka
+ *  nomi va `t2_obyekt.nom` bir xil bo'lishi kutiladi, lekin registr/bo'sh
+ *  joy farqiga chidamli bo'lishi kerak). */
+export function filtrlaKompaniyaObyektlari(
+  skan: PapkaObyekt[], kanonikNomlar: Array<{ nom: string | null }>,
+): PapkaObyekt[] {
+  const ruxsat = new Set(
+    kanonikNomlar.map((o) => (o.nom || '').trim().toLowerCase()).filter(Boolean),
+  );
+  return skan.filter((p) => ruxsat.has((p.obyekt || '').trim().toLowerCase()));
+}
+
+/**
+ * ⚠️ T2-LEGACY-DRIVE-SCAN-COMPANY-LEAK-001 (haqiqiy hodisa, owner:
+ * "butun tizimdagi ... smetalar ro'yxati chiqib ketdi"): `apiPapkaSkan`
+ * (GAS) BUTUN (bitta, umumiy) Drive ROOT papkasini skanerlaydi -- unda
+ * kompaniya tushunchasi UMUMAN yo'q (`PapkaObyekt`da `kompaniya`
+ * maydoni ham yo'q). GAS backend BARCHA kompaniyalar uchun BITTA
+ * umumiy deployment/Drive'ga ega, shuning uchun bu chaqiruv sukut
+ * bo'yicha BOSHQA kompaniyalarning obyektlarini ham qaytaradi --
+ * eski (Tizim_1) sahifalarning barchasi (Obyektlar/Holat/Narxlar/
+ * Hujjatlar/F2Tayyorlash va h.k, `useObyektlar` orqali) shu ro'yxatni
+ * ko'rsatardi.
+ *
+ * Tuzatish: GAS javobi kanonik (Supabase, haqiqiy kompaniya-scoped)
+ * `t2_obyekt` nomlar ro'yxatiga qarshi FILTRLANADI. Kompaniya konteksti
+ * hali aniqlanmagan bo'lsa -- BO'SH ro'yxat (fail-closed): boshqa
+ * kompaniya ma'lumoti hech qachon "sukut bo'yicha" ko'rinmasin.
+ */
 export function useObyektlar() {
+  const { joriy } = useKompaniya();
+  const kompaniyaId = joriy?.id;
   return useQuery({
-    queryKey: ['obyektlar'],
-    queryFn: () => gas<PapkaObyekt[]>('apiPapkaSkan'),
+    queryKey: ['obyektlar', kompaniyaId],
+    queryFn: async () => {
+      const [skan, kanonik] = await Promise.all([
+        gas<PapkaObyekt[]>('apiPapkaSkan'),
+        kompaniyaId ? sbT2ObyektlarOlKomp(kompaniyaId) : Promise.resolve({ ok: true as const, qatorlar: [] }),
+      ]);
+      return filtrlaKompaniyaObyektlari(skan, kanonik.ok ? (kanonik.qatorlar || []) : []);
+    },
+    enabled: !!kompaniyaId,
     staleTime: 10 * 60 * 1000, // 10 minutes cache as requested
   });
 }
