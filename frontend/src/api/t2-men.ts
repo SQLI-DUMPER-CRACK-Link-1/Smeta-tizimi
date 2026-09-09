@@ -152,6 +152,45 @@ export type MemberRemoveInput = { azolik_id: number; operation_id?: string };
  *  GAS'ning eski _XODIMLAR varag'ida ham yo'q. */
 export type MemberPasswordSetInput = { kompaniya_id: number; foydalanuvchi_id: number; yangi_parol: string; operation_id?: string };
 
+/**
+ * T2-RUXSAT-QOSHIMCHA-001: a'zoning rolini o'zgartirmasdan, unga
+ * qo'shimcha (rolining qattiq to'plamidan tashqari) ruxsat berish/olib
+ * tashlash. ⚠️ Bu FAQAT `t2_effective_authorization_v1` orqali o'tadigan
+ * tekshiruvlarga (hozircha ko'pchilik yozish RPC'lari emas) ta'sir
+ * qiladi — UI shuni ochiq ko'rsatishi kerak.
+ */
+export type QoshimchaRuxsat =
+  | 'company.read' | 'company.profile.update' | 'company.member.manage'
+  | 'control.company.read' | 'control.company.write'
+  | 'project.read' | 'project.write' | 'object.read' | 'object.write'
+  | 'document.read' | 'document.write' | 'financial.read' | 'financial.write';
+export const QOSHIMCHA_RUXSATLAR: QoshimchaRuxsat[] = [
+  'company.read', 'company.profile.update', 'company.member.manage',
+  'control.company.read', 'control.company.write',
+  'project.read', 'project.write', 'object.read', 'object.write',
+  'document.read', 'document.write', 'financial.read', 'financial.write',
+];
+export type AzolikRuxsat = {
+  azolik_id: number; foydalanuvchi_id: number; login: string; ism: string | null;
+  rol: string; qoshimcha_ruxsatlar: QoshimchaRuxsat[];
+};
+export type AzolikRuxsatBerInput = { kompaniya_id: number; azolik_id: number; ruxsat: QoshimchaRuxsat; operation_id?: string };
+
+export async function azolikRuxsatlariOl(kompaniyaId: number): Promise<{ azolar: AzolikRuxsat[] }> {
+  const r = await fetch('/api/company?azolik_ruxsatlari=' + Number(kompaniyaId));
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || j.ok !== true) throw toErr(j, r.status);
+  return { azolar: (j.azolar as AzolikRuxsat[]) || [] };
+}
+export function useAzolikRuxsatlari(kompaniyaId: number | null | undefined) {
+  return useQuery({
+    queryKey: ['azolikRuxsatlari', kompaniyaId],
+    queryFn: () => azolikRuxsatlariOl(kompaniyaId as number),
+    enabled: !!kompaniyaId,
+    staleTime: 15_000,
+  });
+}
+
 /** Faqat superadmin uchun — server rolni qayta tekshiradi. */
 export const kompaniyaYarat = (i: KompaniyaYaratInput) => post('create', i);
 export const kompaniyaRoyxatSoraw = (i: RoyxatSorawInput) => post('royxat_soraw', i);
@@ -161,6 +200,8 @@ export const azoQosh = (i: MemberAddInput) => post('member_add', i);
 export const azoRol = (i: MemberRoleInput) => post('member_role', i);
 export const azoOchir = (i: MemberRemoveInput) => post('member_remove', i);
 export const azoParolBelgila = (i: MemberPasswordSetInput) => post('member_password_set', i);
+export const azolikRuxsatBer = (i: AzolikRuxsatBerInput) => post('azolik_ruxsat_ber', i);
+export const azolikRuxsatOlibTashla = (i: AzolikRuxsatBerInput) => post('azolik_ruxsat_olib_tashla', i);
 
 export function useOnboardingCommands() {
   const qc = useQueryClient();
@@ -182,5 +223,13 @@ export function useOnboardingCommands() {
     azoOchir: useMutation({ mutationFn: azoOchir, onSuccess: done }),
     /* Parol ro'yxat/holatga ta'sir qilmaydi -- invalidatsiya shart emas. */
     azoParolBelgila: useMutation({ mutationFn: azoParolBelgila }),
+    azolikRuxsatBer: useMutation({
+      mutationFn: azolikRuxsatBer,
+      onSuccess: () => qc.invalidateQueries({ queryKey: ['azolikRuxsatlari'] }),
+    }),
+    azolikRuxsatOlibTashla: useMutation({
+      mutationFn: azolikRuxsatOlibTashla,
+      onSuccess: () => qc.invalidateQueries({ queryKey: ['azolikRuxsatlari'] }),
+    }),
   };
 }

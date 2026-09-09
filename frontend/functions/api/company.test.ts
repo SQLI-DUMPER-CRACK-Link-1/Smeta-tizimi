@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { imzola } from '../_shared/auth';
-import { onRequestPost } from './company';
+import { onRequestGet, onRequestPost } from './company';
 
 const ENV = { SUPABASE_URL: 'https://proj.supabase.co', SUPABASE_KEY: 'service-key', SESSIYA_KALIT: 'a'.repeat(32) };
 
@@ -15,6 +15,14 @@ async function ctxOf(body: unknown, actorId = 3) {
     request: new Request('http://x/api/company', {
       method: 'POST', headers: { Cookie: `sess=${token}` }, body: JSON.stringify(body),
     }),
+    env: ENV,
+  } as any;
+}
+
+async function getCtxOf(qs: string, actorId = 3) {
+  const token = await imzola({ rol: 'boss', email: 'boss@sinov', foydalanuvchi_id: actorId }, ENV.SESSIYA_KALIT);
+  return {
+    request: new Request('http://x/api/company' + qs, { headers: { Cookie: `sess=${token}` } }),
     env: ENV,
   } as any;
 }
@@ -144,6 +152,59 @@ describe('company -- kompaniya yaratish/so\'rov (T2-COMPANY-CREATE-GATE-001)', (
   it('nom bo‘lmasa RPC BAD payloadni qaytaradi (transport buni majburlamaydi, RPC o‘zi tekshiradi)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, text: async () => JSON.stringify({ ok: false, code: 'COMPANY_NAME_REQUIRED' }) } as Response)));
     const res = await onRequestPost(await ctxOf({ action: 'royxat_soraw' }));
+    expect(res.status).toBe(400);
+  });
+});
+
+/**
+ * T2-RUXSAT-QOSHIMCHA-001 — a'zoning rolini o'zgartirmasdan qo'shimcha
+ * ruxsat berish/olib tashlash. Bir xil aktyor-sessiyadan-olinadi qonuni.
+ */
+describe('company -- a\'zoga qo\'shimcha ruxsat (T2-RUXSAT-QOSHIMCHA-001)', () => {
+  it('GET ?azolik_ruxsatlari=<id> -> t2_azolik_ruxsat_qoshimcha_royxat_v1 ga aktyor sessiyadan boradi', async () => {
+    const fetchSpy = vi.fn(async (url: string, init: { body: string }) => {
+      expect(url).toContain('/rpc/t2_azolik_ruxsat_qoshimcha_royxat_v1');
+      const sent = JSON.parse(init.body);
+      expect(sent).toMatchObject({ p_actor_id: 3, p_kompaniya_id: 1 });
+      return { ok: true, text: async () => JSON.stringify({ ok: true, azolar: [] }) } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await onRequestGet(await getCtxOf('?azolik_ruxsatlari=1'));
+    expect(res.status).toBe(200);
+  });
+
+  it('"azolik_ruxsat_ber" -> t2_azolik_ruxsat_qoshimcha_ber_v1 ga to‘g‘ri parametrlar bilan boradi', async () => {
+    const fetchSpy = vi.fn(async (url: string, init: { body: string }) => {
+      expect(url).toContain('/rpc/t2_azolik_ruxsat_qoshimcha_ber_v1');
+      const sent = JSON.parse(init.body);
+      expect(sent).toMatchObject({ p_actor_id: 3, p_kompaniya_id: 1, p_azolik_id: 32, p_ruxsat: 'financial.read' });
+      return { ok: true, text: async () => JSON.stringify({ ok: true, azolik_id: 32, ruxsat: 'financial.read' }) } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await onRequestPost(await ctxOf({ action: 'azolik_ruxsat_ber', kompaniya_id: 1, azolik_id: 32, ruxsat: 'financial.read' }));
+    expect(res.status).toBe(200);
+  });
+
+  it('"azolik_ruxsat_olib_tashla" -> t2_azolik_ruxsat_qoshimcha_olib_tashla_v1 ga boradi', async () => {
+    const fetchSpy = vi.fn(async (url: string, init: { body: string }) => {
+      expect(url).toContain('/rpc/t2_azolik_ruxsat_qoshimcha_olib_tashla_v1');
+      const sent = JSON.parse(init.body);
+      expect(sent).toMatchObject({ p_actor_id: 3, p_azolik_id: 32, p_ruxsat: 'financial.read' });
+      return { ok: true, text: async () => JSON.stringify({ ok: true, azolik_id: 32, ruxsat: 'financial.read' }) } as Response;
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await onRequestPost(await ctxOf({ action: 'azolik_ruxsat_olib_tashla', kompaniya_id: 1, azolik_id: 32, ruxsat: 'financial.read' }));
+    expect(res.status).toBe(200);
+  });
+
+  it('MANAGE_ROLE_REQUIRED -> 403 (boss/admin bo‘lmagan aktyor)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, text: async () => JSON.stringify({ ok: false, code: 'MANAGE_ROLE_REQUIRED' }) } as Response)));
+    const res = await onRequestPost(await ctxOf({ action: 'azolik_ruxsat_ber', kompaniya_id: 1, azolik_id: 32, ruxsat: 'financial.read' }));
+    expect(res.status).toBe(403);
+  });
+
+  it('"azolik_ruxsat_royxat" (faqat o‘qish) POST orqali RAD ETILADI — 400', async () => {
+    const res = await onRequestPost(await ctxOf({ action: 'azolik_ruxsat_royxat', kompaniya_id: 1 }));
     expect(res.status).toBe(400);
   });
 });

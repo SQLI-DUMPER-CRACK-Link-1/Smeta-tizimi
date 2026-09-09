@@ -41,6 +41,13 @@ const RPC = {
      _XODIMLAR sheet -- see frontend/functions/api/kirish.ts. */
   member_password_set: 't2_parol_belgila_v1',
   profile_update: 't2_kompaniya_yangila_v1',
+  /* T2-RUXSAT-QOSHIMCHA-001: a'zoning rolini o'zgartirmasdan, unga
+     qo'shimcha (rolining qattiq to'plamidan tashqari) ruxsat berish/
+     olib tashlash. Faqat t2_effective_authorization_v1 orqali o'tadigan
+     tekshiruvlarga ta'sir qiladi -- boshqa yozish RPC'lariga emas. */
+  azolik_ruxsat_royxat: 't2_azolik_ruxsat_qoshimcha_royxat_v1',
+  azolik_ruxsat_ber: 't2_azolik_ruxsat_qoshimcha_ber_v1',
+  azolik_ruxsat_olib_tashla: 't2_azolik_ruxsat_qoshimcha_olib_tashla_v1',
 } as const;
 
 const AUTHZ_PERMISSIONS = new Set([
@@ -64,8 +71,8 @@ async function callRpc(env: Env, name: string, body: unknown) {
 
 function statusFor(code: string, raw: string): number {
   if (code === 'ACTOR_NOT_FOUND' || code === 'COMPANY_NOT_FOUND' || code === 'MEMBERSHIP_NOT_FOUND' || code === 'REQUEST_NOT_FOUND' || code === 'AZOLIK_TOPILMADI') return 404;
-  if (code === 'AUTHORIZATION_DENIED' || code === 'SUPERADMIN_REQUIRED' || /42501|direktor|a'zo|azo|membership|PERMISSION/i.test(code + raw)) return 403;
-  if (code === 'OPERATION_ID_REQUIRED' || code === 'PAROL_QISQA' || /INVALID|REQUIRED/.test(code)) return 400;
+  if (code === 'AUTHORIZATION_DENIED' || code === 'SUPERADMIN_REQUIRED' || code === 'MANAGE_ROLE_REQUIRED' || /42501|direktor|a'zo|azo|membership|PERMISSION/i.test(code + raw)) return 403;
+  if (code === 'OPERATION_ID_REQUIRED' || code === 'PAROL_QISQA' || code === 'RUXSAT_NOTOGRI' || /INVALID|REQUIRED/.test(code)) return 400;
   if (code === 'ALREADY_MEMBER' || code === 'LAST_DIRECTOR' || code === 'STALE_VERSION') return 409;
   // T2-COMPANY-CREATE-GATE-001: so'rov allaqachon ko'rib chiqilgan (qayta tasdiqlash/rad etish).
   if (code === 'REQUEST_NOT_PENDING') return 409;
@@ -122,6 +129,23 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
       return Response.json(j);
     }
 
+    // ── T2-RUXSAT-QOSHIMCHA-001: kompaniya a'zolari + ularning qo'shimcha
+    // ruxsatlari ro'yxati ("Rollar va Ruxsatlar" tabining boshqaruvchi qismi). ──
+    const ruxsatKompId = url.searchParams.get('azolik_ruxsatlari');
+    if (ruxsatKompId) {
+      const kompaniyaId = Number(ruxsatKompId);
+      if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, code: 'REQUEST_INVALID' }, { status: 400 });
+      }
+      const { r, j, text } = await callRpc(ctx.env, RPC.azolik_ruxsat_royxat, { p_actor_id: a.id, p_kompaniya_id: kompaniyaId });
+      if (!r.ok || !j) {
+        console.error('[company azolik_ruxsatlari]', r.status, text.slice(0, 300));
+        return Response.json({ ok: false, code: 'CONFIG' }, { status: 502 });
+      }
+      if (j.ok !== true) return Response.json(j, { status: statusFor(j.code || '', text) });
+      return Response.json(j);
+    }
+
     // ── Company profile (Control Center "Profil" tab) — membership-checked read ──
     const profileId = url.searchParams.get('profile');
     if (profileId) {
@@ -172,7 +196,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     if (a instanceof Response) return a;
     const b: any = await ctx.request.json().catch(() => ({}));
     const action: string = b?.action;
-    if (!action || !(action in RPC) || action === 'me' || action === 'royxat_royxat') {
+    if (!action || !(action in RPC) || action === 'me' || action === 'royxat_royxat' || action === 'azolik_ruxsat_royxat') {
       return Response.json({ ok: false, code: 'COMPANY_ACTION_INVALID' }, { status: 400 });
     }
     const opId: string = typeof b.operation_id === 'string' && b.operation_id ? b.operation_id : crypto.randomUUID();
@@ -188,6 +212,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       body = { p_actor_id: a.id, p_kompaniya_id: Number(b.kompaniya_id), p_login: String(b.login ?? ''), p_rol: String(b.rol ?? ''), p_email: b.email == null ? null : String(b.email), p_ism: b.ism == null ? null : String(b.ism), p_operation_id: opId };
     } else if (action === 'member_role') {
       body = { p_actor_id: a.id, p_azolik_id: Number(b.azolik_id), p_yangi_rol: String(b.rol ?? ''), p_operation_id: opId };
+    } else if (action === 'azolik_ruxsat_ber' || action === 'azolik_ruxsat_olib_tashla') {
+      body = { p_actor_id: a.id, p_kompaniya_id: Number(b.kompaniya_id), p_azolik_id: Number(b.azolik_id), p_ruxsat: String(b.ruxsat ?? ''), p_operation_id: opId };
     } else if (action === 'member_password_set') {
       body = { p_actor_id: a.id, p_kompaniya_id: Number(b.kompaniya_id), p_foydalanuvchi_id: Number(b.foydalanuvchi_id), p_yangi_parol: String(b.yangi_parol ?? ''), p_operation_id: opId };
     } else if (action === 'profile_update') {

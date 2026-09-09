@@ -18,7 +18,7 @@ import {
   User, KeyRound, Layers, FolderKanban, Plug, History, Save, RefreshCw,
   Send, Clock, CheckCircle2, XCircle,
 } from 'lucide-react';
-import { useMen, useOnboardingCommands, useKompaniyaAzolari, useKompaniyaProfil, useProfilYangila, useKompaniyaRoyxatlar, type Azolik, type KompaniyaProfil, type KompaniyaRoyxat } from '../../api/t2-men';
+import { useMen, useOnboardingCommands, useKompaniyaAzolari, useKompaniyaProfil, useProfilYangila, useKompaniyaRoyxatlar, useAzolikRuxsatlari, QOSHIMCHA_RUXSATLAR, type Azolik, type KompaniyaProfil, type KompaniyaRoyxat } from '../../api/t2-men';
 import { useSystemControl } from '../../api/t2-control';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { KompaniyaKerak } from '../../umumiy/kontekst/KompaniyaKerak';
@@ -44,6 +44,8 @@ function xatoMatn(code?: string): string {
     case 'SUPERADMIN_REQUIRED': return 'Yangi kompaniyani to‘g‘ridan-to‘g‘ri faqat superadmin ochadi. Iltimos, so‘rov yuboring.';
     case 'REQUEST_NOT_PENDING': return 'Bu so‘rov allaqachon ko‘rib chiqilgan.';
     case 'REQUEST_NOT_FOUND': return 'So‘rov topilmadi.';
+    case 'MANAGE_ROLE_REQUIRED': return 'Bu amal uchun direktor (boss) yoki admin roli kerak.';
+    case 'RUXSAT_NOTOGRI': return 'Bu ruxsat kodi noto‘g‘ri yoki berilishi mumkin emas.';
     default: return 'Amalni bajarib bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.';
   }
 }
@@ -238,36 +240,116 @@ function ProfilTab({ kompaniyaId, isDirector }: { kompaniyaId: number; isDirecto
   );
 }
 
-function RollarTab() {
+function RollarTab({ kompaniyaId, isDirector }: { kompaniyaId: number; isDirector: boolean }) {
   return (
-    <div className="karta p-4 overflow-x-auto">
-      <p className="text-[12px] text-text-dim mb-3">
-        Bu — tizimning haqiqiy ruxsat qonuni (<code>t2_effective_authorization_v1</code> /
-        <code> effective-authorization.ts</code> bilan bir xil manba). Ruxsatlar shu yerdan
-        o‘zgartirilmaydi — rolning o‘zi kompaniya a‘zoligida beriladi (A‘zolar tabi).
-      </p>
-      <table className="text-[12px] w-full min-w-[720px]">
-        <thead>
-          <tr className="text-left text-text-dim border-b border-border">
-            <th className="py-1.5 pr-3">Rol</th>
-            {PERMISSIONS.filter((p) => !p.startsWith('control.global')).map((p) => (
-              <th key={p} className="py-1.5 px-1.5 font-normal whitespace-nowrap">{p}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {MEMBERSHIP_ROLES.filter((r) => r !== 'superadmin' && r !== 'admin').map((rol) => (
-            <tr key={rol} className="border-b border-border/40">
-              <td className="py-1.5 pr-3 font-medium">{rol}</td>
+    <div className="space-y-4">
+      <div className="karta p-4 overflow-x-auto">
+        <p className="text-[12px] text-text-dim mb-3">
+          Bu — tizimning haqiqiy ruxsat qonuni (<code>t2_effective_authorization_v1</code> /
+          <code> effective-authorization.ts</code> bilan bir xil manba). Rolning o‘zi shu yerdan
+          o‘zgartirilmaydi — rol kompaniya a‘zoligida beriladi (A‘zolar tabi). Pastda esa bitta
+          a‘zoga, rolini o‘zgartirmasdan, QO‘SHIMCHA ruxsat berish mumkin.
+        </p>
+        <table className="text-[12px] w-full min-w-[720px]">
+          <thead>
+            <tr className="text-left text-text-dim border-b border-border">
+              <th className="py-1.5 pr-3">Rol</th>
               {PERMISSIONS.filter((p) => !p.startsWith('control.global')).map((p) => (
-                <td key={p} className="py-1.5 px-1.5 text-center">
-                  {ROLE_PERMISSIONS[rol].includes(p) ? <span className="text-emerald-400">✓</span> : <span className="text-text-mute/40">·</span>}
-                </td>
+                <th key={p} className="py-1.5 px-1.5 font-normal whitespace-nowrap">{p}</th>
               ))}
             </tr>
+          </thead>
+          <tbody>
+            {MEMBERSHIP_ROLES.filter((r) => r !== 'superadmin' && r !== 'admin').map((rol) => (
+              <tr key={rol} className="border-b border-border/40">
+                <td className="py-1.5 pr-3 font-medium">{rol}</td>
+                {PERMISSIONS.filter((p) => !p.startsWith('control.global')).map((p) => (
+                  <td key={p} className="py-1.5 px-1.5 text-center">
+                    {ROLE_PERMISSIONS[rol].includes(p) ? <span className="text-emerald-400">✓</span> : <span className="text-text-mute/40">·</span>}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <QoshimchaRuxsatlarBoshqaruv kompaniyaId={kompaniyaId} isDirector={isDirector} />
+    </div>
+  );
+}
+
+/**
+ * T2-RUXSAT-QOSHIMCHA-001: har bir a‘zoga, rolini o‘zgartirmasdan,
+ * qo‘shimcha ruxsat berish/olib tashlash.
+ *
+ * ⚠️ OCHIQ CHEGARA: bu qo‘shimcha ruxsat FAQAT `t2_effective_authorization_v1`
+ * orqali o‘tadigan tekshiruvlarga ta‘sir qiladi (hozircha asosan
+ * `/api/company?authorize=1`). Ko‘pgina yozish amallari (smeta tahrirlash,
+ * narx belgilash, fakt yozish va h.k.) o‘zining alohida rol-tekshiruviga
+ * ega va bu yerdagi qo‘shimcha ruxsatni HISOBGA OLMAYDI.
+ */
+function QoshimchaRuxsatlarBoshqaruv({ kompaniyaId, isDirector }: { kompaniyaId: number; isDirector: boolean }) {
+  const q = useAzolikRuxsatlari(kompaniyaId);
+  const cmd = useOnboardingCommands();
+  const [ochiqAzolikId, setOchiqAzolikId] = useState<number | null>(null);
+
+  if (!isDirector) {
+    return (
+      <div className="karta p-4 text-[12px] text-text-dim">
+        Qo‘shimcha ruxsatlarni faqat direktor (boss) yoki admin boshqara oladi.
+      </div>
+    );
+  }
+  return (
+    <div className="karta p-4">
+      <div className="text-[13px] font-semibold mb-1">A‘zolarga qo‘shimcha ruxsat</div>
+      <p className="text-[11px] text-text-mute mb-3">
+        Masalan: bir prorabga rolini o‘zgartirmasdan <code>financial.read</code> ko‘rish huquqini
+        qo‘shish. Bu — rol tayinlash emas, faqat qo‘shimcha huquq.
+      </p>
+      {q.isLoading && <div className="text-[12px] text-text-dim flex items-center gap-2"><Loader2 className="animate-spin" size={13} /> yuklanmoqda…</div>}
+      {q.isError && <div className="text-[12px] text-rose-300">A‘zolar ro‘yxati o‘qilmadi.</div>}
+      {q.data && (
+        <div className="divide-y divide-border/60">
+          {q.data.azolar.filter((a) => a.rol !== 'boss' && a.rol !== 'admin' && a.rol !== 'superadmin').map((a) => (
+            <div key={a.azolik_id} className="py-2">
+              <button type="button" className="w-full flex items-center justify-between gap-3 text-left"
+                onClick={() => setOchiqAzolikId(ochiqAzolikId === a.azolik_id ? null : a.azolik_id)}>
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium truncate">{a.ism || a.login} <span className="text-[11px] text-text-mute">@{a.login} · {a.rol}</span></div>
+                  {a.qoshimcha_ruxsatlar.length > 0 && (
+                    <div className="text-[11px] text-emerald-400 truncate">+ {a.qoshimcha_ruxsatlar.join(', ')}</div>
+                  )}
+                </div>
+                <span className="text-[11px] text-text-mute shrink-0">{ochiqAzolikId === a.azolik_id ? 'yopish ▴' : 'boshqarish ▾'}</span>
+              </button>
+              {ochiqAzolikId === a.azolik_id && (
+                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                  {QOSHIMCHA_RUXSATLAR.filter((r) => !ROLE_PERMISSIONS[a.rol as keyof typeof ROLE_PERMISSIONS]?.includes(r)).map((r) => {
+                    const bor = a.qoshimcha_ruxsatlar.includes(r);
+                    return (
+                      <label key={r} className="flex items-center gap-1.5 text-[11px] cursor-pointer">
+                        <input type="checkbox" checked={bor} disabled={cmd.azolikRuxsatBer.isPending || cmd.azolikRuxsatOlibTashla.isPending}
+                          onChange={() => {
+                            if (bor) cmd.azolikRuxsatOlibTashla.mutate({ kompaniya_id: kompaniyaId, azolik_id: a.azolik_id, ruxsat: r });
+                            else cmd.azolikRuxsatBer.mutate({ kompaniya_id: kompaniyaId, azolik_id: a.azolik_id, ruxsat: r });
+                          }} />
+                        {r}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           ))}
-        </tbody>
-      </table>
+          {q.data.azolar.filter((a) => a.rol !== 'boss' && a.rol !== 'admin' && a.rol !== 'superadmin').length === 0 && (
+            <p className="py-2 text-[12px] text-text-dim">Qo‘shimcha ruxsat berish mumkin bo‘lgan a‘zo yo‘q (boss/admin/superadmin allaqachon to‘liq huquqqa ega).</p>
+          )}
+        </div>
+      )}
+      {(cmd.azolikRuxsatBer.isError || cmd.azolikRuxsatOlibTashla.isError) && (
+        <p className="mt-2 text-[12px] text-rose-300">{xatoMatn(((cmd.azolikRuxsatBer.error || cmd.azolikRuxsatOlibTashla.error) as any)?.code)}</p>
+      )}
     </div>
   );
 }
@@ -458,7 +540,7 @@ function ControlCenterTabs({ kompaniyaId, kompaniyaNom, isDirector }: { kompaniy
       <div className="mt-3">
         {tab === 'profil' && <ProfilTab kompaniyaId={kompaniyaId} isDirector={isDirector} />}
         {tab === 'azolar' && <AzolarBoshqaruv kompaniyaId={kompaniyaId} kompaniyaNom={kompaniyaNom} isDirector={isDirector} />}
-        {tab === 'rollar' && <RollarTab />}
+        {tab === 'rollar' && <RollarTab kompaniyaId={kompaniyaId} isDirector={isDirector} />}
         {tab === 'modullar' && <ModullarTab kompaniyaId={kompaniyaId} />}
         {tab === 'loyiha' && <LoyihaObyektTab />}
         {tab === 'integratsiya' && <IntegratsiyalarTab kompaniyaId={kompaniyaId} />}
