@@ -5,11 +5,13 @@ import {
   sbT2ObyektlarOlKomp, yangiOperationId, type T2Obyekt, type T2Qator,
 } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
+import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import { readXlsx, f2FaylOqiCore, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
 import { type AktNode, type LrvNode, type F2MatchResult } from '../../lib/f2-match-engine';
 import { f2AggregatsiyaQator, f2ExactPayloadQur, type F2ExactManbaTugun } from '../../test02/f2-exact-payload';
 import { F2PreapprovalAudit } from '../../test02/F2PreapprovalAudit';
 import { F2TwoPaneWorkbench } from './F2TwoPaneWorkbench';
+import { f2ImportJobRecover } from '../../api/t2-f2-job-recovery';
 
 /* T2-GAS-EXIT-001 SS5/SS6 + T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT:
  * eski qattiq devor (15MB / 20000 qator) endi durable job/draft modeli bilan
@@ -27,7 +29,14 @@ const DRAFT_CHUNK = 5000;
 
 function jobKey(objectId: string) { return 't2-f2-import-job:' + objectId; }
 
-type Resumable = { jobId: number; matched: number; total: number | null; updatedAt: string };
+type Resumable = {
+  jobId: number;
+  matched: number;
+  total: number | null;
+  updatedAt: string;
+  status: 'queued' | 'running' | 'paused' | 'review' | 'completed' | 'failed' | 'cancelled';
+  versiya: number;
+};
 
 /** `hajm/narx/summa` durable draftda o'zi saqlangani uchun qayta tiklashda
  *  original faylga qaytish shart emas. Dastlabki sessiyada esa fayl avval
@@ -158,6 +167,7 @@ export function exactWrite(nodes: F2ExactManbaTugun[], mapping: Map<string, numb
 }
 
 function NativeSession({ companyId }: { companyId: number }) {
+  const workspace = usePTOWorkspace();
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
   const [objectId, setObjectId] = useState('');
   const [book, setBook] = useState<XlsxWorkbook | null>(null);
@@ -188,12 +198,13 @@ function NativeSession({ companyId }: { companyId: number }) {
   const sourceOperationId = useRef('');
   useEffect(() => {
     let active = true;
+    const generationRef = generation;
     void sbT2ObyektlarOlKomp(companyId).then(r => {
       if (!active) return;
       if (!r.ok) { setError('Obyektlar o‘qilmadi.'); return; }
       setObjects((r.qatorlar || []) as T2Obyekt[]);
     }).catch(() => { if (active) setError('Obyektlar o‘qilmadi.'); });
-    return () => { active = false; generation.current++; };
+    return () => { active = false; generationRef.current++; };
   }, [companyId]);
   /* Obyekt tanlanganda — o'sha obyekt uchun tugallanmagan job bormi tekshiramiz
    * (localStorage FAQAT job_id'ni eslab qoladi — haqiqat manbai Supabase'da). */
@@ -206,14 +217,20 @@ function NativeSession({ companyId }: { companyId: number }) {
     if (!Number.isFinite(id) || id <= 0) return;
     void sbT2F2ImportJobHolat(id).then(r => {
       if (!active) return;
-      if (!r.ok || !r.status || r.status === 'completed' || r.status === 'failed' || r.status === 'cancelled') {
+      const status = String(r.status || '') as Resumable['status'];
+      if (!r.ok || !status || status === 'completed' || status === 'failed' || status === 'cancelled') {
         try { localStorage.removeItem(jobKey(objectId)); } catch { /* Faqat kesh. */ }
         return;
       }
-      setResumable({ jobId: id, matched: r.matched_rows ?? 0, total: r.total_rows ?? null, updatedAt: r.updated_at || '' });
+      setResumable({ jobId: id, matched: r.matched_rows ?? 0, total: r.total_rows ?? null, updatedAt: r.updated_at || '', status, versiya: r.versiya || 1 });
     }).catch(() => { /* Tarmoq xatosi -- keyingi safar qayta urinamiz, hozircha yangi importga to'sqinlik qilmaymiz. */ });
     return () => { active = false; };
   }, [objectId]);
+  useEffect(() => {
+    if (workspace.scope.objectId != null && objects.some((row) => row.id === workspace.scope.objectId)) {
+      setObjectId(String(workspace.scope.objectId));
+    }
+  }, [objects, workspace.scope.objectId]);
   function reset() {
     generation.current++;
     setSource([]); setMapping(new Map()); setReviewed(false); setDone(false); setError(''); setDraftXato('');
@@ -238,6 +255,21 @@ function NativeSession({ companyId }: { companyId: number }) {
       setResumable(null); setPhase('Ko‘rib chiqish kerak (tiklangan)');
     } catch { setError('Oldingi sessiya tiklanmadi. Faylni qayta yuklashingiz mumkin.'); }
     finally { setBusy(false); }
+  }
+  async function recoverAndResume(r: Resumable) {
+    if (!workspace.isProvider) {
+      await resume(r);
+      return;
+    }
+    setBusy(true); setError(''); setPhase('Stuck sessiya xavfsiz pauzaga olinmoqda');
+    try {
+      const recovered = await f2ImportJobRecover({ jobId: r.jobId, expectedVersiya: r.versiya, operationId: yangiOperationId() });
+      if (!recovered.ok) throw new Error(recovered.error || recovered.code || 'Recovery bajarilmadi');
+      await resume({ ...r, status: 'paused', versiya: recovered.versiya || r.versiya + 1 });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Stuck sessiya tiklanmadi.');
+      setBusy(false);
+    }
   }
   function chooseSheet(workbook: XlsxWorkbook, name: string) {
     reset(); setSheetName(name);
@@ -470,8 +502,8 @@ function NativeSession({ companyId }: { companyId: number }) {
     <h1 className="text-lg font-semibold sm:text-xl">F2 import — yangi rejim</h1>
     <p role="status" className="text-[13px] text-text-dim">{phase}</p>
     {resumable && !source.length && <p className="karta flex flex-wrap items-center gap-2 p-3 text-[13px]">
-      <span>Tugallanmagan import bor ({resumable.matched}/{resumable.total ?? '?'} qator moslashtirilgan, {resumable.updatedAt ? new Date(resumable.updatedAt).toLocaleString() : ''}).</span>
-      <button onClick={() => void resume(resumable)} disabled={busy} className="tugma">Davom ettirish</button>
+      <span>Tugallanmagan import bor ({resumable.matched}/{resumable.total ?? '?'} qator moslashtirilgan, holat: {resumable.status}, {resumable.updatedAt ? new Date(resumable.updatedAt).toLocaleString() : ''}).</span>
+      <button onClick={() => void (resumable.status === 'running' || resumable.status === 'review' ? recoverAndResume(resumable) : resume(resumable))} disabled={busy} title={resumable.status === 'running' || resumable.status === 'review' ? 'Stuck job avval xavfsiz pauzaga olinadi' : undefined} className="tugma">Davom ettirish</button>
     </p>}
     {draftXato && <p role="alert" className="text-warn">{draftXato}</p>}
     {/* Bu forma avval umuman stilsiz edi (yalang'och <label>+<input>):
@@ -481,7 +513,7 @@ function NativeSession({ companyId }: { companyId: number }) {
     <fieldset disabled={busy || done} className="karta grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-4">
       <label className="block text-[12px] font-medium text-text">Obyekt
         <select aria-label="Obyekt" value={objectId} onChange={e => {
-          reset(); setObjectId(e.target.value); rawFile.current = null;
+          reset(); setObjectId(e.target.value); workspace.setObjectId(e.target.value ? Number(e.target.value) : null); rawFile.current = null;
           sourceDocId.current = undefined; sourceOperationId.current = '';
         }} className="input mt-1.5 block h-9 w-full px-2 text-[13px]">
           <option value="">Tanlang</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}

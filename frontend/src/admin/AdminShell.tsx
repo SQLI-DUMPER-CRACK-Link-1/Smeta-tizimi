@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useSessiya } from '../api/hooks';
 import { AlertTriangle, ChevronDown, ChevronRight, Archive, ShieldCheck } from 'lucide-react';
-import { Map, LogOut, Building2, FileInput, Activity, Tags, Network, Calculator, FileOutput, HardHat, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, ClipboardList, Briefcase, Box, Trash2, Users, FolderKanban } from 'lucide-react';
+import { Map, LogOut, Building2, FileInput, Activity, Tags, Network, Calculator, FileOutput, HardHat, ShieldAlert, Settings, FileText, Link2, FileStack, NotebookPen, Database, Gauge, FlaskConical, LayoutDashboard, BarChart, ClipboardList, Briefcase, Box, Trash2, Users, FolderKanban, Menu, X } from 'lucide-react';
 import F2NavbatChip from '../umumiy/ui/F2NavbatChip';
 import { menyuTekshirDev } from '../umumiy/marshrutTekshir';
 import { KompaniyaProvider, useKompaniya } from '../umumiy/kontekst/KompaniyaKontekst';
 import { KompaniyaTanlagich } from '../umumiy/kontekst/KompaniyaTanlagich';
+import { PTOWorkspaceBar, PTOWorkspaceProvider } from '../umumiy/kontekst/PTOWorkspaceContext';
 import { RuxsatGuard } from '../umumiy/kontekst/RuxsatGuard';
 import { tizimdanChiq } from '../umumiy/kontekst/chiqish';
 
@@ -110,7 +111,9 @@ const YOZA_OLMAYDIGAN_ROLLAR = new Set(['rahbar', 'buyurtmachi', 'pudratchi', 'k
 export default function AdminShell() {
   return (
     <KompaniyaProvider>
-      <AdminShellInner />
+      <PTOWorkspaceProvider>
+        <AdminShellInner />
+      </PTOWorkspaceProvider>
     </KompaniyaProvider>
   );
 }
@@ -140,6 +143,8 @@ function AdminShellInner() {
   // (ikonalar) qatori -- foydalanuvchi: "yon panelni sichqoncha borsa
   // katta ochiladigan bo'lmasa faqat belgichalari ko'rinib turadigan".
   const [kengaygan, setKengaygan] = useState(false);
+  const [mobilMenyuOchiq, setMobilMenyuOchiq] = useState(false);
+  const sidebarKengaygan = kengaygan || mobilMenyuOchiq;
 
   // Qaysi guruhlar ochiq ekanligini saqlash
   const [ochiqGuruhlar, setOchiqGuruhlar] = useState<Record<string, boolean>>(() => {
@@ -156,6 +161,7 @@ function AdminShellInner() {
   });
 
   useEffect(() => { if (eskiIchida) setEskiOchiq(true); }, [eskiIchida]);
+  useEffect(() => { setMobilMenyuOchiq(false); }, [joy.pathname]);
 
   const toggleGuruh = (id: string) => {
     setOchiqGuruhlar(prev => ({ ...prev, [id]: !prev[id] }));
@@ -267,15 +273,18 @@ function AdminShellInner() {
       <aside
         onMouseEnter={() => setKengaygan(true)}
         onMouseLeave={() => setKengaygan(false)}
-        className={`os-sidebar relative z-10 border-r backdrop-blur-xl flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
-          kengaygan ? 'w-64 xl:w-72' : 'w-[68px]'
+        aria-label="Asosiy navigatsiya"
+        className={`os-sidebar relative z-30 border-r backdrop-blur-xl flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
+          mobilMenyuOchiq ? 'os-sidebar--open' : ''
+        } ${
+          mobilMenyuOchiq ? 'w-[min(19rem,88vw)]' : sidebarKengaygan ? 'w-64 xl:w-72' : 'w-[68px]'
         }`}
       >
-        <div className={`p-4 border-b border-border flex items-center ${kengaygan ? 'gap-3' : 'justify-center'}`}>
+        <div className={`p-4 border-b border-border flex items-center ${sidebarKengaygan ? 'gap-3' : 'justify-center'}`}>
           <div className="os-brand-mark w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
             <FlaskConical className="text-white" size={18} />
           </div>
-          {kengaygan && (
+          {sidebarKengaygan && (
             <div className="min-w-0">
               <h1 className="text-[15px] font-bold text-text leading-tight tracking-wider whitespace-nowrap">SMETA TIZIM 02</h1>
               <p className="text-[11px] text-text-dim uppercase tracking-wider font-medium mt-0.5 text-accent/80 whitespace-nowrap">
@@ -286,7 +295,7 @@ function AdminShellInner() {
         </div>
 
         <nav className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-3 space-y-4">
-          {!kengaygan ? (
+          {!sidebarKengaygan ? (
             /* Belgichalar qatori: guruh sarlavhalarisiz, faqat ikonalar --
              * har bir guruh orasida yupqa ajratuvchi chiziq. */
             <div className="space-y-1">
@@ -387,19 +396,24 @@ function AdminShellInner() {
             onClick={handleLogout}
             title="Tizimdan chiqish"
             className={`flex items-center w-full rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors ${
-              kengaygan ? 'gap-3 px-3 py-2 text-left' : 'justify-center h-10'
+              sidebarKengaygan ? 'gap-3 px-3 py-2 text-left' : 'justify-center h-10'
             }`}
           >
             <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
-            {kengaygan && <span className="text-sm font-medium whitespace-nowrap">Tizimdan Chiqish</span>}
+            {sidebarKengaygan && <span className="text-sm font-medium whitespace-nowrap">Tizimdan Chiqish</span>}
           </button>
         </div>
       </aside>
+      {mobilMenyuOchiq && <button type="button" className="os-sidebar-backdrop" aria-label="Navigatsiyani yopish" onClick={() => setMobilMenyuOchiq(false)} />}
 
       <main className="os-workspace relative z-10 flex-1 overflow-hidden flex flex-col">
         {/* YAGONA kompaniya konteksti — barcha /admin/* sahifalari shuni ishlatadi */}
         <div className="os-context-bar flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2 border-b backdrop-blur-sm z-20">
+          <button type="button" className="os-mobile-only os-menu-button" aria-label={mobilMenyuOchiq ? 'Navigatsiyani yopish' : 'Navigatsiyani ochish'} aria-expanded={mobilMenyuOchiq} onClick={() => setMobilMenyuOchiq((open) => !open)}>
+            {mobilMenyuOchiq ? <X size={17} /> : <Menu size={17} />}
+          </button>
           <KompaniyaTanlagich />
+          <PTOWorkspaceBar />
         </div>
 
         {/* ⚠️ 2026-09-07 (Claude, P0): AVVAL bu yerda `sess.data.yozaOladi`

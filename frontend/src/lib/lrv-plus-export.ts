@@ -65,6 +65,58 @@ export interface LrvPlusQator {
   daraja: number;
 }
 
+export type LrvPlusExportContext = {
+  kompaniyaId: number;
+  loyihaId: number;
+  obyektId: number;
+  davrId: string;
+  sourceDocumentId: string;
+  revisionId: string;
+  /** Read model to‘liq ekanini server/read-layer isbotlagan bo‘lishi shart. */
+  dataComplete: boolean;
+  /** Registry SHA-256 provenance; missing/blank checksum blocks export. */
+  sourceChecksum?: string | null;
+};
+
+export type LrvPlusExportGate =
+  | { ok: true }
+  | { ok: false; reasons: string[] };
+
+function positiveSafeId(value: number | undefined): boolean {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+export function lrvPlusEksportGate(context: Partial<LrvPlusExportContext> | null | undefined): LrvPlusExportGate {
+  const reasons: string[] = [];
+  const kompaniyaId = context?.kompaniyaId;
+  const loyihaId = context?.loyihaId;
+  const obyektId = context?.obyektId;
+  const davrId = context?.davrId;
+  const sourceDocumentId = context?.sourceDocumentId;
+  const revisionId = context?.revisionId;
+  const sourceChecksum = context?.sourceChecksum;
+  if (!positiveSafeId(kompaniyaId)) reasons.push('COMPANY_CONTEXT_REQUIRED');
+  if (!positiveSafeId(loyihaId)) reasons.push('PROJECT_CONTEXT_REQUIRED');
+  if (!positiveSafeId(obyektId)) reasons.push('OBJECT_CONTEXT_REQUIRED');
+  if (typeof davrId !== 'string' || !davrId.trim()) reasons.push('PERIOD_CONTEXT_REQUIRED');
+  if (typeof sourceDocumentId !== 'string' || !sourceDocumentId.trim()) reasons.push('SOURCE_DOCUMENT_REQUIRED');
+  if (typeof revisionId !== 'string' || !revisionId.trim()) reasons.push('REVISION_REQUIRED');
+  if (context?.dataComplete !== true) reasons.push('READ_MODEL_NOT_COMPLETE');
+  if (typeof sourceChecksum !== 'string' || !sourceChecksum.trim()) reasons.push('SOURCE_CHECKSUM_REQUIRED');
+  return reasons.length ? { ok: false, reasons } : { ok: true };
+}
+
+export class LrvPlusExportBlockedError extends Error {
+  readonly code = 'LRV_PLUS_EXPORT_BLOCKED';
+  readonly reasons: string[];
+
+  constructor(reasons: string[]) {
+    super('LRV_PLUS eksporti uchun provenance/context yetarli emas: ' + reasons.join(', '));
+    this.name = 'LrvPlusExportBlockedError';
+    this.reasons = reasons;
+  }
+}
+
 const LEAF_TUR = new Set(['rs', 'mat', 'ob']);
 const OTA_TUR = new Set(['rz', 'bl']);
 
@@ -123,13 +175,13 @@ export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2Qator
     if (LEAF_TUR.has(tur)) {
       narx = q.narx ?? null;
       summaFormula = `F${r}*G${r}`;
-      // Keshlangan qiymat DOIM formuladan hisoblanadi -- faylni ochmasdan
-      // ko'rinadigan son formulaning natijasi bilan bir xil bo'lsin.
-      summaQiymat = (obyomQiymat ?? 0) * (narx ?? 0);
+      // Missing input is unknown, not zero. The formula remains live in
+      // Excel, but its cached value stays blank until both inputs are known.
+      summaQiymat = obyomQiymat != null && narx != null ? obyomQiymat * narx : null;
     } else if (OTA_TUR.has(tur)) {
       const sp = span.get(q.id);
       if (sp) summaFormula = `SUMIF($X$${sp.c1}:$X$${sp.c2},${daraja + 1},$H$${sp.c1}:$H$${sp.c2})`;
-      else summaQiymat = 0;
+      else summaQiymat = null;
     }
 
     out.push({
@@ -147,10 +199,16 @@ export function lrvPlusQatorlarniHisobla(qatorlar: T2Qator[], holatlar?: T2Qator
     const item = out[i];
     if (!OTA_TUR.has(item.tur) || !item.summaFormula) continue;
     let sum = 0;
+    let hasChild = false;
+    let unknownChild = false;
     for (let j = i + 1; j < rows.length && (rows[j].daraja ?? 0) > item.daraja; j++) {
-      if ((rows[j].daraja ?? 0) === item.daraja + 1) sum += out[j].summaQiymat ?? 0;
+      if ((rows[j].daraja ?? 0) !== item.daraja + 1) continue;
+      hasChild = true;
+      const childSum = out[j].summaQiymat;
+      if (childSum == null) unknownChild = true;
+      else sum += childSum;
     }
-    item.summaQiymat = sum;
+    item.summaQiymat = hasChild && !unknownChild ? sum : null;
   }
 
   return out;
@@ -192,13 +250,26 @@ const RANG: Record<string, { fill?: { patternType: string; fgColor: { rgb: strin
 };
 
 export async function lrvPlusFaylBaytlari(
-  qatorlar: T2Qator[], obyektNomi: string, holatlar?: T2QatorHolat[],
+  qatorlar: T2Qator[], obyektNomi: string, holatlar?: T2QatorHolat[], context?: LrvPlusExportContext,
 ): Promise<Uint8Array> {
+  if (context) {
+    const gate = lrvPlusEksportGate(context);
+    if (!gate.ok) throw new LrvPlusExportBlockedError(gate.reasons);
+  }
   const hisob = lrvPlusQatorlarniHisobla(qatorlar, holatlar);
   const ildiz = hisob.filter((q) => q.daraja === 0);
-  const jamiSumma = ildiz.reduce((s, q) => s + (q.summaQiymat ?? 0), 0);
-  const jamiFakt = ildiz.reduce((s, q) => s + q.faktSumma, 0);
-  const jamiF2 = ildiz.reduce((s, q) => s + q.f2Summa, 0);
+  const knownSum = (items: LrvPlusQator[], pick: (row: LrvPlusQator) => number | null): number | null => {
+    let sum = 0;
+    for (const item of items) {
+      const value = pick(item);
+      if (value == null) return null;
+      sum += value;
+    }
+    return items.length ? sum : null;
+  };
+  const jamiSumma = knownSum(ildiz, (q) => q.summaQiymat);
+  const jamiFakt = knownSum(ildiz, (q) => q.faktSumma);
+  const jamiF2 = knownSum(ildiz, (q) => q.f2Summa);
 
   const XLSX = await import('xlsx-js-style');
   const NCOLS = LRV_PLUS_USTUNLAR.length;
@@ -214,15 +285,15 @@ export async function lrvPlusFaylBaytlari(
     const kat: (string | number)[] = Array.from({ length: 6 }, () => '');
     if (LEAF_TUR.has(q.tur)) {
       const idx = KAT_TARTIB.indexOf(q.kat);
-      if (idx >= 0) kat[idx] = q.summaQiymat ?? 0;
+      if (idx >= 0) kat[idx] = q.summaQiymat ?? '';
     }
     aoa.push([
       q.no, q.kod, q.nom, q.birlik,
       q.birlikHajm ?? '', q.obyomQiymat ?? '', q.narx ?? '', q.summaQiymat ?? '',
       q.tur,
       ...kat,
-      q.faktHajm, (q.obyomQiymat ?? 0) - q.faktHajm, q.f2Hajm, q.faktHajm - q.f2Hajm,
-      q.faktSumma, (q.summaQiymat ?? 0) - q.faktSumma, q.f2Summa, q.faktSumma - q.f2Summa,
+      q.faktHajm, q.obyomQiymat == null ? '' : q.obyomQiymat - q.faktHajm, q.f2Hajm, q.faktHajm - q.f2Hajm,
+      q.faktSumma, q.summaQiymat == null ? '' : q.summaQiymat - q.faktSumma, q.f2Summa, q.faktSumma - q.f2Summa,
       q.daraja,
     ]);
   }
@@ -230,32 +301,33 @@ export async function lrvPlusFaylBaytlari(
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
   for (const q of hisob) {
-    if (q.obyomFormula) ws[`F${q.row}`] = { t: 'n', f: q.obyomFormula, v: q.obyomQiymat ?? 0 };
-    if (q.summaFormula) ws[`H${q.row}`] = { t: 'n', f: q.summaFormula, v: q.summaQiymat ?? 0 };
+    if (q.obyomFormula) ws[`F${q.row}`] = { t: 'n', f: q.obyomFormula, ...(q.obyomQiymat == null ? {} : { v: q.obyomQiymat }) };
+    if (q.summaFormula) ws[`H${q.row}`] = { t: 'n', f: q.summaFormula, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat }) };
     // Kategoriya ustunlari — T1 dagidek H ga havola (faqat bargda).
     if (LEAF_TUR.has(q.tur)) {
       const ustun = KAT_USTUN[q.kat];
-      if (ustun) ws[`${ustun}${q.row}`] = { t: 'n', f: `$H${q.row}`, v: q.summaQiymat ?? 0 };
+      if (ustun) ws[`${ustun}${q.row}`] = { t: 'n', f: `$H${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat }) };
     }
-    ws[`Q${q.row}`] = { t: 'n', f: `F${q.row}-P${q.row}`, v: (q.obyomQiymat ?? 0) - q.faktHajm };
+    ws[`Q${q.row}`] = { t: 'n', f: `F${q.row}-P${q.row}`, ...(q.obyomQiymat == null ? {} : { v: q.obyomQiymat - q.faktHajm }) };
     ws[`S${q.row}`] = { t: 'n', f: `P${q.row}-R${q.row}`, v: q.faktHajm - q.f2Hajm };
-    ws[`U${q.row}`] = { t: 'n', f: `H${q.row}-T${q.row}`, v: (q.summaQiymat ?? 0) - q.faktSumma };
+    ws[`U${q.row}`] = { t: 'n', f: `H${q.row}-T${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat - q.faktSumma }) };
     ws[`W${q.row}`] = { t: 'n', f: `T${q.row}-V${q.row}`, v: q.faktSumma - q.f2Summa };
   }
 
   // ЖАМИ — har bir pul ustuni uchun (hajm ustunlari yig'ilmaydi: turli birlik).
+  const ayirma = (a: number | null, b: number | null): number | null => a == null || b == null ? null : a - b;
   for (const [ustun, qiymat] of [
-    ['H', jamiSumma], ['T', jamiFakt], ['U', jamiSumma - jamiFakt],
-    ['V', jamiF2], ['W', jamiFakt - jamiF2],
-  ] as Array<[string, number]>) {
+    ['H', jamiSumma], ['T', jamiFakt], ['U', ayirma(jamiSumma, jamiFakt)],
+    ['V', jamiF2], ['W', ayirma(jamiFakt, jamiF2)],
+  ] as Array<[string, number | null]>) {
     const f = lrvPlusJamiFormula(hisob, ustun);
-    if (f) ws[`${ustun}3`] = { t: 'n', f, v: qiymat };
+    if (f) ws[`${ustun}3`] = { t: 'n', f, ...(qiymat == null ? {} : { v: qiymat }) };
   }
   if (hisob.length) {
     const c1 = hisob[0].row, c2 = hisob[hisob.length - 1].row;
     // Kategoriya ustunlari faqat barglarda to'ladi -> butun ustunni yig'ish xavfsiz.
     for (const col of ['J', 'K', 'L', 'M', 'N', 'O']) {
-      ws[`${col}3`] = { t: 'n', f: `SUM(${col}${c1}:${col}${c2})`, v: 0 };
+      ws[`${col}3`] = { t: 'n', f: `SUM(${col}${c1}:${col}${c2})` };
     }
   }
 

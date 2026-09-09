@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Database, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
@@ -9,10 +9,11 @@ import {
   sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur,
   yangiOperationId, type T2Obyekt, type T2Qator, type T2QatorHolat,
 } from '../../api/supabase';
-import { lrvPlusFaylBaytlari, lrvPlusYuklab } from '../../lib/lrv-plus-export';
+import { lrvPlusEksportGate, lrvPlusFaylBaytlari, lrvPlusYuklab, type LrvPlusExportContext } from '../../lib/lrv-plus-export';
 import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
 import type { TreeNode } from '../../api/types';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
+import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import SmetaYuklaNative from './SmetaYuklaNative';
 import ResursVedomostNative from './ResursVedomostNative';
 import NarxNazoratNative from './NarxNazoratNative';
@@ -41,6 +42,20 @@ export function HolatNative() {
   const obyektId = Number(id);
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
   const selected = obyektlar.find((o) => o.id === obyektId) ?? null;
+  const workspace = usePTOWorkspace();
+  const canonicalScopeObject = workspace.objects.find((o) => o.id === workspace.scope.objectId && o.id === obyektId) ?? null;
+  const exportContext = useMemo<Partial<LrvPlusExportContext>>(() => ({
+    kompaniyaId: workspace.companyId ?? undefined,
+    loyihaId: workspace.scope.projectId ?? undefined,
+    obyektId: workspace.scope.objectId ?? undefined,
+    davrId: workspace.scope.periodId ?? undefined,
+    sourceDocumentId: workspace.scope.sourceDocumentId ?? undefined,
+    revisionId: workspace.scope.revisionId ?? undefined,
+    sourceChecksum: workspace.sourceDocuments.find((document) => document.id === workspace.scope.sourceDocumentId)?.sha256 ?? undefined,
+    dataComplete: Boolean(canonicalScopeObject && daraxtXom.length > 0 && !loading && !error),
+  }), [canonicalScopeObject, daraxtXom.length, error, loading, workspace.companyId, workspace.scope, workspace.sourceDocuments]);
+  const exportGate = lrvPlusEksportGate(exportContext);
+  const exportBlockReason = !exportGate.ok ? exportGate.reasons[0] : null;
 
   useEffect(() => {
     let active = true;
@@ -80,15 +95,18 @@ export function HolatNative() {
    * o'zgartirsa, ostidagi resurslar va summalar Exceldagi SUMIF/formula
    * orqali avtomatik qayta hisoblanadi -- ilovaga qaytmasdan ham. */
   const excelgaYuklab = useCallback(async () => {
-    if (!selected || !daraxtXom.length) return;
+    if (!selected || !daraxtXom.length || !exportGate.ok) {
+      setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
+      return;
+    }
     setEksportBolmoqda(true);
     try {
-      const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom);
+      const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom, exportContext as LrvPlusExportContext);
       lrvPlusYuklab(bytes, selected.nom);
     } catch {
       setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom]);
+  }, [selected, daraxtXom, holatXom, exportContext, exportGate.ok, exportBlockReason]);
 
   useEffect(() => { void yuklash(); }, [yuklash]);
 
@@ -135,18 +153,23 @@ export function HolatNative() {
           <button onClick={() => navigate('/admin/obyektlar')} className="rounded-lg border border-border p-2 text-text-dim hover:text-text" aria-label="Obyektlarga qaytish"><ArrowLeft size={17} /></button>
           <label className="min-w-[260px] flex-1 text-[12px] font-medium text-text">
             Kanonik obyekt
-            <select value={validId ? String(obyektId) : ''} onChange={(e) => { const object = obyektlar.find((item) => item.id === Number(e.target.value)); navigate(`/admin/holat/${e.target.value}?obyekt_nomi=${encodeURIComponent(object?.nom || '')}`); }} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text outline-none focus:border-accent">
+            <select value={validId ? String(obyektId) : ''} onChange={(e) => { const nextId = Number(e.target.value); const object = obyektlar.find((item) => item.id === nextId); if (Number.isSafeInteger(nextId) && nextId > 0) { workspace.setObjectId(nextId); navigate(`/admin/holat/${nextId}?obyekt=${nextId}&obyekt_nomi=${encodeURIComponent(object?.nom || '')}`); } else { workspace.setObjectId(null); navigate('/admin/holat'); } }} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text outline-none focus:border-accent">
               <option value="">-- obyektni tanlang --</option>
               {obyektlar.map((o) => <option key={o.id} value={o.id}>{o.nom}</option>)}
             </select>
           </label>
           <button onClick={() => void yuklash()} disabled={!validId || loading} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40"><RefreshCw size={14} /> Yangilash</button>
           {validId && tree.length > 0 && (
-            <button onClick={() => void excelgaYuklab()} disabled={eksportBolmoqda}
-              title="Excel'da: bl ОБЪЁМини o'zgartirsangiz, resurslar va summalar formula orqali avtomatik qayta hisoblanadi"
+            <button onClick={() => void excelgaYuklab()} disabled={eksportBolmoqda || !exportGate.ok}
+              title={exportGate.ok ? "Excel'da: bl ОБЪЁМини o'zgartirsangiz, resurslar va summalar formula orqali avtomatik qayta hisoblanadi" : `Eksport bloklangan: ${exportBlockReason}`}
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Excel (formula bilan)'}
             </button>
+          )}
+          {validId && tree.length > 0 && !exportGate.ok && (
+            <span role="status" className="max-w-[280px] text-[11px] text-warn">
+              Excel eksporti bloklangan: {exportBlockReason}. PTO scope’da loyiha, davr, source hujjat va revisionni tanlang.
+            </span>
           )}
           {validId && <button onClick={() => navigate(`/admin/fakt?obyekt=${obyektId}`)} className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white">Fakt kiritish</button>}
         </section>

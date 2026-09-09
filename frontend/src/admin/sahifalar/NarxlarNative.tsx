@@ -10,6 +10,7 @@ import { AlertTriangle, CheckCircle2, RefreshCw, Save, Search, ShieldAlert, Tags
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
+import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import { sbOqi, sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
 import {
   sbT2NarxBelgila, sbT2NarxMarkazOl, sbT2NarxSanaQosh,
@@ -43,6 +44,7 @@ function xatoXabari(x: unknown) {
 
 export default function NarxlarNative() {
   const { joriy, yuklanmoqda: kompaniyaYuklanmoqda } = useKompaniya();
+  const workspace = usePTOWorkspace();
   const kompaniyaId = joriy?.id ?? null;
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [obyektId, setObyektId] = useState<number | null>(null);
@@ -86,13 +88,13 @@ export default function NarxlarNative() {
       setRegistr(byKey);
       const obyektlarYangi = (o.qatorlar as T2Obyekt[]) || [];
       setObyektlar(obyektlarYangi);
-      setObyektId(oldingi => oldingi ?? obyektlarYangi[0]?.id ?? null);
+      setObyektId(oldingi => workspace.scope.objectId ?? oldingi ?? obyektlarYangi[0]?.id ?? null);
     } catch (e) {
       setXato(xatoXabari(e));
     } finally {
       setYuklanmoqda(false);
     }
-  }, [kompaniyaId]);
+  }, [kompaniyaId, workspace.scope.objectId]);
 
   const topilmaganlarniYukla = useCallback(async () => {
     if (!obyektId) { setTopilmaganlar([]); return; }
@@ -194,7 +196,7 @@ export default function NarxlarNative() {
       <div className="space-y-3">
         <div className="karta p-3 flex flex-wrap items-end gap-2">
           <label className="min-w-[220px] flex-1 text-[12px] font-medium text-text">Obyekt
-            <select value={obyektId ?? ''} onChange={e => setObyektId(Number(e.target.value))}
+            <select value={obyektId ?? ''} onChange={e => { const id = Number(e.target.value); setObyektId(Number.isSafeInteger(id) && id > 0 ? id : null); workspace.setObjectId(Number.isSafeInteger(id) && id > 0 ? id : null); }}
               className="mt-1.5 w-full bg-[var(--surface-2)] border border-border rounded-lg px-3 py-2 text-[13px] text-text">
               {!obyektlar.length && <option value="">— obyekt yo‘q —</option>}
               {obyektlar.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}

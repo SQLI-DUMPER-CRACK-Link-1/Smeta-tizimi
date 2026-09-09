@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-import { sbT2ObyektlarOlKomp, sbT2ResursKategoriyaBelgila, yangiOperationId, type T2Obyekt, type T2ResursKategoriya } from '../../api/supabase';
+import { sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2ResursKategoriyaBelgila, yangiOperationId, type T2Obyekt, type T2Qator, type T2ResursKategoriya } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
+import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import { readXlsx, f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
 import { smetaDaraxtniYoy, bolaklarga } from '../../lib/smeta-flatten';
 import type { AktNode } from '../../lib/f2-match-engine';
+import { smetaQaytaImportDiff, type SmetaReimportDiff, type SmetaReimportLine } from '../../lib/smeta-reimport-diff';
 
 /**
  * T2-FINAL-CLEAN-CUTOVER P0.2: native Smeta XLSX -> canonical Supabase, off
@@ -311,6 +313,7 @@ export function ImportQadamlarPaneli({ qadamlar }: { qadamlar: ImportQadam[] }) 
 }
 
 function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: number; fixedObjectId?: number; onImportlandi?: () => void }) {
+  const workspace = usePTOWorkspace();
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
   const [objectId, setObjectId] = useState(fixedObjectId ? String(fixedObjectId) : '');
   const [book, setBook] = useState<XlsxWorkbook | null>(null);
@@ -330,15 +333,13 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
   const [resIndexSize, setResIndexSize] = useState(0);
   const [katKorib, setKatKorib] = useState<Array<{ nom: string; birlik: string; tanlangan: T2ResursKategoriya }>>([]);
   const [katSaqlanmoqda, setKatSaqlanmoqda] = useState(false);
-  /* T2-SMETA-RETRY-CLEAR-001: xato/eskirgan smetani obyektni
-   * o'chirmasdan tozalab, darhol qaytadan yuklash imkonini beradi. */
-  const [tozalanmoqda, setTozalanmoqda] = useState(false);
-  const [tozalaXato, setTozalaXato] = useState('');
+
   /** Owner: "qanaqadir jarayon bo'layotganini bilib bo'lmaydi" -- import
    *  bosqichlari haqiqiy vaqtda, har bir qadam nima qilayotgani va
    *  natijasi bilan ko'rsatiladi (simulyatsiya emas -- har bir yozuv
    *  aynan shu qadam tugagach yoziladi). */
   const [importQadamlari, setImportQadamlari] = useState<ImportQadam[]>([]);
+  const [reimportDiff, setReimportDiff] = useState<SmetaReimportDiff | null>(null);
   /** Owner: bitta faylda ham LRV, ham RES varaqlari bo'lishi mumkin --
    *  har bir varaq turi mazmuniga qarab avtomatik taxmin qilinadi
    *  (varaqTuriTaxmin), foydalanuvchi shu yerda tasdiqlaydi/tuzatadi. */
@@ -368,30 +369,22 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     if (fixedObjectId) setObjectId(String(fixedObjectId));
   }, [fixedObjectId]);
 
+  useEffect(() => {
+    if (fixedObjectId && objects.some((row) => row.id === fixedObjectId) && workspace.scope.objectId !== fixedObjectId) {
+      workspace.setObjectId(fixedObjectId);
+      return;
+    }
+    if (workspace.scope.objectId != null && objects.some((row) => row.id === workspace.scope.objectId)) {
+      setObjectId(String(workspace.scope.objectId));
+    }
+  }, [fixedObjectId, objects, workspace, workspace.scope.objectId, workspace.setObjectId]);
+
   function reset() {
     generation.current++; setError(''); setResult(null); setCols(null); setPreview([]);
     setResBook(null); setResCols(null); setResIndex(null); setResIndexSize(0); setResError('');
-    setVaraqTeglari({}); setInFileResCols({});
+    setVaraqTeglari({}); setInFileResCols({}); setReimportDiff(null);
   }
 
-  /** T2-SMETA-RETRY-CLEAR-001: haqiqiy hodisa -- import xato bo'lganda
-   *  yagona "chiqish" butun obyektni korzinkaga tashlab, yangisini
-   *  yaratish edi (bu esa nom-band bo'lib qolish hodisasiga olib keldi).
-   *  Bu tugma obyektning o'zini saqlab, faqat uning smeta qatorlarini
-   *  tozalaydi -- shundan keyin darhol qaytadan yuklash mumkin bo'ladi. */
-  async function smetaniTozala() {
-    if (!objectId) return;
-    if (!confirm(`Bu obyektdagi ${selectedObject?.qator_soni ?? 0} qatorlik smeta BUTUNLAY o'chiriladi (obyektning o'zi qoladi). Davom etasizmi?`)) return;
-    setTozalanmoqda(true); setTozalaXato('');
-    try {
-      const r = await smetaSorov({ amal: 'smeta_tozala', kompaniyaId: companyId, obyektId: Number(objectId), operationId: yangiOperationId() });
-      if (!r.ok) { setTozalaXato(r.xato || r.code || 'Smeta tozalanmadi.'); return; }
-      setObjects(prev => prev.map(o => o.id === Number(objectId) ? { ...o, qator_soni: 0 } : o));
-      reset(); rawFile.current = null; sourceDocumentId.current = undefined;
-      sourceOperationId.current = ''; importOperationId.current = '';
-      onImportlandi?.();
-    } finally { setTozalanmoqda(false); }
-  }
 
   /** Foydalanuvchi bir varaqni qo'lda LRV yoki RES deb belgilaydi (yoki
    *  e'tiborsiz qoldiradi). LRV -- radio kabi, faqat BITTASI bo'lishi
@@ -423,6 +416,26 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     const detected = f2FaylOqiCore(sheet.rows);
     if ('cols' in detected) { setCols(detected.cols); setPreview(detected.preview); }
     else { setCols(null); setPreview([]); }
+  }
+
+  async function reimportPreview(workbook: XlsxWorkbook, name: string, token: number) {
+    const sheet = workbook.sheet(name);
+    if (!sheet) throw new Error('Qayta import varag‘i topilmadi.');
+    const built = f2FaylOqiCore(sheet.rows);
+    if (!('tree' in built) || !built.tree.length) throw new Error('Qayta import daraxti bo‘sh chiqdi.');
+    const current = await sbT2DaraxtOl(Number(objectId));
+    if (!current.ok) throw new Error('Mavjud smeta qatorlari o‘qilmadi. Diff tuzilmadi.');
+    if (generation.current !== token) return;
+    const before: SmetaReimportLine[] = ((current.qatorlar || []) as T2Qator[]).map((row) => ({
+      canonicalId: row.id, sourceKey: null, kod: row.kod ?? null, nom: row.nom ?? null,
+      birlik: row.birlik ?? null, hajm: row.hajm ?? null, norma: row.norma ?? null, narx: row.narx ?? null,
+    }));
+    const after: SmetaReimportLine[] = smetaDaraxtniYoy(built.tree).map((row) => ({
+      canonicalId: null, sourceKey: null, kod: row.kod, nom: row.nom, birlik: row.birlik,
+      hajm: row.hajm, norma: row.norma, narx: row.narx,
+    }));
+    setReimportDiff(smetaQaytaImportDiff(before, after));
+    setPhase('Qayta import diff tayyor — yozish bloklangan');
   }
 
   async function upload(file: File) {
@@ -457,6 +470,9 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       setVaraqTeglari(teglar); setInFileResCols(resUstunlari);
 
       chooseSheet(workbook, lrvTanlandi); setPhase('Varaq va ustunlarni tekshiring');
+      if ((objects.find((row) => row.id === Number(objectId))?.qator_soni ?? 0) > 0) {
+        await reimportPreview(workbook, lrvTanlandi, token);
+      }
     } catch { if (generation.current === token) setError('Fayl o‘qilmadi. XLSX faylni tekshiring.'); }
     finally { setBusy(false); }
   }
@@ -740,7 +756,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       {!fixedObjectId && <label className="block text-sm">Obyekt
         <select aria-label="Obyekt" className="ml-2 border rounded px-2 py-1"
           value={objectId} onChange={e => {
-            setObjectId(e.target.value); reset(); rawFile.current = null;
+            setObjectId(e.target.value); workspace.setObjectId(e.target.value ? Number(e.target.value) : null); reset(); rawFile.current = null;
             sourceDocumentId.current = undefined; sourceOperationId.current = ''; importOperationId.current = '';
           }}>
           <option value="">Tanlang</option>
@@ -749,12 +765,24 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       </label>}
       {objectId && alreadyHasSmeta && (
         <div className="space-y-2">
-          <p role="alert" className="text-danger text-sm">Bu obyektda allaqachon {selectedObject?.qator_soni} qatorlik smeta bor — bu ekran faqat BO‘SH obyektga birinchi import uchun.</p>
-          <button type="button" className="text-sm text-danger underline disabled:opacity-50"
-            disabled={tozalanmoqda} onClick={() => void smetaniTozala()}>
-            {tozalanmoqda ? 'Tozalanmoqda…' : 'Smetani tozalab, qaytadan yuklash'}
-          </button>
-          {tozalaXato && <p role="alert" className="text-danger text-sm">{tozalaXato}</p>}
+          <p role="alert" className="text-warn text-sm">Bu obyektda allaqachon {selectedObject?.qator_soni} qatorlik smeta bor. Eski qatorlar o‘zgarmaydi; yangi fayl faqat non-destructive diff preview sifatida tekshiriladi.</p>
+          <label className="block text-sm">Smeta yangi revisioni (preview)
+            <input aria-label="Smeta revision fayli" type="file" accept=".xlsx,.xlsm,.xls" className="ml-2"
+              onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
+          </label>
+          {reimportDiff && <section className="karta space-y-2 p-3 text-[13px]" aria-label="Smeta qayta import diff">
+            <p className="font-semibold">Diff tayyor — hech qanday yozish bajarilmadi</p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <span>O‘zgarmagan: <b>{reimportDiff.same.length}</b></span>
+              <span>Qo‘shilgan: <b>{reimportDiff.added.length}</b></span>
+              <span>Yo‘qolgan: <b className={reimportDiff.removed.length ? 'text-danger' : ''}>{reimportDiff.removed.length}</b></span>
+              <span>Tarix candidate: <b>{reimportDiff.history.length}</b></span>
+            </div>
+            {reimportDiff.history.length > 0 && <ul className="list-disc space-y-1 pl-5 text-text-dim">
+              {reimportDiff.history.slice(0, 8).map((row) => <li key={`${row.kind}:${row.identity}`}>{row.kind}: {row.reason}</li>)}
+            </ul>}
+            {reimportDiff.history.length > 8 && <p className="text-text-mute">Yana {reimportDiff.history.length - 8} ta candidate mavjud — operator review va yangi revision RPC talab qilinadi.</p>}
+          </section>}
         </div>
       )}
       {objectId && !alreadyHasSmeta && (
