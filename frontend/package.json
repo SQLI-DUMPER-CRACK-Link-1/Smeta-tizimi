@@ -34,7 +34,8 @@
     "recharts": "^3.10.1",
     "tailwindcss": "^4.3.3",
     "three": "^0.185.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
