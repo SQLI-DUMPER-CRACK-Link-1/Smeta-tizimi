@@ -39,6 +39,7 @@
 import type { T2Qator, T2QatorHolat } from '../api/supabase';
 import type { NakrutkaKoeffitsientlar } from '../api/t2-nakrutka';
 import { lrvKalitYoz } from './lrv-qayta-import';
+import { resursVedomostAoa } from './resurs-vedomost';
 
 /**
  * `toliq` — butun LRV_PLUS (A..W + yashirin Даража).
@@ -216,7 +217,12 @@ export function lrvPlusQatorlarniHisobla(
     const parentRow = q.ota_id != null ? rowOf.get(q.ota_id) : undefined;
     const h = holatById.get(q.id);
 
-    let birlikHajm: number | null = q.hajm ?? null;
+    // ⚠️ 2026-09-10 (owner): E (ҲАЖМ ед) faqat rs/bl-norma holatida ma'noli
+    // ("bir birlikka" normasi) -- boshqa hamma tur uchun (bl/mat/ob va
+    // normasiz rs) bu ustun F (ҲАЖМ жами) bilan AYNAN bir xil sonni
+    // ikkinchi marta yozardi (formulalar hech qachon E'ga murojaat
+    // qilmaydi -- faqat F ishlatiladi). Endi bunday holatda E bo'sh qoladi.
+    let birlikHajm: number | null = null;
     let obyomFormula: string | null = null;
     let obyomQiymat: number | null = q.hajm ?? null;
     let narx: number | null = null;
@@ -533,7 +539,15 @@ export async function lrvPlusFaylBaytlari(
     ? `ФОРМА-2 · Акт выполненных работ${options?.raqam ? ' №' + options.raqam : ''} — ${obyektNomi || 'Smeta'}${options?.davr ? ' — ' + options.davr : ''}`
     : (obyektNomi || 'Smeta'));
 
-  const aoa: (string | number)[][] = [
+  // ⚠️ 2026-09-10 (owner, haqiqiy nosozlik): raqamli ustunlarda noma'lum
+  // qiymat uchun `''` (bo'sh MATN) ishlatilsa, Excel'da o'sha katakka
+  // murojaat qiluvchi HAR QANDAY jonli formula (masalan Q ustunidagi
+  // `F-P`) `#ЗНАЧ!` (#VALUE!) xatosi bilan yiqiladi -- matnni sondan
+  // ayirib/ko'paytirib bo'lmaydi. `null`/`undefined` esa `aoa_to_sheet`da
+  // katakning O'ZINI umuman yaratmaydi (haqiqiy BO'SH katak), Excel buni
+  // arifmetikada xavfsiz 0 deb oladi. Shu sabab quyida `?? ''` emas,
+  // `?? null` ishlatiladi.
+  const aoa: (string | number | null)[][] = [
     [sarlavhaMatn],
     [...ustunlar],
     Array.from({ length: NCOLS }, () => '' as string | number),
@@ -541,14 +555,14 @@ export async function lrvPlusFaylBaytlari(
   aoa[2][2] = 'ЖАМИ';
 
   for (const q of hisob) {
-    const kat: (string | number)[] = Array.from({ length: 6 }, () => '');
+    const kat: (string | number | null)[] = Array.from({ length: 6 }, () => null);
     if (LEAF_TUR.has(q.tur)) {
       const idx = KAT_TARTIB.indexOf(q.kat);
-      if (idx >= 0) kat[idx] = q.summaQiymat ?? '';
+      if (idx >= 0) kat[idx] = q.summaQiymat ?? null;
     }
     const asosiy = [
       q.no, q.kod, q.nom, q.birlik,
-      q.birlikHajm ?? '', q.obyomQiymat ?? '', q.narx ?? '', q.summaQiymat ?? '',
+      q.birlikHajm ?? null, q.obyomQiymat ?? null, q.narx ?? null, q.summaQiymat ?? null,
       q.tur,
       ...kat,
     ];
@@ -679,6 +693,20 @@ export async function lrvPlusFaylBaytlari(
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, rejim === 'forma2' ? 'FORMA_2' : 'LRV_PLUS');
+
+  // Owner (2026-09-10): "excel lrv hujjatlari ichida bo'lishi kerak" --
+  // resurs vedomosti (ЧЕЛ/МАШ/МАТ/ОБ/КАБ/М-К kesimida) ilova ichidagi
+  // alohida ko'rinish (ResursVedomostNative.tsx) bilan cheklanmasin,
+  // eksportning O'ZI ichida alohida varaq bo'lib chiqsin. Ekrandagi va
+  // shu yerdagi hisob-kitob BITTA manba (resursVedomostAoa/
+  // resursVedomostKategoriyalarga) -- ikkinchi haqiqat yaratilmaydi.
+  const resursWs = XLSX.utils.aoa_to_sheet(resursVedomostAoa(holatlar ?? []));
+  resursWs['!cols'] = [
+    { wch: 20 }, { wch: 14 }, { wch: 46 }, { wch: 10 },
+    { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
+  ];
+  XLSX.utils.book_append_sheet(wb, resursWs, 'RESURS_VEDOMOST');
+
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
   return new Uint8Array(out);
 }

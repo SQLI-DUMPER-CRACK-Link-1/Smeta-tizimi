@@ -100,6 +100,28 @@ export type ResursVedomostKategoriya = {
   jamiQoldiqSumma: number;
 };
 
+/**
+ * Owner (2026-09-10): "excel lrv hujjatlari ichida bo'lishi kerak" — resurs
+ * vedomosti ilova ichidagi alohida ko'rinish (`ResursVedomostNative.tsx`)
+ * bilan CHEKLANMASIN, LRV_PLUS/Forma-2 eksportining O'ZI ichida alohida
+ * varaq bo'lib chiqsin. Bu yerda XLSX'ga bog'liqlik YO'Q (pure, testable) —
+ * `lrv-plus-export.ts` shu qatorlar massivini `aoa_to_sheet`ga beradi.
+ * Xuddi shu `resursVedomostKategoriyalarga` natijasidan quriladi — ekrandagi
+ * va Excel'dagi vedomost IKKI XIL HISOB-KITOB emas, bitta manba.
+ */
+export function resursVedomostAoa(qatorlar: readonly T2QatorHolat[]): (string | number)[][] {
+  const aoa: (string | number)[][] = [
+    ['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa', 'F2 hajm', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa'],
+  ];
+  for (const k of resursVedomostKategoriyalarga(qatorlar)) {
+    aoa.push([`${k.kat} (${k.qatorlar.length} resurs)`, '', '', '', '', k.jamiSmetaSumma, '', k.jamiF2Summa, '', k.jamiQoldiqSumma]);
+    for (const r of k.qatorlar) {
+      aoa.push(['', r.kod || '', r.nom, r.birlik || '', r.smetaHajm, r.smetaSumma, r.f2Hajm, r.f2Summa, r.qoldiqHajm, r.qoldiqSumma]);
+    }
+  }
+  return aoa;
+}
+
 /** Kategoriya bo'yicha guruhlangan ko'rinish — sahifada bo'lim-bo'lim chizish uchun. */
 export function resursVedomostKategoriyalarga(qatorlar: readonly T2QatorHolat[]): ResursVedomostKategoriya[] {
   const barchasi = resursVedomostQur(qatorlar);

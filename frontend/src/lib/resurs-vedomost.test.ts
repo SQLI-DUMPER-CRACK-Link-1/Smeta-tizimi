@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resursVedomostKategoriyalarga, resursVedomostQur } from './resurs-vedomost';
+import { resursVedomostAoa, resursVedomostKategoriyalarga, resursVedomostQur } from './resurs-vedomost';
 import type { T2QatorHolat } from '../api/supabase';
 
 function qator(p: Partial<T2QatorHolat>): T2QatorHolat {
@@ -86,5 +86,29 @@ describe('resursVedomostKategoriyalarga', () => {
     ];
     const kats = resursVedomostKategoriyalarga(rows);
     expect(kats.map(k => k.kat)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ']);
+  });
+});
+
+/* Owner (2026-09-10): "excel lrv hujjatlari ichida bo'lishi kerak" --
+   resurs vedomosti LRV_PLUS/Forma-2 eksportining o'z ichida alohida varaq
+   bo'lib chiqishi kerak, faqat ilova ichidagi alohida ko'rinish emas. */
+describe('resursVedomostAoa — LRV Excel ichiga qo\'shiladigan varaq qatorlari', () => {
+  it('sarlavha, kategoriya jami qatori va resurs qatorlarini shu tartibda quradi', () => {
+    const rows = [
+      qator({ tur: 'rs', kat: 'ЧЕЛ', kod: 'K-1', nom: 'Ishchi', birlik: 'chel-soat', smeta_hajm: 10, smeta_summa: 1000000, f2_hajm: 4, f2_summa: 400000, qoldiq_hajm: 6, qoldiq_summa: 600000 }),
+      qator({ tur: 'mat', kat: 'МАТ', kod: null, nom: 'Beton', birlik: 'm3', smeta_hajm: 5, smeta_summa: 500000, f2_hajm: 0, f2_summa: 0, qoldiq_hajm: 5, qoldiq_summa: 500000 }),
+    ];
+    const aoa = resursVedomostAoa(rows);
+    expect(aoa[0]).toEqual(['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa', 'F2 hajm', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa']);
+    expect(aoa[1]).toEqual(['ЧЕЛ (1 resurs)', '', '', '', '', 1000000, '', 400000, '', 600000]);
+    expect(aoa[2]).toEqual(['', 'K-1', 'Ishchi', 'chel-soat', 10, 1000000, 4, 400000, 6, 600000]);
+    expect(aoa[3]).toEqual(['МАТ (1 resurs)', '', '', '', '', 500000, '', 0, '', 500000]);
+    expect(aoa[4]).toEqual(['', '', 'Beton', 'm3', 5, 500000, 0, 0, 5, 500000]);
+  });
+
+  it('bo\'sh kirishda faqat sarlavha qatorini qaytaradi, xato tashlamaydi', () => {
+    expect(resursVedomostAoa([])).toEqual([
+      ['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa', 'F2 hajm', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa'],
+    ]);
   });
 });

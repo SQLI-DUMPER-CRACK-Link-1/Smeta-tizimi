@@ -358,7 +358,7 @@ describe('Forma-2 rejimi — LRV_PLUS ning O ustunigacha bo\'lgan qismi bilan ay
     });
     const XLSX = await import('xlsx-js-style');
     const wb = XLSX.read(bytes, { type: 'array' });
-    expect(wb.SheetNames).toEqual(['FORMA_2']);
+    expect(wb.SheetNames).toEqual(['FORMA_2', 'RESURS_VEDOMOST']);
     const ws = wb.Sheets['FORMA_2'];
 
     expect(ws['A1'].v).toContain('ФОРМА-2');

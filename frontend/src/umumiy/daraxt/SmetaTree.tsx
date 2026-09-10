@@ -45,7 +45,11 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   const [qidiruv, setQidiruv] = useState('');
   const [density, setDensity] = useState<'compact' | 'comfort'>(() =>
     localStorage.getItem('t2-smeta-tree-density') === 'comfort' ? 'comfort' : 'compact');
-  const [preset, setPreset] = useState<'ASOSIY' | 'F2' | 'NARX' | 'TOLIQ'>('ASOSIY');
+  /* Owner (2026-09-10): "pul ham ko'rinishi kerak, faqat obyomlar emas" --
+   * pul ustunlari (Sm./Fk./F2 Summa) allaqachon mavjud edi, lekin faqat
+   * "To'liq"/"Narx nazorati" preset'ida ko'rinardi. Standart holat endi
+   * "To'liq" -- har safar qayta tanlash shart emas. */
+  const [preset, setPreset] = useState<'ASOSIY' | 'F2' | 'NARX' | 'TOLIQ'>('TOLIQ');
   const [quickFilter, setQuickFilter] = useState<'all' | 'f2' | 'qosh' | 'zamena' | 'bl' | 'mat' | 'frozen' | 'risk' | 'basis'>('all');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [drawerTab, setDrawerTab] = useState<'umumiy' | 'fakt' | 'f2' | 'narx' | 'audit'>('umumiy');
