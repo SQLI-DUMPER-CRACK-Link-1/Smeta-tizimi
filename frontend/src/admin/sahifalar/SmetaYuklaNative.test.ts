@@ -108,6 +108,36 @@ describe('RES (resursniy vedomost) narx moslashtirish', () => {
     expect(mosEmasSoni).toBe(0);
   });
 
+  /* Owner (2026-09-10): «yuklanish tugaganidan keyin narxlanmagan rs mat ob
+     kabi har bir qatorlarni bildirishi va sababini keltirib bera olishi
+     kerak». Avval faqat SON qaytarardi -- qaysi qator va nega ekani
+     ko'rinmasdi. */
+  it('narxsiz qolgan har bir qatorni SABABI bilan qaytaradi', () => {
+    const tree: AktNode[] = [
+      { uid: '1', type: 'rs', kod: 'B25', nom: 'БЕТОН ТЯЖЕЛЫЙ', bir: 'М3', hajm: 2 },
+      { uid: '2', type: 'rs', kod: 'B25', nom: 'БЕТОН ТЯЖЕЛЫЙ', bir: 'ТОННА', hajm: 3 },
+      { uid: '3', type: 'rs', kod: 'X', nom: 'НЕИЗВЕСТНЫЙ РЕСУРС', bir: 'ШТ', hajm: 1 },
+      { uid: '4', type: 'rs', kod: 'Y', nom: '', bir: 'ШТ', hajm: 1 },
+    ];
+    const idx = resNarxIndeksiQur([{ kod: 'B25', nom: 'БЕТОН ТЯЖЕЛЫЙ', birlik: 'М3', narx: 500000 }]);
+    const { mosSoni, narxsizlar } = narxlarniDaraxtgaQoll(tree, idx);
+
+    expect(mosSoni).toBe(1);
+    expect(narxsizlar.map(r => [r.uid, r.sabab])).toEqual([
+      ['2', 'birlik_mos_emas'],   // nom RESda bor, birligi boshqa
+      ['3', 'res_da_yoq'],        // bunday nom umuman yo'q
+      ['4', 'nomsiz'],            // nom bo'sh
+    ]);
+  });
+
+  it('RES umuman bo‘sh bo‘lsa sabab «res_yuklanmagan» bo‘ladi', () => {
+    const tree: AktNode[] = [{ uid: '1', type: 'rs', kod: 'B25', nom: 'БЕТОН', bir: 'М3', hajm: 2 }];
+    const { narxsizlar } = narxlarniDaraxtgaQoll(tree, resNarxIndeksiQur([]));
+    expect(narxsizlar).toEqual([
+      { uid: '1', kod: 'B25', nom: 'БЕТОН', bir: 'М3', hajm: 2, sabab: 'res_yuklanmagan' },
+    ]);
+  });
+
   it('narx=0 va mos kelmasa -- «narxsiz qoldi» deb SANAYDI (jim o‘tkazib yubormaydi)', () => {
     const tree: AktNode[] = [{ uid: '1', type: 'rs', kod: 'YOQ', nom: 'Nomalum', bir: 'dona', hajm: 5, narx: 0 }];
     const { mosSoni, mosEmasSoni } = narxlarniDaraxtgaQoll(tree, resNarxIndeksiQur([]));

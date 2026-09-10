@@ -504,9 +504,20 @@ export default function TestXarita() {
     else toast(r.error || 'O\'chirilmadi', 'danger');
   };
 
-  const bezier = (x1: number, y1: number, x2: number, y2: number) => {
-    const cx = (x1 + x2) / 2;
-    return 'M ' + x1 + ' ' + y1 + ' C ' + cx + ' ' + y1 + ', ' + cx + ' ' + y2 + ', ' + x2 + ' ' + y2;
+  /* Owner (2026-09-10): «mind mapda egri chiziqlar juda chalkashtirar ekanda
+   * ... to'g'ri chiziqlarda ideal ajraladigan tushunsa bo'ladigan qilib ber».
+   *
+   * Bezier egri chiziqlari bir-birini kesib o'tganda qaysi chiziq qayerga
+   * borishini ko'z bilan kuzatib bo'lmasdi. O'rniga ORTOGONAL marshrut
+   * (org-chart uslubi): manbadan gorizontal chiqadi, o'rtada vertikal
+   * tushadi, maqsadga gorizontal kiradi -- burchaklar tik, yo'nalish aniq.
+   *
+   * `siljish` -- bir xil hududdagi bir nechta chiziqning vertikal segmenti
+   * ustma-ust tushib, bitta qalin chiziqqa aylanib qolmasligi uchun. */
+  const ortoYol = (x1: number, y1: number, x2: number, y2: number, siljish = 0) => {
+    if (Math.abs(y1 - y2) < 1) return 'M ' + x1 + ' ' + y1 + ' H ' + x2;
+    const cx = (x1 + x2) / 2 + siljish;
+    return 'M ' + x1 + ' ' + y1 + ' H ' + cx + ' V ' + y2 + ' H ' + x2;
   };
 
   const chiziqManba = chiziqManbaId ? joylar[chiziqManbaId] : null;
@@ -674,7 +685,11 @@ export default function TestXarita() {
               if (!m || !q) return null;
               const manbaTur = graf.tugunlar.find((t) => t.id === b.manba)?.tur || 'obyekt';
               const rang = TUR_RANG[manbaTur];
-              const d = bezier(m.x + NODE_W, m.y + TUGUN_BALANDLIGI(graf.tugunlar.find(x => x.id === b.manba)?.tur) / 2, q.x, q.y + TUGUN_BALANDLIGI(graf.tugunlar.find(x => x.id === b.maqsad)?.tur) / 2);
+              const d = ortoYol(
+                m.x + NODE_W, m.y + TUGUN_BALANDLIGI(graf.tugunlar.find(x => x.id === b.manba)?.tur) / 2,
+                q.x, q.y + TUGUN_BALANDLIGI(graf.tugunlar.find(x => x.id === b.maqsad)?.tur) / 2,
+                ((i % 5) - 2) * 12,
+              );
               const bogTanlangan = tanlanganBog?.manba === b.manba && tanlanganBog?.maqsad === b.maqsad && tanlanganBog?.tur === b.tur;
               return (
                 <g key={b.tur + '_' + i} className="pointer-events-auto"
@@ -689,7 +704,7 @@ export default function TestXarita() {
               );
             })}
             {chiziqManba && (
-              <path d={bezier(chiziqManba.x + NODE_W, chiziqManba.y + TUGUN_BALANDLIGI(graf.tugunlar.find(x => x.id === chiziqManbaId)?.tur) / 2, kursor.x, kursor.y)}
+              <path d={ortoYol(chiziqManba.x + NODE_W, chiziqManba.y + TUGUN_BALANDLIGI(graf.tugunlar.find(x => x.id === chiziqManbaId)?.tur) / 2, kursor.x, kursor.y)}
                 fill="none" stroke="#38bdf8" strokeWidth={2} strokeDasharray="6,4" />
             )}
           </svg>

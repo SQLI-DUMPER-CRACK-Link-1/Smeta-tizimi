@@ -83,6 +83,24 @@ export type ResNarxYozuv = {
 export type ResNarxIndeks = {
   byNomBir: Map<string, number>; byKodNomBir: Map<string, number>;
   katByNomBir: Map<string, T2ResursKategoriya>; katByKodNomBir: Map<string, T2ResursKategoriya>;
+  /** Faqat NOM kaliti -- "RES da bor, lekin BIRLIGI boshqa" holatini
+   *  "RES da umuman yo'q" dan ajratish uchun (narxsizlik sababi). */
+  nomlar: Set<string>;
+};
+
+/** Nega bu qatorga narx qo'yilmadi -- foydalanuvchiga aynan shu ko'rsatiladi. */
+export type NarxsizSabab = 'res_yuklanmagan' | 'nomsiz' | 'birlik_mos_emas' | 'res_da_yoq';
+
+export type NarxsizQator = {
+  uid?: string; kod?: string; nom?: string; bir?: string; hajm?: number;
+  sabab: NarxsizSabab;
+};
+
+export const NARXSIZ_SABAB_MATN: Record<NarxsizSabab, string> = {
+  res_yuklanmagan: 'RES fayli ulanmagan — narx manbai yo‘q',
+  nomsiz: 'Qator nomi bo‘sh — nom bo‘yicha moslash imkonsiz',
+  birlik_mos_emas: 'RES da shu nom BOR, lekin BIRLIGI boshqa',
+  res_da_yoq: 'RES ro‘yxatida bunday nom topilmadi',
 };
 
 export type ImportQadam = { kalit: string; nom: string; holat: 'ishlamoqda' | 'tayyor' | 'xato'; tafsilot?: string };
@@ -325,9 +343,11 @@ export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
   const byKodNomBir = new Map<string, number>();
   const katByNomBir = new Map<string, T2ResursKategoriya>();
   const katByKodNomBir = new Map<string, T2ResursKategoriya>();
+  const nomlar = new Set<string>();
   for (const r of rows) {
     const nk = resKalit(r.nom);
     if (!nk) continue; // `kod` yolg'iz hech narsani aniqlamaydi -- yuqoridagi izohga q.
+    nomlar.add(nk);
     const nb = nk + '|' + resKalit(r.birlik);
     if (!byNomBir.has(nb)) byNomBir.set(nb, r.narx);
     if (r.kat && !katByNomBir.has(nb)) katByNomBir.set(nb, r.kat);
@@ -338,7 +358,7 @@ export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
       if (r.kat && !katByKodNomBir.has(kb)) katByKodNomBir.set(kb, r.kat);
     }
   }
-  return { byNomBir, byKodNomBir, katByNomBir, katByKodNomBir };
+  return { byNomBir, byKodNomBir, katByNomBir, katByKodNomBir, nomlar };
 }
 
 /**
@@ -357,25 +377,40 @@ export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
  * 1etaj») aynan shu holatda: 1262 ta resursning HAMMASIDA narx = 0.
  * Endi 0 ham «narx yo'q» deb hisoblanadi.
  */
-export function narxlarniDaraxtgaQoll(tree: AktNode[], idx: ResNarxIndeks): { tree: AktNode[]; mosSoni: number; mosEmasSoni: number } {
+export function narxlarniDaraxtgaQoll(
+  tree: AktNode[], idx: ResNarxIndeks,
+): { tree: AktNode[]; mosSoni: number; mosEmasSoni: number; narxsizlar: NarxsizQator[] } {
   let mosSoni = 0, mosEmasSoni = 0;
+  /* Owner (2026-09-10): "yuklanish tugaganidan keyin narxlanmagan rs mat ob
+     kabi har bir qatorlarni bildirishi va SABABINI keltirib bera olishi
+     kerak". Avval faqat SON chiqardi ("N ta narxsiz qoldi") -- qaysi qator
+     va nega ekani noma'lum edi. */
+  const narxsizlar: NarxsizQator[] = [];
+  const resBosh = idx.nomlar.size === 0;
+  const belgila = (n: AktNode, sabab: NarxsizSabab) => {
+    mosEmasSoni++;
+    narxsizlar.push({ uid: n.uid, kod: n.kod, nom: n.nom, bir: n.bir, hajm: n.hajm, sabab });
+  };
   function walk(n: AktNode): AktNode {
     if (n.children && n.children.length) return { ...n, children: n.children.map(walk) };
     if (n.type !== 'rs' && n.type !== 'mat' && n.type !== 'ob') return n;
     if (n.narx != null && n.narx !== 0) return n;
     const nk = resKalit(n.nom);
-    if (!nk) { mosEmasSoni++; return n; }
+    if (!nk) { belgila(n, 'nomsiz'); return n; }
     const nb = nk + '|' + resKalit(n.bir);
     let narx: number | undefined;
     const kk = resKalit(n.kod);
     if (kk) narx = idx.byKodNomBir.get(kk + '|' + nb);
     if (narx == null) narx = idx.byNomBir.get(nb);
-    if (narx == null) { mosEmasSoni++; return n; }
+    if (narx == null) {
+      belgila(n, resBosh ? 'res_yuklanmagan' : idx.nomlar.has(nk) ? 'birlik_mos_emas' : 'res_da_yoq');
+      return n;
+    }
     mosSoni++;
     const summa = n.hajm != null ? Math.round(n.hajm * narx * 100) / 100 : undefined;
     return { ...n, narx, summa };
   }
-  return { tree: tree.map(walk), mosSoni, mosEmasSoni };
+  return { tree: tree.map(walk), mosSoni, mosEmasSoni, narxsizlar };
 }
 
 /** Import jarayonining haqiqiy vaqtdagi qadam ro'yxati -- foydalanuvchi:
@@ -427,6 +462,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
   const [resIndexSize, setResIndexSize] = useState(0);
   const [katKorib, setKatKorib] = useState<Array<{ nom: string; birlik: string; tanlangan: T2ResursKategoriya }>>([]);
   const [katSaqlanmoqda, setKatSaqlanmoqda] = useState(false);
+  const [narxsizlar, setNarxsizlar] = useState<NarxsizQator[]>([]);
 
   /** Owner: "qanaqadir jarayon bo'layotganini bilib bo'lmaydi" -- import
    *  bosqichlari haqiqiy vaqtda, har bir qadam nima qilayotgani va
@@ -747,6 +783,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         qadam('RES narxlari LRV daraxtiga ulanmoqda');
         const qollangan = narxlarniDaraxtgaQoll(built.tree, resIndex);
         importTree = qollangan.tree;
+        setNarxsizlar(qollangan.narxsizlar);
         yakunla('tayyor', qollangan.mosSoni + ' ta mos, ' + qollangan.mosEmasSoni + ' ta narxsiz qoldi');
       }
 
@@ -968,14 +1005,48 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             {resError && <p role="alert" className="text-danger text-[12px]">{resError}</p>}
             {resBook && resCols && (
               <>
-                {resBook.sheets.length > 1 && (
-                  <label className="block text-sm">RES varag‘i
-                    <select aria-label="RES varag‘i" className="ml-2 border rounded px-2 py-1"
-                      value={resSheetName} onChange={e => chooseResSheet(resBook, e.target.value)}>
-                      {resBook.sheets.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-                    </select>
-                  </label>
-                )}
+                {/* Owner (2026-09-10): "res ni yuklash vaqtida listlarini xuddi
+                    lrv day boshlang'ich ko'rsata olishi kerak edi. hozir shu
+                    yerda listni ko'rmay tavakkal belgilanayapdi" -- avval bu
+                    yerda faqat varaq NOMLARI bo'lgan tanlov (select) turardi:
+                    qaysi varaqda nima borligi ko'rinmasdi. Endi asosiy fayl
+                    varaqlari kabi jadval: nomi, qator soni va tizim taxmini. */}
+                <div className="karta p-2 space-y-1.5" data-testid="res-varaq-royxat">
+                  <p className="text-[12px] font-semibold text-text">
+                    RES faylining varaqlari — qaysi biridan narx o‘qilishini tanlang
+                  </p>
+                  <table className="w-full text-[12.5px]">
+                    <thead>
+                      <tr className="text-text-mute text-left text-[11px]">
+                        <th className="font-normal pb-1">Tanlash</th>
+                        <th className="font-normal pb-1">Varaq</th>
+                        <th className="font-normal pb-1">Qator</th>
+                        <th className="font-normal pb-1">Tizim taxmini</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resBook.sheets.map(s => {
+                        const taxmin = varaqTuriTaxmin(s.rows);
+                        return (
+                          <tr key={s.name} className="border-t border-border/40">
+                            <td className="py-1 pr-2">
+                              <input type="radio" name="res-varaq" aria-label={`${s.name} — RES varag‘i`}
+                                checked={resSheetName === s.name}
+                                onChange={() => chooseResSheet(resBook, s.name)} />
+                            </td>
+                            <td className="py-1 pr-2">{s.name}</td>
+                            <td className="py-1 pr-2 text-text-mute">{s.rows.length}</td>
+                            <td className="py-1">
+                              {taxmin === 'res' ? <span className="text-success">RES (narx katalogi)</span>
+                                : taxmin === 'lrv' ? <span className="text-warn">LRV (ish/hajm) — narx katalogi emas</span>
+                                : <span className="text-text-mute">aniqlanmadi</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
                 <fieldset className="flex flex-wrap gap-3 items-end">
                   <legend className="text-[11px] text-text-mute">Alohida RES fayl ustunlari (1 dan boshlab)</legend>
                   {(['kod', 'nom', 'bir', 'narx'] as const).map(k => (
@@ -1000,11 +1071,13 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             {katKorib.length > 0 && (
               <div className="karta p-2 space-y-1.5 border-amber-500/30">
                 <p className="text-[11px] text-text-mute">
-                  RES faylining bo‘limlaridan ({'«'}ОБОРУДОВАНИЕ{'»'}, {'«'}МАТЕРИАЛЬНЫЕ РЕСУРСЫ{'»'},
-                  {' '}{'«'}КОНСТРУКЦИИ ЗАВОДСКОГО ИЗГОТОВЛЕНИЯ{'»'} …) <b>{katKorib.length} ta</b> resursning
-                  turi aniqlandi — bularni birlikdan (шт, м2, компл) topib bo‘lmaydi, shuning uchun aynan
-                  bo‘lim sarlavhasiga qaraldi. Noto‘g‘ri bo‘lsa shu yerda tuzating; belgilangan tur registrga
-                  yozilib, keyingi importlarda ham eslab qolinadi.
+                  <b>{katKorib.length} ta</b> resursning turi aniqlandi. МАТ va ОБ farqi RES faylining
+                  bo‘lim sarlavhasidan olinadi ({'«'}ОБОРУДОВАНИЕ{'»'}, {'«'}МАТЕРИАЛЬНЫЕ РЕСУРСЫ{'»'} …) —
+                  buni birlikdan (шт, м2, компл) topib bo‘lmaydi. <b>М/К</b> esa alohida qoida bilan:
+                  nomi tayyor konstruksiyani bildirsa <b>va</b> birligi og‘irlikda (кг/т) bo‘lsa —
+                  shuning uchun armatura va prokat М/К ga tushmaydi, ular xomashyo. <b>КАБ</b> —
+                  kabel/provod oilasi, nomi bo‘yicha. Noto‘g‘ri bo‘lsa shu yerda tuzating; belgilangan
+                  tur registrga yozilib, keyingi importlarda ham eslab qolinadi.
                 </p>
                 <p className="text-[11px] text-text-mute">
                   {(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'] as const)
@@ -1041,6 +1114,52 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                   </p>
                 )}
                 {katSaqlanmoqda && <p role="status" className="text-[11px]">Kategoriyalar saqlanmoqda…</p>}
+              </div>
+            )}
+
+            {/* Owner (2026-09-10): "narxlanmagan rs mat ob kabi har bir
+                qatorlarni bildirishi va sababini keltirib bera olishi kerak" --
+                avval faqat "N ta narxsiz qoldi" degan SON chiqardi. */}
+            {narxsizlar.length > 0 && (
+              <div className="karta p-2 space-y-1.5 border-danger/40" data-testid="narxsiz-royxat">
+                <p className="text-[12px]">
+                  <b className="text-danger">{narxsizlar.length} ta qator narxsiz qoldi.</b>{' '}
+                  Bu qatorlar smetaga <b>narxsiz</b> yozildi — obyekt jami summasi shu qadar to‘liq emas.
+                </p>
+                <p className="text-[11px] text-text-mute">
+                  {(Object.keys(NARXSIZ_SABAB_MATN) as NarxsizSabab[])
+                    .map(s => ({ s, n: narxsizlar.filter(x => x.sabab === s).length }))
+                    .filter(x => x.n > 0)
+                    .map(x => `${NARXSIZ_SABAB_MATN[x.s]}: ${x.n} ta`)
+                    .join(' · ')}
+                </p>
+                <div className="overflow-auto max-h-48 text-[12px]">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-text-mute text-[11px]">
+                        <th className="text-left py-0.5 pr-2">Kod</th>
+                        <th className="text-left py-0.5 pr-2">Nom</th>
+                        <th className="text-left py-0.5 pr-2">Birlik</th>
+                        <th className="text-left py-0.5">Nega narxsiz</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {narxsizlar.slice(0, 300).map((r, i) => (
+                        <tr key={(r.uid || '') + i} className="border-t border-border/40">
+                          <td className="py-0.5 pr-2 text-text-mute">{r.kod || '—'}</td>
+                          <td className="py-0.5 pr-2">{r.nom || '(nomsiz)'}</td>
+                          <td className="py-0.5 pr-2 text-text-mute">{r.bir || '—'}</td>
+                          <td className="py-0.5">{NARXSIZ_SABAB_MATN[r.sabab]}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {narxsizlar.length > 300 && (
+                  <p className="text-[11px] text-text-mute">
+                    …va yana {narxsizlar.length - 300} ta (ro‘yxatda birinchi 300 tasi ko‘rsatilgan).
+                  </p>
+                )}
               </div>
             )}
           </div>
