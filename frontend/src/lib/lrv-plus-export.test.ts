@@ -438,4 +438,24 @@ describe('LRV_PLUS export provenance gate', () => {
     expect(borDavrTanlanmagan.ok).toBe(false);
     if (!borDavrTanlanmagan.ok) expect(borDavrTanlanmagan.reasons).toContain('PERIOD_CONTEXT_REQUIRED');
   });
+
+  /* Owner (2026-09-10): «test uchun yuklab ko'rgan yangi obyektimda exellni
+     yuklab bo'lmas emish ... o'sha joyda test obyektim stella chiqmayapdi».
+     Bu -- Stella obyektining (id 71) bazadagi AYNAN holati:
+       · tasdiqlangan F2 akti YO'Q      -> periodApplicable = false
+       · manba hujjat BITTA (id 48), revision 1, sha256 tasdiqlangan
+       · daraxt to'la (1354 qator)      -> dataComplete = true
+     Sahifa scope'ni ochilgan obyekt bilan sinxronlagach va yagona hujjat/
+     revision avtomatik tanlangach, gate OCHIQ bo'lishi kerak. */
+  it('yangi import qilingan obyekt (F2 akti yo\'q, bitta manba hujjat) eksportga ruxsat oladi', () => {
+    const natija = lrvPlusEksportGate({
+      kompaniyaId: 17, loyihaId: 7, obyektId: 71,
+      periodApplicable: false,
+      sourceDocumentId: '48',
+      revisionId: '48:r1',
+      sourceChecksum: '84912267d54f97f34800beff49d5cb5786d748a761b42cfa1755b53b693d074e',
+      dataComplete: true,
+    });
+    expect(natija).toEqual({ ok: true });
+  });
 });
