@@ -24,6 +24,8 @@ export type TreeNode = {
   f2ol: number;
   f2mum: number;
   stFakt?: number | null; stF2?: number | null; stOst?: number | null;
+  /** "F2 olish mumkin" PUL qiymati — `f2mum`ning summa juftligi (fakt - f2). */
+  stF2Mum?: number | null;
   oylar?: Record<string, { obyom: number; narx: number; narxIsFormula?: boolean; uid?: string; }>;
   isQosh?: boolean;
   isZamena?: boolean;

@@ -425,6 +425,9 @@ export function sbT2TreeQur(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): Tre
       stFakt: h ? h.fakt_summa : 0,
       stF2: h ? h.f2_summa : 0,
       stOst: h ? h.qoldiq_summa : son(r.summa),
+      /* `f2mum` hajm ustuni bilan bir xil qoida — bazadagi tayyor
+         `f2_mumkin_summa`, u bo'lmasa fakt-f2 (manfiy bo'lmasin). */
+      stF2Mum: h ? (h.f2_mumkin_summa ?? Math.max(0, h.fakt_summa - h.f2_summa)) : 0,
       faktHajm: h ? h.fakt_hajm : 0,
       qoldiqHajm: h ? h.qoldiq_hajm : son(r.hajm),
       qoldiqSumma: h ? h.qoldiq_summa : son(r.summa),

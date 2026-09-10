@@ -420,8 +420,8 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                   {showMoney && <><div className="w-24 text-right text-blue-200"><FmtN val={node.smeta} /></div>
                   <div className="w-24 text-right text-emerald-300 font-bold"><FmtN val={node.stFakt} /></div>
                   <div className="w-24 text-right text-purple-300 font-bold"><FmtN val={node.stF2} /></div>
-                  <div className="w-24 text-right text-cyan-300"><FmtN val={node.stOst} /></div>
-                  <div className="w-24 text-right text-amber-300"><FmtN val={node.stOst != null && node.smeta != null ? node.smeta - node.stOst : null} /></div></>}
+                  <div className="w-24 text-right text-cyan-300"><FmtN val={node.stF2Mum} /></div>
+                  <div className="w-24 text-right text-amber-300"><FmtN val={node.stOst} /></div></>}
                 </div>
 
                 {/* Expanded RowDetailPanel for F2 Monthly Editing */}

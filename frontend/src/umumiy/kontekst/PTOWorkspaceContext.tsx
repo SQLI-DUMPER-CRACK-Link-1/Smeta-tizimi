@@ -340,7 +340,16 @@ export function PTOWorkspaceProvider({ children }: { children: ReactNode }) {
     const revisionId = scope.revisionId && sourceDocumentId && revisions.some((row) => row.id === scope.revisionId && row.documentId === sourceDocumentId)
       ? scope.revisionId
       : null;
-    const next = { ...scope, periodId, sourceDocumentId, revisionId };
+    /* Owner (2026-09-10): "tepadagi davr balo battarlar nima uchun kerak
+       bilmadimu". Tanlov haqiqatan ham bo'lmaganda -- ya'ni nomzod BITTA
+       bo'lganda -- foydalanuvchini qo'lda tanlashga majburlashning ma'nosi
+       yo'q: u faqat eksportni bloklaydi. Bir nechta nomzod bo'lsa tanlov
+       baribir foydalanuvchida qoladi, hech narsa taxmin qilinmaydi. */
+    const yagonaHujjat = sourceDocumentId ?? (sourceDocuments.length === 1 ? sourceDocuments[0].id : null);
+    const hujjatRevisions = yagonaHujjat == null ? [] : revisions.filter((row) => row.documentId === yagonaHujjat);
+    const yagonaRevision = revisionId
+      ?? (yagonaHujjat != null && hujjatRevisions.length === 1 ? hujjatRevisions[0].id : null);
+    const next = { ...scope, periodId, sourceDocumentId: yagonaHujjat, revisionId: yagonaRevision };
     if (JSON.stringify(next) !== JSON.stringify(scope)) writeScope(next);
   }, [loading.documents, loading.periods, periods, revisions, scope, sourceDocuments, writeScope]);
 

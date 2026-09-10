@@ -124,18 +124,49 @@ function son(v: unknown): number | undefined {
  * @returns kategoriya, yoki 'YAKUN' (ИТОГО/ЖАМИ -- bo'lim tugadi), yoki
  *          null (bu sarlavha emas).
  */
+const RES_BOLIM_NAQSH: ReadonlyArray<readonly [RegExp, T2ResursKategoriya]> = [
+  [/^ТРУДОВЫЕ\s+РЕСУРСЫ$/, 'ЧЕЛ'],
+  [/^ЗАТРАТЫ\s+ТРУДА(\s+(РАБОЧИХ|РАБОЧИХ-СТРОИТЕЛЕЙ|СТРОИТЕЛЕЙ))?$/, 'ЧЕЛ'],
+  [/^ЗАТРАТЫ\s+ТРУДА\s+МАШИНИСТОВ$/, 'МАШ'],
+  [/^(СТРОИТЕЛЬНЫЕ\s+)?МАШИНЫ(\s+И\s+МЕХАНИЗМЫ)?$/, 'МАШ'],
+  [/^МЕХАНИЗМЫ$/, 'МАШ'],
+  [/^МАТЕРИАЛЬНЫЕ\s+РЕСУРСЫ$/, 'МАТ'],
+  [/^(СТРОИТЕЛЬНЫЕ\s+)?МАТЕРИАЛЫ$/, 'МАТ'],
+  [/^КАБЕЛЬ(НАЯ\s+ПРОДУКЦИЯ|НЫЕ\s+ИЗДЕЛИЯ)?$/, 'КАБ'],
+  [/^ПРОВОДА?\s+И\s+КАБЕЛИ$/, 'КАБ'],
+  [/^КОНСТРУКЦИИ\s+ЗАВОДСКОГО\s+ИЗГОТОВЛЕНИЯ$/, 'М/К'],
+  [/^(МЕТАЛЛО)?КОНСТРУКЦИИ$/, 'М/К'],
+  [/^ОБОРУДОВАНИЕ$/, 'ОБ'],
+];
+
+/**
+ * Sarlavha matnini solishtirish uchun normallashtiradi: boshidagi raqam/
+ * rim raqami tartiblash ("III.", "2)"), oxiridagi ikki nuqta va ortiqcha
+ * bo'shliqlar olib tashlanadi.
+ */
+function resSarlavhaNormal(nom: string): string {
+  return String(nom || '')
+    .toUpperCase().replace(/Ё/g, 'Е')
+    .replace(/^[\s№IVX0-9.)-]+/, '')
+    .replace(/[\s:.;]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function resBolimKategoriya(nom: string): T2ResursKategoriya | 'YAKUN' | null {
-  const s = String(nom || '').toUpperCase().replace(/Ё/g, 'Е');
+  const s = resSarlavhaNormal(nom);
   if (!s) return null;
   if (s.includes('ИТОГО') || s.includes('ЖАМИ') || s.includes('ВСЕГО')) return 'YAKUN';
-  /* «ЗАТРАТЫ ТРУДА МАШИНИСТОВ» -- bu RESURS, sarlavha emas; lekin sarlavha
-     sifatida kelib qolsa ham МАШ. T1 da ham shu birinchi tekshiriladi. */
-  if (s.includes('МАШИНИСТ')) return 'МАШ';
-  if (s.includes('ОБОРУДОВАНИ')) return 'ОБ';
-  if (s.includes('КОНСТРУКЦИИ')) return s.includes('КАБЕЛ') ? 'КАБ' : 'М/К';
-  if (s.includes('ТРУДОВЫЕ РЕСУРС') || s.includes('ЗАТРАТЫ ТРУДА')) return 'ЧЕЛ';
-  if (s.includes('МАШИНЫ') || s.includes('МЕХАНИЗМ')) return 'МАШ';
-  if (s.includes('МАТЕРИАЛ')) return 'МАТ';
+  /* Owner (2026-09-10): 23 ta resurs (БЕТОН, ПЕСОК, РАСТВОР, ЩЕБЕНЬ, ПРОВОД …)
+   * noto'g'ri М/К bo'lib chiqdi. Sabab: bu yerda `includes('КОНСТРУКЦИИ')`
+   * ishlatilardi, RES faylida esa «КОНСТРУКЦИИ СТАЛЬНЫЕ ПО ПРОЕКТУ»,
+   * «АРМАТУРА ДЛЯ МОНОЛИТНЫХ ЖЕЛЕЗОБЕТОННЫХ КОНСТРУКЦИЙ …» kabi RESURS
+   * nomlari bor. Narxi bo'sh bo'lgan shunday qator sarlavha deb o'qilib,
+   * undan keyingi BUTUN material oqimi М/К ga o'tib ketardi (М/К nakrutka
+   * foizi МАТ'nikidan boshqa -- ya'ni bu pulga ta'sir qiladi).
+   * Endi sarlavha TO'LIQ moslik bo'yicha aniqlanadi: uzun resurs nomi
+   * hech qachon sarlavhaga aylanmaydi. */
+  for (const [naqsh, kat] of RES_BOLIM_NAQSH) if (naqsh.test(s)) return kat;
   return null;
 }
 
@@ -161,7 +192,12 @@ export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxY
     if (!nom && !kod) continue;
     if (/^\d+$/.test(nom) && /^\d+$/.test(bir)) continue; // ustun-raqamlash qatori
     if (narx == null || narx <= 0) {
-      // Narxsiz matnli qator -- bo'lim sarlavhasi bo'lishi mumkin.
+      /* Narxsiz matnli qator -- bo'lim sarlavhasi bo'lishi mumkin. Lekin
+         HAQIQIY sarlavha faqat sarlavha matnidan iborat: kodi ham,
+         birligi ham bo'lmaydi. Kodi/birligi bor qator -- bu narxi
+         to'ldirilmagan RESURS (masalan «КОНСТРУКЦИИ СТАЛЬНЫЕ ПО ПРОЕКТУ, Т»),
+         uni sarlavha deb o'qish butun keyingi oqim kategoriyasini buzardi. */
+      if (kod || bir) continue;
       const b = resBolimKategoriya(nom);
       if (b === 'YAKUN') joriyKat = undefined;
       else if (b) joriyKat = b;
@@ -169,7 +205,7 @@ export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxY
     }
     out.push({
       kod: kod || undefined, nom: nom || undefined, birlik: bir || undefined, narx,
-      kat: joriyKat,
+      kat: resursMkKabAniqla(nom, bir, joriyKat),
     });
   }
   return out;
@@ -181,6 +217,45 @@ export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxY
  *  qachon shu taxmindan chiqmaydi -- T1 GAS ham buni faqat registr orqali
  *  hal qilardi (10_Engine.js), shuning uchun МАТ (standart) qatorlar
  *  ko'rib chiqish uchun ko'rsatiladi. */
+/* Tayyor konstruksiya nomi KONSTRUKSIYANING O'ZI bilan boshlanadi. Nomi
+   «АРМАТУРА ДЛЯ … КОНСТРУКЦИЙ» yoki «ПРОКАТ ДЛЯ АРМИРОВАНИЯ Ж/Б
+   КОНСТРУКЦИЙ» bo'lganlar konstruksiya UCHUN xomashyo -- ular МАТ. */
+const MK_NOM = /^(МЕТАЛЛО)?КОНСТРУКЦ|^ОТДЕЛЬНЫЕ\s+КОНСТРУКТИВНЫЕ|^КОНСТРУКТИВНЫЕ\s+ЭЛЕМЕНТ/;
+/** Tayyor konstruksiya OG'IRLIKDA o'lchanadi (кг/т) -- shtukada emas. */
+const MK_BIRLIK = /^(КГ|Т|ТН|ТОННА?)$/;
+/** «ПРОВОЛОКА» BU YERGA TUSHMAYDI (ПРОВОЛ ≠ ПРОВОД) -- u bog'lash simi, МАТ. */
+const KAB_NOM = /^(КАБЕЛ|ПРОВОД)/;
+
+/**
+ * Owner (2026-09-10): «mk ni aniqlash ancha og'ir masala … haqiqiy mk bu
+ * TAYYOR KONSTRUKSIYA, kg yoki tonnada belgilanadigan narsa. kabel provod
+ * ham shunaqa — shu oilaga kiruvchi, metr yoki km da berilgan narsalar.»
+ *
+ * Bo'lim sarlavhasi bu ikkisini AYTA OLMAYDI: egasining haqiqiy RES
+ * faylida (Karting) alohida «КОНСТРУКЦИИ ЗАВОДСКОГО ИЗГОТОВЛЕНИЯ» bo'limi
+ * umuman YO'Q — tayyor konstruksiyalar ham, kabellar ham «МАТЕРИАЛЬНЫЕ
+ * РЕСУРСЫ» ichida turadi. Shuning uchun М/К va КАБ qator darajasida,
+ * nom + birlik JUFTLIGI bo'yicha aniqlanadi.
+ *
+ * Qoida ATAYLAB TOR: ikkala shart mos kelmasa qator bo'lim kategoriyasida
+ * (odatda МАТ) qoladi. Sabab — egasining ogohlantirishi: «sani mantiqing
+ * bo'yicha armatura balo battar hamma prokatlar mk ga kirib ketadi».
+ * Kabel/provod nomi esa o'z-o'zidan aniq, shuning uchun unga birlik sharti
+ * qo'yilmaydi (egasining faylida «ПРОВОДА … МЕДНЫЕ» tonnada ham keladi).
+ * Shubhali qolgan qatorlarni foydalanuvchi import oldidagi ro'yxatda
+ * tuzatadi va tanlov registrda eslab qolinadi.
+ */
+export function resursMkKabAniqla(
+  nom: string, birlik: string, bolimKat?: T2ResursKategoriya,
+): T2ResursKategoriya | undefined {
+  const n = String(nom || '').toUpperCase().replace(/Ё/g, 'Е').trim();
+  const b = String(birlik || '').toUpperCase().replace(/Ё/g, 'Е').replace(/[.\s]/g, '').trim();
+  if (!n) return bolimKat;
+  if (KAB_NOM.test(n)) return 'КАБ';
+  if (MK_NOM.test(n) && MK_BIRLIK.test(b)) return 'М/К';
+  return bolimKat;
+}
+
 export function katTaxmini(nom: string, birlik: string): 'ЧЕЛ' | 'МАШ' | 'МАТ' {
   const b = birlik.toUpperCase();
   if (nom.toUpperCase().includes('ТРУДА МАШИНИСТОВ')) return 'МАШ';

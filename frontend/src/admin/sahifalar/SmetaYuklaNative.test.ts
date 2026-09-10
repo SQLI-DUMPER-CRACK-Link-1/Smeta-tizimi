@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya } from './SmetaYuklaNative';
+import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya, resursMkKabAniqla } from './SmetaYuklaNative';
 import type { AktNode } from '../../lib/f2-match-engine';
 import type { F2ColumnConfig } from '../../lib/f2-import-parse';
 
@@ -159,6 +159,77 @@ describe('RES bo‘lim sarlavhalari — МАТ/ОБ/КАБ/М-К ni ajratish', (
     expect(resBolimKategoriya('ШЛИФКРУГИ')).toBeNull();
   });
 
+  /* Owner (2026-09-10): «nima uchundir shu narsalarni mk deb o'ylayapdida» --
+     БЕТОН/ПЕСОК/РАСТВОР/ЩЕБЕНЬ/ПРОВОД М/К bo'lib chiqqan edi. Bu nomlar
+     Karting RES faylidan AYNAN olingan: ular ichida «КОНСТРУКЦИИ» so'zi
+     bor, va eski `includes()` mantiqi ularni bo'lim sarlavhasi deb
+     o'qirdi. Sarlavha emas -- RESURS. */
+  it('nomida «КОНСТРУКЦИИ» bo‘lgan RESURS qatori sarlavha deb o‘qilmaydi', () => {
+    expect(resBolimKategoriya('КОНСТРУКЦИИ СТАЛЬНЫЕ ПО ПРОЕКТУ')).toBeNull();
+    expect(resBolimKategoriya('КОНСТРУКЦИИ 6Х19(1+6+12)+1 О.С. ОЦИНКОВАННЫЙ')).toBeNull();
+    expect(resBolimKategoriya('АРМАТУРА ДЛЯ МОНОЛИТНЫХ ЖЕЛЕЗОБЕТОННЫХ КОНСТРУКЦИЙ В ВИДЕ СЕТОК И ПЛОСКИХ КАРКАСОВ')).toBeNull();
+    expect(resBolimKategoriya('ПРОКАТ ДЛЯ АРМИРОВАНИЯ Ж/Б КОНСТРУКЦИЙ КРУГЛЫЙ И ПЕРИОДИЧЕСКОГО ПРОФИЛЯ')).toBeNull();
+    expect(resBolimKategoriya('АГРЕГАТЫ ОКРАСОЧНЫЕ ВЫСОКОГО ДАВЛЕНИЯ ДЛЯ ОКРАСКИ ПОВЕРХНОСТЕЙ КОНСТРУКЦИЙ МОЩНОСТЬЮ 1 КВТ')).toBeNull();
+  });
+
+  /* Owner (2026-09-10), aynan matni: «haqiqiy mk bu tayyor konstruksiya kg
+     yoki tonnada belgilanadigan narsaga aytiladi. kabel provod ham shunaqa
+     … shu oilaga kiruvchi metr yoki km da berilgan narsalarga aytiladi».
+     Va ogohlantirishi: «armatura balo battar hamma prokatlar mk ga kirib
+     ketadi. Bunaqa vaziyatda noto'g'ri bo'ladi.» Quyidagi nomlar egasining
+     ekranidan va Karting RES faylidan AYNAN ko'chirilgan. */
+  describe('М/К va КАБ — tayyor konstruksiya (кг/т) va kabel oilasi', () => {
+    it('tayyor konstruksiyani og‘irlik birligi bilan М/К deb belgilaydi', () => {
+      expect(resursMkKabAniqla('КОНСТРУКЦИИ СТАЛЬНЫЕ ПО ПРОЕКТУ', 'Т', 'МАТ')).toBe('М/К');
+      expect(resursMkKabAniqla('КОНСТРУКЦИИ ИНДИВИДУАЛЬНЫЕ РЕШЕТЧАТЫЕ СВАРНЫЕ ИЗ СТАЛИ МЕЛКИХ ПРОФИЛЕЙ МАССА, ДО 0,1Т', 'Т', 'МАТ')).toBe('М/К');
+      expect(resursMkKabAniqla('ОТДЕЛЬНЫЕ КОНСТРУКТИВНЫЕ ЭЛЕМЕНТЫ ЗДАНИЙ И СООРУЖЕНИЙ С ПРЕОБЛАДАНИЕМ ГОРЯЧЕКАТАНЫХ ПРОФИЛЕЙ', 'Т', 'МАТ')).toBe('М/К');
+      expect(resursMkKabAniqla('МЕТАЛЛОКОНСТРУКЦИИ ОПОРНЫЕ', 'КГ', 'МАТ')).toBe('М/К');
+    });
+
+    it('armatura va prokatni М/К ga TORTMAYDI — ular konstruksiya uchun xomashyo', () => {
+      expect(resursMkKabAniqla('АРМАТУРА ДЛЯ МОНОЛИТНЫХ ЖЕЛЕЗОБЕТОННЫХ КОНСТРУКЦИЙ В ВИДЕ СЕТОК И ПЛОСКИХ КАРКАСОВ, ПЕРИОДИЧЕСКОГО ПРОФИЛЯ КЛАССА АIII, ДИАМТЕРОМ 12 ММ', 'Т', 'МАТ')).toBe('МАТ');
+      expect(resursMkKabAniqla('ПРОКАТ ДЛЯ АРМИРОВАНИЯ Ж/Б КОНСТРУКЦИЙ КРУГЛЫЙ И ПЕРИОДИЧЕСКОГО ПРОФИЛЯ', 'Т', 'МАТ')).toBe('МАТ');
+      expect(resursMkKabAniqla('КАТАНКА ГОРЯЧЕКАТАНАЯ В МОТКАХ ДИАМЕТРОМ 6,3-6,5 ММ', 'Т', 'МАТ')).toBe('МАТ');
+    });
+
+    it('kabel/provod oilasini КАБ deb belgilaydi, birligidan qat‘i nazar', () => {
+      expect(resursMkKabAniqla('ПРОВОД', 'М', 'МАТ')).toBe('КАБ');
+      expect(resursMkKabAniqla('ПРОВОДА ДЛЯ ВОЗДУШНЫХ ЛИНИЙ ЭЛЕКТРОПЕРЕДАЧИ МЕДНЫЕ МАРКИ М СЕЧ. 4 ММ2', 'Т', 'МАТ')).toBe('КАБ');
+      expect(resursMkKabAniqla('КАБЕЛЬ СИЛОВОЙ С МЕДНЫМИ ЖИЛАМИ', 'КМ', 'МАТ')).toBe('КАБ');
+    });
+
+    it('«ПРОВОЛОКА» kabel emas — u bog‘lash simi, МАТ bo‘lib qoladi', () => {
+      expect(resursMkKabAniqla('ПРОВОЛОКА СВЕТЛАЯ ДИАМЕТРОМ 1,1 ММ', 'Т', 'МАТ')).toBe('МАТ');
+    });
+
+    it('egasining ekranidagi 23 tadan oddiy materiallari МАТ bo‘lib qoladi', () => {
+      for (const [nom, bir] of [
+        ['БЕТОН ТЯЖЕЛЫЙ КЛАССА В12,5 /М-150/ ФРАКЦИИ 5-20ММ', 'М3'],
+        ['ПЕСОК ДЛЯ СТРОИТЕЛЬНЫХ РАБОТ', 'М3'],
+        ['РАСТВОР ГОТОВЫЙ КЛАДОЧНЫЙ ЦЕМЕНТНЫЙ, МАРКА 50', 'М3'],
+        ['ЩЕБЕНЬ', 'М3'],
+        ['СМЕСЬ ПЕСЧАНО-ГРАВИЙНАЯ ПРИРОДНАЯ', 'М3'],
+        ['СМЕСЬ АСФАЛЬТОБЕТОННАЯ', 'Т'],
+        ['СТЕКЛОЛЕНТА ЛИПКАЯ ИЗОЛЯЦИОННАЯ НА ПОЛИКАСИНОВОМ КОМПАУНДЕ МАРКИ ЛСЭПЛ', 'КГ'],
+      ] as const) {
+        expect(resursMkKabAniqla(nom, bir, 'МАТ')).toBe('МАТ');
+      }
+    });
+  });
+
+  it('«КОНСТРУКЦИИ …» nomli narxsiz resurs keyingi materiallarni М/К ga o‘tkazib yubormaydi', () => {
+    const cols = { kod: 0, nom: 1, bir: 2, norma: -1, obyom: -1, narx: 3, sum: -1 };
+    const rows = [
+      ['', 'МАТЕРИАЛЬНЫЕ РЕСУРСЫ', '', ''],
+      ['С', 'КОНСТРУКЦИИ СТАЛЬНЫЕ ПО ПРОЕКТУ', 'Т', ''],   // narxi to'ldirilmagan RESURS
+      ['6322', 'БЕТОН ТЯЖЕЛЫЙ КЛАССА В15 /М-200/', 'М3', '525672'],
+      ['43113', 'ЩЕБЕНЬ', 'М3', '75000'],
+      ['9219', 'ПЕСОК ДЛЯ СТРОИТЕЛЬНЫХ РАБОТ', 'М3', '1850'],
+    ];
+    const out = resSatrlariniOl(rows, cols);
+    expect(out.map((r) => r.kat)).toEqual(['МАТ', 'МАТ', 'МАТ']);
+  });
+
   /* ⭐ Asosiy talab: «materialni va oborudovaniyani ham ajrata oladigan
      bo'lishi kerak». Birlik BUNI AYTMAYDI -- «РЕКЛАМНЫЙ БАННЕР» М2 da,
      «КОНЦЕВАЯ КАБЕЛЬНАЯ МУФТА» КОМПЛ da, ikkalasi ham ОБОРУДОВАНИЕ;
@@ -183,7 +254,12 @@ describe('RES bo‘lim sarlavhalari — МАТ/ОБ/КАБ/М-К ni ajratish', (
     expect(satrlar.map(s => [s.nom, s.kat])).toEqual([
       ['КИРПИЧ', 'МАТ'],
       ['ПЕСОК', 'МАТ'],
-      ['КАБЕЛЬ АПВПУ-1Х240', 'М/К'],
+      /* 2026-09-10 kutilgan natija O'ZGARTIRILDI (avval 'М/К' edi): egasi
+         qoidani aniqlashtirdi -- «kabel provod ... shu oilaga kiruvchi
+         metr yoki km da berilgan narsalar» КАБ bo'ladi. «КОНСТРУКЦИИ
+         ЗАВОДСКОГО ИЗГОТОВЛЕНИЯ» bo'limi ichida turgani kabelni М/К
+         qilmaydi -- bo'lim emas, nomning O'ZI hal qiladi. */
+      ['КАБЕЛЬ АПВПУ-1Х240', 'КАБ'],
       ['КОНЦЕВАЯ КАБЕЛЬНАЯ МУФТА ПКНТ(Н)-0-10-150-240', 'ОБ'],
       ['РЕКЛАМНЫЙ БАННЕР', 'ОБ'],
     ]);

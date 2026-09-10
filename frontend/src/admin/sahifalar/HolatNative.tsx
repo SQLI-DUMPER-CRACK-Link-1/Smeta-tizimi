@@ -76,6 +76,27 @@ export function HolatNative() {
     return () => { active = false; };
   }, [joriy?.id]);
 
+  /* Owner (2026-09-10): "test obyektim stella chiqmayapdi ... exellni yuklab
+   * bo'lmas emish". Sahifa obyektni URL orqali ochadi ("Kanonik obyekt"),
+   * lekin eksport gate'i TEPADAGI PTO scope'ning obyektiga qaraydi. Ikkisi
+   * sinxron bo'lmagani uchun foydalanuvchi ochgan obyektida eksport
+   * OBJECT_CONTEXT_REQUIRED bilan bloklanardi va u AYNAN O'SHA obyektni
+   * tepadan qo'lda qayta tanlashi kerak edi. Scope setter'larining o'zi
+   * kompaniya/loyiha chegarasini tekshiradi -- bu yerda hech qanday
+   * ruxsat kengaytirilmaydi, faqat ochilgan obyekt bilan moslashtiriladi. */
+  useEffect(() => {
+    if (!validId || workspace.loading.hierarchy) return;
+    if (workspace.scope.objectId === obyektId) return;
+    const object = workspace.objects.find((row) => row.id === obyektId);
+    if (!object) return;
+    const objectProject = object.loyiha_id ?? null;
+    if (workspace.scope.projectId !== objectProject) {
+      workspace.setProjectId(objectProject);
+      return;
+    }
+    workspace.setObjectId(obyektId);
+  }, [obyektId, validId, workspace]);
+
   const yuklash = useCallback(async () => {
     if (!validId) { setTree([]); return; }
     setLoading(true); setError(''); setPriceControlLines([]);

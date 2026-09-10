@@ -31,7 +31,39 @@ describe('kanonik LRV daraxti', () => {
       stFakt: 3000,
       stF2: 1249.99,
       stOst: 2000,
+      stF2Mum: 1750,
     });
+  });
+
+  /* Owner (2026-09-10): "hali f2 kiritilmaganku nima uchun smeta summasi
+   * bilan bir xil turibdi? ostatka summada smeta summasi turishi kerak edi".
+   * Daraxtdagi "Ost. Sum" va "F2 M. Sum" ustunlari almashib ketgan edi:
+   * qoldiq (stOst) "F2 mumkin" sarlavhasi ostida, "Qoldiq" ostida esa
+   * smeta-qoldiq (ya'ni OLINGAN summa) chiqardi. Hech narsa qilinmagan
+   * obyektda bu "qoldiq = 0" degan teskari ma'no berardi. */
+  it('hech narsa bajarilmaganda qoldiq = smeta, F2 mumkin = 0 bo\'ladi', () => {
+    const qator = {
+      id: 303, obyekt_id: 71, kompaniya_id: 17, ota_id: null, daraja: 0, tartib: 1,
+      tur: 'rz', kod: null, nom: 'ЗЕМЛЯНЫЕ РАБОТЫ', birlik: null, hajm: null, narx: null,
+      summa: 81599734.26, kat: null, narx_usul: null, qoshimcha: false, zamena: false,
+      d1: null, d2: null, d3: null, xom_qator: null, yangilandi: null,
+      manba_id: null, versiya: 1, raqam: null, norma: null, obyekt: 'Stella',
+    } as T2Qator;
+    const holat = {
+      id: 3, qator_id: 303, obyekt_id: 71, tur: 'rz', kod: null, nom: 'ЗЕМЛЯНЫЕ РАБОТЫ',
+      birlik: null, kat: null, smeta_hajm: null, smeta_summa: 81599734.26,
+      fakt_hajm: 0, fakt_summa: 0, f2_hajm: 0, f2_summa: 0,
+      qoldiq_hajm: null, qoldiq_summa: 81599734.26,
+      f2_mumkin_hajm: 0, f2_mumkin_summa: 0,
+      f2_narx: null, fakt_narx: null, f2_narx_farq_foiz: null,
+    } as T2QatorHolat;
+
+    const [node] = sbT2TreeQur([qator], [holat]);
+
+    expect(node.stOst).toBe(81599734.26);
+    expect(node.stF2Mum).toBe(0);
+    expect(node.stFakt).toBe(0);
+    expect(node.stF2).toBe(0);
   });
 
   it('manba qiymati yo‘q bo‘lsa uni nolga aylantirmaydi', () => {
