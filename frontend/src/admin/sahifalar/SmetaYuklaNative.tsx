@@ -315,7 +315,9 @@ export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxY
     const blokTuri = podvalBlokTuri(nom);
     if (blokTuri) {
       for (let i = blokBoshi; i < out.length; i++) {
-        if (out[i].kat === undefined || out[i].kat === 'МАТ') out[i].kat = blokTuri;
+        /* Faqat МАТ/ОБ chalkashligi hal qilinadi. ЧЕЛ/МАШ/КАБ/М-К birlik
+           yoki nom qoidasidan kelgan -- ular podvaldan kuchliroq. */
+        if (out[i].kat === undefined || out[i].kat === 'МАТ' || out[i].kat === 'ОБ') out[i].kat = blokTuri;
       }
       blokBoshi = out.length;
       joriyKat = undefined;
@@ -381,6 +383,20 @@ export function resursMkKabAniqla(
 ): T2ResursKategoriya | undefined {
   const n = String(nom || '').toUpperCase().replace(/Ё/g, 'Е').trim();
   const b = String(birlik || '').toUpperCase().replace(/Ё/g, 'Е').replace(/[.\s]/g, '').trim();
+
+  /* ⭐ BIRLIK ENG USTUN. Owner (2026-09-10): «bu yana adashayapdida
+     kategoriya topishda. mash chas aniqku bazilarida mat deb tashlagan».
+     ЧЕЛ-Ч va МАШ-Ч birligi turganda kategoriya SHUBHASIZ -- uni na bo'lim
+     sarlavhasi, na podval foizi o'zgartira olmasligi kerak.
+
+     Bu aynan shu xatoning oldini oladi: egasining faylida bo'lim
+     sarlavhalari o'qilmay qolgan, keyin material podvali (…=2% И М/К=0,75%)
+     uchrab, orqaga belgilash BUTUN blokni -- ishchi soati va 70+ mashinani
+     ham -- МАТ qilib qo'ygan edi. Endi ular bu bosqichdayoq ЧЕЛ/МАШ
+     bo'ladi va keyingi hech bir qoida ularga tegmaydi. */
+  if (b.startsWith('ЧЕЛ')) return /МАШИНИСТ/.test(n) ? 'МАШ' : 'ЧЕЛ';
+  if (b.startsWith('МАШ')) return 'МАШ';
+
   if (!n) return bolimKat;
   if (KAB_NOM.test(n)) return 'КАБ';
   if (MK_NOM.test(n) && MK_BIRLIK.test(b)) return 'М/К';
@@ -1318,13 +1334,15 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             {katKorib.length > 0 && (
               <div className="karta p-2 space-y-1.5 border-amber-500/30">
                 <p className="text-[11px] text-text-mute">
-                  <b>{katKorib.length} ta</b> resursning turi aniqlandi. МАТ va ОБ farqi RES faylining
-                  bo‘lim sarlavhasidan olinadi ({'«'}ОБОРУДОВАНИЕ{'»'}, {'«'}МАТЕРИАЛЬНЫЕ РЕСУРСЫ{'»'} …) —
-                  buni birlikdan (шт, м2, компл) topib bo‘lmaydi. <b>М/К</b> esa alohida qoida bilan:
-                  nomi tayyor konstruksiyani bildirsa <b>va</b> birligi og‘irlikda (кг/т) bo‘lsa —
-                  shuning uchun armatura va prokat М/К ga tushmaydi, ular xomashyo. <b>КАБ</b> —
-                  kabel/provod oilasi, nomi bo‘yicha. Noto‘g‘ri bo‘lsa shu yerda tuzating; belgilangan
-                  tur registrga yozilib, keyingi importlarda ham eslab qolinadi.
+                  <b>{katKorib.length} ta</b> resursning turi aniqlandi. Tartib: <b>birlik eng ustun</b> —
+                  ЧЕЛ-Ч → ЧЕЛ, МАШ-Ч → МАШ (mashinist mehnati МАШ, chunki u mashina stavkasi ichida).
+                  <b>КАБ</b> — kabel/provod oilasi, nomi bo‘yicha. <b>М/К</b> — nomi tayyor
+                  konstruksiyani bildirsa <b>va</b> birligi og‘irlikda (кг/т) bo‘lsa, shuning uchun
+                  armatura va prokat unga tushmaydi (ular xomashyo). <b>МАТ va ОБ</b> farqi esa faqat
+                  RES faylining bo‘lim sarlavhasidan yoki podvaldagi nakrutka foizidan olinadi
+                  (ОБ: {'«'}ЗАГОТ-СКЛАДСКИЕ=1,2%{'»'}, МАТ: {'«'}…=2% И М/К=0,75%{'»'}) — buni
+                  birlikdan (шт, м2, компл) topib bo‘lmaydi. Noto‘g‘ri bo‘lsa shu yerda tuzating;
+                  belgilangan tur registrga yozilib, keyingi importlarda ham eslab qolinadi.
                 </p>
                 <p className="text-[11px] text-text-mute">
                   {(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'] as const)

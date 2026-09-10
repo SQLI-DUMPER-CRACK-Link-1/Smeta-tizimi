@@ -333,6 +333,51 @@ describe('RES bo‘lim sarlavhalari — МАТ/ОБ/КАБ/М-К ni ajratish', (
           podvaldagi nakrutka foizlari ajratadi:
             ОБ  : «ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ=1,2%» + «ТРАНСПОРТНЫЕ УСЛУГИ=2%»
             МАТ : «ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ =2% И М/К=0,75%» + «…=5%» */
+  /* ⭐ Owner (2026-09-10): «bu yana adashayapdida jigar kategoriya topishda.
+     mash chas aniqku bazilarida mat deb tashlagan, yaxshi ishlaydigan qilib
+     ber». Ekranida 70+ mashina va ishchi soati МАТ bo'lib chiqqan edi.
+
+     Sabab AYNAN shu sessiyada kiritilgan podval qoidasi edi: bo'lim
+     sarlavhalari o'qilmay qolgan blokda material podvali uchraganda
+     orqaga belgilash BUTUN blokni МАТ qilib qo'ygan -- ЧЕЛ-Ч va МАШ-Ч
+     qatorlarni ham. Endi birlik eng ustun va uni hech narsa bosmaydi. */
+  describe('birlik eng ustun — ЧЕЛ-Ч/МАШ-Ч hech qachon МАТ bo‘lmaydi', () => {
+    it('birlik bo‘yicha kategoriya bo‘lim va podvaldan kuchliroq', () => {
+      expect(resursMkKabAniqla('АВТОПОГРУЗЧИКИ 5 Т', 'МАШ-Ч', 'МАТ')).toBe('МАШ');
+      expect(resursMkKabAniqla('ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ С УЧЕТОМ СОЦСТРАХА', 'ЧЕЛ-Ч', 'МАТ')).toBe('ЧЕЛ');
+      expect(resursMkKabAniqla('ЗАТРАТЫ ТРУДА МАШИНИСТОВ', 'ЧЕЛ-Ч', 'МАТ')).toBe('МАШ');
+      // «МАШ.-Ч», «чел-час» kabi yozilishlar ham
+      expect(resursMkKabAniqla('ВИБРАТОРЫ ГЛУБИННЫЕ', 'МАШ.-Ч', undefined)).toBe('МАШ');
+    });
+
+    it('sarlavhasiz blokda material podvali mashinalarni МАТ ga TORTMAYDI', () => {
+      const cols = { kod: -1, nom: 0, bir: 1, norma: -1, obyom: -1, narx: 2, sum: -1 };
+      const rows = [
+        ['ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ С УЧЕТОМ СОЦСТРАХА', 'ЧЕЛ-Ч', '24517.7'],
+        ['АВТОПОГРУЗЧИКИ 5 Т', 'МАШ-Ч', '148613'],
+        ['КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ 16 Т', 'МАШ-Ч', '244250'],
+        ['ЩЕБЕНЬ', 'М3', '75000'],
+        ['ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ =2% И М/К=0,75%', 'СУМ', ''],
+      ];
+      expect(resSatrlariniOl(rows, cols).map(r => [r.nom, r.kat])).toEqual([
+        ['ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ С УЧЕТОМ СОЦСТРАХА', 'ЧЕЛ'],
+        ['АВТОПОГРУЗЧИКИ 5 Т', 'МАШ'],
+        ['КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ 16 Т', 'МАШ'],
+        ['ЩЕБЕНЬ', 'МАТ'],
+      ]);
+    });
+
+    it('oborudovaniye podvali ham mashinalarni ОБ ga o‘tkazmaydi', () => {
+      const cols = { kod: -1, nom: 0, bir: 1, norma: -1, obyom: -1, narx: 2, sum: -1 };
+      const rows = [
+        ['ЭЛЕКТРОСТАНЦИИ ПЕРЕДВИЖНЫЕ 2 КВТ', 'МАШ-Ч', '50000'],
+        ['ОПТИЧЕСКИЙ ПАТЧ ПАНЕЛЬ 24 ПОРТА', 'ШТ', '325893'],
+        ['ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ=1,2%', 'СУМ', ''],
+      ];
+      expect(resSatrlariniOl(rows, cols).map(r => r.kat)).toEqual(['МАШ', 'ОБ']);
+    });
+  });
+
   describe('ОБ ni МАТ dan ajratish', () => {
     it('«СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ И КОНСТРУКЦИИ» bo‘limini МАТ deb taniydi', () => {
       expect(resBolimKategoriya('СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ И КОНСТРУКЦИИ')).toBe('МАТ');
