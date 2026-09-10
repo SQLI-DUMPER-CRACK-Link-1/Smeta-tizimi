@@ -34,6 +34,30 @@ describe('f2UstunAniqla (column auto-detect parity)', () => {
     expect(d).toMatchObject({ kod: 1, nom: 2, bir: 3, norma: 5, obyom: 6, narx: 7, sum: 8, hdrRow: 0 });
   });
 
+  /* Owner (2026-09-10): «o'zbekistonda 2 ta dastur borda smeta qilib
+     beradigan biri abc4 biri tn qurilish ... ustunlar joylashuvi farq
+     qiladi lekin bizni tizim universal o'qiy olishi kerak».
+     Quyidagi ikki sarlavha egasining HAQIQIY fayllaridan AYNAN olingan. */
+  test('Karting RES (ABC4) — «Количество» va «на.ед.изм./общая»', () => {
+    const data: SheetGrid = [
+      ['N п.п.', 'Шифр номера нормативов и коды ресурсов', 'Наименование работ и затрат',
+        'Единица измерения', 'Количество ', 'Сметная стоимость', ' '],
+      ['', '', '', '', '', 'на.ед.изм.', 'общая'],
+    ];
+    const d = f2UstunAniqla(data);
+    expect(d).toMatchObject({ kod: 1, nom: 2, bir: 3, obyom: 4, narx: 5, sum: 6, hdrRow: 0 });
+  });
+
+  test('Stella RES — «КОЛ-ВО / ЦЕНА ЗА ЕД. / СУММА», kod ustuni YO‘Q', () => {
+    const data: SheetGrid = [
+      ['N п/п', 'НАИМЕНОВАНИЕ', 'ЕД. ИЗМ.', 'КОЛ-ВО', 'ЦЕНА ЗА ЕД.', 'СУММА (сум)'],
+    ];
+    const d = f2UstunAniqla(data);
+    expect(d).toMatchObject({ nom: 1, bir: 2, obyom: 3, narx: 4, sum: 5, hdrRow: 0 });
+    // «N п/п» tartib raqami -- kod deb olinmasligi kerak
+    expect(d.kod).toBe(-1);
+  });
+
   test('no header found within the first 60 rows — falls back to the hardcoded default mapping', () => {
     const data: SheetGrid = [['just', 'some', 'data'], ['no', 'header', 'here']];
     const d = f2UstunAniqla(data);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Database, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
@@ -84,11 +84,26 @@ export function HolatNative() {
    * tepadan qo'lda qayta tanlashi kerak edi. Scope setter'larining o'zi
    * kompaniya/loyiha chegarasini tekshiradi -- bu yerda hech qanday
    * ruxsat kengaytirilmaydi, faqat ochilgan obyekt bilan moslashtiriladi. */
+  const yangilanganObyekt = useRef<number | null>(null);
   useEffect(() => {
     if (!validId || workspace.loading.hierarchy) return;
     if (workspace.scope.objectId === obyektId) return;
     const object = workspace.objects.find((row) => row.id === obyektId);
-    if (!object) return;
+    /* Owner (2026-09-10): "nima uchun yuklangan obyekt o'sha tepadagi
+       ro'yxatda chiqmayapdi ... u avtomat ishlashi kerak bo'lgan narsada".
+       PTO iyerarxiyasi sahifa ochilganda BIR MARTA o'qiladi -- undan keyin
+       yaratilgan obyekt (masalan yangi import qilingani) ro'yxatda
+       bo'lmaydi, sinxronlash esa jim to'xtardi va eksport
+       READ_MODEL_NOT_COMPLETE bilan bloklanardi. Endi ro'yxat bir marta
+       qayta o'qiladi; obyekt shundan keyin ham topilmasa, u haqiqatan
+       shu kompaniyaga tegishli emas -- hech narsa qilinmaydi. */
+    if (!object) {
+      if (yangilanganObyekt.current !== obyektId) {
+        yangilanganObyekt.current = obyektId;
+        workspace.refresh();
+      }
+      return;
+    }
     const objectProject = object.loyiha_id ?? null;
     if (workspace.scope.projectId !== objectProject) {
       workspace.setProjectId(objectProject);

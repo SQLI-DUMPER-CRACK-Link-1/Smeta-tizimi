@@ -119,6 +119,58 @@ export const NARXSIZ_SABAB_MATN: Record<NarxsizSabab, string> = {
 
 export type ImportQadam = { kalit: string; nom: string; holat: 'ishlamoqda' | 'tayyor' | 'xato'; tafsilot?: string };
 
+/**
+ * Tanlangan varaqning BOSHLANG'ICH qatorlarini ustun raqamlari bilan
+ * ko'rsatadi.
+ *
+ * Owner (2026-09-10): «res yuklangandan keyin list tanlangandan keyin list
+ * holati ko'rsatilishi kerak ustunlarni aniqlashtirib olish uchun». Avval
+ * ustun raqamlari (kod/nom/bir/narx) faylni KO'RMASDAN kiritilardi --
+ * to'g'ri kiritilgan-kiritilmagani faqat import natijasidan bilinardi.
+ * Belgilangan ustunlar rangli sarlavha bilan ajratiladi.
+ */
+function VaraqKorinishi({ rows, cols, qatorSoni = 8 }: {
+  rows: SheetGrid;
+  cols: { kod: number; nom: number; bir: number; narx: number } | null;
+  qatorSoni?: number;
+}) {
+  const korsatiladi = rows.filter(r => r.some(c => String(c ?? '').trim() !== '')).slice(0, qatorSoni);
+  if (!korsatiladi.length) return <p className="text-[11px] text-text-mute">Varaq bo‘sh.</p>;
+  const ustunSoni = Math.min(korsatiladi.reduce((m, r) => Math.max(m, r.length), 0), 12);
+  const belgi = (i: number) => cols?.kod === i ? 'kod' : cols?.nom === i ? 'nom'
+    : cols?.bir === i ? 'birlik' : cols?.narx === i ? 'narx' : null;
+  return (
+    <div className="overflow-auto max-h-56 border border-border/40 rounded" data-testid="varaq-korinishi">
+      <table className="w-full text-[11.5px]">
+        <thead className="sticky top-0 bg-surface">
+          <tr>
+            {Array.from({ length: ustunSoni }, (_, i) => {
+              const b = belgi(i);
+              return (
+                <th key={i} className={`px-1.5 py-1 text-left font-normal whitespace-nowrap ${b ? 'text-accent' : 'text-text-mute'}`}>
+                  {i + 1}{b ? ` · ${b}` : ''}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {korsatiladi.map((r, ri) => (
+            <tr key={ri} className="border-t border-border/30">
+              {Array.from({ length: ustunSoni }, (_, ci) => (
+                <td key={ci} className={`px-1.5 py-0.5 max-w-[220px] truncate ${belgi(ci) ? 'text-text' : 'text-text-dim'}`}
+                  title={String(r[ci] ?? '')}>
+                  {String(r[ci] ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** Client-side tolerant numeric parse (comma-decimal, thousands spaces) -- server-side t2_son mirrors this. */
 function son(v: unknown): number | undefined {
   if (v == null) return undefined;
@@ -315,6 +367,7 @@ export function varaqTuriTaxmin(rows: SheetGrid): 'lrv' | 'res' | 'nomalum' {
   const cols = f2UstunAniqla(rows);
   if (cols.nom < 0) return 'nomalum';
   let jami = 0, narxli = 0, hajmli = 0;
+  const bolimlar = new Set<string>();
   for (const row of rows) {
     const nom = String(row[cols.nom] ?? '').trim();
     if (!nom) continue;
@@ -323,8 +376,24 @@ export function varaqTuriTaxmin(rows: SheetGrid): 'lrv' | 'res' | 'nomalum' {
     const hajm = cols.obyom >= 0 ? son(row[cols.obyom]) : undefined;
     if (narx != null && narx > 0) narxli++;
     if (hajm != null) hajmli++;
+    const b = resBolimKategoriya(nom);
+    if (b && b !== 'YAKUN') bolimlar.add(b);
   }
   if (jami < 3) return 'nomalum';
+
+  /* Owner (2026-09-10): «manashu list ress listi lekin nima uchun tizim lrv
+     deb o'yladi». Sabab: pastdagi «hajm bor -> LRV» qoidasi. Egasining
+     haqiqiy RES varag'ida (obyekt 72, 1544 qator) КОЛ-ВО ustuni HAR BIR
+     resursda to'ldirilgan -- bu «resurs jamlanmasi» ko'rinishidagi RES,
+     sof narxnoma emas. Ya'ni hajmning bor-yo'qligi bu ikkisini ajrata
+     olmaydi.
+
+     Ishonchli belgi -- RES BO'LIM SARLAVHALARI (ЗАТРАТЫ ТРУДА /
+     СТРОИТЕЛЬНЫЕ МАШИНЫ И МЕХАНИЗМЫ / МАТЕРИАЛЬНЫЕ РЕСУРСЫ /
+     ОБОРУДОВАНИЕ ...). LRV ish ierarxiyasida bunday bo'limlar bo'lmaydi.
+     Kamida IKKI xil bo'lim topilsa -- bu aniq RES. */
+  if (bolimlar.size >= 2) return 'res';
+
   const narxNisbat = narxli / jami;
   const hajmNisbat = hajmli / jami;
   if (hajmNisbat > 0.3) return 'lrv';
@@ -1183,6 +1252,11 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                     </label>
                   ))}
                 </fieldset>
+                <p className="text-[11px] text-text-mute">
+                  «{resSheetName}» varag‘ining boshlang‘ich qatorlari — yuqoridagi ustun
+                  raqamlari to‘g‘ri joyga tushganini shu yerdan tekshiring:
+                </p>
+                <VaraqKorinishi rows={resBook.sheet(resSheetName)?.rows ?? []} cols={resCols} />
               </>
             )}
             {(book?.sheets.some(s => varaqTeglari[s.name] === 'res') || (resBook && resCols)) && (
