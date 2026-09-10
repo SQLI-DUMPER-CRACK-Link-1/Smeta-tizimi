@@ -5,6 +5,7 @@ import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
 import { FmtN } from '../../lib/format';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
+import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import { sbT2AktYaratV2, sbT2ObyektlarOlKomp, yangiOperationId, type T2Obyekt } from '../../api/supabase';
 import { sbQatorHolatOl, type QatorHolat } from '../../api/t2-fakt';
 import { f2NativePayloadQur, type F2NativeInput } from '../../lib/f2-native-preparation';
@@ -19,6 +20,7 @@ const oyBoshlanishi = () => `${new Date().getFullYear()}-${String(new Date().get
 /** T1 GASsiz F2 qoralama: only canonical Fakt qoldig'i + exact F2 document values. */
 export function F2TayyorlashNative() {
   const { joriy } = useKompaniya();
+  const workspace = usePTOWorkspace();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
@@ -36,6 +38,18 @@ export function F2TayyorlashNative() {
     if (!joriy?.id) return;
     void sbT2ObyektlarOlKomp(joriy.id).then((result) => setObyektlar((result.ok ? result.qatorlar : []) as T2Obyekt[]));
   }, [joriy?.id]);
+
+  useEffect(() => {
+    if (workspace.scope.objectId == null || !obyektlar.some((object) => object.id === workspace.scope.objectId)) return;
+    if (workspace.scope.objectId !== obyektId) {
+      setParams((old) => {
+        const next = new URLSearchParams(old);
+        next.set('obyekt', String(workspace.scope.objectId));
+        next.delete('obyekt_nomi');
+        return next;
+      });
+    }
+  }, [obyektId, obyektlar, setParams, workspace.scope.objectId]);
 
   const yuklash = useCallback(async () => {
     if (!validId) { setQatorlar([]); return; }
@@ -117,7 +131,7 @@ export function F2TayyorlashNative() {
     <div className="flex h-full min-h-0 flex-col gap-3">
       <section className="karta flex flex-wrap items-end gap-3 p-3">
         <label className="min-w-[260px] flex-1 text-[12px] font-medium text-text">Obyekt
-          <select value={validId ? obyektId : ''} onChange={(event) => { const object = obyektlar.find((item) => item.id === Number(event.target.value)); setParams({ obyekt: event.target.value, obyekt_nomi: object?.nom || '' }); }} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-text">
+          <select value={validId ? obyektId : ''} onChange={(event) => { const object = obyektlar.find((item) => item.id === Number(event.target.value)); workspace.setObjectId(object?.id ?? null); setParams({ obyekt: event.target.value, obyekt_nomi: object?.nom || '' }); }} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-text">
             <option value="">-- kanonik obyektni tanlang --</option>{obyektlar.map((object) => <option key={object.id} value={object.id}>{object.nom}</option>)}
           </select>
         </label>

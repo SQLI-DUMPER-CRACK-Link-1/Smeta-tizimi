@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lrvPlusQatorlarniHisobla, lrvPlusJamiFormula, lrvPlusFaylBaytlari, LRV_PLUS_USTUNLAR } from './lrv-plus-export';
+import { lrvPlusQatorlarniHisobla, lrvPlusJamiFormula, lrvPlusFaylBaytlari, lrvPlusEksportGate, LRV_PLUS_USTUNLAR } from './lrv-plus-export';
 import type { T2Qator, T2QatorHolat } from '../api/supabase';
 
 /** Production'da T2-SMETA-NORMA-CASCADE-001 tekshiruvida ishlatilgan
@@ -69,11 +69,16 @@ describe('lrvPlusQatorlarniHisobla — smeta kaskadi', () => {
     expect(bl.summaQiymat).toBe(190000 + 235000);
   });
 
-  it('bo\'sh bo\'lim (bolasi yo\'q) uchun СУММА 0 (formula emas)', () => {
+  it('bo\'sh bo\'lim (bolasi yo\'q) uchun СУММА noma\'lum bo\'lib qoladi', () => {
     const yolgiz = qator({ id: 9, tartib: 1, tur: 'rz', daraja: 0, nom: 'Bo\'sh bo\'lim' });
     const h = lrvPlusQatorlarniHisobla([yolgiz]);
     expect(h[0].summaFormula).toBeNull();
-    expect(h[0].summaQiymat).toBe(0);
+    expect(h[0].summaQiymat).toBeNull();
+  });
+
+  it('narx noma\'lum bo\'lsa summa 0 emas, unknown bo\'ladi', () => {
+    const h = lrvPlusQatorlarniHisobla([qator({ id: 10, tartib: 1, tur: 'rs', daraja: 0, hajm: 5, narx: null })]);
+    expect(h[0].summaQiymat).toBeNull();
   });
 });
 
@@ -386,3 +391,21 @@ describe('Forma-2 rejimi — LRV_PLUS ning O ustunigacha bo\'lgan qismi bilan ay
   });
 });
 
+describe('LRV_PLUS export provenance gate', () => {
+  it('blocks missing context and incomplete read model', () => {
+    const blocked = lrvPlusEksportGate({ kompaniyaId: 1, obyektId: 2, dataComplete: false });
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.reasons).toEqual(expect.arrayContaining([
+      'PROJECT_CONTEXT_REQUIRED', 'PERIOD_CONTEXT_REQUIRED', 'SOURCE_DOCUMENT_REQUIRED',
+      'REVISION_REQUIRED', 'READ_MODEL_NOT_COMPLETE',
+    ]));
+  });
+
+  it('allows export only when every scope/provenance field is explicit', () => {
+    expect(lrvPlusEksportGate({
+      kompaniyaId: 1, loyihaId: 2, obyektId: 3, davrId: '2026-09',
+      sourceDocumentId: 'doc-1', revisionId: 'doc-1:r2', dataComplete: true,
+      sourceChecksum: 'abc123',
+    })).toEqual({ ok: true });
+  });
+});

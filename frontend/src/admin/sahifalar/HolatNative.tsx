@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Database, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
@@ -9,11 +9,12 @@ import {
   sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur,
   yangiOperationId, type T2Obyekt, type T2Qator, type T2QatorHolat,
 } from '../../api/supabase';
-import { lrvPlusFaylBaytlari, lrvPlusYuklab, type LrvPlusRejim } from '../../lib/lrv-plus-export';
+import { lrvPlusEksportGate, lrvPlusFaylBaytlari, lrvPlusYuklab, type LrvPlusExportContext, type LrvPlusRejim } from '../../lib/lrv-plus-export';
 import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
 import { t2ObyektNakrutka } from '../../api/t2-nakrutka';
 import type { TreeNode } from '../../api/types';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
+import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import SmetaYuklaNative from './SmetaYuklaNative';
 import ResursVedomostNative from './ResursVedomostNative';
 import NarxNazoratNative from './NarxNazoratNative';
@@ -42,6 +43,20 @@ export function HolatNative() {
   const obyektId = Number(id);
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
   const selected = obyektlar.find((o) => o.id === obyektId) ?? null;
+  const workspace = usePTOWorkspace();
+  const canonicalScopeObject = workspace.objects.find((o) => o.id === workspace.scope.objectId && o.id === obyektId) ?? null;
+  const exportContext = useMemo<Partial<LrvPlusExportContext>>(() => ({
+    kompaniyaId: workspace.companyId ?? undefined,
+    loyihaId: workspace.scope.projectId ?? undefined,
+    obyektId: workspace.scope.objectId ?? undefined,
+    davrId: workspace.scope.periodId ?? undefined,
+    sourceDocumentId: workspace.scope.sourceDocumentId ?? undefined,
+    revisionId: workspace.scope.revisionId ?? undefined,
+    sourceChecksum: workspace.sourceDocuments.find((document) => document.id === workspace.scope.sourceDocumentId)?.sha256 ?? undefined,
+    dataComplete: Boolean(canonicalScopeObject && daraxtXom.length > 0 && !loading && !error),
+  }), [canonicalScopeObject, daraxtXom.length, error, loading, workspace.companyId, workspace.scope, workspace.sourceDocuments]);
+  const exportGate = lrvPlusEksportGate(exportContext);
+  const exportBlockReason = !exportGate.ok ? exportGate.reasons[0] : null;
 
   useEffect(() => {
     let active = true;
@@ -87,21 +102,30 @@ export function HolatNative() {
    * nakrutka koeffitsientlari HAR IKKI rejimda (`toliq`, `forma2`) ham
    * so'raladi va kaskad jadvali qo'shiladi. Nakrutka o'qish muvaffaqiyatsiz
    * bo'lsa (masalan shartnoma sozlanmagan) -- eksport BLOKLANMAYDI, faqat
-   * kaskad jadvalisiz chiqadi (best-effort, hujjatning o'zi muhimroq). */
+   * kaskad jadvalisiz chiqadi (best-effort, hujjatning o'zi muhimroq).
+   *
+   * HERM-001 WP-1C: bundan tashqari, PTO scope (kompaniya/loyiha/obyekt/
+   * davr/source hujjat/revision) va read-model to'liqligi ISBOTLANMASA
+   * (`exportGate`), eksport butunlay BLOKLANADI -- nakrutka bilan/siz
+   * farqi yo'q, provenance hech qachon ixtiyoriy emas. */
   const eksportQil = useCallback(async (rejim: LrvPlusRejim) => {
     if (!selected || !daraxtXom.length) return;
+    if (!exportGate.ok) {
+      setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
+      return;
+    }
     setEksportBolmoqda(true);
     try {
       const nakr = await t2ObyektNakrutka(obyektId).catch(() => null);
       const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom, {
         rejim,
         nakrutka: nakr?.ok ? nakr.koeffitsientlar : undefined,
-      });
+      }, exportContext as LrvPlusExportContext);
       lrvPlusYuklab(bytes, selected.nom + (rejim === 'forma2' ? '_FORMA2' : ''));
     } catch {
       setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, obyektId]);
+  }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason]);
 
   useEffect(() => { void yuklash(); }, [yuklash]);
 
@@ -148,24 +172,29 @@ export function HolatNative() {
           <button onClick={() => navigate('/admin/obyektlar')} className="rounded-lg border border-border p-2 text-text-dim hover:text-text" aria-label="Obyektlarga qaytish"><ArrowLeft size={17} /></button>
           <label className="min-w-[260px] flex-1 text-[12px] font-medium text-text">
             Kanonik obyekt
-            <select value={validId ? String(obyektId) : ''} onChange={(e) => { const object = obyektlar.find((item) => item.id === Number(e.target.value)); navigate(`/admin/holat/${e.target.value}?obyekt_nomi=${encodeURIComponent(object?.nom || '')}`); }} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text outline-none focus:border-accent">
+            <select value={validId ? String(obyektId) : ''} onChange={(e) => { const nextId = Number(e.target.value); const object = obyektlar.find((item) => item.id === nextId); if (Number.isSafeInteger(nextId) && nextId > 0) { workspace.setObjectId(nextId); navigate(`/admin/holat/${nextId}?obyekt=${nextId}&obyekt_nomi=${encodeURIComponent(object?.nom || '')}`); } else { workspace.setObjectId(null); navigate('/admin/holat'); } }} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text outline-none focus:border-accent">
               <option value="">-- obyektni tanlang --</option>
               {obyektlar.map((o) => <option key={o.id} value={o.id}>{o.nom}</option>)}
             </select>
           </label>
           <button onClick={() => void yuklash()} disabled={!validId || loading} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40"><RefreshCw size={14} /> Yangilash</button>
           {validId && tree.length > 0 && (<>
-            <button onClick={() => void eksportQil('toliq')} disabled={eksportBolmoqda}
-              title="Excel'da: bl ОБЪЁМини o'zgartirsangiz, resurslar va summalar formula orqali avtomatik qayta hisoblanadi. Nakrutka kaskadi ham qo'shiladi."
+            <button onClick={() => void eksportQil('toliq')} disabled={eksportBolmoqda || !exportGate.ok}
+              title={exportGate.ok ? "Excel'da: bl ОБЪЁМини o'zgartirsangiz, resurslar va summalar formula orqali avtomatik qayta hisoblanadi. Nakrutka kaskadi ham qo'shiladi." : `Eksport bloklangan: ${exportBlockReason}`}
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'LRV Excel'}
             </button>
-            <button onClick={() => void eksportQil('forma2')} disabled={eksportBolmoqda}
-              title="Forma-2 -- LRV'ning O ustunigacha bo'lgan qismi + nakrutka kaskadi. Buyurtmachiga tasdiqlash uchun yuboriladigan shakl."
+            <button onClick={() => void eksportQil('forma2')} disabled={eksportBolmoqda || !exportGate.ok}
+              title={exportGate.ok ? "Forma-2 -- LRV'ning O ustunigacha bo'lgan qismi + nakrutka kaskadi. Buyurtmachiga tasdiqlash uchun yuboriladigan shakl." : `Eksport bloklangan: ${exportBlockReason}`}
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Forma-2 Excel'}
             </button>
           </>)}
+          {validId && tree.length > 0 && !exportGate.ok && (
+            <span role="status" className="max-w-[280px] text-[11px] text-warn">
+              Excel eksporti bloklangan: {exportBlockReason}. PTO scope’da loyiha, davr, source hujjat va revisionni tanlang.
+            </span>
+          )}
           {validId && <button onClick={() => navigate(`/admin/fakt?obyekt=${obyektId}`)} className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white">Fakt kiritish</button>}
         </section>
 

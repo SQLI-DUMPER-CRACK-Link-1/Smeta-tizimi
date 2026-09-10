@@ -27,6 +27,9 @@ export const ROUTE_SCOPE: Record<string, RouteScope> = {
   // COMPANY_SCOPED
   '/admin/dashboard': 'COMPANY_SCOPED',
   '/admin/documents': 'COMPANY_SCOPED',
+  '/admin/hujjatlar': 'COMPANY_SCOPED',
+  '/admin/loyiha': 'COMPANY_SCOPED',
+  '/admin/obyektlar': 'COMPANY_SCOPED',
   '/admin/mindmap': 'COMPANY_SCOPED',
   '/admin/test/portfel': 'COMPANY_SCOPED',
   '/admin/test/moliya': 'COMPANY_SCOPED',
@@ -44,6 +47,14 @@ export const ROUTE_SCOPE: Record<string, RouteScope> = {
   '/admin/test/aosr': 'PROJECT_SCOPED',
 
   // OBJECT_SCOPED
+  '/admin/holat': 'OBJECT_SCOPED',
+  '/admin/f2': 'OBJECT_SCOPED',
+  '/admin/f2-tayyorlash': 'OBJECT_SCOPED',
+  '/admin/f2-tarix': 'OBJECT_SCOPED',
+  '/admin/fakt': 'OBJECT_SCOPED',
+  '/admin/nakopitelniy': 'OBJECT_SCOPED',
+  '/admin/narxlar': 'OBJECT_SCOPED',
+  '/admin/smeta-narxlash': 'OBJECT_SCOPED',
   '/admin/hujjat-nazorat': 'OBJECT_SCOPED',
   '/admin/storage': 'OBJECT_SCOPED',
   '/admin/test/obyektlar': 'OBJECT_SCOPED',
@@ -52,7 +63,8 @@ export const ROUTE_SCOPE: Record<string, RouteScope> = {
 
 /** GLOBAL bo'lmagan (kompaniya kerak bo'ladigan) marshrutmi? */
 export function kompaniyaKerakmi(pathname: string): boolean {
-  const s = ROUTE_SCOPE[pathname];
+  const exact = ROUTE_SCOPE[pathname];
+  const s = exact || Object.entries(ROUTE_SCOPE).find(([route]) => pathname.startsWith(route + '/'))?.[1];
   if (!s) return false; // noma'lum/legacy — o'z-o'zini qo'riqlaydi
   return s === 'COMPANY_SCOPED' || s === 'PROJECT_SCOPED' || s === 'OBJECT_SCOPED';
 }

@@ -69,7 +69,12 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                          named RPCs, so they must remain in the gateway
                          allow-list oracle. */
                       't2_f2_import_job_yarat_v1', 't2_f2_import_job_ilgarilash_v1',
+                      't2_f2_import_job_recover_v1', 't2_f2_import_job_cancel_v1',
                       't2_f2_import_draft_saqla_v1',
+                      /* 2026-09-10, HERM-001: lifecycle transition and
+                         correction are named, tenant/actor-bound commands;
+                         they must remain explicit in this allow-list. */
+                      't2_akt_lifecycle_transition_v1', 't2_akt_correction_create_v1',
                       't2_kompaniya_yangila',
                       't2_material_alias_yoz', 't2_material_alias_ochir',
                       't2_mindmap_bog_v2', 't2_mindmap_bog_ochir_v2',

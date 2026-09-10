@@ -50,7 +50,11 @@ const AMALLAR = {
      from the verified session, exactly like every other v1 RPC here. */
   f2_import_job_yarat: { rpc: 't2_f2_import_job_yarat_v1' },
   f2_import_job_ilgarilash: { rpc: 't2_f2_import_job_ilgarilash_v1' },
+  f2_import_job_recover: { rpc: 't2_f2_import_job_recover_v1' },
+  f2_import_job_cancel: { rpc: 't2_f2_import_job_cancel_v1' },
   f2_import_draft_saqla: { rpc: 't2_f2_import_draft_saqla_v1' },
+  akt_lifecycle_transition_v1: { rpc: 't2_akt_lifecycle_transition_v1' },
+  akt_correction_create_v1: { rpc: 't2_akt_correction_create_v1' },
   akt_tasdiqlash: { rpc: 't2_akt_tasdiqlash' },
   akt_bekor:      { rpc: 't2_akt_bekor' },
   narx_belgila:   { rpc: 't2_narx_belgila' },
@@ -544,6 +548,43 @@ export const onRequestPost: PagesFunction<{
         p_last_error: so.last_error ? String(so.last_error).slice(0, 500) : null,
       };
 
+    } else if (amal === 'f2_import_job_recover' || amal === 'f2_import_job_cancel') {
+      const jobId = Number(so.job_id);
+      const expectedRaw = so.expected_versiya ?? so.kutilgan_versiya;
+      const expectedVersion = Number(expectedRaw);
+      if (!Number.isSafeInteger(jobId) || jobId <= 0 || expectedRaw == null ||
+          (typeof expectedRaw === 'string' && !expectedRaw.trim()) ||
+          !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+        return Response.json({ ok: false, error: 'job_id va expected_versiya noto\'g\'ri' });
+      }
+      if (!uuidRe.test(operationId)) {
+        return Response.json({ ok: false, error: 'operation_id (UUID) majburiy' });
+      }
+      if (amal === 'f2_import_job_recover') {
+        const staleRaw = so.stale_after_seconds;
+        const stale = staleRaw == null ? null : Number(staleRaw);
+        if (stale != null && (!Number.isSafeInteger(stale) || stale < 60 || stale > 86400)) {
+          return Response.json({ ok: false, error: 'stale_after_seconds 60..86400 oralig\'ida bo\'lishi kerak' });
+        }
+        yuk = {
+          p_job_id: jobId,
+          p_actor_id: sess.foydalanuvchi_id,
+          p_expected_versiya: expectedVersion,
+          p_operation_id: operationId,
+          ...(stale == null ? {} : { p_stale_after_seconds: stale }),
+        };
+      } else {
+        const reason = typeof so.sabab === 'string' ? so.sabab.trim().slice(0, 2000) : '';
+        if (!reason) return Response.json({ ok: false, error: 'Bekor qilish sababi majburiy' });
+        yuk = {
+          p_job_id: jobId,
+          p_actor_id: sess.foydalanuvchi_id,
+          p_expected_versiya: expectedVersion,
+          p_operation_id: operationId,
+          p_reason: reason,
+        };
+      }
+
     } else if (amal === 'f2_import_draft_saqla') {
       const jobId = Number(so.job_id);
       if (!Number.isFinite(jobId) || jobId <= 0) {
@@ -901,6 +942,67 @@ export const onRequestPost: PagesFunction<{
       }
       yuk = { p_xarajat_id: xarajatId,
               p_kutilgan_versiya: so.kutilgan_versiya == null ? null : Number(so.kutilgan_versiya) };
+
+    /* ══════════ CANONICAL F2 LIFECYCLE / CORRECTION ══════════ */
+    } else if (amal === 'akt_lifecycle_transition_v1' || amal === 'akt_correction_create_v1') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      const actorId = Number(sess.foydalanuvchi_id);
+      if (!Number.isSafeInteger(kompaniyaId) || kompaniyaId <= 0) {
+        return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' }, { status: 400 });
+      }
+      if (!Number.isSafeInteger(actorId) || actorId <= 0) {
+        return Response.json({ ok: false, error: 'Lifecycle uchun tasdiqlangan actor talab qilinadi' }, { status: 401 });
+      }
+      if (!Array.isArray(sess.kompaniyalar) || !sess.kompaniyalar.some((a) => a.kompaniya_id === kompaniyaId)) {
+        return Response.json({ ok: false, error: 'Bu kompaniyaga ruxsat yo\'q' }, { status: 403 });
+      }
+      if (!uuidRe.test(operationId)) {
+        return Response.json({ ok: false, error: 'Lifecycle operation_id UUID bo\'lishi shart' }, { status: 400 });
+      }
+      if (amal === 'akt_lifecycle_transition_v1') {
+        const aktId = Number(so.akt_id);
+        const expectedRaw = so.kutilgan_versiya ?? so.expected_version;
+        const expectedVersion = Number(expectedRaw);
+        const allowed = new Set(['draft', 'submitted', 'checked', 'approved', 'rejected', 'cancelled', 'superseded']);
+        if (expectedRaw == null || (typeof expectedRaw === 'string' && !expectedRaw.trim()) ||
+            !Number.isSafeInteger(aktId) || aktId <= 0 || !Number.isSafeInteger(expectedVersion) || expectedVersion < 0) {
+          return Response.json({ ok: false, error: 'akt_id va kutilgan_versiya noto\'g\'ri' }, { status: 400 });
+        }
+        if (!allowed.has(String(so.to_status || so.holat || ''))) {
+          return Response.json({ ok: false, error: 'to_status noto\'g\'ri' }, { status: 400 });
+        }
+        yuk = {
+          p_kompaniya_id: kompaniyaId,
+          p_akt_id: aktId,
+          p_to_status: String(so.to_status || so.holat),
+          p_actor_id: actorId,
+          p_expected_version: expectedVersion,
+          p_operation_id: operationId,
+          p_reason: so.sabab ? String(so.sabab).slice(0, 2000) : null,
+        };
+      } else {
+        const sourceAktId = Number(so.source_akt_id ?? so.akt_id);
+        const expectedRaw = so.kutilgan_versiya ?? so.expected_source_version;
+        const expectedVersion = Number(expectedRaw);
+        const revisionId = so.revision_id == null ? null : Number(so.revision_id);
+        if (expectedRaw == null || (typeof expectedRaw === 'string' && !expectedRaw.trim()) ||
+            !Number.isSafeInteger(sourceAktId) || sourceAktId <= 0 || !Number.isSafeInteger(expectedVersion) || expectedVersion < 0) {
+          return Response.json({ ok: false, error: 'source_akt_id va kutilgan_versiya noto\'g\'ri' }, { status: 400 });
+        }
+        if (revisionId != null && (!Number.isSafeInteger(revisionId) || revisionId <= 0)) {
+          return Response.json({ ok: false, error: 'revision_id noto\'g\'ri' }, { status: 400 });
+        }
+        yuk = {
+          p_kompaniya_id: kompaniyaId,
+          p_actor_id: actorId,
+          p_source_akt_id: sourceAktId,
+          p_operation_id: operationId,
+          p_expected_source_version: expectedVersion,
+          p_revision_id: revisionId,
+          p_reason: so.sabab ? String(so.sabab).slice(0, 2000) : null,
+          p_raqam: so.raqam ? String(so.raqam).slice(0, 100) : null,
+        };
+      }
 
     /* ══════════ TASDIQLASH / BEKOR ══════════ */
     } else if (amal === 'akt_tasdiqlash' || amal === 'akt_bekor') {
