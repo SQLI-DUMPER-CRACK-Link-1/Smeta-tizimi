@@ -682,6 +682,7 @@
         "frontend/src/umumiy/kontekst/routeScope.ts",
         "frontend/src/api/t2-akt-lifecycle.ts",
         "frontend/src/api/t2-f2-job-recovery.ts",
+        "frontend/functions/api/sb.ts",
         "frontend/src/umumiy/ui/PTOUi.tsx",
         "frontend/src/umumiy/ui/PTOUi.test.tsx",
         "frontend/src/admin/AdminShell.tsx",

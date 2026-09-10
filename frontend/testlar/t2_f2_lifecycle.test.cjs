@@ -10,6 +10,7 @@ const recoveryMigration = path.join(root, 'supabase', 'migrations', '20260922130
 const recoveryAcceptance = path.join(root, 'supabase', 'migrations', '20260922130000_t2_f2_import_job_recovery_v1.acceptance.sql');
 const recoveryRollback = path.join(root, 'supabase', 'migrations', '20260922130000_t2_f2_import_job_recovery_v1.rollback.sql');
 const gateway = path.join(root, 'frontend', 'functions', 'api', 'sb-yoz.ts');
+const readGateway = path.join(root, 'frontend', 'functions', 'api', 'sb.ts');
 const read = (p) => fs.readFileSync(p, 'utf8');
 const must = (label, ok) => {
   if (!ok) throw new Error('FAIL: ' + label);
@@ -23,6 +24,7 @@ const recovery = read(recoveryMigration);
 const recoveryAcc = read(recoveryAcceptance);
 const recoveryRoll = read(recoveryRollback);
 const apiGateway = read(gateway);
+const apiReadGateway = read(readGateway);
 const smetaUi = read(path.join(root, 'frontend', 'src', 'admin', 'sahifalar', 'SmetaYuklaNative.tsx'));
 const f2HistoryUi = read(path.join(root, 'frontend', 'src', 'admin', 'sahifalar', 'F2TarixNative.tsx'));
 
@@ -46,4 +48,5 @@ must('recovery rollback keeps job data', !/\bdrop\s+(table|column)\b/i.test(reco
 must('gateway maps recovery and cancel actions', apiGateway.includes("f2_import_job_recover: { rpc: 't2_f2_import_job_recover_v1' }") && apiGateway.includes("f2_import_job_cancel: { rpc: 't2_f2_import_job_cancel_v1' }"));
 must('smeta native reimport is non-destructive', smetaUi.includes('smetaQaytaImportDiff') && !smetaUi.includes('smeta_tozala') && !smetaUi.includes('Smetani tozalab'));
 must('F2 approval follows draft-submitted-checked-approved sequence', f2HistoryUi.includes("['submitted', 'checked', 'approved']") && f2HistoryUi.includes('t2AktLifecycleTransition') && !f2HistoryUi.includes('sbT2AktTasdiqlash'));
+must('read gateway exposes tenant+actor-bound lifecycle history (GET-only, no ad-hoc RPC name)', apiReadGateway.includes("akt_lifecycle_history_v1: 'akt_kompaniya_actor'") && apiReadGateway.includes("q.set('p_akt_id', String(id))") && apiReadGateway.includes("tur === 'kompaniya_actor' || tur === 'akt_kompaniya_actor'"));
 console.log('  ✅ T2 F2 lifecycle source contract');

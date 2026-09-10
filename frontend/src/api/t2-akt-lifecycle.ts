@@ -11,6 +11,17 @@ export type PtoLifecycleResult = AktNatija & {
   retry?: boolean;
 };
 
+export type PtoLifecycleHistoryRow = {
+  id: number;
+  akt_id: number;
+  from_status: PtoLifecycleStatus | null;
+  to_status: PtoLifecycleStatus;
+  reason: string | null;
+  actor_id: number;
+  operation_id: string;
+  created_at: string;
+};
+
 function validId(value: number): boolean {
   return Number.isSafeInteger(value) && value > 0;
 }
@@ -79,4 +90,27 @@ export function t2AktCorrectionCreate(p: {
     raqam: p.raqam ?? null,
     operation_id: operationId,
   }) as Promise<PtoLifecycleResult>;
+}
+
+/**
+ * Read the append-only approval-chain history for one F2 (akt). GET-only,
+ * `stable` RPC (`t2_akt_lifecycle_history_v1`) read through `/api/sb`'s
+ * named allowlist (`akt_lifecycle_history_v1`) -- actor comes from the
+ * verified session, never from the client.
+ */
+export async function t2AktLifecycleHistory(p: { kompaniyaId: number; aktId: number }): Promise<
+  { ok: boolean; qatorlar: PtoLifecycleHistoryRow[]; error?: string }
+> {
+  if (!validId(p.kompaniyaId) || !validId(p.aktId)) {
+    return { ok: false, qatorlar: [], error: 'Lifecycle identifikatori noto‘g‘ri' };
+  }
+  const r = await fetch('/api/sb', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ soro: 'akt_lifecycle_history_v1', kompaniya_id: p.kompaniyaId, akt_id: p.aktId }),
+  });
+  const j = await r.json().catch(() => null) as { ok?: boolean; natija?: PtoLifecycleHistoryRow[]; error?: string } | null;
+  if (!j || !j.ok || !Array.isArray(j.natija)) {
+    return { ok: false, qatorlar: [], error: j?.error || 'Lifecycle tarixi o‘qilmadi' };
+  }
+  return { ok: true, qatorlar: j.natija };
 }

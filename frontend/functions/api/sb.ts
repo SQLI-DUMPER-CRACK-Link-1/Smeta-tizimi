@@ -179,7 +179,7 @@ export const onRequestPost: PagesFunction<{
      *
      * Rol: `boss`/`rahbar` ham CHAQIRA OLADI — bu faqat o'qish. */
     if (so.soro) {
-      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya' | 'obyekt_actor' | 'akt_actor' | 'job_actor' | 'kompaniya_actor'> = {
+      const OQISH_RPC: Record<string, 'obyekt' | 'kompaniya' | 'obyekt_kompaniya' | 'obyekt_actor' | 'akt_actor' | 'job_actor' | 'kompaniya_actor' | 'akt_kompaniya_actor'> = {
         ai_kontekst: 'obyekt',
         ai_umumiy: 'kompaniya',
         /* ⚡ 2026-08-28: mindmap butun grafni (tugunlar + bog'lanishlar)
@@ -203,6 +203,13 @@ export const onRequestPost: PagesFunction<{
            t2_actor_kompaniya_azo_tekshir. */
         nakrutka_koef_ol_v1: 'kompaniya_actor',
         obyekt_nakrutka_v1: 'obyekt_actor',
+        /* HERM-001 WP-1: F2 lifecycle approval-chain history. `stable`,
+           membership-checked inside the RPC itself
+           (t2_actor_kompaniya_azo_tekshir(p_kompaniya_id, p_actor_id)); the
+           WHERE clause filters by BOTH kompaniya_id and akt_id, so a
+           mismatched pair simply returns zero rows rather than leaking
+           another tenant's history. */
+        akt_lifecycle_history_v1: 'akt_kompaniya_actor',
       };
       const tur = OQISH_RPC[so.soro];
       if (!tur) {
@@ -227,7 +234,7 @@ export const onRequestPost: PagesFunction<{
         }
         q.set('p_obyekt_id', String(id));
       }
-      if (tur === 'akt_actor') {
+      if (tur === 'akt_actor' || tur === 'akt_kompaniya_actor') {
         const id = Number(so.akt_id);
         if (!Number.isFinite(id) || id <= 0) {
           return Response.json({ ok: false, error: 'akt_id noto\'g\'ri' });
@@ -241,7 +248,7 @@ export const onRequestPost: PagesFunction<{
         }
         q.set('p_job_id', String(id));
       }
-      if (tur === 'obyekt_actor' || tur === 'akt_actor' || tur === 'job_actor' || tur === 'kompaniya_actor') {
+      if (tur === 'obyekt_actor' || tur === 'akt_actor' || tur === 'job_actor' || tur === 'kompaniya_actor' || tur === 'akt_kompaniya_actor') {
         if (!Number.isInteger(sess.foydalanuvchi_id) || (sess.foydalanuvchi_id as number) <= 0) {
           return Response.json({ ok: false, error: 'Sessiyada foydalanuvchi yo\'q' }, { status: 401 });
         }
@@ -258,7 +265,7 @@ export const onRequestPost: PagesFunction<{
         }
         if (kid != null) q.set('p_kompaniya_id', String(kid));
       }
-      if (tur === 'kompaniya_actor') {
+      if (tur === 'kompaniya_actor' || tur === 'akt_kompaniya_actor') {
         const kid = Number(so.kompaniya_id);
         if (!Number.isFinite(kid) || kid <= 0) {
           return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
