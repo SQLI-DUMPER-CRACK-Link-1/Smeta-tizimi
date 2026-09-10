@@ -408,4 +408,34 @@ describe('LRV_PLUS export provenance gate', () => {
       sourceChecksum: 'abc123',
     })).toEqual({ ok: true });
   });
+
+  /* ⚠️ 2026-09-10 (haqiqiy nosozlik, egasi "Karting2"da topdi): `davrId`
+     F2 akt reestridan keladi -- yangi obyektda hali birorta ham F2 akt
+     yo'q bo'lsa, PTO "Davr" ro'yxati ABADIY bo'sh qoladi va tanlab
+     bo'lmaydi, ya'ni LRV Excel eksporti hech qachon ochilmasdi -- aynan
+     F2/Fakt hali boshlanmagan bosqichda, eng ko'p kerak bo'lganda. */
+  it('davr talabini olib tashlaydi, agar obyektda hali TANLASH MUMKIN bo\'lgan davr umuman bo\'lmasa', () => {
+    const natija = lrvPlusEksportGate({
+      kompaniyaId: 1, loyihaId: 2, obyektId: 3, periodApplicable: false,
+      sourceDocumentId: 'doc-1', revisionId: 'doc-1:r2', dataComplete: true,
+      sourceChecksum: 'abc123',
+    });
+    expect(natija).toEqual({ ok: true });
+  });
+
+  it('davr hali yuklanmagan yoki obyektda haqiqatan davr bo\'lsa -- talab saqlanadi', () => {
+    const yuklanmagan = lrvPlusEksportGate({
+      kompaniyaId: 1, loyihaId: 2, obyektId: 3,
+      sourceDocumentId: 'doc-1', revisionId: 'doc-1:r2', dataComplete: true, sourceChecksum: 'abc123',
+    });
+    expect(yuklanmagan.ok).toBe(false);
+    if (!yuklanmagan.ok) expect(yuklanmagan.reasons).toContain('PERIOD_CONTEXT_REQUIRED');
+
+    const borDavrTanlanmagan = lrvPlusEksportGate({
+      kompaniyaId: 1, loyihaId: 2, obyektId: 3, periodApplicable: true,
+      sourceDocumentId: 'doc-1', revisionId: 'doc-1:r2', dataComplete: true, sourceChecksum: 'abc123',
+    });
+    expect(borDavrTanlanmagan.ok).toBe(false);
+    if (!borDavrTanlanmagan.ok) expect(borDavrTanlanmagan.reasons).toContain('PERIOD_CONTEXT_REQUIRED');
+  });
 });

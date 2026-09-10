@@ -50,11 +50,18 @@ export function HolatNative() {
     loyihaId: workspace.scope.projectId ?? undefined,
     obyektId: workspace.scope.objectId ?? undefined,
     davrId: workspace.scope.periodId ?? undefined,
+    /* 2026-09-10: `davr` faqat F2 akt reestridan keladi -- yangi obyektda
+       hali birorta ham F2 akt bo'lmasa, ro'yxat abadiy bo'sh qoladi va
+       foydalanuvchi hech qachon tanlay olmaydi. Davrlar ro'yxati
+       yuklanib bo'lib (`!loading.periods`) haqiqatan ham bo'sh ekani
+       tasdiqlangandagina davr talabi olib tashlanadi -- hali yuklanayotgan
+       paytda emas (aks holda bir lahzalik noto'g'ri "ruxsat" chaqnaydi). */
+    periodApplicable: workspace.loading.periods ? undefined : workspace.periods.length > 0,
     sourceDocumentId: workspace.scope.sourceDocumentId ?? undefined,
     revisionId: workspace.scope.revisionId ?? undefined,
     sourceChecksum: workspace.sourceDocuments.find((document) => document.id === workspace.scope.sourceDocumentId)?.sha256 ?? undefined,
     dataComplete: Boolean(canonicalScopeObject && daraxtXom.length > 0 && !loading && !error),
-  }), [canonicalScopeObject, daraxtXom.length, error, loading, workspace.companyId, workspace.scope, workspace.sourceDocuments]);
+  }), [canonicalScopeObject, daraxtXom.length, error, loading, workspace.companyId, workspace.loading.periods, workspace.periods.length, workspace.scope, workspace.sourceDocuments]);
   const exportGate = lrvPlusEksportGate(exportContext);
   const exportBlockReason = !exportGate.ok ? exportGate.reasons[0] : null;
 

@@ -114,6 +114,19 @@ export type LrvPlusExportContext = {
   dataComplete: boolean;
   /** Registry SHA-256 provenance; missing/blank checksum blocks export. */
   sourceChecksum?: string | null;
+  /**
+   * ⚠️ 2026-09-10 (haqiqiy nosozlik, egasi "Karting2"da topdi): `davrId`
+   * ro'yxati F2 akt reestridan olinadi (`PTOWorkspaceContext`) -- YANGI
+   * obyektda hali birorta ham F2 akt yo'q bo'lsa, ro'yxat BO'SH bo'ladi va
+   * foydalanuvchi hech qachon `davr` tanlay olmaydi -- LRV Excel eksporti
+   * ABADIY bloklanib qolardi, aynan F2/Fakt hali boshlanmagan (eng ko'p
+   * kerak bo'ladigan) bosqichda. Chaqiruvchi shu bayroqni `false` qilib
+   * yuborsa (obyektda haqiqatan ham tanlanadigan davr yo'qligini
+   * TASDIQLAB), `davrId` talabi qo'yilmaydi -- chunki "davr tanlash"
+   * F2 tarixi mavjud bo'lgandagina ma'noli. Berilmasa (`undefined`) --
+   * eski qat'iy xatti-harakat saqlanadi (orqaga moslik).
+   */
+  periodApplicable?: boolean;
 };
 
 export type LrvPlusExportGate =
@@ -136,7 +149,7 @@ export function lrvPlusEksportGate(context: Partial<LrvPlusExportContext> | null
   if (!positiveSafeId(kompaniyaId)) reasons.push('COMPANY_CONTEXT_REQUIRED');
   if (!positiveSafeId(loyihaId)) reasons.push('PROJECT_CONTEXT_REQUIRED');
   if (!positiveSafeId(obyektId)) reasons.push('OBJECT_CONTEXT_REQUIRED');
-  if (typeof davrId !== 'string' || !davrId.trim()) reasons.push('PERIOD_CONTEXT_REQUIRED');
+  if (context?.periodApplicable !== false && (typeof davrId !== 'string' || !davrId.trim())) reasons.push('PERIOD_CONTEXT_REQUIRED');
   if (typeof sourceDocumentId !== 'string' || !sourceDocumentId.trim()) reasons.push('SOURCE_DOCUMENT_REQUIRED');
   if (typeof revisionId !== 'string' || !revisionId.trim()) reasons.push('REVISION_REQUIRED');
   if (context?.dataComplete !== true) reasons.push('READ_MODEL_NOT_COMPLETE');
