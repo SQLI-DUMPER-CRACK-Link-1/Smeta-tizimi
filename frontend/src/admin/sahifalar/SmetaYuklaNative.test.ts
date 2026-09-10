@@ -108,6 +108,80 @@ describe('RES (resursniy vedomost) narx moslashtirish', () => {
     expect(mosEmasSoni).toBe(0);
   });
 
+  /* ⭐⭐ Owner (2026-09-10), Stella obyekti: «primoy zatrati 6mlrd 250mln ga
+     yaqin summa edi ... nimadir xato yoki narxlanmay qolayotgan narsalar
+     bor». Tizim 5.04 mlrd ko'rsatardi; 319 qator narxsiz qolgan edi.
+
+     Ildiz sabab, egasining Drive'dagi MANBA faylidan tasdiqlangan
+     («Copy of Стелла 26.12.2025г 1кв 2025.xlsx»): RES bo'limida nom
+     «ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ С УЧЕТОМ СОЦСТРАХА», ЧЕЛ-Ч,
+     narx 24 517.700 -- LRV'da esa o'sha qator «ЗАТРАТЫ ТРУДА
+     РАБОЧИХ-СТРОИТЕЛЕЙ» deb yozilgan (suffikssiz). Hajmi bir xil:
+     43 647.501. Nom bo'yicha moslash topa olmagan.
+
+     Egasining yechimi: «eng oson yo'li mash Chas va chel Chas
+     birliklaridan topish ... resdan chel Chas qidiriladi topiladi hamma
+     chel Chas lrv da narxlanadi ... bunda zatrat truda mashinist
+     narxlanmaydi chunki u mash chasda hisoblangan bo'ladi». */
+  describe('Stella: birlik bo‘yicha narx topish (ЧЕЛ-Ч / МАШ-Ч)', () => {
+    const resStella = [
+      { nom: 'ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ С УЧЕТОМ СОЦСТРАХА', birlik: 'ЧЕЛ-Ч', narx: 24517.7 },
+      { nom: 'АВТОПОГРУЗЧИКИ 5 Т', birlik: 'МАШ-Ч', narx: 148613 },
+      { nom: 'КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ 16 Т', birlik: 'МАШ-Ч', narx: 244250 },
+      { nom: 'КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ 10 Т', birlik: 'МАШ-Ч', narx: 210000 },
+    ];
+
+    it('nomi boshqacha yozilgan ishchi soatini ЧЕЛ-Ч birligidan topadi', () => {
+      // hajm bazadagi aniq qiymat (t2_qator, obyekt 71 bo'yicha jami)
+      const hajm = 43647.5011696;
+      const tree: AktNode[] = [
+        { uid: '1', type: 'rs', kod: '1', nom: 'ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ', bir: 'ЧЕЛ-Ч', hajm, narx: 0 },
+      ];
+      const { tree: out, mosSoni } = narxlarniDaraxtgaQoll(tree, resNarxIndeksiQur(resStella));
+      expect(out[0].narx).toBe(24517.7);
+      expect(out[0].summa).toBe(Math.round(hajm * 24517.7 * 100) / 100);
+      // T1 shu qator uchun 1 070 136 339 so'm ko'rsatadi -- 1 so'mgacha mos
+      expect(out[0].summa).toBeCloseTo(1070136339, -1);
+      expect(mosSoni).toBe(1);
+    });
+
+    it('mashinist mehnatini ATAYLAB narxlamaydi — u МАШ-Ч stavkasi ichida', () => {
+      const tree: AktNode[] = [
+        { uid: '2', type: 'rs', kod: '3', nom: 'ЗАТРАТЫ ТРУДА МАШИНИСТОВ', bir: 'ЧЕЛ-Ч', hajm: 3938.03, narx: 0 },
+      ];
+      const { tree: out, narxsizlar } = narxlarniDaraxtgaQoll(tree, resNarxIndeksiQur(resStella));
+      expect(out[0].narx).toBe(0);   // qator o'zgarmadi -- narxi 0 bo'lib qoladi
+      expect(narxsizlar[0].sabab).toBe('mashinist_normativ');
+    });
+
+    it('МАШ-Ч da nomning o‘rtasidagi qo‘shimcha matnni kechiradi, SONI bo‘yicha ajratadi', () => {
+      const tree: AktNode[] = [
+        { uid: '3', type: 'rs', nom: 'КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ ПРИ РАБОТЕ НА ДРУГИХ ВИДАХ СТРОИТЕЛЬСТВА (КРОМЕ МАГИСТРАЛЬНЫХ ТРУБОПРОВОДОВ) 16 Т', bir: 'МАШ-Ч', hajm: 2, narx: 0 },
+      ];
+      const { tree: out } = narxlarniDaraxtgaQoll(tree, resNarxIndeksiQur(resStella));
+      expect(out[0].narx).toBe(244250); // 16 Т -- 10 Т bilan aralashmadi
+    });
+
+    it('sonlari boshqa mashinani MOSLAMAYDI (16 Т ≠ 25 Т)', () => {
+      const tree: AktNode[] = [
+        { uid: '4', type: 'rs', nom: 'КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ 25 Т', bir: 'МАШ-Ч', hajm: 1, narx: 0 },
+      ];
+      const { tree: out, narxsizlar } = narxlarniDaraxtgaQoll(tree, resNarxIndeksiQur(resStella));
+      expect(out[0].narx).toBe(0);
+      expect(narxsizlar[0].sabab).toBe('res_da_yoq');
+    });
+
+    it('qavs va tinish belgilari farqi narx topishga XALAQIT BERMAYDI', () => {
+      const idx = resNarxIndeksiQur([
+        { nom: 'АВТОГРЕЙДЕРЫ СРЕДНЕГО ТИПА 99 (135) КВТ (Л.С.)', birlik: 'МАШ-Ч', narx: 319423 },
+      ]);
+      const tree: AktNode[] = [
+        { uid: '5', type: 'rs', nom: 'АВТОГРЕЙДЕРЫ СРЕДНЕГО ТИПА 99/135 КВТ Л.С.', bir: 'МАШ-Ч', hajm: 1, narx: 0 },
+      ];
+      expect(narxlarniDaraxtgaQoll(tree, idx).tree[0].narx).toBe(319423);
+    });
+  });
+
   /* Owner (2026-09-10): «yuklanish tugaganidan keyin narxlanmagan rs mat ob
      kabi har bir qatorlarni bildirishi va sababini keltirib bera olishi
      kerak». Avval faqat SON qaytarardi -- qaysi qator va nega ekani

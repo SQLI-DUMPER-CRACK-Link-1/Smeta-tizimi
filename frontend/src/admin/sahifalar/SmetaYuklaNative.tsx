@@ -80,16 +80,28 @@ export type ResNarxYozuv = {
   /** RES faylining BO'LIM sarlavhasidan aniqlangan kategoriya (quyiga qarang). */
   kat?: T2ResursKategoriya;
 };
+/** Birlik guruhi ichidagi bitta RES yozuvi -- token bo'yicha moslash uchun. */
+export type ResBirlikYozuv = { nk: string; sozlar: string[]; raqamlar: string; narx: number };
+
 export type ResNarxIndeks = {
   byNomBir: Map<string, number>; byKodNomBir: Map<string, number>;
   katByNomBir: Map<string, T2ResursKategoriya>; katByKodNomBir: Map<string, T2ResursKategoriya>;
   /** Faqat NOM kaliti -- "RES da bor, lekin BIRLIGI boshqa" holatini
    *  "RES da umuman yo'q" dan ajratish uchun (narxsizlik sababi). */
   nomlar: Set<string>;
+  /** BIRLIK bo'yicha guruhlangan yozuvlar -- owner: "eng oson yo'li mash Chas
+   *  va chel Chas birliklaridan topish ... Bunaqa usul variantlar sonini
+   *  kamaytirib ishni tezlatadi". */
+  byBirlik: Map<string, ResBirlikYozuv[]>;
 };
 
 /** Nega bu qatorga narx qo'yilmadi -- foydalanuvchiga aynan shu ko'rsatiladi. */
-export type NarxsizSabab = 'res_yuklanmagan' | 'nomsiz' | 'birlik_mos_emas' | 'res_da_yoq';
+export type NarxsizSabab =
+  | 'res_yuklanmagan' | 'nomsiz' | 'birlik_mos_emas' | 'res_da_yoq'
+  /** Normativ bo'yicha 0 -- xato emas (mashinist mehnati mashina stavkasi ichida). */
+  | 'mashinist_normativ'
+  /** Birlik guruhida bir nechta nomzod topildi -- taxmin qilinmadi. */
+  | 'kop_nomzod';
 
 export type NarxsizQator = {
   uid?: string; kod?: string; nom?: string; bir?: string; hajm?: number;
@@ -101,6 +113,8 @@ export const NARXSIZ_SABAB_MATN: Record<NarxsizSabab, string> = {
   nomsiz: 'Qator nomi bo‘sh — nom bo‘yicha moslash imkonsiz',
   birlik_mos_emas: 'RES da shu nom BOR, lekin BIRLIGI boshqa',
   res_da_yoq: 'RES ro‘yxatida bunday nom topilmadi',
+  mashinist_normativ: 'Normativ bo‘yicha 0 — mashinist mehnati МАШ-Ч stavkasi ichida (xato emas)',
+  kop_nomzod: 'Birlik ichida bir nechta o‘xshash nom — taxmin qilinmadi, qo‘lda tanlang',
 };
 
 export type ImportQadam = { kalit: string; nom: string; holat: 'ishlamoqda' | 'tayyor' | 'xato'; tafsilot?: string };
@@ -338,16 +352,91 @@ export function resKalit(v?: string | null): string {
     .replace(/[^0-9A-ZА-Я]/g, '');
 }
 
+/**
+ * Nomni SO'ZLAR va SONLAR ga ajratadi.
+ *
+ * Owner (2026-09-10): «nomdagi qavs yulduzcha balo battarlardagi farqdan
+ * narx topilmay qoladi shuning uchun normalize ishlashi kerak. material
+ * nomidagi harf va sonlar ajratib shu orqali tekshirilsa oson bo'ladi».
+ *
+ * Haqiqiy misol (Stella): RES'da «КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ 16 Т»,
+ * LRV'da esa «КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ ПРИ РАБОТЕ НА ДРУГИХ ВИДАХ
+ * СТРОИТЕЛЬСТВА (КРОМЕ МАГИСТРАЛЬНЫХ ТРУБОПРОВОДОВ) 16 Т» -- bir xil
+ * mashina, lekin o'rtasida qo'shimcha matn bor. To'liq nom bo'yicha
+ * solishtirish ishlamaydi; so'zlar to'plami + sonlar esa ishlaydi.
+ *
+ * SONLAR alohida saqlanadi va ular TENG bo'lishi SHART: «16 Т» va «10 Т»
+ * kranlari bir-biriga aralashib ketmasligi uchun.
+ */
+export function narxTokenlar(nom?: string | null): { sozlar: string[]; raqamlar: string } {
+  const s = String(nom ?? '').toUpperCase().replace(/Ё/g, 'Е').replace(/³/g, '3').replace(/²/g, '2');
+  const bolaklar = s.split(/[^0-9A-ZА-Я]+/).filter(Boolean);
+  const sozlar: string[] = [];
+  const raqamlar: string[] = [];
+  for (const b of bolaklar) {
+    // «16Т» kabi yopishgan bo'lakni ham son va so'zga ajratamiz
+    const sonlar = b.match(/[0-9]+/g);
+    const harflar = b.replace(/[0-9]/g, '');
+    if (sonlar) raqamlar.push(...sonlar);
+    if (harflar) sozlar.push(harflar);
+  }
+  return { sozlar, raqamlar: raqamlar.join('.') };
+}
+
+/** ЧЕЛ-Ч / ЧЕЛ.-Ч / чел-час ... -> 'ЧЕЛЧ'; МАШ-Ч -> 'МАШЧ'. */
+function birlikSinfi(birlik?: string | null): string {
+  const b = resKalit(birlik);
+  if (b.startsWith('ЧЕЛ')) return 'ЧЕЛЧ';
+  if (b.startsWith('МАШ')) return 'МАШЧ';
+  return b;
+}
+
+/** Mashinist mehnati -- normativ bo'yicha narxsiz (МАШ-Ч ichida hisoblangan). */
+function mashinistMehnatimi(nom?: string | null): boolean {
+  return /МАШИНИСТ/.test(String(nom ?? '').toUpperCase());
+}
+
+/**
+ * Birlik guruhi ichidan nomga mos yagona yozuvni topadi.
+ * Mos deb hisoblanadi: bittasining so'zlari ikkinchisiga TO'LIQ kiradi
+ * (qo'shimcha matn kechiriladi) VA sonlari aynan teng.
+ * Bir nechta nomzod bo'lsa -- `null` (taxmin qilinmaydi).
+ */
+export function birlikIchidanTop(
+  yozuvlar: ResBirlikYozuv[], nom?: string | null,
+): { narx: number } | 'kop_nomzod' | null {
+  const { sozlar, raqamlar } = narxTokenlar(nom);
+  if (!sozlar.length) return null;
+  const qator = new Set(sozlar);
+  const nomzod = yozuvlar.filter((y) => {
+    if (y.raqamlar !== raqamlar) return false;
+    const res = new Set(y.sozlar);
+    const resQatorda = y.sozlar.every((w) => qator.has(w));
+    const qatorResda = sozlar.every((w) => res.has(w));
+    return resQatorda || qatorResda;
+  });
+  if (!nomzod.length) return null;
+  const narxlar = new Set(nomzod.map((n) => n.narx));
+  if (narxlar.size > 1) return 'kop_nomzod';
+  return { narx: nomzod[0].narx };
+}
+
 export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
   const byNomBir = new Map<string, number>();
   const byKodNomBir = new Map<string, number>();
   const katByNomBir = new Map<string, T2ResursKategoriya>();
   const katByKodNomBir = new Map<string, T2ResursKategoriya>();
   const nomlar = new Set<string>();
+  const byBirlik = new Map<string, ResBirlikYozuv[]>();
   for (const r of rows) {
     const nk = resKalit(r.nom);
     if (!nk) continue; // `kod` yolg'iz hech narsani aniqlamaydi -- yuqoridagi izohga q.
     nomlar.add(nk);
+    const bs = birlikSinfi(r.birlik);
+    const { sozlar, raqamlar } = narxTokenlar(r.nom);
+    const guruh = byBirlik.get(bs);
+    const yozuv: ResBirlikYozuv = { nk, sozlar, raqamlar, narx: r.narx };
+    if (guruh) guruh.push(yozuv); else byBirlik.set(bs, [yozuv]);
     const nb = nk + '|' + resKalit(r.birlik);
     if (!byNomBir.has(nb)) byNomBir.set(nb, r.narx);
     if (r.kat && !katByNomBir.has(nb)) katByNomBir.set(nb, r.kat);
@@ -358,7 +447,7 @@ export function resNarxIndeksiQur(rows: ResNarxYozuv[]): ResNarxIndeks {
       if (r.kat && !katByKodNomBir.has(kb)) katByKodNomBir.set(kb, r.kat);
     }
   }
-  return { byNomBir, byKodNomBir, katByNomBir, katByKodNomBir, nomlar };
+  return { byNomBir, byKodNomBir, katByNomBir, katByKodNomBir, nomlar, byBirlik };
 }
 
 /**
@@ -402,6 +491,43 @@ export function narxlarniDaraxtgaQoll(
     const kk = resKalit(n.kod);
     if (kk) narx = idx.byKodNomBir.get(kk + '|' + nb);
     if (narx == null) narx = idx.byNomBir.get(nb);
+
+    /* ══ BIRLIK BO'YICHA ZAXIRA MOSLASH ═══════════════════════════════
+       Owner (2026-09-10): «bittada aniq hamma narxlarni olishi shart har
+       qanday formatdagi hujjatlarda ... eng oson yo'li mash Chas va chel
+       Chas birliklaridan topish».
+
+       Haqiqiy sabab (Stella, Drive'dagi manba fayl bilan tasdiqlangan):
+       RES'da nom «ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ С УЧЕТОМ СОЦСТРАХА»,
+       LRV'da esa «ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ» -- ayni bir narsa
+       (hajmi ham bir xil: 43 647.501), lekin nomi boshqacha yozilgan.
+       Nom bo'yicha qidirish topa olmagan va 108 qator, ~1.07 mlrd so'm
+       narxsiz qolgan.
+
+       ЧЕЛ-Ч: butun RES faylida ATIGI BITTA nom bor (ishchi soati stavkasi)
+       -- shuning uchun barcha ЧЕЛ-Ч qatorlariga o'sha stavka qo'yiladi.
+       МАШ-Ч: 170 xil mashina, har birida o'z stavkasi -- shuning uchun
+       birlik faqat qidiruv doirasini toraytiradi, ichida esa nom
+       so'zlari + sonlari bo'yicha moslanadi (narxTokenlar'ga qarang). */
+    if (narx == null) {
+      const bs = birlikSinfi(n.bir);
+      if (bs === 'ЧЕЛЧ' && mashinistMehnatimi(n.nom)) {
+        belgila(n, 'mashinist_normativ');
+        return n;
+      }
+      const guruh = idx.byBirlik.get(bs);
+      if (guruh?.length) {
+        const narxlar = new Set(guruh.map((g) => g.narx));
+        if (bs === 'ЧЕЛЧ' && narxlar.size === 1) {
+          narx = guruh[0].narx;
+        } else {
+          const topildi = birlikIchidanTop(guruh, n.nom);
+          if (topildi === 'kop_nomzod') { belgila(n, 'kop_nomzod'); return n; }
+          if (topildi) narx = topildi.narx;
+        }
+      }
+    }
+
     if (narx == null) {
       belgila(n, resBosh ? 'res_yuklanmagan' : idx.nomlar.has(nk) ? 'birlik_mos_emas' : 'res_da_yoq');
       return n;
