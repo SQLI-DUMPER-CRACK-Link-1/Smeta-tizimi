@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya, resursMkKabAniqla } from './SmetaYuklaNative';
+import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya, resursMkKabAniqla, podvalBlokTuri } from './SmetaYuklaNative';
 import type { AktNode } from '../../lib/f2-match-engine';
 import type { F2ColumnConfig } from '../../lib/f2-import-parse';
 
@@ -318,6 +318,63 @@ describe('RES bo‘lim sarlavhalari — МАТ/ОБ/КАБ/М-К ni ajratish', (
       ] as const) {
         expect(resursMkKabAniqla(nom, bir, 'МАТ')).toBe('МАТ');
       }
+    });
+  });
+
+  /* ⭐ Owner (2026-09-10): «resurs vedemost da exell da ham saytni o'zidagi
+     bo'limida ham ob ajratilmasdan materialga aralashtirib tashlanayapdiku».
+     Egasining Stella faylida (obyekt 72) bazada ОБ kategoriyasi UMUMAN
+     yo'q edi -- 127 mat + 409 rs qatorining hammasi МАТ.
+
+     Ikki sabab, ikkalasi ham fayldan aynan tasdiqlangan:
+       1) bo'lim «СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ И КОНСТРУКЦИИ» deb nomlangan --
+          eski naqsh «…МАТЕРИАЛЫ$» bilan tugashini talab qilardi;
+       2) oborudovaniye ALOHIDA VARAQDA, ustida sarlavha YO'Q -- uni faqat
+          podvaldagi nakrutka foizlari ajratadi:
+            ОБ  : «ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ=1,2%» + «ТРАНСПОРТНЫЕ УСЛУГИ=2%»
+            МАТ : «ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ =2% И М/К=0,75%» + «…=5%» */
+  describe('ОБ ni МАТ dan ajratish', () => {
+    it('«СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ И КОНСТРУКЦИИ» bo‘limini МАТ deb taniydi', () => {
+      expect(resBolimKategoriya('СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ И КОНСТРУКЦИИ')).toBe('МАТ');
+      expect(resBolimKategoriya('МАТЕРИАЛЬНЫЕ РЕСУРСЫ И КОНСТРУКЦИИ')).toBe('МАТ');
+      expect(resBolimKategoriya('ОБОРУДОВАНИЕ И ИНВЕНТАРЬ')).toBe('ОБ');
+    });
+
+    it('podval foizidan blok turini aniqlaydi', () => {
+      expect(podvalBlokTuri('ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ=1,2%')).toBe('ОБ');
+      expect(podvalBlokTuri('ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ =2% И М/К=0,75%')).toBe('МАТ');
+      expect(podvalBlokTuri('ТРАНСПОРТНЫЕ УСЛУГИ=2%')).toBeNull();  // bu ajratmaydi
+      expect(podvalBlokTuri('ЩЕБЕНЬ')).toBeNull();
+    });
+
+    it('sarlavhasiz oborudovaniye blokini podvaliga qarab ОБ ga o‘tkazadi', () => {
+      const cols = { kod: -1, nom: 0, bir: 1, norma: -1, obyom: -1, narx: 2, sum: -1 };
+      const rows = [
+        ['СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ И КОНСТРУКЦИИ', '', ''],
+        ['ЩЕБЕНЬ', 'М3', '75000'],
+        ['ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ =2% И М/К=0,75%', 'СУМ', ''],
+        // sarlavhasiz blok -- faqat podvali ОБ ekanini aytadi
+        ['ОПТИЧЕСКИЙ ПАТЧ ПАНЕЛЬ 24 ПОРТА RJ-45', 'ШТ', '325893'],
+        ['ШКАФ ТЕЛЕКОММУНИКАЦИОННЫЙ 19"', 'ШТ', '412500'],
+        ['ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ=1,2%', 'СУМ', ''],
+      ];
+      const out = resSatrlariniOl(rows, cols);
+      expect(out.map(r => [r.nom, r.kat])).toEqual([
+        ['ЩЕБЕНЬ', 'МАТ'],
+        ['ОПТИЧЕСКИЙ ПАТЧ ПАНЕЛЬ 24 ПОРТА RJ-45', 'ОБ'],
+        ['ШКАФ ТЕЛЕКОММУНИКАЦИОННЫЙ 19"', 'ОБ'],
+      ]);
+    });
+
+    it('nom/birlik qoidasidan kelgan КАБ va М/К ni podval BUZMAYDI', () => {
+      const cols = { kod: -1, nom: 0, bir: 1, norma: -1, obyom: -1, narx: 2, sum: -1 };
+      const rows = [
+        ['КАБЕЛЬ СИЛОВОЙ', 'М', '123956'],
+        ['КОНСТРУКЦИИ СТАЛЬНЫЕ ПО ПРОЕКТУ', 'Т', '9000000'],
+        ['ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ=1,2%', 'СУМ', ''],
+      ];
+      const out = resSatrlariniOl(rows, cols);
+      expect(out.map(r => r.kat)).toEqual(['КАБ', 'М/К']);
     });
   });
 

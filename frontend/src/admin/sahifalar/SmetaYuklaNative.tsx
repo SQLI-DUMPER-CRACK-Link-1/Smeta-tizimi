@@ -214,14 +214,42 @@ const RES_BOLIM_NAQSH: ReadonlyArray<readonly [RegExp, T2ResursKategoriya]> = [
   [/^ЗАТРАТЫ\s+ТРУДА\s+МАШИНИСТОВ$/, 'МАШ'],
   [/^(СТРОИТЕЛЬНЫЕ\s+)?МАШИНЫ(\s+И\s+МЕХАНИЗМЫ)?$/, 'МАШ'],
   [/^МЕХАНИЗМЫ$/, 'МАШ'],
-  [/^МАТЕРИАЛЬНЫЕ\s+РЕСУРСЫ$/, 'МАТ'],
-  [/^(СТРОИТЕЛЬНЫЕ\s+)?МАТЕРИАЛЫ$/, 'МАТ'],
+  /* «… И КОНСТРУКЦИИ» qo'shimchasi bilan ham keladi -- egasining Stella
+     faylida bo'lim aynan «СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ И КОНСТРУКЦИИ» deb
+     nomlangan va oldingi ($ bilan tugaydigan) naqsh unga mos kelmagan:
+     natijada butun material oqimi bo'limsiz qolib, zaxira qoida bo'yicha
+     МАТ bo'lgan va ОБ undan ajralmagan. */
+  [/^МАТЕРИАЛЬНЫЕ\s+РЕСУРСЫ(\s+И\s+КОНСТРУКЦИИ)?$/, 'МАТ'],
+  [/^(СТРОИТЕЛЬНЫЕ\s+)?МАТЕРИАЛЫ(\s+И\s+(КОНСТРУКЦИИ|ИЗДЕЛИЯ))?$/, 'МАТ'],
   [/^КАБЕЛЬ(НАЯ\s+ПРОДУКЦИЯ|НЫЕ\s+ИЗДЕЛИЯ)?$/, 'КАБ'],
   [/^ПРОВОДА?\s+И\s+КАБЕЛИ$/, 'КАБ'],
   [/^КОНСТРУКЦИИ\s+ЗАВОДСКОГО\s+ИЗГОТОВЛЕНИЯ$/, 'М/К'],
   [/^(МЕТАЛЛО)?КОНСТРУКЦИИ$/, 'М/К'],
-  [/^ОБОРУДОВАНИЕ$/, 'ОБ'],
+  [/^ОБОРУДОВАНИ[ЕЯ](\s+И\s+(ИНВЕНТАРЬ|МЕБЕЛЬ))?$/, 'ОБ'],
 ];
+
+/**
+ * Bo'lim SARLAVHASI yo'q blokning turini PODVAL FOIZLARIDAN aniqlaydi.
+ *
+ * Owner (2026-09-10): «resurs vedemost da ... ob ajratilmasdan materialga
+ * aralashtirib tashlanayapdiku». Egasining Stella faylida oborudovaniye
+ * ALOHIDA VARAQDA turadi va uning ustida hech qanday «ОБОРУДОВАНИЕ»
+ * sarlavhasi YO'Q -- blok faqat oxiridagi nakrutka qatorlari bilan
+ * ajraladi (fayldan aynan ko'chirilgan):
+ *
+ *   oborudovaniye:  «ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ=1,2%» + «ТРАНСПОРТНЫЕ УСЛУГИ=2%»
+ *   material:       «ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ =2% И М/К=0,75%» + «…=5%»
+ *
+ * Ajratuvchi belgi -- «М/К» so'zi: u material blokida bo'ladi, oborudovaniye
+ * blokida esa bo'lmaydi.
+ */
+export function podvalBlokTuri(nom: string): 'ОБ' | 'МАТ' | null {
+  const s = String(nom || '').toUpperCase().replace(/Ё/g, 'Е');
+  if (!/ЗАГОТОВИТЕЛЬНО[\s-]*СКЛАДСКИ|СКЛАДСКИЕ\s+РАСХОДЫ/.test(s)) return null;
+  if (/М\s*\/?\s*К/.test(s)) return 'МАТ';
+  if (/1[.,]2\s*%/.test(s)) return 'ОБ';
+  return null;
+}
 
 /**
  * Sarlavha matnini solishtirish uchun normallashtiradi: boshidagi raqam/
@@ -268,6 +296,9 @@ export function resBolimKategoriya(nom: string): T2ResursKategoriya | 'YAKUN' | 
 export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxYozuv[] {
   const out: ResNarxYozuv[] = [];
   let joriyKat: T2ResursKategoriya | undefined;
+  /* Sarlavhasiz blok podvalidan aniqlanganda orqaga qarab belgilash uchun
+     shu blok qayerdan boshlanganini eslab turamiz. */
+  let blokBoshi = 0;
   for (const row of rows) {
     const kod = cols.kod >= 0 ? String(row[cols.kod] ?? '').trim() : '';
     const nom = cols.nom >= 0 ? String(row[cols.nom] ?? '').trim() : '';
@@ -275,6 +306,22 @@ export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxY
     const narx = cols.narx >= 0 ? son(row[cols.narx]) : undefined;
     if (!nom && !kod) continue;
     if (/^\d+$/.test(nom) && /^\d+$/.test(bir)) continue; // ustun-raqamlash qatori
+
+    /* Podval qatori (nakrutka foizi) -- blok TURINI aytadi. U narxli ham,
+       narxsiz ham kelishi mumkin, shuning uchun narx shartidan OLDIN
+       tekshiriladi. Faqat sarlavhadan tur aniqlanmagan qatorlarga
+       (undefined yoki zaxira МАТ) qo'llanadi -- ЧЕЛ/МАШ/КАБ/М-К nom yoki
+       birlik qoidasidan kelgan, ular ustidan yozilmaydi. */
+    const blokTuri = podvalBlokTuri(nom);
+    if (blokTuri) {
+      for (let i = blokBoshi; i < out.length; i++) {
+        if (out[i].kat === undefined || out[i].kat === 'МАТ') out[i].kat = blokTuri;
+      }
+      blokBoshi = out.length;
+      joriyKat = undefined;
+      continue;
+    }
+
     if (narx == null || narx <= 0) {
       /* Narxsiz matnli qator -- bo'lim sarlavhasi bo'lishi mumkin. Lekin
          HAQIQIY sarlavha faqat sarlavha matnidan iborat: kodi ham,
@@ -283,7 +330,7 @@ export function resSatrlariniOl(rows: SheetGrid, cols: F2ColumnConfig): ResNarxY
          uni sarlavha deb o'qish butun keyingi oqim kategoriyasini buzardi. */
       if (kod || bir) continue;
       const b = resBolimKategoriya(nom);
-      if (b === 'YAKUN') joriyKat = undefined;
+      if (b === 'YAKUN') { joriyKat = undefined; blokBoshi = out.length; }
       else if (b) joriyKat = b;
       continue;
     }
