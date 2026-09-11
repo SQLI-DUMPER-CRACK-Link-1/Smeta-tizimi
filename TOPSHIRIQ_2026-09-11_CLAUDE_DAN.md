@@ -182,41 +182,60 @@ obyektning o'z narx bazasi bor.
 
 ### 2.5. LRV Excel: sarlavhalar, freeze panes, katak kengligi
 
-**Holat:** ochiq, 2026-09-10 dan beri tegilmagan.
+**Holat:** son formati + kenglik BAJARILDI (2026-09-11); sarlavhalar va
+freeze panes ochiq.
 
 Egasining so'rovi (aynan): *«mos ravishda hujjatlarga mos sarlavhalar qo'y
 freeze qil kerakli joyidan. son tekst formatlari yacheyka ichiga kirib
 ketmasligi kerak ideal ko'rinishi kataklar kengaya olishi kerak»*.
 
-Bajarilgan: `!cols` bilan kenglik faqat `RESURS_VEDOMOST` varag'iga
-qo'yilgan (`lrv-plus-export.ts`).
+Bajarilgan (2026-09-11, commit `5110e47` + `7c53d82`):
+- Pul ustunlariga `#,##0.00`, hajm ustunlariga `#,##0.####` son formati —
+  endi katta summa `471209797.5111` xom ko'rinmaydi.
+- Nom ustuni (C) `wrapText` bilan o'raladi (uzun rus nomlari kesilmaydi).
+  ⚠️ `xlsx-js-style` `wrapText`ni faylga yozadi, lekin qayta o'qiganda
+  `s.alignment`ni tiklamaydi — shuning uchun testda `exceljs` bilan
+  tekshirilgan (`lrv-plus-export.test.ts`).
+- Asosiy varaqning pul ustunlari (СУММА, ЧЕЛ..М/К jamilari, ФАКТ/ОСТАТКА/F2
+  суммы) milliardli jamiga sig'adigan kenglikka (15–17) kengaytirildi.
 
-Bajarilmagan: asosiy varaqda kenglik, hujjatga mos sarlavhalar, freeze panes.
+Bajarilmagan: hujjatga mos sarlavhalar, freeze panes.
 
 ⚠️ **Freeze panes:** `xlsx-js-style` uni varaq darajasida qo'llab-quvvatlamaydi
-(`types/index.d.ts`da faqat workbook `Views?: WBView[]`). Ya'ni oddiy yo'l
-bilan bo'lmaydi — yo ZIP/XML'ni post-processing qilish, yo boshqa kutubxona.
+(bu sessiyada XML darajasida tekshirildi — `XLSX.write` `<sheetView>`ga
+`<pane>` yozmaydi, `!freeze`/`!views` e'tiborsiz qoladi). Ya'ni oddiy yo'l
+bilan bo'lmaydi — yo ZIP/XML'ni post-processing qilish, yo boshqa kutubxona
+(masalan `exceljs` — allaqachon to'g'ridan-to'g'ri bog'liqlik va freeze'ni
+qo'llab-quvvatlaydi, lekin uslub yo'qolishi xavfi bor).
 **Egasiga avval shuni ayting**, va'da bermang.
 
 ### 2.6. Obyekt o'chirish ro'yxatdan yo'qolmaydi
 
-**Holat:** ochiq, aniqlik kerak.
+**Holat:** BAJARILDI (2026-09-11, commit `2665c47`).
 
 Egasi obyektni o'chirmoqchi bo'lgan, o'chmagan. Tekshirildi: Stella (71)
-bazada `holat='bekor'` — ya'ni **o'chirish ishlagan**.
+bazada `holat='bekor'` — ya'ni **o'chirish ishlagan**, va `t2_obyekt_jami`
+view'i `holat <> 'bekor'` bilan filtrlaydi, ya'ni baza to'g'ri.
 
-Gumon: `useObyektlar` hook'ida `staleTime: 10 * 60 * 1000` (10 daqiqa kesh),
-`frontend/src/api/hooks.ts:184`. Ya'ni o'chirilgan obyekt 10 daqiqagacha
-ro'yxatda qolaveradi. Bu yangi yaratilgan obyekt ko'rinmasligini ham
-tushuntiradi.
+Haqiqiy sabab — **uch mustaqil obyekt keshi bir-biriga mos emas edi**:
+1. React Query `['obyektlar']` (`useObyektlar`, staleTime 10 daq) — yon panel
+   va ko'p sahifa.
+2. `TestObyektlar.tsx` lokal state (`yukla`) — obyektlar sahifasining o'zi.
+3. `PTOWorkspaceContext` lokal state — PTO scope tanlagichi.
 
-Lekin **qaysi sahifadan o'chirgani noma'lum**: `/admin/obyektlar`
-(`Obyektlar.tsx`)da o'chirish tugmasi yo'q; `test02/TestObyektlar.tsx`da bor
-(`handleOchirish` → `sbObyektOchirish`). **Egasidan qaysi sahifa ekanini
-so'rang**, keyin tuzating.
+`/admin/obyektlar` → `TestObyektlar` (o'chirish tugmasi shu yerda). U
+mutatsiyadan keyin faqat o'z lokal ro'yxatini yangilardi; (1) va (3) 10
+daqiqagacha eski qolib, o'chirilgan obyekt ko'rinaverar, yangi yaratilgani
+esa scope/panelda paydo bo'lmasdi.
 
-Yo'l-yo'lakay topilgan: `Obyektlar.tsx:23` da `dbObyektlar` state yuklanadi va
-**hech qayerda ishlatilmaydi** — o'lik kod.
+**Yechim:** `sinxronla()` — har muvaffaqiyatli yaratish/o'chirish/tahrirdan
+keyin uchala keshni ham qo'zg'atadi (`yukla()` + `qc.invalidateQueries` +
+`workspace.refresh()`). 10 daqiqalik staleTime oddiy navigatsiya uchun
+saqlanib qoldi.
+
+Yo'l-yo'lakay topilgan (hali ochiq): `Obyektlar.tsx:23` da `dbObyektlar`
+state yuklanadi va **hech qayerda ishlatilmaydi** — o'lik kod (Tizim_01
+arxiv sahifasi, past ustuvorlik).
 
 ### 2.7. ОБ ajratishni haqiqiy faylda tekshirish
 
