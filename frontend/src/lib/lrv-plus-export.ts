@@ -779,7 +779,26 @@ export async function lrvPlusFaylBaytlari(
     }
   }
 
-  const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+  const raw = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+
+  /* Freeze panes — egasi (aynan): «freeze qil kerakli joyidan». xlsx-js-style
+     buni varaq darajasida yoza olmaydi (XML darajasida tekshirilgan:
+     `<sheetView>`ga `<pane>` yozmaydi). Shuning uchun tayyor faylni exceljs
+     orqali qayta o'qib, FAQAT muzlatishni qo'shamiz -- exceljs allaqachon
+     to'g'ridan-to'g'ri bog'liqlik. Round-trip empirik sinovdan o'tgan: formula,
+     uslub/rang, son formati, birlashtirish (`!merges`), outline guruhlash
+     (`!rows` level), yashirin ustun/qator va autofilter -- hammasi saqlanadi.
+     Sarlavha (1), ustun nomlari (2) va ЖАМИ (3) qatorlari + A..C ustunlari
+     (№/КОД/НАИМЕНОВАНИЕ) muzlatiladi, shunda pastga/o'ngga varaqlaganda ular
+     ko'rinib turadi. RESURS_VEDOMOST va МАНБА da faqat sarlavha qatori. */
+  const ExcelJS = (await import('exceljs')).default;
+  const ewb = new ExcelJS.Workbook();
+  await ewb.xlsx.load(raw);
+  const asosiy = ewb.getWorksheet(rejim === 'forma2' ? 'FORMA_2' : 'LRV_PLUS');
+  if (asosiy) asosiy.views = [{ state: 'frozen', xSplit: 3, ySplit: 3 }];
+  const rv = ewb.getWorksheet('RESURS_VEDOMOST');
+  if (rv) rv.views = [{ state: 'frozen', ySplit: 1 }];
+  const out = (await ewb.xlsx.writeBuffer()) as ArrayBuffer;
   return new Uint8Array(out);
 }
 

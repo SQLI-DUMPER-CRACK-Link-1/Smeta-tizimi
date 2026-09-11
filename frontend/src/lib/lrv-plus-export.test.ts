@@ -179,6 +179,19 @@ describe('lrvPlusFaylBaytlari — son formati va uzun nom', () => {
     expect(nom.alignment?.wrapText).toBe(true);
     expect(nom.alignment?.vertical).toBe('top');
   });
+
+  /* Owner (aynan): «freeze qil kerakli joyidan». Sarlavha/ЖАМИ (1-3 qator) va
+     №/КОД/НАИМЕНОВАНИЕ (A-C) muzlatiladi. */
+  it('freeze panes qo\'yiladi (sarlavha + nom ustunlari)', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Sinov Obyekti', HOLATLAR);
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(bytes as unknown as ArrayBuffer);
+    const view = wb.getWorksheet('LRV_PLUS')!.views[0] as { state: string; xSplit?: number; ySplit?: number };
+    expect(view.state).toBe('frozen');
+    expect(view.xSplit).toBe(3);
+    expect(view.ySplit).toBe(3);
+  });
 });
 
 /* Owner (2026-09-11): eksport endi manba tanlashni talab qilmaydi, lekin
@@ -309,11 +322,13 @@ describe('eksport ↔ qayta import halqasi', () => {
     const ishchi = h.find((r) => r.nom === 'Ishchi')!;
     const kalit = lrvKalitOqi(ws[`Y${ishchi.row}`]?.v);
     expect(kalit?.id).toBe(3);                       // kanonik t2_qator.id
-    // КАЛИТ ustuni yashirin — haqiqiy fayl XML'idan tekshiriladi
-    const wb2 = XLSX.read(bytes, { type: 'array', bookFiles: true });
-    const e = (wb2 as unknown as { files: Record<string, { content: Uint8Array | string }> }).files['xl/worksheets/sheet1.xml'];
-    const xml = typeof e.content === 'string' ? e.content : new TextDecoder().decode(Uint8Array.from(e.content));
-    expect(xml).toMatch(/<col[^>]*min="25"[^>]*hidden="true"/);
+    /* КАЛИТ ustuni (25 = Y) yashirin. Fayl endi freeze uchun exceljs orqali
+       qayta yoziladi (`hidden="1"` deb), shuning uchun raw-XML regex emas,
+       exceljs API bilan tekshiramiz. */
+    const ExcelJS = (await import('exceljs')).default;
+    const ewb = new ExcelJS.Workbook();
+    await ewb.xlsx.load(bytes as unknown as ArrayBuffer);
+    expect(ewb.getWorksheet('LRV_PLUS')!.getColumn(25).hidden).toBe(true);
   });
 
   it('faylni tahrirlab qaytarish: hajm o\'zgarsa qabul, nusxalansa RAD', async () => {
