@@ -15,8 +15,8 @@ describe('RES (resursniy vedomost) narx moslashtirish', () => {
     ];
     const satrlar = resSatrlariniOl(rows, cols);
     expect(satrlar).toEqual([
-      { kod: 'B25', nom: 'Beton B25', birlik: 'm3', narx: 500000 },
-      { kod: undefined, nom: 'Armatura', birlik: 'kg', narx: 12000.5 },
+      { kod: 'B25', nom: 'Beton B25', birlik: 'm3', narx: 500000, kat: 'БЕЗСКЛАД' },
+      { kod: undefined, nom: 'Armatura', birlik: 'kg', narx: 12000.5, kat: undefined },
     ]);
   });
 
@@ -306,17 +306,18 @@ describe('RES bo‘lim sarlavhalari — МАТ/ОБ/КАБ/М-К ni ajratish', (
       expect(resursMkKabAniqla('ПРОВОЛОКА СВЕТЛАЯ ДИАМЕТРОМ 1,1 ММ', 'Т', 'МАТ')).toBe('МАТ');
     });
 
-    it('egasining ekranidagi 23 tadan oddiy materiallari МАТ bo‘lib qoladi', () => {
-      for (const [nom, bir] of [
-        ['БЕТОН ТЯЖЕЛЫЙ КЛАССА В12,5 /М-150/ ФРАКЦИИ 5-20ММ', 'М3'],
-        ['ПЕСОК ДЛЯ СТРОИТЕЛЬНЫХ РАБОТ', 'М3'],
-        ['РАСТВОР ГОТОВЫЙ КЛАДОЧНЫЙ ЦЕМЕНТНЫЙ, МАРКА 50', 'М3'],
-        ['ЩЕБЕНЬ', 'М3'],
-        ['СМЕСЬ ПЕСЧАНО-ГРАВИЙНАЯ ПРИРОДНАЯ', 'М3'],
-        ['СМЕСЬ АСФАЛЬТОБЕТОННАЯ', 'Т'],
-        ['СТЕКЛОЛЕНТА ЛИПКАЯ ИЗОЛЯЦИОННАЯ НА ПОЛИКАСИНОВОМ КОМПАУНДЕ МАРКИ ЛСЭПЛ', 'КГ'],
+    it('nom bo‘yicha БЕЗСКЛАД va saqlanadigan materiallarni ajratadi', () => {
+      for (const [nom, bir, kutilgan] of [
+        ['БЕТОН ТЯЖЕЛЫЙ КЛАССА В12,5 /М-150/ ФРАКЦИИ 5-20ММ', 'М3', 'БЕЗСКЛАД'],
+        ['ВОДА', 'М3', 'БЕЗСКЛАД'],
+        ['РАСТВОР ГОТОВЫЙ КЛАДОЧНЫЙ ЦЕМЕНТНЫЙ, МАРКА 50', 'М3', 'БЕЗСКЛАД'],
+        ['ПЕСОК ДЛЯ СТРОИТЕЛЬНЫХ РАБОТ', 'М3', 'МАТ'],
+        ['ЩЕБЕНЬ', 'М3', 'МАТ'],
+        ['СМЕСЬ ПЕСЧАНО-ГРАВИЙНАЯ ПРИРОДНАЯ', 'М3', 'МАТ'],
+        ['СМЕСЬ АСФАЛЬТОБЕТОННАЯ', 'Т', 'МАТ'],
+        ['СТЕКЛОЛЕНТА ЛИПКАЯ ИЗОЛЯЦИОННАЯ НА ПОЛИКАСИНОВОМ КОМПАУНДЕ МАРКИ ЛСЭПЛ', 'КГ', 'МАТ'],
       ] as const) {
-        expect(resursMkKabAniqla(nom, bir, 'МАТ')).toBe('МАТ');
+        expect(resursMkKabAniqla(nom, bir, 'МАТ')).toBe(kutilgan);
       }
     });
   });
@@ -433,7 +434,7 @@ describe('RES bo‘lim sarlavhalari — МАТ/ОБ/КАБ/М-К ni ajratish', (
       ['9219', 'ПЕСОК ДЛЯ СТРОИТЕЛЬНЫХ РАБОТ', 'М3', '1850'],
     ];
     const out = resSatrlariniOl(rows, cols);
-    expect(out.map((r) => r.kat)).toEqual(['МАТ', 'МАТ', 'МАТ']);
+    expect(out.map((r) => r.kat)).toEqual(['БЕЗСКЛАД', 'МАТ', 'МАТ']);
   });
 
   /* ⭐ Asosiy talab: «materialni va oborudovaniyani ham ajrata oladigan

@@ -6,7 +6,7 @@ import {
   t2NakrutkaKoefOl, t2NakrutkaKoefSaqla, t2ObyektNakrutka,
   NAKRUTKA_KOEF_KODLAR, NAKRUTKA_KOEF_IZOH,
   type NakrutkaKoefKod, type NakrutkaKoeffitsientlar,
-  type NakrutkaKaskad, type NakrutkaKategoriyaJadval,
+  type NakrutkaKaskad, type NakrutkaKategoriyaJadval, nakrutkaMatSof,
 } from '../../api/t2-nakrutka';
 import { FmtN } from '../../lib/format';
 
@@ -139,7 +139,7 @@ function ObyektKaskad({ obyektId }: { obyektId: number }) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 text-[12px]">
-        {([['ЧЕЛ', cats.chel], ['МАШ', cats.mash], ['МАТ', cats.mat], ['ОБ', cats.ob], ['М/К', cats.mk], ['КАБ', cats.kab], ['БЕЗСКЛАД', cats.bez]] as const).map(([label, val]) => (
+        {([['ЧЕЛ', cats.chel], ['МАШ', cats.mash], ['МАТ', nakrutkaMatSof(cats)], ['ОБ', cats.ob], ['М/К', cats.mk], ['КАБ', cats.kab], ['БЕЗСКЛАД', cats.bez]] as const).map(([label, val]) => (
           <div key={label} className="border rounded px-2 py-1.5">
             <div className="text-text-mute">{label}</div>
             <div className="tabular-nums font-medium"><FmtN val={val} /></div>

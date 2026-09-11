@@ -7,6 +7,7 @@ import { readXlsx, f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2Colum
 import { smetaDaraxtniYoy, bolaklarga } from '../../lib/smeta-flatten';
 import type { AktNode } from '../../lib/f2-match-engine';
 import { smetaQaytaImportDiff, type SmetaReimportDiff, type SmetaReimportLine } from '../../lib/smeta-reimport-diff';
+import { classifyResursKategoriya } from '../../lib/resurs-kategoriya';
 
 /**
  * T2-FINAL-CLEAN-CUTOVER P0.2: native Smeta XLSX -> canonical Supabase, off
@@ -398,17 +399,22 @@ export function resursMkKabAniqla(
   if (b.startsWith('МАШ')) return 'МАШ';
 
   if (!n) return bolimKat;
+  /* Owner rule: inert liquid/poured resources are БЕЗСКЛАД by name.
+     This comes after the unit authority above, so ЧЕЛ/МАШ can never be
+     reclassified by a coincidental name token. */
+  const bezsklad = classifyResursKategoriya(n);
+  if (bezsklad) return bezsklad;
   if (KAB_NOM.test(n)) return 'КАБ';
   if (MK_NOM.test(n) && MK_BIRLIK.test(b)) return 'М/К';
   return bolimKat;
 }
 
-export function katTaxmini(nom: string, birlik: string): 'ЧЕЛ' | 'МАШ' | 'МАТ' {
+export function katTaxmini(nom: string, birlik: string): T2ResursKategoriya {
   const b = birlik.toUpperCase();
   if (nom.toUpperCase().includes('ТРУДА МАШИНИСТОВ')) return 'МАШ';
   if (b.includes('ЧЕЛ')) return 'ЧЕЛ';
   if (b.includes('МАШ')) return 'МАШ';
-  return 'МАТ';
+  return classifyResursKategoriya(nom) ?? 'МАТ';
 }
 
 export type VaraqTegi = 'lrv' | 'res' | 'etibor_bermaslik';
@@ -1336,6 +1342,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                 <p className="text-[11px] text-text-mute">
                   <b>{katKorib.length} ta</b> resursning turi aniqlandi. Tartib: <b>birlik eng ustun</b> —
                   ЧЕЛ-Ч → ЧЕЛ, МАШ-Ч → МАШ (mashinist mehnati МАШ, chunki u mashina stavkasi ichida).
+                  <b>БЕЗСКЛАД</b> — suv/beton/qorishma nomi bo‘yicha, storable mahsulotlar istisno qilinadi.
                   <b>КАБ</b> — kabel/provod oilasi, nomi bo‘yicha. <b>М/К</b> — nomi tayyor
                   konstruksiyani bildirsa <b>va</b> birligi og‘irlikda (кг/т) bo‘lsa, shuning uchun
                   armatura va prokat unga tushmaydi (ular xomashyo). <b>МАТ va ОБ</b> farqi esa faqat
@@ -1345,7 +1352,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                   belgilangan tur registrga yozilib, keyingi importlarda ham eslab qolinadi.
                 </p>
                 <p className="text-[11px] text-text-mute">
-                  {(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'] as const)
+                  {( ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗСКЛАД', 'М/К', 'КАБ'] as const)
                     .map(k => ({ k, n: katKorib.filter(x => x.tanlangan === k).length }))
                     .filter(x => x.n > 0)
                     .map(x => `${x.k}: ${x.n}`).join(' · ')}
@@ -1364,8 +1371,9 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                               <option value="МАШ">МАШ</option>
                               <option value="МАТ">МАТ</option>
                               <option value="ОБ">ОБ</option>
-                              <option value="КАБ">КАБ</option>
+                              <option value="БЕЗСКЛАД">БЕЗСКЛАД</option>
                               <option value="М/К">М/К</option>
+                              <option value="КАБ">КАБ</option>
                             </select>
                           </td>
                         </tr>

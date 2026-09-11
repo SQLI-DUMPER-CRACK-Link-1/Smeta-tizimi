@@ -18,20 +18,21 @@
  *
  * Ustunlar:
  *   A №  B КОД  C НАИМЕНОВАНИЕ  D ЕД.ИЗМ.  E ҲАЖМ(ед)  F ҲАЖМ(жами)
- *   G НАРХ  H СУММА  I ТИП  J ЧЕЛ  K МАШ  L МАТ  M ОБ  N КАБ  O М/К
- *   P ФАКТ ҳажм  Q ОСТАТКА ҳажм  R F2 ОЛИНГАН ҳажм  S F2 МУМКИН ҳажм
- *   T ФАКТ сумма  U ОСТАТКА сумма  V F2 ОЛИНГАН сумма  W F2 МУМКИН сумма
- *   X Даража (yashirin — SUMIF ota-bola filtri uchun)
+ *   G НАРХ  H СУММА  I ТИП  J ЧЕЛ  K МАШ  L МАТ  M ОБ
+ *   N БЕЗ СКЛАД  O М/К  P ПРОВОД/КАБ
+ *   Q ФАКТ ҳажм  R ОСТАТКА ҳажм  S F2 ОЛИНГАН ҳажм  T F2 МУМКИН ҳажм
+ *   U ФАКТ сумма  V ОСТАТКА сумма  W F2 ОЛИНГАН сумма  X F2 МУМКИН сумма
+ *   Y Даража  Z КАЛИТ (yashirin — SUMIF/qayta import uchun)
  *
  * Formulalar (T1 naqshi):
  *   F(rs, bl ostida) = E(norma) × F(ota bl)
  *   H(barg)          = F × G
- *   H(bl/rz)         = bevosita bolalar yig'indisi (SUMIF, yashirin X bo'yicha)
- *   J..O             = `=$H{qator}` — faqat mos kategoriyada, faqat bargda
- *   Q = F − P        (ostatka ҳажм)
- *   S = P − R        (F2 olinishi mumkin = fakt − olingan)
- *   U = H − T        (ostatka сумма)
- *   W = T − V        (F2 mumkin сумма)
+ * H(bl/rz)         = bevosita bolalar yig'indisi (SUMIF, yashirin Y bo'yicha)
+ *   J..P             = `=$H{qator}` — faqat mos kategoriyada, faqat bargda
+ *   R = F − Q        (ostatka ҳажм)
+ *   T = Q − S        (F2 olinishi mumkin = fakt − olingan)
+ *   V = H − U        (ostatka сумма)
+ *   X = U − W        (F2 mumkin сумма)
  *
  * `xlsx-js-style` ishlatiladi: oddiy SheetJS Community yozishda katak
  * rangini/chegarasini UMUMAN qo'llab-quvvatlamaydi (Pro xususiyat).
@@ -42,12 +43,12 @@ import { lrvKalitYoz } from './lrv-qayta-import';
 import { resursVedomostAoa } from './resurs-vedomost';
 
 /**
- * `toliq` — butun LRV_PLUS (A..W + yashirin Даража).
- * `forma2` — egasining talabi (2026-09-09): «forma 2 xuddi lrv plusni O
+ * `toliq` — butun LRV_PLUS (A..Z, Y/Z yashirin xizmat ustunlari).
+ * `forma2` — egasining talabi (2026-09-09): «forma 2 xuddi lrv plusni P
  * ustunigacha bo'lgan qismi bilan bir xil bo'lishi shart, faqat sarlavha
  * o'zgaradi va tagida nakrutkalarni hisoblangan jadvali qo'shilishi kerak.
  * qolgan hammasi — formuladan tortib shakl-shamoyilgacha — LRV_PLUS bilan
- * bir xil.» Ya'ni bu ALOHIDA hujjat emas, LRV_PLUSning O gacha kesilgani.
+ * bir xil.» Ya'ni bu ALOHIDA hujjat emas, LRV_PLUSning P gacha kesilgani.
  */
 export type LrvPlusRejim = 'toliq' | 'forma2';
 
@@ -100,7 +101,7 @@ export interface LrvPlusQator {
   faktSumma: number;
   f2Hajm: number;
   f2Summa: number;
-  /** X (yashirin) va Excel outline darajasi. */
+  /** Y (yashirin) va Excel outline darajasi. */
   daraja: number;
 }
 
@@ -183,16 +184,16 @@ const OTA_TUR = new Set(['rz', 'bl']);
 
 /** `t2_qator.kat` — migration CHECK bilan tasdiqlangan aniq qiymatlar. */
 const KAT_USTUN: Record<string, string> = {
-  'ЧЕЛ': 'J', 'МАШ': 'K', 'МАТ': 'L', 'ОБ': 'M', 'КАБ': 'N', 'М/К': 'O',
+  'ЧЕЛ': 'J', 'МАШ': 'K', 'МАТ': 'L', 'ОБ': 'M', 'БЕЗСКЛАД': 'N', 'М/К': 'O', 'КАБ': 'P',
 };
-const KAT_TARTIB = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'];
+const KAT_TARTIB = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗСКЛАД', 'М/К', 'КАБ'];
 
-/** Yashirin Даража ustuni har doim OXIRGI ustun: to'liq rejimda `X`,
- *  Forma-2 (O gacha kesilgan) rejimda `P`. SUMIF shu ustunga tayanadi. */
-export const LRV_DARAJA_USTUN: Record<LrvPlusRejim, string> = { toliq: 'X', forma2: 'Q' };
+/** Yashirin Даража ustuni har doim OXIRGI ustun: to'liq rejimda `Y`,
+ *  Forma-2 (P gacha kesilgan) rejimda `R`. SUMIF shu ustunga tayanadi. */
+export const LRV_DARAJA_USTUN: Record<LrvPlusRejim, string> = { toliq: 'Y', forma2: 'R' };
 
 export function lrvPlusQatorlarniHisobla(
-  qatorlar: T2Qator[], holatlar?: T2QatorHolat[], darajaUstun = 'X',
+  qatorlar: T2Qator[], holatlar?: T2QatorHolat[], darajaUstun = 'Y',
 ): LrvPlusQator[] {
   const rows = [...qatorlar].sort((a, b) => (a.tartib ?? 0) - (b.tartib ?? 0));
   const DATA_START = 4; // 1: obyekt nomi, 2: sarlavhalar, 3: ЖАМИ, 4+: ma'lumot
@@ -290,7 +291,7 @@ export function lrvPlusQatorlarniHisobla(
 
 /** Ildiz (daraja=0) qatorlar yig'indisi — ular allaqachon butun naslning
  *  jami qiymati, shuning uchun ikki marta sanalmaydi. */
-export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string, darajaUstun = 'X'): string | null {
+export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string, darajaUstun = 'Y'): string | null {
   if (!qatorlar.length) return null;
   const c1 = qatorlar[0].row, c2 = qatorlar[qatorlar.length - 1].row;
   return `SUMIF($${darajaUstun}$${c1}:$${darajaUstun}$${c2},0,$${ustun}$${c1}:$${ustun}$${c2})`;
@@ -298,17 +299,17 @@ export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string, dara
 
 export const LRV_PLUS_USTUNLAR = [
   '№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ.', 'ҲАЖМ (ед)', 'ҲАЖМ (жами)', 'НАРХ', 'СУММА',
-  'ТИП', 'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К',
+  'ТИП', 'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗ СКЛАД', 'М/К', 'ПРОВОД/КАБ',
   'ФАКТ ҳажм', 'ОСТАТКА ҳажм', 'F2 ОЛИНГАН ҳажм', 'F2 ОЛИНИШИ МУМКИН ҳажм',
   'ФАКТ сумма', 'ОСТАТКА сумма', 'F2 ОЛИНГАН сумма', 'F2 ОЛИНИШИ МУМКИН сумма',
   'Даража', 'КАЛИТ',
 ] as const;
 
-/** Forma-2: A..O — LRV_PLUS bilan AYNAN bir xil; keyin hujjatning o'z
+/** Forma-2: A..P — LRV_PLUS bilan AYNAN bir xil; keyin hujjatning o'z
  *  ustunlari. `ЗАМЕЧАНИЕ` — buyurtmachi qo'lda yozadigan ustun; `Даража` va
  *  `ID` yashirin (`ID` qaytib kelgan faylni aniq moslashtirish uchun). */
 export const LRV_FORMA2_USTUNLAR = [
-  ...LRV_PLUS_USTUNLAR.slice(0, 15), 'ЗАМЕЧАНИЕ', 'Даража', 'КАЛИТ',
+  ...LRV_PLUS_USTUNLAR.slice(0, 16), 'ЗАМЕЧАНИЕ', 'Даража', 'КАЛИТ',
 ] as const;
 
 /** Fayl qaysi obyekt/davrga tegishli ekanini mashina o'qiy oladigan belgi —
@@ -349,7 +350,7 @@ const RANG: Record<string, { fill?: { patternType: string; fgColor: { rgb: strin
 /**
  * Nakrutka kaskadi jadvalining bitta qatori. `pctKoef` berilsa E ustunida
  * TAHRIRLANADIGAN foiz katagi chiqadi (literal son); `summaFormula` shu
- * foiz katagiga va yuqoridagi qatorlarga/`J3..O3` kategoriya jamilariga
+ * foiz katagiga va yuqoridagi qatorlarga/`J3..P3` kategoriya jamilariga
  * tayanadi — Excelning o'zida qayta hisoblanadi.
  */
 type NakrutkaQator = {
@@ -367,31 +368,31 @@ type NakrutkaQator = {
 };
 
 type NakrutkaHisob = {
-  chel: number; mash: number; mat: number; ob: number; kab: number; mk: number;
+  chel: number; mash: number; mat: number; ob: number; bez: number; kab: number; mk: number;
 };
 
 /**
  * `t2_nakrutka_hisobla_v1` (migratsiya `20261014090000`) bilan BAYT-
  * BAYTIGA bir xil kaskad — endi Excel formula sifatida. `mat` bu yerda
- * TO'LIQ bucket (МАТ+КАБ+М/К), server RPC'dagi bilan bir xil semantika;
+ *  mat bu yerda TO'LIQ bucket (МАТ+БЕЗСКЛАД+КАБ+М/К), server RPC'dagi bilan bir xil semantika;
  * `kab`/`mk` undan formulada QAYTA ayiriladi.
  */
 function nakrutkaQatorlarQur(): NakrutkaQator[] {
   return [
     {
-      label: 'Прямые затраты (ЧЕЛ+МАШ+МАТ+ОБ)', pctKoef: null,
-      summaFormula: () => '=ROUND(J3+K3+L3+M3+N3+O3,2)',
+      label: 'Прямые затраты (ЧЕЛ+МАШ+МАТ+ОБ+БЕЗСКЛАД+М/К+КАБ)', pctKoef: null,
+      summaFormula: () => '=ROUND(J3+K3+L3+M3+N3+O3+P3,2)',
       summaJS: (kat) => kat.chel + kat.mash + kat.mat + kat.ob,
     },
     {
       label: 'Транспорт (материалы)', pctKoef: 'ТРАНСПОРТ_МАТЕРИАЛ',
-      summaFormula: (r) => `=ROUND((L3+O3)*E${r}/100,2)`,
+      summaFormula: (r) => `=ROUND((L3+N3+O3)*E${r}/100,2)`,
       summaJS: (kat, koef) => (kat.mat - kat.kab) * (koef.ТРАНСПОРТ_МАТЕРИАЛ ?? 0) / 100,
     },
     {
       label: 'Складские (материалы)', pctKoef: 'СКЛАДСКИЕ_МАТЕРИАЛ',
-      summaFormula: (r) => `=ROUND((L3+N3)*E${r}/100,2)`,
-      summaJS: (kat, koef) => (kat.mat - kat.mk) * (koef.СКЛАДСКИЕ_МАТЕРИАЛ ?? 0) / 100,
+      summaFormula: (r) => `=ROUND((L3+P3)*E${r}/100,2)`,
+      summaJS: (kat, koef) => (kat.mat - kat.bez - kat.mk) * (koef.СКЛАДСКИЕ_МАТЕРИАЛ ?? 0) / 100,
     },
     {
       label: 'Складские (М/К)', pctKoef: 'СКЛАДСКИЕ_МК',
@@ -400,7 +401,7 @@ function nakrutkaQatorlarQur(): NakrutkaQator[] {
     },
     {
       label: 'Транспорт (кабель)', pctKoef: 'ТРАНСПОРТ_КАБЕЛЬ',
-      summaFormula: (r) => `=ROUND(N3*E${r}/100,2)`,
+      summaFormula: (r) => `=ROUND(P3*E${r}/100,2)`,
       summaJS: (kat, koef) => kat.kab * (koef.ТРАНСПОРТ_КАБЕЛЬ ?? 0) / 100,
     },
     {
@@ -468,7 +469,7 @@ function nakrutkaQatorlarQur(): NakrutkaQator[] {
 
 /**
  * Nakrutka kaskadi jadvalini `ws` ga yozadi, `startRow` dan boshlab.
- * `J3..O3` (kategoriya ЖАМИ formulalari) allaqachon faylda yozilgan
+ * `J3..P3` (kategoriya ЖАМИ formulalari) allaqachon faylda yozilgan
  * bo'lishi shart — bu funksiya faqat ularga HAVOLA qiladi, qayta
  * hisoblamaydi (ikkinchi haqiqat manbai emas).
  */
@@ -534,9 +535,9 @@ export async function lrvPlusFaylBaytlari(
   const jamiFakt = knownSum(ildiz, (q) => q.faktSumma);
   const jamiF2 = knownSum(ildiz, (q) => q.f2Summa);
 
-  // Kategoriya ЖАМИ — J3..O3 keshlangan qiymati va nakrutka kaskadi shu
+  // Kategoriya ЖАМИ — J3..P3 keshlangan qiymati va nakrutka kaskadi shu
   // yerdan oladi (faqat barglar, T1 dagidek).
-  const katYigindi: Record<string, number> = { 'ЧЕЛ': 0, 'МАШ': 0, 'МАТ': 0, 'ОБ': 0, 'КАБ': 0, 'М/К': 0 };
+  const katYigindi: Record<string, number> = { 'ЧЕЛ': 0, 'МАШ': 0, 'МАТ': 0, 'ОБ': 0, 'БЕЗСКЛАД': 0, 'М/К': 0, 'КАБ': 0 };
   for (const q of hisob) {
     if (LEAF_TUR.has(q.tur) && q.kat in katYigindi) katYigindi[q.kat] += q.summaQiymat ?? 0;
   }
@@ -564,7 +565,7 @@ export async function lrvPlusFaylBaytlari(
   aoa[2][2] = 'ЖАМИ';
 
   for (const q of hisob) {
-    const kat: (string | number | null)[] = Array.from({ length: 6 }, () => null);
+    const kat: (string | number | null)[] = Array.from({ length: 7 }, () => null);
     if (LEAF_TUR.has(q.tur)) {
       const idx = KAT_TARTIB.indexOf(q.kat);
       if (idx >= 0) kat[idx] = q.summaQiymat ?? null;
@@ -576,7 +577,7 @@ export async function lrvPlusFaylBaytlari(
       ...kat,
     ];
     if (rejim === 'forma2') {
-      // A..O + ЗАМЕЧАНИЕ (bo'sh, buyurtmachi to'ldiradi) + Даража + КАЛИТ.
+      // A..P + ЗАМЕЧАНИЕ (bo'sh, buyurtmachi to'ldiradi) + Даража + КАЛИТ.
       aoa.push([...asosiy, '', q.daraja, lrvKalitYoz(q.id, q.kod, q.nom, q.birlik)]);
     } else {
       aoa.push([
@@ -600,10 +601,10 @@ export async function lrvPlusFaylBaytlari(
       if (ustun) ws[`${ustun}${q.row}`] = { t: 'n', f: `$H${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat }) };
     }
     if (rejim === 'toliq') {
-      ws[`Q${q.row}`] = { t: 'n', f: `F${q.row}-P${q.row}`, ...(q.obyomQiymat == null ? {} : { v: q.obyomQiymat - q.faktHajm }) };
-      ws[`S${q.row}`] = { t: 'n', f: `P${q.row}-R${q.row}`, v: q.faktHajm - q.f2Hajm };
-      ws[`U${q.row}`] = { t: 'n', f: `H${q.row}-T${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat - q.faktSumma }) };
-      ws[`W${q.row}`] = { t: 'n', f: `T${q.row}-V${q.row}`, v: q.faktSumma - q.f2Summa };
+      ws[`R${q.row}`] = { t: 'n', f: `F${q.row}-Q${q.row}`, ...(q.obyomQiymat == null ? {} : { v: q.obyomQiymat - q.faktHajm }) };
+      ws[`T${q.row}`] = { t: 'n', f: `Q${q.row}-S${q.row}`, v: q.faktHajm - q.f2Hajm };
+      ws[`V${q.row}`] = { t: 'n', f: `H${q.row}-U${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat - q.faktSumma }) };
+      ws[`X${q.row}`] = { t: 'n', f: `U${q.row}-W${q.row}`, v: q.faktSumma - q.f2Summa };
     }
   }
 
@@ -612,7 +613,7 @@ export async function lrvPlusFaylBaytlari(
   const ayirma = (a: number | null, b: number | null): number | null => a == null || b == null ? null : a - b;
   const jamiUstunlar: Array<[string, number | null]> = [['H', jamiSumma]];
   if (rejim === 'toliq') {
-    jamiUstunlar.push(['T', jamiFakt], ['U', ayirma(jamiSumma, jamiFakt)], ['V', jamiF2], ['W', ayirma(jamiFakt, jamiF2)]);
+    jamiUstunlar.push(['U', jamiFakt], ['V', ayirma(jamiSumma, jamiFakt)], ['W', jamiF2], ['X', ayirma(jamiFakt, jamiF2)]);
   }
   for (const [ustun, qiymat] of jamiUstunlar) {
     const f = lrvPlusJamiFormula(hisob, ustun, darajaUstun);
@@ -623,8 +624,8 @@ export async function lrvPlusFaylBaytlari(
     // Kategoriya ustunlari faqat barglarda to'ladi -> butun ustunni yig'ish
     // xavfsiz. Keshlangan qiymat ENDI TO'G'RI (avval 0 edi) — nakrutka
     // kaskadi va SheetJS bilan formula-recalc'siz o'quvchilar shunga tayanadi.
-    for (const col of ['J', 'K', 'L', 'M', 'N', 'O'] as const) {
-      const kalitlar: Record<string, string> = { J: 'ЧЕЛ', K: 'МАШ', L: 'МАТ', M: 'ОБ', N: 'КАБ', O: 'М/К' };
+    for (const col of ['J', 'K', 'L', 'M', 'N', 'O', 'P'] as const) {
+      const kalitlar: Record<string, string> = { J: 'ЧЕЛ', K: 'МАШ', L: 'МАТ', M: 'ОБ', N: 'БЕЗСКЛАД', O: 'М/К', P: 'КАБ' };
       ws[`${col}3`] = { t: 'n', f: `SUM(${col}${c1}:${col}${c2})`, v: katYigindi[kalitlar[col]] };
     }
   }
@@ -641,10 +642,10 @@ export async function lrvPlusFaylBaytlari(
      qo'shni katak to'la bo'lsa kesilib qolardi. */
   const PUL_FORMAT = '#,##0.00';
   const HAJM_FORMAT = '#,##0.####';
-  /** C = nom; E/F = hajm; G/H = narx va summa; J..O = kategoriya summalari. */
+  /** C = nom; E/F = hajm; G/H = narx va summa; J..P = kategoriya summalari. */
   const NOM_USTUN = 2;
-  const HAJM_USTUN = new Set([4, 5]);
-  const PUL_USTUN = new Set([6, 7, 9, 10, 11, 12, 13, 14]);
+  const HAJM_USTUN = new Set([4, 5, 16, 17, 18, 19]);
+  const PUL_USTUN = new Set([6, 7, 9, 10, 11, 12, 13, 14, 15, 20, 21, 22, 23]);
 
   // ── Uslub: chegara + qator turi rangi ──────────────────────────────
   for (const q of hisob) {
@@ -695,7 +696,7 @@ export async function lrvPlusFaylBaytlari(
     { wch: 5 }, { wch: 14 }, { wch: 46 }, { wch: 9 },
     { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 17 },
     { wch: 6 },
-    { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+    { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
   ];
   ws['!cols'] = rejim === 'toliq'
     ? [
@@ -719,8 +720,8 @@ export async function lrvPlusFaylBaytlari(
   if (options?.nakrutka) {
     const kat: NakrutkaHisob = {
       chel: katYigindi['ЧЕЛ'], mash: katYigindi['МАШ'],
-      mat: katYigindi['МАТ'] + katYigindi['КАБ'] + katYigindi['М/К'],
-      ob: katYigindi['ОБ'], kab: katYigindi['КАБ'], mk: katYigindi['М/К'],
+      mat: katYigindi['МАТ'] + katYigindi['БЕЗСКЛАД'] + katYigindi['КАБ'] + katYigindi['М/К'],
+      ob: katYigindi['ОБ'], bez: katYigindi['БЕЗСКЛАД'], kab: katYigindi['КАБ'], mk: katYigindi['М/К'],
     };
     const oxirgiNakrutkaQator = nakrutkaKaskadYoz(ws, XLSX, oxirgiMalumotQator + 2, options.nakrutka, kat);
     // ⚠️ SheetJS asl `aoa_to_sheet` chegarasidan (`!ref`) TASHQARIDA qo'lda
@@ -737,7 +738,7 @@ export async function lrvPlusFaylBaytlari(
   XLSX.utils.book_append_sheet(wb, ws, rejim === 'forma2' ? 'FORMA_2' : 'LRV_PLUS');
 
   // Owner (2026-09-10): "excel lrv hujjatlari ichida bo'lishi kerak" --
-  // resurs vedomosti (ЧЕЛ/МАШ/МАТ/ОБ/КАБ/М-К kesimida) ilova ichidagi
+  // resurs vedomosti (ЧЕЛ/МАШ/МАТ/ОБ/БЕЗСКЛАД/М-К/КАБ kesimida) ilova ichidagi
   // alohida ko'rinish (ResursVedomostNative.tsx) bilan cheklanmasin,
   // eksportning O'ZI ichida alohida varaq bo'lib chiqsin. Ekrandagi va
   // shu yerdagi hisob-kitob BITTA manba (resursVedomostAoa/

@@ -82,10 +82,11 @@ describe('resursVedomostKategoriyalarga', () => {
       qator({ tur: 'mat', kat: 'МАТ', nom: 'Beton', smeta_summa: 1 }),
       qator({ tur: 'rs', kat: 'МАШ', nom: 'Ekskavator', smeta_summa: 1 }),
       qator({ tur: 'rs', kat: 'ЧЕЛ', nom: 'Ishchi', smeta_summa: 1 }),
+      qator({ tur: 'mat', kat: 'БЕЗСКЛАД', nom: 'ВОДА', smeta_summa: 1 }),
       qator({ tur: 'rs', kat: 'КАБ', nom: 'Kabel', smeta_summa: 1 }),
     ];
     const kats = resursVedomostKategoriyalarga(rows);
-    expect(kats.map(k => k.kat)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ']);
+    expect(kats.map(k => k.kat)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗСКЛАД', 'КАБ']);
   });
 });
 

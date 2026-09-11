@@ -13,11 +13,11 @@ import NarxlarNative from './NarxlarNative';
 
 /* ЧЕЛ va МАШ — birlikdan avtomat aniqlanadi va QULFLANGAN (qat'iy qoida).
  * Qolganlari qo'lda tanlanadi. */
-const KATEGORIYALAR = ['МАТ', 'ОБ', 'М/К', 'КАБ'];
+const KATEGORIYALAR = ['МАТ', 'ОБ', 'БЕЗСКЛАД', 'М/К', 'КАБ'];
 const QULF = ['ЧЕЛ', 'МАШ'];
 
 const KAT_RANG: Record<string, 'ok' | 'warn' | 'danger' | 'neytral'> = {
-  'ЧЕЛ': 'neytral', 'МАШ': 'neytral', 'МАТ': 'ok', 'ОБ': 'warn', 'КАБ': 'neytral', 'М/К': 'neytral',
+  'ЧЕЛ': 'neytral', 'МАШ': 'neytral', 'МАТ': 'ok', 'ОБ': 'warn', 'БЕЗСКЛАД': 'ok', 'КАБ': 'neytral', 'М/К': 'neytral',
 };
 
 /* T2-PTO-CLOSURE-007: bosqichma-bosqich (feature flag) cutover — F2Import.tsx
@@ -152,7 +152,7 @@ function NarxlarLegacy() {
       yangilanmoqda={soragan.isFetching}
       amallar={
         <div className="flex items-center gap-3">
-          <Tanlov qiymat={filter} ozgardi={setFilter} variantlar={['ALL', 'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К']} />
+          <Tanlov qiymat={filter} ozgardi={setFilter} variantlar={['ALL', 'ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗСКЛАД', 'М/К', 'КАБ']} />
           <Qidiruv qiymat={q} ozgardi={setQ} placeholder="Resurs nomi…" />
         </div>
       }
@@ -249,7 +249,7 @@ function NarxlarLegacy() {
                                   j === i ? { ...x, kat: e.target.value } : x))}
                                 className="bg-[var(--surface-3)] border border-border rounded
                                            px-1.5 py-0.5 text-[11px] text-text">
-                                {['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'].map((k) =>
+                                {['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗСКЛАД', 'М/К', 'КАБ'].map((k) =>
                                   <option key={k} value={k}>{k}</option>)}
                               </select>
                             ) : (

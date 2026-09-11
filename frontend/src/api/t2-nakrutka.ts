@@ -37,6 +37,16 @@ export const NAKRUTKA_KOEF_IZOH: Record<NakrutkaKoefKod, string> = {
 
 export type NakrutkaKoeffitsientlar = Record<NakrutkaKoefKod, number>;
 export type NakrutkaKategoriyaJadval = Record<'ЧЕЛ' | 'МАШ' | 'МАТ' | 'ОБ' | 'М/К' | 'КАБ' | 'БЕЗСКЛАД', number>;
+
+/**
+ * The API's `cats.mat` is the full material basis used by the cascade. Keep
+ * the category card mutually exclusive by removing its M/K, cable, and
+ * no-warehouse sub-splits before presenting the plain МАТ amount.
+ */
+export function nakrutkaMatSof(cats: { mat: number; mk: number; kab: number; bez: number }): number {
+  return Math.max(0, cats.mat - cats.mk - cats.kab - cats.bez);
+}
+
 export type NakrutkaKaskad = {
   pryamye: number; chel: number; mash: number; mat: number; ob: number; kab: number;
   tr_mat: number; skl_mat: number; tr_kab: number;

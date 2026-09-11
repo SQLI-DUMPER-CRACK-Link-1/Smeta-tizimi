@@ -65,7 +65,7 @@ describe('lrvPlusQatorlarniHisobla — smeta kaskadi', () => {
     const bl = h.find((r) => r.nom === 'Qazish')!;
     const rs = h.filter((r) => r.tur === 'rs');
     const c1 = Math.min(...rs.map((r) => r.row)), c2 = Math.max(...rs.map((r) => r.row));
-    expect(bl.summaFormula).toBe(`SUMIF($X$${c1}:$X$${c2},${bl.daraja + 1},$H$${c1}:$H$${c2})`);
+    expect(bl.summaFormula).toBe(`SUMIF($Y$${c1}:$Y$${c2},${bl.daraja + 1},$H$${c1}:$H$${c2})`);
     expect(bl.summaQiymat).toBe(190000 + 235000);
   });
 
@@ -103,8 +103,8 @@ describe('lrvPlusQatorlarniHisobla — FAKT / F2 (egasining talabi: har bir qato
   it('ЖАМИ formulasi berilgan ustun bo\'yicha faqat ildiz (daraja=0) qatorlarni yig\'adi', () => {
     const h = lrvPlusQatorlarniHisobla(DARAXT);
     const c1 = h[0].row, c2 = h[h.length - 1].row;
-    expect(lrvPlusJamiFormula(h, 'H')).toBe(`SUMIF($X$${c1}:$X$${c2},0,$H$${c1}:$H$${c2})`);
-    expect(lrvPlusJamiFormula(h, 'T')).toBe(`SUMIF($X$${c1}:$X$${c2},0,$T$${c1}:$T$${c2})`);
+    expect(lrvPlusJamiFormula(h, 'H')).toBe(`SUMIF($Y$${c1}:$Y$${c2},0,$H$${c1}:$H$${c2})`);
+    expect(lrvPlusJamiFormula(h, 'U')).toBe(`SUMIF($Y$${c1}:$Y$${c2},0,$U$${c1}:$U$${c2})`);
   });
 });
 
@@ -116,7 +116,7 @@ describe('LRV eksport — egasi so\'ragan tuzatishlar', () => {
     expect(LRV_PLUS_USTUNLAR[6]).toBe('НАРХ');        // G
     expect(LRV_PLUS_USTUNLAR[7]).toBe('СУММА');       // H
     expect(LRV_PLUS_USTUNLAR[8]).toBe('ТИП');         // I — markirovka
-    expect(LRV_PLUS_USTUNLAR.slice(9, 15)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К']); // J..O
+    expect(LRV_PLUS_USTUNLAR.slice(9, 16)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗ СКЛАД', 'М/К', 'ПРОВОД/КАБ']); // J..P
   });
 
   it('РАЗДЕЛ va ВИД РАБОТ ustunlari yo\'q — ierarxiya endi guruhlash orqali', () => {
@@ -243,14 +243,14 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
     expect(ws[`H${rz.row}`].v).toBe(425000);
 
     // Egasining talabi: fakt / ostatka / f2 olingan / f2 olinishi mumkin
-    expect(ws[`P${ishchi.row}`].v).toBe(3.8); // ФАКТ ҳажм
-    expect(ws[`T${ishchi.row}`].v).toBe(76000); // ФАКТ сумма
-    expect(ws[`Q${ishchi.row}`].f).toBe(`F${ishchi.row}-P${ishchi.row}`); // ОСТАТКА = smeta - fakt
-    expect(ws[`Q${ishchi.row}`].v).toBeCloseTo(9.5 - 3.8, 6);
-    expect(ws[`R${ishchi.row}`].v).toBe(1.9); // F2 ОЛИНГАН
-    expect(ws[`S${ishchi.row}`].f).toBe(`P${ishchi.row}-R${ishchi.row}`); // F2 МУМКИН = fakt - olingan
-    expect(ws[`S${ishchi.row}`].v).toBeCloseTo(1.9, 6);
-    expect(ws[`W${ishchi.row}`].v).toBe(76000 - 38000);
+    expect(ws[`Q${ishchi.row}`].v).toBe(3.8); // ФАКТ ҳажм
+    expect(ws[`U${ishchi.row}`].v).toBe(76000); // ФАКТ сумма
+    expect(ws[`R${ishchi.row}`].f).toBe(`F${ishchi.row}-Q${ishchi.row}`); // ОСТАТКА = smeta - fakt
+    expect(ws[`R${ishchi.row}`].v).toBeCloseTo(9.5 - 3.8, 6);
+    expect(ws[`S${ishchi.row}`].v).toBe(1.9); // F2 ОЛИНГАН
+    expect(ws[`T${ishchi.row}`].f).toBe(`Q${ishchi.row}-S${ishchi.row}`); // F2 МУМКИН = fakt - olingan
+    expect(ws[`T${ishchi.row}`].v).toBeCloseTo(1.9, 6);
+    expect(ws[`X${ishchi.row}`].v).toBe(76000 - 38000);
 
     // Kategoriya ustunlari faqat bargda va faqat MOS ustunda
     expect(ws[`J${ishchi.row}`].f).toBe(`$H${ishchi.row}`); // ЧЕЛ -- formula bilan
@@ -263,10 +263,10 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
     expect(ws['A1'].v).toBe('Sinov Obyekti');
     expect(ws['H3'].f).toContain('SUMIF');
     expect(ws['H3'].v).toBe(425000);
-    expect(ws['T3'].v).toBe(170000);
-    expect(ws['V3'].v).toBe(85000);
-    expect(ws['U3'].v).toBe(425000 - 170000); // ЖАМИ ОСТАТКА
-    expect(ws['W3'].v).toBe(170000 - 85000); // ЖАМИ F2 ОЛИНИШИ МУМКИН
+    expect(ws['U3'].v).toBe(170000);
+    expect(ws['W3'].v).toBe(85000);
+    expect(ws['V3'].v).toBe(425000 - 170000); // ЖАМИ ОСТАТКА
+    expect(ws['X3'].v).toBe(170000 - 85000); // ЖАМИ F2 ОЛИНИШИ МУМКIN
 
   });
 
@@ -320,15 +320,15 @@ describe('eksport ↔ qayta import halqasi', () => {
     const { lrvKalitOqi } = await import('./lrv-qayta-import');
     const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR);
     const ishchi = h.find((r) => r.nom === 'Ishchi')!;
-    const kalit = lrvKalitOqi(ws[`Y${ishchi.row}`]?.v);
+    const kalit = lrvKalitOqi(ws[`Z${ishchi.row}`]?.v);
     expect(kalit?.id).toBe(3);                       // kanonik t2_qator.id
-    /* КАЛИТ ustuni (25 = Y) yashirin. Fayl endi freeze uchun exceljs orqali
+    /* КАЛИТ ustuni (26 = Z) yashirin. Fayl endi freeze uchun exceljs orqali
        qayta yoziladi (`hidden="1"` deb), shuning uchun raw-XML regex emas,
        exceljs API bilan tekshiramiz. */
     const ExcelJS = (await import('exceljs')).default;
     const ewb = new ExcelJS.Workbook();
     await ewb.xlsx.load(bytes as unknown as ArrayBuffer);
-    expect(ewb.getWorksheet('LRV_PLUS')!.getColumn(25).hidden).toBe(true);
+    expect(ewb.getWorksheet('LRV_PLUS')!.getColumn(26).hidden).toBe(true);
   });
 
   it('faylni tahrirlab qaytarish: hajm o\'zgarsa qabul, nusxalansa RAD', async () => {
@@ -341,7 +341,7 @@ describe('eksport ↔ qayta import halqasi', () => {
     const kanonik = DARAXT.map((q) => ({ id: q.id, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', hajm: q.hajm }));
     const oqi = (r: number) => ({
       satr: r,
-      kalit: String(ws[`Y${r}`]?.v ?? ''),
+      kalit: String(ws[`Z${r}`]?.v ?? ''),
       kod: String(ws[`B${r}`]?.v ?? ''),
       nom: String(ws[`C${r}`]?.v ?? ''),
       birlik: String(ws[`D${r}`]?.v ?? ''),
@@ -398,8 +398,9 @@ describe('Nakrutka kaskadi — t2_nakrutka_hisobla_v1 bilan bir xil formulalar',
     expect(ws['K3'].v).toBe(50000);  // МАШ
     expect(ws['L3'].v).toBe(200000); // МАТ
     expect(ws['M3'].v).toBe(80000);  // ОБ
-    expect(ws['N3'].v).toBe(20000);  // КАБ
+    expect(ws['N3'].v).toBe(0);      // БЕЗСКЛАД
     expect(ws['O3'].v).toBe(30000);  // М/К
+    expect(ws['P3'].v).toBe(20000);  // КАБ
   });
 
   it('kaskad Excelning o\'zida ROUND bilan qayta hisoblanadigan formulalarga ega va keshlangan qiymatlar qo\'lda hisoblangan bilan mos', async () => {
@@ -421,6 +422,24 @@ describe('Nakrutka kaskadi — t2_nakrutka_hisobla_v1 bilan bir xil formulalar',
     expect(ws[`E${r0 + 14}`].v).toBe(12); // НДС foizi -- tahrirlanadigan literal
   });
 
+  it('БЕЗСКЛАД summasi transportga kiradi, ombor ustamasiga kirmaydi', async () => {
+    const bezTree: T2Qator[] = [
+      qator({ id: 101, tartib: 1, tur: 'rz', daraja: 0, nom: 'Bezsklad bo\'limi' }),
+      qator({ id: 102, tartib: 2, tur: 'mat', daraja: 1, ota_id: 101,
+        kod: 'B1', nom: 'BETON', birlik: 'm3', hajm: 1, narx: 40000,
+        summa: 40000, kat: 'БЕЗСКЛАД' }),
+    ];
+    const bytes = await lrvPlusFaylBaytlari(bezTree, 'Bezsklad nakrutka', undefined, { nakrutka: KOEF });
+    const XLSX = await import('xlsx-js-style');
+    const ws = XLSX.read(bytes, { type: 'array' }).Sheets['LRV_PLUS'];
+    expect(ws['N3'].v).toBe(40000);
+    const r0 = 3 + bezTree.length + 4;
+    expect(ws[`F${r0}`].f).toContain('N3');
+    expect(ws[`F${r0 + 1}`].f).toContain('N3');
+    expect(ws[`F${r0 + 2}`].f).toContain('L3+P3');
+    expect(ws[`F${r0 + 2}`].v).toBe(0);
+  });
+
   it('nakrutka berilmasa jadval umuman qo\'shilmaydi (o\'ylab topilgan son yo\'q)', async () => {
     const bytes = await lrvPlusFaylBaytlari(KAT_DARAXT, 'Nakrutkasiz');
     const XLSX = await import('xlsx-js-style');
@@ -430,8 +449,8 @@ describe('Nakrutka kaskadi — t2_nakrutka_hisobla_v1 bilan bir xil formulalar',
   });
 });
 
-describe('Forma-2 rejimi — LRV_PLUS ning O ustunigacha bo\'lgan qismi bilan aynan bir xil', () => {
-  it('faqat A..O + ЗАМЕЧАНИЕ + yashirin Даража/КАЛИТ, sarlavha o\'zgaradi', async () => {
+describe('Forma-2 rejimi — LRV_PLUS ning P ustunigacha bo\'lgan qismi bilan aynan bir xil', () => {
+  it('faqat A..P + ЗАМЕЧАНИЕ + yashirin Даража/КАЛИТ, sarlavha o\'zgaradi', async () => {
     const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Amfiteatr', HOLATLAR, {
       rejim: 'forma2', davr: '2026-07', raqam: 'Ф2-07',
     });
@@ -444,13 +463,13 @@ describe('Forma-2 rejimi — LRV_PLUS ning O ustunigacha bo\'lgan qismi bilan ay
     expect(ws['A1'].v).toContain('Ф2-07');
     expect(ws['A1'].v).toContain('2026-07');
 
-    // Ustun 15 (0-indeks) = ЗАМЕЧАНИЕ (P), keyin Даража (Q, yashirin), КАЛИТ (R, yashirin).
-    expect(ws['P2'].v).toBe('ЗАМЕЧАНИЕ');
-    expect(ws['Q2'].v).toBe('Даража');
-    expect(ws['R2'].v).toBe('КАЛИТ');
+    // Ustun 16 (0-indeks) = ЗАМЕЧАНИЕ (Q), keyin Даража (R, yashirin), КАЛИТ (S, yashirin).
+    expect(ws['Q2'].v).toBe('ЗАМЕЧАНИЕ');
+    expect(ws['R2'].v).toBe('Даража');
+    expect(ws['S2'].v).toBe('КАЛИТ');
 
-    // FAKT/OSTATKA/F2 ustunlari (P..W to'liq rejimda) forma2 da YO'Q.
-    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR, 'Q');
+    // FAKT/OSTATKA/F2 ustunlari (Q..X to'liq rejimda) forma2 da YO'Q.
+    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR, 'R');
     const ishchi = h.find((r) => r.nom === 'Ishchi')!;
     expect(ws[`H${ishchi.row}`].f).toContain('F'); // СУММА hali A..O ichida, bor
     // Lekin to'liq rejimdagi FAKT sumasi ustuni (odatda T) forma2'da mavjud emas.
@@ -461,12 +480,27 @@ describe('Forma-2 rejimi — LRV_PLUS ning O ustunigacha bo\'lgan qismi bilan ay
     const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Amfiteatr', HOLATLAR, { rejim: 'forma2' });
     const XLSX = await import('xlsx-js-style');
     const ws = XLSX.read(bytes, { type: 'array' }).Sheets['FORMA_2'];
-    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR, 'Q');
+    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR, 'R');
     const ishchi = h.find((r) => r.nom === 'Ishchi')!;
     const bl = h.find((r) => r.tur === 'bl')!;
     expect(ws[`F${ishchi.row}`].f).toBe(`E${ishchi.row}*F${bl.row}`);
     expect(ws[`H${bl.row}`].f).toContain('SUMIF');
-    expect(ws[`H${bl.row}`].f).toContain('$Q$'); // forma2 rejimida yashirin Даража ustuni Q
+    expect(ws[`H${bl.row}`].f).toContain('$R$'); // forma2 rejimida yashirin Даража ustuni R
+  });
+});
+
+describe('LRV_PLUS freeze panes', () => {
+  it('LRV va RESURS_VEDOMOST varaqlarida muzlatish sozlamasi saqlanadi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Freeze sinovi');
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(bytes as unknown as Parameters<typeof wb.xlsx.load>[0]);
+    expect(wb.getWorksheet('LRV_PLUS')?.views[0]).toMatchObject({
+      state: 'frozen', xSplit: 3, ySplit: 3,
+    });
+    expect(wb.getWorksheet('RESURS_VEDOMOST')?.views[0]).toMatchObject({
+      state: 'frozen', ySplit: 1,
+    });
   });
 });
 
