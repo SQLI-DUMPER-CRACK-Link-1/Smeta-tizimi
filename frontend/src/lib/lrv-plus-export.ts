@@ -676,17 +676,23 @@ export async function lrvPlusFaylBaytlari(
   for (const q of hisob) rowInfo[q.row - 1] = { level: Math.min(q.daraja, 7) };
   ws['!rows'] = rowInfo;
 
+  /* Egasi (2026-09-10): «son katakka sig'sin, kataklar kengaya olsin».
+     `#,##0.00` bilan obyekt/razdel jamilari milliardga chiqadi —
+     «6,250,000,000.00» = 16 belgi. Jami tushadigan pul ustunlari
+     (СУММА, ЧЕЛ..М/К kategoriya jamilari, ФАКТ/ОСТАТКА/F2 суммы) shu
+     kenglikka sig'ishi kerak, aks holda tor ustunda `#####` bo'ladi.
+     НАРХ — birlik narxi (kichik) va ҲАЖМ ustunlari o'z kengligida qoladi. */
   const asosiyKengliklar = [
     { wch: 5 }, { wch: 14 }, { wch: 46 }, { wch: 9 },
-    { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 },
+    { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 17 },
     { wch: 6 },
-    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+    { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
   ];
   ws['!cols'] = rejim === 'toliq'
     ? [
         ...asosiyKengliklar,
         { wch: 11 }, { wch: 12 }, { wch: 13 }, { wch: 15 },
-        { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
+        { wch: 17 }, { wch: 17 }, { wch: 17 }, { wch: 17 },
         { wch: 7, hidden: true },   // Даража
         { wch: 18, hidden: true },  // КАЛИТ
       ]
