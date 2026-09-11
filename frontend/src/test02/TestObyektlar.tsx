@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Database, RefreshCw, AlertTriangle, Trash2, Edit3, MapPin, X, Briefcase, Save, Plus, FolderKanban } from 'lucide-react';
 import { Sahifa } from '../umumiy/ui/Sahifa';
@@ -7,6 +8,7 @@ import { sbT2ObyektlarOlKomp, sbObyektOchirish, sbObyektTahrirlash, sbObyektLoka
 import { sbT2LoyihalarOl, type T2Loyiha } from '../api/t2-loyiha';
 import { toast } from '../umumiy/ui/Toast';
 import { useKompaniya } from './KompaniyaTanlov';
+import { usePTOWorkspace } from '../umumiy/kontekst/PTOWorkspaceContext';
 
 // LEAFLET IMPORTS
 import 'leaflet/dist/leaflet.css';
@@ -58,6 +60,8 @@ export default function TestObyektlar() {
   const navigate = useNavigate();
   const { joriy } = useKompaniya();
   const kompYuklanmoqda = joriy === undefined;
+  const qc = useQueryClient();
+  const workspace = usePTOWorkspace();
 
   const [yuklanmoqda, setYuklanmoqda] = useState(false);
   const [qatorlar, setQatorlar] = useState<Qator[] | null>(null);
@@ -92,7 +96,7 @@ export default function TestObyektlar() {
       if (!r.ok) { toast(r.xato || r.error || r.code || 'Obyekt yaratilmadi', 'danger'); return; }
       toast('Obyekt yaratildi', 'ok');
       setYaratishOchiq(false); setYangiNom(''); setYangiLoyihaId('');
-      yukla();
+      sinxronla();
     } catch (e: any) {
       toast('Xatolik: ' + (e?.message || e), 'danger');
     } finally { setYaratilmoqda(false); }
@@ -105,7 +109,7 @@ export default function TestObyektlar() {
       setYuklanmoqda(true);
       await sbObyektOchirish(o.id, o.nom);
       toast("Obyekt Korzinkaga o'tkazildi", 'ok');
-      yukla();
+      sinxronla();
     } catch(err: any) {
       toast('Xatolik: ' + err.message, 'danger');
       setYuklanmoqda(false);
@@ -141,7 +145,7 @@ export default function TestObyektlar() {
 
       toast('Obyekt tahrirlandi', 'ok');
       setEditObj(null);
-      yukla();
+      sinxronla();
     } catch(err: any) {
       toast('Xatolik: ' + err.message, 'danger');
       setYuklanmoqda(false);
@@ -160,6 +164,20 @@ export default function TestObyektlar() {
   };
 
   useEffect(() => { yukla(); }, [joriy?.id, kompYuklanmoqda]);
+
+  /* Obyekt yaratish/o'chirish/tahrirlashdan keyin FAQAT shu sahifaning
+   * lokal ro'yxatini emas, tizimdagi BARCHA obyekt keshini yangilash kerak.
+   * Aks holda egasi ko'rgan xato takrorlanadi: obyekt bazada o'chgan
+   * (holat='bekor'), lekin yon panel / PTO scope tanlagichi eski keshdan
+   * (`useObyektlar` staleTime = 10 daq) uni hali ko'rsatib turadi; yangi
+   * yaratilgan obyekt esa o'sha joylarda paydo bo'lmaydi. Uch mustaqil
+   * kesh bor — React Query (`['obyektlar']`), bu sahifa (`yukla`) va PTO
+   * workspace (`refresh`) — uchalasini ham qo'zg'atamiz. */
+  const sinxronla = async () => {
+    await yukla();
+    qc.invalidateQueries({ queryKey: ['obyektlar'] });
+    workspace.refresh();
+  };
 
   const jami = useMemo(() => {
     const q = qatorlar || [];
