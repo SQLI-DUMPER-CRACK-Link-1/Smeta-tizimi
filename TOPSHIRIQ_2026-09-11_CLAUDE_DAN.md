@@ -111,6 +111,32 @@ bir marta adashilgan (pastdagi 4-bo'limga qarang).
 **Ish hajmi:** `T2ResursKategoriya`ga 7-qiymat; `resursMkKabAniqla`ga qoida;
 registr/UI ro'yxatlariga qo'shish; `resurs-vedomost.ts`dagi `KATEGORIYA_TARTIB`.
 
+**2026-09-11 tekshiruv (Claude):**
+- `t2_qator.kat` da **CHECK constraint YO'Q** — 'БЕЗ СКЛАД' ni saqlash uchun
+  migratsiya kerak emas. Hozirgi kategoriyalar: МАТ 16391, МАШ 12813,
+  ЧЕЛ 2945, ОБ 465, М/К 8, КАБ 5. БЕЗ СКЛАД hech qayerda yo'q.
+- Sozlamalarda **`KW_BEZSKLAD`** kaliti allaqachon bor
+  (`Sozlamalar.tsx:378`, "Omborsiz (без склада) hisoblanadigan resurslar") —
+  lekin u **GAS (Tizim_01) tasnif dvigateliga** ulangan, T2 native importga
+  EMAS. T2 import o'z qattiq regexlari bilan tasniflaydi
+  (`resursMkKabAniqla`), KW_ sozlamalarini o'qimaydi.
+- Nakrutka BЕЗСКЛАД ni **biladi** (type + UI), lekin kaskad matematikasi
+  uchun (skladskoy 2% BEZ SKLAD ga qo'shilmasligi) egasining haqiqiy
+  tasdiqlangan F2'siga qarshi tekshirilishi shart — ustun tartibi ham
+  o'zgaradi (J..O endi 7 kategoriya: …|ОБ|БЕЗ СКЛАД|М/К|…).
+
+**Egasidan kerak bo'lgan QAROR (ikkitadan biri):**
+(a) **Qo'lda belgilash** — БЕЗ СКЛАД ni faqat kategoriya sifatida qo'shaman,
+    egasi har resursni qo'lda БЕЗ СКЛАД qiladi (kat tahriri allaqachon bor).
+    Hech qanday taxmin yo'q, pul xavfi yo'q.
+(b) **Kalit so'z bilan avtomat** — egasi inert material kalit so'zlarini
+    (beton, вода, раствор…) beradi; T2 import shu ro'yxat bo'yicha (birlik
+    МАТ bo'lgan qatorlardagina) БЕЗ СКЛАД qiladi. Ro'yxat bo'sh bo'lsa —
+    hozirgidek, hech nima o'zgarmaydi (xavfsiz standart).
+Ikkalasida ham: export ustuni + resurs-vedomost + nakrutka kaskadini haqiqiy
+F2 bilan tekshirib chiqaman. **Egasi (a) yoki (b) ni tanlashi kerak** —
+bu money-sensitive, taxmin qilib qurilmaydi.
+
 ### 2.2. Mavjud obyektga qayta import qilib bo'lmaydi
 
 **Holat:** ochiq. Yechim bazada tayyor, klientga ulanmagan.
