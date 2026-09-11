@@ -620,6 +620,23 @@ export async function lrvPlusFaylBaytlari(
     }
   }
 
+  /* Owner (2026-09-10): «son tekst formatlari yacheyka ichiga kirib
+     ketmasligi kerak ideal ko'rinishi». Format berilmasa Excel katta
+     summani xom holda chiqaradi (471209797.5111) -- u katakka sig'maydi
+     va tor ustunda `#####` bo'lib qoladi. Mingliklar ajratilgan format
+     ham kengligini oldindan aytib beradi, ham egasining hujjatlaridagi
+     ko'rinishga mos keladi (471,209,797.51).
+
+     Nom ustuni (C) esa o'ralib ko'rsatiladi -- resurs nomlari juda uzun
+     («КРАНЫ НА АВТОМОБИЛЬНОМ ХОДУ ПРИ РАБОТЕ НА ДРУГИХ ВИДАХ …»), ular
+     qo'shni katak to'la bo'lsa kesilib qolardi. */
+  const PUL_FORMAT = '#,##0.00';
+  const HAJM_FORMAT = '#,##0.####';
+  /** C = nom; E/F = hajm; G/H = narx va summa; J..O = kategoriya summalari. */
+  const NOM_USTUN = 2;
+  const HAJM_USTUN = new Set([4, 5]);
+  const PUL_USTUN = new Set([6, 7, 9, 10, 11, 12, 13, 14]);
+
   // ── Uslub: chegara + qator turi rangi ──────────────────────────────
   for (const q of hisob) {
     const rang = RANG[q.tur];
@@ -628,7 +645,17 @@ export async function lrvPlusFaylBaytlari(
       const cell = ws[ref];
       if (!cell) continue;
       cell.s = { border: chegara(c), ...(rang || {}) };
+      if (c === NOM_USTUN) {
+        cell.s.alignment = { ...(cell.s.alignment || {}), wrapText: true, vertical: 'top' };
+      } else if (cell.t === 'n') {
+        cell.z = HAJM_USTUN.has(c) ? HAJM_FORMAT : PUL_USTUN.has(c) ? PUL_FORMAT : cell.z;
+      }
     }
+  }
+  // ЖАМИ qatoridagi va kategoriya jamilaridagi sonlar ham bir xil formatda
+  for (let c = 0; c < NCOLS; c++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: 2, c })];
+    if (cell && cell.t === 'n') cell.z = PUL_USTUN.has(c) || c === 7 ? PUL_FORMAT : HAJM_FORMAT;
   }
   for (const r of [1, 2]) { // sarlavha va ЖАМИ
     for (let c = 0; c < NCOLS; c++) {

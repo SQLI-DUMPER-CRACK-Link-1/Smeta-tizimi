@@ -144,6 +144,43 @@ describe('LRV eksport — egasi so\'ragan tuzatishlar', () => {
   });
 });
 
+/* Owner (2026-09-10): «son tekst formatlari yacheyka ichiga kirib
+   ketmasligi kerak ideal ko'rinishi kataklar kengaya olishi kerak».
+   Formatsiz katta summa xom holda (471209797.5111) chiqib, tor ustunda
+   `#####` bo'lib qolardi. */
+describe('lrvPlusFaylBaytlari — son formati va uzun nom', () => {
+  it('pul ustuniga mingliklar formati beradi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Sinov Obyekti', HOLATLAR);
+    const XLSX = await import('xlsx-js-style');
+    const wb = XLSX.read(bytes, { type: 'array', cellStyles: true });
+    const ws = wb.Sheets['LRV_PLUS'];
+    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR);
+    const qator = h.find((q) => q.summaQiymat != null)!;
+
+    const summa = ws[`H${qator.row}`];
+    expect(summa.t).toBe('n');
+    expect(summa.z).toBe('#,##0.00');
+  });
+
+  /* wrapText'ni xlsx-js-style o'zi qayta o'qiy olmaydi (s.alignment'ni
+     tiklamaydi), lekin faylga to'g'ri yozadi -- buni styles.xml darajasida
+     tekshirilgan. Shuning uchun uni to'liq o'qiydigan exceljs bilan
+     tasdiqlaymiz (u ham to'g'ridan-to'g'ri bog'liqlik). */
+  it('nom ustunini o\'raydi (exceljs bilan qayta o\'qib)', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Sinov Obyekti', HOLATLAR);
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(bytes as unknown as ArrayBuffer);
+    const ws = wb.getWorksheet('LRV_PLUS')!;
+    const h = lrvPlusQatorlarniHisobla(DARAXT, HOLATLAR);
+    const qator = h.find((q) => q.summaQiymat != null)!;
+
+    const nom = ws.getCell(`C${qator.row}`);
+    expect(nom.alignment?.wrapText).toBe(true);
+    expect(nom.alignment?.vertical).toBe('top');
+  });
+});
+
 describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', () => {
   it('smeta formulalari, FAKT/OSTATKA/F2 ustunlari va ranglar faylga tushadi', async () => {
     const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Sinov Obyekti', HOLATLAR);
