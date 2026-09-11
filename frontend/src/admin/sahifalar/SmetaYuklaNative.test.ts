@@ -1,9 +1,117 @@
-import { describe, expect, it } from 'vitest';
-import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya } from './SmetaYuklaNative';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createElement } from 'react';
+import SmetaYuklaNative, { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya } from './SmetaYuklaNative';
 import type { AktNode } from '../../lib/f2-match-engine';
 import type { F2ColumnConfig } from '../../lib/f2-import-parse';
 
+const uiMocks = vi.hoisted(() => ({
+  company: { joriy: { id: 1 }, yuklanmoqda: false },
+  objects: [{ id: 8, nom: 'Sinov obyekt', qator_soni: 0, loyiha_id: null }],
+  detectedCols: { kod: 0, nom: 1, bir: 2, norma: -1, obyom: -1, narx: 3, sum: -1 },
+}));
+
+vi.mock('../../umumiy/kontekst/KompaniyaKontekst', () => ({ useKompaniya: () => uiMocks.company }));
+vi.mock('../../api/supabase', () => ({
+  sbT2ObyektlarOlKomp: async () => ({ ok: true, qatorlar: uiMocks.objects }),
+  sbT2ResursKategoriyaBelgila: async () => ({ ok: true }),
+  yangiOperationId: () => 'test-operation',
+}));
+vi.mock('../../lib/f2-import-parse', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/f2-import-parse')>();
+  return {
+    ...actual,
+    readXlsx: async () => ({
+      sheets: [{ name: 'LRV' }],
+      sheet: () => ({ rows: [['Smeta']] }),
+    }),
+    f2FaylOqiCore: (_rows: unknown[], suppliedCols?: unknown) => suppliedCols
+      ? { tree: [{ uid: 'root', type: 'rs', nom: 'Beton', bir: 'm3', hajm: 1 }] }
+      : { cols: uiMocks.detectedCols, preview: [] },
+  };
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  uiMocks.objects[0].qator_soni = 0;
+});
+
 const cols: F2ColumnConfig = { kod: 0, nom: 1, bir: 2, norma: -1, obyom: -1, narx: 3, sum: -1 };
+
+function smetaTestFile() {
+  const file = new File(['xlsx'], 'smeta.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  Object.defineProperty(file, 'arrayBuffer', { value: async () => new ArrayBuffer(1) });
+  return file;
+}
+
+describe('mavjud smeta qayta importi xavfsizligi', () => {
+  it('SMETA_ALREADY_EXISTS dan keyin tozalashni faqat tasdiqdan so‘ng chaqiradi', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, document_id: 42 }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: false, code: 'SMETA_ALREADY_EXISTS' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, obyekt_id: 8, ochirilgan_qator_soni: 0 }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, document_id: 43 }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, sessiya_id: 99 }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, jami: 1 }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, qator_soni: 1 }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const confirmMock = vi.fn();
+    vi.stubGlobal('confirm', confirmMock);
+    vi.stubGlobal('crypto', { subtle: { digest: async () => new ArrayBuffer(32) } });
+
+    render(createElement(SmetaYuklaNative));
+    fireEvent.change(await screen.findByLabelText('Obyekt'), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText('Smeta fayli'), { target: { files: [smetaTestFile()] } });
+    await screen.findByRole('button', { name: 'Ushbu ustunlar bilan import qilish' });
+    fireEvent.click(screen.getByRole('button', { name: 'Ushbu ustunlar bilan import qilish' }));
+
+    await screen.findByText('Bu obyektda smeta allaqachon mavjud — ustidan yozilmaydi (xavfsizlik uchun).');
+    expect(screen.getByRole('button', { name: /Smetani tozalab/i })).toBeTruthy();
+    expect(screen.getByText(/obyektning o‘zi qoladi.*smeta.*import/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Ushbu ustunlar bilan import qilish' })).toBeNull();
+    expect(confirmMock).not.toHaveBeenCalled();
+
+    confirmMock.mockReturnValue(false);
+    fireEvent.click(screen.getByRole('button', { name: /Smetani tozalab/i }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    confirmMock.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: /Smetani tozalab/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/smeta-yukla');
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toMatchObject({
+      amal: 'smeta_tozala', kompaniyaId: 1, obyektId: 8, operationId: 'test-operation',
+    });
+    await screen.findByLabelText('Smeta fayli');
+    expect(screen.queryByRole('button', { name: /Smetani tozalab/i })).toBeNull();
+    fireEvent.change(screen.getByLabelText('Smeta fayli'), { target: { files: [smetaTestFile()] } });
+    await screen.findByRole('button', { name: 'Ushbu ustunlar bilan import qilish' });
+    fireEvent.click(screen.getByRole('button', { name: 'Ushbu ustunlar bilan import qilish' }));
+    await screen.findByText(/Tayyor: 1 qator canonical Supabase/);
+  });
+
+  it('SMETA_HAS_DEPENDENT_DATA bo‘lsa tozalashni qat’iy rad etadi va yangi importni ochmaydi', async () => {
+    uiMocks.objects[0].qator_soni = 12;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: false, code: 'SMETA_HAS_DEPENDENT_DATA' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const confirmMock = vi.fn().mockReturnValue(true);
+    vi.stubGlobal('confirm', confirmMock);
+
+    render(createElement(SmetaYuklaNative));
+    fireEvent.change(await screen.findByLabelText('Obyekt'), { target: { value: '8' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Smetani tozalab/i }));
+
+    await screen.findByText(/Smetani tozalash qat’iy rad etildi/);
+    expect(screen.queryByRole('button', { name: /Smetani tozalab/i })).toBeNull();
+    expect(screen.queryByLabelText('Smeta fayli')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(confirmMock).toHaveBeenCalledWith(expect.stringMatching(/obyektning o‘zi qoladi.*barcha smeta qatorlari.*import sessiyasi/i));
+  });
+});
 
 describe('RES (resursniy vedomost) narx moslashtirish', () => {
   it('kod, nom va birlik ustunlaridan narx katalogini quradi', () => {

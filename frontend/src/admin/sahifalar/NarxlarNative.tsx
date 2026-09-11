@@ -24,7 +24,7 @@ type NarxRegistr = {
   narx: number;
 };
 
-const ERKIN_KAT = ['МАТ', 'ОБ', 'М/К', 'КАБ'];
+const ERKIN_KAT = ['МАТ', 'ОБ', 'М/К', 'КАБ', 'БЕЗСКЛАД'];
 
 function kalit(nomKey: string, birlikKey: string) {
   return `${nomKey}|${birlikKey}`;

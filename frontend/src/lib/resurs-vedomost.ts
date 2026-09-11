@@ -45,7 +45,7 @@ const RESURS_TUR = new Set(['rs', 'mat', 'ob']);
  * yo'q har qanday kategoriya (masalan КАБ/М/К/BOSHQA) oxirida, o'zaro
  * alifbo tartibida qoladi.
  */
-const KATEGORIYA_TARTIB = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'];
+const KATEGORIYA_TARTIB = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗСКЛАД', 'М/К', 'КАБ'];
 
 function katTartibRaqami(kat: string): number {
   const i = KATEGORIYA_TARTIB.indexOf(kat);

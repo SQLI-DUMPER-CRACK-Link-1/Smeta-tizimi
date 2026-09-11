@@ -87,4 +87,18 @@ describe('resursVedomostKategoriyalarga', () => {
     const kats = resursVedomostKategoriyalarga(rows);
     expect(kats.map(k => k.kat)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ']);
   });
+
+  it('БЕЗСКЛАД resurs vedomostda ОБ dan keyin, М/К va КАБ dan oldin chiqadi', () => {
+    const rows = [
+      qator({ tur: 'rs', kat: 'КАБ', nom: 'Kabel', smeta_summa: 1 }),
+      qator({ tur: 'mat', kat: 'М/К', nom: 'Konstruksiya', smeta_summa: 1 }),
+      qator({ tur: 'mat', kat: 'БЕЗСКЛАД', nom: 'Beton', smeta_summa: 1 }),
+      qator({ tur: 'ob', kat: 'ОБ', nom: 'Uskuna', smeta_summa: 1 }),
+      qator({ tur: 'rs', kat: 'МАТ', nom: 'Sement', smeta_summa: 1 }),
+      qator({ tur: 'rs', kat: 'МАШ', nom: 'Kran', smeta_summa: 1 }),
+      qator({ tur: 'rs', kat: 'ЧЕЛ', nom: 'Ishchi', smeta_summa: 1 }),
+    ];
+    const kats = resursVedomostKategoriyalarga(rows);
+    expect(kats.map(k => k.kat)).toEqual(['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'БЕЗСКЛАД', 'М/К', 'КАБ']);
+  });
 });

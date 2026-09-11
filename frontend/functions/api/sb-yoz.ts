@@ -1312,7 +1312,7 @@ export const onRequestPost: PagesFunction<{
       if (!Number.isFinite(kompaniyaId) || kompaniyaId <= 0) {
         return Response.json({ ok: false, error: 'kompaniya_id noto\'g\'ri' });
       }
-      const KAT_RUXSAT = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'М/К', 'КАБ'];
+      const KAT_RUXSAT = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'М/К', 'КАБ', 'БЕЗСКЛАД'];
       if (!KAT_RUXSAT.includes(String(so.kategoriya))) {
         return Response.json({ ok: false, error: 'kategoriya noto\'g\'ri: ' + KAT_RUXSAT.join('|') });
       }
