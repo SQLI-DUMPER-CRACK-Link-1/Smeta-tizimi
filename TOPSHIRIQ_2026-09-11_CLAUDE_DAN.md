@@ -133,31 +133,36 @@ tasdiqlashini so'ragan edi — **avval undan so'rang**.
 Egasi hozircha buni aylanib o'tyapti: yangi obyekt yaratib (Stella → Stella2),
 o'sha yerga import qilyapti.
 
-### 2.3. PTO scope paneli hech narsa yozmaydi (tepadagi tanlagichlar)
+### 2.3. PTO scope paneli eksportni bloklardi (tepadagi tanlagichlar)
 
-**Holat:** ochiq, egasiga variantlar berilgan, javob kutilyapti.
+**Holat:** HAL QILINDI (2026-09-11, commit `8b73a5f`). Egasi ikkinchi marta
+"shu tepadagi belgilanadigan joy naxxuy kerak o'zi?" deb so'ragach, 1+2
+variantlarning aralashmasi tanlandi: **eksport bloklanmaydi, provenance
+bo'lsa yoziladi.**
 
-Tepadagi panel (`PTOWorkspaceBar`) loyiha/obyekt/davr/manba hujjat/revision
-so'raydi. Eksport gate'i ularni **talab qiladi**, lekin:
+Ilgari eksport gate'i manba hujjat + revision + sha256 tanlanishini
+**talab qilardi**, lekin bu maydonlar hech qayerga yozilmasdi — ya'ni
+foyda yo'q, faqat to'siq. Yangi/ko'p manbali obyektda "hujjat markazi"da
+yozuv bo'lmagani uchun eksport abadiy bloklanardi.
 
-`sourceDocumentId`, `revisionId`, `sourceChecksum` — `lrv-plus-export.ts`da
-**faqat gate ichida** ishlatiladi (147–157-qatorlar). Ular:
-- eksport qilingan Excel ichiga yozilmaydi
-- audit jurnaliga yozilmaydi
-- umuman hech qayerda saqlanmaydi
+Endi:
+- Gate FAQAT haqiqiy shartlarni tekshiradi: `OBJECT_CONTEXT_REQUIRED`
+  (qaysi obyekt) + `READ_MODEL_NOT_COMPLETE` (daraxt to'la yuklangan) +
+  kompaniya (kontekst uchun). Loyiha/davr/manba/revision/checksum —
+  **ixtiyoriy provenance**.
+- Eksport konteksti tepadagi PTO scope'dan emas, **sahifa ochgan
+  obyektdan** olinadi (`HolatNative.tsx`) — tepadan hech narsa tanlash
+  shart emas.
+- Manba hujjat/revision/checksum scope'da tanlangan bo'lsa, ular faylning
+  alohida **"МАНБА"** varag'iga yoziladi (`lrvPlusFaylBaytlari`). Hech
+  narsa tanlanmasa varaq qo'shilmaydi, eksport baribir ochiladi.
+- Reason-kod satrlari va context maydonlari type ichida **saqlab qolindi**
+  — kelajakda provenance siyosati qayta yoqilsa yoki audit jurnaliga
+  yozilsa ishlatiladi.
 
-Ya'ni rejaning yarmi qurilgan: talab qilish bor, yozib qo'yish yo'q. Bugungi
-holatda panel foydalanuvchiga **hech narsa bermaydi**, faqat to'siq.
-
-Egasiga uch variant berilgan:
-1. **Haqiqiy qilish** — manba fayl/revision/checksum eksport faylining ichiga
-   (alohida "Manba" bloki yoki varaq) va eksport jurnaliga yoziladi; panel
-   faqat haqiqiy tanlov bo'lganda ko'rinadi (nomzod bitta bo'lsa avtomat
-   tanlanadi — bu allaqachon ishlaydi)
-2. Gate'ni butunlay olib tashlash
-3. Hozirgidek qoldirish (tavsiya etilmaydi)
-
-Claude 1-variantni tavsiya qilgan. **Egasining qarorini kuting.**
+⚠️ Bu **HERM-001** provenance siyosatini yumshatadi (egasining aniq,
+takroriy so'rovi bilan). `t2_pto_closure_hermes.test.cjs` yangi invariantga
+moslandi.
 
 ### 2.4. Narxsiz qolgan obyektlarni qayta narxlash
 
