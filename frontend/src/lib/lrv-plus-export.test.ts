@@ -181,6 +181,33 @@ describe('lrvPlusFaylBaytlari — son formati va uzun nom', () => {
   });
 });
 
+/* Owner (2026-09-11): eksport endi manba tanlashni talab qilmaydi, lekin
+   tanlangan bo'lsa fayl ichida iz qoldirishi kerak (МАНБА varag'i). */
+describe('lrvPlusFaylBaytlari — МАНБА (provenance) varag\'i', () => {
+  const OK_CONTEXT = { kompaniyaId: 17, obyektId: 71, dataComplete: true as const };
+
+  it('provenance berilsa МАНБА varag\'iga checksum va revision yoziladi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Sinov Obyekti', HOLATLAR, undefined, {
+      ...OK_CONTEXT, loyihaId: 7, davrId: '2026-09',
+      sourceDocumentId: '48', revisionId: '48:r1', sourceChecksum: 'abc123def456',
+    });
+    const XLSX = await import('xlsx-js-style');
+    const wb = XLSX.read(bytes, { type: 'array' });
+    expect(wb.SheetNames).toContain('МАНБА');
+    const matn = XLSX.utils.sheet_to_csv(wb.Sheets['МАНБА']);
+    expect(matn).toContain('abc123def456');
+    expect(matn).toContain('48:r1');
+  });
+
+  it('provenance bo\'lmasa МАНБА varag\'i qo\'shilmaydi, eksport baribir ochiladi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Sinov Obyekti', HOLATLAR, undefined, OK_CONTEXT);
+    const XLSX = await import('xlsx-js-style');
+    const wb = XLSX.read(bytes, { type: 'array' });
+    expect(wb.SheetNames).not.toContain('МАНБА');
+    expect(wb.SheetNames).toContain('LRV_PLUS');
+  });
+});
+
 describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', () => {
   it('smeta formulalari, FAKT/OSTATKA/F2 ustunlari va ranglar faylga tushadi', async () => {
     const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Sinov Obyekti', HOLATLAR);
@@ -428,70 +455,40 @@ describe('Forma-2 rejimi — LRV_PLUS ning O ustunigacha bo\'lgan qismi bilan ay
   });
 });
 
-describe('LRV_PLUS export provenance gate', () => {
-  it('blocks missing context and incomplete read model', () => {
-    const blocked = lrvPlusEksportGate({ kompaniyaId: 1, obyektId: 2, dataComplete: false });
+describe('LRV_PLUS export gate', () => {
+  /* ⚠️ 2026-09-11 (egasi ko'rsatmasi): eksport gate'i endi FAQAT obyekt
+     kontekstini va to'la read-model'ni talab qiladi. Manba hujjat/revision/
+     checksum/davr IXTIYORIY provenance bo'ldi — ular hech qachon faylga
+     ham, jurnal ham yozilmasdi, lekin yangi/ko'p obyektda eksportni abadiy
+     bloklardi (egasi Stella/Karting2'da urildi). */
+  it('obyekt yoki to\'la ma\'lumot bo\'lmasa bloklaydi', () => {
+    const blocked = lrvPlusEksportGate({ kompaniyaId: 1, dataComplete: false });
     expect(blocked.ok).toBe(false);
     if (!blocked.ok) expect(blocked.reasons).toEqual(expect.arrayContaining([
-      'PROJECT_CONTEXT_REQUIRED', 'PERIOD_CONTEXT_REQUIRED', 'SOURCE_DOCUMENT_REQUIRED',
-      'REVISION_REQUIRED', 'READ_MODEL_NOT_COMPLETE',
+      'OBJECT_CONTEXT_REQUIRED', 'READ_MODEL_NOT_COMPLETE',
     ]));
   });
 
-  it('allows export only when every scope/provenance field is explicit', () => {
+  it('kompaniya + obyekt + to\'la read-model bo\'lsa ruxsat beradi — provenance shart emas', () => {
     expect(lrvPlusEksportGate({
-      kompaniyaId: 1, loyihaId: 2, obyektId: 3, davrId: '2026-09',
-      sourceDocumentId: 'doc-1', revisionId: 'doc-1:r2', dataComplete: true,
-      sourceChecksum: 'abc123',
+      kompaniyaId: 1, obyektId: 3, dataComplete: true,
     })).toEqual({ ok: true });
   });
 
-  /* ⚠️ 2026-09-10 (haqiqiy nosozlik, egasi "Karting2"da topdi): `davrId`
-     F2 akt reestridan keladi -- yangi obyektda hali birorta ham F2 akt
-     yo'q bo'lsa, PTO "Davr" ro'yxati ABADIY bo'sh qoladi va tanlab
-     bo'lmaydi, ya'ni LRV Excel eksporti hech qachon ochilmasdi -- aynan
-     F2/Fakt hali boshlanmagan bosqichda, eng ko'p kerak bo'lganda. */
-  it('davr talabini olib tashlaydi, agar obyektda hali TANLASH MUMKIN bo\'lgan davr umuman bo\'lmasa', () => {
-    const natija = lrvPlusEksportGate({
-      kompaniyaId: 1, loyihaId: 2, obyektId: 3, periodApplicable: false,
-      sourceDocumentId: 'doc-1', revisionId: 'doc-1:r2', dataComplete: true,
-      sourceChecksum: 'abc123',
-    });
-    expect(natija).toEqual({ ok: true });
-  });
-
-  it('davr hali yuklanmagan yoki obyektda haqiqatan davr bo\'lsa -- talab saqlanadi', () => {
-    const yuklanmagan = lrvPlusEksportGate({
-      kompaniyaId: 1, loyihaId: 2, obyektId: 3,
-      sourceDocumentId: 'doc-1', revisionId: 'doc-1:r2', dataComplete: true, sourceChecksum: 'abc123',
-    });
-    expect(yuklanmagan.ok).toBe(false);
-    if (!yuklanmagan.ok) expect(yuklanmagan.reasons).toContain('PERIOD_CONTEXT_REQUIRED');
-
-    const borDavrTanlanmagan = lrvPlusEksportGate({
-      kompaniyaId: 1, loyihaId: 2, obyektId: 3, periodApplicable: true,
-      sourceDocumentId: 'doc-1', revisionId: 'doc-1:r2', dataComplete: true, sourceChecksum: 'abc123',
-    });
-    expect(borDavrTanlanmagan.ok).toBe(false);
-    if (!borDavrTanlanmagan.ok) expect(borDavrTanlanmagan.reasons).toContain('PERIOD_CONTEXT_REQUIRED');
+  it('provenance berilmasa ham (manba/revision/davr yo\'q) eksport ochiladi', () => {
+    expect(lrvPlusEksportGate({
+      kompaniyaId: 1, obyektId: 3, dataComplete: true,
+      sourceDocumentId: '', revisionId: '', davrId: '',
+    })).toEqual({ ok: true });
   });
 
   /* Owner (2026-09-10): «test uchun yuklab ko'rgan yangi obyektimda exellni
-     yuklab bo'lmas emish ... o'sha joyda test obyektim stella chiqmayapdi».
-     Bu -- Stella obyektining (id 71) bazadagi AYNAN holati:
-       · tasdiqlangan F2 akti YO'Q      -> periodApplicable = false
-       · manba hujjat BITTA (id 48), revision 1, sha256 tasdiqlangan
-       · daraxt to'la (1354 qator)      -> dataComplete = true
-     Sahifa scope'ni ochilgan obyekt bilan sinxronlagach va yagona hujjat/
-     revision avtomatik tanlangach, gate OCHIQ bo'lishi kerak. */
-  it('yangi import qilingan obyekt (F2 akti yo\'q, bitta manba hujjat) eksportga ruxsat oladi', () => {
+     yuklab bo'lmas emish ... test obyektim stella chiqmayapdi». Yangi
+     import qilingan obyekt (F2 akti yo'q, hatto manba hujjat ham yo'q) endi
+     hech qanday qo'shimcha tanlovsiz eksportga chiqadi. */
+  it('yangi import qilingan obyekt (manba hujjat ham yo\'q) eksportga ruxsat oladi', () => {
     const natija = lrvPlusEksportGate({
-      kompaniyaId: 17, loyihaId: 7, obyektId: 71,
-      periodApplicable: false,
-      sourceDocumentId: '48',
-      revisionId: '48:r1',
-      sourceChecksum: '84912267d54f97f34800beff49d5cb5786d748a761b42cfa1755b53b693d074e',
-      dataComplete: true,
+      kompaniyaId: 17, obyektId: 71, dataComplete: true,
     });
     expect(natija).toEqual({ ok: true });
   });

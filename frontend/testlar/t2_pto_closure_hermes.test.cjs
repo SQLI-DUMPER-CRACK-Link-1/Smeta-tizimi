@@ -19,7 +19,10 @@ must('AdminShell mounts one PTO provider', shell.includes('<PTOWorkspaceProvider
 must('scope URL has tenant hierarchy fields', ['loyiha', 'obyekt', 'davr', 'hujjat', 'revision'].every((name) => context.includes(`'${name}`)));
 must('dynamic PTO paths are company guarded', scope.includes("'/admin/f2': 'OBJECT_SCOPED'") && scope.includes('pathname.startsWith(route + \'/\')'));
 must('Smeta reimport is preview-only', smeta.includes('smetaQaytaImportDiff') && !smeta.includes('smeta_tozala'));
-must('LRV export requires checksum and complete read model', exportLib.includes('SOURCE_CHECKSUM_REQUIRED') && exportLib.includes('READ_MODEL_NOT_COMPLETE'));
+/* 2026-09-11 (egasi ko'rsatmasi): manba/checksum endi IXTIYORIY provenance,
+   eksportni bloklamaydi. Zaruriy invariant — obyekt konteksti + to'la
+   read-model. Provenance berilsa "МАНБА" varag'iga yoziladi. */
+must('LRV export requires object context and complete read model', exportLib.includes('OBJECT_CONTEXT_REQUIRED') && exportLib.includes('READ_MODEL_NOT_COMPLETE'));
 must('HERMES task stays production-write disabled', hermes && hermes.production_write_allowed === false);
 must('HERMES branch is isolated', hermes && hermes.branch === 'hermes/t2-pto-closure-v1');
 

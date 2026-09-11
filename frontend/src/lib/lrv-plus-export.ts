@@ -113,7 +113,8 @@ export type LrvPlusExportContext = {
   revisionId: string;
   /** Read model to‘liq ekanini server/read-layer isbotlagan bo‘lishi shart. */
   dataComplete: boolean;
-  /** Registry SHA-256 provenance; missing/blank checksum blocks export. */
+  /** Registry SHA-256 provenance. IXTIYORIY: berilsa "МАНБА" varag'iga
+   *  yoziladi, berilmasa eksport to'silmaydi (2026-09-11 dan). */
   sourceChecksum?: string | null;
   /**
    * ⚠️ 2026-09-10 (haqiqiy nosozlik, egasi "Karting2"da topdi): `davrId`
@@ -138,23 +139,31 @@ function positiveSafeId(value: number | undefined): boolean {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
 
+/* ⚠️ 2026-09-11 (egasi ko'rsatmasi, "shu tepadagi belgilanadigan joy naxxuy
+ * kerak o'zi ... nima uchun so'rayapdi shuni?" — ikkinchi marta so'radi):
+ * eksport gate'i endi FAQAT haqiqiy zaruriy shartlarni talab qiladi —
+ * qaysi obyekt (`OBJECT_CONTEXT_REQUIRED`) va ma'lumot to'la yuklanganmi
+ * (`READ_MODEL_NOT_COMPLETE`). Kompaniya ham tekshiriladi (jurnal/kontekst
+ * uchun, doim mavjud).
+ *
+ * Avval bu yerda HERM-001 provenance siyosati bor edi: manba hujjat +
+ * revision + sha256 tanlanmasa eksport BUTUNLAY bloklanardi. Amalda:
+ *   1) bu maydonlar hech qayerga (fayl ichiga ham, jurnal ham) yozilmasdi —
+ *      ya'ni talab qilinardi, lekin qiymati yo'q edi;
+ *   2) yangi/ko'p obyektda "hujjat markazi"da yozuv bo'lmagani uchun eksport
+ *      abadiy bloklanardi (egasi Stella/Karting2'da aynan shunga urildi).
+ * Shuning uchun manba/revision/davr endi IXTIYORIY provenance — berilsa,
+ * `lrvPlusFaylBaytlari` ularni faylning "МАНБА" varag'iga yozadi (pastga
+ * qarang); berilmasa eksport to'silmaydi. Reason-kod satrlari (masalan
+ * `SOURCE_CHECKSUM_REQUIRED`) type ichida qoldirilgan — kelajakda siyosat
+ * qayta yoqilsa yoki jurnalga yozilsa ishlatiladi. */
 export function lrvPlusEksportGate(context: Partial<LrvPlusExportContext> | null | undefined): LrvPlusExportGate {
   const reasons: string[] = [];
   const kompaniyaId = context?.kompaniyaId;
-  const loyihaId = context?.loyihaId;
   const obyektId = context?.obyektId;
-  const davrId = context?.davrId;
-  const sourceDocumentId = context?.sourceDocumentId;
-  const revisionId = context?.revisionId;
-  const sourceChecksum = context?.sourceChecksum;
   if (!positiveSafeId(kompaniyaId)) reasons.push('COMPANY_CONTEXT_REQUIRED');
-  if (!positiveSafeId(loyihaId)) reasons.push('PROJECT_CONTEXT_REQUIRED');
   if (!positiveSafeId(obyektId)) reasons.push('OBJECT_CONTEXT_REQUIRED');
-  if (context?.periodApplicable !== false && (typeof davrId !== 'string' || !davrId.trim())) reasons.push('PERIOD_CONTEXT_REQUIRED');
-  if (typeof sourceDocumentId !== 'string' || !sourceDocumentId.trim()) reasons.push('SOURCE_DOCUMENT_REQUIRED');
-  if (typeof revisionId !== 'string' || !revisionId.trim()) reasons.push('REVISION_REQUIRED');
   if (context?.dataComplete !== true) reasons.push('READ_MODEL_NOT_COMPLETE');
-  if (typeof sourceChecksum !== 'string' || !sourceChecksum.trim()) reasons.push('SOURCE_CHECKSUM_REQUIRED');
   return reasons.length ? { ok: false, reasons } : { ok: true };
 }
 
@@ -501,7 +510,7 @@ function nakrutkaKaskadYoz(
 
 export async function lrvPlusFaylBaytlari(
   qatorlar: T2Qator[], obyektNomi: string, holatlar?: T2QatorHolat[],
-  options?: LrvPlusOptions, context?: LrvPlusExportContext,
+  options?: LrvPlusOptions, context?: Partial<LrvPlusExportContext>,
 ): Promise<Uint8Array> {
   if (context) {
     const gate = lrvPlusEksportGate(context);
@@ -739,6 +748,36 @@ export async function lrvPlusFaylBaytlari(
     { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
   ];
   XLSX.utils.book_append_sheet(wb, resursWs, 'RESURS_VEDOMOST');
+
+  /* Provenance (ixtiyoriy) — 2026-09-11. Eksport endi manba hujjat tanlashni
+     TALAB qilmaydi (egasi so'radi), lekin agar scope'da manba hujjat/revision/
+     checksum tanlangan bo'lsa, ular bekorga ketmasin: alohida "МАНБА" varag'iga
+     yoziladi, shunda faylning qayerdan kelgani hujjat ichida qoladi. Hech
+     qanday provenance bo'lmasa varaq umuman qo'shilmaydi. */
+  if (context) {
+    const manba: (string | number)[][] = [];
+    const q = (kalit: string, qiymat: string | number | null | undefined) => {
+      if (qiymat != null && qiymat !== '') manba.push([kalit, qiymat]);
+    };
+    q('Обект', obyektNomi);
+    q('Обект ID', context.obyektId ?? '');
+    q('Лойиҳа ID', context.loyihaId ?? '');
+    q('Давр', context.davrId ?? '');
+    q('Манба ҳужжат ID', context.sourceDocumentId ?? '');
+    q('Ревизия', context.revisionId ?? '');
+    q('SHA-256', context.sourceChecksum ?? '');
+    q('Яратилди (UTC)', new Date().toISOString());
+    const provenanceBor = Boolean(
+      (context.sourceDocumentId && String(context.sourceDocumentId).trim()) ||
+      (context.revisionId && String(context.revisionId).trim()) ||
+      (context.sourceChecksum && String(context.sourceChecksum).trim()),
+    );
+    if (provenanceBor) {
+      const manbaWs = XLSX.utils.aoa_to_sheet([['МАНБА (provenance)', ''], ...manba]);
+      manbaWs['!cols'] = [{ wch: 22 }, { wch: 70 }];
+      XLSX.utils.book_append_sheet(wb, manbaWs, 'МАНБА');
+    }
+  }
 
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
   return new Uint8Array(out);

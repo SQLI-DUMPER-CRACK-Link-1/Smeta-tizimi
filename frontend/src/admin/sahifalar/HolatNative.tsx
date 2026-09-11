@@ -44,24 +44,23 @@ export function HolatNative() {
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
   const selected = obyektlar.find((o) => o.id === obyektId) ?? null;
   const workspace = usePTOWorkspace();
-  const canonicalScopeObject = workspace.objects.find((o) => o.id === workspace.scope.objectId && o.id === obyektId) ?? null;
+  /* 2026-09-11 (egasi: "shu tepadagi belgilanadigan joy naxxuy kerak o'zi?"):
+     eksport konteksti endi TEPADAGI PTO scope'ga emas, SAHIFA ochgan obyektga
+     tayanadi. Obyekt URL bilan ochilgan va daraxti to'la yuklangan bo'lsa —
+     eksport ochiladi, tepadan hech narsa tanlash shart emas. Manba hujjat/
+     revision/davr — agar scope'da tanlangan bo'lsa — IXTIYORIY provenance
+     sifatida uzatiladi va fayldagi "МАНБА" varag'iga yoziladi. */
   const exportContext = useMemo<Partial<LrvPlusExportContext>>(() => ({
-    kompaniyaId: workspace.companyId ?? undefined,
-    loyihaId: workspace.scope.projectId ?? undefined,
-    obyektId: workspace.scope.objectId ?? undefined,
+    kompaniyaId: joriy?.id ?? undefined,
+    loyihaId: selected?.loyiha_id ?? undefined,
+    obyektId: validId ? obyektId : undefined,
     davrId: workspace.scope.periodId ?? undefined,
-    /* 2026-09-10: `davr` faqat F2 akt reestridan keladi -- yangi obyektda
-       hali birorta ham F2 akt bo'lmasa, ro'yxat abadiy bo'sh qoladi va
-       foydalanuvchi hech qachon tanlay olmaydi. Davrlar ro'yxati
-       yuklanib bo'lib (`!loading.periods`) haqiqatan ham bo'sh ekani
-       tasdiqlangandagina davr talabi olib tashlanadi -- hali yuklanayotgan
-       paytda emas (aks holda bir lahzalik noto'g'ri "ruxsat" chaqnaydi). */
     periodApplicable: workspace.loading.periods ? undefined : workspace.periods.length > 0,
     sourceDocumentId: workspace.scope.sourceDocumentId ?? undefined,
     revisionId: workspace.scope.revisionId ?? undefined,
     sourceChecksum: workspace.sourceDocuments.find((document) => document.id === workspace.scope.sourceDocumentId)?.sha256 ?? undefined,
-    dataComplete: Boolean(canonicalScopeObject && daraxtXom.length > 0 && !loading && !error),
-  }), [canonicalScopeObject, daraxtXom.length, error, loading, workspace.companyId, workspace.loading.periods, workspace.periods.length, workspace.scope, workspace.sourceDocuments]);
+    dataComplete: Boolean(validId && daraxtXom.length > 0 && !loading && !error),
+  }), [joriy?.id, selected?.loyiha_id, validId, obyektId, daraxtXom.length, error, loading, workspace.loading.periods, workspace.periods.length, workspace.scope, workspace.sourceDocuments]);
   const exportGate = lrvPlusEksportGate(exportContext);
   const exportBlockReason = !exportGate.ok ? exportGate.reasons[0] : null;
 
@@ -163,7 +162,7 @@ export function HolatNative() {
       const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom, {
         rejim,
         nakrutka: nakr?.ok ? nakr.koeffitsientlar : undefined,
-      }, exportContext as LrvPlusExportContext);
+      }, exportContext);
       lrvPlusYuklab(bytes, selected.nom + (rejim === 'forma2' ? '_FORMA2' : ''));
     } catch {
       setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
