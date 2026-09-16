@@ -71,8 +71,21 @@ function stableKey(parts: readonly string[]): string {
  * satrlari semantik signal sifatida ishlatiladi. Noma'lum holat auto-import
  * bo'lmaydi: foydalanuvchi LRV/RES/e'tiborsiz qarorini beradi.
  */
-export function smetaVaraqniTahlilQil(rows: SheetGrid): SmetaSheetAnalysis {
-  const nonEmpty = rows.filter((row) => row.some((cell) => text(cell) !== ''));
+/**
+ * XLSX parsers tashqi fayl formatidan keladi: bo'sh/nostandart worksheet
+ * satri hech qachon paket oynasini yiqitmasligi kerak. Uni LRV/RES deb
+ * taxmin qilmaymiz; operator faqat `unknown` natijasini ko'radi va aniq
+ * tanlov qiladi. Bu normalizator import kontrakti uchun emas, faqat tahlil
+ * qatlamining xato-bardosh chegarasidir.
+ */
+function xavfsizGrid(rows: unknown): SheetGrid {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => Array.isArray(row) ? row : []);
+}
+
+export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): SmetaSheetAnalysis {
+  const grid = xavfsizGrid(rows);
+  const nonEmpty = grid.filter((row) => row.some((cell) => text(cell) !== ''));
   const header = nonEmpty.slice(0, 35).flatMap((row) => row.map(text)).join(' ');
   let lrvScore = 0;
   let resScore = 0;

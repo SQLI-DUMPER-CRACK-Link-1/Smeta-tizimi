@@ -42,6 +42,12 @@ describe('universal smeta package sheet analysis', () => {
     expect(result.detectedRole).toBe('unknown');
     expect(result.confidence).toBe('low');
   });
+
+  it('bo‘sh yoki nostandart worksheet panelni yiqitmaydi — faqat unknown bo‘ladi', () => {
+    const result = smetaVaraqniTahlilQil(undefined);
+    expect(result.detectedRole).toBe('unknown');
+    expect(result.dataRows).toBe(0);
+  });
 });
 
 describe('package selection safety', () => {

@@ -1047,29 +1047,45 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
    */
   async function paketFayllariniTahlilQil(files: FileList | File[]) {
     if (!objectId) { setError('Avval obyektni tanlang.'); return; }
-    const incoming = Array.from(files).filter((file) => /\.(xlsx|xlsm|xls)$/i.test(file.name));
+    const incoming = Array.from(files || []).filter((file) => /\.(xlsx|xlsm|xls)$/i.test(file.name));
     if (!incoming.length) { setError('XLSX/XLSM/XLS fayl topilmadi.'); return; }
     setError(''); setPaketBand(true); setPhase('Paket varaqlari tahlil qilinmoqda');
     try {
       const fresh: PaketVaraq[] = [];
       for (const file of incoming) {
         if (file.size > MAX_FILE_BYTES) throw new Error(`«${file.name}» ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
-        const workbook = await readXlsx(await file.arrayBuffer());
+        let workbook: XlsxWorkbook;
+        try {
+          workbook = await readXlsx(await file.arrayBuffer());
+        } catch (e) {
+          const reason = e instanceof Error ? e.message : 'noma’lum XLSX o‘qish xatosi';
+          throw new Error(`«${file.name}» o‘qilmadi: ${reason}`);
+        }
+        const sheets = Array.isArray(workbook.sheets) ? workbook.sheets : [];
+        if (!sheets.length) throw new Error(`«${file.name}» ichida o‘qiladigan varaq topilmadi.`);
         const workbookId = `workbook-${yangiOperationId()}`;
-        for (const sheetInfo of workbook.sheets) {
+        for (const sheetInfo of sheets) {
+          if (!sheetInfo || typeof sheetInfo.name !== 'string' || !sheetInfo.name.trim()) {
+            throw new Error(`«${file.name}» ichida nomi aniqlanmagan varaq bor — xavfsizlik uchun paket tahlili to‘xtatildi.`);
+          }
           const sheet = workbook.sheet(sheetInfo.name);
-          if (!sheet) continue;
-          const analysis = smetaVaraqniTahlilQil(sheet.rows);
-          const parsed = f2FaylOqiCore(sheet.rows);
+          if (!sheet) throw new Error(`«${file.name} / ${sheetInfo.name}» varag‘i o‘qilmadi.`);
+          // Bo'sh yoki nostandart satrlar `unknown` review qatori bo'ladi;
+          // tashqi XLSX strukturasining `undefined.length` xatosi UIga chiqmaydi.
+          const rows: SheetGrid = Array.isArray(sheet.rows)
+            ? sheet.rows.map((row) => Array.isArray(row) ? row : [])
+            : [];
+          const analysis = smetaVaraqniTahlilQil(rows);
+          const parsed = f2FaylOqiCore(rows);
           fresh.push({
             id: `sheet-${yangiOperationId()}`,
             workbookId,
             sourceKey: `source-${yangiOperationId()}`,
             file,
             sheetName: sheetInfo.name,
-            rows: sheet.rows,
+            rows,
             lrvCols: 'cols' in parsed ? parsed.cols : null,
-            resCols: f2UstunAniqla(sheet.rows),
+            resCols: f2UstunAniqla(rows),
             analysis,
             analysisKey: analysis.analysisKey,
             selectedRole: analysis.detectedRole === 'unknown' ? undefined : analysis.detectedRole,
