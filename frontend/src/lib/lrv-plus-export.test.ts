@@ -28,6 +28,12 @@ function holat(p: Partial<T2QatorHolat> & { qator_id: number }): T2QatorHolat {
   };
 }
 
+/** Resurs vedomosti sinovida qatordagi nom/kod/kategoriya ham read-modeldan
+ *  kelayotganini aniq ko'rsatish uchun kichik yordamchi. */
+function resursHolat(p: Partial<T2QatorHolat> & { qator_id: number }): T2QatorHolat {
+  return { ...holat(p), ...p };
+}
+
 const DARAXT: T2Qator[] = [
   qator({ id: 1, tartib: 1, tur: 'rz', daraja: 0, nom: 'Yer ishlari' }),
   qator({ id: 2, tartib: 2, tur: 'bl', daraja: 1, ota_id: 1, kod: 'K1', nom: 'Qazish', birlik: 'm3', hajm: 100 }),
@@ -191,6 +197,57 @@ describe('lrvPlusFaylBaytlari — son formati va uzun nom', () => {
     expect(view.state).toBe('frozen');
     expect(view.xSplit).toBe(3);
     expect(view.ySplit).toBe(3);
+  });
+});
+
+describe('LRV_PLUS — ishchi Excel ko‘rinishi va RESURS_VEDOMOST formulalari', () => {
+  const RESURS_HOLATLAR: T2QatorHolat[] = [
+    resursHolat({ qator_id: 3, tur: 'rs', kat: 'ЧЕЛ', kod: '000001', nom: 'Ishchi', birlik: 'ЧЕЛ-Ч', smeta_hajm: 10, smeta_summa: 200000, f2_hajm: 4, f2_summa: 80000, qoldiq_hajm: 6, qoldiq_summa: 120000 }),
+    resursHolat({ qator_id: 4, tur: 'mat', kat: 'МАТ', kod: 'M-1', nom: 'Sement', birlik: 'kg', smeta_hajm: 100, smeta_summa: 300000, f2_hajm: 20, f2_summa: 60000, qoldiq_hajm: 80, qoldiq_summa: 240000 }),
+  ];
+
+  it('resurs kategoriya jamilarini ko‘rinadigan resurs qatorlari formulasi bilan bog‘laydi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Ko‘rinish sinovi', RESURS_HOLATLAR);
+    const XLSX = await import('xlsx-js-style');
+    const wb = XLSX.read(bytes, { type: 'array' });
+    const ws = wb.Sheets['RESURS_VEDOMOST'];
+    expect(ws['F2'].f).toBe('SUM(F3:F3)');
+    expect(ws['H2'].f).toBe('SUM(H3:H3)');
+    expect(ws['J2'].f).toBe('SUM(J3:J3)');
+    expect(ws['F4'].f).toBe('SUM(F5:F5)');
+    expect(ws['F2'].v).toBe(200000);
+    expect(ws['H4'].v).toBe(60000);
+  });
+
+  it('RES faylida kod bo‘lmasa ham resurs nomi/birligi yo‘qolmaydi va kategoriya jamiga kiradi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Kod-siz RES sinovi', [
+      resursHolat({ qator_id: 4, tur: 'mat', kat: 'МАТ', kod: null, nom: 'Amfiteatr uchun maxsus material', birlik: 'm3', smeta_hajm: 12, smeta_summa: 3456.78, f2_hajm: 3, f2_summa: 864.2, qoldiq_hajm: 9, qoldiq_summa: 2592.58 }),
+    ]);
+    const XLSX = await import('xlsx-js-style');
+    const ws = XLSX.read(bytes, { type: 'array' }).Sheets['RESURS_VEDOMOST'];
+    expect(ws['B3']?.v ?? '').toBe('');
+    expect(ws['C3'].v).toBe('Amfiteatr uchun maxsus material');
+    expect(ws['D3'].v).toBe('m3');
+    expect(ws['F2'].f).toBe('SUM(F3:F3)');
+    expect(ws['F2'].v).toBe(3456.78);
+  });
+
+  it('sarlavha banneri, filter, freeze, chop etish va bo‘sh kategoriya ixchamligi saqlanadi', async () => {
+    const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Ko‘rinish sinovi', RESURS_HOLATLAR);
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(bytes as unknown as ArrayBuffer);
+    const main = wb.getWorksheet('LRV_PLUS')!;
+    const rv = wb.getWorksheet('RESURS_VEDOMOST')!;
+    expect(main.views[0]).toMatchObject({ state: 'frozen', xSplit: 3, ySplit: 3 });
+    expect(main.pageSetup.orientation).toBe('landscape');
+    expect(main.pageSetup.printTitlesRow).toBe('1:3');
+    expect(main.getCell('A1').isMerged).toBe(true);
+    expect(main.getColumn(12).hidden).toBe(true); // МАТ — bu testda resurs yo‘q
+    expect(String(main.autoFilter)).toContain('A2');
+    expect(rv.views[0]).toMatchObject({ state: 'frozen', ySplit: 1 });
+    expect(rv.pageSetup.printTitlesRow).toBe('1:1');
+    expect(String(rv.autoFilter)).toContain('J');
   });
 });
 

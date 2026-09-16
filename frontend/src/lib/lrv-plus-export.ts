@@ -187,6 +187,11 @@ const KAT_USTUN: Record<string, string> = {
 };
 const KAT_TARTIB = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'КАБ', 'М/К'];
 
+/** Eksportdagi ko‘rinish uchun ham shu tartib saqlanadi. Qavatlar, bo‘lim
+ *  nomining takrorlari yoki qator raqami hech qachon yangi haqiqat sifatida
+ *  qo‘shilmaydi — ular TIZIM_02 kanonik daraxtida mavjud emas. */
+const KAT_INDEX = new Map(KAT_TARTIB.map((kat, index) => [kat, index]));
+
 /** Yashirin Даража ustuni har doim OXIRGI ustun: to'liq rejimda `X`,
  *  Forma-2 (O gacha kesilgan) rejimda `P`. SUMIF shu ustunga tayanadi. */
 export const LRV_DARAJA_USTUN: Record<LrvPlusRejim, string> = { toliq: 'X', forma2: 'Q' };
@@ -327,16 +332,21 @@ export function lrvBelgiOqi(matn: unknown): { rejim: string; obyektId: number; d
   return Number.isFinite(obyekt) ? { rejim, obyektId: obyekt, davr } : null;
 }
 
-/** «H gacha» — egasi uchun eng muhim zona; chegarasi qalinroq. */
-const ASOSIY_ZONA_OXIRI = 7; // 0-indeks: A..H
+const CHIZIQ = { style: 'thin', color: { rgb: 'D9E1E8' } } as const;
+const QALIN = { style: 'medium', color: { rgb: '78909C' } } as const;
 
-const CHIZIQ = { style: 'thin', color: { rgb: 'B0B0B0' } } as const;
-const QALIN = { style: 'medium', color: { rgb: '606060' } } as const;
+/** Guruh chegaralari ichki kataklarni og‘ir panjaraga aylantirmasdan
+ *  `ISH / KATEGORIYA / FAKT-F2 / NAZORAT` zonalarini ajratadi. */
+const GURUH_BOSHI = new Set([0, 8, 9, 15, 19, 23]);
+const GURUH_OXIRI = new Set([7, 8, 14, 18, 22, 24]);
 
 function chegara(c: number) {
-  const asosiy = c <= ASOSIY_ZONA_OXIRI;
-  const v = asosiy ? QALIN : CHIZIQ;
-  return { top: v, bottom: v, left: v, right: v };
+  return {
+    top: CHIZIQ,
+    bottom: CHIZIQ,
+    left: GURUH_BOSHI.has(c) ? QALIN : CHIZIQ,
+    right: GURUH_OXIRI.has(c) ? QALIN : CHIZIQ,
+  };
 }
 
 /** T1 `00_Config.js` CFG.RANG: rz sariq, bl ko'k + oq shrift, mat yashil. */
@@ -344,7 +354,27 @@ const RANG: Record<string, { fill?: { patternType: string; fgColor: { rgb: strin
   rz: { fill: { patternType: 'solid', fgColor: { rgb: 'FFFF00' } }, font: { bold: true } },
   bl: { fill: { patternType: 'solid', fgColor: { rgb: '4A86E8' } }, font: { bold: true, color: { rgb: 'FFFFFF' } } },
   mat: { fill: { patternType: 'solid', fgColor: { rgb: 'D9EAD3' } } },
+  ob: { fill: { patternType: 'solid', fgColor: { rgb: 'EDE7F6' } } },
 };
+
+const HEADER_RANG: Array<{ from: number; to: number; rgb: string }> = [
+  { from: 0, to: 7, rgb: '1F4E78' },   // Ish
+  { from: 8, to: 8, rgb: '455A64' },   // Tur
+  { from: 9, to: 14, rgb: '2F6F75' },  // Resurs toifalari
+  { from: 15, to: 18, rgb: '5B4B8A' }, // Fakt/F2 hajm
+  { from: 19, to: 22, rgb: '7A5C2E' }, // Fakt/F2 summa
+  { from: 23, to: 24, rgb: '546E7A' }, // Texnik metadata (yashirin)
+];
+
+function headerRang(c: number): string {
+  return HEADER_RANG.find((g) => c >= g.from && c <= g.to)?.rgb ?? '1F4E78';
+}
+
+function qatorBalandligi(nom: string, tur: string): number {
+  const matn = String(nom || '').replace(/\r/g, '');
+  const satrlar = matn.split('\n').reduce((jami, satr) => jami + Math.max(1, Math.ceil(satr.length / (tur === 'rz' || tur === 'bl' ? 56 : 68))), 0);
+  return Math.min(78, Math.max(22, 22 + (Math.min(5, satrlar) - 1) * 13));
+}
 
 /**
  * Nakrutka kaskadi jadvalining bitta qatori. `pctKoef` berilsa E ustunida
@@ -483,7 +513,15 @@ function nakrutkaKaskadYoz(
   const bosh = [['Показатель', 1], ['%', 4], ['Сумма', 5]] as const;
   for (const [matn, ustun] of bosh) {
     const ref = XLSX.utils.encode_cell({ r: boshQator - 1, c: ustun });
-    ws[ref] = { t: 's', v: matn, s: { font: { bold: true }, fill: { patternType: 'solid', fgColor: { rgb: 'EFEFEF' } }, border: chegara(0) } };
+    ws[ref] = {
+      t: 's', v: matn,
+      s: {
+        font: { bold: true },
+        fill: { patternType: 'solid', fgColor: { rgb: 'EAF0F5' } },
+        border: chegara(ustun),
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      },
+    };
   }
 
   const qatorlar = nakrutkaQatorlarQur();
@@ -492,20 +530,129 @@ function nakrutkaKaskadYoz(
   const summaOldin: number[] = [];
   let r = boshQator + 1;
   for (const q of qatorlar) {
-    ws[XLSX.utils.encode_cell({ r: r - 1, c: 1 })] = { t: 's', v: q.label, s: { font: { bold: !!q.jami } } };
+    ws[XLSX.utils.encode_cell({ r: r - 1, c: 1 })] = {
+      t: 's', v: q.label,
+      s: { font: { bold: !!q.jami }, alignment: { vertical: 'center', wrapText: true } },
+    };
     if (q.pctKoef) {
       const pct = koef[q.pctKoef] ?? 0;
-      ws[`E${r}`] = { t: 'n', v: pct, s: { fill: { patternType: 'solid', fgColor: { rgb: 'FFF9E0' } } } };
+      ws[`E${r}`] = {
+        t: 'n', v: pct, z: '0.##',
+        s: {
+          fill: { patternType: 'solid', fgColor: { rgb: 'FFF9E0' } },
+          border: chegara(4),
+          alignment: { horizontal: 'right', vertical: 'center' },
+        },
+      };
     }
     const summaJS = Math.round(q.summaJS(kat, koef, summaOldin) * 100) / 100;
     ws[`F${r}`] = {
-      t: 'n', f: q.summaFormula(r).replace(/^=/, ''), v: summaJS,
-      s: q.jami ? { font: { bold: true }, fill: { patternType: 'solid', fgColor: { rgb: 'FFF2CC' } }, border: chegara(0) } : undefined,
+      t: 'n', f: q.summaFormula(r).replace(/^=/, ''), v: summaJS, z: '#,##0.00',
+      s: {
+        font: { bold: !!q.jami },
+        fill: { patternType: 'solid', fgColor: { rgb: q.jami ? 'FFF2CC' : 'F8FAFC' } },
+        border: chegara(5),
+        alignment: { horizontal: 'right', vertical: 'center' },
+      },
     };
     summaOldin.push(summaJS);
     r++;
   }
   return r; // birinchi bo'sh qator (jadvaldan keyin)
+}
+
+/** RESURS_VEDOMOST varag‘ini ishchi hujjat darajasiga olib keladi.
+ *
+ * Resurs qatorlari — eksport paytidagi kanonik read-model snapshoti. Kategoriya
+ * jami qatorlari esa shu snapshotdagi ko‘rinib turgan resurs qatorlaridan
+ * Excel formulasi bilan yig‘iladi. Shuning uchun foydalanuvchi vedomostdagi
+ * izoh/tahlil uchun sonni o‘zgartirsa, jami qator formula orqali qayta
+ * hisoblanadi; bu yangi biznes haqiqatini yaratmaydi va Supabase qiymatini
+ * almashtirmaydi.
+ */
+function resursVedomostUslubla(
+  ws: import('xlsx-js-style').WorkSheet,
+  XLSX: typeof import('xlsx-js-style'),
+  aoa: (string | number)[][],
+): void {
+  const RV_BORDER = {
+    top: CHIZIQ, bottom: CHIZIQ, left: CHIZIQ, right: CHIZIQ,
+  };
+  const RV_HEADER = {
+    font: { bold: true, color: { rgb: 'FFFFFF' } },
+    fill: { patternType: 'solid', fgColor: { rgb: '1F4E78' } },
+    border: { top: QALIN, bottom: QALIN, left: QALIN, right: QALIN },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+  };
+  const RV_GROUP = {
+    font: { bold: true, color: { rgb: '17365D' } },
+    fill: { patternType: 'solid', fgColor: { rgb: 'D9EAF7' } },
+    border: { top: QALIN, bottom: CHIZIQ, left: QALIN, right: QALIN },
+    alignment: { vertical: 'center', wrapText: true },
+  };
+  const RV_EVEN = { patternType: 'solid', fgColor: { rgb: 'F8FAFC' } };
+  const RV_VOLUME = '#,##0.####';
+  const RV_MONEY = '#,##0.00';
+  const isGroupRow = (index: number): boolean => {
+    const first = String(aoa[index]?.[0] ?? '');
+    return index > 0 && /\(\d+\s+resurs\)$/i.test(first);
+  };
+  const groupIndexes = aoa.map((_row, index) => index).filter(isGroupRow);
+
+  // Kategoriya jami qiymatlari resurs qatorlarining o‘zidan olinadi.
+  for (let i = 0; i < groupIndexes.length; i++) {
+    const categoryIndex = groupIndexes[i];
+    const nextCategoryIndex = groupIndexes[i + 1] ?? aoa.length;
+    const categoryExcelRow = categoryIndex + 1;
+    const firstResourceRow = categoryExcelRow + 1;
+    const lastResourceRow = nextCategoryIndex;
+    if (lastResourceRow < firstResourceRow) continue;
+    for (const [column, source] of [['F', 'F'], ['H', 'H'], ['J', 'J']] as const) {
+      const ref = `${column}${categoryExcelRow}`;
+      const oldValue = ws[ref]?.v;
+      ws[ref] = {
+        t: 'n',
+        f: `SUM(${source}${firstResourceRow}:${source}${lastResourceRow})`,
+        ...(typeof oldValue === 'number' ? { v: oldValue } : {}),
+        z: RV_MONEY,
+      };
+    }
+  }
+
+  const rowInfo: Array<{ hpt?: number }> = [{ hpt: 34 }];
+  for (let r = 1; r <= aoa.length; r++) {
+    const group = isGroupRow(r - 1);
+    rowInfo[r - 1] = { hpt: group ? 25 : r === 1 ? 34 : 23 };
+    for (let c = 0; c < 10; c++) {
+      const ref = XLSX.utils.encode_cell({ r: r - 1, c });
+      const cell = ws[ref];
+      if (!cell) continue;
+      if (r === 1) {
+        cell.s = RV_HEADER;
+      } else if (group) {
+        cell.s = RV_GROUP;
+      } else {
+        cell.s = {
+          border: RV_BORDER,
+          fill: r % 2 === 0 ? RV_EVEN : undefined,
+          alignment: { vertical: 'center', ...(c === 2 ? { wrapText: true } : {}) },
+        };
+      }
+      if (c === 2) {
+        cell.s = { ...(cell.s || {}), alignment: { ...(cell.s?.alignment || {}), vertical: 'top', wrapText: true } };
+      } else if (cell.t === 'n') {
+        cell.z = [4, 6, 8].includes(c) ? RV_VOLUME : RV_MONEY;
+        cell.s = { ...(cell.s || {}), alignment: { ...(cell.s?.alignment || {}), horizontal: 'right', vertical: 'center' } };
+      }
+    }
+  }
+  ws['!rows'] = rowInfo;
+  ws['!cols'] = [
+    { wch: 21 }, { wch: 16 }, { wch: 72 }, { wch: 12 },
+    { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 18 },
+    { wch: 15 }, { wch: 18 },
+  ];
+  ws['!autofilter'] = { ref: `A1:J${Math.max(1, aoa.length)}` };
 }
 
 export async function lrvPlusFaylBaytlari(
@@ -537,8 +684,12 @@ export async function lrvPlusFaylBaytlari(
   // Kategoriya ЖАМИ — J3..O3 keshlangan qiymati va nakrutka kaskadi shu
   // yerdan oladi (faqat barglar, T1 dagidek).
   const katYigindi: Record<string, number> = { 'ЧЕЛ': 0, 'МАШ': 0, 'МАТ': 0, 'ОБ': 0, 'КАБ': 0, 'М/К': 0 };
+  const katQatorSoni: Record<string, number> = { 'ЧЕЛ': 0, 'МАШ': 0, 'МАТ': 0, 'ОБ': 0, 'КАБ': 0, 'М/К': 0 };
   for (const q of hisob) {
-    if (LEAF_TUR.has(q.tur) && q.kat in katYigindi) katYigindi[q.kat] += q.summaQiymat ?? 0;
+    if (LEAF_TUR.has(q.tur) && q.kat in katYigindi) {
+      katQatorSoni[q.kat] += 1;
+      katYigindi[q.kat] += q.summaQiymat ?? 0;
+    }
   }
 
   const XLSX = await import('xlsx-js-style');
@@ -566,7 +717,7 @@ export async function lrvPlusFaylBaytlari(
   for (const q of hisob) {
     const kat: (string | number | null)[] = Array.from({ length: 6 }, () => null);
     if (LEAF_TUR.has(q.tur)) {
-      const idx = KAT_TARTIB.indexOf(q.kat);
+      const idx = KAT_INDEX.get(q.kat) ?? -1;
       if (idx >= 0) kat[idx] = q.summaQiymat ?? null;
     }
     const asosiy = [
@@ -646,17 +797,23 @@ export async function lrvPlusFaylBaytlari(
   const HAJM_USTUN = new Set([4, 5]);
   const PUL_USTUN = new Set([6, 7, 9, 10, 11, 12, 13, 14]);
 
-  // ── Uslub: chegara + qator turi rangi ──────────────────────────────
+  // ── Uslub: guruhlangan sarlavha + yengil panjara + qator turi rangi ───
+  // Sarlavha qiymatlari o'zgarmaydi; guruhlar rang va qalin ajratgich bilan
+  // ko'rinadi. Har bir katakka og'ir chegara chizilmaydi.
   for (const q of hisob) {
     const rang = RANG[q.tur];
     for (let c = 0; c < NCOLS; c++) {
       const ref = XLSX.utils.encode_cell({ r: q.row - 1, c });
       const cell = ws[ref];
       if (!cell) continue;
-      cell.s = { border: chegara(c), ...(rang || {}) };
-      if (c === NOM_USTUN) {
-        cell.s.alignment = { ...(cell.s.alignment || {}), wrapText: true, vertical: 'top' };
-      } else if (cell.t === 'n') {
+      cell.s = {
+        border: chegara(c),
+        ...(rang || {}),
+        alignment: c === NOM_USTUN
+          ? { wrapText: true, vertical: 'top' }
+          : { horizontal: cell.t === 'n' ? 'right' : 'center', vertical: 'center' },
+      };
+      if (cell.t === 'n') {
         cell.z = HAJM_USTUN.has(c) ? HAJM_FORMAT : PUL_USTUN.has(c) ? PUL_FORMAT : cell.z;
       }
     }
@@ -666,48 +823,74 @@ export async function lrvPlusFaylBaytlari(
     const cell = ws[XLSX.utils.encode_cell({ r: 2, c })];
     if (cell && cell.t === 'n') cell.z = PUL_USTUN.has(c) || c === 7 ? PUL_FORMAT : HAJM_FORMAT;
   }
-  for (const r of [1, 2]) { // sarlavha va ЖАМИ
-    for (let c = 0; c < NCOLS; c++) {
-      const cell = ws[XLSX.utils.encode_cell({ r, c })];
-      if (!cell) continue;
-      cell.s = {
+  // 1-qator — hujjat nomi, 2-qator — guruh rangli sarlavha, 3-qator — jami.
+  for (let c = 0; c < NCOLS; c++) {
+    const titleCell = ws[XLSX.utils.encode_cell({ r: 0, c })];
+    if (titleCell) {
+      titleCell.s = {
+        border: { top: QALIN, bottom: QALIN, left: QALIN, right: QALIN },
+        font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 14 },
+        fill: { patternType: 'solid', fgColor: { rgb: '1F4E78' } },
+        alignment: { vertical: 'center', horizontal: 'left' },
+      };
+    }
+    const headerCell = ws[XLSX.utils.encode_cell({ r: 1, c })];
+    if (headerCell) {
+      headerCell.s = {
         border: chegara(c),
-        font: { bold: true },
-        fill: { patternType: 'solid', fgColor: { rgb: r === 1 ? 'EFEFEF' : 'FFF2CC' } },
-        alignment: r === 1 ? { wrapText: true, vertical: 'center', horizontal: 'center' } : undefined,
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { patternType: 'solid', fgColor: { rgb: headerRang(c) } },
+        alignment: { wrapText: true, vertical: 'center', horizontal: 'center' },
+      };
+    }
+    const totalCell = ws[XLSX.utils.encode_cell({ r: 2, c })];
+    if (totalCell) {
+      totalCell.s = {
+        border: chegara(c),
+        font: { bold: true, color: { rgb: '5B3A00' } },
+        fill: { patternType: 'solid', fgColor: { rgb: 'FFF2CC' } },
+        alignment: { vertical: 'center', horizontal: totalCell.t === 'n' ? 'right' : 'left' },
       };
     }
   }
+  // Obyekt nomi sarlavha zonasida bitta toza banner sifatida ko'rinadi.
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: Math.min(7, NCOLS - 1) } }];
 
   // ── Guruhlash: rz > bl > resurs (yig'iladigan qatorlar) ─────────────
   const rowInfo: Array<{ level?: number; hpt?: number }> = [];
-  rowInfo[1] = { hpt: 30 }; // sarlavha balandroq (wrapText)
-  for (const q of hisob) rowInfo[q.row - 1] = { level: Math.min(q.daraja, 7) };
+  rowInfo[0] = { hpt: 36 };
+  rowInfo[1] = { hpt: 38 };
+  rowInfo[2] = { hpt: 27 };
+  for (const q of hisob) rowInfo[q.row - 1] = {
+    level: Math.min(q.daraja, 7),
+    hpt: qatorBalandligi(q.nom, q.tur),
+  };
   ws['!rows'] = rowInfo;
 
-  /* Egasi (2026-09-10): «son katakka sig'sin, kataklar kengaya olsin».
-     `#,##0.00` bilan obyekt/razdel jamilari milliardga chiqadi —
-     «6,250,000,000.00» = 16 belgi. Jami tushadigan pul ustunlari
-     (СУММА, ЧЕЛ..М/К kategoriya jamilari, ФАКТ/ОСТАТКА/F2 суммы) shu
-     kenglikka sig'ishi kerak, aks holda tor ustunda `#####` bo'ladi.
-     НАРХ — birlik narxi (kichik) va ҲАЖМ ustunlari o'z kengligida qoladi. */
+  /* Uzun resurs nomlari endi satr balandligi bilan to'liq o'qiladi. Bo'sh
+     kategoriya ustunlari esa faylda saqlanadi, lekin default ko'rinishni
+     keraksiz kengaytirmaslik uchun yashiriladi; foydalanuvchi Excel orqali
+     ularni qayta ko'rsatishi mumkin. */
   const asosiyKengliklar = [
-    { wch: 5 }, { wch: 14 }, { wch: 46 }, { wch: 9 },
-    { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 17 },
-    { wch: 6 },
-    { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+    { wch: 6 }, { wch: 16 }, { wch: 62 }, { wch: 12 },
+    { wch: 13 }, { wch: 15 }, { wch: 16 }, { wch: 19 },
+    { wch: 8 },
   ];
+  const kategoriyaKengliklari = KAT_TARTIB.map((kat) => ({
+    wch: katQatorSoni[kat] > 0 ? 13 : 9,
+    hidden: katQatorSoni[kat] === 0,
+  }));
   ws['!cols'] = rejim === 'toliq'
     ? [
-        ...asosiyKengliklar,
-        { wch: 11 }, { wch: 12 }, { wch: 13 }, { wch: 15 },
-        { wch: 17 }, { wch: 17 }, { wch: 17 }, { wch: 17 },
+        ...asosiyKengliklar, ...kategoriyaKengliklari,
+        { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
+        { wch: 19 }, { wch: 19 }, { wch: 19 }, { wch: 19 },
         { wch: 7, hidden: true },   // Даража
         { wch: 18, hidden: true },  // КАЛИТ
       ]
     : [
-        ...asosiyKengliklar,
-        { wch: 30 },                // ЗАМЕЧАНИЕ
+        ...asosiyKengliklar, ...kategoriyaKengliklari,
+        { wch: 32 },                // ЗАМЕЧАНИЕ
         { wch: 7, hidden: true },   // Даража
         { wch: 18, hidden: true },  // КАЛИТ
       ];
@@ -742,11 +925,9 @@ export async function lrvPlusFaylBaytlari(
   // eksportning O'ZI ichida alohida varaq bo'lib chiqsin. Ekrandagi va
   // shu yerdagi hisob-kitob BITTA manba (resursVedomostAoa/
   // resursVedomostKategoriyalarga) -- ikkinchi haqiqat yaratilmaydi.
-  const resursWs = XLSX.utils.aoa_to_sheet(resursVedomostAoa(holatlar ?? []));
-  resursWs['!cols'] = [
-    { wch: 20 }, { wch: 14 }, { wch: 46 }, { wch: 10 },
-    { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
-  ];
+  const resursAoa = resursVedomostAoa(holatlar ?? []);
+  const resursWs = XLSX.utils.aoa_to_sheet(resursAoa);
+  resursVedomostUslubla(resursWs, XLSX, resursAoa);
   XLSX.utils.book_append_sheet(wb, resursWs, 'RESURS_VEDOMOST');
 
   /* Provenance (ixtiyoriy) — 2026-09-11. Eksport endi manba hujjat tanlashni
@@ -775,6 +956,14 @@ export async function lrvPlusFaylBaytlari(
     if (provenanceBor) {
       const manbaWs = XLSX.utils.aoa_to_sheet([['МАНБА (provenance)', ''], ...manba]);
       manbaWs['!cols'] = [{ wch: 22 }, { wch: 70 }];
+      manbaWs['!rows'] = [{ hpt: 28 }];
+      for (const ref of ['A1', 'B1']) {
+        if (manbaWs[ref]) manbaWs[ref].s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' } },
+          fill: { patternType: 'solid', fgColor: { rgb: '1F4E78' } },
+          alignment: { vertical: 'center', wrapText: true },
+        };
+      }
       XLSX.utils.book_append_sheet(wb, manbaWs, 'МАНБА');
     }
   }
@@ -795,9 +984,25 @@ export async function lrvPlusFaylBaytlari(
   const ewb = new ExcelJS.Workbook();
   await ewb.xlsx.load(raw);
   const asosiy = ewb.getWorksheet(rejim === 'forma2' ? 'FORMA_2' : 'LRV_PLUS');
-  if (asosiy) asosiy.views = [{ state: 'frozen', xSplit: 3, ySplit: 3 }];
+  if (asosiy) {
+    asosiy.views = [{ state: 'frozen', xSplit: 3, ySplit: 3 }];
+    asosiy.pageSetup = {
+      orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      paperSize: 9, printTitlesRow: '1:3', horizontalDpi: 300, verticalDpi: 300,
+      margins: { left: 0.25, right: 0.25, top: 0.45, bottom: 0.45, header: 0.2, footer: 0.2 },
+      showGridLines: false,
+    };
+  }
   const rv = ewb.getWorksheet('RESURS_VEDOMOST');
-  if (rv) rv.views = [{ state: 'frozen', ySplit: 1 }];
+  if (rv) {
+    rv.views = [{ state: 'frozen', ySplit: 1 }];
+    rv.pageSetup = {
+      orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      paperSize: 9, printTitlesRow: '1:1', horizontalDpi: 300, verticalDpi: 300,
+      margins: { left: 0.25, right: 0.25, top: 0.45, bottom: 0.45, header: 0.2, footer: 0.2 },
+      showGridLines: false,
+    };
+  }
   const out = (await ewb.xlsx.writeBuffer()) as ArrayBuffer;
   return new Uint8Array(out);
 }
