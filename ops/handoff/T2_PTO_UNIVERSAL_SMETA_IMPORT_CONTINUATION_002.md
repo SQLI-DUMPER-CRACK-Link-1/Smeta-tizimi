@@ -302,4 +302,9 @@ tasdig'idan keyingi import navbatdagi xavfsiz acceptance bosqichidir.
 - Boshqa production migration qo'llanmagan.
 - `governance.log` stage/commit qilinmagan.
 - Branch pushidan so'ng Preview route load va deployment SHA alohida
-  tekshiriladi; ushbu handoffning keyingi commitida qayd qilinadi.
+  tekshirildi: Cloudflare Pages GitHub check `7d5aef7` uchun `success`.
+  Immutable Preview: `https://faa282e9.smeta-tizimi.pages.dev/admin/holat`.
+  HTTP 200 qaytdi va bundle ichida `Importdan oldin tasdiq kerak`,
+  `Tahlil va manba bog'lanishini tasdiqlash` hamda `/api/smeta-yukla`
+  kontraktlari topildi. Branch alias CDN cache'i oldingi bundle berishi mumkin;
+  acceptance uchun immutable deployment URL ishlatilsin.
