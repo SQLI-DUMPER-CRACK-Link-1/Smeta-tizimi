@@ -217,3 +217,89 @@ yaratish operatorning importdagi yakuniy tasdig'isiz bajarilmaydi.
 - Shifr yo'qligi importni rad etish sababi emas.
 - File nomi yoki papka nomi RES bog'lashning yagona dalili bo'la olmaydi.
 - `governance.log` commit qilinmasin.
+
+---
+
+## 2026-09-16 yakuniy bajarilish qaydi
+
+### Supabase P0-1 — qo'llandi, chegaralangan scope
+
+`tuoyrzadkgoltpqkdiyx` projectiga **faqat**
+`20261025090000_t2_smeta_paket_import_v1.sql` qo'llandi. Source migration
+fayli o'zgartirilmadi: `apply_migration` uchun faqat tashqi birinchi `begin;`
+va yakuniy `commit;` olib tashlangan nusxa yuborildi. Boshqa pending migration
+qo'llanmagan.
+
+Post-apply katalog dalili:
+
+- `t2_document_canonical_reserve_slot_v1`,
+  `t2_smeta_paket_import_boshla_v1`,
+  `t2_smeta_paket_import_bolak_v1`,
+  `t2_smeta_paket_import_yakunla_v1` — **mavjud**;
+- `t2_document_registry.source_slot_key` — **mavjud**;
+- `t2_qator.smeta_paket_manba_id` provenance ustuni — **mavjud**;
+- besh paket jadvalida RLS yoqilgan, to'rt command RPC uchun `service_role`
+  execute granti mavjud;
+- source acceptance SQL `begin; ...; rollback;` ichida exceptionlarsiz
+  o'tdi. Hech qanday acceptance ma'lumoti qolmadi.
+
+Supabase Management API migration tarixida source fayl nomi
+`20261025090000_t2_smeta_paket_import_v1` sifatida saqlangan, lekin boshqaruv
+API yozgan version `20260916164046`. Bu API metadata xususiyati; uni
+"to'g'rilash" uchun qo'shimcha production mutatsiya qilinmadi.
+
+Bu dalil PGRST202 ildiz sababini yo'q qiladi: `source_slot_key` bilan chaqirilgan
+RPC endi production schema katalogida bor. Real authenticated upload probe
+qilinmadi, chunki operator tasdig'isiz real biznes XLSXni persistent import
+qilish qat'iyan taqiqlangan.
+
+### P0-2/P0-3 — source checkpoint
+
+Source implementation commit: `dbb7600738b447604b50aa56b37418623a67ffff`
+
+- `SmetaYuklaNative.tsx` paketni fayl-darajasidan **har bir XLSX varag'i**
+  darajasiga o'tkazdi: `tahlil → operator role/target tanlovi → tasdiq →
+  import`.
+- `smeta-source-analysis.ts` TN va ABC4 LRV signallari, RES bo'limlari hamda
+  shifrsiz `nom + birlik + narx` RES satrlarini deterministik tahlil qiladi.
+  Fayl/papka nomi hech qachon canonical binding emas.
+- Noma'lum varaqning roli bo'sh qoladi va u operator `LRV`, `RES` yoki
+  `E'tiborsiz` tanlamaguncha importdan chiqarilgan.
+- Ichki RES faqat shu workbook ichidagi LRV manbasiga birikadi; tashqi RES
+  esa dropdown orqali **aynan bitta** LRV manbaga biriktiriladi.
+- `smetaPaketTasdiqImzosi` analysis/role/target/source-key snapshotidir:
+  tahlil yoki tanlov o'zgarsa import qayta tasdiqlanmaguncha bloklanadi.
+- Random paket-scoped `sourceKey` ishlatiladi; display filename faqat UI
+  label. Duplicate source key va bir RESning noto'g'ri targeti validator bilan
+  fail-closed qilinadi.
+
+Yangi testlar:
+
+- `frontend/src/lib/smeta-source-analysis.test.ts` — 8 Vitest: TN LRV,
+  ABC4 LRV, shifrsiz RES, cover/izoh, ichki/tashqi RES isolation,
+  tasdiq/analysis invalidation, source-key collision.
+- fokuslangan Vitest: `58/58` PASS
+  (`smeta-source-analysis`, `smeta-package-import`, `SmetaYuklaNative`).
+- `npx tsc -b`, `npm run typecheck:functions`, `npm run lint`, `npm run build`,
+  `npm run tekshir`, `node ops/governance-check.cjs`,
+  `node tizim02/registr.gen.cjs --tekshir`, `git diff --check` — PASS.
+  Lint faqat repo bo'ylab oldindan bor warnings chiqardi; error yo'q.
+
+### Hostdagi real manba cheklovi
+
+Quyidagi user ko'rsatgan Windows yo'llari ushbu hostda `NOT_FOUND` edi:
+
+- `C:\Users\PC\Desktop\Park Chizmalar UZB\Смета ФАРАВОН.ЯНГИ УЗБ.20.07.26г\1.дор.ч\`
+- `C:\Users\PC\Downloads\Defektniy_Akt_ABC4_Shablon.xlsx`
+
+Shu sabab real biznes binarysi bu hostda ochilmadi yoki import qilinmadi.
+Fixturelar struktural test orqali qoplandi. Previewdagi haqiqiy operator
+tasdig'idan keyingi import navbatdagi xavfsiz acceptance bosqichidir.
+
+### Release chegarasi
+
+- `main`ga merge/push qilinmadi.
+- Boshqa production migration qo'llanmagan.
+- `governance.log` stage/commit qilinmagan.
+- Branch pushidan so'ng Preview route load va deployment SHA alohida
+  tekshiriladi; ushbu handoffning keyingi commitida qayd qilinadi.
