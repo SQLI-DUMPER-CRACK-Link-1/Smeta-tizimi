@@ -1376,11 +1376,19 @@ export default function TestF2Import() {
     if (tur === 'f2') {
       f2Payload = f2ExactPayloadQur(rows);
       if (!f2Payload.ok) {
-        toast(
-          `${f2Payload.noaniqSoni} ta qatorda narx bor, lekin F2 faylning o'z summasi (SUMMA ustuni) yo'q — ` +
-          `summa qty×narx dan TO'QILMAYDI. Faylni tekshiring yoki shu qatorlarni qo'lda ko'rib chiqing.`,
-          'danger', undefined, 15000,
-        );
+        if (f2Payload.sabab === 'CONFLICTING_PRICES') {
+          toast(
+            `${f2Payload.qatorIdlar.length} ta smeta qatoriga turli F2 narxlari tushdi — ` +
+            `bog‘lanish yoki hujjat davrlarini tekshiring. Yozish to‘xtatildi.`,
+            'danger', undefined, 15000,
+          );
+        } else {
+          toast(
+            `${f2Payload.noaniqSoni} ta qatorda narx bor, lekin F2 faylning o'z summasi (SUMMA ustuni) yo'q — ` +
+            `summa qty×narx dan TO'QILMAYDI. Faylni tekshiring yoki shu qatorlarni qo'lda ko'rib chiqing.`,
+            'danger', undefined, 15000,
+          );
+        }
         return;
       }
     }
@@ -2111,7 +2119,6 @@ export default function TestF2Import() {
     </Sahifa>
   );
 }
-
 
 
 

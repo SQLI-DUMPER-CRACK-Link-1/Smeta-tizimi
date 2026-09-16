@@ -159,6 +159,9 @@ export function exactWrite(nodes: F2ExactManbaTugun[], mapping: Map<string, numb
   if (rows.some(r => r.barchaNarxlar.length > 1)) throw new Error('Bir smeta qatoriga turli narxlar tushdi. Bog‘lanishni tekshiring.');
   const result = f2ExactPayloadQur(rows);
   if (!result.ok) {
+    if (result.sabab === 'CONFLICTING_PRICES') {
+      throw new Error(`${result.qatorIdlar.length} ta smeta qatoriga turli F2 narxlari tushdi. Bog‘lanish yoki hujjat davrlarini tekshiring.`);
+    }
     throw new Error(result.sabab === 'AMOUNT_WITHOUT_PRICE'
       ? `${result.noaniqSoni} qatorda summa bor, lekin birlik narxi yo‘q — bunday qator yozilsa summa yo‘qoladi. Narxni to‘ldiring yoki manbani tekshiring.`
       : 'Hujjat summasi noaniq. Yozish to‘xtatildi.');

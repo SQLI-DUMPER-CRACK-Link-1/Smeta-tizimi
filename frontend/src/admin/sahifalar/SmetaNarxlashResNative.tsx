@@ -8,6 +8,13 @@ import { Sahifa } from '../../umumiy/ui/Sahifa';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
+const RES_SABAB_MATNI: Record<NonNullable<ResPreview['moslashmagan']>[number]['sabab'], string> = {
+  QATOR_IDENTIYASI_YOQ: 'qator nomi yoki birligi yo‘q',
+  RES_MANBASI_TOPILMADI: 'RESda aynan mos qator topilmadi',
+  RES_MANBA_ZIDDIYATI: 'bir RES kalitida turli narxlar bor',
+  BIR_NECHTA_NARX_VARIANTI: 'bir nechta mos narx varianti bor',
+};
+
 /** 0 -> A, 25 -> Z, 26 -> AA — Exceldagi ustun harfi. */
 function ustunHarfi(i: number): string {
   let s = '';
@@ -233,6 +240,20 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       {preview.ziddiyatliManba > 0 && <p className="mt-2 text-[12px] text-warn">
         {preview.ziddiyatliManba} ta RES kalitida turli narx bor — ular avtomatik qo‘llanmaydi (taxmin qilinmaydi).
       </p>}
+      <p className="mt-2 text-[11px] text-text-mute">
+        RS: {preview.turBoyicha.rs.mos}/{preview.turBoyicha.rs.narxsiz} · MAT: {preview.turBoyicha.mat.mos}/{preview.turBoyicha.mat.narxsiz} · OB: {preview.turBoyicha.ob.mos}/{preview.turBoyicha.ob.narxsiz}
+      </p>
+      {preview.moslashmagan.length > 0 && <details className="mt-2 rounded-lg border border-border/60 p-2">
+        <summary className="cursor-pointer text-[12px] font-medium text-text">
+          Narxsiz qoladigan qatorlar sababi ({preview.moslashmagan.length})
+        </summary>
+        <ul className="mt-2 max-h-52 space-y-1 overflow-auto text-[11px] text-text-dim">
+          {preview.moslashmagan.slice(0, 100).map((q, i) => <li key={`${q.tur}:${q.kod ?? ''}:${q.nom ?? ''}:${i}`}>
+            <b>{q.tur.toUpperCase()}</b> · {q.kod || 'kodsiz'} · {q.nom || 'nomsiz'} ({q.birlik || 'birliksiz'}) — {RES_SABAB_MATNI[q.sabab]}
+          </li>)}
+          {preview.moslashmagan.length > 100 && <li>Yana {preview.moslashmagan.length - 100} ta qator bor.</li>}
+        </ul>
+      </details>}
       <button type="button" className="tugma tugma-asosiy mt-3 w-full sm:w-auto"
         disabled={busy || preview.mos === 0} onClick={() => void tasdiqla()}>Tasdiqlab narxlash</button>
     </div>}
