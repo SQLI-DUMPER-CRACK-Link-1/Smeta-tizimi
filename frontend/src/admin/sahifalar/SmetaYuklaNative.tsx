@@ -51,6 +51,22 @@ type PaketVaraq = SmetaPackageSheetChoice & {
   documentId?: number;
 };
 
+/** XLSX parser boundary: malformed/legacy worksheet data must never reach a
+ * renderer or detector as `undefined`. This is deliberately fail-closed: an
+ * invalid grid becomes an empty reviewable worksheet, not an auto-import. */
+function safeSheetRows(rows: unknown): SheetGrid {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => Array.isArray(row) ? row : []);
+}
+
+function spreadsheetReadError(fileName: string, error: unknown): Error {
+  const message = error instanceof Error ? error.message : '';
+  if (/Cannot read properties of undefined \(reading ['"]length['"]\)/i.test(message)) {
+    return new Error(`«${fileName}» jadval tuzilmasi o‘qilmadi. Faylni Excelda ochib, yangi .xlsx sifatida saqlang va qayta tanlang.`);
+  }
+  return new Error(`«${fileName}» o‘qilmadi: ${message || 'noma’lum XLSX o‘qish xatosi'}`);
+}
+
 /** `/api/smeta-yukla` ga bitta so'rov. Tarmoq uzilishi ham `ok:false`
  *  bo'lib qaytadi -- chaqiruvchi hamma joyda bir xil ishlashi uchun. */
 async function smetaSorov(yuk: Record<string, unknown>): Promise<SmetaYuklaJavob> {
@@ -149,11 +165,11 @@ export type ImportQadam = { kalit: string; nom: string; holat: 'ishlamoqda' | 't
  * Belgilangan ustunlar rangli sarlavha bilan ajratiladi.
  */
 function VaraqKorinishi({ rows, cols, qatorSoni = 8 }: {
-  rows: SheetGrid;
+  rows: SheetGrid | null | undefined;
   cols: { kod: number; nom: number; bir: number; narx: number } | null;
   qatorSoni?: number;
 }) {
-  const korsatiladi = rows.filter(r => r.some(c => String(c ?? '').trim() !== '')).slice(0, qatorSoni);
+  const korsatiladi = safeSheetRows(rows).filter(r => r.some(c => String(c ?? '').trim() !== '')).slice(0, qatorSoni);
   if (!korsatiladi.length) return <p className="text-[11px] text-text-mute">Varaq bo‘sh.</p>;
   const ustunSoni = Math.min(korsatiladi.reduce((m, r) => Math.max(m, r.length), 0), 12);
   const belgi = (i: number) => cols?.kod === i ? 'kod' : cols?.nom === i ? 'nom'
@@ -445,12 +461,13 @@ export type VaraqTegi = 'lrv' | 'res' | 'etibor_bermaslik';
  * Ikkalasi ham yo'q yoki juda kam ma'lumot -- "nomalum" (foydalanuvchi
  * qo'lda belgilaydi, hech narsa taxmin qilib yozilmaydi).
  */
-export function varaqTuriTaxmin(rows: SheetGrid): 'lrv' | 'res' | 'nomalum' {
-  const cols = f2UstunAniqla(rows);
+export function varaqTuriTaxmin(rows: SheetGrid | null | undefined): 'lrv' | 'res' | 'nomalum' {
+  const grid = safeSheetRows(rows);
+  const cols = f2UstunAniqla(grid);
   if (cols.nom < 0) return 'nomalum';
   let jami = 0, narxli = 0, hajmli = 0;
   const bolimlar = new Set<string>();
-  for (const row of rows) {
+  for (const row of grid) {
     const nom = String(row[cols.nom] ?? '').trim();
     if (!nom) continue;
     jami++;
@@ -1058,8 +1075,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         try {
           workbook = await readXlsx(await file.arrayBuffer());
         } catch (e) {
-          const reason = e instanceof Error ? e.message : 'noma’lum XLSX o‘qish xatosi';
-          throw new Error(`«${file.name}» o‘qilmadi: ${reason}`);
+          throw spreadsheetReadError(file.name, e);
         }
         const sheets = Array.isArray(workbook.sheets) ? workbook.sheets : [];
         if (!sheets.length) throw new Error(`«${file.name}» ichida o‘qiladigan varaq topilmadi.`);
@@ -1072,9 +1088,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
           if (!sheet) throw new Error(`«${file.name} / ${sheetInfo.name}» varag‘i o‘qilmadi.`);
           // Bo'sh yoki nostandart satrlar `unknown` review qatori bo'ladi;
           // tashqi XLSX strukturasining `undefined.length` xatosi UIga chiqmaydi.
-          const rows: SheetGrid = Array.isArray(sheet.rows)
-            ? sheet.rows.map((row) => Array.isArray(row) ? row : [])
-            : [];
+          const rows = safeSheetRows(sheet.rows);
           const analysis = smetaVaraqniTahlilQil(rows);
           const parsed = f2FaylOqiCore(rows);
           fresh.push({
