@@ -8,7 +8,9 @@ export type SmetaSheetRole = 'lrv' | 'res' | 'ignore' | 'unknown';
 export type SmetaSheetConfidence = 'high' | 'medium' | 'low';
 
 export type SmetaSheetAnalysis = {
-  detectedRole: Exclude<SmetaSheetRole, 'ignore'>;
+  /** `ignore` — mazmuni LRV/RES manbasi emasligi aniq; operator xohlasa
+   * jadvaldagi tanlovdan uni qayta LRV/RESga o'tkaza oladi. */
+  detectedRole: SmetaSheetRole;
   confidence: SmetaSheetConfidence;
   evidence: string[];
   lrvScore: number;
@@ -85,10 +87,25 @@ function xavfsizGrid(rows: unknown): SheetGrid {
     : []);
 }
 
-export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): SmetaSheetAnalysis {
+export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined, sheetName?: string): SmetaSheetAnalysis {
   const grid = xavfsizGrid(rows);
   const nonEmpty = grid.filter((row) => row.some((cell) => text(cell) !== ''));
   const header = nonEmpty.slice(0, 35).flatMap((row) => row.map(text)).join(' ');
+  /* Hujjat turi odatda birinchi titul/sarlavha blokida yoziladi. Pastdagi
+     resurs jadvalida «vedomost potrebnyh resursov» kabi so'zlar uchrashi
+     mumkin; ular BV/LRV titulini bekor qila olmaydi. */
+  const titleHeader = nonEmpty.slice(0, 10).flatMap((row) => row.map(text)).join(' ');
+  const ignoreSummary = /РЕКОМЕНДУЕМ.{0,60}СТОИМОСТ.{0,80}ОБЪЕКТ|СВОДН.{0,50}(СМЕТ|РАСЧ[ЕЁ]Т|СТОИМОСТ)/.test(header);
+  const ignoreTransport = /РАСЧ[ЕЁ]Т\s+ЗАТРАТ\s+ТРАНСПОРТ|ДАЛЬНОСТ.{0,35}ВОЗК|ГРУЗООБОРОТ/.test(header);
+  if (ignoreSummary || ignoreTransport) {
+    return {
+      detectedRole: 'ignore', confidence: 'high', evidence: [ignoreSummary
+        ? 'yig‘ma qiymat/svodka varag‘i — kanonik LRV yoki RES manbasi emas'
+        : 'tashish hisob-kitobi — kanonik LRV yoki RES manbasi emas'],
+      lrvScore: 0, resScore: 0, dataRows: nonEmpty.length, codelessResRows: 0,
+      analysisKey: stableKey([header, String(nonEmpty.length), 'ignore']),
+    };
+  }
   let lrvScore = 0;
   let resScore = 0;
   const evidence: string[] = [];
@@ -99,14 +116,23 @@ export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): Smeta
     evidence.push(note);
   };
 
-  if (/ЛОКАЛЬН.{0,20}(РЕСУРСН.{0,20})?(СМЕТ|ВЕДОМОСТ)/.test(header)) add('lrv', 3, 'lokal smeta/LRV sarlavhasi');
+  /* Hujjatning o'z nomi satrlar ichidagi narx/resurs so'zidan kuchliroq
+     dalildir. LRV ichida resurs qatorlari va narxlar bo'lishi normal; shu
+     sabab u RESga aylanib ketmasligi kerak. */
+  const explicitLrvTitle = /ЛОКАЛЬН.{0,40}(РЕСУРСН.{0,20})?(СМЕТ|ВЕДОМОСТ)/.test(titleHeader);
+  /* «Ресурсная ведомость» LRVning to'liq nomining ham qismi. RES uchun
+     qat'iyroq «vedomost potrebnyh resursov» titulini talab qilamiz; qolgan
+     resurs bo'limlari pastdagi mazmuniy signal sifatida baholanadi. */
+  const explicitResTitle = /ВЕДОМОСТ.{0,30}ПОТРЕБН.{0,30}РЕСУРС/.test(titleHeader);
+  if (explicitLrvTitle) add('lrv', 8, 'aniq lokal smeta/LRV sarlavhasi');
   if (/\bABC\s*4\b|АВС\s*4/.test(header)) add('lrv', 2, 'ABC4 belgisi');
   if (/\bТН\b|ТЕРРИТОРИАЛЬН.{0,30}НОРМ/.test(header)) add('lrv', 2, 'TN qurilish normasi belgisi');
   if (/НАИМЕНОВАНИЕ\s+(РАБОТ|РАБОТ И ЗАТРАТ)|ВИД\s+РАБОТ/.test(header)) add('lrv', 3, 'ish nomi sarlavhasi');
   if (/КОЛИЧЕСТВ|ОБЪ[ЕЁ]М|ОБЬЕМ|ОБЪЁМ/.test(header)) add('lrv', 1, 'hajm/miqdor sarlavhasi');
   if (/ШИФР|НОРМ.{0,20}РАСХОД/.test(header)) add('lrv', 1, 'shifr/norma sarlavhasi');
 
-  if (/РЕСУРСН.{0,30}(ВЕДОМОСТ|ЧАСТ)|МАТЕРИАЛЬНЫЕ\s+РЕСУРСЫ|ТРУДОВЫЕ\s+РЕСУРСЫ|ОБОРУДОВАНИ/.test(header)) {
+  if (explicitResTitle) add('res', 8, 'aniq RES/vedomost potrebnyh resursov sarlavhasi');
+  else if (/МАТЕРИАЛЬНЫЕ\s+РЕСУРСЫ|ТРУДОВЫЕ\s+РЕСУРСЫ|ОБОРУДОВАНИ/.test(header)) {
     add('res', 3, 'RES bo\'limi yoki resurs sarlavhasi');
   }
   if (/ЦЕНА|СТОИМОСТ.{0,20}(ЕД|ЕДИНИЦ)|ТЕКУЩ.{0,20}ЦЕН/.test(header)) add('res', 2, 'narx sarlavhasi');
@@ -137,9 +163,25 @@ export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): Smeta
   if (resourceLikeRows >= 3) add('res', 2, `${resourceLikeRows} ta nom+birlik+narx resurs satri`);
   if (codelessResRows >= 2) add('res', 2, `${codelessResRows} ta shifrsiz RES satri`);
 
-  let detectedRole: Exclude<SmetaSheetRole, 'ignore'> = 'unknown';
-  if (lrvScore >= 5 && lrvScore >= resScore + 1) detectedRole = 'lrv';
-  if (resScore >= 5 && resScore > lrvScore) detectedRole = 'res';
+  let detectedRole: SmetaSheetRole = 'unknown';
+  /* BR/"ведомость потребных ресурсов" ostida ba'zan qavs ichida
+     "локальная ресурсная смета" degan texnik izoh ham uchraydi. Hujjatning
+     aniq asosiy nomi RES ekanini bildiradi, shu sabab u umumiy LRV izohidan
+     ustun turadi. */
+  if (explicitResTitle) detectedRole = 'res';
+  else if (explicitLrvTitle) detectedRole = 'lrv';
+  else if (lrvScore >= 5 && lrvScore >= resScore + 1) detectedRole = 'lrv';
+  else if (resScore >= 5 && resScore > lrvScore) detectedRole = 'res';
+  /* BR/BV kodlari universal qonun emas. Ular faqat hujjat mazmunidan
+     aniq qaror chiqmagan, lekin yetarli signal bor holatda yordamchi
+     tiebreaker bo'ladi — bo'sh Sheet1 hech qachon nomi sabab import qilinmaydi. */
+  const name = text(sheetName);
+  const brHint = /(?:^|[_ .-])(BR|БР)(?:$|[_ .-])/.test(name);
+  const bvHint = /(?:^|[_ .-])(BV|БВ)(?:$|[_ .-])/.test(name);
+  if (detectedRole === 'unknown' && Math.max(lrvScore, resScore) >= 3 && (brHint || bvHint)) {
+    detectedRole = brHint ? 'res' : 'lrv';
+    evidence.push(`varaq kodi ${brHint ? 'BR/БР' : 'BV/БВ'} yordamchi signal sifatida ishlatildi`);
+  }
   const strongest = Math.max(lrvScore, resScore);
   const difference = Math.abs(lrvScore - resScore);
   const confidence: SmetaSheetConfidence = detectedRole === 'unknown'

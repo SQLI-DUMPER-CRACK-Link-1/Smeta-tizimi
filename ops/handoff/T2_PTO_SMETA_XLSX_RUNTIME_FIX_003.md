@@ -37,6 +37,30 @@ Shunday qilib `Blob.stream()`ga bog'liqlik va `undefined` katakning UIga
 o'tishi olib tashlandi; XLSX mazmuni, satrlar yoki qurilish hisoblari
 o'zgartirilmagan.
 
+## Varaq rollari va tasdiqlash oqimi
+
+Haqiqiy TN yo'l smetalari ichidagi bitta XLSXda to'rt xil varaq borligi
+tekshirildi. Endi paket oynasi avval titul va jadval mazmunini tekshiradi;
+varaq kodi faqat mazmun yetarli bo'lmagandagi yordamchi signal, hech qachon
+canonical bog'lanish emas.
+
+- `ЛОКАЛЬНАЯ РЕСУРСНАЯ ВЕДОМОСТЬ` (`БВ`/`BV`) — **LRV**;
+- `ВЕДОМОСТЬ ПОТРЕБНЫХ РЕСУРСОВ` (`БР`/`BR`) — **RES**;
+- `сводн.`/tavsiya etilgan obyekt qiymati — **e'tiborsiz**;
+- transport xarajati hisob-kitobi — **e'tiborsiz**.
+
+LRV ichida narx va resurs qatorlari borligi uni RESga aylantirmaydi. Aksincha,
+BR titulida qavs ichidagi `lokal resurs smeta` izohi bo'lsa ham, asosiy
+`vedomost potrebnyh resursov` sarlavhasi RES deb olinadi. Bir XLSXda aynan
+bitta LRV aniqlansa, shu fayldagi RES unga avtomatik va ko'rinarli tarzda
+bog'lanadi; boshqa fayl/uchastka LRVsi hech qachon yashirin nishon bo'lmaydi.
+
+Shu sabab `PACKAGE_SHEET_ROLE_REQUIRED` faqat tizim mazmunini ishonchli
+aniqlay olmagan haqiqiy noma'lum varaq qolganida chiqadi. Operator bunday
+varaqni qo'lda LRV/RES/e'tiborsiz belgilaydi. Tasdiqlash biznes yozuvini
+boshlamaydi: u tanlovni muzlatadi va keyingi `Tasdiqlangan paketni kanonik
+import qilish` tugmasini xavfsiz faollashtiradi.
+
 ## Dalil
 
 Ishxona kompyuteridagi haqiqiy manbalar read-only smoke orqali ochildi:

@@ -536,6 +536,29 @@ describe('varaqTuriTaxmin (owner: bitta faylda ham LRV, ham RES varaqlari bo‘l
   it('bo‘sh/mazmunsiz varaqni taxmin qilmaydi', () => {
     expect(varaqTuriTaxmin([['x'], [], []])).toBe('nomalum');
   });
+
+  it('TN titulidagi LRVni ichki narx/resurs qatorlari chalg‘itmaydi', () => {
+    const rows = [
+      ['ЛОКАЛЬНАЯ РЕСУРСНАЯ ВЕДОМОСТЬ'],
+      ...sarlavha,
+      ['1', 'K1', 'Beton ishlari', 'м3', '', '10', '850000', ''],
+      ['2', 'K2', 'Armatura ishlari', 'кг', '', '20', '12000', ''],
+      ['3', 'K3', 'Qum ishlari', 'м3', '', '15', '110000', ''],
+    ];
+    expect(varaqTuriTaxmin(rows, '4230_БВ')).toBe('lrv');
+  });
+
+  it('TN titulidagi RESni «lokal smeta» izohi chalg‘itmaydi', () => {
+    const rows = [
+      ['ВЕДОМОСТЬ ПОТРЕБНЫХ РЕСУРСОВ'],
+      ['(локальная ресурсная смета)'],
+      ['№', 'ШИФР', 'НАИМЕНОВАНИЕ', 'ЕД. ИЗМ.', 'ЦЕНА'],
+      ['1', 'R1', 'Beton B25', 'м3', '850000'],
+      ['2', 'R2', 'Armatura', 'кг', '12000'],
+      ['3', 'R3', 'Qum', 'м3', '110000'],
+    ];
+    expect(varaqTuriTaxmin(rows, '4230_БР')).toBe('res');
+  });
 });
 
 describe('katTaxmini (mijoz tomoni ko‘rib chiqish uchun taxmin)', () => {

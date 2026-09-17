@@ -463,8 +463,14 @@ export type VaraqTegi = 'lrv' | 'res' | 'etibor_bermaslik';
  * Ikkalasi ham yo'q yoki juda kam ma'lumot -- "nomalum" (foydalanuvchi
  * qo'lda belgilaydi, hech narsa taxmin qilib yozilmaydi).
  */
-export function varaqTuriTaxmin(rows: SheetGrid | null | undefined): 'lrv' | 'res' | 'nomalum' {
+export function varaqTuriTaxmin(rows: SheetGrid | null | undefined, sheetName?: string): 'lrv' | 'res' | 'nomalum' {
   const grid = safeSheetRows(rows);
+  const semantic = smetaVaraqniTahlilQil(grid, sheetName);
+  /* Bitta-fayl oynasi ham paket importi bilan bir xil professional titul
+     qonunidan foydalanadi. `ignore` eski UI tilida e'tiborsiz qoldiriladi. */
+  if (semantic.detectedRole === 'lrv' && semantic.evidence.includes('aniq lokal smeta/LRV sarlavhasi')) return 'lrv';
+  if (semantic.detectedRole === 'res' && semantic.evidence.includes('aniq RES/vedomost potrebnyh resursov sarlavhasi')) return 'res';
+  if (semantic.detectedRole === 'ignore') return 'nomalum';
   const cols = f2UstunAniqla(grid);
   if (cols.nom < 0) return 'nomalum';
   let jami = 0, narxli = 0, hajmli = 0;
@@ -969,7 +975,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       let lrvTanlandi = '';
       for (const s of workbook.sheets) {
         const sheet = workbook.sheet(s.name);
-        const taxmin = sheet ? varaqTuriTaxmin(sheet.rows) : 'nomalum';
+        const taxmin = sheet ? varaqTuriTaxmin(sheet.rows, s.name) : 'nomalum';
         teglar[s.name] = taxmin === 'nomalum' ? 'etibor_bermaslik' : taxmin;
         if (taxmin === 'lrv' && sheet) {
           const detected = f2FaylOqiCore(sheet.rows);
@@ -1042,7 +1048,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       const detected: Record<string, F2ColumnConfig> = {};
       const tanlangan: string[] = [];
       for (const s of workbook.sheets) {
-        if (varaqTuriTaxmin(s.rows) !== 'res') continue;
+        if (varaqTuriTaxmin(s.rows, s.name) !== 'res') continue;
         detected[s.name] = f2UstunAniqla(s.rows);
         tanlangan.push(s.name);
       }
@@ -1091,7 +1097,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
           // Bo'sh yoki nostandart satrlar `unknown` review qatori bo'ladi;
           // tashqi XLSX strukturasining `undefined.length` xatosi UIga chiqmaydi.
           const rows = safeSheetRows(sheet.rows);
-          const analysis = smetaVaraqniTahlilQil(rows);
+          const analysis = smetaVaraqniTahlilQil(rows, sheetInfo.name);
           const parsed = f2FaylOqiCore(rows);
           fresh.push({
             id: `sheet-${yangiOperationId()}`,
@@ -1109,11 +1115,21 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         }
       }
       if (!fresh.length) throw new Error('Tanlangan fayllarda o‘qiladigan varaq topilmadi.');
-      setPaketVaraqlar((prev) => [...prev, ...fresh]);
+      /* Bir XLSX ichidagi BR/RES hech qachon boshqa uchastkaning BV/LRV
+         daraxtiga yashirin ulanmaydi. Shu faylda aynan bitta LRV bo'lsa,
+         bog'lanishni foydalanuvchiga ko'rinarli ravishda oldindan qo'yamiz;
+         0 yoki 2+ LRV holatida esa tasdiq oynasi aniq tanlov talab qiladi. */
+      const reviewedFresh = fresh.map((sheet) => {
+        if (sheet.selectedRole !== 'res') return sheet;
+        const ownLrvs = fresh.filter((candidate) => candidate.workbookId === sheet.workbookId && candidate.selectedRole === 'lrv');
+        return ownLrvs.length === 1 ? { ...sheet, targetLrvSourceKey: ownLrvs[0].sourceKey } : sheet;
+      });
+      setPaketVaraqlar((prev) => [...prev, ...reviewedFresh]);
       setPaketTasdiqImzosi(null); paketImportOperationId.current = '';
       if (!paketKalit) setPaketKalit(yangiOperationId());
       if (!paketNom) setPaketNom((objects.find((x) => x.id === Number(objectId))?.nom || 'Obyekt') + ' — boshlang‘ich smeta paketi');
-      setPhase(`${fresh.length} ta varaq tahlil qilindi — rol va RES bog‘lanishini tasdiqlang`);
+      const readyResCount = reviewedFresh.filter((sheet) => sheet.selectedRole === 'res' && sheet.targetLrvSourceKey).length;
+      setPhase(`${reviewedFresh.length} ta varaq tahlil qilindi — ${readyResCount} ta ichki RES bog‘landi, rol va manbani tasdiqlang`);
     } catch (e) { setError(e instanceof Error ? e.message : 'Paket fayllari o‘qilmadi.'); }
     finally { setPaketBand(false); }
   }
@@ -1701,7 +1717,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                     </thead>
                     <tbody>
                       {resBook.sheets.map(s => {
-                        const taxmin = varaqTuriTaxmin(s.rows);
+                        const taxmin = varaqTuriTaxmin(s.rows, s.name);
                         return (
                           <tr key={s.name} className="border-t border-border/40">
                             <td className="py-1 pr-2">

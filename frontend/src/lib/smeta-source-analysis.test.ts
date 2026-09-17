@@ -54,10 +54,36 @@ describe('universal smeta package sheet analysis', () => {
     sparse[0] = 'ТН. ЛОКАЛЬНАЯ СМЕТА';
     sparse[5] = 'КОЛИЧЕСТВО';
     const result = smetaVaraqniTahlilQil([sparse]);
-    // Bir dona title satri yakuniy LRV qarori uchun dalil emas; muhim
-    // kafolat — siyrak kataklar xato bermaydi va operator review oladi.
-    expect(result.detectedRole).toBe('unknown');
+    expect(result.detectedRole).toBe('lrv');
     expect(result.dataRows).toBe(1);
+  });
+
+  it('aniq BR RES sarlavhasini ichki “lokal smeta” izohi chalg‘itmaydi', () => {
+    const result = smetaVaraqniTahlilQil([
+      ['ВЕДОМОСТЬ ПОТРЕБНЫХ РЕСУРСОВ'],
+      ['(локальная ресурсная смета)'],
+      ['НАИМЕНОВАНИЕ', 'ЕД. ИЗМ.', 'ЦЕНА'],
+      ['Beton', 'М3', 850000],
+      ['Armatura', 'Т', 7200000],
+      ['Qum', 'М3', 110000],
+    ], '4240_БР');
+    expect(result.detectedRole).toBe('res');
+  });
+
+  it('aniq BV lokal vedomostini ichki RES satrlari RESga aylantirmaydi', () => {
+    const result = smetaVaraqniTahlilQil([
+      ['ЛОКАЛЬНАЯ РЕСУРСНАЯ ВЕДОМОСТЬ'],
+      ['ШИФР', 'НАИМЕНОВАНИЕ РАБОТ И ЗАТРАТ', 'ЕД. ИЗМ.', 'КОЛИЧЕСТВО', 'ЦЕНА'],
+      ['01-01', 'Beton ishlari', 'М3', 10, 850000],
+      ['01-02', 'Armatura ishlari', 'Т', 2, 7200000],
+      ['01-03', 'Qum ishlari', 'М3', 5, 110000],
+    ], '4240_БВ');
+    expect(result.detectedRole).toBe('lrv');
+  });
+
+  it('svodka va transport hisobini avtomatik e’tiborsiz qoldiradi', () => {
+    expect(smetaVaraqniTahlilQil([['РЕКОМЕНДУЕМАЯ СТОИМОСТЬ ОБЪЕКТА В ТЕКУЩИХ ЦЕНАХ']]).detectedRole).toBe('ignore');
+    expect(smetaVaraqniTahlilQil([['РАСЧЁТ ЗАТРАТ ТРАНСПОРТА'], ['ГРУЗООБОРОТ']]).detectedRole).toBe('ignore');
   });
 });
 
