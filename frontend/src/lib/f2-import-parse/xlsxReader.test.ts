@@ -33,6 +33,20 @@ describe('readXlsx', () => {
     expect(sheet!.merges).toEqual([{ r1: 2, c1: 0, r2: 2, c2: 1 }]);
   });
 
+  test('reads a normally DEFLATE-compressed xlsx without relying on Blob.stream', async () => {
+    const XLSX = await import('xlsx');
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['ШИФР', 'НАИМЕНОВАНИЕ РАБОТ И ЗАТРАТ', 'ЕД. ИЗМ.', 'КОЛИЧЕСТВО'],
+      ['A-1', 'Beton ishlari', 'М3', 10],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Smeta');
+    const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx', compression: true }) as ArrayBuffer;
+
+    const parsed = await readXlsx(bytes);
+    expect(parsed.sheet('Smeta')!.rows[1]).toEqual(['A-1', 'Beton ishlari', 'М3', 10]);
+  });
+
   test('throws a clear error on a non-ZIP input rather than silently returning empty/wrong data', async () => {
     await expect(readXlsx(new TextEncoder().encode('not a zip file at all'))).rejects.toThrow('XLSX_NOT_A_ZIP');
   });

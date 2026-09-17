@@ -92,15 +92,19 @@ function u16(v: DataView, off: number): number { return v.getUint16(off, true); 
 function u32(v: DataView, off: number): number { return v.getUint32(off, true); }
 
 async function inflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
-  // Cast via `any`, not a named lib type: this module is type-checked under TWO
-  // different tsconfigs (the browser app's, which has "dom" and resolves
-  // `BlobPart`; the Cloudflare Functions one, lib:["ES2022"] only, which does
-  // NOT -- `BlobPart` itself is unresolvable there even though Blob/Response/
-  // DecompressionStream all exist at runtime via @cloudflare/workers-types).
-  // Uint8Array is always accepted by Blob's constructor at runtime in every
-  // target (Workers/browser/Node >=18) this module runs in.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stream = new Blob([bytes as any]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  /* `Blob.stream()` Chrome va Workersda bor, lekin Vitest/jsdom kabi haqiqiy
+     browser bo'lmagan muhitlarda Blob yarim-implementatsiya bo'lishi mumkin.
+     `Response(Uint8Array).body` esa browser, Worker va Node 18+da bir xil
+     Web Streams kontraktini beradi. Shu yo'l siqilgan Excel faylini hamma
+     import yo'llarida bir xil o'qiydi; faqat testni emas, parserning o'zini
+     portativ qiladi. */
+  // `bytes` TypedArray'i SharedArrayBuffer ko'rinishida ham kelishi mumkin;
+  // Response uchun esa mutlaqo oddiy, mustaqil ArrayBuffer beramiz.
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const source = new Response(copy.buffer).body;
+  if (!source) throw new Error('XLSX_STREAM_UNAVAILABLE: compressed XLSX oqimi ochilmadi');
+  const stream = source.pipeThrough(new DecompressionStream('deflate-raw'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
