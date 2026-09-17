@@ -210,7 +210,12 @@ function parseSheetXml(xml: string, sharedStrings: string[]): { rows: SheetGrid;
       else if (t !== 'str' && t !== 'inlineStr' && v !== '' && !isNaN(Number(v))) v = Number(v);
       arr[colIdx(refM[1])] = v;
     }
-    rows[rIdx] = arr;
+    /* XMLda faqat A va F katagi yozilgan bo'lsa, JavaScript massivi A…F
+       oralig'ida "teshik"lar bilan chiqadi. Bu tashqi hujjat formati
+       xususiyati, biznes ma'lumoti emas. Ularni bir marta shu parser
+       chegarasida aniq `null`ga aylantiramiz: keyingi LRV/RES/F2 detektori,
+       renderer va eksportchi hech qachon `undefined` katak bilan ishlamaydi. */
+    rows[rIdx] = Array.from({ length: arr.length }, (_, col) => arr[col] ?? null);
   }
   for (let i = 0; i < rows.length; i++) if (!rows[i]) rows[i] = [];
 

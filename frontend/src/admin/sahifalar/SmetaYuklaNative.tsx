@@ -62,7 +62,9 @@ type PaketVaraq = SmetaPackageSheetChoice & {
  * invalid grid becomes an empty reviewable worksheet, not an auto-import. */
 function safeSheetRows(rows: unknown): SheetGrid {
   if (!Array.isArray(rows)) return [];
-  return rows.map((row) => Array.isArray(row) ? row : []);
+  return rows.map((row) => Array.isArray(row)
+    ? Array.from(row, (cell) => cell ?? null)
+    : []);
 }
 
 function spreadsheetReadError(fileName: string, error: unknown): Error {
