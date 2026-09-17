@@ -47,6 +47,17 @@ describe('readXlsx', () => {
     expect(parsed.sheet('Smeta')!.rows[1]).toEqual(['A-1', 'Beton ishlari', 'М3', 10]);
   });
 
+  test('turns sparse XLSX cells into explicit nulls before any PTO logic sees them', async () => {
+    const XLSX = await import('xlsx');
+    const ws = XLSX.utils.aoa_to_sheet([['A', undefined, undefined, 'D']]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Siyrak');
+    const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx', compression: true }) as ArrayBuffer;
+
+    const parsed = await readXlsx(bytes);
+    expect(parsed.sheet('Siyrak')!.rows[0]).toEqual(['A', null, null, 'D']);
+  });
+
   test('throws a clear error on a non-ZIP input rather than silently returning empty/wrong data', async () => {
     await expect(readXlsx(new TextEncoder().encode('not a zip file at all'))).rejects.toThrow('XLSX_NOT_A_ZIP');
   });

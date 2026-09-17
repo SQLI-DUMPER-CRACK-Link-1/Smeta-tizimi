@@ -8,11 +8,17 @@
 
 ## Aniqlangan sabab
 
-Paket importining custom XLSX o'qigichi DEFLATE-siqlilgan XML qismlarini
-`Blob.stream()` orqali ochardi. Bu API to'liq bo'lmagan browser/test
-muhitida mavjud bo'lmagani uchun o'qish yo'li yiqilar, operatorga kontekstsiz
-`Cannot read properties of undefined (reading 'length')` ko'rinishidagi xato
-chiqishi mumkin edi.
+Bu ikkita alohida parser-bardoshlilik nuqtasi ekanligi aniqlandi:
+
+1. Paket importining custom XLSX o'qigichi DEFLATE-siqlilgan XML qismlarini
+   `Blob.stream()` orqali ochardi. Bu API to'liq bo'lmagan browser/test
+   muhitida mavjud bo'lmagani uchun compressed-XLSX yo'li yiqilishi mumkin edi.
+2. Haqiqiy yo'l TN smetalarida A va F kabi uzoq ustunlar to'ldirilib,
+   oradagi kataklar XMLda umuman yozilmagan. JavaScript buni siyrak massiv
+   sifatida beradi. LRV/RES tahlilchisi shu teshikni `undefined` deb olib,
+   `.length` so'rardi. Operator ko'rgan aynan
+   `Cannot read properties of undefined (reading 'length')` xatosining
+   haqiqiy ildiz sababi shu bo'ldi.
 
 Bu R2, Supabase RPC yoki foydalanuvchi faylining buzilganini anglatmaydi.
 `20261025090000_t2_smeta_paket_import_v1` allaqachon production katalogida
@@ -22,11 +28,14 @@ mavjud: paketning reserve/start/chunk/final RPC va zarur ustunlari bor.
 
 `frontend/src/lib/f2-import-parse/xlsxReader.ts`dagi compressed-XLSX yo'li
 endi mustaqil `ArrayBuffer`dan `Response(...).body` Web Stream hosil qiladi va
-keyin `DecompressionStream('deflate-raw')`ga uzatadi. Bu browser, Cloudflare
-Workers va Node 18+ uchun bitta standart oqim kontrakti.
+keyin `DecompressionStream('deflate-raw')`ga uzatadi. Shuningdek XMLdan
+chiqqan har siyrak satr bir marta `null` katakli zich satrga aylantiriladi.
+`smeta-source-analysis.ts` va `SmetaYuklaNative.tsx` ham tashqi gridni ayni
+qoidada normalizatsiya qiladi.
 
-`Blob.stream()`ga bog'liqlik olib tashlandi; XLSX mazmuni, satrlar yoki
-qurilish hisoblari o'zgartirilmagan.
+Shunday qilib `Blob.stream()`ga bog'liqlik va `undefined` katakning UIga
+o'tishi olib tashlandi; XLSX mazmuni, satrlar yoki qurilish hisoblari
+o'zgartirilmagan.
 
 ## Dalil
 
@@ -48,7 +57,8 @@ U parser `Blob.stream()`siz ham normal Excel faylini o'qishini tekshiradi.
 
 ## Gates
 
-- Fokuslangan import/testlar: 76/76 PASS
+- Fokuslangan import/testlar: 83/83 PASS (shu jumladan haqiqiy 4 yo'l XLSX
+  hamda ABC4 shabloni read-only smoke)
 - Functions TypeScript: PASS
 - Brauzer TypeScript: PASS
 - Vite build: PASS

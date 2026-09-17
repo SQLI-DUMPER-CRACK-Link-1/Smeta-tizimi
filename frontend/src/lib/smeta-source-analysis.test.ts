@@ -48,6 +48,17 @@ describe('universal smeta package sheet analysis', () => {
     expect(result.detectedRole).toBe('unknown');
     expect(result.dataRows).toBe(0);
   });
+
+  it('TN varag‘idagi siyrak bo‘sh ustunlarni xavfsiz tahlil qiladi', () => {
+    const sparse: Array<string | null> = [];
+    sparse[0] = 'ТН. ЛОКАЛЬНАЯ СМЕТА';
+    sparse[5] = 'КОЛИЧЕСТВО';
+    const result = smetaVaraqniTahlilQil([sparse]);
+    // Bir dona title satri yakuniy LRV qarori uchun dalil emas; muhim
+    // kafolat — siyrak kataklar xato bermaydi va operator review oladi.
+    expect(result.detectedRole).toBe('unknown');
+    expect(result.dataRows).toBe(1);
+  });
 });
 
 describe('package selection safety', () => {

@@ -80,7 +80,9 @@ function stableKey(parts: readonly string[]): string {
  */
 function xavfsizGrid(rows: unknown): SheetGrid {
   if (!Array.isArray(rows)) return [];
-  return rows.map((row) => Array.isArray(row) ? row : []);
+  return rows.map((row) => Array.isArray(row)
+    ? Array.from(row, (cell) => cell ?? null)
+    : []);
 }
 
 export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): SmetaSheetAnalysis {
@@ -112,7 +114,13 @@ export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): Smeta
   let resourceLikeRows = 0;
   let codelessResRows = 0;
   for (const row of nonEmpty.slice(0, 600)) {
-    const values = row.map(text);
+    /* XLSX XML satri ko'pincha siyrak massiv bo'ladi: masalan A va F katagi
+       bor, B–E esa umuman yozilmagan. `Array.prototype.map` bunday
+       "teshik"larni saqlab qoladi va `find` callbackiga `undefined` keladi.
+       `Array.from` esa har bo'sh ustunni aniq bo'sh matnga aylantiradi.
+       Shunday qilib TN/ABC4 varag'idagi bo'sh ustun tahlil oynasini
+       yiqitmaydi va u hech qachon yashirin import qaroriga aylanmaydi. */
+    const values = Array.from(row, text);
     const name = values.find((value) => value.length >= 3 && /[A-ZА-ЯЎҚҒҲ]/.test(value));
     const hasPrice = row.some((value) => isNumber(value) && Number(String(value).replace(/[\s ]/g, '').replace(',', '.')) > 0);
     const unit = row.some(hasUnit);
