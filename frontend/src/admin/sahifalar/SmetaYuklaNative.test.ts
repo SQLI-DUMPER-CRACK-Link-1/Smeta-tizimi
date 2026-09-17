@@ -603,4 +603,24 @@ describe('ko‘p varaqdan smeta/RES importi', () => {
     expect(tree[0].children?.[0].children?.[0].nom).toBe('Бетон B25');
     expect(tree[1].children?.[0].children?.[0].nom).toBe('Асфальт');
   });
+
+  it('LRV yakunidan keyingi RES ilovasini ish daraxtiga kiritmaydi', () => {
+    const lrvCols: F2ColumnConfig = { kod: 0, nom: 1, bir: 2, norma: 3, obyom: 4, narx: 5, sum: 6 };
+    const tree = tanlanganLrvVaraqlaridanDaraxtQur([{
+      name: '1-uchastka / 4230_БВ',
+      rows: [
+        ['ЛОКАЛЬНАЯ РЕСУРСНАЯ ВЕДОМОСТЬ'],
+        ['01', 'Asfalt ishlari', 'м2', '', '100', '', ''],
+        ['ИТОГО ПО ЛОКАЛЬНОЙ РЕСУРСНОЙ ВЕДОМОСТИ:'],
+        ['ТРУДОВЫЕ РЕСУРСЫ'],
+        ['1', 'Ishchi-resurs ilovasi', 'чел-ч', '', '20', '25000', '500000'],
+      ],
+      cols: lrvCols,
+    }], { harManbagaRz: true });
+    expect(tree).toHaveLength(1);
+    expect(tree[0].type).toBe('rz');
+    expect(tree[0].nom).toBe('1-uchastka / 4230_БВ');
+    expect(JSON.stringify(tree)).toContain('Asfalt ishlari');
+    expect(JSON.stringify(tree)).not.toContain('Ishchi-resurs ilovasi');
+  });
 });

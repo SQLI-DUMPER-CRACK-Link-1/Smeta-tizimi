@@ -91,6 +91,45 @@ U parser `Blob.stream()`siz ham normal Excel faylini o'qishini tekshiradi.
 - Governance: PASS; faqat `CURRENT_STATE.md`dagi oldindan mavjud `main_sha`
   eskirganligi haqida warning bor.
 
+## 004 — LRV ichiga qo'shilgan RES ilovasi chegarasi
+
+### Aniqlangan fakt
+
+Haqiqiy to'rtta yo'l uchastkasi manbasida (`4230_БВ`, `4240_БВ`,
+`4250_БВ`, `6120_БВ`) lokal resurs vedomosti yakunidan keyin yana
+resurslar ro'yxati keladi. U ish/hajm daraxtining davomi emas. Masalan
+`4230_БВ`da Excelning 993-satrida `ИТОГО ПО ЛОКАЛЬНОЙ РЕСУРСНОЙ
+ВЕДОМОСТИ:` tugaydi, keyin `ТРУДОВЫЕ РЕСУРСЫ` va boshqa RES satrlari
+boshlanadi.
+
+Bu ichki ilovada faqat resurs miqdori bor; uning o'zida sertifikatlangan
+narx yo'q. Narxli manba — shu XLSXdagi alohida `4230_БР` kabi
+`ВЕДОМОСТЬ ПОТРЕБНЫХ РЕСУРСОВ` varag'i. Demak ilovani LRV daraxti sifatida
+qayta kiritish ish hajmini va keyin narxlanadigan resurslarni ikki marta
+hisoblashga olib keladi.
+
+### Tuzatish
+
+- `frontend/src/lib/smeta-lrv-boundary.ts` LRV yakuni yoki keyingi aniq RES
+  titulidan qat'iy chegara topadi. Satr raqami hech qachon qoida emas.
+- `SmetaYuklaNative.tsx` faqat chegaragacha bo'lgan qismdan kanonik ish
+  daraxti quradi. Ichki RES ilovasi hech qachon qator/hajm sifatida tushmaydi.
+- Alohida bog'langan BR/RES bo'lsa, u yagona narx manbasi bo'ladi. U bo'lmasa
+  ichki ilova faqat narxli qatorlari haqiqatan aniqlangandagina zaxira sifatida
+  ishlatiladi; narxsiz miqdorlar hech qachon o'zidan narx yasamaydi.
+- Paket review jadvali operatorga `LRV yakunidan keyingi RES ilovasi
+  N-qatordan ajratiladi` deb ko'rsatadi. Har LRV import natijasida o'zining
+  `fayl — varaq` nomli RZ ildizi ostida turadi, shuning uchun to'rt uchastka
+  aralashmaydi.
+
+### Read-only dalil va regression
+
+To'rtta real LRV manbasi bilan smoke natijasi: 4 ta alohida RZ ildizi,
+3695 ta ish daraxti qatori va `ТРУДОВЫЕ РЕСУРСЫ`/`МАТЕРИАЛЬНЫЕ РЕСУРСЫ`
+ichki-ilova sarlavhalari daraxtda 0 ta. Fokuslangan regression suite:
+82/82 PASS. Brauzer va Functions TypeScript, lint, `npm run tekshir` PASS;
+governance PASS (faqat oldindan mavjud `CURRENT_STATE.md` main SHA warning).
+
 ## Keyingi amal
 
 Recovery branch push qilingach Cloudflare Preview avtomatik yig'iladi.

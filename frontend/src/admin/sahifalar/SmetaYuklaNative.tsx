@@ -6,6 +6,7 @@ import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import { readXlsx, f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
 import { smetaDaraxtniYoy, bolaklarga } from '../../lib/smeta-flatten';
 import { smetaPaketQatorlariniYoy, smetaPaketRejasiniTekshir, type SmetaPaketManbaReja } from '../../lib/smeta-package-import';
+import { lrvVaIchkiResniAjrat } from '../../lib/smeta-lrv-boundary';
 import {
   smetaPaketTasdiqImzosi, smetaPaketTanloviniTekshir, smetaVaraqniTahlilQil,
   type SmetaPackageSheetChoice, type SmetaSheetAnalysis,
@@ -48,6 +49,9 @@ type PaketVaraq = SmetaPackageSheetChoice & {
   lrvCols: F2ColumnConfig | null;
   resCols: F2ColumnConfig;
   analysis: SmetaSheetAnalysis;
+  /** LRV yakunidan keyingi ichki RES ilovasi bo'lsa, operatorga
+   * ko'rinadigan Excel satr chegarasi. Bu ilova ish daraxtiga kirmaydi. */
+  embeddedResBoundaryRow?: number;
   documentId?: number;
 };
 
@@ -760,8 +764,9 @@ export function resKategoriyaNomzodlariniOl(satrlar: ResNarxYozuv[]): ResKategor
  */
 export function tanlanganLrvVaraqlaridanDaraxtQur(
   manbalar: ReadonlyArray<{ name: string; rows: SheetGrid; cols: F2ColumnConfig }>,
+  options?: { harManbagaRz?: boolean },
 ): AktNode[] {
-  const koP = manbalar.length > 1;
+  const koP = options?.harManbagaRz || manbalar.length > 1;
   const namespace = (nodes: AktNode[], prefix: string): AktNode[] => nodes.map((node) => ({
     ...node,
     uid: `${prefix}::${node.uid}`,
@@ -769,7 +774,8 @@ export function tanlanganLrvVaraqlaridanDaraxtQur(
   }));
   const out: AktNode[] = [];
   for (const [index, manba] of manbalar.entries()) {
-    const parsed = f2FaylOqiCore(manba.rows, manba.cols);
+    const { lrvRows } = lrvVaIchkiResniAjrat(manba.rows);
+    const parsed = f2FaylOqiCore(lrvRows, manba.cols);
     if (!('tree' in parsed) || !parsed.tree.length) continue;
     const tree = namespace(parsed.tree, `varaq_${index}`);
     if (koP) {
@@ -1099,6 +1105,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
           const rows = safeSheetRows(sheet.rows);
           const analysis = smetaVaraqniTahlilQil(rows, sheetInfo.name);
           const parsed = f2FaylOqiCore(rows);
+          const lrvSplit = analysis.detectedRole === 'lrv' ? lrvVaIchkiResniAjrat(rows) : undefined;
           fresh.push({
             id: `sheet-${yangiOperationId()}`,
             workbookId,
@@ -1109,6 +1116,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             lrvCols: 'cols' in parsed ? parsed.cols : null,
             resCols: f2UstunAniqla(rows),
             analysis,
+            embeddedResBoundaryRow: lrvSplit?.boundaryRow,
             analysisKey: analysis.analysisKey,
             selectedRole: analysis.detectedRole === 'unknown' ? undefined : analysis.detectedRole,
           });
@@ -1189,11 +1197,23 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       const pricedTrees: Array<{ sourceKey: string; tree: AktNode[] }> = [];
       const categoryCandidates: ResKategoriyaNomzodi[] = [];
       for (const lrv of lrvs) {
-        const tree = tanlanganLrvVaraqlaridanDaraxtQur([{ name: lrv.sheetName, rows: lrv.rows, cols: lrv.lrvCols! }]);
+        const split = lrvVaIchkiResniAjrat(lrv.rows);
+        const tree = tanlanganLrvVaraqlaridanDaraxtQur([{
+          name: `${lrv.file.name} — ${lrv.sheetName}`,
+          rows: split.lrvRows,
+          cols: lrv.lrvCols!,
+        }], { harManbagaRz: true });
         if (!tree.length) throw new Error(`«${lrv.file.name} / ${lrv.sheetName}» LRV daraxti bo‘sh chiqdi.`);
-        const rows = tanlanganResManbalariniYig(reses
+        const tashqiResRows = tanlanganResManbalariniYig(reses
           .filter((res) => res.targetLrvSourceKey === lrv.sourceKey)
           .map((res) => ({ rows: res.rows, cols: res.resCols })));
+        /* LRV ostidagi RES ilovasi faqat alohida/aniq ulangan RES yo'q bo'lsa
+           narx manbasiga aylanadi. Ikkalasi birga bo'lsa ilova ikkinchi
+           marta narx yoki miqdor kiritmaydi. */
+        const ichkiResRows = split.embeddedResRows.length
+          ? tanlanganResManbalariniYig([{ rows: split.embeddedResRows, cols: lrv.resCols }])
+          : [];
+        const rows = tashqiResRows.length ? tashqiResRows : ichkiResRows;
         const idx = rows.length ? resNarxIndeksiQur(rows) : null;
         const applied = idx ? narxlarniDaraxtgaQoll(tree, idx).tree : tree;
         pricedTrees.push({ sourceKey: lrv.sourceKey, tree: applied });
@@ -1529,7 +1549,8 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
               <p className="text-[13px] font-semibold">Ko‘p faylli smeta paketi — 4 uchastka + EO kabi</p>
               <p className="mt-1 text-[11px] text-text-mute">
                 Avval har bir XLSX ichidagi har bir varaq tahlil qilinadi. So‘ng LRV, RES yoki e’tiborsiz rolini
-                tasdiqlaysiz. RES hech qachon boshqa LRVga avtomatik tarqatilmaydi; papka va fayl nomi faqat ko‘rinish uchun.
+                tasdiqlaysiz. Har LRV alohida RZ ildizi sifatida saqlanadi. RES hech qachon boshqa LRVga avtomatik
+                tarqatilmaydi; papka va fayl nomi faqat ko‘rinish uchun.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -1565,7 +1586,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                       const internal = ownLrvs.length > 0;
                       return <tr key={sheet.id} className="border-t border-border/40">
                         <td className="py-1 pr-2">{sheet.file.name}<br /><span className="text-text-mute">{sheet.sheetName}</span></td>
-                        <td className="py-1 pr-2"><span className="capitalize">{sheet.analysis.detectedRole}</span> · {sheet.analysis.confidence}<br /><span className="text-text-mute">{sheet.analysis.evidence[0] || 'signal yo‘q'}</span></td>
+                        <td className="py-1 pr-2"><span className="capitalize">{sheet.analysis.detectedRole}</span> · {sheet.analysis.confidence}<br /><span className="text-text-mute">{sheet.analysis.evidence[0] || 'signal yo‘q'}</span>{sheet.embeddedResBoundaryRow && <><br /><span className="text-warn">LRV yakunidan keyingi RES ilovasi {sheet.embeddedResBoundaryRow}-qatordan ajratiladi</span></>}</td>
                         <td className="py-1 pr-2"><select aria-label={`${sheet.file.name} ${sheet.sheetName} roli`} className="border rounded px-1" value={sheet.selectedRole || ''} disabled={paketBand}
                           onChange={e => paketVaraqniYangila(sheet.id, { selectedRole: (e.target.value || undefined) as PaketVaraq['selectedRole'], targetLrvSourceKey: e.target.value === 'res' ? sheet.targetLrvSourceKey : undefined })}>
                           <option value="">Tanlang</option><option value="lrv">LRV</option><option value="res">RES</option><option value="ignore">E’tiborsiz</option>
