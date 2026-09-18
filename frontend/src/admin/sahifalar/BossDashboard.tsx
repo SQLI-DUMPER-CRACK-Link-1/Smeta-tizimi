@@ -39,14 +39,14 @@ function Kpi({ Icon, nom, qiymat, izoh, ulangan = true }: {
   Icon: typeof Wallet; nom: string; qiymat: string; izoh?: string; ulangan?: boolean;
 }) {
   return (
-    <div className="lux-karta p-4 flex items-start gap-3">
-      <div className="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(14,165,233,0.1)]">
+    <div className="lux-karta p-5 flex items-start gap-4 group hover:border-sky-500/40 transition-all">
+      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/10 border border-sky-500/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(56,189,248,0.2)] group-hover:shadow-[0_0_25px_rgba(56,189,248,0.4)] transition-all">
         <Icon size={18} className="text-sky-400" />
       </div>
       <div className="min-w-0">
         <div className="text-[11px] text-zinc-400">{nom}</div>
         {ulangan
-          ? <div className="text-lg font-bold text-white truncate">{qiymat}</div>
+          ? <div className="text-[28px] leading-none font-black text-white truncate drop-shadow-[0_0_10px_rgba(255,255,255,0.4)] group-hover:drop-shadow-[0_0_15px_rgba(56,189,248,0.5)] transition-all mt-1">{qiymat}</div>
           : <div className="text-[12px] text-zinc-500 italic">Ma’lumot modeli hali ulanmagan</div>}
         {izoh && ulangan && <div className="text-[10px] text-zinc-500 mt-0.5">{izoh}</div>}
       </div>
@@ -64,7 +64,7 @@ export default function BossDashboard() {
     <div className="os-workbench min-h-0 overflow-auto p-6 text-white bg-[#060914]">
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 tracking-tight drop-shadow-[0_0_15px_rgba(34,211,238,0.4)] flex items-center gap-3">
             <TrendingUp className="text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.6)]" /> Rahbar paneli
           </h1>
           <p className="text-sm text-zinc-400 mt-1">
@@ -98,8 +98,8 @@ export default function BossDashboard() {
           </div>
 
           <div className="grid gap-5 lg:grid-cols-3">
-            <section className="lux-karta p-4 lg:col-span-2">
-              <h2 className="font-semibold flex items-center gap-2 mb-3"><FolderKanban size={16} className="text-sky-400" /> Loyihalar</h2>
+            <section className="lux-karta p-6 lg:col-span-2 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+              <h2 className="text-lg font-bold flex items-center gap-2 mb-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"><FolderKanban size={16} className="text-sky-400" /> Loyihalar</h2>
               {q.data.loyihalar.length === 0 && <div className="text-[12px] text-text-dim">Loyiha yo‘q.</div>}
               <table className="w-full text-[13px]">
                 <thead><tr className="text-text-dim text-left text-[11px]">
@@ -121,7 +121,7 @@ export default function BossDashboard() {
             </section>
 
             <section className="lux-karta p-4">
-              <h2 className="font-semibold flex items-center gap-2 mb-3">
+              <h2 className="text-lg font-bold flex items-center gap-2 mb-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
                 <AlertTriangle size={16} className="text-amber-400" /> Signallar / risklar
                 <span className="ml-auto text-[11px] text-zinc-500">{q.data.signal.ochiq_soni} ochiq · {q.data.signal.kritik_soni} kritik</span>
               </h2>
@@ -137,7 +137,7 @@ export default function BossDashboard() {
             </section>
 
             <section className="lux-karta p-4">
-              <h2 className="font-semibold flex items-center gap-2 mb-3"><HardDrive size={16} className="text-sky-400" /> Hujjat / storage holati</h2>
+              <h2 className="text-lg font-bold flex items-center gap-2 mb-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"><HardDrive size={16} className="text-sky-400" /> Hujjat / storage holati</h2>
               {q.data.storage.ulangan ? (
                 <dl className="text-[13px] space-y-1.5">
                   <div className="flex justify-between"><dt className="text-zinc-500">Hujjatlar</dt><dd>{q.data.storage.hujjat_soni}</dd></div>
@@ -147,8 +147,8 @@ export default function BossDashboard() {
               ) : <div className="text-[12px] text-zinc-500 italic">{q.data.storage.izoh || 'Ma’lumot modeli hali ulanmagan'}</div>}
             </section>
 
-            <section className="lux-karta p-4 lg:col-span-2">
-              <h2 className="font-semibold flex items-center gap-2 mb-3"><Layers size={16} className="text-zinc-400" /> Hali kanonik modelga ulanmagan modullar</h2>
+            <section className="lux-karta p-6 lg:col-span-2 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+              <h2 className="text-lg font-bold flex items-center gap-2 mb-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"><Layers size={16} className="text-zinc-400" /> Hali kanonik modelga ulanmagan modullar</h2>
               <div className="flex flex-wrap gap-2">
                 {q.data.ulanmagan_modullar.map((m) => (
                   <span key={m} className="px-2 py-1 rounded-md border border-white/10 bg-white/5 text-[11px] text-zinc-400">{m}</span>

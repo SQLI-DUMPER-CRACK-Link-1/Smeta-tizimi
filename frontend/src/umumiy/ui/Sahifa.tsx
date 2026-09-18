@@ -35,35 +35,36 @@ export function Sahifa<T = unknown>({
     ? <Holatlar soragan={soragan} bosh={bosh}>{(d) => (children as (data: T) => ReactNode)(d)}</Holatlar>
     : (children as ReactNode);
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
-      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col h-full min-h-0 min-w-0 overflow-hidden"
-    >
-      <header className="flex-shrink-0 px-6 pt-6 pb-4 flex items-start justify-between gap-4 flex-wrap">
-        <div className="min-w-0">
-          <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 tracking-wide drop-shadow-[0_0_10px_rgba(56,189,248,0.3)]">{sarlavha}</h2>
-          {tavsif && <p className="text-sm text-zinc-400 mt-2">{tavsif}</p>}
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {yangilangan != null && <MalumotYoshi vaqt={yangilangan} />}
-          {onYangila && (
-            <button
-              onClick={onYangila}
-              disabled={yangilanmoqda}
-              title="Yangilash"
-              className="lux-btn lux-btn-ghost h-9 px-3 inline-flex items-center gap-2 text-[13px] disabled:opacity-50"
-            >
-              <RefreshCw size={16} className={yangilanmoqda ? 'animate-spin text-sky-400' : 'text-zinc-400'} />
-              Yangilash
-            </button>
-          )}
-          {amallar}
-        </div>
-      </header>
-      <div className="flex-1 min-h-0 min-w-0 overflow-auto px-6 pb-6">{ichki}</div>
-    </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
+        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col h-full min-h-0 min-w-0 overflow-hidden relative"
+      >
+        <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-sky-500/10 to-transparent pointer-events-none opacity-50 z-0" />
+        <header className="flex-shrink-0 px-6 pt-8 pb-6 flex items-start justify-between gap-4 flex-wrap relative z-10 border-b border-white/5">
+          <div className="min-w-0">
+            <h2 className="text-[32px] md:text-[38px] font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 tracking-tight drop-shadow-[0_0_20px_rgba(56,189,248,0.5)] uppercase">{sarlavha}</h2>
+            {tavsif && <p className="text-sm font-medium text-sky-200/60 mt-2 max-w-2xl">{tavsif}</p>}
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {yangilangan != null && <MalumotYoshi vaqt={yangilangan} />}
+            {onYangila && (
+              <button
+                onClick={onYangila}
+                disabled={yangilanmoqda}
+                title="Yangilash"
+                className="lux-btn lux-btn-ghost h-10 px-4 inline-flex items-center gap-2 text-[13px] border border-white/10 hover:border-sky-400/30 shadow-[0_0_15px_rgba(0,0,0,0.5)] disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={yangilanmoqda ? 'animate-spin text-sky-400' : 'text-sky-400/80 drop-shadow-[0_0_3px_rgba(56,189,248,0.5)]'} />
+                <span className="font-bold text-white">Yangilash</span>
+              </button>
+            )}
+            {amallar}
+          </div>
+        </header>
+        <div className="flex-1 min-h-0 min-w-0 overflow-auto px-6 py-6 relative z-10">{ichki}</div>
+      </motion.div>
   );
 }
 
@@ -177,25 +178,26 @@ export function Jadval<T,>({
   onSatrBos?: (satr: T) => void;
 }) {
   return (
-    <div className="lux-karta overflow-hidden border-white/5">
+    <div className="lux-karta overflow-hidden border-white/10 shadow-[0_5px_30px_rgba(0,0,0,0.5)]">
       <div className="overflow-x-auto">
         <table className="w-full text-[13px] border-collapse">
           <thead>
-            <tr className="bg-black/40">
+            <tr className="bg-gradient-to-r from-black/80 to-black/60 relative">
+              <th className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-sky-500/50 to-transparent"></th>
               {ustunlar.map((u) => (
                 <th
                   key={u.kalit}
                   style={{ width: u.en, minWidth: u.en }}
-                  className={`sticky top-0 z-[1] bg-black/60 backdrop-blur-md px-4 py-3 font-bold
-                              text-[11px] uppercase tracking-wider text-zinc-400
-                              border-b border-white/5 ${u.raqam ? 'text-right' : 'text-left'}`}
+                  className={`sticky top-0 z-[1] px-5 py-4 font-bold
+                              text-[11px] uppercase tracking-wider text-sky-200/70
+                              ${u.raqam ? 'text-right' : 'text-left'}`}
                 >
                   {u.nom}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-white/5">
             {satrlar.map((s, i) => (
               <motion.tr
                 key={kalit(s, i)}
@@ -203,13 +205,16 @@ export function Jadval<T,>({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.02, 0.4), duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                 onClick={onSatrBos ? () => onSatrBos(s) : undefined}
-                className={`border-b border-white/5 last:border-0 transition-colors duration-[120ms]
-                            hover:bg-sky-500/[0.04] ${onSatrBos ? 'cursor-pointer' : ''}`}
+                className={`group relative transition-all ${
+                  onSatrBos ? 'cursor-pointer hover:bg-sky-500/[0.08] hover:shadow-[inset_0_1px_0_rgba(56,189,248,0.2),inset_0_-1px_0_rgba(56,189,248,0.2)]' : ''
+                }`}
               >
                 {ustunlar.map((u) => (
                   <td
                     key={u.kalit}
-                    className={`px-4 py-3 align-middle ${u.raqam ? 'text-right tabular-nums' : 'text-left'}`}
+                    className={`px-5 py-3 align-middle ${
+                      u.raqam ? 'text-right tabular-nums' : 'text-left'
+                    }`}
                   >
                     {u.chiz(s, i)}
                   </td>
@@ -223,17 +228,17 @@ export function Jadval<T,>({
   );
 }
 
-/* ---------- Kichik bo'laklar ---------- */
+/* ---------- Kartalar va nishonlar ---------- */
 
 export function Nishon({ matn, tur = 'neytral' }: { matn: string; tur?: 'ok' | 'warn' | 'danger' | 'neytral' }) {
   const uslub = {
-    ok: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(52,211,153,0.1)]',
-    warn: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_8px_rgba(251,191,36,0.1)]',
-    danger: 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_8px_rgba(248,113,113,0.1)]',
-    neytral: 'bg-white/5 text-zinc-400 border-white/10',
+    ok: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]',
+    warn: 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-[0_0_10px_rgba(251,191,36,0.2)]',
+    danger: 'bg-red-500/10 text-red-400 border-red-500/30 shadow-[0_0_10px_rgba(248,113,113,0.2)]',
+    neytral: 'bg-white/5 text-zinc-300 border-white/20',
   }[tur];
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-bold tracking-wide ${uslub}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md border text-[11px] font-bold tracking-widest uppercase ${uslub}`}>
       {matn}
     </span>
   );
@@ -241,10 +246,10 @@ export function Nishon({ matn, tur = 'neytral' }: { matn: string; tur?: 'ok' | '
 
 export function KpiKarta({ nom, qiymat, ost }: { nom: string; qiymat: ReactNode; ost?: ReactNode }) {
   return (
-    <div className="lux-karta p-5 border-white/5">
-      <p className="text-[11px] uppercase tracking-wider font-bold text-zinc-500">{nom}</p>
-      <p className="text-[26px] leading-8 font-extrabold text-white mt-2 tabular-nums drop-shadow-[0_0_6px_rgba(255,255,255,0.2)]">{qiymat}</p>
-      {ost && <p className="text-xs text-zinc-400 mt-2 tabular-nums">{ost}</p>}
+    <div className="lux-karta p-6 border-white/10 group hover:border-sky-500/40 transition-all">
+      <p className="text-[12px] uppercase tracking-widest font-bold text-sky-400/80 mb-2 group-hover:text-sky-400 transition-colors">{nom}</p>
+      <p className="text-[32px] leading-none font-black text-white tabular-nums drop-shadow-[0_0_10px_rgba(255,255,255,0.4)] group-hover:drop-shadow-[0_0_15px_rgba(56,189,248,0.5)] transition-all">{qiymat}</p>
+      {ost && <div className="text-[13px] text-zinc-400 mt-3 tabular-nums font-medium border-t border-white/5 pt-3">{ost}</div>}
     </div>
   );
 }

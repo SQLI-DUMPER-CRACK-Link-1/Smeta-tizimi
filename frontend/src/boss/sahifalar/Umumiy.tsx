@@ -157,7 +157,7 @@ export function GlassCard({ children, className = '', onClick }: { children: Rea
       ref={ref}
       onClick={handleClick}
       onMouseMove={handleMouseMove}
-      className={`relative bg-slate-800/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden group/card hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20 ${className} laser-border`}
+      className={`relative bg-gradient-to-br from-[#0f172a]/80 to-[#020617]/90 backdrop-blur-[24px] border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] rounded-2xl overflow-hidden group/card hover:shadow-[0_0_30px_rgba(56,189,248,0.15),_0_20px_60px_rgba(0,0,0,0.9)] hover:border-sky-400/30 ${className} laser-border`}
       style={{ ['--mx' as string]: '50%', ['--my' as string]: '50%' }}
     >
       <div

@@ -58,9 +58,17 @@
 
 body {
   background-color: var(--bg);
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(129, 140, 248, 0.08), transparent 25%),
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
+  background-position: 0 0, 0 0, -1px -1px, -1px -1px;
   color: var(--text);
   font-family: Inter, system-ui, sans-serif;
   margin: 0;
+  min-height: 100vh;
 }
 
 html, body, #root { height: 100%; min-height: 100%; }
@@ -356,52 +364,59 @@ html, body, #root { height: 100%; min-height: 100%; }
 /* Asosiy (Primary) — Ko'k neon tugma */
 .lux-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 0 14px; height: 32px;
-  font-size: 12.5px; font-weight: 600;
+  padding: 0 16px; height: 36px;
+  font-size: 13px; font-weight: 700;
   border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 .lux-btn-primary {
-  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
-  border-color: rgba(14, 165, 233, 0.5);
+  background: linear-gradient(135deg, rgba(14,165,233,0.9) 0%, rgba(37,99,235,0.9) 100%);
+  border-color: rgba(56, 189, 248, 0.6);
   color: #fff;
-  box-shadow: 0 0 12px rgba(14, 165, 233, 0.25);
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.4), inset 0 1px 1px rgba(255,255,255,0.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 .lux-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 0 20px rgba(14, 165, 233, 0.45);
+  background: linear-gradient(135deg, rgba(56,189,248,1) 0%, rgba(59,130,246,1) 100%);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.6), inset 0 1px 2px rgba(255,255,255,0.5);
   transform: translateY(-1px);
 }
-.lux-btn-primary:active:not(:disabled) { transform: translateY(0); }
-.lux-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.lux-btn-primary:active:not(:disabled) { transform: translateY(1px); }
+.lux-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; filter: grayscale(50%); }
 
 /* Ikkinchi darajali (Ghost) — Shaffof chegara bilan */
 .lux-btn-ghost {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
 }
 .lux-btn-ghost:hover:not(:disabled) {
-  background: rgba(14, 165, 233, 0.1);
-  border-color: rgba(14, 165, 233, 0.35);
+  background: rgba(14, 165, 233, 0.15);
+  border-color: rgba(56, 189, 248, 0.5);
   color: #fff;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.2), inset 0 1px 1px rgba(255,255,255,0.1);
 }
-.lux-btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+.lux-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Xavfli (Danger) — Qizil/sariq ogohlantirish */
 .lux-btn-warn {
-  background: rgba(251, 146, 60, 0.1);
-  border-color: rgba(251, 146, 60, 0.3);
-  color: #fb923c;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
 .lux-btn-warn:hover:not(:disabled) {
-  background: rgba(251, 146, 60, 0.2);
-  border-color: rgba(251, 146, 60, 0.5);
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(248, 113, 113, 0.6);
   color: #fff;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
 }
-.lux-btn-warn:disabled { opacity: 0.45; cursor: not-allowed; }
+.lux-btn-warn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Yuklanayotgan holat — pulse animatsiya */
 .lux-btn-loading {
@@ -437,11 +452,27 @@ html, body, #root { height: 100%; min-height: 100%; }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Karta — Chuqurroq ko'rinish (mavjud .karta ni o'zgartirmaydi) */
+/* Karta — Chuqurroq ko'rinish, HUD/Digital Twin uslubida */
 .lux-karta {
-  background: rgba(19, 23, 34, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+  background: linear-gradient(145deg, rgba(16, 20, 31, 0.95) 0%, rgba(6, 9, 15, 0.9) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-top: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.05), inset 0 0 20px rgba(56, 189, 248, 0.02);
+  position: relative;
+  transition: all 0.3s ease;
+}
+.lux-karta:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 10px 45px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.1), inset 0 0 25px rgba(56, 189, 248, 0.05);
+}
+.lux-karta::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent);
+  opacity: 0.6;
 }
 

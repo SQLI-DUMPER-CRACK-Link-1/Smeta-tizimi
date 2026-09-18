@@ -337,9 +337,9 @@ export function Holat() {
             hali hal qilinmagan muammosini chetlab o'tadi. Ataylab
             yopiq/ixtiyoriy — yuqoridagi mavjud oqimga hech narsa
             o'zgartirmaydi. */}
-        <details className="lux-karta p-4 mb-4 group flex-shrink-0">
-          <summary className="cursor-pointer list-none flex items-center justify-between">
-            <h3 className="text-[14px] font-semibold text-text">
+        <details className="lux-karta p-5 mb-5 group flex-shrink-0 border-white/10 hover:border-sky-500/30 transition-all">
+          <summary className="cursor-pointer list-none flex items-center justify-between outline-none">
+            <h3 className="text-[15px] font-bold text-sky-100 group-hover:text-sky-400 transition-colors drop-shadow-[0_0_8px_rgba(56,189,248,0.3)]">
               Qo'shimcha ish / Zamena / Resurs qo'shish — yangi (GAS'siz) rejim
             </h3>
             <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
@@ -354,9 +354,9 @@ export function Holat() {
             bo'yicha resurs vedomosti — butun smeta+F2'dan, `t2_qator_holat`
             asosida (yangi hisob-kitob yo'q, faqat jamlanma). Ataylab
             yopiq/ixtiyoriy, mavjud oqimga tegmaydi. */}
-        <details className="lux-karta p-4 mb-4 group flex-shrink-0">
-          <summary className="cursor-pointer list-none flex items-center justify-between">
-            <h3 className="text-[14px] font-semibold text-text">
+        <details className="lux-karta p-5 mb-5 group flex-shrink-0 border-white/10 hover:border-sky-500/30 transition-all">
+          <summary className="cursor-pointer list-none flex items-center justify-between outline-none">
+            <h3 className="text-[15px] font-bold text-sky-100 group-hover:text-sky-400 transition-colors drop-shadow-[0_0_8px_rgba(56,189,248,0.3)]">
               Resursiy vedomost (kategoriya bo'yicha) — yangi (GAS'siz) rejim
             </h3>
             <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
@@ -370,9 +370,9 @@ export function Holat() {
         {/* T2-PTO-DAILY-FINAL-CUTOVER-008 P0.9: narx nazorati — real backend
             (t2_price_control_v1) bilan ulangan, GAS-nom daraxtidan
             MUSTAQIL, boshqa ikkitasi bilan bir xil naqsh. */}
-        <details className="lux-karta p-4 mb-4 group flex-shrink-0">
-          <summary className="cursor-pointer list-none flex items-center justify-between">
-            <h3 className="text-[14px] font-semibold text-text">
+        <details className="lux-karta p-5 mb-5 group flex-shrink-0 border-white/10 hover:border-sky-500/30 transition-all">
+          <summary className="cursor-pointer list-none flex items-center justify-between outline-none">
+            <h3 className="text-[15px] font-bold text-sky-100 group-hover:text-sky-400 transition-colors drop-shadow-[0_0_8px_rgba(56,189,248,0.3)]">
               Narx nazorati (muzlagan / xavf ostida) — yangi (GAS'siz) rejim
             </h3>
             <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
@@ -389,9 +389,9 @@ export function Holat() {
             import uchun (SMETA_ALREADY_EXISTS obyektga ustidan yozishni
             rad etadi) — boshqa uchtasi bilan bir xil ochish-ixtiyoriy
             naqsh, mavjud oqimga tegmaydi. */}
-        <details className="lux-karta p-4 mb-4 group flex-shrink-0">
-          <summary className="cursor-pointer list-none flex items-center justify-between">
-            <h3 className="text-[14px] font-semibold text-text">
+        <details className="lux-karta p-5 mb-5 group flex-shrink-0 border-white/10 hover:border-sky-500/30 transition-all">
+          <summary className="cursor-pointer list-none flex items-center justify-between outline-none">
+            <h3 className="text-[15px] font-bold text-sky-100 group-hover:text-sky-400 transition-colors drop-shadow-[0_0_8px_rgba(56,189,248,0.3)]">
               Smeta yuklash (XLSX) — yangi (GAS'siz) rejim
             </h3>
             <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
