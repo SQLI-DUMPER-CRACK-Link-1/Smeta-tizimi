@@ -104,7 +104,7 @@ export default function Hujjatlar() {
               <Search size={13} className="absolute left-3 top-[11px] text-zinc-500" />
               <input value={qidiruv} onChange={(e) => setQidiruv(e.target.value)}
                 placeholder="Qidirish…"
-                className="pl-9 pr-3 py-2 rounded-xl bg-black/40 border border-white/10 text-[12px] text-white outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all w-56 placeholder:text-zinc-600" />
+                className="pl-9 pr-3 py-2 rounded-xl bg-[#0a0f1a]/80 backdrop-blur-md border border-white/10 text-[12px] text-white outline-none focus:border-sky-400 focus:bg-[#0f172a]/90 focus:shadow-[inset_0_2px_15px_rgba(0,0,0,0.8),_0_0_20px_rgba(56,189,248,0.2)] transition-all w-56 placeholder:text-zinc-600" />
             </div>
           </div>
 
@@ -284,7 +284,7 @@ export default function Hujjatlar() {
               <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Obyekt</label>
               <select value={obyekt}
                 onChange={(e) => { setObyekt(e.target.value); setOyNom(''); setNatija(null); }}
-                className="w-full h-9 px-3 rounded-xl bg-black/40 border border-white/10 text-[12px] text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all cursor-pointer appearance-none">
+                className="w-full h-10 px-4 rounded-xl bg-[#0a0f1a]/80 backdrop-blur-md border border-white/10 text-[13px] text-white focus:outline-none focus:border-sky-400 focus:bg-[#0f172a]/90 focus:shadow-[inset_0_2px_15px_rgba(0,0,0,0.8),_0_0_20px_rgba(56,189,248,0.2)] transition-all cursor-pointer appearance-none">
                 <option value="" className="bg-[#060914]">— tanlang —</option>
                 {obNomlari.map((o) => <option key={o} value={o} className="bg-[#060914] py-1">{o}</option>)}
               </select>
@@ -297,7 +297,7 @@ export default function Hujjatlar() {
                   Erkin matnda bitta harf farqi bo'sh hisobot berardi. */}
               <select value={oyNom} onChange={(e) => { setOyNom(e.target.value); setNatija(null); }}
                 disabled={!obyekt || lrv.isLoading}
-                className="w-full h-9 px-3 rounded-xl bg-black/40 border border-white/10 text-[12px] text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all cursor-pointer disabled:opacity-50 disabled:bg-black/20 appearance-none">
+                className="w-full h-10 px-4 rounded-xl bg-[#0a0f1a]/80 backdrop-blur-md border border-white/10 text-[13px] text-white focus:outline-none focus:border-sky-400 focus:bg-[#0f172a]/90 focus:shadow-[inset_0_2px_15px_rgba(0,0,0,0.8),_0_0_20px_rgba(56,189,248,0.2)] transition-all cursor-pointer disabled:opacity-50 disabled:bg-black/20 appearance-none">
                 <option value="" className="bg-[#060914]">
                   {!obyekt ? '— avval obyekt —'
                     : lrv.isLoading ? 'yuklanmoqda...'

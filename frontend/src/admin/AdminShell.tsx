@@ -274,7 +274,7 @@ function AdminShellInner() {
         onMouseEnter={() => setKengaygan(true)}
         onMouseLeave={() => setKengaygan(false)}
         aria-label="Asosiy navigatsiya"
-        className={`relative z-30 border-r border-white/5 bg-[#060914]/95 backdrop-blur-2xl flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out shadow-[10px_0_30px_rgba(0,0,0,0.5)] ${
+        className={`relative z-30 border-r border-sky-500/20 bg-gradient-to-br from-[#0f172a]/95 to-[#020617]/95 backdrop-blur-2xl flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out shadow-[10px_0_40px_rgba(0,0,0,0.8),_inset_-1px_0_10px_rgba(56,189,248,0.1)] ${
           mobilMenyuOchiq ? 'os-sidebar--open' : ''
         } ${
           mobilMenyuOchiq ? 'w-[min(19rem,88vw)]' : sidebarKengaygan ? 'w-64 xl:w-72' : 'w-[68px]'
@@ -308,7 +308,7 @@ function AdminShellInner() {
                         title={m.nom}
                         className={({ isActive }) =>
                           `flex items-center justify-center h-10 rounded-xl transition-all duration-[120ms] cursor-pointer ${
-                            isActive ? 'bg-sky-500/10 text-sky-400 shadow-[inset_2px_0_0_#38bdf8]' : 'text-zinc-500 hover:bg-white/5 hover:text-white'
+                            isActive ? 'bg-sky-500/20 text-sky-400 shadow-[inset_2px_0_0_#38bdf8,_inset_0_0_15px_rgba(56,189,248,0.15)] font-bold construction-tape-sky border border-sky-500/20' : 'text-zinc-500 hover:bg-sky-500/10 hover:text-sky-300 hover:border-sky-500/20 border border-transparent'
                           }`
                         }
                       >

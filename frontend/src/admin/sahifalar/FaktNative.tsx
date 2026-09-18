@@ -118,7 +118,7 @@ export function FaktNative() {
             <option value="">-- obyektni tanlang --</option>{obyektlar.map((o) => <option key={o.id} value={o.id}>{o.nom}</option>)}
           </select>
         </label>
-        {validId && <button onClick={() => navigate(`/admin/holat/${obyektId}?obyekt_nomi=${encodeURIComponent(obyektlar.find((item) => item.id === obyektId)?.nom || '')}`)} className="rounded-lg border border-border px-3 py-2 text-[12px]">LRVga qaytish</button>}
+        {validId && <button onClick={() => navigate(`/admin/holat/${obyektId}?obyekt_nomi=${encodeURIComponent(obyektlar.find((item) => item.id === obyektId)?.nom || '')}`)} className="lux-btn lux-btn-ghost">LRVga qaytish</button>}
         {validId && <fieldset className="flex items-center gap-1 rounded-lg border border-border p-1" aria-label="Fakt yozish usuli">
           <legend className="sr-only">Fakt yozish usuli</legend>
           <button type="button" aria-pressed={yozishUsuli === 'qoshish'} onClick={() => setYozishUsuli('qoshish')} className={`rounded-md px-3 py-1.5 text-[12px] ${yozishUsuli === 'qoshish' ? 'bg-accent text-white' : 'text-text-dim'}`}>Ustiga qo‘shish</button>
@@ -126,14 +126,14 @@ export function FaktNative() {
         </fieldset>}
       </section>
       {!validId && <section className="karta p-4 text-text-dim">Avval kanonik obyektni tanlang.</section>}
-      {error && validId && <section role="alert" className="karta flex flex-wrap items-center gap-3 border-danger/40 bg-danger/5 p-4 text-[13px] text-danger"><AlertTriangle size={16} /><span className="flex-1">{error}</span><button type="button" onClick={() => void yuklash()} className="rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-semibold hover:bg-danger/10">Qayta urinib ko‘rish</button></section>}
-      {loading && <div className="skel min-h-[250px] flex-1 rounded-xl" />}
-      {validId && !loading && !error && <section className="karta min-h-0 flex-1 overflow-auto">
+      {error && validId && <section role="alert" className="lux-karta flex flex-wrap items-center gap-3 border-red-500/50 bg-[#7f1d1d]/40 p-4 text-[13px] text-red-400 construction-tape-danger"><AlertTriangle size={16} /><span className="flex-1">{error}</span><button type="button" onClick={() => void yuklash()} className="lux-btn lux-btn-ghost !text-red-400 !border-red-500/50">Qayta urinib ko‘rish</button></section>}
+      {loading && <div className="lux-karta min-h-[250px] flex-1 rounded-xl animate-pulse" />}
+      {validId && !loading && !error && <section className="lux-karta min-h-0 flex-1 overflow-auto">
         <table className="w-full text-left text-[12px]"><thead className="sticky top-0 bg-surface-2 text-text-dim"><tr><th className="p-3">Kod / ish</th><th>Birlik</th><th>Fakt jami</th><th>F2 mumkin</th><th className="p-3">{yozishUsuli === 'jami' ? 'Yangi Fakt jami' : 'Bugun qo‘shish'}</th></tr></thead>
           <tbody>{qatorlar.filter((q) => q.tur !== 'rz').length === 0 ? <tr><td colSpan={5} className="p-8 text-center text-text-dim">Fakt kiritish uchun kanonik qator yo‘q.</td></tr> : qatorlar.filter((q) => q.tur !== 'rz').map((q) => <tr key={q.qator_id} className="border-t border-border/60"><td className="p-3"><div className="font-medium">{q.kod}</div>{q.nom}</td><td>{q.birlik}</td><td><FmtN val={q.fakt_hajm} /></td><td><FmtN val={q.f2_mumkin_hajm} /></td><td className="p-3"><input aria-label={`Fakt hajmi: ${q.kod || q.nom || 'ish / resurs'}`} type="number" value={qiymatlar[q.qator_id] ?? ''} onChange={(e) => setQiymatlar((old) => ({ ...old, [q.qator_id]: e.target.value }))} className="w-28 rounded border border-border bg-bg px-2 py-1 text-right" /></td></tr>)}</tbody>
         </table>
       </section>}
-      {validId && <section className="flex items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> {yozishUsuli === 'jami' ? 'Jami tahririda server eskirgan qiymatni conflict sifatida rad etadi.' : 'Limit oshishi serverda ogohlantiriladi'}; F2 hech qachon bu formadan yozilmaydi.</p><button onClick={() => void saqlash()} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Saqlanmoqda…' : 'Faktni saqlash'}</button></section>}
+      {validId && <section className="flex items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> {yozishUsuli === 'jami' ? 'Jami tahririda server eskirgan qiymatni conflict sifatida rad etadi.' : 'Limit oshishi serverda ogohlantiriladi'}; F2 hech qachon bu formadan yozilmaydi.</p><button onClick={() => void saqlash()} disabled={saving} className="lux-btn lux-btn-primary"><Save size={16} />{saving ? 'Saqlanmoqda…' : 'Faktni saqlash'}</button></section>}
     </div>
   </Sahifa>;
 }

@@ -504,16 +504,16 @@ function NativeSession({ companyId }: { companyId: number }) {
   return <section className="w-full space-y-4 p-3 sm:p-4">
     <h1 className="text-lg font-semibold sm:text-xl">F2 import — yangi rejim</h1>
     <p role="status" className="text-[13px] text-text-dim">{phase}</p>
-    {resumable && !source.length && <p className="karta flex flex-wrap items-center gap-2 p-3 text-[13px]">
+    {resumable && !source.length && <p className="lux-karta flex flex-wrap items-center gap-2 p-3 text-[13px]">
       <span>Tugallanmagan import bor ({resumable.matched}/{resumable.total ?? '?'} qator moslashtirilgan, holat: {resumable.status}, {resumable.updatedAt ? new Date(resumable.updatedAt).toLocaleString() : ''}).</span>
-      <button onClick={() => void (resumable.status === 'running' || resumable.status === 'review' ? recoverAndResume(resumable) : resume(resumable))} disabled={busy} title={resumable.status === 'running' || resumable.status === 'review' ? 'Stuck job avval xavfsiz pauzaga olinadi' : undefined} className="tugma">Davom ettirish</button>
+      <button onClick={() => void (resumable.status === 'running' || resumable.status === 'review' ? recoverAndResume(resumable) : resume(resumable))} disabled={busy} title={resumable.status === 'running' || resumable.status === 'review' ? 'Stuck job avval xavfsiz pauzaga olinadi' : undefined} className="lux-btn lux-btn-primary">Davom ettirish</button>
     </p>}
     {draftXato && <p role="alert" className="text-warn">{draftXato}</p>}
     {/* Bu forma avval umuman stilsiz edi (yalang'och <label>+<input>):
         tor ekranda yorliq va maydon bir qatorga tiqilib, o'qib bo'lmasdi.
         Endi loyihaning o'z `.karta`/`.input` tizimi va ekranga qarab
         1→2→4 ustunga bo'linadigan panjara. */}
-    <fieldset disabled={busy || done} className="karta grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-4">
+    <fieldset disabled={busy || done} className="lux-karta grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-4">
       <label className="block text-[12px] font-medium text-text">Obyekt
         <select aria-label="Obyekt" value={objectId} onChange={e => {
           reset(); setObjectId(e.target.value); workspace.setObjectId(e.target.value ? Number(e.target.value) : null); rawFile.current = null;
@@ -537,7 +537,7 @@ function NativeSession({ companyId }: { companyId: number }) {
         </select>
       </label>}
     </fieldset>
-    {cols && <fieldset disabled={busy || done} className="karta p-3">
+    {cols && <fieldset disabled={busy || done} className="lux-karta p-3">
       <legend className="px-1 text-[12px] font-medium text-text-dim">Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>
       <div className="mt-2 flex flex-wrap items-end gap-2 sm:gap-3">
         {(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => (
@@ -546,7 +546,7 @@ function NativeSession({ companyId }: { companyId: number }) {
               value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} />
           </label>
         ))}
-        <button onClick={() => void match()} disabled={!objectId || !month} className="tugma tugma-asosiy ml-auto">Moslashtirish</button>
+        <button onClick={() => void match()} disabled={!objectId || !month} className="lux-btn lux-btn-primary tugma-asosiy ml-auto">Moslashtirish</button>
       </div>
     </fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}
@@ -554,7 +554,7 @@ function NativeSession({ companyId }: { companyId: number }) {
     {/* Fayl tuzilishi — moslashtirishdan OLDIN. Ustunlar noto'g'ri
         o'qilgan bo'lsa bu yerda darhol ko'rinadi (bo'lim/ish/resurs soni
         va daraxtning o'zi), natijani kutib o'tirmasdan. */}
-    {faylTuzilishi && source.length === 0 && <section className="karta p-3" aria-label="Fayl tuzilishi">
+    {faylTuzilishi && source.length === 0 && <section className="lux-karta p-3" aria-label="Fayl tuzilishi">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
         <span className="font-semibold text-text">Fayl tuzilishi</span>
         <span className="text-text-dim">Bo‘lim: <b className="text-text tabular-nums">{faylTuzilishi.bolim}</b></span>
@@ -581,7 +581,7 @@ function NativeSession({ companyId }: { companyId: number }) {
           ['Arifmetik farq', xulosa.arifmetik, xulosa.arifmetik ? 'text-warn' : 'text-text'],
           ['Narxsiz — faqat hajm yoziladi', xulosa.qiymatsiz, xulosa.qiymatsiz ? 'text-warn' : 'text-text'],
         ] as const).map(([label, value, tone]) => (
-          <div key={label} className="karta px-3 py-2">
+          <div key={label} className="lux-karta px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-mute">{label}</p>
             <p className={`mt-1 text-lg font-semibold tabular-nums ${tone}`}>{value}</p>
           </div>
@@ -598,7 +598,7 @@ function NativeSession({ companyId }: { companyId: number }) {
       <F2PreapprovalAudit aktBarglar={source} getSmetaId={uid => mapping.get(uid)} />
       {payload.error && <p role="alert">{payload.error}</p>}
       <label className="block"><input type="checkbox" checked={reviewed} disabled={busy || done} onChange={e => setReviewed(e.target.checked)} /> Varaq, davr va moslashtirish natijasini tekshirdim</label>
-      <button className="karta p-3" disabled={busy || done || !reviewed || !!payload.error} onClick={() => void save()}>F2 qoralamasini saqlash</button>
+      <button className="lux-karta p-3" disabled={busy || done || !reviewed || !!payload.error} onClick={() => void save()}>F2 qoralamasini saqlash</button>
     </>}
   </section>;
 }

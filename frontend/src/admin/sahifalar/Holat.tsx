@@ -293,7 +293,7 @@ export function Holat() {
         
         <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-6 flex-shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/admin/obyektlar')} className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 transition-colors backdrop-blur-md">
+            <button onClick={() => navigate('/admin/obyektlar')} className="w-12 h-12 rounded-2xl lux-btn-ghost flex items-center justify-center">
               <ArrowLeft size={24} />
             </button>
             <div>
@@ -425,7 +425,7 @@ export function Holat() {
           <div className="mb-6 flex-shrink-0">
             <button 
               onClick={() => setShowNakrutka(!showNakrutka)}
-              className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors backdrop-blur-md text-sm font-bold text-slate-300"
+              className="w-full flex items-center justify-between p-3 lux-btn-ghost rounded-xl"
             >
               <div className="flex items-center gap-2 text-cyan-400">
                 <TrendingUp size={18} />
@@ -497,8 +497,8 @@ export function Holat() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setEdits({})} className="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white bg-white/5 border border-white/10 rounded-lg transition-colors">Bekor qilish</button>
-                  <button onClick={() => setIsSaveModalOpen(true)} className="px-6 py-2 text-sm font-bold text-black bg-yellow-500 hover:bg-yellow-400 rounded-lg shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all active:scale-95 flex items-center gap-2">
+                  <button onClick={() => setEdits({})} className="lux-btn lux-btn-ghost">Bekor qilish</button>
+                  <button onClick={() => setIsSaveModalOpen(true)} className="lux-btn lux-btn-primary !bg-gradient-to-b !from-yellow-400 !to-yellow-600 !border-yellow-400 !text-black !shadow-[0_0_20px_rgba(234,179,8,0.5),_inset_0_2px_5px_rgba(255,255,255,0.4)]">
                     <Save size={16} /> Saqlash va Yopish
                   </button>
                 </div>
