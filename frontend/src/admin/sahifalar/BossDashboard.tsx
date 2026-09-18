@@ -39,16 +39,16 @@ function Kpi({ Icon, nom, qiymat, izoh, ulangan = true }: {
   Icon: typeof Wallet; nom: string; qiymat: string; izoh?: string; ulangan?: boolean;
 }) {
   return (
-    <div className="karta p-4 flex items-start gap-3">
-      <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-        <Icon size={18} className="text-accent" />
+    <div className="lux-karta p-4 flex items-start gap-3">
+      <div className="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(14,165,233,0.1)]">
+        <Icon size={18} className="text-sky-400" />
       </div>
       <div className="min-w-0">
-        <div className="text-[11px] text-text-dim">{nom}</div>
+        <div className="text-[11px] text-zinc-400">{nom}</div>
         {ulangan
-          ? <div className="text-lg font-bold text-text truncate">{qiymat}</div>
-          : <div className="text-[12px] text-text-mute italic">Ma’lumot modeli hali ulanmagan</div>}
-        {izoh && ulangan && <div className="text-[10px] text-text-mute mt-0.5">{izoh}</div>}
+          ? <div className="text-lg font-bold text-white truncate">{qiymat}</div>
+          : <div className="text-[12px] text-zinc-500 italic">Ma’lumot modeli hali ulanmagan</div>}
+        {izoh && ulangan && <div className="text-[10px] text-zinc-500 mt-0.5">{izoh}</div>}
       </div>
     </div>
   );
@@ -61,26 +61,26 @@ export default function BossDashboard() {
   if (!joriy?.id) return <KompaniyaKerak nima="Rahbar paneli" />;
 
   return (
-    <div className="os-workbench min-h-0 overflow-auto p-6 text-text">
+    <div className="os-workbench min-h-0 overflow-auto p-6 text-white bg-[#060914]">
       <div className="flex items-start justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <TrendingUp className="text-accent" /> Rahbar paneli
+            <TrendingUp className="text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.6)]" /> Rahbar paneli
           </h1>
-          <p className="text-sm text-text-dim mt-1">
+          <p className="text-sm text-zinc-400 mt-1">
             {joriy?.nom ? joriy.nom + ' — ' : ''}kanonik ma’lumot (Supabase). Drive/Sheets/GAS bog‘liqligi yo‘q.
-            {q.data && <span className="text-text-mute"> · {new Date(q.data.generated_at).toLocaleString('uz-UZ')}</span>}
+            {q.data && <span className="text-zinc-500"> · {new Date(q.data.generated_at).toLocaleString('uz-UZ')}</span>}
           </p>
         </div>
-        <button onClick={() => q.refetch()} className="bg-surface border border-border hover:bg-surface-2 px-4 py-2 flex items-center gap-2 rounded-lg text-sm font-medium">
-          <RefreshCw size={14} className={q.isFetching ? 'animate-spin text-accent' : ''} /> Yangilash
+        <button onClick={() => q.refetch()} className="lux-btn lux-btn-ghost px-4 py-2 flex items-center gap-2">
+          <RefreshCw size={14} className={q.isFetching ? 'animate-spin text-sky-400' : 'text-zinc-400'} /> Yangilash
         </button>
       </div>
 
       {q.isLoading && <Skelet qatorlar={6} />}
       {q.isError && (
-        <div role="alert" className="rounded-lg border border-danger/25 bg-danger/5 px-4 py-3 text-[13px] text-danger flex items-center gap-3">
-          <AlertTriangle size={16} /> <span className="flex-1">Rahbar paneli yuklanmadi. Birozdan so‘ng qayta urinib ko‘ring.</span><button type="button" onClick={() => void q.refetch()} className="rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-semibold hover:bg-danger/10">Qayta urinish</button>
+        <div role="alert" className="rounded-lg border border-red-500/25 bg-red-500/5 px-4 py-3 text-[13px] text-red-400 flex items-center gap-3">
+          <AlertTriangle size={16} /> <span className="flex-1">Rahbar paneli yuklanmadi. Birozdan so‘ng qayta urinib ko‘ring.</span><button type="button" onClick={() => void q.refetch()} className="lux-btn lux-btn-warn !py-1 !text-xs">Qayta urinish</button>
         </div>
       )}
 
@@ -98,8 +98,8 @@ export default function BossDashboard() {
           </div>
 
           <div className="grid gap-5 lg:grid-cols-3">
-            <section className="karta p-4 lg:col-span-2">
-              <h2 className="font-semibold flex items-center gap-2 mb-3"><FolderKanban size={16} className="text-accent" /> Loyihalar</h2>
+            <section className="lux-karta p-4 lg:col-span-2">
+              <h2 className="font-semibold flex items-center gap-2 mb-3"><FolderKanban size={16} className="text-sky-400" /> Loyihalar</h2>
               {q.data.loyihalar.length === 0 && <div className="text-[12px] text-text-dim">Loyiha yo‘q.</div>}
               <table className="w-full text-[13px]">
                 <thead><tr className="text-text-dim text-left text-[11px]">
@@ -120,10 +120,10 @@ export default function BossDashboard() {
               </table>
             </section>
 
-            <section className="karta p-4">
+            <section className="lux-karta p-4">
               <h2 className="font-semibold flex items-center gap-2 mb-3">
                 <AlertTriangle size={16} className="text-amber-400" /> Signallar / risklar
-                <span className="ml-auto text-[11px] text-text-dim">{q.data.signal.ochiq_soni} ochiq · {q.data.signal.kritik_soni} kritik</span>
+                <span className="ml-auto text-[11px] text-zinc-500">{q.data.signal.ochiq_soni} ochiq · {q.data.signal.kritik_soni} kritik</span>
               </h2>
               <ul className="space-y-2 max-h-[420px] overflow-y-auto">
                 {q.data.signal.royxat.map((s) => (
@@ -132,29 +132,29 @@ export default function BossDashboard() {
                     <div className="text-[10px] opacity-70">{signalEntityLabel(s.entity_type)}{s.due_at ? ' · muddat ' + new Date(s.due_at).toLocaleDateString('uz-UZ') : ''}</div>
                   </li>
                 ))}
-                {q.data.signal.royxat.length === 0 && <li className="text-[12px] text-text-dim">Ochiq signal yo‘q.</li>}
+                {q.data.signal.royxat.length === 0 && <li className="text-[12px] text-zinc-500">Ochiq signal yo‘q.</li>}
               </ul>
             </section>
 
-            <section className="karta p-4">
-              <h2 className="font-semibold flex items-center gap-2 mb-3"><HardDrive size={16} className="text-accent" /> Hujjat / storage holati</h2>
+            <section className="lux-karta p-4">
+              <h2 className="font-semibold flex items-center gap-2 mb-3"><HardDrive size={16} className="text-sky-400" /> Hujjat / storage holati</h2>
               {q.data.storage.ulangan ? (
                 <dl className="text-[13px] space-y-1.5">
-                  <div className="flex justify-between"><dt className="text-text-dim">Hujjatlar</dt><dd>{q.data.storage.hujjat_soni}</dd></div>
-                  <div className="flex justify-between"><dt className="text-text-dim">Kanonik (R2) saqlangan</dt><dd>{q.data.storage.canonical_stored}</dd></div>
-                  <div className="flex justify-between"><dt className="text-text-dim">Drive replika xato</dt><dd className={q.data.storage.drive_replica_failed ? 'text-rose-300' : ''}>{q.data.storage.drive_replica_failed}</dd></div>
+                  <div className="flex justify-between"><dt className="text-zinc-500">Hujjatlar</dt><dd>{q.data.storage.hujjat_soni}</dd></div>
+                  <div className="flex justify-between"><dt className="text-zinc-500">Kanonik (R2) saqlangan</dt><dd>{q.data.storage.canonical_stored}</dd></div>
+                  <div className="flex justify-between"><dt className="text-zinc-500">Drive replika xato</dt><dd className={q.data.storage.drive_replica_failed ? 'text-rose-400' : ''}>{q.data.storage.drive_replica_failed}</dd></div>
                 </dl>
-              ) : <div className="text-[12px] text-text-mute italic">{q.data.storage.izoh || 'Ma’lumot modeli hali ulanmagan'}</div>}
+              ) : <div className="text-[12px] text-zinc-500 italic">{q.data.storage.izoh || 'Ma’lumot modeli hali ulanmagan'}</div>}
             </section>
 
-            <section className="karta p-4 lg:col-span-2">
-              <h2 className="font-semibold flex items-center gap-2 mb-3"><Layers size={16} className="text-text-dim" /> Hali kanonik modelga ulanmagan modullar</h2>
+            <section className="lux-karta p-4 lg:col-span-2">
+              <h2 className="font-semibold flex items-center gap-2 mb-3"><Layers size={16} className="text-zinc-400" /> Hali kanonik modelga ulanmagan modullar</h2>
               <div className="flex flex-wrap gap-2">
                 {q.data.ulanmagan_modullar.map((m) => (
-                  <span key={m} className="px-2 py-1 rounded-md border border-border text-[11px] text-text-mute">{m}</span>
+                  <span key={m} className="px-2 py-1 rounded-md border border-white/10 bg-white/5 text-[11px] text-zinc-400">{m}</span>
                 ))}
               </div>
-              <p className="text-[10px] text-text-mute mt-2">Bu bo‘limlar uchun soxta raqam ko‘rsatilmaydi — kanonik model tayyor bo‘lgach ulanadi (roadmap: docs/architecture/CONSTRUCTION_OS_MASTER_ROADMAP.md).</p>
+              <p className="text-[10px] text-zinc-500 mt-2">Bu bo‘limlar uchun soxta raqam ko‘rsatilmaydi — kanonik model tayyor bo‘lgach ulanadi (roadmap: docs/architecture/CONSTRUCTION_OS_MASTER_ROADMAP.md).</p>
             </section>
           </div>
         </>

@@ -172,41 +172,41 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
   };
 
   return (
-    <div className={`relative flex flex-col h-full bg-surface border border-border rounded-xl shadow-sm overflow-hidden ${density === 'compact' ? 'text-xs' : 'text-sm'}`}>
-      <div className="sticky top-0 z-30 flex-shrink-0 bg-surface-2/95 backdrop-blur-md">
-        <div className="border-b border-border px-4 py-2">
-          <div className="flex flex-wrap items-center gap-2">
+    <div className={`relative flex flex-col h-full bg-[#060914] border border-white/[0.06] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] overflow-hidden ${density === 'compact' ? 'text-xs' : 'text-sm'}`}>
+      <div className="sticky top-0 z-30 flex-shrink-0 bg-gradient-to-r from-black/60 via-slate-900/40 to-black/60 backdrop-blur-xl border-b border-white/[0.06]">
+        <div className="px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
-          <Search size={14} className="absolute left-2 top-2 text-text-mute" />
+          <Search size={14} className="absolute left-2.5 top-2.5 text-zinc-500" />
           <input
             type="text"
             value={qidiruv}
             onChange={(e) => setQidiruv(e.target.value)}
             placeholder="Qidiruv..."
             aria-label="Daraxtdan qidirish"
-            className="bg-bg border border-border rounded-md pl-7 pr-7 py-1.5 text-sm w-64 focus:outline-none focus:border-accent"
+            className="bg-black/40 border border-white/10 rounded-lg pl-8 pr-8 py-2 text-sm w-64 focus:outline-none focus:border-sky-500/50 text-white placeholder:text-zinc-600 transition-colors"
           />
-          {qidiruv && <button onClick={() => setQidiruv('')} className="absolute right-2 top-2 text-text-mute"><X size={14}/></button>}
+          {qidiruv && <button onClick={() => setQidiruv('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-white transition-colors"><X size={14}/></button>}
           </div>
           {!!qidiruv.trim() && (
-            <span className="text-[11px] text-text-mute whitespace-nowrap">
+            <span className="text-[11px] text-zinc-400 whitespace-nowrap">
               {flatNodes.length} qator
               <button onClick={() => setQidiruv('')}
-                className="ml-2 text-accent hover:underline">tozalash</button>
+                className="ml-2 text-sky-400 hover:underline">tozalash</button>
             </span>
           )}
           </div>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-          <select value={preset} onChange={(e) => setPreset(e.target.value as any)} className="px-2 py-1.5 bg-surface border border-border rounded-md" aria-label="Ustun preset">
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+          <select value={preset} onChange={(e) => setPreset(e.target.value as any)} className="px-3 py-1.5 bg-black/40 border border-white/10 rounded-lg text-white text-xs outline-none focus:border-sky-500/50" aria-label="Ustun preset">
             <option value="ASOSIY">Asosiy</option><option value="F2">F2</option><option value="NARX">Narx nazorati</option><option value="TOLIQ">To'liq</option>
           </select>
-          <button onClick={() => changeDensity(density === 'compact' ? 'comfort' : 'compact')} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">{density === 'compact' ? 'Comfort' : 'Compact'}</button>
-          <button onClick={expandAll} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">Hammasini yoyish</button>
-          <button onClick={collapseAll} className="px-3 py-1.5 text-xs font-medium bg-surface hover:bg-surface-2 border border-border rounded-md">Yig'ish</button>
+          <button onClick={() => changeDensity(density === 'compact' ? 'comfort' : 'compact')} className="lux-btn lux-btn-ghost text-xs">{density === 'compact' ? 'Comfort' : 'Compact'}</button>
+          <button onClick={expandAll} className="lux-btn lux-btn-ghost text-xs">Hammasini yoyish</button>
+          <button onClick={collapseAll} className="lux-btn lux-btn-ghost text-xs">Yig'ish</button>
           </div>
-          <div className="mt-2 flex gap-1 overflow-x-auto">
-          {([['all','Hammasi'],['f2','F2 olish mumkin'],['qosh','Qo\'shimcha'],['zamena','Zamena'],['bl','Faqat BL'],['mat','Materiallar']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>)}
-          {priceControlReady ? ([['frozen','Muzlagan'],['risk','Xavf ostida'],['basis','Protokolsiz']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-[11px] ${quickFilter === id ? 'bg-accent text-white' : 'bg-surface text-text-dim border border-border'}`}>{label}</button>) : <span className="px-2 py-1 text-[11px] text-text-mute">Narx nazorati ma'lumoti ulanmagan</span>}
+          <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+          {([['all','Hammasi'],['f2','F2 olish mumkin'],['qosh','Qo\'shimcha'],['zamena','Zamena'],['bl','Faqat BL'],['mat','Materiallar']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`lux-btn whitespace-nowrap !rounded-full px-3 py-1 text-[11px] ${quickFilter === id ? 'lux-btn-primary' : 'lux-btn-ghost'}`}>{label}</button>)}
+          {priceControlReady ? ([['frozen','Muzlagan'],['risk','Xavf ostida'],['basis','Protokolsiz']] as const).map(([id,label]) => <button key={id} onClick={() => setQuickFilter(id)} className={`lux-btn whitespace-nowrap !rounded-full px-3 py-1 text-[11px] ${quickFilter === id ? 'lux-btn-primary' : 'lux-btn-ghost'}`}>{label}</button>) : <span className="px-2 py-1 text-[11px] text-zinc-600">Narx nazorati ma'lumoti ulanmagan</span>}
           </div>
         </div>
 
@@ -297,7 +297,7 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
                   if (onNodeDrop) onNodeDrop(draggedNode, node);
                   setDraggedNode(null);
                 }}
-                className={`absolute top-0 left-0 min-w-[930px] w-full flex items-center border-b border-border/50 hover:bg-surface-2/30 transition-colors text-sm group ${isEdited ? 'shadow-[inset_3px_0_0_var(--warn)] bg-warn/5' : ''} ${selectedKey === key ? 'bg-accent/10' : ''}`}
+                className={`absolute top-0 left-0 min-w-[930px] w-full flex items-center border-b border-white/[0.06] hover:bg-sky-500/[0.04] transition-colors text-sm group ${isEdited ? 'shadow-[inset_3px_0_0_var(--warn)] bg-warn/5' : ''} ${selectedKey === key ? 'bg-sky-500/10' : ''}`}
                 style={{
                   height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start}px)`,
