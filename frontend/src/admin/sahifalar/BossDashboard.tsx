@@ -39,7 +39,7 @@ function Kpi({ Icon, nom, qiymat, izoh, ulangan = true }: {
   Icon: typeof Wallet; nom: string; qiymat: string; izoh?: string; ulangan?: boolean;
 }) {
   return (
-    <div className="lux-karta p-5 flex items-start gap-4 group hover:border-sky-500/40 transition-all">
+    <div className="lux-karta p-5 flex items-start gap-4 group hover:border-sky-500/40 transition-all relative overflow-hidden">`n      <div className="absolute top-0 left-0 right-0 h-1 construction-tape-sky opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/10 border border-sky-500/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(56,189,248,0.2)] group-hover:shadow-[0_0_25px_rgba(56,189,248,0.4)] transition-all">
         <Icon size={18} className="text-sky-400" />
       </div>

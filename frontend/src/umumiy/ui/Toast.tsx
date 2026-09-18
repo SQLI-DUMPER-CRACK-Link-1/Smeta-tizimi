@@ -30,9 +30,9 @@ export const toast = (
 };
 
 const USLUB: Record<ToastType, string> = {
-  ok: 'border-ok text-ok',
-  warn: 'border-warn text-warn',
-  danger: 'border-danger text-danger',
+  ok: 'border-emerald-500/50 text-emerald-400 bg-[#064e3b]/40 shadow-[0_5px_20px_rgba(16,185,129,0.3)]',
+  warn: 'border-amber-500/50 text-amber-400 shadow-[0_5px_20px_rgba(245,158,11,0.3)] construction-tape-warn',
+  danger: 'border-red-500/50 text-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.3)] construction-tape-danger',
 };
 
 export function ToastContainer() {
@@ -40,12 +40,10 @@ export function ToastContainer() {
 
   useEffect(() => {
     toastListener = (t) => {
-      // Millisecond collision prevent
-      const id = Date.now() + Math.random();
+      const id = Date.now();
       setToasts((prev) => {
         const next = [...prev, { ...t, id }];
-        // Maksimal 5 ta toast qolishi kerak (eskilari o'chiriladi)
-        if (next.length > 5) return next.slice(next.length - 5);
+        if (next.length > 3) next.shift(); // 06 - 3 tadan ko'p xabar yo'q
         return next;
       });
       setTimeout(() => {
@@ -58,15 +56,16 @@ export function ToastContainer() {
   }, []);
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3">
       <AnimatePresence>
         {toasts.map((t) => (
           <motion.div
             key={t.id}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border bg-surface-2 ${USLUB[t.type]}`}
+            initial={{ opacity: 0, x: 50, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9, filter: 'blur(5px)' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className={`flex items-center gap-4 px-5 py-4 rounded-xl border backdrop-blur-xl ${USLUB[t.type]}`}
           >
             {t.type === 'ok' ? <CheckCircle2 size={20} />
               : t.type === 'warn' ? <AlertTriangle size={20} />

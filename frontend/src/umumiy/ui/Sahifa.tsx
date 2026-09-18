@@ -90,15 +90,19 @@ export function MalumotYoshi({ vaqt }: { vaqt: number }) {
 /** Skeleton — spinner EMAS (06 §6). Haqiqiy tarkib shaklida. */
 export function Skelet({ qatorlar = 8 }: { qatorlar?: number }) {
   return (
-    <div className="lux-karta overflow-hidden border-white/5">
-      <div className="h-11 border-b border-white/5 bg-white/[0.02]" />
-      {Array.from({ length: qatorlar }).map((_, i) => (
-        <div key={i} className="h-12 border-b border-white/5 last:border-0 flex items-center px-4 gap-4">
-          <div className="h-3 rounded flex-1 bg-white/5 animate-pulse" style={{ animationDelay: `${i * 60}ms` }} />
-          <div className="h-3 rounded w-24 bg-white/5 animate-pulse" style={{ animationDelay: `${i * 60 + 30}ms` }} />
-          <div className="h-3 rounded w-20 bg-white/5 animate-pulse" style={{ animationDelay: `${i * 60 + 60}ms` }} />
-        </div>
-      ))}
+    <div className="lux-karta overflow-hidden border-white/10 shadow-[0_5px_30px_rgba(0,0,0,0.5)]">
+      <div className="h-12 bg-gradient-to-r from-black/80 to-black/60 relative">
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-sky-500/30 to-transparent"></div>
+      </div>
+      <div className="divide-y divide-white/5">
+        {Array.from({ length: qatorlar }).map((_, i) => (
+          <div key={i} className="h-[45px] flex items-center px-5 gap-6">
+            <div className="h-2.5 rounded-full flex-1 bg-sky-500/10 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.2)]" style={{ animationDelay: `${i * 100}ms` }} />
+            <div className="h-2.5 rounded-full w-28 bg-sky-500/10 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.2)]" style={{ animationDelay: `${i * 100 + 40}ms` }} />
+            <div className="h-2.5 rounded-full w-24 bg-sky-500/10 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.2)]" style={{ animationDelay: `${i * 100 + 80}ms` }} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -232,13 +236,15 @@ export function Jadval<T,>({
 
 export function Nishon({ matn, tur = 'neytral' }: { matn: string; tur?: 'ok' | 'warn' | 'danger' | 'neytral' }) {
   const uslub = {
-    ok: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]',
-    warn: 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-[0_0_10px_rgba(251,191,36,0.2)]',
-    danger: 'bg-red-500/10 text-red-400 border-red-500/30 shadow-[0_0_10px_rgba(248,113,113,0.2)]',
+    ok: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(52,211,153,0.3)]',
+    warn: 'bg-amber-500/10 text-amber-400 border-amber-500/50 shadow-[0_0_15px_rgba(251,191,36,0.4)] animate-pulse',
+    danger: 'bg-red-500/10 text-red-400 border-red-500/60 shadow-[0_0_15px_rgba(248,113,113,0.6)] animate-pulse',
     neytral: 'bg-white/5 text-zinc-300 border-white/20',
   }[tur];
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md border text-[11px] font-bold tracking-widest uppercase ${uslub}`}>
+      {tur === 'danger' && <span className="w-1.5 h-1.5 rounded-full bg-red-400 mr-1.5 animate-ping" />}
+      {tur === 'warn' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5 animate-ping" />}
       {matn}
     </span>
   );
@@ -246,10 +252,14 @@ export function Nishon({ matn, tur = 'neytral' }: { matn: string; tur?: 'ok' | '
 
 export function KpiKarta({ nom, qiymat, ost }: { nom: string; qiymat: ReactNode; ost?: ReactNode }) {
   return (
-    <div className="lux-karta p-6 border-white/10 group hover:border-sky-500/40 transition-all">
-      <p className="text-[12px] uppercase tracking-widest font-bold text-sky-400/80 mb-2 group-hover:text-sky-400 transition-colors">{nom}</p>
+    <div className="lux-karta p-6 border-white/10 group hover:border-sky-500/40 transition-all relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-1 construction-tape-sky opacity-0 group-hover:opacity-100 transition-opacity" />
+      <p className="text-[12px] uppercase tracking-widest font-bold text-sky-400/80 mb-2 group-hover:text-sky-400 transition-colors flex items-center gap-2">
+        <span className="w-2 h-2 rounded-sm bg-sky-500/50 group-hover:bg-sky-400 group-hover:shadow-[0_0_8px_rgba(56,189,248,0.8)] transition-all" />
+        {nom}
+      </p>
       <p className="text-[32px] leading-none font-black text-white tabular-nums drop-shadow-[0_0_10px_rgba(255,255,255,0.4)] group-hover:drop-shadow-[0_0_15px_rgba(56,189,248,0.5)] transition-all">{qiymat}</p>
-      {ost && <div className="text-[13px] text-zinc-400 mt-3 tabular-nums font-medium border-t border-white/5 pt-3">{ost}</div>}
+      {ost && <div className="text-[13px] text-zinc-400 mt-3 tabular-nums font-medium border-t border-white/5 pt-3 relative z-10">{ost}</div>}
     </div>
   );
 }
@@ -304,11 +314,11 @@ export function Yon({
             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="fixed right-0 top-0 bottom-0 w-full sm:w-[520px] max-w-full z-50
-                       bg-[#060914]/95 backdrop-blur-2xl border-l border-sky-500/10 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] flex flex-col"
+                       bg-gradient-to-l from-[#0f172a]/95 to-[#020617]/95 backdrop-blur-3xl border-l-2 border-sky-500/30 shadow-[-20px_0_50px_rgba(0,0,0,0.9),_inset_1px_0_10px_rgba(56,189,248,0.2)] flex flex-col"
           >
             <header className="flex-shrink-0 px-5 py-4 border-b border-white/5 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="text-[17px] font-bold text-white truncate drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{sarlavha}</h3>
+                <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 truncate drop-shadow-[0_0_10px_rgba(56,189,248,0.3)] uppercase tracking-wide">{sarlavha}</h3>
                 {tavsif && <div className="text-sm text-zinc-400 mt-1">{tavsif}</div>}
               </div>
               <button
@@ -341,6 +351,22 @@ export function Maydon({ nom, children, izoh }: { nom: string; children: ReactNo
   );
 }
 
+export function Qidiruv({ qiymat, ozgardi, placeholder = 'Qidirish…' }: {
+  qiymat: string; ozgardi: (v: string) => void; placeholder?: string;
+}) {
+  return (
+    <div className="relative group">
+      <input
+        value={qiymat}
+        onChange={(e) => ozgardi(e.target.value)}
+        placeholder={placeholder}
+        className="h-10 pl-10 pr-4 rounded-xl text-sm w-64 max-w-full bg-[#0a0f1a]/80 backdrop-blur-md border border-white/10 text-white shadow-[inset_0_2px_15px_rgba(0,0,0,0.8)] focus:outline-none focus:border-sky-400 focus:bg-[#0f172a]/90 focus:shadow-[inset_0_2px_15px_rgba(0,0,0,0.8),_0_0_20px_rgba(56,189,248,0.2)] transition-all placeholder:text-zinc-600"
+      />
+      <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-sky-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+    </div>
+  );
+}
+
 export function Kiritma({
   qiymat, ozgardi, tur = 'text', placeholder, ozgarmas,
 }: {
@@ -357,7 +383,7 @@ export function Kiritma({
       disabled={ozgarmas}
       placeholder={placeholder}
       onChange={(e) => ozgardi(e.target.value)}
-      className={`h-9 px-3 rounded-xl text-sm w-full bg-black/40 border border-white/10 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all placeholder:text-zinc-600 ${tur === 'number' ? 'text-right tabular-nums' : ''} ${ozgarmas ? 'opacity-50 cursor-not-allowed bg-black/20' : ''}`}
+      className={`h-10 px-4 rounded-xl text-sm w-full bg-[#0a0f1a]/80 backdrop-blur-md border border-white/10 text-white shadow-[inset_0_2px_15px_rgba(0,0,0,0.8)] focus:outline-none focus:border-sky-400 focus:bg-[#0f172a]/90 focus:shadow-[inset_0_2px_15px_rgba(0,0,0,0.8),_0_0_20px_rgba(56,189,248,0.2)] transition-all placeholder:text-zinc-600 ${tur === 'number' ? 'text-right tabular-nums' : ''} ${ozgarmas ? 'opacity-50 cursor-not-allowed bg-black/40' : ''}`}
     />
   );
 }
@@ -366,13 +392,16 @@ export function Tanlov({ qiymat, ozgardi, variantlar }: {
   qiymat: string; ozgardi: (v: string) => void; variantlar: string[];
 }) {
   return (
-    <select
-      value={qiymat}
-      onChange={(e) => ozgardi(e.target.value)}
-      className="h-9 px-3 rounded-xl text-sm w-full bg-black/40 border border-white/10 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all cursor-pointer appearance-none"
-    >
-      {variantlar.map((v) => <option key={v} value={v} className="bg-[#060914] text-white py-1">{v}</option>)}
-    </select>
+    <div className="relative">
+      <select
+        value={qiymat}
+        onChange={(e) => ozgardi(e.target.value)}
+        className="h-10 px-4 pr-10 rounded-xl text-sm w-full bg-[#0a0f1a]/80 backdrop-blur-md border border-white/10 text-white shadow-[inset_0_2px_15px_rgba(0,0,0,0.8)] focus:outline-none focus:border-sky-400 focus:bg-[#0f172a]/90 focus:shadow-[inset_0_2px_15px_rgba(0,0,0,0.8),_0_0_20px_rgba(56,189,248,0.2)] transition-all cursor-pointer appearance-none"
+      >
+        {variantlar.map((v) => <option key={v} value={v} className="bg-[#060914] text-white py-2">{v}</option>)}
+      </select>
+      <svg className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+    </div>
   );
 }
 

@@ -547,8 +547,8 @@ function ObyektRow({ obj }: { obj: any }) {
         <td className="py-4 px-4 text-right font-mono text-ok font-medium"><FmtN val={obj.fakt} /></td>
         <td className="py-4 px-4">
           <div className="flex items-center gap-3 justify-end">
-            <div className="w-24 h-2 bg-white/5 rounded-full overflow-hidden">
-              <div className={`h-full ${bgCol}`} style={{ width: `${Math.min(obj.progress, 100)}%` }} />
+            <div className="w-24 h-2 bg-black/60 rounded-full overflow-hidden shadow-[inset_0_1px_5px_rgba(0,0,0,0.8)] border border-white/5 relative">
+              <div className={`h-full ${bgCol} shadow-[0_0_10px_currentColor] relative overflow-hidden`} style={{ width: `${Math.min(obj.progress, 100)}%` }}><div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 animate-[pulse_2s_ease-in-out_infinite]" /></div>
             </div>
             <span className={`font-mono font-bold text-sm w-12 text-right ${pCol}`}>{obj.progress}%</span>
           </div>
@@ -600,8 +600,8 @@ function ShartnomaRow({ shartnoma }: { shartnoma: any }) {
         <td className="py-5 px-4 text-right font-mono font-bold text-ok"><FmtN val={shartnoma.fakt} /></td>
         <td className="py-5 px-4">
           <div className="flex items-center gap-4 justify-end">
-            <div className="w-32 h-2.5 bg-black/40 rounded-full overflow-hidden shadow-inner">
-              <div className={`h-full ${bgCol}`} style={{ width: `${Math.min(shartnoma.progress, 100)}%` }} />
+            <div className="w-32 h-2.5 bg-black/60 rounded-full overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] border border-white/10 relative">
+              <div className={`h-full ${bgCol} shadow-[0_0_15px_currentColor] relative overflow-hidden`} style={{ width: `${Math.min(shartnoma.progress, 100)}%` }}><div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 animate-[pulse_2s_ease-in-out_infinite]" /></div>
             </div>
             <span className={`font-mono font-extrabold text-base w-12 text-right ${pCol}`}>{shartnoma.progress}%</span>
           </div>
