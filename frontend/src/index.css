@@ -347,3 +347,101 @@ html, body, #root { height: 100%; min-height: 100%; }
     transition-duration: .01ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   LUX UI — Zamonaviy tugma va karta class'lari
+   Faqat shu faylga qo'shildi, hech narsaga tegmadi.
+   ═══════════════════════════════════════════════════════ */
+
+/* Asosiy (Primary) — Ko'k neon tugma */
+.lux-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 14px; height: 32px;
+  font-size: 12.5px; font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.lux-btn-primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  border-color: rgba(14, 165, 233, 0.5);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.25);
+}
+.lux-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.45);
+  transform: translateY(-1px);
+}
+.lux-btn-primary:active:not(:disabled) { transform: translateY(0); }
+.lux-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* Ikkinchi darajali (Ghost) — Shaffof chegara bilan */
+.lux-btn-ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+}
+.lux-btn-ghost:hover:not(:disabled) {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.35);
+  color: #fff;
+}
+.lux-btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Xavfli (Danger) — Qizil/sariq ogohlantirish */
+.lux-btn-warn {
+  background: rgba(251, 146, 60, 0.1);
+  border-color: rgba(251, 146, 60, 0.3);
+  color: #fb923c;
+}
+.lux-btn-warn:hover:not(:disabled) {
+  background: rgba(251, 146, 60, 0.2);
+  border-color: rgba(251, 146, 60, 0.5);
+  color: #fff;
+}
+.lux-btn-warn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Yuklanayotgan holat — pulse animatsiya */
+.lux-btn-loading {
+  animation: lux-pulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes lux-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* Modal — Glassmorphism */
+.lux-modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  animation: lux-fadein 0.18s ease;
+}
+.lux-modal {
+  background: rgba(16, 20, 36, 0.92);
+  border: 1px solid rgba(14, 165, 233, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 0 40px rgba(14, 165, 233, 0.1), 0 24px 48px rgba(0,0,0,0.5);
+  animation: lux-slidein 0.22s ease;
+}
+@keyframes lux-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes lux-slidein {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Karta — Chuqurroq ko'rinish (mavjud .karta ni o'zgartirmaydi) */
+.lux-karta {
+  background: rgba(19, 23, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+

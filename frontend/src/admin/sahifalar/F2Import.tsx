@@ -1704,8 +1704,8 @@ const onAvtoMoslash = () => {
       </div>
 
       {dopModalUid && (
-        <div className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setDopModalUid(null); }}>
-          <div className="bg-[#18181b] border border-border/40 rounded-xl p-5 max-w-lg w-full max-h-[80vh] flex flex-col shadow-2xl">
+        <div className="lux-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDopModalUid(null); }}>
+          <div className="lux-modal p-5 max-w-lg w-full max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center mb-3 border-b border-border/20 pb-3">
               <h3 className="font-bold text-lg text-emerald-400">Qaysi razdelga qo'shamiz?</h3>
               <button onClick={() => setDopModalUid(null)} className="text-text-mute hover:text-white transition-colors">
@@ -1735,8 +1735,8 @@ const onAvtoMoslash = () => {
       )}
 
       {dropState && (
-        <div className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setDropState(null); }}>
-          <div className="bg-[#18181b] border border-border/40 rounded-xl p-6 max-w-lg w-full shadow-2xl">
+        <div className="lux-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDropState(null); }}>
+          <div className="lux-modal p-6 max-w-lg w-full">
             <h3 className="font-bold text-lg text-white mb-1 text-center">Bu qator bilan nima qilamiz?</h3>
             <p className="text-text-mute text-[12px] text-center mb-5">
               Akt qatori: <span className="text-white font-medium">{aktBarchaTugun.find(x=>x.uid===dropState.aktKalit)?.nom?.slice(0,50)}</span>
@@ -1796,8 +1796,7 @@ const onAvtoMoslash = () => {
                   {mavjudOylar.length > 0 && (
                     <button
                       onClick={() => { setYangiOyRejim(false); setOyNom(''); }}
-                      className="px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-text-mute
-                                 text-[12px] whitespace-nowrap transition-colors">
+                      className="lux-btn lux-btn-ghost text-[12px]">
                       ↩ Ro'yxatdan
                     </button>
                   )}
@@ -1807,8 +1806,7 @@ const onAvtoMoslash = () => {
                   <Tanlov qiymat={oyNom} ozgardi={setOyNom} variantlar={['', ...mavjudOylar]} />
                   <button
                     onClick={() => { setYangiOyRejim(true); setOyNom(''); }}
-                    className="px-2.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
-                               text-[12px] whitespace-nowrap transition-colors">
+                    className="lux-btn lux-btn-primary text-[12px]">
                     ＋ Yangi oy
                   </button>
                 </div>
@@ -1850,12 +1848,12 @@ const onAvtoMoslash = () => {
                   <div className="flex gap-1.5">
                     <button
                       onClick={() => setTanlanganLoklar(loklar.data?.lokalkalar || [])}
-                      className="text-[10px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-text-mute transition-colors">
+                      className="lux-btn lux-btn-ghost text-[11px] h-6 px-2">
                       Hammasi
                     </button>
                     <button
                       onClick={() => { setTanlanganLoklar([]); setLokalka(''); }}
-                      className="text-[10px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-text-mute transition-colors">
+                      className="lux-btn lux-btn-ghost text-[11px] h-6 px-2">
                       Tozalash
                     </button>
                   </div>
@@ -2211,7 +2209,7 @@ const onAvtoMoslash = () => {
                           } catch (e: any) { toast('Xato: ' + e.message, 'danger'); }
                         }}
                         disabled={obyektIshla.isPending}
-                        className="w-full px-3 py-2 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent/90 transition-colors disabled:opacity-50"
+                        className={`lux-btn lux-btn-primary w-full py-2 text-[12px] ${obyektIshla.isPending ? 'lux-btn-loading' : ''}`}
                       >
                         {obyektIshla.isPending ? 'Navbatga qo\'yilmoqda…' : `▶ «${lokalka || obyekt}» ni hisoblash`}
                       </button>
@@ -2219,7 +2217,7 @@ const onAvtoMoslash = () => {
                   )}
                   <button
                     onClick={() => lrv.refetch()}
-                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-text text-[12px] hover:bg-white/10 transition-colors"
+                    className="lux-btn lux-btn-ghost w-full py-2 text-[12px]"
                   >
                     ↻ Qayta o'qish
                   </button>
