@@ -329,9 +329,9 @@ export function Yon({
 export function Maydon({ nom, children, izoh }: { nom: string; children: ReactNode; izoh?: string }) {
   return (
     <label className="block">
-      <span className="block text-[11px] uppercase tracking-[0.04em] text-text-dim mb-1.5">{nom}</span>
+      <span className="block text-[11px] uppercase tracking-wider font-bold text-zinc-400 mb-1.5">{nom}</span>
       {children}
-      {izoh && <span className="block text-[11px] text-text-mute mt-1">{izoh}</span>}
+      {izoh && <span className="block text-[11px] text-zinc-500 mt-1 italic">{izoh}</span>}
     </label>
   );
 }
@@ -352,8 +352,7 @@ export function Kiritma({
       disabled={ozgarmas}
       placeholder={placeholder}
       onChange={(e) => ozgardi(e.target.value)}
-      className={`input h-9 px-3 text-sm w-full ${tur === 'number' ? 'text-right tabular-nums' : ''}
-                  ${ozgarmas ? 'opacity-60 cursor-not-allowed' : ''}`}
+      className={`h-9 px-3 rounded-xl text-sm w-full bg-black/40 border border-white/10 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all placeholder:text-zinc-600 ${tur === 'number' ? 'text-right tabular-nums' : ''} ${ozgarmas ? 'opacity-50 cursor-not-allowed bg-black/20' : ''}`}
     />
   );
 }
@@ -365,9 +364,9 @@ export function Tanlov({ qiymat, ozgardi, variantlar }: {
     <select
       value={qiymat}
       onChange={(e) => ozgardi(e.target.value)}
-      className="input h-9 px-3 text-sm w-full cursor-pointer"
+      className="h-9 px-3 rounded-xl text-sm w-full bg-black/40 border border-white/10 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all cursor-pointer appearance-none"
     >
-      {variantlar.map((v) => <option key={v} value={v} className="bg-slate-800 text-white">{v}</option>)}
+      {variantlar.map((v) => <option key={v} value={v} className="bg-[#060914] text-white py-1">{v}</option>)}
     </select>
   );
 }

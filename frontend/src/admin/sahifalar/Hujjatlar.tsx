@@ -88,24 +88,23 @@ export default function Hujjatlar() {
             to'liq o'qish API lari bor edi (apiAktlarOl / apiPrixodOl /
             apiViborkaOl) va eski panelda ular ishlatilardi — saytda esa
             hujjat ichini ko'rish uchun Google jadvalni ochish kerak edi. */}
-        <div className="karta p-0 overflow-hidden">
-          <div className="flex items-center gap-1 px-3 pt-3 border-b border-border">
+        <div className="lux-karta p-0 overflow-hidden border-white/5">
+          <div className="flex items-center gap-1 px-3 pt-3 border-b border-white/5">
             {(['akt', 'prixod', 'viborka'] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
-                className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors
+                className={`px-4 py-2.5 text-[13px] font-bold rounded-t-xl transition-all
                   ${tab === t
-                    ? 'bg-[var(--surface-2)] text-accent border-b-2 border-accent -mb-px'
-                    : 'text-text-mute hover:text-text'}`}>
-                {t === 'akt' ? '📋 Aktlar' : t === 'prixod' ? '📦 Prixod' : '📐 Viborka'}
+                    ? 'bg-sky-500/10 text-sky-400 border-b-2 border-sky-400 -mb-px shadow-[inset_0_-2px_4px_rgba(56,189,248,0.2)]'
+                    : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                {t === 'akt' ? '📋 Aktlar' : t === 'prixod' ? '📦 Prixod' : '📑 Viborka'}
               </button>
             ))}
             <div className="flex-1" />
             <div className="relative pb-2">
-              <Search size={13} className="absolute left-2 top-[9px] text-text-mute" />
+              <Search size={13} className="absolute left-3 top-[11px] text-zinc-500" />
               <input value={qidiruv} onChange={(e) => setQidiruv(e.target.value)}
                 placeholder="Qidirish…"
-                className="pl-7 pr-2 py-1.5 rounded bg-[var(--surface-2)] border border-border
-                           text-[12px] text-text outline-none focus:border-accent/50 w-48" />
+                className="pl-9 pr-3 py-2 rounded-xl bg-black/40 border border-white/10 text-[12px] text-white outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all w-56 placeholder:text-zinc-600" />
             </div>
           </div>
 
@@ -233,9 +232,9 @@ export default function Hujjatlar() {
         </div>
 
         {/* ── Mavjud hujjat fayllari ─────────────────────────────── */}
-        <div className="karta p-4">
-          <h3 className="text-[15px] font-semibold text-text mb-1 flex items-center gap-2">
-            <FolderOpen size={17} className="text-accent" />
+        <div className="lux-karta p-4 border-white/5">
+          <h3 className="text-[15px] font-bold text-white mb-1 flex items-center gap-2">
+            <FolderOpen size={17} className="text-sky-400 drop-shadow-[0_0_4px_rgba(56,189,248,0.5)]" />
             Hujjat fayllari
           </h3>
           <p className="text-[12px] text-text-mute mb-3">
@@ -252,86 +251,77 @@ export default function Hujjatlar() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {(hujjatlar.data ?? []).map((h) => (
-              <a key={h.tur}
-                href={h.url || undefined}
-                target="_blank" rel="noreferrer"
-                className={`rounded-lg border p-3 transition-colors flex flex-col gap-1.5
-                  ${h.url
-                    ? 'border-border bg-[var(--surface-2)]/40 hover:bg-white/5 hover:border-accent/40'
-                    : 'border-border/50 bg-[var(--surface-2)]/20 opacity-60 pointer-events-none'}`}>
-                <span className="text-[20px] leading-none">{h.icon}</span>
-                <span className="text-[13px] font-medium text-text leading-tight">{h.nom}</span>
-                {h.url
-                  ? <span className="text-[11px] text-accent flex items-center gap-1">
-                      Ochish <ExternalLink size={11} />
-                    </span>
-                  : <span className="text-[11px] text-text-mute">Fayl hali yaratilmagan</span>}
-              </a>
-            ))}
+                <a key={h.nom} href={h.url || undefined}
+                  target="_blank" rel="noreferrer"
+                  className={`rounded-xl border p-4 transition-all flex flex-col gap-2 relative overflow-hidden group
+                    ${h.url
+                      ? 'border-white/10 bg-black/40 hover:bg-white/5 hover:border-sky-400/40 hover:shadow-[0_0_15px_rgba(56,189,248,0.1)]'
+                      : 'border-white/5 bg-black/20 opacity-50 pointer-events-none'}`}>
+                  <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="text-[24px] leading-none text-sky-400 drop-shadow-[0_0_3px_rgba(56,189,248,0.5)] relative z-10">{h.icon}</span>
+                  <span className="text-[13px] font-bold text-white leading-tight relative z-10">{h.nom}</span>
+                  {h.url
+                    ? <ExternalLink size={14} className="text-zinc-500 mt-auto ml-auto group-hover:text-sky-400 transition-colors relative z-10" />
+                    : <span className="text-[10px] text-red-400 mt-auto bg-red-500/10 px-2 py-0.5 rounded w-max">Ulanmagan</span>}
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
 
         {/* ── M-29 ──────────────────────────────────────────────── */}
-        <div className="karta p-4">
-          <h3 className="text-[15px] font-semibold text-text mb-1 flex items-center gap-2">
-            <FileText size={17} className="text-accent" />
+        <div className="lux-karta p-4 border-white/5">
+          <h3 className="text-[15px] font-bold text-white mb-1 flex items-center gap-2">
+            <FileText size={17} className="text-sky-400 drop-shadow-[0_0_4px_rgba(56,189,248,0.5)]" />
             M-29 — material hisoboti
           </h3>
-          <p className="text-[12px] text-text-mute mb-3">
-            Tanlangan oy uchun smetadagi <b>normativ sarf</b> va <b>haqiqiy sarf</b>
+          <p className="text-[12px] text-zinc-400 mb-4">
+            Tanlangan oy uchun smetadagi <b className="text-sky-400">normativ sarf</b> va <b className="text-indigo-400">haqiqiy sarf</b>
             {' '}solishtiriladi. Natija yangi Google jadval sifatida yaratiladi.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-[12px] font-medium text-text block mb-1.5">Obyekt</label>
+              <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Obyekt</label>
               <select value={obyekt}
                 onChange={(e) => { setObyekt(e.target.value); setOyNom(''); setNatija(null); }}
-                className="w-full bg-[var(--surface-2)] border border-border rounded
-                           px-2 py-1.5 text-[12px] text-text">
-                <option value="">— tanlang —</option>
-                {obNomlari.map((o) => <option key={o} value={o}>{o}</option>)}
+                className="w-full h-9 px-3 rounded-xl bg-black/40 border border-white/10 text-[12px] text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all cursor-pointer appearance-none">
+                <option value="" className="bg-[#060914]">— tanlang —</option>
+                {obNomlari.map((o) => <option key={o} value={o} className="bg-[#060914] py-1">{o}</option>)}
               </select>
             </div>
-
             <div>
-              <label className="text-[12px] font-medium text-text block mb-1.5 flex items-center gap-1.5">
-                <Calendar size={13} /> Oy
+              <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                <Calendar size={12} className="text-sky-400" /> Qaysi oy uchun
               </label>
-              {/* ⚡ Oy ERKIN MATN emas — mavjudlaridan tanlanadi.
+              {/* 2026-08-16: oldin erkin matn (input text) edi.
                   Erkin matnda bitta harf farqi bo'sh hisobot berardi. */}
               <select value={oyNom} onChange={(e) => { setOyNom(e.target.value); setNatija(null); }}
                 disabled={!obyekt || lrv.isLoading}
-                className="w-full bg-[var(--surface-2)] border border-border rounded
-                           px-2 py-1.5 text-[12px] text-text disabled:opacity-50">
-                <option value="">
+                className="w-full h-9 px-3 rounded-xl bg-black/40 border border-white/10 text-[12px] text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all cursor-pointer disabled:opacity-50 disabled:bg-black/20 appearance-none">
+                <option value="" className="bg-[#060914]">
                   {!obyekt ? '— avval obyekt —'
-                    : lrv.isLoading ? 'oylar o\'qilmoqda…'
-                    : oylar.length ? '— tanlang —' : 'bu obyektda F2 oyi yo\'q'}
+                    : lrv.isLoading ? 'yuklanmoqda...'
+                    : (oylar.length === 0 ? 'oylar topilmadi' : '— oyni tanlang —')}
                 </option>
-                {oylar.map((o) => <option key={o} value={o}>{o}</option>)}
+                {oylar.map(oy => <option key={oy} value={oy} className="bg-[#060914] py-1">{oy}</option>)}
               </select>
             </div>
           </div>
 
           <button onClick={m29Yarat} disabled={m29.isPending || !obyekt || !oyNom}
-            className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white
-                       text-[13px] font-medium hover:bg-accent/90 transition-colors
-                       disabled:opacity-40 disabled:cursor-not-allowed">
+            className="mt-5 lux-btn lux-btn-primary h-9 px-5 text-[13px] gap-2 w-full sm:w-auto">
             <Play size={14} />
             {m29.isPending ? 'Yaratilmoqda…' : 'M-29 yaratish'}
           </button>
 
           {natija?.url && (
-            <div className="mt-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30
-                            flex items-center gap-3">
-              <FileText size={16} className="text-emerald-400 flex-shrink-0" />
-              <span className="flex-1 text-[12px] text-emerald-200">
-                {natija.nom || 'M-29 tayyor'}
+            <div className="mt-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.1)] flex items-center gap-3">
+              <FileText size={18} className="text-emerald-400 flex-shrink-0 drop-shadow-[0_0_4px_rgba(52,211,153,0.5)]" />
+              <span className="flex-1 text-[13px] font-bold text-emerald-300">
+                {natija.nom || 'M-29 hisoboti muvaffaqiyatli tayyorlandi'}
               </span>
               <a href={natija.url} target="_blank" rel="noreferrer"
-                className="text-[12px] px-3 py-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30
-                           text-emerald-300 transition-colors flex items-center gap-1.5">
+                className="lux-btn lux-btn-ghost h-8 px-3 text-[12px] !text-emerald-300 hover:!bg-emerald-500/20 flex items-center gap-1.5 border border-emerald-500/30">
                 Ochish <ExternalLink size={12} />
               </a>
             </div>

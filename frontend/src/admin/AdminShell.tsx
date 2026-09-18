@@ -274,15 +274,15 @@ function AdminShellInner() {
         onMouseEnter={() => setKengaygan(true)}
         onMouseLeave={() => setKengaygan(false)}
         aria-label="Asosiy navigatsiya"
-        className={`os-sidebar relative z-30 border-r backdrop-blur-xl flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
+        className={`relative z-30 border-r border-white/5 bg-[#060914]/95 backdrop-blur-2xl flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out shadow-[10px_0_30px_rgba(0,0,0,0.5)] ${
           mobilMenyuOchiq ? 'os-sidebar--open' : ''
         } ${
           mobilMenyuOchiq ? 'w-[min(19rem,88vw)]' : sidebarKengaygan ? 'w-64 xl:w-72' : 'w-[68px]'
         }`}
       >
-        <div className={`p-4 border-b border-border flex items-center ${sidebarKengaygan ? 'gap-3' : 'justify-center'}`}>
-          <div className="os-brand-mark w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
-            <FlaskConical className="text-white" size={18} />
+        <div className={`p-4 border-b border-white/5 flex items-center ${sidebarKengaygan ? 'gap-3' : 'justify-center'}`}>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 shadow-[0_0_10px_rgba(56,189,248,0.5)] flex items-center justify-center flex-shrink-0">
+            <HardHat className="text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]" size={18} />
           </div>
           {sidebarKengaygan && (
             <div className="min-w-0">
@@ -300,51 +300,50 @@ function AdminShellInner() {
              * har bir guruh orasida yupqa ajratuvchi chiziq. */
             <div className="space-y-1">
               {filtrKilinganGuruhlar.map((guruh, gi) => (
-                <div key={guruh.id} className={gi > 0 ? 'space-y-1 pt-3 mt-3 border-t border-white/10' : 'space-y-1'}>
-                  {guruh.menyular.map(m => (
-                    <NavLink
-                      key={m.yol}
-                      to={m.yol}
-                      title={m.nom}
-                      className={({ isActive }) =>
-                        `os-nav-link flex items-center justify-center h-10 rounded-lg transition-colors duration-[120ms] cursor-pointer ${
-                          isActive ? 'os-nav-link--active' : ''
-                        }`
-                      }
-                    >
-                      {({ isActive }) => <m.Ikonka className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.5} />}
-                    </NavLink>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {filtrKilinganGuruhlar.map(guruh => (
-                <div key={guruh.id} className="space-y-1">
-                  <button
-                    onClick={() => toggleGuruh(guruh.id)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-bold text-text-dim uppercase tracking-wider hover:text-text transition-colors group"
-                  >
-                    <guruh.Ikonka size={14} className="text-text-dim group-hover:text-accent transition-colors" />
-                    <span className="flex-1 text-left whitespace-nowrap">{guruh.nom}</span>
-                    {ochiqGuruhlar[guruh.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  </button>
-
-                  <div className={`space-y-0.5 pl-2 ${ochiqGuruhlar[guruh.id] ? 'block' : 'hidden'}`}>
+                  <div key={guruh.id} className={gi > 0 ? 'space-y-1 pt-3 mt-3 border-t border-white/5' : 'space-y-1'}>
                     {guruh.menyular.map(m => (
                       <NavLink
                         key={m.yol}
                         to={m.yol}
+                        title={m.nom}
                         className={({ isActive }) =>
-                          `os-nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-[13.5px] font-medium transition-colors duration-[120ms] cursor-pointer relative ${
-                            isActive
-                              ? 'os-nav-link--active'
-                              : ''
+                          `flex items-center justify-center h-10 rounded-xl transition-all duration-[120ms] cursor-pointer ${
+                            isActive ? 'bg-sky-500/10 text-sky-400 shadow-[inset_2px_0_0_#38bdf8]' : 'text-zinc-500 hover:bg-white/5 hover:text-white'
                           }`
                         }
                       >
-                        {({ isActive }) => (
+                        {({ isActive }) => <m.Ikonka className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.5} />}
+                      </NavLink>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                {filtrKilinganGuruhlar.map(guruh => (
+                  <div key={guruh.id} className="space-y-1">
+                    <button
+                      onClick={() => toggleGuruh(guruh.id)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-[12px] font-bold text-zinc-500 uppercase tracking-wider hover:text-white transition-colors group"
+                    >
+                      <guruh.Ikonka size={14} className="text-zinc-500 group-hover:text-sky-400 transition-colors" />
+                      <span className="flex-1 text-left whitespace-nowrap">{guruh.nom}</span>
+                      {ochiqGuruhlar[guruh.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
+
+                    <div className={`space-y-0.5 pl-2 ${ochiqGuruhlar[guruh.id] ? 'block' : 'hidden'}`}>
+                      {guruh.menyular.map(m => (
+                        <NavLink
+                          key={m.yol}
+                          to={m.yol}
+                          className={({ isActive }) =>
+                            `flex items-center gap-3 px-3 py-2 rounded-xl text-[13.5px] font-medium transition-all duration-[120ms] cursor-pointer relative ${
+                              isActive
+                                ? 'bg-sky-500/10 text-sky-400 shadow-[inset_3px_0_0_#38bdf8]'
+                                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                            }`
+                          }
+                        >{({ isActive }) => (
                           <>
                             <m.Ikonka className="w-[16px] h-[16px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.5} />
                             <span className="truncate">{m.nom}</span>
@@ -391,11 +390,11 @@ function AdminShellInner() {
           )}
         </nav>
 
-        <div className="p-3 border-t border-border space-y-1">
+        <div className="p-3 border-t border-white/5 bg-black/20 space-y-1">
           <button
             onClick={handleLogout}
             title="Tizimdan chiqish"
-            className={`flex items-center w-full rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors ${
+            className={`flex items-center w-full rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all ${
               sidebarKengaygan ? 'gap-3 px-3 py-2 text-left' : 'justify-center h-10'
             }`}
           >
@@ -406,9 +405,9 @@ function AdminShellInner() {
       </aside>
       {mobilMenyuOchiq && <button type="button" className="os-sidebar-backdrop" aria-label="Navigatsiyani yopish" onClick={() => setMobilMenyuOchiq(false)} />}
 
-      <main className="os-workspace relative z-10 flex-1 overflow-hidden flex flex-col">
+      <main className="os-workspace relative z-10 flex-1 overflow-hidden flex flex-col bg-[#030509]">
         {/* YAGONA kompaniya konteksti — barcha /admin/* sahifalari shuni ishlatadi */}
-        <div className="os-context-bar flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2 border-b backdrop-blur-sm z-20">
+        <div className="flex-shrink-0 flex flex-wrap items-center gap-3 px-6 py-2 border-b border-white/5 bg-[#060914]/80 backdrop-blur-md shadow-sm z-20">
           <button type="button" className="os-mobile-only os-menu-button" aria-label={mobilMenyuOchiq ? 'Navigatsiyani yopish' : 'Navigatsiyani ochish'} aria-expanded={mobilMenyuOchiq} onClick={() => setMobilMenyuOchiq((open) => !open)}>
             {mobilMenyuOchiq ? <X size={17} /> : <Menu size={17} />}
           </button>

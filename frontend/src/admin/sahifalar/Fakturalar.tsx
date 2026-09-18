@@ -474,7 +474,7 @@ export function Fakturalar() {
           328 ta fayl xato papkasidan qutqarilgandi — lekin ular saytga
           ULANMAGAN edi: faqat GAS muharriridan chaqirish mumkin edi.
           Endi to'g'ridan-to'g'ri shu yerda. */}
-      <details className="karta p-4 mb-4 group">
+      <details className="lux-karta p-4 mb-4 group">
         <summary className="cursor-pointer list-none flex items-center justify-between">
           <div>
             <h3 className="text-[14px] font-semibold text-text flex items-center gap-2">
@@ -596,7 +596,7 @@ export function Fakturalar() {
 
             {/* Analitika Kengash - Premium UI */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="karta p-6 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl relative overflow-hidden group">
+              <div className="lux-karta p-6 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                   <FileText size={80} />
                 </div>
@@ -612,7 +612,7 @@ export function Fakturalar() {
                 </div>
               </div>
 
-              <div className="karta p-5 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl overflow-hidden flex flex-col">
+              <div className="lux-karta p-5 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl overflow-hidden flex flex-col">
                 <h3 className="text-[13px] font-medium text-text-dim mb-3 uppercase tracking-wider">Kategoriyalar bo'yicha</h3>
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
                   {analitika.katArr.length === 0 ? <span className="text-text-dim text-sm">Ma'lumot yo'q</span> : 
@@ -625,7 +625,7 @@ export function Fakturalar() {
                 </div>
               </div>
 
-              <div className="karta p-5 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl overflow-hidden flex flex-col">
+              <div className="lux-karta p-5 shadow-2xl border border-white/10 bg-gradient-to-br from-[#1a1a24]/90 to-[#0f0f15]/80 backdrop-blur-md rounded-2xl overflow-hidden flex flex-col">
                 <h3 className="text-[13px] font-medium text-text-dim mb-4 uppercase tracking-widest flex items-center gap-2"><FolderOpen size={16} className="text-accent"/> Top-5 Yetkazib Beruvchi</h3>
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
                   {analitika.postArr.length === 0 ? <span className="text-text-dim text-sm italic">Ma'lumot yo'q</span> : 
