@@ -554,16 +554,16 @@ export default function TestXarita() {
   const tanlanganBogMaqsad = tanlanganBog ? graf.tugunlar.find((t) => t.id === tanlanganBog.maqsad) : null;
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0f1d] text-white overflow-hidden">
+    <div className="h-full flex flex-col bg-[#060914] text-white overflow-hidden">
       {/* BOSHQARUV */}
-      <div className="flex-shrink-0 border-b border-white/10 bg-black/40 px-5 py-3">
+      <div className="flex-shrink-0 border-b border-white/[0.06] bg-gradient-to-r from-black/60 via-sky-950/20 to-black/60 backdrop-blur-xl px-5 py-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-bold flex items-center gap-2">
-              <Move size={18} className="text-sky-400" /> Rahbarning tirik holat xaritasi
+              <Move size={18} className="text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.6)]" /> Rahbarning tirik holat xaritasi
               {saqlanmoqda && <span className="text-[10px] text-amber-400 inline-flex items-center gap-1"><Save size={11} /> saqlanmoqda…</span>}
             </h1>
-            <p className="text-[11px] text-zinc-400 mt-0.5">
+            <p className="text-[11px] text-zinc-500 mt-0.5">
               Obyekt ustidagi belgi — shu obyekt bo'yicha real e'tibor talab qiladigan holat.
               Xarita har 30 soniyada yangilanadi · tugunni sudrang, nuqtadan chiziq torting
             </p>
@@ -571,15 +571,15 @@ export default function TestXarita() {
           <div className="flex items-center gap-1.5">
             {oxirgiYangilanish && <span className="text-[10px] text-zinc-500 inline-flex items-center gap-1 mr-1"><Clock size={11} /> {oxirgiYangilanish.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}</span>}
             <button onClick={hammasiniQaytaTer} title="Hammasini ustunlarga qayta terish"
-              className="px-2.5 py-2 bg-white/5 hover:bg-white/10 rounded-lg inline-flex items-center gap-1.5 text-[11px]">
+              className="lux-btn lux-btn-ghost text-[11px]">
               <LayoutGrid size={14} /> Qayta terish
             </button>
             <button onClick={ekrangaSigdir} title="Ekranga sig'dirish"
-              className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><Maximize2 size={15} /></button>
-            <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><ZoomOut size={15} /></button>
+              className="lux-btn lux-btn-ghost p-2"><Maximize2 size={15} /></button>
+            <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))} className="lux-btn lux-btn-ghost p-2"><ZoomOut size={15} /></button>
             <span className="text-[11px] text-zinc-500 w-10 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><ZoomIn size={15} /></button>
-            <button onClick={yukla} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg"><RefreshCcw size={15} className={yuklanmoqda ? 'animate-spin' : ''} /></button>
+            <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))} className="lux-btn lux-btn-ghost p-2"><ZoomIn size={15} /></button>
+            <button onClick={yukla} className="lux-btn lux-btn-ghost p-2"><RefreshCcw size={15} className={yuklanmoqda ? 'animate-spin' : ''} /></button>
           </div>
         </div>
 
@@ -589,8 +589,8 @@ export default function TestXarita() {
             const Ik = TUR_IKONKA[y.tur];
             return (
               <button key={y.tur} onClick={() => { setYaratModal(y.tur); setMaydonlar({}); setYaratXato(''); }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border hover:bg-white/10 transition-colors"
-                style={{ borderColor: TUR_RANG[y.tur] + '55', color: TUR_RANG[y.tur] }}>
+                className="lux-btn text-[11px] font-medium"
+                style={{ borderColor: TUR_RANG[y.tur] + '55', color: TUR_RANG[y.tur], background: TUR_RANG[y.tur] + '12' }}>
                 <Plus size={12} /> <Ik size={12} /> {TUR_NOM[y.tur]}
               </button>
             );
@@ -601,7 +601,7 @@ export default function TestXarita() {
         </div>
 
         {graf.jamlanma && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-sky-500/15 bg-sky-500/5 px-3 py-2 text-[11px]">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-sky-500/20 bg-sky-500/[0.06] px-3 py-2 text-[11px] shadow-[0_0_20px_rgba(14,165,233,0.05)]">
             <span className="font-semibold text-sky-300 inline-flex items-center gap-1.5"><CheckCircle2 size={13} /> Tashkilot holati</span>
             <span className="text-zinc-300">{graf.jamlanma.obyekt_soni} ta obyekt</span>
             <span className="text-zinc-400">Smeta: <b className="text-white">{pulQisqa(graf.jamlanma.smeta_jami)}</b></span>

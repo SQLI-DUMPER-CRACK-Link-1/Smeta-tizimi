@@ -2614,8 +2614,7 @@ const onAvtoMoslash = () => {
                   onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
                 })}
                 disabled={bogTikla.isPending}
-                className="px-3 py-1.5 rounded-lg bg-sky-500/20 text-sky-300 hover:bg-sky-500/30
-                           text-[12px] font-medium transition-colors disabled:opacity-50 whitespace-nowrap">
+                className={`lux-btn lux-btn-ghost text-[12px] whitespace-nowrap ${bogTikla.isPending ? 'lux-btn-loading' : ''}`}>
                 {bogTikla.isPending ? 'Tiklanmoqda…' : '↻ Smetadan tiklash'}
               </button>
             </div>
@@ -2688,8 +2687,8 @@ const onAvtoMoslash = () => {
 
           {/* ⭐ IKKI PANEL — panel'dagi kabi: chapda AKT, o'ngda SMETA */}
           <IkkiPanel
-            chapSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>AKT LOKALKASI (Ф2) - {oyNom}</span> <button onClick={onAvtoMoslash} className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-2 py-1 rounded text-[11px] transition-colors font-bold whitespace-nowrap"><Wand2 size={13}/> + Barchasini Avto-Moslash</button></div><Kiritma qiymat={f2Qidiruv} ozgardi={setF2Qidiruv} placeholder="F2 ichidan izlash (nomi yoki kodi)" /></div>}
-            ongSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>SMETA (LRV) — {boglanganJoylar.size} qator band</span><button onClick={() => setQatorQoshModal(true)} className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-[11px] transition-colors whitespace-nowrap"><FolderOpen size={13}/> + Qator Qo'shish</button></div><Kiritma qiymat={smetaQidiruv} ozgardi={setSmetaQidiruv} placeholder="Smeta ichidan izlash (nomi yoki kodi)" /></div>}
+            chapSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>AKT LOKALKASI (Ф2) - {oyNom}</span> <button onClick={onAvtoMoslash} className="lux-btn lux-btn-primary text-[11px]"><Wand2 size={13}/> + Barchasini Avto-Moslash</button></div><Kiritma qiymat={f2Qidiruv} ozgardi={setF2Qidiruv} placeholder="F2 ichidan izlash (nomi yoki kodi)" /></div>}
+            ongSarlavha={<div className="flex flex-col gap-2 w-full"><div className="flex items-center justify-between w-full"><span>SMETA (LRV) — {boglanganJoylar.size} qator band</span><button onClick={() => setQatorQoshModal(true)} className="lux-btn lux-btn-ghost text-[11px]"><FolderOpen size={13}/> + Qator Qo'shish</button></div><Kiritma qiymat={smetaQidiruv} ozgardi={setSmetaQidiruv} placeholder="Smeta ichidan izlash (nomi yoki kodi)" /></div>}
             chapOng={
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex gap-1 flex-shrink-0 bg-black/20 p-1 rounded-lg flex-wrap">
@@ -2855,10 +2854,8 @@ const onAvtoMoslash = () => {
                         });
                       }}
                       disabled={jobTozala.isPending}
-                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-danger/20 border border-border
-                                 hover:border-danger/40 text-[11px] text-text-mute hover:text-danger
-                                 transition-colors disabled:opacity-50 whitespace-nowrap">
-                      {jobTozala.isPending ? 'To’xtatilmoqda…' : '⏹ To’xtatish'}
+                      className={`lux-btn lux-btn-warn text-[11px] whitespace-nowrap ${jobTozala.isPending ? 'lux-btn-loading' : ''}`}>
+                      {jobTozala.isPending ? 'To\'xtatilmoqda…' : '⏹ To\'xtatish'}
                     </button>
                   </div>
                 )}
