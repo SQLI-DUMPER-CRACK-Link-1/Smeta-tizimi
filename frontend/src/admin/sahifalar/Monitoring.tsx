@@ -191,21 +191,22 @@ export function Monitoring() {
           «tuzatdim, lekin tuzalmadi» holatida vaqt kodni qayta o'qishga
           ketardi. Endi raqam SHU YERDA turadi: xato haqida gapirishdan
           oldin shuni ko'rish kerak. */}
-      <div className="karta p-3 mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Server size={15} className="text-accent flex-shrink-0" />
-          <div className="min-w-0">
-            <span className="text-[12px] text-text">Server kodi versiyasi</span>
-            <p className="text-[11px] text-text-mute leading-snug">
-              «Tuzatdim, lekin tuzalmadi» holatida avval shu raqamni tekshiring —
-              kutilganidan kichik bo'lsa muammo koddа emas, deploy'da.
-            </p>
+        <div className="lux-karta p-4 mb-4 flex flex-wrap items-center justify-between gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.2)] border-white/5">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(14,165,233,0.1)]">
+              <Server size={18} className="text-sky-400 flex-shrink-0 drop-shadow-[0_0_6px_rgba(56,189,248,0.6)]" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[12px] font-bold text-white tracking-wide">Server kodi versiyasi</span>
+              <p className="text-[11px] text-zinc-400 leading-snug mt-0.5">
+                Agar o'zgartirishlaringiz ko'rinmasa, Cloudflare Pages build bitgunicha (30-60s) kutib, sahifani yangilang
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {ver.isLoading && <span className="text-[12px] text-text-mute">o'qilmoqda…</span>}
-          {ver.isError && (
-            <span className="text-[12px] text-danger">
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {ver.isLoading && <span className="text-[12px] text-zinc-500 animate-pulse">o'qilmoqda…</span>}
+            {ver.isError && (
+              <span className="text-[12px] text-red-400">
               versiya o'qilmadi — server javob bermayapti
             </span>
           )}
@@ -231,23 +232,23 @@ export function Monitoring() {
           GAS da `apiTolaDiagnostika`, `apiKeshHolat`, `apiTriggerlarRoyxat`
           BOR edi, lekin saytdan chaqirilmasdi. Nimadir buzilganda sababni
           faqat GAS logidan ko'rish mumkin edi. Endi shu yerda. */}
-      <div className="karta p-4 mb-4">
+      <div className="lux-karta p-4 mb-4 border-white/5">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <div>
-            <h3 className="text-[14px] font-semibold text-text flex items-center gap-2">
-              <Stethoscope size={16} className="text-accent" /> Tizim tashxisi
+            <h3 className="text-[14px] font-semibold text-white flex items-center gap-2">
+              <Stethoscope size={16} className="text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.6)]" /> Tizim tashxisi
             </h3>
-            <p className="text-[11px] text-text-mute mt-0.5">
+            <p className="text-[11px] text-zinc-400 mt-0.5">
               Sozlamalar, papkalar, kesh va triggerlar joyidami — bir bosishda tekshiradi
             </p>
           </div>
           <button
+            type="button"
             onClick={() => tashxis.mutate(undefined, {
               onError: (e: Error) => toast(e.message, 'danger', undefined, 9000),
             })}
             disabled={tashxis.isPending}
-            className="px-3 py-1.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
-                       text-[12px] font-medium transition-colors disabled:opacity-50">
+            className="lux-btn lux-btn-ghost px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-2 disabled:opacity-50">
             {tashxis.isPending ? 'Tekshirilmoqda…' : '🩺 Tashxis o‘tkazish'}
           </button>
         </div>

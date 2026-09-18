@@ -164,28 +164,28 @@ function NarxlarLegacy() {
           va narxi ham xato bo'ladi.
           GAS da uchta API bor edi (apiOraliqlarOl/Skan/Saqla), saytda
           umuman yo'q edi — sozlash uchun eski panelga qaytish kerak edi. */}
-      <details className="karta p-4 mb-4 group">
+      <details className="lux-karta p-4 mb-4 group border-white/5">
         <summary className="cursor-pointer list-none flex items-center justify-between">
           <div>
-            <h3 className="text-[14px] font-semibold text-text flex items-center gap-2">
-              <SlidersHorizontal size={16} className="text-accent" />
+            <h3 className="text-[14px] font-semibold text-white flex items-center gap-2">
+              <SlidersHorizontal size={16} className="text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.6)]" />
               Svodka oraliqlari
             </h3>
-            <p className="text-[11px] text-text-mute mt-0.5">
+            <p className="text-[11px] text-zinc-400 mt-0.5">
               Qaysi qatordan qaysi kategoriya boshlanadi — narxlash shunga tayanadi
             </p>
           </div>
-          <span className="text-[11px] text-text-mute group-open:hidden">ochish ▾</span>
-          <span className="text-[11px] text-text-mute hidden group-open:inline">yopish ▴</span>
+          <span className="text-[11px] text-zinc-500 group-open:hidden">ochish ▾</span>
+          <span className="text-[11px] text-zinc-500 hidden group-open:inline">yopish ▴</span>
         </summary>
 
         <div className="mt-3 space-y-3">
           <div className="flex items-end gap-2 flex-wrap">
             <div className="flex-1 min-w-[220px]">
-              <label className="text-[12px] font-medium text-text block mb-1.5">Obyekt</label>
+              <label className="text-[12px] font-medium text-white block mb-1.5">Obyekt</label>
               <select value={orObyekt} onChange={(e) => { setOrObyekt(e.target.value); setOrTahrir(null); }}
-                className="w-full bg-[var(--surface-2)] border border-border rounded
-                           px-2 py-1.5 text-[12px] text-text">
+                className="w-full bg-black/50 border border-white/10 rounded-xl
+                           px-3 py-2 text-[12px] text-white focus:border-sky-400 outline-none transition-colors">
                 <option value="">— tanlang —</option>
                 {(obyektlar.data ?? []).map((o) => (
                   <option key={o.obyekt} value={o.obyekt}>{o.obyekt}</option>
@@ -204,8 +204,7 @@ function NarxlarLegacy() {
                 });
               }}
               disabled={orSkan.isPending || !orObyekt}
-              className="px-3 py-1.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25
-                         text-[12px] font-medium transition-colors disabled:opacity-40">
+              className="lux-btn lux-btn-ghost px-4 py-2 flex items-center gap-2 disabled:opacity-40 text-[12px]">
               {orSkan.isPending ? 'Skanlanmoqda…' : '🔍 Svodkani skanlash'}
             </button>
           </div>

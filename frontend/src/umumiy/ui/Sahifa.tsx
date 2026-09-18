@@ -43,8 +43,8 @@ export function Sahifa<T = unknown>({
     >
       <header className="flex-shrink-0 px-6 pt-6 pb-4 flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
-          <h2 className="text-[22px] leading-7 font-semibold text-text tracking-tight">{sarlavha}</h2>
-          {tavsif && <p className="text-sm text-text-dim mt-1">{tavsif}</p>}
+          <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 tracking-wide drop-shadow-[0_0_10px_rgba(56,189,248,0.3)]">{sarlavha}</h2>
+          {tavsif && <p className="text-sm text-zinc-400 mt-2">{tavsif}</p>}
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {yangilangan != null && <MalumotYoshi vaqt={yangilangan} />}
@@ -53,11 +53,9 @@ export function Sahifa<T = unknown>({
               onClick={onYangila}
               disabled={yangilanmoqda}
               title="Yangilash"
-              className="h-9 px-3 inline-flex items-center gap-2 rounded-[10px] karta text-sm
-                         text-text hover:border-[var(--accent)]/50 transition-colors
-                         disabled:opacity-50 cursor-pointer"
+              className="lux-btn lux-btn-ghost h-9 px-3 inline-flex items-center gap-2 text-[13px] disabled:opacity-50"
             >
-              <RefreshCw size={16} className={yangilanmoqda ? 'animate-spin' : ''} />
+              <RefreshCw size={16} className={yangilanmoqda ? 'animate-spin text-sky-400' : 'text-zinc-400'} />
               Yangilash
             </button>
           )}
@@ -91,13 +89,13 @@ export function MalumotYoshi({ vaqt }: { vaqt: number }) {
 /** Skeleton — spinner EMAS (06 §6). Haqiqiy tarkib shaklida. */
 export function Skelet({ qatorlar = 8 }: { qatorlar?: number }) {
   return (
-    <div className="karta overflow-hidden">
-      <div className="h-11 border-b border-border bg-[var(--surface-2)]/40" />
+    <div className="lux-karta overflow-hidden border-white/5">
+      <div className="h-11 border-b border-white/5 bg-white/[0.02]" />
       {Array.from({ length: qatorlar }).map((_, i) => (
-        <div key={i} className="h-12 border-b border-border last:border-0 flex items-center px-4 gap-4">
-          <div className="skel h-3 rounded flex-1" style={{ animationDelay: `${i * 60}ms` }} />
-          <div className="skel h-3 rounded w-24" style={{ animationDelay: `${i * 60 + 30}ms` }} />
-          <div className="skel h-3 rounded w-20" style={{ animationDelay: `${i * 60 + 60}ms` }} />
+        <div key={i} className="h-12 border-b border-white/5 last:border-0 flex items-center px-4 gap-4">
+          <div className="h-3 rounded flex-1 bg-white/5 animate-pulse" style={{ animationDelay: `${i * 60}ms` }} />
+          <div className="h-3 rounded w-24 bg-white/5 animate-pulse" style={{ animationDelay: `${i * 60 + 30}ms` }} />
+          <div className="h-3 rounded w-20 bg-white/5 animate-pulse" style={{ animationDelay: `${i * 60 + 60}ms` }} />
         </div>
       ))}
     </div>
@@ -106,10 +104,10 @@ export function Skelet({ qatorlar = 8 }: { qatorlar?: number }) {
 
 export function BoshHolat({ matn, izoh, amal }: { matn: string; izoh?: string; amal?: ReactNode }) {
   return (
-    <div className="karta py-16 px-6 flex flex-col items-center text-center">
-      <Inbox size={48} className="text-text-mute mb-4" strokeWidth={1.5} />
-      <p className="text-text font-medium">{matn}</p>
-      {izoh && <p className="text-sm text-text-dim mt-1 max-w-md">{izoh}</p>}
+    <div className="lux-karta py-16 px-6 flex flex-col items-center text-center border-white/5">
+      <Inbox size={48} className="text-zinc-500 mb-4" strokeWidth={1.5} />
+      <h3 className="text-lg font-semibold text-white mb-2">{matn}</h3>
+      {izoh && <p className="text-sm text-zinc-400 max-w-md mb-6">{izoh}</p>}
       {amal && <div className="mt-4">{amal}</div>}
     </div>
   );
@@ -118,17 +116,16 @@ export function BoshHolat({ matn, izoh, amal }: { matn: string; izoh?: string; a
 export function XatoHolat({ xato, qayta }: { xato: unknown; qayta?: () => void }) {
   const xabar = xato instanceof Error ? xato.message : String(xato ?? 'Nomaʼlum xato');
   return (
-    <div className="rounded-[10px] border border-danger/25 bg-danger/[.08] p-4">
+    <div className="rounded-[10px] border border-red-500/25 bg-red-500/10 p-4 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
       <div className="flex gap-3">
-        <AlertTriangle size={18} className="text-danger flex-shrink-0 mt-0.5" />
+        <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5 drop-shadow-[0_0_4px_rgba(248,113,113,0.5)]" />
         <div className="min-w-0">
-          <p className="font-medium text-text">Ma'lumot yuklanmadi</p>
-          <p className="text-sm text-text-dim mt-1 break-words">{xabar}</p>
+          <p className="font-semibold text-white">Ma'lumot yuklanmadi</p>
+          <p className="text-sm text-zinc-400 mt-1 break-words">{xabar}</p>
           {qayta && (
             <button
               onClick={qayta}
-              className="mt-3 h-9 px-3 rounded-[10px] karta text-sm text-text
-                         hover:border-[var(--accent)]/50 transition-colors cursor-pointer"
+              className="lux-btn lux-btn-warn mt-4 text-[12px] px-4 py-1.5"
             >
               Qayta urinish
             </button>
@@ -180,18 +177,18 @@ export function Jadval<T,>({
   onSatrBos?: (satr: T) => void;
 }) {
   return (
-    <div className="karta overflow-hidden">
+    <div className="lux-karta overflow-hidden border-white/5">
       <div className="overflow-x-auto">
         <table className="w-full text-[13px] border-collapse">
           <thead>
-            <tr className="bg-[var(--surface-2)]/50">
+            <tr className="bg-black/40">
               {ustunlar.map((u) => (
                 <th
                   key={u.kalit}
                   style={{ width: u.en, minWidth: u.en }}
-                  className={`sticky top-0 z-[1] bg-[var(--surface-2)] px-4 py-3 font-medium
-                              text-[11px] uppercase tracking-[0.04em] text-text-dim
-                              border-b border-border ${u.raqam ? 'text-right' : 'text-left'}`}
+                  className={`sticky top-0 z-[1] bg-black/60 backdrop-blur-md px-4 py-3 font-bold
+                              text-[11px] uppercase tracking-wider text-zinc-400
+                              border-b border-white/5 ${u.raqam ? 'text-right' : 'text-left'}`}
                 >
                   {u.nom}
                 </th>
@@ -206,8 +203,8 @@ export function Jadval<T,>({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.02, 0.4), duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                 onClick={onSatrBos ? () => onSatrBos(s) : undefined}
-                className={`border-b border-border last:border-0 transition-colors duration-[120ms]
-                            hover:bg-[var(--surface-2)]/60 ${onSatrBos ? 'cursor-pointer' : ''}`}
+                className={`border-b border-white/5 last:border-0 transition-colors duration-[120ms]
+                            hover:bg-sky-500/[0.04] ${onSatrBos ? 'cursor-pointer' : ''}`}
               >
                 {ustunlar.map((u) => (
                   <td
@@ -230,13 +227,13 @@ export function Jadval<T,>({
 
 export function Nishon({ matn, tur = 'neytral' }: { matn: string; tur?: 'ok' | 'warn' | 'danger' | 'neytral' }) {
   const uslub = {
-    ok: 'bg-ok/10 text-ok border-ok/20',
-    warn: 'bg-warn/10 text-warn border-warn/20',
-    danger: 'bg-danger/10 text-danger border-danger/20',
-    neytral: 'bg-[var(--surface-2)] text-text-dim border-border',
+    ok: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(52,211,153,0.1)]',
+    warn: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_8px_rgba(251,191,36,0.1)]',
+    danger: 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_8px_rgba(248,113,113,0.1)]',
+    neytral: 'bg-white/5 text-zinc-400 border-white/10',
   }[tur];
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-medium ${uslub}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-bold tracking-wide ${uslub}`}>
       {matn}
     </span>
   );
@@ -244,10 +241,10 @@ export function Nishon({ matn, tur = 'neytral' }: { matn: string; tur?: 'ok' | '
 
 export function KpiKarta({ nom, qiymat, ost }: { nom: string; qiymat: ReactNode; ost?: ReactNode }) {
   return (
-    <div className="karta p-5">
-      <p className="text-[11px] uppercase tracking-[0.04em] text-text-dim">{nom}</p>
-      <p className="text-[26px] leading-8 font-semibold text-text mt-1 tabular-nums">{qiymat}</p>
-      {ost && <p className="text-xs text-text-mute mt-1 tabular-nums">{ost}</p>}
+    <div className="lux-karta p-5 border-white/5">
+      <p className="text-[11px] uppercase tracking-wider font-bold text-zinc-500">{nom}</p>
+      <p className="text-[26px] leading-8 font-extrabold text-white mt-2 tabular-nums drop-shadow-[0_0_6px_rgba(255,255,255,0.2)]">{qiymat}</p>
+      {ost && <p className="text-xs text-zinc-400 mt-2 tabular-nums">{ost}</p>}
     </div>
   );
 }
@@ -260,7 +257,7 @@ export function Qidiruv({ qiymat, ozgardi, placeholder = 'Qidirish…' }: {
       value={qiymat}
       onChange={(e) => ozgardi(e.target.value)}
       placeholder={placeholder}
-      className="input h-9 px-3 text-sm w-64 max-w-full"
+      className="h-9 px-4 rounded-xl text-sm w-64 max-w-full bg-black/40 border border-white/10 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all placeholder:text-zinc-600"
     />
   );
 }
@@ -302,24 +299,24 @@ export function Yon({
             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="fixed right-0 top-0 bottom-0 w-full sm:w-[520px] max-w-full z-50
-                       bg-[var(--surface)] border-l border-border flex flex-col"
+                       bg-[#060914]/95 backdrop-blur-2xl border-l border-sky-500/10 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] flex flex-col"
           >
-            <header className="flex-shrink-0 px-5 py-4 border-b border-border flex items-start justify-between gap-3">
+            <header className="flex-shrink-0 px-5 py-4 border-b border-white/5 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="text-[17px] font-semibold text-text truncate">{sarlavha}</h3>
-                {tavsif && <div className="text-sm text-text-dim mt-0.5">{tavsif}</div>}
+                <h3 className="text-[17px] font-bold text-white truncate drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{sarlavha}</h3>
+                {tavsif && <div className="text-sm text-zinc-400 mt-1">{tavsif}</div>}
               </div>
               <button
                 onClick={yop}
                 aria-label="Yopish"
-                className="h-8 w-8 grid place-items-center rounded-lg text-text-dim
-                           hover:bg-[var(--surface-2)] hover:text-text transition-colors cursor-pointer"
+                className="h-8 w-8 grid place-items-center rounded-lg text-zinc-400
+                           hover:bg-white/5 hover:text-white transition-colors cursor-pointer border border-transparent hover:border-white/10"
               >
                 <X size={18} />
               </button>
             </header>
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">{children}</div>
-            {past && <footer className="flex-shrink-0 px-5 py-4 border-t border-border">{past}</footer>}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">{children}</div>
+            {past && <footer className="flex-shrink-0 px-5 py-4 border-t border-white/5 bg-black/20">{past}</footer>}
           </motion.aside>
         </>
       )}
@@ -375,9 +372,9 @@ export function Tanlov({ qiymat, ozgardi, variantlar }: {
   );
 }
 
-export function Tugma({
-  children, onBos, tur = 'secondary', band, ikonka,
-}: {
+/* ---------- Kiritmalar ---------- */
+
+export function Tugma({ children, onBos, tur = 'secondary', band, ikonka }: {
   children: ReactNode;
   onBos?: () => void;
   tur?: 'primary' | 'secondary' | 'danger';
@@ -385,17 +382,15 @@ export function Tugma({
   ikonka?: ReactNode;
 }) {
   const uslub = {
-    primary: 'bg-accent text-white hover:bg-accent/90 border-transparent',
-    secondary: 'karta text-text hover:border-[var(--accent)]/50',
-    danger: 'bg-danger/10 text-danger border-danger/25 hover:bg-danger/15',
+    primary: 'lux-btn-primary',
+    secondary: 'lux-btn-ghost',
+    danger: 'lux-btn-warn',
   }[tur];
   return (
     <button
       onClick={onBos}
       disabled={band}
-      className={`h-9 px-4 inline-flex items-center justify-center gap-2 rounded-[10px] border
-                  text-sm font-medium transition-colors duration-[120ms] cursor-pointer
-                  active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed ${uslub}`}
+      className={`lux-btn h-9 px-4 inline-flex items-center justify-center gap-2 text-[13px] ${uslub} ${band ? 'lux-btn-loading opacity-70' : ''}`}
     >
       {band ? <span className="opacity-70">…</span> : ikonka}
       {children}
@@ -406,9 +401,9 @@ export function Tugma({
 /** Kalit → qiymat juftliklari (batafsil panelda) */
 export function Juft({ nom, qiymat }: { nom: string; qiymat: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-2 border-b border-border last:border-0">
-      <span className="text-sm text-text-dim flex-shrink-0">{nom}</span>
-      <span className="text-sm text-text text-right tabular-nums min-w-0 break-words">{qiymat}</span>
+    <div className="flex items-baseline justify-between gap-4 py-2 border-b border-white/5 last:border-0">
+      <span className="text-sm text-zinc-400 flex-shrink-0">{nom}</span>
+      <span className="text-sm text-white font-medium text-right tabular-nums min-w-0 break-words">{qiymat}</span>
     </div>
   );
 }

@@ -299,12 +299,12 @@ export function Holat() {
             <div>
               <motion.h1 
                 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-300 to-amber-500 tracking-tight drop-shadow-[0_0_15px_rgba(251,191,36,0.4)] flex items-center gap-3"
+                className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 tracking-tight drop-shadow-[0_0_15px_rgba(34,211,238,0.4)] flex items-center gap-3"
               >
                 Loyiha Boshqaruvi
               </motion.h1>
               <div className="text-slate-300 text-sm mt-1 flex items-center gap-3 font-medium">
-                <span className="bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded text-xs border border-yellow-500/30 font-bold uppercase tracking-widest">BIM / EVM</span>
+                <span className="bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded text-xs border border-cyan-500/30 font-bold uppercase tracking-widest shadow-[0_0_8px_rgba(34,211,238,0.2)]">BIM / EVM</span>
                 Smeta Holati va Konstruktiv Nazorat
               </div>
             </div>
@@ -337,7 +337,7 @@ export function Holat() {
             hali hal qilinmagan muammosini chetlab o'tadi. Ataylab
             yopiq/ixtiyoriy — yuqoridagi mavjud oqimga hech narsa
             o'zgartirmaydi. */}
-        <details className="karta p-4 mb-4 group flex-shrink-0">
+        <details className="lux-karta p-4 mb-4 group flex-shrink-0">
           <summary className="cursor-pointer list-none flex items-center justify-between">
             <h3 className="text-[14px] font-semibold text-text">
               Qo'shimcha ish / Zamena / Resurs qo'shish — yangi (GAS'siz) rejim
@@ -354,7 +354,7 @@ export function Holat() {
             bo'yicha resurs vedomosti — butun smeta+F2'dan, `t2_qator_holat`
             asosida (yangi hisob-kitob yo'q, faqat jamlanma). Ataylab
             yopiq/ixtiyoriy, mavjud oqimga tegmaydi. */}
-        <details className="karta p-4 mb-4 group flex-shrink-0">
+        <details className="lux-karta p-4 mb-4 group flex-shrink-0">
           <summary className="cursor-pointer list-none flex items-center justify-between">
             <h3 className="text-[14px] font-semibold text-text">
               Resursiy vedomost (kategoriya bo'yicha) — yangi (GAS'siz) rejim
@@ -370,7 +370,7 @@ export function Holat() {
         {/* T2-PTO-DAILY-FINAL-CUTOVER-008 P0.9: narx nazorati — real backend
             (t2_price_control_v1) bilan ulangan, GAS-nom daraxtidan
             MUSTAQIL, boshqa ikkitasi bilan bir xil naqsh. */}
-        <details className="karta p-4 mb-4 group flex-shrink-0">
+        <details className="lux-karta p-4 mb-4 group flex-shrink-0">
           <summary className="cursor-pointer list-none flex items-center justify-between">
             <h3 className="text-[14px] font-semibold text-text">
               Narx nazorati (muzlagan / xavf ostida) — yangi (GAS'siz) rejim
@@ -389,7 +389,7 @@ export function Holat() {
             import uchun (SMETA_ALREADY_EXISTS obyektga ustidan yozishni
             rad etadi) — boshqa uchtasi bilan bir xil ochish-ixtiyoriy
             naqsh, mavjud oqimga tegmaydi. */}
-        <details className="karta p-4 mb-4 group flex-shrink-0">
+        <details className="lux-karta p-4 mb-4 group flex-shrink-0">
           <summary className="cursor-pointer list-none flex items-center justify-between">
             <h3 className="text-[14px] font-semibold text-text">
               Smeta yuklash (XLSX) — yangi (GAS'siz) rejim

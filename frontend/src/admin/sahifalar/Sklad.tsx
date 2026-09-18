@@ -134,7 +134,7 @@ export function Sklad() {
         bosh={{ matn: 'Sklad bo‘sh', izoh: '«Приход» va «Расход» varaqlarida yozuv topilmadi.' }}
       >
         {() => satrlar.length === 0
-          ? <div className="karta py-12 text-center text-text-dim text-sm">Filtrga mos material topilmadi</div>
+          ? <div className="lux-karta border-white/5 py-12 text-center text-zinc-500 text-sm">Filtrga mos material topilmadi</div>
           : <Jadval ustunlar={ustunlar} satrlar={satrlar} kalit={(m, i) => `${m.nom}|${m.birlik}|${i}`} onSatrBos={setTanlangan} />}
       </Holatlar>
 
@@ -147,13 +147,13 @@ export function Sklad() {
       >
         {tanlangan && (
           <>
-            <section className="karta p-4">
+            <section className="lux-karta p-4 border-white/5">
               <Juft nom="Jami kirim" qiymat={<FmtN val={tanlangan.kirim} />} />
               <Juft nom="Jami chiqim" qiymat={<FmtN val={tanlangan.chiqim} />} />
               <Juft
                 nom="Qoldiq"
                 qiymat={
-                  <span className={tanlangan.qoldiq < 0 ? 'text-danger' : tanlangan.qoldiq === 0 ? 'text-warn' : 'text-ok'}>
+                  <span className={tanlangan.qoldiq < 0 ? 'text-red-400 font-bold drop-shadow-[0_0_4px_rgba(248,113,113,0.5)]' : tanlangan.qoldiq === 0 ? 'text-amber-400 font-medium' : 'text-sky-400 font-bold drop-shadow-[0_0_4px_rgba(56,189,248,0.5)]'}>
                     <FmtN val={tanlangan.qoldiq} /> {tanlangan.birlik}
                   </span>
                 }
@@ -161,7 +161,7 @@ export function Sklad() {
             </section>
 
             {tanlangan.qoldiq < 0 && (
-              <div className="rounded-[10px] border border-danger/25 bg-danger/[.08] p-3 text-sm text-text-dim">
+              <div className="rounded-[10px] border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
                 Chiqim kirimdan ko'p. Odatda bu kirim hujjati kiritilmaganini bildiradi —
                 «Приход» varag'ini tekshiring.
               </div>
@@ -177,8 +177,8 @@ export function Sklad() {
                 </Tugma>
               </div>
             ) : (
-              <section className="karta p-4 space-y-3">
-                <p className="text-[11px] uppercase tracking-[0.04em] text-text-dim">
+              <section className="lux-karta p-4 space-y-3 border-white/5">
+                <p className="text-[11px] uppercase tracking-[0.04em] text-zinc-400 font-bold">
                   {yangi.op === 'prixod' ? 'Yangi kirim (Приход)' : 'Yangi chiqim (Расход)'}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
