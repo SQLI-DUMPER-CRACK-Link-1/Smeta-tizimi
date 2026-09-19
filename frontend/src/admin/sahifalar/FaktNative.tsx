@@ -7,6 +7,7 @@ import { toast } from '../../umumiy/ui/Toast';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
 import { sbFaktBelgilaV2, sbFaktYoz, sbQatorHolatOl, type QatorHolat } from '../../api/t2-fakt';
+import { faktKiritishIzohi, faktQoldaKiritiladimi } from '../../lib/fakt-input-policy';
 
 /** KANONIK Fakt kiritish: faqat qator_id + operation_id orqali. */
 export function FaktNative() {
@@ -24,6 +25,7 @@ export function FaktNative() {
   const jamiOperationIds = useRef<Record<number, string>>({});
   const obyektId = Number(params.get('obyekt'));
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
+  const kiritiladiganQatorlar = qatorlar.filter((q) => faktQoldaKiritiladimi(q.tur));
 
   const bugunMahalliy = () => {
     const d = new Date();
@@ -52,10 +54,11 @@ export function FaktNative() {
   useEffect(() => { void yuklash(); }, [yuklash]);
 
   const saqlash = async () => {
+    const ruxsatliIdlar = new Set(kiritiladiganQatorlar.map((q) => q.qator_id));
     const kiritilgan = Object.entries(qiymatlar).flatMap(([id, value]) => {
       if (value.trim() === '') return [];
       const hajm = Number(value);
-      return Number.isFinite(hajm) ? [{ qator_id: Number(id), hajm }] : [];
+      return Number.isFinite(hajm) && ruxsatliIdlar.has(Number(id)) ? [{ qator_id: Number(id), hajm }] : [];
     });
     const qatorlarYozuvi = yozishUsuli === 'qoshish'
       ? kiritilgan.filter((q) => q.hajm !== 0)
@@ -130,10 +133,10 @@ export function FaktNative() {
       {loading && <div className="skel min-h-[250px] flex-1 rounded-xl" />}
       {validId && !loading && !error && <section className="karta min-h-0 flex-1 overflow-auto">
         <table className="w-full text-left text-[12px]"><thead className="sticky top-0 bg-surface-2 text-text-dim"><tr><th className="p-3">Kod / ish</th><th>Birlik</th><th>Fakt jami</th><th>F2 mumkin</th><th className="p-3">{yozishUsuli === 'jami' ? 'Yangi Fakt jami' : 'Bugun qo‘shish'}</th></tr></thead>
-          <tbody>{qatorlar.filter((q) => q.tur !== 'rz').length === 0 ? <tr><td colSpan={5} className="p-8 text-center text-text-dim">Fakt kiritish uchun kanonik qator yo‘q.</td></tr> : qatorlar.filter((q) => q.tur !== 'rz').map((q) => <tr key={q.qator_id} className="border-t border-border/60"><td className="p-3"><div className="font-medium">{q.kod}</div>{q.nom}</td><td>{q.birlik}</td><td><FmtN val={q.fakt_hajm} /></td><td><FmtN val={q.f2_mumkin_hajm} /></td><td className="p-3"><input aria-label={`Fakt hajmi: ${q.kod || q.nom || 'ish / resurs'}`} type="number" value={qiymatlar[q.qator_id] ?? ''} onChange={(e) => setQiymatlar((old) => ({ ...old, [q.qator_id]: e.target.value }))} className="w-28 rounded border border-border bg-bg px-2 py-1 text-right" /></td></tr>)}</tbody>
+          <tbody>{kiritiladiganQatorlar.length === 0 ? <tr><td colSpan={5} className="p-8 text-center text-text-dim">Fakt kiritish uchun BL, MAT yoki OB kanonik qatori yo‘q.</td></tr> : kiritiladiganQatorlar.map((q) => <tr key={q.qator_id} className="border-t border-border/60"><td className="p-3"><div className="font-medium">{q.kod}</div>{q.nom}</td><td>{q.birlik}</td><td><FmtN val={q.fakt_hajm} /></td><td><FmtN val={q.f2_mumkin_hajm} /></td><td className="p-3"><input aria-label={`Fakt hajmi: ${q.kod || q.nom || 'ish / resurs'}`} type="number" value={qiymatlar[q.qator_id] ?? ''} onChange={(e) => setQiymatlar((old) => ({ ...old, [q.qator_id]: e.target.value }))} className="w-28 rounded border border-border bg-bg px-2 py-1 text-right" /></td></tr>)}</tbody>
         </table>
       </section>}
-      {validId && <section className="flex items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> {yozishUsuli === 'jami' ? 'Jami tahririda server eskirgan qiymatni conflict sifatida rad etadi.' : 'Limit oshishi serverda ogohlantiriladi'}; F2 hech qachon bu formadan yozilmaydi.</p><button onClick={() => void saqlash()} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Saqlanmoqda…' : 'Faktni saqlash'}</button></section>}
+      {validId && <section className="flex items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> {yozishUsuli === 'jami' ? 'Jami tahririda server eskirgan qiymatni conflict sifatida rad etadi.' : 'Limit oshishi serverda ogohlantiriladi'}; {faktKiritishIzohi('rs')} F2 hech qachon bu formadan yozilmaydi.</p><button onClick={() => void saqlash()} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Saqlanmoqda…' : 'Faktni saqlash'}</button></section>}
     </div>
   </Sahifa>;
 }
