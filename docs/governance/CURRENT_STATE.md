@@ -155,3 +155,17 @@ tekshirilgan holatdir. Eski jadval tarixiy dalil sifatida saqlanadi.
 | `production_migrations` | T2 native LRV uchun kerakli besh additive migration live katalogda mavjud; `t2_fakt_yoz_v2` ham qo‘llangan. Ushbu checkpoint yangi production migration qo‘llamadi. |
 | `sheets_bridge` | Kod va ko‘prik kontrakti tayyor, lekin real Google trigger/Sheet↔Supabase acceptance hali egasi tomonidan faollashtirilmagan. |
 | `remaining_evidence` | Authenticated production deep-smoke egasining real sessiyasini talab qiladi; bu muhit parol yoki cookie olmagan. |
+# 2026-09-20 — T2 Fakt norma derivatsiyasi production’da LIVE
+
+Ushbu addendum production tekshiruvi bilan o‘lchandi va quyidagi eski PTO
+yozuvlaridan ustun turadi.
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `0079c4a7aeed94f241744494340e8d77eae67f26` — native PTO/package import release. |
+| `production_migration` | `t2_fakt_norma_derivation_v1` production Supabase’ga qo‘llandi; Supabase migration version `20260919203559`. |
+| `migration_contract` | `t2_qator.norma` mavjud; `t2_qator_holat` BL_NORMA orqali BL Fakt × norma derivatsiyasini beradi; `t2_fakt_yoz_v2` RS/RZ kabi derived qatorlarga yozishni `FAKT_DERIVED_OR_ROLLUP_LINE` bilan rad etadi. |
+| `security` | `t2_qator` RLS yoqilgan; acceptance actor `3`, company `1`, object `8` bilan o‘tdi; acceptance tranzaksiyasi rollback qilindi. |
+| `frontend_deploy` | Cloudflare Production `0079c4a` deploy’i LIVE; `/admin/holat`, `/admin/fakt`, `/admin/f2`, `/admin/f2-tayyorlash`, `/api/soglik` HTTP `200`. |
+| `verification` | Fakt policy `2/2`, FaktNative `3/3`, `npm run tekshir` — PASS. |
+| `remaining_gate` | Authenticated owner smoke hali alohida bajarilishi kerak; T2-GAS-EXIT va live bridge deployi alohida P1. |
