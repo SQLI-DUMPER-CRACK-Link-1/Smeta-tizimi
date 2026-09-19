@@ -24,6 +24,7 @@ import type { AktNode } from '../../src/lib/f2-match-engine';
 import { handleFaylOqi } from './f2-moslash';
 import type { F2ColumnConfig } from '../../src/lib/f2-import-parse';
 import { smetaDaraxtniYoy, type SmetaFlatQator } from '../../src/lib/smeta-flatten';
+import type { SmetaPaketFlatQator, SmetaPaketManbaReja } from '../../src/lib/smeta-package-import';
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
 
@@ -74,6 +75,30 @@ interface ImportYakunlaBody {
   kompaniyaId: number;
   sessiyaId: number;
 }
+/** T2-PTO-SMETA-PAKET-IMPORT-001: ko‘p mustaqil LRV/RES manbali obyekt
+ * uchun alohida sessiya. V1 bitta-fayl yo‘li saqlanadi; bu yo‘l faqat
+ * boshlang‘ich paket importida ishlaydi va qatorni o‘z manbasidan ayirmaydi. */
+interface PaketImportBoshlaBody {
+  amal: 'paket_import_boshla';
+  kompaniyaId: number;
+  obyektId: number;
+  operationId: string;
+  paketKalit: string;
+  paketNom: string;
+  manbalar: SmetaPaketManbaReja[];
+}
+interface PaketImportBolakBody {
+  amal: 'paket_import_bolak';
+  kompaniyaId: number;
+  sessiyaId: number;
+  bolak: number;
+  qatorlar: SmetaPaketFlatQator[];
+}
+interface PaketImportYakunlaBody {
+  amal: 'paket_import_yakunla';
+  kompaniyaId: number;
+  sessiyaId: number;
+}
 /* T2-SMETA-RETRY-CLEAR-001: xato/eskirgan importdan keyin obyektni
  * o'chirib-qayta-yaratmasdan, faqat uning smeta qatorlarini tozalab,
  * darhol qayta import qilish imkonini beradi (t2_smeta_tozalash_v1). */
@@ -83,7 +108,8 @@ interface SmetaTozalaBody {
   obyektId: number;
   operationId: string;
 }
-type SmetaYuklaBody = FaylOqiBody | ImportBody | ImportBoshlaBody | ImportBolakBody | ImportYakunlaBody | SmetaTozalaBody;
+type SmetaYuklaBody = FaylOqiBody | ImportBody | ImportBoshlaBody | ImportBolakBody | ImportYakunlaBody
+  | PaketImportBoshlaBody | PaketImportBolakBody | PaketImportYakunlaBody | SmetaTozalaBody;
 
 type FlatRow = SmetaFlatQator;
 
@@ -202,6 +228,38 @@ async function handleImportYakunla(env: Env, actorId: number, body: ImportYakunl
   });
 }
 
+async function handlePaketImportBoshla(env: Env, actorId: number, body: PaketImportBoshlaBody) {
+  if (!body.kompaniyaId || !body.obyektId || !body.operationId || !body.paketKalit || !body.paketNom || !Array.isArray(body.manbalar)) {
+    return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
+  }
+  return bolakliRpc(env, 't2_smeta_paket_import_boshla_v1', {
+    p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_obyekt_id: body.obyektId,
+    p_operation_id: body.operationId, p_paket_kalit: body.paketKalit, p_paket_nom: body.paketNom,
+    p_manbalar: body.manbalar.map((m) => ({
+      kalit: m.key, nom: m.nom, lrv_document_id: m.lrvDocumentId, res_document_ids: m.resDocumentIds,
+    })),
+  });
+}
+
+async function handlePaketImportBolak(env: Env, actorId: number, body: PaketImportBolakBody) {
+  if (!body.kompaniyaId || !body.sessiyaId || !Number.isInteger(body.bolak) || body.bolak < 0) {
+    return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
+  }
+  if (!Array.isArray(body.qatorlar) || body.qatorlar.length === 0) return Response.json({ ok: false, code: 'MISSING_ROWS' }, { status: 400 });
+  if (body.qatorlar.length > MAX_BOLAK_ROWS) return Response.json({ ok: false, code: 'BAD_CHUNK_SIZE' }, { status: 422 });
+  return bolakliRpc(env, 't2_smeta_paket_import_bolak_v1', {
+    p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_sessiya_id: body.sessiyaId,
+    p_bolak: body.bolak, p_qatorlar: body.qatorlar,
+  });
+}
+
+async function handlePaketImportYakunla(env: Env, actorId: number, body: PaketImportYakunlaBody) {
+  if (!body.kompaniyaId || !body.sessiyaId) return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
+  return bolakliRpc(env, 't2_smeta_paket_import_yakunla_v1', {
+    p_kompaniya_id: body.kompaniyaId, p_actor_id: actorId, p_sessiya_id: body.sessiyaId,
+  });
+}
+
 async function handleSmetaTozala(env: Env, actorId: number, body: SmetaTozalaBody) {
   if (!body.kompaniyaId || !body.obyektId || !body.operationId) {
     return Response.json({ ok: false, code: 'MISSING_CONTEXT' }, { status: 400 });
@@ -233,6 +291,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (body.amal === 'import_boshla') return handleImportBoshla(ctx.env, actorId, body);
   if (body.amal === 'import_bolak') return handleImportBolak(ctx.env, actorId, body);
   if (body.amal === 'import_yakunla') return handleImportYakunla(ctx.env, actorId, body);
+  if (body.amal === 'paket_import_boshla') return handlePaketImportBoshla(ctx.env, actorId, body);
+  if (body.amal === 'paket_import_bolak') return handlePaketImportBolak(ctx.env, actorId, body);
+  if (body.amal === 'paket_import_yakunla') return handlePaketImportYakunla(ctx.env, actorId, body);
   if (body.amal === 'smeta_tozala') return handleSmetaTozala(ctx.env, actorId, body);
   return Response.json({ ok: false, code: 'BAD_AMAL' }, { status: 400 });
 };

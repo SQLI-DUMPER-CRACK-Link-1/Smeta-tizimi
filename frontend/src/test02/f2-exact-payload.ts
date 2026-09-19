@@ -113,7 +113,9 @@ export type F2ExactPayloadNatija =
    * `certified_amount`ni ATAYLAB `null` qiladi — ya'ni qatordagi PUL
    * yo'qoladi. Shuning uchun yozish to'xtatiladi.
    */
-  | { ok: false; sabab: 'AMOUNT_WITHOUT_PRICE'; noaniqSoni: number; noaniqQatorIdlar: number[] };
+  | { ok: false; sabab: 'AMOUNT_WITHOUT_PRICE'; noaniqSoni: number; noaniqQatorIdlar: number[] }
+  /** Bitta kanonik qatorga turli sertifikatlangan narxlarni bitta narx sifatida yozish mumkin emas. */
+  | { ok: false; sabab: 'CONFLICTING_PRICES'; qatorIdlar: number[] };
 
 /**
  * Aggregatsiyalangan qatorlardan `t2_akt_yarat_v2` uchun aniq (exact)
@@ -125,6 +127,17 @@ export type F2ExactPayloadNatija =
 const qismanSumma = (r: F2ExactQator) => r.summaBor && (r.summasizBolak ?? 0) > 0;
 
 export function f2ExactPayloadQur(rows: F2ExactQator[]): F2ExactPayloadNatija {
+  // Aggregatsiya diagnostika uchun birinchi narxni saqlaydi, lekin payload
+  // quruvchisi buni haqiqat sifatida tanlamaydi. Har qanday chaqiruvchi
+  // shu markaziy fail-closed himoyadan o'tadi.
+  const narxZiddiyati = rows.filter((r) => r.barchaNarxlar.length > 1);
+  if (narxZiddiyati.length > 0) {
+    return {
+      ok: false,
+      sabab: 'CONFLICTING_PRICES',
+      qatorIdlar: narxZiddiyati.map((r) => r.qator_id),
+    };
+  }
   const noaniq = rows.filter((r) => (r.narx != null && !r.summaBor) || qismanSumma(r));
   if (noaniq.length > 0) {
     return {

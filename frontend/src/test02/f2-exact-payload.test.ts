@@ -76,8 +76,10 @@ describe('F2 exact payload — NEEDS_REVIEW ambiguity guard (never fabricates qt
     expect(natija.ok).toBe(false);
     if (!natija.ok) {
       expect(natija.sabab).toBe('NEEDS_REVIEW');
-      expect(natija.noaniqSoni).toBe(1);
-      expect(natija.noaniqQatorIdlar).toEqual([2]);
+      if (natija.sabab === 'NEEDS_REVIEW') {
+        expect(natija.noaniqSoni).toBe(1);
+        expect(natija.noaniqQatorIdlar).toEqual([2]);
+      }
     }
   });
 
@@ -94,6 +96,18 @@ describe('F2 exact payload — NEEDS_REVIEW ambiguity guard (never fabricates qt
         priceIntentionallyAbsent: true,
       });
     }
+  });
+
+  it('the central payload builder rejects conflicting source prices before any write payload is returned', () => {
+    const rows: F2ExactQator[] = [{
+      qator_id: 10,
+      hajm: 10,
+      narx: 100,
+      summa: 1250,
+      summaBor: true,
+      barchaNarxlar: [100, 150],
+    }];
+    expect(f2ExactPayloadQur(rows)).toEqual({ ok: false, sabab: 'CONFLICTING_PRICES', qatorIdlar: [10] });
   });
 
   it('the worked example (qty=10, price=123.45, source amount=1234.49) is carried through verbatim, not recomputed', () => {
@@ -163,7 +177,7 @@ describe('F2 exact payload — NEEDS_REVIEW ambiguity guard (never fabricates qt
     expect(natija.ok).toBe(false);
     if (!natija.ok) {
       expect(natija.sabab).toBe('AMOUNT_WITHOUT_PRICE');
-      expect(natija.noaniqQatorIdlar).toEqual([2]);
+      if (natija.sabab === 'AMOUNT_WITHOUT_PRICE') expect(natija.noaniqQatorIdlar).toEqual([2]);
     }
   });
 

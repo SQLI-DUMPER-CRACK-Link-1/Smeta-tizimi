@@ -39,4 +39,37 @@ describe('RES narxlash kalitlari', () => {
     expect(result.ziddiyatliManba).toBe(1);
     expect(result.mos).toBe(0);
   });
+
+  it('kodsiz RES manbasi nom+birlik bo\'yicha xavfsiz moslashadi', () => {
+    const result = resNarxlashPreview([
+      { id: 10, tur: 'mat', kod: 'SMETA-1', nom: 'бетон b25', birlik: 'м3', narx: null },
+    ], [{ nom: 'бетон b25', birlik: 'м³', narx: 321.5 }]);
+    expect(result.mos).toBe(1);
+    expect(result.qatorNarxlari.get(10)).toBe(321.5);
+    expect(result.moslashmagan).toEqual([]);
+  });
+
+  it('narxsiz qatorni turiga va aniq sababiga ajratadi', () => {
+    const result = resNarxlashPreview([
+      { id: 11, tur: 'rs', kod: 'A', nom: 'Ishchi kuchi', birlik: 'soat', narx: null },
+      { id: 12, tur: 'ob', kod: 'B', nom: null, birlik: 'dona', narx: 0 },
+    ], [{ kod: 'C', nom: 'Boshqa resurs', birlik: 'dona', narx: 5 }]);
+    expect(result.turBoyicha).toEqual({
+      rs: { narxsiz: 1, mos: 0 },
+      mat: { narxsiz: 0, mos: 0 },
+      ob: { narxsiz: 1, mos: 0 },
+    });
+    expect(result.moslashmagan.map((x) => x.sabab)).toEqual(['RES_MANBASI_TOPILMADI', 'QATOR_IDENTIYASI_YOQ']);
+  });
+
+  it('kodli va kodsiz mos manbalar turli narx bersa avtomatik tanlamaydi', () => {
+    const result = resNarxlashPreview([
+      { id: 13, tur: 'mat', kod: 'C', nom: 'Maxsus resurs', birlik: 'шт', narx: null },
+    ], [
+      { kod: 'C', nom: 'Maxsus resurs', birlik: 'шт', narx: 100 },
+      { nom: 'Maxsus resurs', birlik: 'шт', narx: 200 },
+    ]);
+    expect(result.mos).toBe(0);
+    expect(result.moslashmagan[0]?.sabab).toBe('BIR_NECHTA_NARX_VARIANTI');
+  });
 });

@@ -18,6 +18,11 @@ import { f2FaylOqiCore } from './treeBuild';
 import type { SheetGrid, F2ColumnConfig } from './types';
 
 describe('f2UstunAniqla (column auto-detect parity)', () => {
+  test('nostandart worksheet rows bilan ham xavfsiz bo‘sh preview qaytaradi', () => {
+    expect(f2UstunAniqla(undefined).hdrRow).toBe(-1);
+    expect(f2FaylOqiCore(undefined)).toEqual({ ok: true, tree: [] });
+  });
+
   test('template 1 — standard LRV_PLUS-style header (kod=1,nom=2,bir=3,norma=4,obyom=5,narx=6,sum=7)', () => {
     const data: SheetGrid = [
       ['№', 'Шифр (обоснование)', 'Наименование', 'Ед.изм', 'Норма на единицу', 'Объем по проекту', 'Цена на.ед', 'Общая сумма'],

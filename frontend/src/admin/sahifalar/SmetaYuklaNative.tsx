@@ -5,6 +5,11 @@ import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import { readXlsx, f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
 import { smetaDaraxtniYoy, bolaklarga } from '../../lib/smeta-flatten';
+import { smetaPaketQatorlariniYoy, smetaPaketRejasiniTekshir, type SmetaPaketManbaReja } from '../../lib/smeta-package-import';
+import {
+  smetaPaketTasdiqImzosi, smetaPaketTanloviniTekshir, smetaVaraqniTahlilQil,
+  type SmetaPackageSheetChoice, type SmetaSheetAnalysis,
+} from '../../lib/smeta-source-analysis';
 import type { AktNode } from '../../lib/f2-match-engine';
 import { smetaQaytaImportDiff, type SmetaReimportDiff, type SmetaReimportLine } from '../../lib/smeta-reimport-diff';
 
@@ -29,8 +34,38 @@ const BOLAK_HAJMI = 4000;
 type SmetaYuklaJavob = {
   ok: boolean; code?: string; xato?: string; xabar?: string;
   qator_soni?: number; sessiya_id?: number; takror?: boolean;
-  bolak?: number; jami?: number; obyekt_id?: number;
+  bolak?: number; jami?: number; obyekt_id?: number; paket_id?: number;
 };
+
+/**
+ * XLSX ichidagi har bir varaq mustaqil review qilinadi. `sourceKey` tasodifiy
+ * paket-scoped kalit; fayl/papka nomi faqat operatorga ko'rinadigan label.
+ */
+type PaketVaraq = SmetaPackageSheetChoice & {
+  file: File;
+  sheetName: string;
+  rows: SheetGrid;
+  lrvCols: F2ColumnConfig | null;
+  resCols: F2ColumnConfig;
+  analysis: SmetaSheetAnalysis;
+  documentId?: number;
+};
+
+/** XLSX parser boundary: malformed/legacy worksheet data must never reach a
+ * renderer or detector as `undefined`. This is deliberately fail-closed: an
+ * invalid grid becomes an empty reviewable worksheet, not an auto-import. */
+function safeSheetRows(rows: unknown): SheetGrid {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => Array.isArray(row) ? row : []);
+}
+
+function spreadsheetReadError(fileName: string, error: unknown): Error {
+  const message = error instanceof Error ? error.message : '';
+  if (/Cannot read properties of undefined \(reading ['"]length['"]\)/i.test(message)) {
+    return new Error(`«${fileName}» jadval tuzilmasi o‘qilmadi. Faylni Excelda ochib, yangi .xlsx sifatida saqlang va qayta tanlang.`);
+  }
+  return new Error(`«${fileName}» o‘qilmadi: ${message || 'noma’lum XLSX o‘qish xatosi'}`);
+}
 
 /** `/api/smeta-yukla` ga bitta so'rov. Tarmoq uzilishi ham `ok:false`
  *  bo'lib qaytadi -- chaqiruvchi hamma joyda bir xil ishlashi uchun. */
@@ -130,11 +165,11 @@ export type ImportQadam = { kalit: string; nom: string; holat: 'ishlamoqda' | 't
  * Belgilangan ustunlar rangli sarlavha bilan ajratiladi.
  */
 function VaraqKorinishi({ rows, cols, qatorSoni = 8 }: {
-  rows: SheetGrid;
+  rows: SheetGrid | null | undefined;
   cols: { kod: number; nom: number; bir: number; narx: number } | null;
   qatorSoni?: number;
 }) {
-  const korsatiladi = rows.filter(r => r.some(c => String(c ?? '').trim() !== '')).slice(0, qatorSoni);
+  const korsatiladi = safeSheetRows(rows).filter(r => r.some(c => String(c ?? '').trim() !== '')).slice(0, qatorSoni);
   if (!korsatiladi.length) return <p className="text-[11px] text-text-mute">Varaq bo‘sh.</p>;
   const ustunSoni = Math.min(korsatiladi.reduce((m, r) => Math.max(m, r.length), 0), 12);
   const belgi = (i: number) => cols?.kod === i ? 'kod' : cols?.nom === i ? 'nom'
@@ -426,12 +461,13 @@ export type VaraqTegi = 'lrv' | 'res' | 'etibor_bermaslik';
  * Ikkalasi ham yo'q yoki juda kam ma'lumot -- "nomalum" (foydalanuvchi
  * qo'lda belgilaydi, hech narsa taxmin qilib yozilmaydi).
  */
-export function varaqTuriTaxmin(rows: SheetGrid): 'lrv' | 'res' | 'nomalum' {
-  const cols = f2UstunAniqla(rows);
+export function varaqTuriTaxmin(rows: SheetGrid | null | undefined): 'lrv' | 'res' | 'nomalum' {
+  const grid = safeSheetRows(rows);
+  const cols = f2UstunAniqla(grid);
   if (cols.nom < 0) return 'nomalum';
   let jami = 0, narxli = 0, hajmli = 0;
   const bolimlar = new Set<string>();
-  for (const row of rows) {
+  for (const row of grid) {
     const nom = String(row[cols.nom] ?? '').trim();
     if (!nom) continue;
     jami++;
@@ -671,6 +707,72 @@ export function narxlarniDaraxtgaQoll(
   return { tree: tree.map(walk), mosSoni, mosEmasSoni, narxsizlar };
 }
 
+/**
+ * Bir nechta RES varag'i tanlanganda ular bitta narx manbasi sifatida
+ * ishlaydi. Bu yordamchi UI tugmasining holatiga bog'liq emas: import aynan
+ * foydalanuvchi tanlagan barcha varaqlardan shu zahoti indeks quradi.
+ *
+ * Muhim qoida: bo'sh yoki tanlanmagan varaq hech qachon indeksga kirmaydi;
+ * kod yolg'iz moslash kaliti emas, mavjud `resNarxIndeksiQur` qonuni saqlanadi.
+ */
+export function tanlanganResManbalariniYig(
+  manbalar: ReadonlyArray<{ rows: SheetGrid; cols: F2ColumnConfig }>,
+): ResNarxYozuv[] {
+  return manbalar.flatMap(({ rows, cols }) => resSatrlariniOl(rows, cols));
+}
+
+type ResKategoriyaNomzodi = { nom: string; birlik: string; tanlangan: T2ResursKategoriya };
+
+/** RES bo'limi bergan kategoriya faqat server zaxira qoidasidan farq qilsa
+ * registrga nomzod bo'ladi. Shu sabab importning narx bosqichi operatorning
+ * oldin alohida "Narxlarni ulash" tugmasini bosishiga qaram bo'lib qolmaydi. */
+export function resKategoriyaNomzodlariniOl(satrlar: ResNarxYozuv[]): ResKategoriyaNomzodi[] {
+  const korilgan = new Set<string>();
+  const out: ResKategoriyaNomzodi[] = [];
+  for (const s of satrlar) {
+    if (!s.nom || !s.birlik) continue;
+    const serverTaxmini = katTaxmini(s.nom, s.birlik);
+    const haqiqiy = s.kat ?? serverTaxmini;
+    if (haqiqiy === serverTaxmini) continue;
+    const key = resKalit(s.nom) + '|' + resKalit(s.birlik);
+    if (korilgan.has(key)) continue;
+    korilgan.add(key);
+    out.push({ nom: s.nom, birlik: s.birlik, tanlangan: haqiqiy });
+  }
+  return out;
+}
+
+/**
+ * Bitta obyektning bir manba XLSX faylida bir necha uchastka/LRV varag'i
+ * bo'lishi mumkin. Har varaqdagi lokal ID lar (`f2_0`, `f2_1`, ...) qayta
+ * boshlanishi sabab ular serverga yuborishdan oldin varaq nomi bilan
+ * namespace qilinadi. Bir nechta varaq tanlansa, haqiqiy Excel varaq nomi
+ * yuqori RZ bo'lib saqlanadi: uchastkalar aralashmaydi va manba faylida
+ * qaysi qism qayerdan kelgani daraxtning o'zida ko'rinadi.
+ */
+export function tanlanganLrvVaraqlaridanDaraxtQur(
+  manbalar: ReadonlyArray<{ name: string; rows: SheetGrid; cols: F2ColumnConfig }>,
+): AktNode[] {
+  const koP = manbalar.length > 1;
+  const namespace = (nodes: AktNode[], prefix: string): AktNode[] => nodes.map((node) => ({
+    ...node,
+    uid: `${prefix}::${node.uid}`,
+    children: node.children ? namespace(node.children, prefix) : node.children,
+  }));
+  const out: AktNode[] = [];
+  for (const [index, manba] of manbalar.entries()) {
+    const parsed = f2FaylOqiCore(manba.rows, manba.cols);
+    if (!('tree' in parsed) || !parsed.tree.length) continue;
+    const tree = namespace(parsed.tree, `varaq_${index}`);
+    if (koP) {
+      out.push({ uid: `varaq_${index}::ildiz`, type: 'rz', nom: manba.name, children: tree });
+    } else {
+      out.push(...tree);
+    }
+  }
+  return out;
+}
+
 /** Import jarayonining haqiqiy vaqtdagi qadam ro'yxati -- foydalanuvchi:
  *  "qanaqadir jarayon bo'layotganini bilib bo'lmaydi ... to'lib boruvchi
  *  ... animatsiya va loglar bilan ko'rsatib tursa". Progress-bar HAQIQIY
@@ -712,8 +814,9 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ qator_soni: number } | null>(null);
   const [resBook, setResBook] = useState<XlsxWorkbook | null>(null);
-  const [resSheetName, setResSheetName] = useState('');
-  const [resCols, setResCols] = useState<F2ColumnConfig | null>(null);
+  /** Alohida RES faylida ham bir nechta narx varaqlari bo'lishi mumkin. */
+  const [resSheetNames, setResSheetNames] = useState<string[]>([]);
+  const [resColsBySheet, setResColsBySheet] = useState<Record<string, F2ColumnConfig>>({});
   const [resBusy, setResBusy] = useState(false);
   const [resError, setResError] = useState('');
   const [resIndex, setResIndex] = useState<ResNarxIndeks | null>(null);
@@ -732,16 +835,29 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
    *  har bir varaq turi mazmuniga qarab avtomatik taxmin qilinadi
    *  (varaqTuriTaxmin), foydalanuvchi shu yerda tasdiqlaydi/tuzatadi. */
   const [varaqTeglari, setVaraqTeglari] = useState<Record<string, VaraqTegi>>({});
+  /** Har tanlangan LRV varag'i o'z ustun xaritasini saqlaydi. Bu bir
+   * obyekt ichidagi uchastkalar turli Excel shaklida bo'lsa ham ularni
+   * bitta import sessiyasida aralashtirmasdan o'qish uchun kerak. */
+  const [inFileLrvCols, setInFileLrvCols] = useState<Record<string, F2ColumnConfig>>({});
   /** RES deb belgilangan har bir ICHKI varaq uchun avtomatik aniqlangan
    *  ustunlar -- f2UstunAniqla standart holatda ЕNKБ shakli (ikki qatorli
    *  sarlavha)ni kutadi, oddiy tekis kod/nom/narx jadvalida ustunlar
    *  noto'g'ri chiqishi mumkin, shuning uchun foydalanuvchi shu yerda ham
    *  tuzata oladi (alohida RES fayl bilan bir xil naqsh). */
   const [inFileResCols, setInFileResCols] = useState<Record<string, F2ColumnConfig>>({});
+  /** Bir obyektning 4 uchastka + EO kabi ko‘p mustaqil manbasi uchun
+   * boshlang‘ich smeta paketi. Bu V1 dagi bitta-fayl holatini buzmaydi. */
+  const [paketVaraqlar, setPaketVaraqlar] = useState<PaketVaraq[]>([]);
+  /** Faqat aynan hozirgi varaq tahlili va operator tanlovi uchun yaroqli. */
+  const [paketTasdiqImzosi, setPaketTasdiqImzosi] = useState<string | null>(null);
+  const [paketKalit, setPaketKalit] = useState('');
+  const [paketNom, setPaketNom] = useState('');
+  const [paketBand, setPaketBand] = useState(false);
   const rawFile = useRef<File | null>(null);
   const sourceDocumentId = useRef<number | undefined>(undefined);
   const sourceOperationId = useRef('');
   const importOperationId = useRef('');
+  const paketImportOperationId = useRef('');
   const generation = useRef(0);
 
   useEffect(() => {
@@ -769,25 +885,29 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
 
   function reset() {
     generation.current++; setError(''); setResult(null); setCols(null); setPreview([]);
-    setResBook(null); setResCols(null); setResIndex(null); setResIndexSize(0); setResError('');
-    setVaraqTeglari({}); setInFileResCols({}); setReimportDiff(null);
+    setResBook(null); setResSheetNames([]); setResColsBySheet({}); setResIndex(null); setResIndexSize(0); setResError('');
+    setVaraqTeglari({}); setInFileLrvCols({}); setInFileResCols({}); setKatKorib([]); setReimportDiff(null);
+    setPaketVaraqlar([]); setPaketTasdiqImzosi(null); setPaketKalit(''); setPaketNom(''); setPaketBand(false); paketImportOperationId.current = '';
   }
 
 
   /** Foydalanuvchi bir varaqni qo'lda LRV yoki RES deb belgilaydi (yoki
-   *  e'tiborsiz qoldiradi). LRV -- radio kabi, faqat BITTASI bo'lishi
-   *  mumkin (aynan shu varaqdan daraxt quriladi); RES -- checkbox kabi,
-   *  bir nechtasi bo'lishi mumkin (barchasining narxlari birlashtiriladi). */
+   *  e'tiborsiz qoldiradi). LRV ham, RES ham checkbox kabi: bitta obyekt
+   * bir necha uchastka smetasidan iborat bo'lishi, RES esa bir necha narx
+   * bo'limiga ajralishi mumkin. */
   function varaqTegBelgila(workbook: XlsxWorkbook, name: string, teg: VaraqTegi) {
-    setVaraqTeglari(prev => {
-      const next = { ...prev, [name]: teg };
-      if (teg === 'lrv') {
-        for (const k of Object.keys(next)) if (k !== name && next[k] === 'lrv') next[k] = 'etibor_bermaslik';
-      }
-      return next;
-    });
-    setResIndex(null); setResIndexSize(0);
+    setVaraqTeglari(prev => ({ ...prev, [name]: teg }));
+    setResIndex(null); setResIndexSize(0); setKatKorib([]);
     if (teg === 'lrv') chooseSheet(workbook, name);
+    if (teg === 'lrv') {
+      setInFileLrvCols(prev => {
+        if (prev[name]) return prev;
+        const sheet = workbook.sheet(name);
+        if (!sheet) return prev;
+        const detected = f2FaylOqiCore(sheet.rows);
+        return 'cols' in detected ? { ...prev, [name]: detected.cols } : prev;
+      });
+    }
     if (teg === 'res') {
       setInFileResCols(prev => {
         if (prev[name]) return prev; // avval belgilangan tuzatish saqlanadi
@@ -806,11 +926,11 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     else { setCols(null); setPreview([]); }
   }
 
-  async function reimportPreview(workbook: XlsxWorkbook, name: string, token: number) {
-    const sheet = workbook.sheet(name);
-    if (!sheet) throw new Error('Qayta import varag‘i topilmadi.');
-    const built = f2FaylOqiCore(sheet.rows);
-    if (!('tree' in built) || !built.tree.length) throw new Error('Qayta import daraxti bo‘sh chiqdi.');
+  async function reimportPreview(
+    manbalar: ReadonlyArray<{ name: string; rows: SheetGrid; cols: F2ColumnConfig }>, token: number,
+  ) {
+    const daraxt = tanlanganLrvVaraqlaridanDaraxtQur(manbalar);
+    if (!daraxt.length) throw new Error('Qayta import daraxti bo‘sh chiqdi.');
     const current = await sbT2DaraxtOl(Number(objectId));
     if (!current.ok) throw new Error('Mavjud smeta qatorlari o‘qilmadi. Diff tuzilmadi.');
     if (generation.current !== token) return;
@@ -818,7 +938,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       canonicalId: row.id, sourceKey: null, kod: row.kod ?? null, nom: row.nom ?? null,
       birlik: row.birlik ?? null, hajm: row.hajm ?? null, norma: row.norma ?? null, narx: row.narx ?? null,
     }));
-    const after: SmetaReimportLine[] = smetaDaraxtniYoy(built.tree).map((row) => ({
+    const after: SmetaReimportLine[] = smetaDaraxtniYoy(daraxt).map((row) => ({
       canonicalId: null, sourceKey: null, kod: row.kod, nom: row.nom, birlik: row.birlik,
       hajm: row.hajm, norma: row.norma, narx: row.narx,
     }));
@@ -838,28 +958,43 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       setBook(workbook);
 
       // Har bir varaq mazmuniga qarab LRV/RES/e'tiborsiz deb taxmin
-      // qilinadi -- birinchi LRV-ga o'xshagan varaq daraxt qurish uchun
-      // tanlanadi, qolgan LRV-ga o'xshaganlari (bo'lsa) ehtiyot uchun
-      // e'tiborsiz qoldiriladi (foydalanuvchi qo'lda qayta belgilay oladi).
+      // qilinadi. Barcha LRV-ga o'xshagan varaqlar tanlanadi: bitta obyekt
+      // ko'pincha bir nechta uchastka smetasidan iborat bo'ladi. Ular import
+      // sessiyasida alohida manba ildizlari ostida saqlanadi.
       const teglar: Record<string, VaraqTegi> = {};
+      const lrvUstunlari: Record<string, F2ColumnConfig> = {};
       const resUstunlari: Record<string, F2ColumnConfig> = {};
       let lrvTanlandi = '';
       for (const s of workbook.sheets) {
         const sheet = workbook.sheet(s.name);
         const taxmin = sheet ? varaqTuriTaxmin(sheet.rows) : 'nomalum';
         teglar[s.name] = taxmin === 'nomalum' ? 'etibor_bermaslik' : taxmin;
+        if (taxmin === 'lrv' && sheet) {
+          const detected = f2FaylOqiCore(sheet.rows);
+          if ('cols' in detected) lrvUstunlari[s.name] = detected.cols;
+          if (!lrvTanlandi) lrvTanlandi = s.name;
+        }
         if (taxmin === 'res' && sheet) resUstunlari[s.name] = f2UstunAniqla(sheet.rows);
       }
-      for (const s of workbook.sheets) {
-        if (teglar[s.name] !== 'lrv') continue;
-        if (!lrvTanlandi) lrvTanlandi = s.name; else teglar[s.name] = 'etibor_bermaslik';
-      }
       if (!lrvTanlandi) { lrvTanlandi = workbook.sheets[0]?.name || ''; teglar[lrvTanlandi] = 'lrv'; }
-      setVaraqTeglari(teglar); setInFileResCols(resUstunlari);
+      if (lrvTanlandi && !lrvUstunlari[lrvTanlandi]) {
+        const sheet = workbook.sheet(lrvTanlandi);
+        if (sheet) {
+          const detected = f2FaylOqiCore(sheet.rows);
+          if ('cols' in detected) lrvUstunlari[lrvTanlandi] = detected.cols;
+        }
+      }
+      setVaraqTeglari(teglar); setInFileLrvCols(lrvUstunlari); setInFileResCols(resUstunlari);
 
       chooseSheet(workbook, lrvTanlandi); setPhase('Varaq va ustunlarni tekshiring');
       if ((objects.find((row) => row.id === Number(objectId))?.qator_soni ?? 0) > 0) {
-        await reimportPreview(workbook, lrvTanlandi, token);
+        const lrvManbalar = workbook.sheets.flatMap((s) => {
+          if (teglar[s.name] !== 'lrv') return [];
+          const sheet = workbook.sheet(s.name);
+          const lrvCols = lrvUstunlari[s.name];
+          return sheet && lrvCols ? [{ name: s.name, rows: sheet.rows, cols: lrvCols }] : [];
+        });
+        await reimportPreview(lrvManbalar, token);
       }
     } catch { if (generation.current === token) setError('Fayl o‘qilmadi. XLSX faylni tekshiring.'); }
     finally { setBusy(false); }
@@ -898,21 +1033,210 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
    *  (f2UstunAniqla), lekin RES odatda tekis narx katalogi -- foydalanuvchi
    *  ustunlarni tasdiqlashi/tuzatishi kerak (LRV'dagi bilan bir xil naqsh). */
   async function uploadRes(file: File) {
-    setResError(''); setResIndex(null); setResIndexSize(0); setResBusy(true);
+    setResError(''); setResIndex(null); setResIndexSize(0); setKatKorib([]); setResBusy(true);
     try {
       const workbook = await readXlsx(await file.arrayBuffer());
       setResBook(workbook);
-      const name = workbook.sheets[0]?.name || '';
-      setResSheetName(name);
-      const sheet = workbook.sheet(name);
-      setResCols(sheet ? f2UstunAniqla(sheet.rows) : null);
+      const detected: Record<string, F2ColumnConfig> = {};
+      const tanlangan: string[] = [];
+      for (const s of workbook.sheets) {
+        if (varaqTuriTaxmin(s.rows) !== 'res') continue;
+        detected[s.name] = f2UstunAniqla(s.rows);
+        tanlangan.push(s.name);
+      }
+      // Bir varaqlik faylni operator alohida RES deb tanlagan bo'lsa,
+      // u taxmin turlicha chiqsa ham avvalgi qulay oqim saqlanadi.
+      if (!tanlangan.length && workbook.sheets.length === 1) {
+        const only = workbook.sheets[0];
+        tanlangan.push(only.name);
+        detected[only.name] = f2UstunAniqla(only.rows);
+      }
+      setResSheetNames(tanlangan);
+      setResColsBySheet(detected);
     } catch { setResError('RES fayli o‘qilmadi. XLSX faylni tekshiring.'); }
     finally { setResBusy(false); }
   }
-  function chooseResSheet(workbook: XlsxWorkbook, name: string) {
-    setResSheetName(name); setResIndex(null); setResIndexSize(0);
+
+  /**
+   * Har XLSXning barcha varaqlari ko'rib chiqishga chiqadi. Detektor tavsiya
+   * beradi, ammo noaniq varaqni ham, yuqori-confidence varaqni ham operator
+   * aniq tasdiqlamaguncha import yo'liga kiritmaymiz.
+   */
+  async function paketFayllariniTahlilQil(files: FileList | File[]) {
+    if (!objectId) { setError('Avval obyektni tanlang.'); return; }
+    const incoming = Array.from(files || []).filter((file) => /\.(xlsx|xlsm|xls)$/i.test(file.name));
+    if (!incoming.length) { setError('XLSX/XLSM/XLS fayl topilmadi.'); return; }
+    setError(''); setPaketBand(true); setPhase('Paket varaqlari tahlil qilinmoqda');
+    try {
+      const fresh: PaketVaraq[] = [];
+      for (const file of incoming) {
+        if (file.size > MAX_FILE_BYTES) throw new Error(`«${file.name}» ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
+        let workbook: XlsxWorkbook;
+        try {
+          workbook = await readXlsx(await file.arrayBuffer());
+        } catch (e) {
+          throw spreadsheetReadError(file.name, e);
+        }
+        const sheets = Array.isArray(workbook.sheets) ? workbook.sheets : [];
+        if (!sheets.length) throw new Error(`«${file.name}» ichida o‘qiladigan varaq topilmadi.`);
+        const workbookId = `workbook-${yangiOperationId()}`;
+        for (const sheetInfo of sheets) {
+          if (!sheetInfo || typeof sheetInfo.name !== 'string' || !sheetInfo.name.trim()) {
+            throw new Error(`«${file.name}» ichida nomi aniqlanmagan varaq bor — xavfsizlik uchun paket tahlili to‘xtatildi.`);
+          }
+          const sheet = workbook.sheet(sheetInfo.name);
+          if (!sheet) throw new Error(`«${file.name} / ${sheetInfo.name}» varag‘i o‘qilmadi.`);
+          // Bo'sh yoki nostandart satrlar `unknown` review qatori bo'ladi;
+          // tashqi XLSX strukturasining `undefined.length` xatosi UIga chiqmaydi.
+          const rows = safeSheetRows(sheet.rows);
+          const analysis = smetaVaraqniTahlilQil(rows);
+          const parsed = f2FaylOqiCore(rows);
+          fresh.push({
+            id: `sheet-${yangiOperationId()}`,
+            workbookId,
+            sourceKey: `source-${yangiOperationId()}`,
+            file,
+            sheetName: sheetInfo.name,
+            rows,
+            lrvCols: 'cols' in parsed ? parsed.cols : null,
+            resCols: f2UstunAniqla(rows),
+            analysis,
+            analysisKey: analysis.analysisKey,
+            selectedRole: analysis.detectedRole === 'unknown' ? undefined : analysis.detectedRole,
+          });
+        }
+      }
+      if (!fresh.length) throw new Error('Tanlangan fayllarda o‘qiladigan varaq topilmadi.');
+      setPaketVaraqlar((prev) => [...prev, ...fresh]);
+      setPaketTasdiqImzosi(null); paketImportOperationId.current = '';
+      if (!paketKalit) setPaketKalit(yangiOperationId());
+      if (!paketNom) setPaketNom((objects.find((x) => x.id === Number(objectId))?.nom || 'Obyekt') + ' — boshlang‘ich smeta paketi');
+      setPhase(`${fresh.length} ta varaq tahlil qilindi — rol va RES bog‘lanishini tasdiqlang`);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Paket fayllari o‘qilmadi.'); }
+    finally { setPaketBand(false); }
+  }
+
+  /** Papka ham aynan bitta varaqma-varaq tahlil oqimidan o'tadi. */
+  async function paketPapkasiniTahlilQil(files: FileList | File[]) {
+    await paketFayllariniTahlilQil(files);
+  }
+
+  async function paketHujjatiniR2gaYukla(file: File, objId: number, turi: 'smeta_lrv' | 'smeta_res', sourceSlotKey: string): Promise<number> {
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const loyihaId = objects.find((o) => o.id === objId)?.loyiha_id ?? null;
+    const fd = new FormData();
+    fd.append('fayl', file); fd.append('kompaniya_id', String(companyId));
+    if (loyihaId != null) fd.append('loyiha_id', String(loyihaId));
+    fd.append('obyekt_id', String(objId)); fd.append('turi', turi); fd.append('source_slot_key', sourceSlotKey);
+    fd.append('operation_id', yangiOperationId()); fd.append('sha256', sha256); fd.append('size', String(file.size));
+    const response = await fetch('/api/hujjat-yukla', { method: 'POST', body: fd });
+    const body = await response.json().catch(() => null) as { ok?: boolean; document_id?: number; code?: string } | null;
+    const documentId = body?.ok ? Number(body.document_id) : NaN;
+    if (!response.ok || !Number.isSafeInteger(documentId) || documentId <= 0) {
+      throw new Error('«' + file.name + '» kanonik R2 manba hujjati sifatida qabul qilinmadi (' + (body?.code || 'xato') + ').');
+    }
+    return documentId;
+  }
+
+  function paketVaraqniYangila(id: string, patch: Partial<PaketVaraq>) {
+    setPaketVaraqlar((prev) => prev.map((sheet) => sheet.id === id ? { ...sheet, ...patch } : sheet));
+    setPaketTasdiqImzosi(null); paketImportOperationId.current = '';
+  }
+
+  function paketTahliliniTasdiqla() {
+    const signature = smetaPaketTasdiqImzosi(paketVaraqlar);
+    const check = smetaPaketTanloviniTekshir(paketVaraqlar, signature);
+    if (!check.ok) {
+      setError(`Paket tahlili tasdiqlanmadi: ${check.code}${check.sheetId ? ` (${check.sheetId})` : ''}.`);
+      return;
+    }
+    setError(''); setPaketTasdiqImzosi(signature);
+    setPhase('Tahlil tasdiqlandi — import shu tarkib bilan bajariladi');
+  }
+
+  async function paketImportQil() {
+    if (!objectId || !paketVaraqlar.length || paketBand) return;
+    if (selectedObject?.qator_soni) { setError('Bu obyektda smeta bor; paket faqat boshlang‘ich import uchun. Qayta revision alohida nazorat oqimi bilan qilinadi.'); return; }
+    if (!paketKalit || !paketNom.trim()) { setError('Paket nomi va identifikatori bo‘sh bo‘lmasligi kerak.'); return; }
+    const selection = smetaPaketTanloviniTekshir(paketVaraqlar, paketTasdiqImzosi);
+    if (!selection.ok) { setError(`Import bloklandi: ${selection.code}. Tahlil/rol/bog‘lanishni qayta tekshirib tasdiqlang.`); return; }
+    const lrvs = paketVaraqlar.filter((sheet) => sheet.selectedRole === 'lrv');
+    const reses = paketVaraqlar.filter((sheet) => sheet.selectedRole === 'res');
+    if (lrvs.some((sheet) => !sheet.lrvCols)) { setError('LRV deb tanlangan varaqdan ish/hajm ustunlari aniqlanmadi. Ustunlarni tuzating yoki rolini o‘zgartiring.'); return; }
+    setError(''); setResult(null); setPaketBand(true); setBusy(true); setPhase('Tasdiqlangan smeta paketi tayyorlanmoqda');
+    try {
+      const objId = Number(objectId);
+      const pricedTrees: Array<{ sourceKey: string; tree: AktNode[] }> = [];
+      const categoryCandidates: ResKategoriyaNomzodi[] = [];
+      for (const lrv of lrvs) {
+        const tree = tanlanganLrvVaraqlaridanDaraxtQur([{ name: lrv.sheetName, rows: lrv.rows, cols: lrv.lrvCols! }]);
+        if (!tree.length) throw new Error(`«${lrv.file.name} / ${lrv.sheetName}» LRV daraxti bo‘sh chiqdi.`);
+        const rows = tanlanganResManbalariniYig(reses
+          .filter((res) => res.targetLrvSourceKey === lrv.sourceKey)
+          .map((res) => ({ rows: res.rows, cols: res.resCols })));
+        const idx = rows.length ? resNarxIndeksiQur(rows) : null;
+        const applied = idx ? narxlarniDaraxtgaQoll(tree, idx).tree : tree;
+        pricedTrees.push({ sourceKey: lrv.sourceKey, tree: applied });
+        categoryCandidates.push(...resKategoriyaNomzodlariniOl(rows));
+      }
+      if (categoryCandidates.length) await katNomzodlariniSaqla(categoryCandidates);
+
+      const uploadedDocumentIds = new Map<string, number>();
+      for (const lrv of lrvs) {
+        const documentId = lrv.documentId ?? await paketHujjatiniR2gaYukla(lrv.file, objId, 'smeta_lrv', `smeta-paket:${paketKalit}:${lrv.sourceKey}:lrv`);
+        uploadedDocumentIds.set(lrv.id, documentId);
+      }
+      const resOrdinalByTarget = new Map<string, number>();
+      for (const res of reses) {
+        const target = res.targetLrvSourceKey!;
+        const ordinal = (resOrdinalByTarget.get(target) || 0) + 1;
+        resOrdinalByTarget.set(target, ordinal);
+        const documentId = res.documentId ?? await paketHujjatiniR2gaYukla(res.file, objId, 'smeta_res', `smeta-paket:${paketKalit}:${target}:res:${ordinal}`);
+        uploadedDocumentIds.set(res.id, documentId);
+      }
+      setPaketVaraqlar((prev) => prev.map((sheet) => uploadedDocumentIds.has(sheet.id)
+        ? { ...sheet, documentId: uploadedDocumentIds.get(sheet.id) } : sheet));
+
+      const plan: SmetaPaketManbaReja[] = lrvs.map((lrv) => ({
+        key: lrv.sourceKey,
+        nom: `${lrv.file.name} / ${lrv.sheetName}`,
+        lrvDocumentId: uploadedDocumentIds.get(lrv.id)!,
+        resDocumentIds: reses.filter((res) => res.targetLrvSourceKey === lrv.sourceKey).map((res) => uploadedDocumentIds.get(res.id)!),
+      }));
+      const check = smetaPaketRejasiniTekshir(paketKalit, paketNom, plan);
+      if (!check.ok) throw new Error('Smeta paketi manba kontrakti bajarilmadi: ' + check.code + (check.sourceKey ? ` (${check.sourceKey})` : '') + '.');
+      const flatRows = smetaPaketQatorlariniYoy(pricedTrees);
+      if (!flatRows.length) throw new Error('Paket qatorlari bo‘sh chiqdi.');
+
+      const operationId = paketImportOperationId.current || (paketImportOperationId.current = yangiOperationId());
+      const start = await smetaSorov({ amal: 'paket_import_boshla', kompaniyaId: companyId, obyektId: objId,
+        operationId, paketKalit, paketNom, manbalar: plan });
+      if (!start.ok || !start.sessiya_id) throw new Error('Paket import sessiyasi ochilmadi (' + (start.code || 'xato') + ').');
+      const sessiyaId = Number(start.sessiya_id);
+      const chunks = bolaklarga(flatRows, BOLAK_HAJMI);
+      for (let i = 0; i < chunks.length; i++) {
+        setPhase(`Paket qatorlari yuborilmoqda: ${i + 1}/${chunks.length}`);
+        const part = await smetaSorov({ amal: 'paket_import_bolak', kompaniyaId: companyId, sessiyaId, bolak: i, qatorlar: chunks[i] });
+        if (!part.ok) throw new Error('Paketning ' + (i + 1) + '-bo‘lagi qabul qilinmadi (' + (part.code || 'xato') + ').');
+      }
+      setPhase('Paket kanonik bazaga yozilmoqda');
+      const done = await smetaSorov({ amal: 'paket_import_yakunla', kompaniyaId: companyId, sessiyaId });
+      if (!done.ok) throw new Error('Smeta paketi yozilmadi (' + (done.code || 'xato') + ').');
+      setResult({ qator_soni: done.qator_soni || 0 });
+      setObjects((prev) => prev.map((o) => o.id === objId ? { ...o, qator_soni: done.qator_soni ?? o.qator_soni } : o));
+      setPhase('Smeta paketi tayyor'); onImportlandi?.();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Smeta paketi import qilinmadi.'); }
+    finally { setBusy(false); setPaketBand(false); }
+  }
+  function resVaraqBelgila(workbook: XlsxWorkbook, name: string, tanlandi: boolean) {
+    setResIndex(null); setResIndexSize(0); setKatKorib([]);
+    setResSheetNames(prev => tanlandi ? [...new Set([...prev, name])] : prev.filter(x => x !== name));
+    if (!tanlandi) return;
     const sheet = workbook.sheet(name);
-    setResCols(sheet ? f2UstunAniqla(sheet.rows) : null);
+    if (!sheet) return;
+    setResColsBySheet(prev => prev[name] ? prev : { ...prev, [name]: f2UstunAniqla(sheet.rows) });
   }
   /** Narx satrlarini BARCHA manbalardan yig'adi: (1) asosiy faylda RES deb
    *  belgilangan varaq(lar) -- ustunlar avtomatik aniqlanadi, (2) alohida
@@ -921,20 +1245,23 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
    *  bo'lmasligi mumkin -- owner: "bitta hujjat ichida ham lrv ham res
    *  sahifalari ham bo'lishi mumkin". */
   function resSatrlariBarchaManbadan(): ResNarxYozuv[] {
-    const out: ResNarxYozuv[] = [];
+    const manbalar: Array<{ rows: SheetGrid; cols: F2ColumnConfig }> = [];
     if (book) {
       for (const s of book.sheets) {
         if (varaqTeglari[s.name] !== 'res') continue;
         const sheet = book.sheet(s.name);
         if (!sheet) continue;
-        out.push(...resSatrlariniOl(sheet.rows, inFileResCols[s.name] || f2UstunAniqla(sheet.rows)));
+        manbalar.push({ rows: sheet.rows, cols: inFileResCols[s.name] || f2UstunAniqla(sheet.rows) });
       }
     }
-    if (resBook && resCols) {
-      const sheet = resBook.sheet(resSheetName);
-      if (sheet) out.push(...resSatrlariniOl(sheet.rows, resCols));
+    if (resBook) {
+      for (const name of resSheetNames) {
+        const sheet = resBook.sheet(name);
+        const cols = resColsBySheet[name];
+        if (sheet && cols) manbalar.push({ rows: sheet.rows, cols });
+      }
     }
-    return out;
+    return tanlanganResManbalariniYig(manbalar);
   }
 
   /**
@@ -954,19 +1281,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     if (!satrlar.length) return;
     setResIndex(resNarxIndeksiQur(satrlar));
     setResIndexSize(satrlar.length);
-    const korilgan = new Set<string>();
-    const kandidatlar: Array<{ nom: string; birlik: string; tanlangan: T2ResursKategoriya }> = [];
-    for (const s of satrlar) {
-      if (!s.nom || !s.birlik) continue;
-      const serverTaxmini = katTaxmini(s.nom, s.birlik);
-      const haqiqiy = s.kat ?? serverTaxmini;
-      if (haqiqiy === serverTaxmini) continue; // server o'zi to'g'ri topadi
-      const key = resKalit(s.nom) + '|' + resKalit(s.birlik);
-      if (korilgan.has(key)) continue;
-      korilgan.add(key);
-      kandidatlar.push({ nom: s.nom, birlik: s.birlik, tanlangan: haqiqiy });
-    }
-    setKatKorib(kandidatlar);
+    setKatKorib(resKategoriyaNomzodlariniOl(satrlar));
   }
 
   /** Ro'yxatdagi kategoriyalarni registrga yozadi -- best-effort,
@@ -978,11 +1293,11 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
    *  mumkin: masalan birligi «МАШ.-Ч» bo'lgani uchun server МАШ deydi,
    *  RES bo'limi esa МАТЕРИАЛЬНЫЕ РЕСУРСЫ. Shuning uchun filtr olib
    *  tashlandi -- aks holda aynan shunday tuzatishlar yo'qolardi. */
-  async function katlarniSaqla() {
-    if (!katKorib.length) return;
+  async function katNomzodlariniSaqla(nomzodlar: ResKategoriyaNomzodi[]) {
+    if (!nomzodlar.length) return;
     setKatSaqlanmoqda(true);
     try {
-      await Promise.all(katKorib.map(k =>
+      await Promise.all(nomzodlar.map(k =>
         sbT2ResursKategoriyaBelgila({ kompaniyaId: companyId, nom: k.nom, birlik: k.birlik, kategoriya: k.tanlangan }).catch(() => null)));
     } finally { setKatSaqlanmoqda(false); }
   }
@@ -1016,30 +1331,41 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       });
     };
     try {
-      // Kategoriya tuzatishlar (agar bo'lsa) importdan OLDIN registrga
-      // yoziladi -- shu import ham ulardan darhol foydalanishi uchun.
-      if (katKorib.length) {
+      // Kategoriya tuzatishlar importdan OLDIN registrga yoziladi. Agar
+      // operator "Narxlarni ulash" tugmasini bosmagan bo'lsa ham, tanlangan
+      // RES varaqlari importning o'zida qayta o'qiladi -- narx/kategoriya
+      // manbasi vaqtinchalik UI holatiga bog'liq bo'lib qolmaydi.
+      const resSatrlar = resSatrlariBarchaManbadan();
+      const avtomatikKatNomzodlari = resKategoriyaNomzodlariniOl(resSatrlar);
+      const saqlanadiganKatNomzodlari = katKorib.length ? katKorib : avtomatikKatNomzodlari;
+      if (saqlanadiganKatNomzodlari.length) {
         qadam('Resurs kategoriyalari saqlanmoqda');
-        await katlarniSaqla();
-        yakunla('tayyor', katKorib.length + ' ta resurs turi registrga yozildi');
+        await katNomzodlariniSaqla(saqlanadiganKatNomzodlari);
+        yakunla('tayyor', saqlanadiganKatNomzodlari.length + ' ta resurs turi registrga yozildi');
       }
 
       qadam('Fayl tuzilishi (bo‘lim/ish/resurs) qurilmoqda');
-      const sheet = book.sheet(sheetName)!;
-      const built = f2FaylOqiCore(sheet.rows, cols);
-      if (!('tree' in built) || !built.tree.length) {
+      const lrvManbalar = book.sheets.flatMap((s) => {
+        if (varaqTeglari[s.name] !== 'lrv') return [];
+        const sheet = book.sheet(s.name);
+        const lrvCols = inFileLrvCols[s.name] || (s.name === sheetName ? cols : null);
+        return sheet && lrvCols ? [{ name: s.name, rows: sheet.rows, cols: lrvCols }] : [];
+      });
+      const lrvTree = tanlanganLrvVaraqlaridanDaraxtQur(lrvManbalar);
+      if (!lrvTree.length) {
         yakunla('xato', 'daraxt bo‘sh chiqdi');
-        throw new Error('Ustunlarni tekshiring — daraxt bo‘sh chiqdi.');
+        throw new Error('Kamida bitta LRV varag‘i va uning ustunlari tanlangan bo‘lishi kerak.');
       }
-      yakunla('tayyor', built.tree.length + ' ta bo‘lim topildi');
+      yakunla('tayyor', lrvManbalar.length + ' ta LRV varag‘i, ' + lrvTree.length + ' ta yuqori bo‘lim topildi');
 
-      // RES fayli ulangan bo'lsa: narxi YO'Q rs/mat/ob barglariga kod/nom+birlik
-      // bo'yicha narx qo'llanadi. LRV faylida allaqachon narx bo'lgan qatorlar
-      // ustidan YOZILMAYDI (narxlarniDaraxtgaQoll'ning o'zi shuni ta'minlaydi).
-      let importTree = built.tree;
-      if (resIndex) {
+      // RES tanlangan bo'lsa, indeks aynan HOZIRGI varaqlardan quriladi.
+      // Shuning uchun ichki RES + alohida RES ko'p varaqda tanlangan holatda
+      // ham "Narxlarni ulash" tugmasini avval bosish talab qilinmaydi.
+      let importTree = lrvTree;
+      const importResIndex = resSatrlar.length ? resNarxIndeksiQur(resSatrlar) : null;
+      if (importResIndex) {
         qadam('RES narxlari LRV daraxtiga ulanmoqda');
-        const qollangan = narxlarniDaraxtgaQoll(built.tree, resIndex);
+        const qollangan = narxlarniDaraxtgaQoll(lrvTree, importResIndex);
         importTree = qollangan.tree;
         setNarxsizlar(qollangan.narxsizlar);
         yakunla('tayyor', qollangan.mosSoni + ' ta mos, ' + qollangan.mosEmasSoni + ' ta narxsiz qoldi');
@@ -1175,10 +1501,81 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         </div>
       )}
       {objectId && !alreadyHasSmeta && (
-        <label className="block text-sm">Smeta fayli (XLSX)
-          <input aria-label="Smeta fayli" type="file" accept=".xlsx,.xlsm,.xls" className="ml-2"
-          onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
-        </label>
+        <>
+          <label className="block text-sm">Bitta smeta fayli (XLSX)
+            <input aria-label="Smeta fayli" type="file" accept=".xlsx,.xlsm,.xls" className="ml-2"
+            onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
+          </label>
+          <section className="karta mt-3 space-y-3 p-3" aria-label="Ko‘p faylli smeta paketi">
+            <div>
+              <p className="text-[13px] font-semibold">Ko‘p faylli smeta paketi — 4 uchastka + EO kabi</p>
+              <p className="mt-1 text-[11px] text-text-mute">
+                Avval har bir XLSX ichidagi har bir varaq tahlil qilinadi. So‘ng LRV, RES yoki e’tiborsiz rolini
+                tasdiqlaysiz. RES hech qachon boshqa LRVga avtomatik tarqatilmaydi; papka va fayl nomi faqat ko‘rinish uchun.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <label className="text-sm">Paket XLSX fayllari (bir nechtasini tanlang)
+                <input aria-label="Paket XLSX fayllari" type="file" multiple accept=".xlsx,.xlsm,.xls" className="ml-2"
+                  disabled={paketBand}
+                  onChange={e => { if (e.target.files?.length) void paketFayllariniTahlilQil(e.target.files); e.currentTarget.value = ''; }} />
+              </label>
+              <label className="text-sm">Obyekt papkasini birdan tahlil qilish
+                <input aria-label="Paket papkasi" type="file" multiple className="ml-2"
+                  ref={(node) => { node?.setAttribute('webkitdirectory', ''); node?.setAttribute('directory', ''); }}
+                  disabled={paketBand}
+                  onChange={e => { if (e.target.files?.length) void paketPapkasiniTahlilQil(e.target.files); e.currentTarget.value = ''; }} />
+              </label>
+            </div>
+            {paketBand && <p role="status" className="text-[12px] text-text-mute">{phase}…</p>}
+            {paketVaraqlar.length > 0 && (
+              <>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <label className="text-[12px]">Paket nomi
+                    <input aria-label="Smeta paketi nomi" className="ml-2 w-[min(100%,20rem)] border rounded px-2 py-1"
+                      value={paketNom} onChange={e => { setPaketNom(e.target.value); setPaketTasdiqImzosi(null); paketImportOperationId.current = ''; }} disabled={paketBand} />
+                  </label>
+                  <span className="text-[11px] text-text-mute self-end">{paketVaraqlar.length} ta varaq tahlil qilindi</span>
+                </div>
+                <div className="overflow-auto">
+                  <table className="w-full text-[12px]">
+                    <thead><tr className="text-left text-text-mute"><th className="pb-1 font-normal">Fayl / varaq</th><th className="pb-1 font-normal">Tahlil</th><th className="pb-1 font-normal">Rol</th><th className="pb-1 font-normal">RES qaysi LRVga</th><th className="pb-1 font-normal">Amal</th></tr></thead>
+                    <tbody>{paketVaraqlar.map((sheet) => {
+                      const allLrvs = paketVaraqlar.filter((item) => item.selectedRole === 'lrv');
+                      const ownLrvs = allLrvs.filter((item) => item.workbookId === sheet.workbookId);
+                      const targets = ownLrvs.length ? ownLrvs : allLrvs;
+                      const internal = ownLrvs.length > 0;
+                      return <tr key={sheet.id} className="border-t border-border/40">
+                        <td className="py-1 pr-2">{sheet.file.name}<br /><span className="text-text-mute">{sheet.sheetName}</span></td>
+                        <td className="py-1 pr-2"><span className="capitalize">{sheet.analysis.detectedRole}</span> · {sheet.analysis.confidence}<br /><span className="text-text-mute">{sheet.analysis.evidence[0] || 'signal yo‘q'}</span></td>
+                        <td className="py-1 pr-2"><select aria-label={`${sheet.file.name} ${sheet.sheetName} roli`} className="border rounded px-1" value={sheet.selectedRole || ''} disabled={paketBand}
+                          onChange={e => paketVaraqniYangila(sheet.id, { selectedRole: (e.target.value || undefined) as PaketVaraq['selectedRole'], targetLrvSourceKey: e.target.value === 'res' ? sheet.targetLrvSourceKey : undefined })}>
+                          <option value="">Tanlang</option><option value="lrv">LRV</option><option value="res">RES</option><option value="ignore">E’tiborsiz</option>
+                        </select></td>
+                        <td className="py-1 pr-2">{sheet.selectedRole === 'res' ? <><select aria-label={`${sheet.file.name} ${sheet.sheetName} RES manbasi`} className="border rounded px-1" value={sheet.targetLrvSourceKey || ''} disabled={paketBand}
+                          onChange={e => paketVaraqniYangila(sheet.id, { targetLrvSourceKey: e.target.value || undefined })}>
+                          <option value="">Tanlang — global qo‘llanmaydi</option>{targets.map(target => <option key={target.id} value={target.sourceKey}>{target.file.name} / {target.sheetName}</option>)}
+                        </select><br /><span className="text-text-mute">{internal ? 'Ichki RES: faqat shu XLSX LRVsi' : 'Tashqi RES: operator tanlagan bitta LRV'}</span></> : '—'}</td>
+                        <td className="py-1"><button type="button" className="text-danger underline disabled:opacity-50" disabled={paketBand}
+                          onClick={() => { setPaketVaraqlar(prev => prev.filter(item => item.id !== sheet.id)); setPaketTasdiqImzosi(null); paketImportOperationId.current = ''; }}>Olib tashlash</button></td>
+                      </tr>;
+                    })}</tbody>
+                  </table>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" className="tugma disabled:opacity-50" disabled={paketBand || busy} onClick={paketTahliliniTasdiqla}>Tahlil va manba bog‘lanishini tasdiqlash</button>
+                  <span className={paketTasdiqImzosi === smetaPaketTasdiqImzosi(paketVaraqlar) ? 'text-success text-[12px]' : 'text-warn text-[12px]'}>
+                    {paketTasdiqImzosi === smetaPaketTasdiqImzosi(paketVaraqlar) ? 'Tasdiqlandi' : 'Importdan oldin tasdiq kerak'}
+                  </span>
+                </div>
+                <button type="button" className="tugma-asosiy disabled:opacity-50" disabled={paketBand || busy || !paketVaraqlar.some((sheet) => sheet.selectedRole === 'lrv') || paketTasdiqImzosi !== smetaPaketTasdiqImzosi(paketVaraqlar)}
+                  onClick={() => void paketImportQil()}>
+                  {paketBand ? 'Paket tayyorlanmoqda…' : 'Tasdiqlangan paketni kanonik import qilish'}
+                </button>
+              </>
+            )}
+          </section>
+        </>
       )}
       {busy && importQadamlari.length === 0 && <p role="status">{phase}…</p>}
       {importQadamlari.length > 0 && <ImportQadamlarPaneli qadamlar={importQadamlari} />}
@@ -1192,8 +1589,9 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
               </p>
               <p className="text-[11px] text-text-mute">
                 Bitta faylda ham LRV (ish/hajm ierarxiyasi), ham RES (narx katalogi) varaqlari bo‘lishi mumkin.
-                Aynan BITTA varaq LRV bo‘ladi (undan daraxt quriladi); RES belgilangan varaq(lar)ning narxlari
-                birlashtirib qo‘llanadi.
+                Bir obyekt ichidagi bir nechta uchastka uchun bir nechta LRV varag‘ini belgilang: ular alohida
+                manba ildizlari ostida bitta kanonik importga tushadi. RES belgilangan varaq(lar)ning narxlari
+                hammasidan birlashtirib qo‘llanadi.
               </p>
               <table className="w-full text-[12.5px]">
                 <thead><tr className="text-text-mute text-left"><th className="font-normal pb-1">Varaq</th><th className="font-normal pb-1">LRV</th><th className="font-normal pb-1">RES</th></tr></thead>
@@ -1202,9 +1600,9 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                     <tr key={s.name} className="border-t border-border/40">
                       <td className="py-1 pr-2">{s.name}</td>
                       <td className="py-1 pr-2">
-                        <input type="radio" name="lrv-varaq" aria-label={`${s.name} — LRV`}
+                        <input type="checkbox" aria-label={`${s.name} — LRV`}
                           checked={varaqTeglari[s.name] === 'lrv'}
-                          onChange={() => varaqTegBelgila(book, s.name, 'lrv')} />
+                          onChange={e => varaqTegBelgila(book, s.name, e.target.checked ? 'lrv' : 'etibor_bermaslik')} />
                       </td>
                       <td className="py-1">
                         <input type="checkbox" aria-label={`${s.name} — RES`}
@@ -1215,6 +1613,22 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                   ))}
                 </tbody>
               </table>
+              {book.sheets.filter(s => varaqTeglari[s.name] === 'lrv').map(s => {
+                const c = inFileLrvCols[s.name];
+                if (!c) return null;
+                return (
+                  <fieldset key={s.name} className="flex flex-wrap gap-3 items-end pt-1 border-t border-border/40">
+                    <legend className="text-[11px] text-text-mute">«{s.name}» LRV ustunlari (1 dan boshlab)</legend>
+                    {(['kod', 'nom', 'bir', 'norma', 'obyom', 'narx', 'sum'] as const).map(k => (
+                      <label key={k} className="text-[12px]">{k}
+                        <input className="w-16 border rounded px-1 ml-1" type="number" min="0"
+                          value={c[k] + 1}
+                          onChange={e => setInFileLrvCols(prev => ({ ...prev, [s.name]: { ...c, [k]: Number(e.target.value) - 1 } }))} />
+                      </label>
+                    ))}
+                  </fieldset>
+                );
+              })}
               {book.sheets.filter(s => varaqTeglari[s.name] === 'res').map(s => {
                 const c = inFileResCols[s.name];
                 if (!c) return null;
@@ -1234,6 +1648,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             </div>
           )}
           <div className="karta p-3 text-[12px] overflow-auto max-h-64">
+            <p className="mb-1 text-[11px] text-text-mute">Tekshirilayotgan LRV varag‘i: <b>{sheetName}</b></p>
             <table className="w-full">
               <tbody>
                 {preview.slice(0, 12).map(row => (
@@ -1261,7 +1676,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             </label>
             {resBusy && <p role="status" className="text-[12px]">RES fayli o‘qilmoqda…</p>}
             {resError && <p role="alert" className="text-danger text-[12px]">{resError}</p>}
-            {resBook && resCols && (
+            {resBook && (
               <>
                 {/* Owner (2026-09-10): "res ni yuklash vaqtida listlarini xuddi
                     lrv day boshlang'ich ko'rsata olishi kerak edi. hozir shu
@@ -1271,7 +1686,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                     varaqlari kabi jadval: nomi, qator soni va tizim taxmini. */}
                 <div className="karta p-2 space-y-1.5" data-testid="res-varaq-royxat">
                   <p className="text-[12px] font-semibold text-text">
-                    RES faylining varaqlari — qaysi biridan narx o‘qilishini tanlang
+                    RES faylining varaqlari — narx o‘qiladigan hamma varaqlarni belgilang
                   </p>
                   <table className="w-full text-[12.5px]">
                     <thead>
@@ -1288,9 +1703,9 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                         return (
                           <tr key={s.name} className="border-t border-border/40">
                             <td className="py-1 pr-2">
-                              <input type="radio" name="res-varaq" aria-label={`${s.name} — RES varag‘i`}
-                                checked={resSheetName === s.name}
-                                onChange={() => chooseResSheet(resBook, s.name)} />
+                              <input type="checkbox" aria-label={`${s.name} — RES varag‘i`}
+                                checked={resSheetNames.includes(s.name)}
+                                onChange={e => resVaraqBelgila(resBook, s.name, e.target.checked)} />
                             </td>
                             <td className="py-1 pr-2">{s.name}</td>
                             <td className="py-1 pr-2 text-text-mute">{s.rows.length}</td>
@@ -1305,30 +1720,37 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                     </tbody>
                   </table>
                 </div>
-                <fieldset className="flex flex-wrap gap-3 items-end">
-                  <legend className="text-[11px] text-text-mute">Alohida RES fayl ustunlari (1 dan boshlab)</legend>
-                  {(['kod', 'nom', 'bir', 'narx'] as const).map(k => (
-                    <label key={k} className="text-[12px]">{k}
-                      <input className="w-16 border rounded px-1 ml-1" type="number" min="1"
-                        value={resCols[k] + 1}
-                        onChange={e => { setResIndex(null); setResIndexSize(0); setResCols({ ...resCols, [k]: Number(e.target.value) - 1 }); }} />
-                    </label>
-                  ))}
-                </fieldset>
-                <p className="text-[11px] text-text-mute">
-                  «{resSheetName}» varag‘ining boshlang‘ich qatorlari — yuqoridagi ustun
-                  raqamlari to‘g‘ri joyga tushganini shu yerdan tekshiring:
-                </p>
-                <VaraqKorinishi rows={resBook.sheet(resSheetName)?.rows ?? []} cols={resCols} />
+                {resSheetNames.length === 0 && <p className="text-[11px] text-warn">Narx manbasi uchun kamida bitta RES varag‘ini belgilang.</p>}
+                {resSheetNames.map(name => {
+                  const c = resColsBySheet[name];
+                  const sheet = resBook.sheet(name);
+                  if (!c || !sheet) return null;
+                  return (
+                    <div key={name} className="space-y-1 border-t border-border/40 pt-2">
+                      <fieldset className="flex flex-wrap gap-3 items-end">
+                        <legend className="text-[11px] text-text-mute">«{name}» RES ustunlari (1 dan boshlab)</legend>
+                        {(['kod', 'nom', 'bir', 'narx'] as const).map(k => (
+                          <label key={k} className="text-[12px]">{k}
+                            <input className="w-16 border rounded px-1 ml-1" type="number" min="0"
+                              value={c[k] + 1}
+                              onChange={e => { setResIndex(null); setResIndexSize(0); setKatKorib([]); setResColsBySheet(prev => ({ ...prev, [name]: { ...c, [k]: Number(e.target.value) - 1 } })); }} />
+                          </label>
+                        ))}
+                      </fieldset>
+                      <p className="text-[11px] text-text-mute">«{name}» varag‘ining boshlang‘ich qatorlari:</p>
+                      <VaraqKorinishi rows={sheet.rows} cols={c} />
+                    </div>
+                  );
+                })}
               </>
             )}
-            {(book?.sheets.some(s => varaqTeglari[s.name] === 'res') || (resBook && resCols)) && (
-              <button type="button" className="tugma" onClick={resNarxlarniUlash}>Narxlarni ulash</button>
+            {(book?.sheets.some(s => varaqTeglari[s.name] === 'res') || (resBook && resSheetNames.length > 0)) && (
+              <button type="button" className="tugma" onClick={resNarxlarniUlash}>Narxlarni tekshirib ulash</button>
             )}
             {resIndex && (
               <p className="text-[12px] text-success">
                 {resIndexSize} ta resurs narxi o‘qildi ({resIndex.byNomBir.size} ta nom+birlik bo‘yicha, shundan {resIndex.byKodNomBir.size} tasi kod bilan aniqlashtirilgan).
-                Import bosilganda mos keluvchi narxsiz qatorlarga qo‘llanadi.
+                Import bosilganda hozir tanlangan barcha ichki va alohida RES varaqlaridan narxlar yana yig‘ilib, mos keluvchi narxsiz qatorlarga qo‘llanadi.
               </p>
             )}
             {katKorib.length > 0 && (

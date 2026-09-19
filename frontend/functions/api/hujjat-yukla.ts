@@ -22,6 +22,9 @@
  *   sha256        hex (required — client-computed)
  *   size          bytes (required)
  *   revision      string (optional)
+ *   source_slot_key optional, immutable logical source slot for a multi-file
+ *                   smeta package. Different slots are independent documents,
+ *                   not revisions of one another.
  */
 import { tekshir } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
@@ -35,6 +38,7 @@ type Env = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HEX64 = /^[0-9a-f]{64}$/i;
+const SOURCE_SLOT_KEY = /^[a-z0-9][a-z0-9._:-]{0,180}$/;
 const DEFAULT_INLINE_LIMIT = 25 * 1024 * 1024;
 const DEFAULT_MAX_BYTES = 512 * 1024 * 1024;
 
@@ -89,19 +93,30 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     const clientSha = String(form.get('sha256') || '').trim().toLowerCase();
     const declaredSize = Number(form.get('size') || (file ? (file as any).size : 0)) || 0;
     const revision = form.get('revision') != null ? String(form.get('revision')) : null;
+    const sourceSlotKey = form.get('source_slot_key') != null ? String(form.get('source_slot_key')).trim().toLowerCase() : '';
 
     if (!file || typeof file.stream !== 'function') return Response.json({ ok: false, code: 'DOCUMENT_CONTEXT_REQUIRED', xato: 'Fayl topilmadi' }, { status: 400 });
     if (!kompaniyaId || !UUID.test(operationId)) return Response.json({ ok: false, code: 'DOCUMENT_CONTEXT_REQUIRED', xato: 'kompaniya_id va UUID operation_id majburiy' }, { status: 400 });
     if (!HEX64.test(clientSha)) return Response.json({ ok: false, code: 'DOCUMENT_CONTRACT_INVALID', xato: 'Brauzer tomonidan hisoblangan sha256 (64 hex) majburiy' }, { status: 400 });
     if (declaredSize <= 0) return Response.json({ ok: false, code: 'DOCUMENT_CONTRACT_INVALID', xato: 'Fayl hajmi majburiy' }, { status: 400 });
     if (declaredSize > maxBytes) return Response.json({ ok: false, code: 'FILE_TOO_LARGE', xato: 'Fayl chegaradan katta (' + maxBytes + ' bayt)', max_bytes: maxBytes }, { status: 413 });
+    if (sourceSlotKey && !SOURCE_SLOT_KEY.test(sourceSlotKey)) return Response.json({ ok: false, code: 'SOURCE_SLOT_INVALID', xato: 'Manba bo‘lagi kaliti noto‘g‘ri' }, { status: 400 });
+    if (sourceSlotKey && !['smeta_lrv', 'smeta_res'].includes(turi)) return Response.json({ ok: false, code: 'SOURCE_DOCUMENT_TYPE_INVALID', xato: 'Paket manbasi faqat LRV yoki RES bo‘lishi mumkin' }, { status: 400 });
 
     // ── PHASE 1: reserve ──────────────────────────────────────────────────
-    const reserve = await rpc(ctx.env, 't2_document_canonical_reserve_v1', {
-      p_kompaniya_id: kompaniyaId, p_actor_id: actorId, p_loyiha_id: loyihaId, p_obyekt_id: obyektId,
-      p_document_type: turi, p_original_filename: safeName(file.name), p_mime_type: file.type || 'application/octet-stream',
-      p_expected_size: declaredSize, p_client_sha256: clientSha, p_operation_id: operationId, p_revision: revision,
-    });
+    const reserve = await rpc(ctx.env, sourceSlotKey ? 't2_document_canonical_reserve_slot_v1' : 't2_document_canonical_reserve_v1',
+      sourceSlotKey
+        ? {
+            p_kompaniya_id: kompaniyaId, p_actor_id: actorId, p_loyiha_id: loyihaId, p_obyekt_id: obyektId,
+            p_document_type: turi, p_source_slot_key: sourceSlotKey,
+            p_original_filename: safeName(file.name), p_mime_type: file.type || 'application/octet-stream',
+            p_expected_size: declaredSize, p_client_sha256: clientSha, p_operation_id: operationId, p_revision: revision,
+          }
+        : {
+            p_kompaniya_id: kompaniyaId, p_actor_id: actorId, p_loyiha_id: loyihaId, p_obyekt_id: obyektId,
+            p_document_type: turi, p_original_filename: safeName(file.name), p_mime_type: file.type || 'application/octet-stream',
+            p_expected_size: declaredSize, p_client_sha256: clientSha, p_operation_id: operationId, p_revision: revision,
+          });
     if (!reserve.httpOk || !reserve.body || reserve.body.ok !== true) {
       return upstreamDocumentFailure((reserve.body && typeof reserve.body.code === 'string') ? reserve.body.code : 'DOCUMENT_RESERVE_FAILED');
     }

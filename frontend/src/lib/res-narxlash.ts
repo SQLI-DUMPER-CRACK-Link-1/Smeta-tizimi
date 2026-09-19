@@ -3,7 +3,17 @@ import type { SheetGrid, XlsxWorkbook } from './f2-import-parse';
 export type ResNarx = { kod?: string; nom: string; birlik: string; narx: number };
 export type ResUstunlar = { kod: number; nom: number; birlik: number; narx: number; sarlavha: number };
 export type NarxsizQator = { id: number; tur: string | null; kod: string | null; nom: string | null; birlik: string | null; narx: number | null };
-export type ResPreview = { narxsiz: number; mos: number; narxsizQoldi: number; ziddiyatliManba: number; qatorNarxlari: Map<number, number> };
+export type ResMoslashmaganSabab = 'QATOR_IDENTIYASI_YOQ' | 'RES_MANBASI_TOPILMADI' | 'RES_MANBA_ZIDDIYATI' | 'BIR_NECHTA_NARX_VARIANTI';
+export type ResMoslashmagan = { tur: string; kod: string | null; nom: string | null; birlik: string | null; sabab: ResMoslashmaganSabab };
+export type ResPreview = {
+  narxsiz: number;
+  mos: number;
+  narxsizQoldi: number;
+  ziddiyatliManba: number;
+  qatorNarxlari: Map<number, number>;
+  moslashmagan: ResMoslashmagan[];
+  turBoyicha: Record<'rs' | 'mat' | 'ob', { narxsiz: number; mos: number }>;
+};
 
 const plain = (v: unknown) => String(v ?? '').trim();
 const up = (v: unknown) => plain(v).toUpperCase();
@@ -74,29 +84,37 @@ export function resVaraqlariniTop(workbook: XlsxWorkbook): Array<{ nom: string; 
   });
 }
 
-type Source = { code: string; nom: string; birlik: string; narx: number };
+function sourceKaliti(code: string, nom: string, birlik: string): string {
+  return `${code}|${nom}|${birlik}`;
+}
 
-function sourceQur(rows: ResNarx[]): { source: Source[]; ziddiyatli: number } {
+function sourceQur(rows: ResNarx[]): {
+  ziddiyatli: number;
+  ziddiyatliKalitlar: Set<string>;
+  narxlarByKalit: Map<string, Set<number>>;
+} {
   const grouped = new Map<string, Set<number>>();
-  const first = new Map<string, Source>();
   for (const row of rows) {
     const nom = resNomKalit(row.nom);
     const birlik = resBirlikKalit(row.birlik);
     const code = resKodKalit(row.kod);
     if (!nom || !birlik || !Number.isFinite(row.narx) || row.narx <= 0) continue;
-    const key = `${code}|${nom}|${birlik}`;
+    const key = sourceKaliti(code, nom, birlik);
     const prices = grouped.get(key) ?? new Set<number>();
-    prices.add(row.narx); grouped.set(key, prices);
-    first.set(key, { code, nom, birlik, narx: row.narx });
+    prices.add(row.narx);
+    grouped.set(key, prices);
   }
-  const source: Source[] = [];
   let ziddiyatli = 0;
+  const ziddiyatliKalitlar = new Set<string>();
+  const narxlarByKalit = new Map<string, Set<number>>();
   for (const [key, prices] of grouped) {
-    if (prices.size !== 1) { ziddiyatli++; continue; }
-    const one = first.get(key);
-    if (one) source.push(one);
+    narxlarByKalit.set(key, prices);
+    if (prices.size !== 1) {
+      ziddiyatli++;
+      ziddiyatliKalitlar.add(key);
+    }
   }
-  return { source, ziddiyatli };
+  return { ziddiyatli, ziddiyatliKalitlar, narxlarByKalit };
 }
 
 /**
@@ -104,23 +122,62 @@ function sourceQur(rows: ResNarx[]): { source: Source[]; ziddiyatli: number } {
  * bo'lishi shart; kod yo'q manba faqat nom+birlik orqali ishlaydi.
  */
 export function resNarxlashPreview(qatorlar: NarxsizQator[], reslar: ResNarx[]): ResPreview {
-  const { source, ziddiyatli } = sourceQur(reslar);
+  const { ziddiyatli, ziddiyatliKalitlar, narxlarByKalit } = sourceQur(reslar);
   const qatorNarxlari = new Map<number, number>();
+  const moslashmagan: ResMoslashmagan[] = [];
+  const turBoyicha: ResPreview['turBoyicha'] = {
+    rs: { narxsiz: 0, mos: 0 },
+    mat: { narxsiz: 0, mos: 0 },
+    ob: { narxsiz: 0, mos: 0 },
+  };
   let narxsiz = 0;
   for (const q of qatorlar) {
     if (!['rs', 'mat', 'ob'].includes(q.tur ?? '') || !(q.narx == null || q.narx === 0)) continue;
     narxsiz++;
+    const tur = q.tur as 'rs' | 'mat' | 'ob';
+    turBoyicha[tur].narxsiz++;
     const nom = resNomKalit(q.nom);
     const birlik = resBirlikKalit(q.birlik);
     const code = resKodKalit(q.kod);
-    if (!nom || !birlik) continue;
-    const candidates = new Set<number>();
-    for (const s of source) {
-      if (s.nom !== nom || s.birlik !== birlik) continue;
-      if (s.code && s.code !== code) continue;
-      candidates.add(s.narx);
+    if (!nom || !birlik) {
+      moslashmagan.push({ tur, kod: q.kod, nom: q.nom, birlik: q.birlik, sabab: 'QATOR_IDENTIYASI_YOQ' });
+      continue;
     }
-    if (candidates.size === 1) qatorNarxlari.set(q.id, [...candidates][0]);
+
+    // Kodli manba aynan shu kodli qatorga, kodsiz manba esa nom+birlikka
+    // tushadi. Indeks ishlatilgani uchun har bir qator uchun butun RES fayli
+    // qayta aylanilmaydi; moslashuv natijasi hanuz qat'iy va taxminsiz.
+    const keys = code
+      ? [sourceKaliti(code, nom, birlik), sourceKaliti('', nom, birlik)]
+      : [sourceKaliti('', nom, birlik)];
+    const candidates = new Set<number>();
+    let ziddiyatliMoslik = false;
+    for (const key of keys) {
+      if (ziddiyatliKalitlar.has(key)) ziddiyatliMoslik = true;
+      for (const narx of narxlarByKalit.get(key) ?? []) candidates.add(narx);
+    }
+    if (candidates.size === 1 && !ziddiyatliMoslik) {
+      qatorNarxlari.set(q.id, [...candidates][0]);
+      turBoyicha[tur].mos++;
+      continue;
+    }
+    moslashmagan.push({
+      tur,
+      kod: q.kod,
+      nom: q.nom,
+      birlik: q.birlik,
+      sabab: ziddiyatliMoslik ? 'RES_MANBA_ZIDDIYATI'
+        : candidates.size > 1 ? 'BIR_NECHTA_NARX_VARIANTI'
+          : 'RES_MANBASI_TOPILMADI',
+    });
   }
-  return { narxsiz, mos: qatorNarxlari.size, narxsizQoldi: narxsiz - qatorNarxlari.size, ziddiyatliManba: ziddiyatli, qatorNarxlari };
+  return {
+    narxsiz,
+    mos: qatorNarxlari.size,
+    narxsizQoldi: narxsiz - qatorNarxlari.size,
+    ziddiyatliManba: ziddiyatli,
+    qatorNarxlari,
+    moslashmagan,
+    turBoyicha,
+  };
 }

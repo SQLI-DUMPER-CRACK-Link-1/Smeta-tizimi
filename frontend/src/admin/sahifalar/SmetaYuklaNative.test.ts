@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya, resursMkKabAniqla, podvalBlokTuri } from './SmetaYuklaNative';
+import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya, resursMkKabAniqla, podvalBlokTuri, tanlanganResManbalariniYig, tanlanganLrvVaraqlaridanDaraxtQur } from './SmetaYuklaNative';
 import type { AktNode } from '../../lib/f2-match-engine';
 import type { F2ColumnConfig } from '../../lib/f2-import-parse';
 
@@ -545,5 +545,39 @@ describe('katTaxmini (mijoz tomoni ko‘rib chiqish uchun taxmin)', () => {
   it('boshqa hollarda МАТ (standart) -- ОБ/КАБ/М-К hech qachon taxmin qilinmaydi', () => {
     expect(katTaxmini('Кабель ВВГ 3х2,5', 'м')).toBe('МАТ');
     expect(katTaxmini('Экскаватор', 'шт')).toBe('МАТ');
+  });
+});
+
+describe('ko‘p varaqdan smeta/RES importi', () => {
+  it('tanlangan ichki va alohida RES varaqlarini bitta indeksga yig‘adi', () => {
+    const materialRows = [
+      ['M-1', 'БЕТОН ТЯЖЕЛЫЙ', 'М3', '500000'],
+    ];
+    const uskunaRows = [
+      ['O-1', 'НАСОС', 'ШТ', '750000'],
+    ];
+    const satrlar = tanlanganResManbalariniYig([
+      { rows: materialRows, cols },
+      { rows: uskunaRows, cols },
+    ]);
+    const applied = narxlarniDaraxtgaQoll([
+      { uid: 'mat', type: 'mat', nom: 'БЕТОН ТЯЖЕЛЫЙ', bir: 'М3', hajm: 2, narx: 0 },
+      { uid: 'ob', type: 'ob', nom: 'НАСОС', bir: 'ШТ', hajm: 1, narx: 0 },
+    ], resNarxIndeksiQur(satrlar));
+    expect(satrlar).toHaveLength(2);
+    expect(applied.tree.map(x => x.narx)).toEqual([500000, 750000]);
+    expect(applied.mosSoni).toBe(2);
+  });
+
+  it('bir obyektning ikki LRV varag‘ini alohida manba ildizlari ostida saqlaydi', () => {
+    const lrvCols: F2ColumnConfig = { kod: 0, nom: 1, bir: 2, norma: 3, obyom: 4, narx: 5, sum: 6 };
+    const tree = tanlanganLrvVaraqlaridanDaraxtQur([
+      { name: '1-uchastka', rows: [['01', 'Бетон B25', 'М3', '', '10', '', '']], cols: lrvCols },
+      { name: '2-uchastka', rows: [['02', 'Асфальт', 'Т', '', '20', '', '']], cols: lrvCols },
+    ]);
+    expect(tree.map(x => x.nom)).toEqual(['1-uchastka', '2-uchastka']);
+    expect(tree[0].children?.[0].uid).not.toBe(tree[1].children?.[0].uid);
+    expect(tree[0].children?.[0].children?.[0].nom).toBe('Бетон B25');
+    expect(tree[1].children?.[0].children?.[0].nom).toBe('Асфальт');
   });
 });

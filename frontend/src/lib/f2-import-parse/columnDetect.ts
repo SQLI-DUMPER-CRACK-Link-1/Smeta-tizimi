@@ -64,11 +64,17 @@ function tartibRaqamiMi(v: unknown): boolean {
  * — this is what makes the "ФОРМА" template (shifted by one column) resolve
  * correctly instead of silently reading the wrong column.
  */
-export function f2UstunAniqla(data: SheetGrid): F2ColumnConfig & { hdrRow: number } {
+function safeGrid(data: unknown): SheetGrid {
+  if (!Array.isArray(data)) return [];
+  return data.map((row) => Array.isArray(row) ? row : []);
+}
+
+export function f2UstunAniqla(data: SheetGrid | null | undefined): F2ColumnConfig & { hdrRow: number } {
+  const grid = safeGrid(data);
   const d: F2ColumnConfig & { hdrRow: number } = { kod: 1, nom: 2, bir: 3, norma: 4, obyom: 5, narx: 6, sum: 7, hdrRow: -1 };
 
-  for (let r = 0; r < Math.min(60, data.length); r++) {
-    const row = data[r] || [];
+  for (let r = 0; r < Math.min(60, grid.length); r++) {
+    const row = grid[r] || [];
     let iNom = -1;
     let iBir = -1;
     for (let c = 0; c < row.length; c++) {
@@ -95,8 +101,8 @@ export function f2UstunAniqla(data: SheetGrid): F2ColumnConfig & { hdrRow: numbe
     /* Sarlavha qatori + keyingi 2 qator (ko'p shablonda sarlavha ikki
        qavatli: «Сметная стоимость» ustida, «на.ед.изм./общая» ostida). */
     const sarlavhalar: Array<{ c: number; u: string }> = [];
-    for (let rr = r; rr < Math.min(r + 3, data.length); rr++) {
-      const rw = data[rr] || [];
+    for (let rr = r; rr < Math.min(r + 3, grid.length); rr++) {
+      const rw = grid[rr] || [];
       for (let c3 = 0; c3 < rw.length; c3++) {
         const u3 = up(rw[c3]).replace(/\s+/g, ' ');
         if (u3) sarlavhalar.push({ c: c3, u: u3 });

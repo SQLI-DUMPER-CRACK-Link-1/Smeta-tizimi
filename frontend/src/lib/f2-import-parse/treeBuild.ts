@@ -56,10 +56,16 @@ function detectHasMarker(data: SheetGrid): boolean {
  * for a confirmation UI (dual-mode return preserved for 1:1 diffability
  * against the GAS source); with `colConfig`, builds and returns the act tree.
  */
-export function f2FaylOqiCore(data: SheetGrid, colConfig?: Partial<F2ColumnConfig> | null): F2FaylOqiCoreResult {
-  if (data.length === 0) return { ok: true, tree: [] };
+function safeGrid(data: unknown): SheetGrid {
+  if (!Array.isArray(data)) return [];
+  return data.map((row) => Array.isArray(row) ? row : []);
+}
 
-  const hasMarker = detectHasMarker(data);
+export function f2FaylOqiCore(data: SheetGrid | null | undefined, colConfig?: Partial<F2ColumnConfig> | null): F2FaylOqiCoreResult {
+  const grid = safeGrid(data);
+  if (grid.length === 0) return { ok: true, tree: [] };
+
+  const hasMarker = detectHasMarker(grid);
   let cKod: number, cNom: number, cBir: number, cNorma: number, cObyom: number, cNarx: number, cSum: number;
   let hdrRow = -1;
 
@@ -69,13 +75,13 @@ export function f2FaylOqiCore(data: SheetGrid, colConfig?: Partial<F2ColumnConfi
     cNorma = n(colConfig.norma); cObyom = n(colConfig.obyom);
     cNarx = n(colConfig.narx); cSum = n(colConfig.sum);
   } else {
-    const det = f2UstunAniqla(data);
+    const det = f2UstunAniqla(grid);
     cKod = det.kod; cNom = det.nom; cBir = det.bir;
     cNorma = det.norma; cObyom = det.obyom; cNarx = det.narx; cSum = det.sum;
     hdrRow = det.hdrRow;
     const preview: Array<{ r: number; cells: string[]; mk: string }> = [];
-    for (let pi = 0; pi < data.length && preview.length < 28; pi++) {
-      const rowArr = data[pi] || [];
+    for (let pi = 0; pi < grid.length && preview.length < 28; pi++) {
+      const rowArr = grid[pi] || [];
       const cells: string[] = [];
       for (let cc = 0; cc < Math.min(10, rowArr.length); cc++) cells.push(cell(rowArr[cc]));
       if (cells.join('').trim() === '') continue;
@@ -84,7 +90,7 @@ export function f2FaylOqiCore(data: SheetGrid, colConfig?: Partial<F2ColumnConfi
     return {
       ok: true, mode: 'config', hasMarker,
       cols: { kod: cKod, nom: cNom, bir: cBir, norma: cNorma, obyom: cObyom, narx: cNarx, sum: cSum },
-      maxCol: (data[0] || []).length, preview, hdrQator: hdrRow >= 0 ? hdrRow + 1 : 0,
+      maxCol: (grid[0] || []).length, preview, hdrQator: hdrRow >= 0 ? hdrRow + 1 : 0,
     };
   }
 
@@ -94,8 +100,8 @@ export function f2FaylOqiCore(data: SheetGrid, colConfig?: Partial<F2ColumnConfi
   result.push(currentRz);
   let currentBl: AktNode | null = null;
 
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i] || [];
+  for (let i = 0; i < grid.length; i++) {
+    const row = grid[i] || [];
     const kod = cKod >= 0 ? cell(row[cKod]) : '';
     const nom = cNom >= 0 ? cell(row[cNom]) : '';
     const bir = cBir >= 0 ? cell(row[cBir]) : '';
@@ -157,8 +163,8 @@ export function f2FaylOqiCore(data: SheetGrid, colConfig?: Partial<F2ColumnConfi
       // Look ahead to the next meaningful row: if IT has F filled, this row
       // is the parent work item.
       let nextIsRs = false;
-      for (let j = i + 1; j < data.length; j++) {
-        const jRow = data[j] || [];
+      for (let j = i + 1; j < grid.length; j++) {
+        const jRow = grid[j] || [];
         const jNom = cNom >= 0 ? cell(jRow[cNom]) : '';
         const jOb = cObyom >= 0 ? cell(jRow[cObyom]) : '';
         const jNr = cNorma >= 0 ? cell(jRow[cNorma]) : '';
