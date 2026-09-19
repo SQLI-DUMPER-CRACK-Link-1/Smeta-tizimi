@@ -36,9 +36,9 @@ export function Sahifa<T = unknown>({
     : (children as ReactNode);
   return (
       <motion.div
-        initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
-        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ opacity: 0, scale: 0.97, filter: 'blur(10px)', rotateX: 2 }}
+        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', rotateX: 0 }}
+        transition={{ duration: 0.5, type: 'spring', bounce: 0.3 }}
         className="flex flex-col h-full min-h-0 min-w-0 overflow-hidden relative"
       >
         <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-sky-500/10 to-transparent pointer-events-none opacity-50 z-0" />
@@ -97,9 +97,9 @@ export function Skelet({ qatorlar = 8 }: { qatorlar?: number }) {
       <div className="divide-y divide-white/5">
         {Array.from({ length: qatorlar }).map((_, i) => (
           <div key={i} className="h-[45px] flex items-center px-5 gap-6">
-            <div className="h-2.5 rounded-full flex-1 bg-sky-500/10 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.2)]" style={{ animationDelay: `${i * 100}ms` }} />
-            <div className="h-2.5 rounded-full w-28 bg-sky-500/10 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.2)]" style={{ animationDelay: `${i * 100 + 40}ms` }} />
-            <div className="h-2.5 rounded-full w-24 bg-sky-500/10 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.2)]" style={{ animationDelay: `${i * 100 + 80}ms` }} />
+            <div className="h-2.5 rounded-full flex-1 bg-sky-500/10 shadow-[0_0_8px_rgba(56,189,248,0.2)] hud-shimmer" style={{ animationDelay: `${i * 100}ms` }} />
+            <div className="h-2.5 rounded-full w-28 bg-sky-500/10 shadow-[0_0_8px_rgba(56,189,248,0.2)] hud-shimmer" style={{ animationDelay: `${i * 100 + 40}ms` }} />
+            <div className="h-2.5 rounded-full w-24 bg-sky-500/10 shadow-[0_0_8px_rgba(56,189,248,0.2)] hud-shimmer" style={{ animationDelay: `${i * 100 + 80}ms` }} />
           </div>
         ))}
       </div>
@@ -207,7 +207,7 @@ export function Jadval<T,>({
                 key={kalit(s, i)}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.02, 0.4), duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: Math.min(i * 0.04, 0.6), type: 'spring', bounce: 0.4, duration: 0.5 }}
                 onClick={onSatrBos ? () => onSatrBos(s) : undefined}
                 className={`group relative transition-all ${
                   onSatrBos ? 'cursor-pointer hover:bg-sky-500/[0.08] hover:shadow-[inset_0_1px_0_rgba(56,189,248,0.2),inset_0_-1px_0_rgba(56,189,248,0.2)]' : ''

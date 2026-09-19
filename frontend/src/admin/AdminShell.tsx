@@ -264,7 +264,11 @@ function AdminShellInner() {
   }).filter(g => g.menyular.length > 0);
 
   return (
-    <div className="os-app-shell flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30">
+    <div className="os-app-shell flex h-screen overflow-hidden text-white relative font-sans selection:bg-accent/30 hud-glitch-on-load">
+      <div className="hud-scanline" />
+      <div className="hud-orb hud-orb-1" />
+      <div className="hud-orb hud-orb-2" />
+      <div className="hud-orb hud-orb-3" />
 
       {/* Sidebar -- 2026-09-07: standart holatda faqat belgichalar (ikonalar)
        * qatori, sichqoncha ustiga borilganda to'liq (nomlar bilan) kengayadi.

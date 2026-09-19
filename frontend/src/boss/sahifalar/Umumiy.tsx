@@ -420,10 +420,10 @@ function TopList({ title, icon: Icon, items, color, valKey }: { title: string, i
       </h3>
       <div className="space-y-3">
         {items.map((item, idx) => (
-          <div key={idx} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0 last:pb-0 group">
+          <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05, duration: 0.3 }} key={idx} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0 last:pb-0 group">
              <div className="text-[13px] text-slate-300 font-medium truncate pr-3 group-hover:text-white transition-colors">{item.nom}</div>
              <div className={`text-sm font-mono font-bold ${color}`}><FmtN val={item[valKey]} qisqa /></div>
-          </div>
+          </motion.div>
         ))}
         {items.length === 0 && <div className="text-xs text-slate-500 italic">Ma'lumot topilmadi</div>}
       </div>
@@ -525,13 +525,20 @@ function RazdelRow({ nom }: { nom: string }) {
 
 function ObyektRow({ obj }: { obj: any }) {
   const [open, setOpen] = useState(false);
-  const isSub = obj.nom.startsWith('👷');
+  const isSub = obj.nom.startsWith('├─');
   const pCol = obj.progress >= 70 ? 'text-ok' : obj.progress >= 30 ? 'text-warn' : 'text-danger';
   const bgCol = obj.progress >= 70 ? 'bg-ok' : obj.progress >= 30 ? 'bg-warn' : 'bg-danger';
   
   return (
     <>
-      <tr onClick={() => setOpen(!open)} className="cursor-pointer bg-white/[0.01] hover:bg-blue-500/[0.05] transition-all border-b border-white/5">
+      <motion.tr 
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -10 }}
+        transition={{ duration: 0.2, type: 'spring', stiffness: 300, damping: 25 }}
+        onClick={() => setOpen(!open)} 
+        className="cursor-pointer bg-white/[0.01] hover:bg-blue-500/[0.05] transition-all border-b border-white/5"
+      >
         <td className="py-4 pl-[48px] pr-4 flex items-center gap-3">
           <div className={`w-5 h-5 flex items-center justify-center rounded-md transition-colors ${open ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/40 group-hover:bg-blue-500/10'}`}>
             {!isSub && (open ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
@@ -540,7 +547,7 @@ function ObyektRow({ obj }: { obj: any }) {
             {!isSub && <FileText size={14} className="inline mr-2 text-blue-400/50" />}
             {obj.nom} 
             {obj.leaf ? <span className="text-[11px] text-white/30 ml-2 font-mono bg-white/5 px-2 py-0.5 rounded-md">[{obj.leaf}]</span> : ''}
-            {(obj.fakt - obj.f2) > 0 && <span className="text-[10px] ml-3 text-warn/90 bg-warn/10 px-2 py-0.5 rounded-full border border-warn/20 shadow-[0_0_10px_rgba(251,191,36,0.1)]">❄️ Muzlagan: <FmtN val={obj.fakt - obj.f2} qisqa /></span>}
+            {(obj.fakt - obj.f2) > 0 && <span className="text-[10px] ml-3 text-warn/90 bg-warn/10 px-2 py-0.5 rounded-full border border-warn/20 shadow-[0_0_10px_rgba(251,191,36,0.1)]">⚠️ Muzlagan: <FmtN val={obj.fakt - obj.f2} qisqa /></span>}
           </span>
         </td>
         <td className="py-4 px-4 text-right font-mono text-white/70"><FmtN val={obj.smeta} /></td>
@@ -566,7 +573,7 @@ function ObyektRow({ obj }: { obj: any }) {
             <ExternalLink size={14} /> Ichiga kirish
           </button>
         </td>
-      </tr>
+      </motion.tr>
       
       {open && !isSub && (
         <RazdelRow nom={obj.nom} />
