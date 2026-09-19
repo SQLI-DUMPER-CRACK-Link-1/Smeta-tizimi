@@ -38,7 +38,7 @@ async function readRpc(env: Env, rpc: string, parameter: string, id: number): Pr
  * External-agent execution point. There is deliberately no generic SQL,
  * provider key, write operation, or unscoped tenant query in this route.
  */
-export const onRequestPost: PagesFunction<Env> = async (ctx) => {
+export const onRequestPost: any = async (ctx: any) => {
   if (!ctx.env.T2_AGENT_KEYS_JSON) {
     return problem(503, 'agent_connector_unconfigured', 'Agent connector sozlanmagan');
   }

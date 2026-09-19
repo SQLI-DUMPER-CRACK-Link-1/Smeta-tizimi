@@ -264,19 +264,6 @@ export function KpiKarta({ nom, qiymat, ost }: { nom: string; qiymat: ReactNode;
   );
 }
 
-export function Qidiruv({ qiymat, ozgardi, placeholder = 'Qidirish…' }: {
-  qiymat: string; ozgardi: (v: string) => void; placeholder?: string;
-}) {
-  return (
-    <input
-      value={qiymat}
-      onChange={(e) => ozgardi(e.target.value)}
-      placeholder={placeholder}
-      className="h-9 px-4 rounded-xl text-sm w-64 max-w-full bg-black/40 border border-white/10 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/50 transition-all placeholder:text-zinc-600"
-    />
-  );
-}
-
 /* ---------- Yon panel (drawer) ---------- */
 
 /**
