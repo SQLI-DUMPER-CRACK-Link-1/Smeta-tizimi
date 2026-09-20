@@ -1,143 +1,53 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, RefreshCw, Target } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Save } from 'lucide-react';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
-import { FmtN } from '../../lib/format';
-import { toast } from '../../umumiy/ui/Toast';
+import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
-import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
-import { sbFaktBelgilaV2, sbFaktYoz, sbQatorHolatOl, type QatorHolat } from '../../api/t2-fakt';
-import { faktKiritishIzohi, faktQoldaKiritiladimi } from '../../lib/fakt-input-policy';
+import { sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur, yangiOperationId, type T2Obyekt, type T2Qator, type T2QatorHolat } from '../../api/supabase';
+import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
+import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
+import type { TreeNode } from '../../api/types';
+import { faktQoldaKiritiladimi } from '../../lib/fakt-input-policy';
+import { toast } from '../../umumiy/ui/Toast';
 
-/** KANONIK Fakt kiritish: faqat qator_id + operation_id orqali. */
+function walk(nodes: TreeNode[], fn: (n: TreeNode) => void) { for (const n of nodes) { fn(n); if (n.children) walk(n.children, fn); } }
+
 export function FaktNative() {
-  const { joriy } = useKompaniya();
-  const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
-  const [qatorlar, setQatorlar] = useState<QatorHolat[]>([]);
-  const [qiymatlar, setQiymatlar] = useState<Record<number, string>>({});
-  const [yozishUsuli, setYozishUsuli] = useState<'qoshish' | 'jami'>('qoshish');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const operationId = useRef(crypto.randomUUID());
-  const jamiOperationIds = useRef<Record<number, string>>({});
-  const obyektId = Number(params.get('obyekt'));
-  const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
-  const kiritiladiganQatorlar = qatorlar.filter((q) => faktQoldaKiritiladimi(q.tur));
-
-  const bugunMahalliy = () => {
-    const d = new Date();
-    const ikki = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${ikki(d.getMonth() + 1)}-${ikki(d.getDate())}`;
-  };
-
-  useEffect(() => {
-    if (!joriy?.id) return;
-    void sbT2ObyektlarOlKomp(joriy.id).then((r) => setObyektlar((r.ok ? r.qatorlar : []) as T2Obyekt[]));
-  }, [joriy?.id]);
-
+  const { joriy } = useKompaniya(); const navigate = useNavigate(); const [params, setParams] = useSearchParams();
+  const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]); const [rows, setRows] = useState<T2Qator[]>([]); const [states, setStates] = useState<T2QatorHolat[]>([]);
+  const [tree, setTree] = useState<TreeNode[]>([]); const [price, setPrice] = useState<PriceControlLine[]>([]); const [marker, setMarker] = useState('');
+  const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [refresh, setRefresh] = useState(0);
+  const obyektId = Number(params.get('obyekt')); const valid = Number.isSafeInteger(obyektId) && obyektId > 0; const selected = obyektlar.find(o => o.id === obyektId);
+  const markers = useMemo(() => Array.from(new Set(rows.filter(r => faktQoldaKiritiladimi(r.tur || '') && r.kat?.trim()).map(r => r.kat!.trim()))).sort(), [rows]);
+  const smetaJami = states.reduce((s, r) => s + (r.smeta_hajm || 0), 0); const faktJami = states.reduce((s, r) => s + (r.fakt_hajm || 0), 0);
+  useEffect(() => { if (joriy?.id) void sbT2ObyektlarOlKomp(joriy.id).then(r => setObyektlar((r.ok ? r.qatorlar : []) as T2Obyekt[])); }, [joriy?.id]);
   const yuklash = useCallback(async () => {
-    if (!validId) { setQatorlar([]); return; }
-    setLoading(true); setError('');
-    try {
-      const r = await sbQatorHolatOl(obyektId);
-      if (!r.ok) { setQatorlar([]); setError('Kanonik Fakt holati o‘qilmadi.'); return; }
-      setQatorlar(r.qatorlar || []);
-      setQiymatlar({});
-      operationId.current = crypto.randomUUID();
-      jamiOperationIds.current = {};
-    } catch { setQatorlar([]); setError('Fakt ma’lumotlari o‘qilmadi. Qayta urinib ko‘ring.'); }
-    finally { setLoading(false); }
-  }, [obyektId, validId]);
-  useEffect(() => { void yuklash(); }, [yuklash]);
-
-  const saqlash = async () => {
-    const ruxsatliIdlar = new Set(kiritiladiganQatorlar.map((q) => q.qator_id));
-    const kiritilgan = Object.entries(qiymatlar).flatMap(([id, value]) => {
-      if (value.trim() === '') return [];
-      const hajm = Number(value);
-      return Number.isFinite(hajm) && ruxsatliIdlar.has(Number(id)) ? [{ qator_id: Number(id), hajm }] : [];
-    });
-    const qatorlarYozuvi = yozishUsuli === 'qoshish'
-      ? kiritilgan.filter((q) => q.hajm !== 0)
-      : kiritilgan;
-    if (!validId || qatorlarYozuvi.length === 0) { toast('Kiritiladigan Fakt hajmi yo‘q.', 'warn'); return; }
-    setSaving(true);
-    try {
-      if (yozishUsuli === 'qoshish') {
-        const r = await sbFaktYoz({
-          obyektId, sana: bugunMahalliy(), qatorlar: qatorlarYozuvi,
-          operationId: operationId.current, izoh: 'Website kanonik Fakt kiritishi',
-        });
-        if (!r.ok) { toast(r.error || r.xabar || 'Fakt saqlanmadi.', 'danger'); return; }
-        toast(r.ogohlantirish_soni ? `Fakt saqlandi, ${r.ogohlantirish_soni} ta limit ogohlantirishi bor.` : 'Fakt kanonik hujjatga saqlandi.', 'ok');
-      } else {
-        let saved = 0;
-        let conflicts = 0;
-        let failed = 0;
-        for (const row of qatorlarYozuvi) {
-          const canonical = qatorlar.find((q) => q.qator_id === row.qator_id);
-          if (!canonical) { failed += 1; continue; }
-          const operation = jamiOperationIds.current[row.qator_id] || crypto.randomUUID();
-          jamiOperationIds.current[row.qator_id] = operation;
-          try {
-            const r = await sbFaktBelgilaV2({
-              obyektId,
-              qatorId: row.qator_id,
-              expectedFaktHajm: canonical.fakt_hajm,
-              yangiFaktHajm: row.hajm,
-              sana: bugunMahalliy(),
-              operationId: operation,
-              izoh: 'Website kanonik Fakt jami tahriri',
-            });
-            if (r.ok) saved += 1;
-            else if (r.code === 'FAKT_CONFLICT') conflicts += 1;
-            else failed += 1;
-          } catch {
-            failed += 1;
-          }
-        }
-        if (conflicts || failed) {
-          const qismlar = [`${saved} ta saqlandi`];
-          if (conflicts) qismlar.push(`${conflicts} ta qator eskirgan qiymat sabab rad etildi`);
-          if (failed) qismlar.push(`${failed} ta qator saqlanmadi`);
-          toast(qismlar.join(', ') + '. Kanonik qiymatlar qayta yuklandi.', 'warn');
-        } else {
-          toast(`${saved} ta Fakt jami kanonik saqlandi.`, 'ok');
-        }
-      }
-      await yuklash();
-    } catch { toast('Fakt saqlanmadi. Tarmoqni tekshirib qayta urinib ko‘ring.', 'danger'); }
-    finally { setSaving(false); }
+    if (!valid) { setTree([]); return; } setLoading(true); setError('');
+    try { const [d, h, p] = await Promise.all([sbT2DaraxtOl(obyektId), sbT2QatorHolatOl(obyektId), priceControlOl(obyektId)]);
+      if (!d.ok || !h.ok) throw new Error(d.error || h.error || 'Kanonik Fakt daraxti o‘qilmadi.');
+      const nextRows = (d.qatorlar || []) as T2Qator[]; const nextStates = (h.qatorlar || []) as T2QatorHolat[];
+      setRows(nextRows); setStates(nextStates); setTree(sbT2TreeQur(nextRows, nextStates)); setPrice(p.ok ? p.qatorlar : []);
+    } catch (e) { setTree([]); setRows([]); setStates([]); setError(e instanceof Error ? e.message : 'Fakt daraxti o‘qilmadi.'); } finally { setLoading(false); }
+  }, [obyektId, valid]);
+  useEffect(() => { void yuklash(); }, [yuklash, refresh]);
+  const faktSaqlash = useCallback(async (node: TreeNode, mode: 'qoshish' | 'jami', value: number) => {
+    if (!valid || node.id == null) return { ok: false, message: 'Kanonik qator ID topilmadi.' };
+    if (!faktQoldaKiritiladimi(node.type)) return { ok: false, message: 'Bu qatorga Fakt qo‘lda kiritilmaydi.' };
+    const sana = new Date().toISOString().slice(0, 10); const operationId = yangiOperationId();
+    if (mode === 'qoshish') { const r = await sbFaktYoz({ obyektId, sana, operationId, qatorlar: [{ qator_id: node.id, hajm: value }], izoh: 'Fakt daraxtidan kanonik qo‘shish' }); if (!r.ok) return { ok: false, message: r.error || r.xabar || 'Fakt qo‘shilmadi.' }; }
+    else { const r = await sbFaktBelgilaV2({ obyektId, qatorId: node.id, expectedFaktHajm: Number(node.fakt || 0), yangiFaktHajm: value, sana, operationId, izoh: 'Fakt daraxtidan kanonik jami tahriri' }); if (!r.ok) return { ok: false, conflict: r.code === 'FAKT_CONFLICT', message: r.code === 'FAKT_CONFLICT' ? 'Qator serverda o‘zgargan. Yangilang.' : (r.error || r.xabar || 'Fakt saqlanmadi.') }; }
+    setRefresh(n => n + 1); return { ok: true };
+  }, [obyektId, valid]);
+  const yuz = async () => {
+    if (!marker || saving) return; const targets: TreeNode[] = []; walk(tree, n => { if (faktQoldaKiritiladimi(n.type) && String(n.kat || '').trim() === marker && n.smetaHajm != null && n.fakt !== n.smetaHajm) targets.push(n); });
+    if (!targets.length) { toast('Bu markirovkada bajarilmagan hajm topilmadi.', 'warn'); return; } setSaving(true); let ok = 0; let fail = 0;
+    try { for (const n of targets) { const r = await sbFaktBelgilaV2({ obyektId, qatorId: n.id!, expectedFaktHajm: Number(n.fakt || 0), yangiFaktHajm: n.smetaHajm!, sana: new Date().toISOString().slice(0, 10), operationId: yangiOperationId(), izoh: `Markirovka ${marker} bo‘yicha 100% Fakt` }); if (r.ok) ok++; else fail++; } toast(`${ok} ta qator 100% ga belgilandi${fail ? `, ${fail} ta qator saqlanmadi` : ''}.`, fail ? 'warn' : 'ok'); setRefresh(n => n + 1); } catch { toast('100% belgilash vaqtida javob olinmadi.', 'danger'); } finally { setSaving(false); }
   };
-
-  return <Sahifa sarlavha="Bajarilgan ishlar (Fakt)" tavsif="Kanonik hujjatga yoziladi; tasdiqlangan F2 tarixi o‘zgarmaydi">
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <section className="karta flex flex-wrap items-end gap-3 p-3">
-        <label className="min-w-[260px] flex-1 text-[12px] font-medium text-text">Obyekt
-          <select value={validId ? obyektId : ''} onChange={(e) => { const object = obyektlar.find((item) => item.id === Number(e.target.value)); setParams({ obyekt: e.target.value, obyekt_nomi: object?.nom || '' }); }} className="mt-1.5 block w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-text">
-            <option value="">-- obyektni tanlang --</option>{obyektlar.map((o) => <option key={o.id} value={o.id}>{o.nom}</option>)}
-          </select>
-        </label>
-        {validId && <button onClick={() => navigate(`/admin/holat/${obyektId}?obyekt_nomi=${encodeURIComponent(obyektlar.find((item) => item.id === obyektId)?.nom || '')}`)} className="rounded-lg border border-border px-3 py-2 text-[12px]">LRVga qaytish</button>}
-        {validId && <fieldset className="flex items-center gap-1 rounded-lg border border-border p-1" aria-label="Fakt yozish usuli">
-          <legend className="sr-only">Fakt yozish usuli</legend>
-          <button type="button" aria-pressed={yozishUsuli === 'qoshish'} onClick={() => setYozishUsuli('qoshish')} className={`rounded-md px-3 py-1.5 text-[12px] ${yozishUsuli === 'qoshish' ? 'bg-accent text-white' : 'text-text-dim'}`}>Ustiga qo‘shish</button>
-          <button type="button" aria-pressed={yozishUsuli === 'jami'} onClick={() => setYozishUsuli('jami')} className={`rounded-md px-3 py-1.5 text-[12px] ${yozishUsuli === 'jami' ? 'bg-accent text-white' : 'text-text-dim'}`}>Jami qiymat</button>
-        </fieldset>}
-      </section>
-      {!validId && <section className="karta p-4 text-text-dim">Avval kanonik obyektni tanlang.</section>}
-      {error && validId && <section role="alert" className="karta flex flex-wrap items-center gap-3 border-danger/40 bg-danger/5 p-4 text-[13px] text-danger"><AlertTriangle size={16} /><span className="flex-1">{error}</span><button type="button" onClick={() => void yuklash()} className="rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-semibold hover:bg-danger/10">Qayta urinib ko‘rish</button></section>}
-      {loading && <div className="skel min-h-[250px] flex-1 rounded-xl" />}
-      {validId && !loading && !error && <section className="karta min-h-0 flex-1 overflow-auto">
-        <table className="w-full text-left text-[12px]"><thead className="sticky top-0 bg-surface-2 text-text-dim"><tr><th className="p-3">Kod / ish</th><th>Birlik</th><th>Fakt jami</th><th>F2 mumkin</th><th className="p-3">{yozishUsuli === 'jami' ? 'Yangi Fakt jami' : 'Bugun qo‘shish'}</th></tr></thead>
-          <tbody>{kiritiladiganQatorlar.length === 0 ? <tr><td colSpan={5} className="p-8 text-center text-text-dim">Fakt kiritish uchun BL, MAT yoki OB kanonik qatori yo‘q.</td></tr> : kiritiladiganQatorlar.map((q) => <tr key={q.qator_id} className="border-t border-border/60"><td className="p-3"><div className="font-medium">{q.kod}</div>{q.nom}</td><td>{q.birlik}</td><td><FmtN val={q.fakt_hajm} /></td><td><FmtN val={q.f2_mumkin_hajm} /></td><td className="p-3"><input aria-label={`Fakt hajmi: ${q.kod || q.nom || 'ish / resurs'}`} type="number" value={qiymatlar[q.qator_id] ?? ''} onChange={(e) => setQiymatlar((old) => ({ ...old, [q.qator_id]: e.target.value }))} className="w-28 rounded border border-border bg-bg px-2 py-1 text-right" /></td></tr>)}</tbody>
-        </table>
-      </section>}
-      {validId && <section className="flex items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> {yozishUsuli === 'jami' ? 'Jami tahririda server eskirgan qiymatni conflict sifatida rad etadi.' : 'Limit oshishi serverda ogohlantiriladi'}; {faktKiritishIzohi('rs')} F2 hech qachon bu formadan yozilmaydi.</p><button onClick={() => void saqlash()} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Saqlanmoqda…' : 'Faktni saqlash'}</button></section>}
-    </div>
-  </Sahifa>;
+  return <Sahifa sarlavha="Bajarilgan ishlar (Fakt)" tavsif="Smeta hajmi va Faktni RZ → BL → RS/MAT/OB daraxtida boshqaring">
+    <div className="flex h-full min-h-0 flex-col gap-3"><section className="karta flex flex-wrap items-end gap-3 p-3"><label className="min-w-[260px] flex-1 text-[12px] font-medium text-text">Obyekt<select aria-label="Obyekt" value={valid ? obyektId : ''} onChange={e => { const o = obyektlar.find(x => x.id === Number(e.target.value)); setParams({ obyekt: e.target.value, obyekt_nomi: o?.nom || '' }); }} className="input mt-1.5 block h-9 w-full px-2 text-[13px]"><option value="">-- obyektni tanlang --</option>{obyektlar.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}</select></label>{valid && <button onClick={() => navigate(`/admin/holat/${obyektId}?obyekt_nomi=${encodeURIComponent(selected?.nom || '')}`)} className="rounded-lg border border-border px-3 py-2 text-[12px]">LRVga qaytish</button>}{valid && <button onClick={() => void yuklash()} disabled={loading || saving} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px]"><RefreshCw size={14}/> Yangilash</button>}</section>
+      {valid && !loading && !error && tree.length > 0 && <section className="karta flex flex-wrap items-end gap-3 p-3" aria-label="Fakt markirovka boshqaruvi"><span className="text-[12px] text-text-dim"><b className="text-text">Smeta:</b> {smetaJami.toLocaleString('ru-RU')} · <b className="text-text">Fakt:</b> {faktJami.toLocaleString('ru-RU')}</span><label className="min-w-[220px] text-[12px] font-medium text-text">Markirovka bo‘yicha 100%<select aria-label="Fakt markirovkasi" value={marker} onChange={e => setMarker(e.target.value)} className="input mt-1 block h-9 w-full px-2"><option value="">Markirovkani tanlang</option>{markers.map(m => <option key={m} value={m}>{m}</option>)}</select></label><button onClick={() => void yuz()} disabled={!marker || saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50"><Target size={14}/> {saving ? 'Belgilanmoqda…' : '100% qilish'}</button><span className="text-[11px] text-text-mute">Faqat BL/MAT/OB; RS avtomatik hisoblanadi.</span></section>}
+      {!valid && <section className="karta p-4 text-text-dim">Avval kanonik obyektni tanlang.</section>}{error && valid && <section role="alert" className="karta flex items-center gap-2 border-danger/40 bg-danger/5 p-4 text-danger"><AlertTriangle size={16}/>{error}</section>}{loading && <div className="skel min-h-[280px] flex-1 rounded-xl"/>}{valid && !loading && !error && tree.length === 0 && <section className="karta p-5 text-[13px] text-text-dim">Bu obyektda kanonik smeta daraxti yo‘q. Avval Smeta/LRV paketini import qiling.</section>}{tree.length > 0 && !loading && !error && <div className="min-h-0 flex-1"><SmetaTree data={tree} priceControlLines={price} onFaktSave={faktSaqlash} onQatorTahrirlandi={yuklash}/></div>}
+    </div></Sahifa>;
 }
 export default FaktNative;

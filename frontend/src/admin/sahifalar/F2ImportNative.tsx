@@ -199,6 +199,8 @@ function NativeSession({ companyId }: { companyId: number }) {
   const rawFile = useRef<File | null>(null);
   const sourceDocId = useRef<number | undefined>(undefined);
   const sourceOperationId = useRef('');
+  const lastAutoMatchKey = useRef('');
+  const matchingRef = useRef(false);
   useEffect(() => {
     let active = true;
     const generationRef = generation;
@@ -275,13 +277,13 @@ function NativeSession({ companyId }: { companyId: number }) {
     }
   }
   function chooseSheet(workbook: XlsxWorkbook, name: string) {
-    reset(); setSheetName(name);
+    lastAutoMatchKey.current = ''; reset(); setSheetName(name);
     const sheet = workbook.sheet(name);
     const preview = sheet && f2FaylOqiCore(sheet.rows);
     setCols(preview && 'cols' in preview ? preview.cols : null);
   }
   async function upload(file: File) {
-    reset(); setBook(null); setCols(null); setBusy(true); setPhase('Fayl o‘qilmoqda');
+    lastAutoMatchKey.current = ''; reset(); setBook(null); setCols(null); setBusy(true); setPhase('Fayl o‘qilmoqda');
     rawFile.current = file; sourceDocId.current = undefined; sourceOperationId.current = yangiOperationId();
     const token = generation.current;
     try {
@@ -339,8 +341,8 @@ function NativeSession({ companyId }: { companyId: number }) {
     setSmetaRoots(smetaRootsFromRows(rows)); setSmetaRawRows(rows);
   }
   async function match() {
-    if (!book || !cols || !objectId) return;
-    reset(); const token = generation.current; setBusy(true); setPhase('Moslashtirilmoqda');
+    if (!book || !cols || !objectId || !month || matchingRef.current) return;
+    matchingRef.current = true; reset(); const token = generation.current; setBusy(true); setPhase('Moslashtirilmoqda — ikki oynali panel tayyorlanmoqda');
     try {
       const sheet = book.sheet(sheetName)!;
       if (sheet.rows.length > MAX_ROWS) throw new Error(`Varaq ${MAX_ROWS} qatordan katta.`);
@@ -373,8 +375,15 @@ function NativeSession({ companyId }: { companyId: number }) {
       setSource(leaves); setMapping(bindings); operation.current = yangiOperationId(); setPhase('Ko‘rib chiqish kerak');
       await qoralamaniSaqla(leaves, bindings, names);
     } catch (e) { if (generation.current === token) setError(e instanceof Error ? e.message : 'O‘qish bajarilmadi.'); }
-    finally { setBusy(false); }
+    finally { matchingRef.current = false; setBusy(false); }
   }
+  const autoMatchKey = book && cols && objectId && month ? `${objectId}|${month}|${sheetName}|${Object.values(cols).join(',')}` : '';
+  useEffect(() => {
+    if (!autoMatchKey || !book || !cols || source.length || done || busy || resumable || matchingRef.current) return;
+    if (lastAutoMatchKey.current === autoMatchKey) return;
+    lastAutoMatchKey.current = autoMatchKey; void match();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMatchKey, book, cols, objectId, month, sheetName, source.length, done, busy, resumable]);
   /**
    * T2-GAS-EXIT-001 SS5/SS6: moslashtirish natijasi DARHOL Supabase'ga
    * yoziladi -- refresh/PC o'chishi/tarmoq uzilishi natijani yo'qotmasin.
@@ -516,7 +525,7 @@ function NativeSession({ companyId }: { companyId: number }) {
     <fieldset disabled={busy || done} className="karta grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-4">
       <label className="block text-[12px] font-medium text-text">Obyekt
         <select aria-label="Obyekt" value={objectId} onChange={e => {
-          reset(); setObjectId(e.target.value); workspace.setObjectId(e.target.value ? Number(e.target.value) : null); rawFile.current = null;
+          lastAutoMatchKey.current = ''; reset(); setObjectId(e.target.value); workspace.setObjectId(e.target.value ? Number(e.target.value) : null); rawFile.current = null;
           sourceDocId.current = undefined; sourceOperationId.current = '';
         }} className="input mt-1.5 block h-9 w-full px-2 text-[13px]">
           <option value="">Tanlang</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
@@ -543,10 +552,10 @@ function NativeSession({ companyId }: { companyId: number }) {
         {(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => (
           <label key={k} className="text-[12px] text-text-dim">{k}
             <input className="input mt-1 block h-8 w-16 px-1.5 text-center text-[13px]" type="number" min="1"
-              value={cols[k] + 1} onChange={e => { reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} />
+              value={cols[k] + 1} onChange={e => { lastAutoMatchKey.current = ''; reset(); setCols({ ...cols, [k]: Number(e.target.value) - 1 }); }} />
           </label>
         ))}
-        <button onClick={() => void match()} disabled={!objectId || !month} className="tugma tugma-asosiy ml-auto">Moslashtirish</button>
+        <button onClick={() => { lastAutoMatchKey.current = ''; void match(); }} disabled={!objectId || !month || busy} className="tugma tugma-asosiy ml-auto">{source.length ? 'Qayta moslashtirish' : 'Moslashtirishni qayta ishga tushirish'}</button>
       </div>
     </fieldset>}
     {error && <p role="alert" className="text-danger">{error}</p>}

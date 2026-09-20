@@ -51,7 +51,6 @@ it('yangi yo‘l asl summani V2 ga yozadi, javob yo‘qolganda ayni operation bi
   Object.defineProperty(file, 'arrayBuffer', { value: async () => new ArrayBuffer(1) });
   fireEvent.change(screen.getByLabelText('XLSX fayl'), { target: { files: [file] } });
   await screen.findByText('Varaq va ustunlarni tekshiring');
-  fireEvent.click(screen.getByText('Moslashtirish'));
   await screen.findByText('Ko‘rib chiqish kerak');
   // T2-GAS-EXIT-001 §5/§6: moslashtirish natijasi darhol job/draft sifatida saqlanadi.
   await waitFor(() => expect(mocks.jobYarat).toHaveBeenCalledWith(
@@ -87,7 +86,6 @@ it('R2 manba qabul qilmasa F2 moslashtirish va yozish boshlanmaydi', async () =>
   Object.defineProperty(file, 'arrayBuffer', { value: async () => new ArrayBuffer(1) });
   fireEvent.change(screen.getByLabelText('XLSX fayl'), { target: { files: [file] } });
   await screen.findByText('Varaq va ustunlarni tekshiring');
-  fireEvent.click(screen.getByText('Moslashtirish'));
   await screen.findByText('F2 manba fayli kanonik R2 saqlashga qabul qilinmadi.');
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(mocks.jobYarat).not.toHaveBeenCalled();
@@ -145,7 +143,6 @@ it('30 000 qatorlik faylni rad etmaydi va har 5000 tadan checkpoint qiladi (Code
   fireEvent.change(screen.getByLabelText('XLSX fayl'), { target: { files: [file] } });
   await screen.findByText('Varaq va ustunlarni tekshiring');
   // Eski qattiq devor (>20000 qator RAD ETILGAN bo'lardi) endi yo'q -- 30000 qator qabul qilinadi.
-  fireEvent.click(screen.getByText('Moslashtirish'));
   await screen.findByText('Ko‘rib chiqish kerak', {}, { timeout: 10000 });
   expect(screen.queryByText(/qatordan katta/)).toBeNull();
   // 30000 / 5000 = 6 ta bo'lak -- har birida draft saqlanadi VA checkpoint yoziladi.
