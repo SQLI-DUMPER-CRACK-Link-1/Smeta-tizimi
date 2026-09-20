@@ -4,7 +4,7 @@
 
 - BASE: `origin/main` @ `0079c4a7aeed94f241744494340e8d77eae67f26`
 - BRANCH: `codex/pto-res-boundary-main-v1`
-- HEAD: `to'ldiriladi commitdan keyin`
+- HEAD: `3536ffc`
 - Production DB tekshiruvi: `t2_shartnoma_qator_qamrov` mavjud emas; mavjud
   nakrutka RPC lar bor, lekin contract-qator scope yo'q.
 - Production/main/GAS/Cloudflare o'zgartirilmadi.
