@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { smetaPaketTasdiqImzosi, smetaPaketTanloviniTekshir, smetaVaraqniTahlilQil, type SmetaPackageSheetChoice } from './smeta-source-analysis';
+import { smetaPaketResTargetlariniTaklifQil, smetaPaketTasdiqImzosi, smetaPaketTanloviniTekshir, smetaVaraqniTahlilQil, type SmetaPackageSheetChoice } from './smeta-source-analysis';
 
 const base = (override: Partial<SmetaPackageSheetChoice> = {}): SmetaPackageSheetChoice => ({
   id: 'sheet-1', workbookId: 'book-a', sourceKey: 'source-a', analysisKey: 'analysis-a', selectedRole: 'lrv', ...override,
@@ -104,5 +104,22 @@ describe('package selection safety', () => {
       base({ id: 'res-4230', sourceKey: 'res-4230', selectedRole: 'res', targetLrvSourceKey: 'lrv-4230' }),
     ];
     expect(smetaPaketTanloviniTekshir(sheets, smetaPaketTasdiqImzosi(sheets))).toEqual({ ok: true });
+  });
+
+  it('bitta fayldagi yagona LRV uchun RES targetini deterministik taklif qiladi', () => {
+    const sheets = [
+      base({ id: 'lrv', sourceKey: 'lrv', workbookId: 'book-a' }),
+      base({ id: 'res', sourceKey: 'res', workbookId: 'book-a', selectedRole: 'res' }),
+    ];
+    expect(smetaPaketResTargetlariniTaklifQil(sheets)[1].targetLrvSourceKey).toBe('lrv');
+  });
+
+  it('bir nechta LRV bo‘lsa RESni indeks yoki nom bilan taxminan aralashtirmaydi', () => {
+    const sheets = [
+      base({ id: 'lrv-a', sourceKey: 'lrv-a', workbookId: 'book-a' }),
+      base({ id: 'lrv-b', sourceKey: 'lrv-b', workbookId: 'book-a' }),
+      base({ id: 'res', sourceKey: 'res', workbookId: 'book-a', selectedRole: 'res' }),
+    ];
+    expect(smetaPaketResTargetlariniTaklifQil(sheets)[2].targetLrvSourceKey).toBeUndefined();
   });
 });

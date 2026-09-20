@@ -9,7 +9,7 @@ import { smetaPaketQatorlariniYoy, smetaPaketRejasiniTekshir, type SmetaPaketMan
 import { lrvVaIchkiResniAjrat } from '../../lib/smeta-lrv-boundary';
 import {
   smetaPaketTasdiqImzosi, smetaPaketTanloviniTekshir, smetaVaraqniTahlilQil,
-  type SmetaPackageSheetChoice, type SmetaSheetAnalysis,
+  smetaPaketResTargetlariniTaklifQil, type SmetaPackageSheetChoice, type SmetaSheetAnalysis,
 } from '../../lib/smeta-source-analysis';
 import type { AktNode } from '../../lib/f2-match-engine';
 import { smetaQaytaImportDiff, type SmetaReimportDiff, type SmetaReimportLine } from '../../lib/smeta-reimport-diff';
@@ -1115,7 +1115,8 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         }
       }
       if (!fresh.length) throw new Error('Tanlangan fayllarda o‘qiladigan varaq topilmadi.');
-      setPaketVaraqlar((prev) => [...prev, ...fresh]);
+      const freshWithResTargets = smetaPaketResTargetlariniTaklifQil(fresh);
+      setPaketVaraqlar((prev) => [...prev, ...freshWithResTargets]);
       setPaketTasdiqImzosi(null); paketImportOperationId.current = '';
       if (!paketKalit) setPaketKalit(yangiOperationId());
       if (!paketNom) setPaketNom((objects.find((x) => x.id === Number(objectId))?.nom || 'Obyekt') + ' — boshlang‘ich smeta paketi');

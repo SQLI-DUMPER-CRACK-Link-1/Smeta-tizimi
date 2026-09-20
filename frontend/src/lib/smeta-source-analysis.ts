@@ -167,6 +167,30 @@ export function smetaPaketTasdiqImzosi(sheets: readonly SmetaPackageSheetChoice[
   ).join('|');
 }
 
+/**
+ * RES manbasini xavfsiz tarzda LRVga taklif qiladi. Bir xil faylda faqat bitta
+ * LRV bo'lsa, yoki butun paketda faqat bitta LRV bo'lsa, bog'lanish
+ * deterministik hisoblanadi. Bir nechta nomzod bo'lsa hech qachon indeks yoki
+ * nom bo'yicha taxmin qilmaydi — operator tanlovi talab qilinadi.
+ */
+export function smetaPaketResTargetlariniTaklifQil<T extends SmetaPackageSheetChoice>(
+  sheets: readonly T[],
+): T[] {
+  const lrvs = sheets.filter((sheet) => sheet.selectedRole === 'lrv');
+  const byWorkbook = new Map<string, SmetaPackageSheetChoice[]>();
+  for (const lrv of lrvs) {
+    const list = byWorkbook.get(lrv.workbookId) || [];
+    list.push(lrv);
+    byWorkbook.set(lrv.workbookId, list);
+  }
+  return sheets.map((sheet) => {
+    if (sheet.selectedRole !== 'res' || sheet.targetLrvSourceKey) return sheet;
+    const sameWorkbook = byWorkbook.get(sheet.workbookId) || [];
+    const candidate = sameWorkbook.length === 1 ? sameWorkbook[0] : lrvs.length === 1 ? lrvs[0] : undefined;
+    return candidate ? { ...sheet, targetLrvSourceKey: candidate.sourceKey } : sheet;
+  });
+}
+
 export function smetaPaketTanloviniTekshir(
   sheets: readonly SmetaPackageSheetChoice[],
   confirmedSignature?: string | null,
