@@ -64,6 +64,11 @@ Qolgani append-only.
 | **Codex** | Senior backend/DB/release | mailbox/`<TASK>`/NN-codex@`<mashina>`.md | o'z `owns` yo'llari ichidagi implementatsiya |
 | **Antigravity** | Frontend/mexanik CRUD | mailbox/`<TASK>`/NN-antigravity@`<mashina>`.md | berilgan kontrakt bo'yicha UI |
 
+Agent rollarining batafsil capability chegarasi
+`docs/governance/AGENT_CAPABILITY_POLICY.md`da. Claude chief integrator
+ sifatida routine release vakolatiga ega; Antigravity default holatda auditor
+ va production/backend/release chegaralariga kira olmaydi.
+
 **Ishchi arxitekturani belgilamaydi.** Yangi jadval/RPC/kontrakt kerak
 bo'lsa — mailboxda savol yozadi, orkestrator javob beradi yoki ADR chiqaradi.
 

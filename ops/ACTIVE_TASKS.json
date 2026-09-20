@@ -732,6 +732,19 @@
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/governance/AGENT_COMMS_PROTOCOL.md"],
       "production_write_allowed": false,
       "_izoh": "Routine engineering actions use the active Owner standing authorization; irreversible destructive changes, secret rotation, data deletion and new financial commitments remain hard stops."
+    },
+    {
+      "id": "GOV-AGENT-CAP-001",
+      "title": "Agent role capability boundaries",
+      "owner": "codex",
+      "branch": "codex/agent-capability-policy-v1",
+      "base_sha": "ab15d611ee340f54f5f64e3ccaf0fbbab608c174",
+      "status": "completed",
+      "owns": ["AGENTS.md", "docs/governance/", "ops/ACTIVE_TASKS.json"],
+      "depends_on": ["GOV-OWNER-AUTH-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/governance/OWNER_AUTHORIZATION.md"],
+      "production_write_allowed": false,
+      "_izoh": "Claude routine integrator vakolatlari aniq yozildi; Antigravity audit-first, production/backend/release chegaralari bilan cheklangan."
     }
   ]
 }

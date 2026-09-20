@@ -8,9 +8,10 @@ Before changing anything, read this chain in order:
    mailbox, handoff, status vocabulary, and the multi-machine rule. Laptop and
    office PC share exactly one line — the git remote. Unpushed work is not a
    message. Every mailbox file names its agent AND its machine.
-4. `ops/ACTIVE_TASKS.json` — task ownership, locks, dependencies and required reading.
-5. `ops/mailbox/INBOX.md` — open items currently waiting on someone.
-6. Only the relevant accepted contract/ADR under `docs/architecture/` or review under `docs/reviews/`.
+4. `docs/governance/OWNER_AUTHORIZATION.md` and `docs/governance/AGENT_CAPABILITY_POLICY.md` — Owner standing authorization and role boundaries.
+5. `ops/ACTIVE_TASKS.json` — task ownership, locks, dependencies and required reading.
+6. `ops/mailbox/INBOX.md` — open items currently waiting on someone.
+7. Only the relevant accepted contract/ADR under `docs/architecture/` or review under `docs/reviews/`.
 
 Run `node ops/governance-check.cjs` before handoff. A task may edit only paths in
 its `owns` list. Do not use `tizim02/MULOQOT.md` as current state: it is an
@@ -19,5 +20,7 @@ is recorded in `docs/governance/OWNER_AUTHORIZATION.md`: routine git work,
 additive safe migrations, normal deployment and `main` integration do not need
 repeated approval questions. Do not stop for routine permission bureaucracy.
 Only the destructive/key-rotation/irreversible cases listed in that document
-remain hard stops. Record changes in the task branch and leave unrelated
-worktree changes untouched.
+remain hard stops. Agent-specific limits are defined in
+`docs/governance/AGENT_CAPABILITY_POLICY.md`; Antigravity is audit-first and
+cannot touch production/backend/release boundaries. Record changes in the task
+branch and leave unrelated worktree changes untouched.

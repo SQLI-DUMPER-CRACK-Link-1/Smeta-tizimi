@@ -17,6 +17,10 @@ uchun agent qayta-qayta alohida ruxsat so‘ramaydi:
 Bu hujjat chatdagi vaqtinchalik gap emas: u repository ichidagi amaldagi
 Owner qarori sifatida agentlar uchun yagona ruxsat manbai hisoblanadi.
 
+Agentlar bo‘yicha aniq chegaralar `docs/governance/AGENT_CAPABILITY_POLICY.md`
+da: Claude — chief integrator, Codex/Hermes — task-bound implementer,
+Antigravity — audit-first va cheklangan frontend agent.
+
 ## Ishlash qoidasi
 
 Agent vazifani mustaqil yakunlaydi, testlarni ishga tushiradi, branchni push
