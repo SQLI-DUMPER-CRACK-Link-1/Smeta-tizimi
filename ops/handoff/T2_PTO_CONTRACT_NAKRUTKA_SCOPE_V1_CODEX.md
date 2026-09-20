@@ -91,3 +91,16 @@ yaratilmaydi.
 4. So'ng shartnoma selector + qamrov panelini authenticated Preview smoke'da
    tekshirish: ikkita obyekt, bitta chiqarilgan resurs, bitta qo'shilgan
    kanonik qator, ikki xil shartnoma koeffitsienti.
+
+## Hardening davomida qo'shilgan nazoratlar
+
+- `NULL` qator summasi endi nakrutka hisobida nolga aylantirilmaydi:
+  hisob ochiq `CANONICAL_AMOUNT_UNKNOWN` bilan to'xtaydi, qamrov read-modeli
+  esa noma'lum jami uchun `jami_noaniq` sonini beradi.
+- `hajm_override` faqat manba hajmi mavjud va noldan farqli bo'lsa qabul
+  qilinadi; aks holda `QAMROV_HAJM_BASIS_MISSING` qaytadi.
+- PTO qamrov panelida har bir resurs qatori uchun shartnomaviy hajmni
+  kiritish/tozalash mumkin. Bu `t2_qator`ni o'zgartirmaydi, faqat shu
+  shartnoma hisobiga ta'sir qiladi.
+- Qamrov adapteri va migration acceptance izolyatsiyalangan testlarda
+  noma'lum summa hamda qisman hajm holatlarini alohida talab qiladi.

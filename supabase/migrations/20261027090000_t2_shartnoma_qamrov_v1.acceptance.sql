@@ -34,3 +34,6 @@ end $$;
 -- E) duplicate operation_id returns the original result;
 -- F) stale qamrov version returns VERSION_CONFLICT;
 -- G) two objects under one contract are evaluated by the same scope rules.
+-- H) qator.summa NULL is returned as unknown and blocks nakrutka calculation;
+-- I) hajm_override is rejected when the canonical qator has no non-zero
+--    source hajm; no silent fallback to qator.summa is allowed.

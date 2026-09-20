@@ -85,9 +85,10 @@ begin
         (q.tur in ('rs','mat','ob')) as hisobga_kiradi,
         case
           when coalesce(c.holat,'kiritilgan') = 'chiqarilgan' then 0::numeric
-          when c.hajm_override is not null and coalesce(q.hajm,0) <> 0
-            then coalesce(q.summa,0) * c.hajm_override / q.hajm
-          else coalesce(q.summa,0)
+          when q.summa is null then null::numeric
+          when c.hajm_override is not null and q.hajm is not null and q.hajm <> 0
+            then q.summa * c.hajm_override / q.hajm
+          else q.summa
         end as summa_amaldagi
       from public.t2_shartnoma_bog b
       join public.t2_obyekt o on o.id = b.obyekt_id
@@ -108,7 +109,10 @@ begin
         'qamrovda', (select count(*) from l where l.amalda_qamrovda),
         'chiqarilgan', (select count(*) from l where not l.amalda_qamrovda),
         'hisobga_kiradigan', (select count(*) from l where l.hisobga_kiradi and l.amalda_qamrovda),
-        'jami', (select coalesce(sum(l.summa_amaldagi) filter (where l.hisobga_kiradi),0) from l)
+        'jami', (select case when exists (
+          select 1 from l x where x.hisobga_kiradi and x.amalda_qamrovda and x.summa_amaldagi is null
+        ) then null::numeric else coalesce(sum(l.summa_amaldagi) filter (where l.hisobga_kiradi),0) end from l),
+        'jami_noaniq', (select count(*) from l where l.hisobga_kiradi and l.amalda_qamrovda and l.summa_amaldagi is null)
       )
     )
   );
@@ -180,6 +184,12 @@ begin
      where q.id=p_qator_id and q.obyekt_id=p_obyekt_id and q.kompaniya_id=p_kompaniya_id
   ) then
     return jsonb_build_object('ok',false,'code','QATOR_SCOPE_MISMATCH');
+  end if;
+  if p_hajm_override is not null and not exists (
+    select 1 from public.t2_qator q
+     where q.id=p_qator_id and q.hajm is not null and q.hajm <> 0
+  ) then
+    return jsonb_build_object('ok',false,'code','QAMROV_HAJM_BASIS_MISSING');
   end if;
 
   select * into v_old
@@ -279,6 +289,29 @@ begin
     return jsonb_build_object('ok',false,'code','SHARTNOMA_OBYEKT_SCOPE_MISMATCH');
   end if;
 
+  if exists (
+    select 1
+      from public.t2_qator q
+      left join public.t2_shartnoma_qator_qamrov c
+        on c.shartnoma_id=v_shartnoma_id and c.qator_id=q.id
+     where q.obyekt_id=p_obyekt_id and q.tur in ('rs','mat','ob')
+       and coalesce(c.holat,'kiritilgan') <> 'chiqarilgan'
+       and q.summa is null
+  ) then
+    return jsonb_build_object('ok',false,'code','CANONICAL_AMOUNT_UNKNOWN');
+  end if;
+  if exists (
+    select 1
+      from public.t2_qator q
+      join public.t2_shartnoma_qator_qamrov c
+        on c.shartnoma_id=v_shartnoma_id and c.qator_id=q.id
+     where q.obyekt_id=p_obyekt_id and q.tur in ('rs','mat','ob')
+       and c.holat <> 'chiqarilgan' and c.hajm_override is not null
+       and (q.hajm is null or q.hajm = 0)
+  ) then
+    return jsonb_build_object('ok',false,'code','QAMROV_HAJM_BASIS_MISSING');
+  end if;
+
   select jsonb_build_object(
     'chel',coalesce(sum(x.summa) filter (where x.kat='ЧЕЛ'),0),
     'mash',coalesce(sum(x.summa) filter (where x.kat='МАШ'),0),
@@ -292,9 +325,8 @@ begin
       select q.kat,
         case
           when c.holat='chiqarilgan' then 0::numeric
-          when c.hajm_override is not null and coalesce(q.hajm,0) <> 0
-            then coalesce(q.summa,0) * c.hajm_override / q.hajm
-          else coalesce(q.summa,0)
+          when c.hajm_override is not null then q.summa * c.hajm_override / q.hajm
+          else q.summa
         end as summa
       from public.t2_qator q
       left join public.t2_shartnoma_qator_qamrov c

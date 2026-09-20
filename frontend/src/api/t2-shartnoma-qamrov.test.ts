@@ -11,7 +11,7 @@ afterEach(() => {
 describe('shartnoma qamrovi adapteri', () => {
   it('qamrovni faqat tanlangan shartnoma identifikatori bilan o\'qiydi', async () => {
     fetchMock.mockResolvedValue({
-      json: async () => ({ ok: true, natija: { ok: true, qatorlar: [], summary: { qator_soni: 0, qamrovda: 0, chiqarilgan: 0, hisobga_kiradigan: 0, jami: 0 } } }),
+      json: async () => ({ ok: true, natija: { ok: true, qatorlar: [], summary: { qator_soni: 0, qamrovda: 0, chiqarilgan: 0, hisobga_kiradigan: 0, jami: 0, jami_noaniq: 0 } } }),
     });
     vi.stubGlobal('fetch', fetchMock);
 
@@ -34,6 +34,20 @@ describe('shartnoma qamrovi adapteri', () => {
       amal: 'shartnoma_qamrov_saqla', kompaniya_id: 7, shartnoma_id: 42,
       obyekt_id: 9, qator_id: 101, holat: 'chiqarilgan', kutilgan_versiya: 3,
       operation_id: 'f2ee16f8-0488-4a42-a113-4493ee1d0bf9',
+    });
+  });
+
+  it('qisman shartnomaviy hajmni canonical qatorni o\'zgartirmasdan yuboradi', async () => {
+    fetchMock.mockResolvedValue({ json: async () => ({ ok: true }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await t2ShartnomaQamrovSaqla({
+      kompaniyaId: 7, shartnomaId: 42, obyektId: 9, qatorId: 101,
+      holat: 'kiritilgan', hajmOverride: 12.5,
+      sabab: 'Shu shartnomada tasdiqlangan qism', kutilganVersiya: 1,
+    });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      amal: 'shartnoma_qamrov_saqla', holat: 'kiritilgan', hajm_override: 12.5,
     });
   });
 });

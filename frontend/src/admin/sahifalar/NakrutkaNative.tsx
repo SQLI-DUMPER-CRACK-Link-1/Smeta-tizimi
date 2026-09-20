@@ -201,22 +201,30 @@ function QamrovTahrirchi({
   const [qidiruv, setQidiruv] = useState('');
   const [sabab, setSabab] = useState('Shartnoma qamrovi PTO tomonidan belgilandi');
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [hajmDraft, setHajmDraft] = useState<Record<number, string>>({});
   const [xato, setXato] = useState('');
   const filtr = qidiruv.trim().toLocaleLowerCase();
   const rows = qatorlar.filter(q => !filtr || [q.obyekt_nom, q.kod, q.nom, q.birlik, q.kat]
     .some(v => String(v || '').toLocaleLowerCase().includes(filtr)));
 
-  const almashtir = async (q: ShartnomaQamrovQatori, kiritilsin: boolean) => {
+  const saqlaQamrov = async (q: ShartnomaQamrovQatori, holat: 'kiritilgan' | 'chiqarilgan') => {
     if (!sabab.trim()) { setXato('O‘zgarish sababi majburiy.'); return; }
+    const draft = hajmDraft[q.qator_id];
+    const hajmOverride = draft === undefined
+      ? q.hajm_override
+      : draft.trim() === '' ? null : Number(draft.replace(',', '.'));
+    if (hajmOverride !== null && (!Number.isFinite(hajmOverride) || hajmOverride < 0)) {
+      setXato('Shartnomaviy hajm 0 yoki undan katta son bo‘lishi kerak.'); return;
+    }
     setSavingId(q.qator_id); setXato('');
     try {
       const r = await t2ShartnomaQamrovSaqla({
         kompaniyaId: companyId, shartnomaId: contractId, obyektId: q.obyekt_id, qatorId: q.qator_id,
-        holat: kiritilsin ? 'kiritilgan' : 'chiqarilgan',
-        hajmOverride: q.hajm_override, sabab: sabab.trim(),
+        holat, hajmOverride, sabab: sabab.trim(),
         dalilHujjatId: q.dalil_hujjat_id, kutilganVersiya: q.qamrov_versiya || 1,
       });
       if (!r.ok) { setXato(r.error || r.code || 'Qamrov saqlanmadi'); return; }
+      setHajmDraft(d => { const n = { ...d }; delete n[q.qator_id]; return n; });
       await onRefresh();
     } finally { setSavingId(null); }
   };
@@ -249,6 +257,7 @@ function QamrovTahrirchi({
               <th className="text-left px-2 py-1.5">Kod / nom</th>
               <th className="text-left px-2 py-1.5">Birlik</th>
               <th className="text-right px-2 py-1.5">Smeta hajmi</th>
+              <th className="text-right px-2 py-1.5">Shartnoma hajmi</th>
               <th className="text-right px-2 py-1.5">Summa</th>
               <th className="text-left px-2 py-1.5">Holat</th>
               <th className="px-2 py-1.5">Amal</th>
@@ -266,19 +275,37 @@ function QamrovTahrirchi({
                   </td>
                   <td className="px-2 py-1.5">{q.birlik || '—'}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{q.hajm ?? '—'}</td>
+                  <td className="px-2 py-1.5 text-right">
+                    {!parent ? <input
+                      aria-label={`Shartnoma hajmi ${q.qator_id}`}
+                      className="w-24 border rounded px-2 py-1 text-right tabular-nums"
+                      inputMode="decimal" min="0" step="any"
+                      placeholder="Smeta bilan bir xil"
+                      value={hajmDraft[q.qator_id] ?? (q.hajm_override == null ? '' : String(q.hajm_override))}
+                      onChange={e => setHajmDraft(d => ({ ...d, [q.qator_id]: e.target.value }))}
+                    /> : '—'}
+                  </td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{q.summa ?? '—'}</td>
                   <td className="px-2 py-1.5">{parent ? 'Tarkib qatori' : q.amalda_qamrovda ? 'Kiritilgan' : 'Chiqarilgan'}</td>
                   <td className="px-2 py-1.5 text-right">
-                    {!parent && <button type="button" disabled={savingId === q.qator_id}
-                      onClick={() => void almashtir(q, !q.amalda_qamrovda)}
-                      className="border rounded px-2 py-1 disabled:opacity-40">
-                      {savingId === q.qator_id ? 'Saqlanmoqda…' : q.amalda_qamrovda ? 'Chiqarish' : 'Kiritish'}
-                    </button>}
+                    {!parent && <div className="flex justify-end gap-1">
+                      <button type="button" disabled={savingId === q.qator_id}
+                        onClick={() => void saqlaQamrov(q, q.amalda_qamrovda ? 'chiqarilgan' : 'kiritilgan')}
+                        className="border rounded px-2 py-1 disabled:opacity-40">
+                        {savingId === q.qator_id ? 'Saqlanmoqda…' : q.amalda_qamrovda ? 'Chiqarish' : 'Kiritish'}
+                      </button>
+                      {(hajmDraft[q.qator_id] !== undefined || q.hajm_override !== null) &&
+                        <button type="button" disabled={savingId === q.qator_id}
+                          onClick={() => void saqlaQamrov(q, q.amalda_qamrovda ? 'kiritilgan' : 'chiqarilgan')}
+                          className="border border-accent text-accent rounded px-2 py-1 disabled:opacity-40">
+                          Hajmni saqlash
+                        </button>}
+                    </div>}
                   </td>
                 </tr>
               );
             })}
-            {!rows.length && <tr><td colSpan={7} className="px-3 py-5 text-center text-text-mute">Qator topilmadi</td></tr>}
+            {!rows.length && <tr><td colSpan={8} className="px-3 py-5 text-center text-text-mute">Qator topilmadi</td></tr>}
           </tbody>
         </table>
       </div>

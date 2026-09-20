@@ -33,7 +33,7 @@ export type ShartnomaQamrovQatori = {
   qamrov_versiya: number | null;
   amalda_qamrovda: boolean;
   hisobga_kiradi: boolean;
-  summa_amaldagi: number;
+  summa_amaldagi: number | null;
 };
 
 export type ShartnomaQamrovNatija = {
@@ -48,7 +48,8 @@ export type ShartnomaQamrovNatija = {
     qamrovda: number;
     chiqarilgan: number;
     hisobga_kiradigan: number;
-    jami: number;
+    jami: number | null;
+    jami_noaniq: number;
   };
 };
 
