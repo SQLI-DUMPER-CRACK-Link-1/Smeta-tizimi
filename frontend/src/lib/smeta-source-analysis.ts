@@ -9,6 +9,9 @@ export type SmetaSheetConfidence = 'high' | 'medium' | 'low';
 
 export type SmetaSheetAnalysis = {
   detectedRole: Exclude<SmetaSheetRole, 'ignore'>;
+  /** Mazmuni import manbasi emasligi aniq bo'lsa, UI ignore ni oldindan tanlaydi. */
+  suggestedIgnore: boolean;
+  ignoreReason?: string;
   confidence: SmetaSheetConfidence;
   evidence: string[];
   lrvScore: number;
@@ -132,6 +135,18 @@ export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): Smeta
   let detectedRole: Exclude<SmetaSheetRole, 'ignore'> = 'unknown';
   if (lrvScore >= 5 && lrvScore >= resScore + 1) detectedRole = 'lrv';
   if (resScore >= 5 && resScore > lrvScore) detectedRole = 'res';
+  /* Obyekt qiymati xulosasi yoki transport xarajatlari alohida varaqlari
+     kanonik LRV/RES manbasi emas. Faqat kuchli mazmun signali bor va LRV
+     sarlavhasi yo'q holatda avtomatik e'tiborsiz tavsiya qilinadi. */
+  const ignoreMatch = header.match(
+    /РЕКОМЕНДУЕМАЯ\s+СТОИМОСТЬ\s+ОБЪЕКТА|РАСЧ[ЕЁ]Т\s+ЗАТРАТ\s+ТРАНСПОРТА|СВОДН(?:ЫЙ|АЯ|ОЕ)\s+(?:РАСЧ[ЕЁ]Т|ВЕДОМОСТ|ИТОГ)/,
+  );
+  const suggestedIgnore = Boolean(ignoreMatch && lrvScore < 5);
+  const ignoreReason = suggestedIgnore ? 'xulosa/transport varag‘i — kanonik LRV yoki RES manbasi emas' : undefined;
+  if (suggestedIgnore) {
+    detectedRole = 'unknown';
+    evidence.push(`avtomatik e'tiborsiz: ${ignoreReason}`);
+  }
   const strongest = Math.max(lrvScore, resScore);
   const difference = Math.abs(lrvScore - resScore);
   const confidence: SmetaSheetConfidence = detectedRole === 'unknown'
@@ -140,7 +155,7 @@ export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): Smeta
   if (detectedRole === 'unknown') evidence.push('yetarli ishonchli LRV yoki RES signali yo\'q');
 
   return {
-    detectedRole, confidence, evidence, lrvScore, resScore, dataRows: nonEmpty.length, codelessResRows,
+    detectedRole, suggestedIgnore, ignoreReason, confidence, evidence, lrvScore, resScore, dataRows: nonEmpty.length, codelessResRows,
     analysisKey: stableKey([header, String(nonEmpty.length), String(resourceLikeRows), String(codelessResRows)]),
   };
 }

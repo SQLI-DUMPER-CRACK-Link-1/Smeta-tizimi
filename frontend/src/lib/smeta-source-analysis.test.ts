@@ -46,7 +46,30 @@ describe('universal smeta package sheet analysis', () => {
   it('bo‘sh yoki nostandart worksheet panelni yiqitmaydi — faqat unknown bo‘ladi', () => {
     const result = smetaVaraqniTahlilQil(undefined);
     expect(result.detectedRole).toBe('unknown');
+    expect(result.suggestedIgnore).toBe(false);
     expect(result.dataRows).toBe(0);
+  });
+
+  it('obyekt qiymati xulosasini RES deb noto‘g‘ri tanlamaydi', () => {
+    const result = smetaVaraqniTahlilQil([
+      ['РЕКОМЕНДУЕМАЯ СТОИМОСТЬ ОБЪЕКТА В ТЕКУЩИХ ЦЕНАХ'],
+      ['НАИМЕНОВАНИЕ ЗАТРАТ', 'ЦЕНА'],
+      ['ЗАТРАТЫ НА МАТЕРИАЛЫ', 5019131967],
+      ['ЗАТРАТЫ НА ТРАНСПОРТ', 418774643.6],
+    ]);
+    expect(result.detectedRole).toBe('unknown');
+    expect(result.suggestedIgnore).toBe(true);
+    expect(result.ignoreReason).toContain('xulosa');
+  });
+
+  it('transport xarajatlari varag‘ini avtomatik e’tiborsiz qiladi', () => {
+    const result = smetaVaraqniTahlilQil([
+      ['Расчёт затрат транспорта'],
+      ['Наименование материалов', 'Ед.изм', 'Кол-во', 'Стоимость всего сум'],
+      ['Асфальтобетон', 'ТН', 6494.997, 109189156.62],
+    ]);
+    expect(result.detectedRole).toBe('unknown');
+    expect(result.suggestedIgnore).toBe(true);
   });
 });
 
@@ -71,5 +94,15 @@ describe('package selection safety', () => {
   it('source-key kesishmasini bloklaydi', () => {
     const sheets = [base(), base({ id: 'sheet-2', sourceKey: 'source-a' })];
     expect(smetaPaketTanloviniTekshir(sheets, smetaPaketTasdiqImzosi(sheets))).toEqual({ ok: false, code: 'PACKAGE_SOURCE_KEY_DUPLICATE', sheetId: 'sheet-2' });
+  });
+
+  it('xulosa va transport varaqlari ignore bo‘lsa, haqiqiy LRV+RES paketi rol xatosiz tasdiqlanadi', () => {
+    const sheets = [
+      base({ id: 'summary', sourceKey: 'summary', selectedRole: 'ignore' }),
+      base({ id: 'transport', sourceKey: 'transport', selectedRole: 'ignore' }),
+      base({ id: 'lrv-4230', sourceKey: 'lrv-4230', selectedRole: 'lrv' }),
+      base({ id: 'res-4230', sourceKey: 'res-4230', selectedRole: 'res', targetLrvSourceKey: 'lrv-4230' }),
+    ];
+    expect(smetaPaketTanloviniTekshir(sheets, smetaPaketTasdiqImzosi(sheets))).toEqual({ ok: true });
   });
 });

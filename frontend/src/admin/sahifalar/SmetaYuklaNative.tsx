@@ -1110,7 +1110,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
             analysis,
             embeddedResBoundaryRow: lrvSplit?.boundaryRow,
             analysisKey: analysis.analysisKey,
-            selectedRole: analysis.detectedRole === 'unknown' ? undefined : analysis.detectedRole,
+            selectedRole: analysis.suggestedIgnore ? 'ignore' : analysis.detectedRole === 'unknown' ? undefined : analysis.detectedRole,
           });
         }
       }
@@ -1568,7 +1568,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                       const internal = ownLrvs.length > 0;
                       return <tr key={sheet.id} className="border-t border-border/40">
                         <td className="py-1 pr-2">{sheet.file.name}<br /><span className="text-text-mute">{sheet.sheetName}</span></td>
-                        <td className="py-1 pr-2"><span className="capitalize">{sheet.analysis.detectedRole}</span> · {sheet.analysis.confidence}<br /><span className="text-text-mute">{sheet.analysis.evidence[0] || 'signal yo‘q'}</span>{sheet.embeddedResBoundaryRow && <><br /><span className="text-warn">LRV yakunidan keyingi RES ilovasi {sheet.embeddedResBoundaryRow}-qatordan ajratiladi</span></>}</td>
+                        <td className="py-1 pr-2"><span className="capitalize">{sheet.selectedRole === 'ignore' ? 'e’tiborsiz' : sheet.analysis.detectedRole}</span> · {sheet.analysis.confidence}<br /><span className="text-text-mute">{sheet.analysis.ignoreReason || sheet.analysis.evidence[0] || 'signal yo‘q'}</span>{sheet.embeddedResBoundaryRow && <><br /><span className="text-warn">LRV yakunidan keyingi RES ilovasi {sheet.embeddedResBoundaryRow}-qatordan ajratiladi</span></>}</td>
                         <td className="py-1 pr-2"><select aria-label={`${sheet.file.name} ${sheet.sheetName} roli`} className="border rounded px-1" value={sheet.selectedRole || ''} disabled={paketBand}
                           onChange={e => paketVaraqniYangila(sheet.id, { selectedRole: (e.target.value || undefined) as PaketVaraq['selectedRole'], targetLrvSourceKey: e.target.value === 'res' ? sheet.targetLrvSourceKey : undefined })}>
                           <option value="">Tanlang</option><option value="lrv">LRV</option><option value="res">RES</option><option value="ignore">E’tiborsiz</option>
