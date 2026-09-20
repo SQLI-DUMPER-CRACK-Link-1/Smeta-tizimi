@@ -107,9 +107,11 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
   function handleDropOnLeaf(sourceUid: string, targetRow: number) {
     if (!dragDropEnabled) return;
     const oldRow = rowById.get(targetRow);
-    const parent = oldRow?.ota_id != null ? rowById.get(oldRow.ota_id) : null;
-    if (!oldRow || !parent) return;
-    setPendingDrop({ sourceUid, action: { kind: 'replacement', oldRow, parent } });
+    if (!oldRow) return;
+    const bound = bindingsByTarget.get(targetRow) || [];
+    if (bound.length === 0) { link(sourceUid, targetRow); return; }
+    const parent = oldRow.ota_id != null ? rowById.get(oldRow.ota_id) : null;
+    if (parent) setPendingDrop({ sourceUid, action: { kind: 'replacement', oldRow, parent } });
   }
   function handleDropOnContainer(sourceUid: string, containerRow: number) {
     if (!dragDropEnabled) return;
@@ -185,7 +187,7 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
           onClick={() => !p.disabled && setSelected(isSelected ? null : n.uid)}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!p.disabled) setSelected(isSelected ? null : n.uid); } }}
           style={{ marginLeft: depth * 14 }}
-          title={dragDropEnabled ? 'Bosib bog‘lang, yoki smeta tomonga tortib qo‘shimcha/zamena yarating' : undefined}
+          title={dragDropEnabled ? 'Tanlang va smeta qatorini bosing yoki shu qatorni smetaga tortib bog‘lang' : undefined}
           className={
             'flex items-center gap-1.5 px-2 py-1 rounded-md text-[12px] cursor-pointer border ' +
             (draggingUid === n.uid ? 'opacity-40'
@@ -267,7 +269,7 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
             if (uid) handleDropOnLeaf(uid, n.row);
           }}
           style={{ marginLeft: depth * 14 }}
-          title={dragDropEnabled ? 'Bu qatorni zamena qilish uchun F2 manba qatorini shu yerga tashlang' : undefined}
+          title={dragDropEnabled ? (bound.length ? 'Bu qator band: tashlash zamena tasdig‘ini ochadi' : 'F2 manba qatorini shu yerga tashlang — bog‘lanadi') : undefined}
           className={
             'flex items-center gap-1.5 px-2 py-1 rounded-md text-[12px] border ' +
             (isDropTarget ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
@@ -409,7 +411,8 @@ export function F2TwoPaneWorkbench(p: F2TwoPaneWorkbenchProps) {
       )}
       {dragDropEnabled && (
         <p className="text-[11px] text-text-mute flex items-center gap-3">
-          <span className="inline-flex items-center gap-1"><GitPullRequestArrow size={12} /> qator ustiga tashlang — zamena</span>
+          <span className="inline-flex items-center gap-1"><GitPullRequestArrow size={12} /> bo‘sh smeta qatoriga tashlang — bog‘lash</span>
+          <span className="inline-flex items-center gap-1">yoki manbani tanlab o‘ng qatorni bosing</span>
           <span className="inline-flex items-center gap-1"><PlusSquare size={12} /> bo‘lim/ish ustiga tashlang — qo‘shimcha</span>
         </p>
       )}
