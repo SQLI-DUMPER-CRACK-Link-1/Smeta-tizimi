@@ -3,8 +3,9 @@
 ## Holat
 
 - BASE: `origin/main` @ `0079c4a7aeed94f241744494340e8d77eae67f26`
-- BRANCH: `codex/pto-res-boundary-main-v1`
-- HEAD: `99e16e8`
+- ORIGINAL BRANCH: `codex/pto-res-boundary-main-v1` @ `711ef673c8ba726fe359a2a3fc226199e4302db6`
+- HARDENING BRANCH: `codex/pto-contract-scope-hardening-v1`
+- HARDENING CHECKPOINT: `7677b408a1ef5fb4321555948790ea6b4e413a90`
 - Production DB tekshiruvi: `t2_shartnoma_qator_qamrov` mavjud emas; mavjud
   nakrutka RPC lar bor, lekin contract-qator scope yo'q.
 - Production/main/GAS/Cloudflare o'zgartirilmadi.
