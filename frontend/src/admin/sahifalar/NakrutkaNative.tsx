@@ -2,12 +2,17 @@ import { useEffect, useState } from 'react';
 import { RefreshCw, Save } from 'lucide-react';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
+import { sbT2ShartnomalarOl, type Shartnoma } from '../../api/t2-shartnoma';
 import {
   t2NakrutkaKoefOl, t2NakrutkaKoefSaqla, t2ObyektNakrutka,
   NAKRUTKA_KOEF_KODLAR, NAKRUTKA_KOEF_IZOH,
   type NakrutkaKoefKod, type NakrutkaKoeffitsientlar,
   type NakrutkaKaskad, type NakrutkaKategoriyaJadval,
 } from '../../api/t2-nakrutka';
+import {
+  t2ShartnomaQamrovOl, t2ShartnomaQamrovSaqla,
+  type ShartnomaQamrovQatori,
+} from '../../api/t2-shartnoma-qamrov';
 import { FmtN } from '../../lib/format';
 
 /**
@@ -39,7 +44,7 @@ const KASKAD_QATORLAR: { key: keyof NakrutkaKaskad; label: string }[] = [
   { key: 'vsego', label: 'ВСЕГО', },
 ];
 
-function KoefTahrirchi({ companyId }: { companyId: number }) {
+function KoefTahrirchi({ companyId, contractId }: { companyId: number; contractId: number | null }) {
   const [koef, setKoef] = useState<NakrutkaKoeffitsientlar | null>(null);
   const [dirty, setDirty] = useState<Partial<Record<NakrutkaKoefKod, string>>>({});
   const [busy, setBusy] = useState(false);
@@ -49,13 +54,13 @@ function KoefTahrirchi({ companyId }: { companyId: number }) {
   const yukla = async () => {
     setBusy(true); setXato('');
     try {
-      const r = await t2NakrutkaKoefOl(companyId);
+      const r = await t2NakrutkaKoefOl(companyId, contractId);
       if (!r.ok) { setXato(r.error || 'Koeffitsientlar yuklanmadi'); return; }
       setKoef(r.koeffitsientlar); setDirty({});
     } finally { setBusy(false); }
   };
 
-  useEffect(() => { void yukla(); }, [companyId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void yukla(); }, [companyId, contractId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saqla = async (kod: NakrutkaKoefKod) => {
     const raw = dirty[kod];
@@ -64,7 +69,7 @@ function KoefTahrirchi({ companyId }: { companyId: number }) {
     if (!Number.isFinite(qiymat)) { setXato('Qiymat noto\'g\'ri: ' + kod); return; }
     setSaving(kod); setXato('');
     try {
-      const r = await t2NakrutkaKoefSaqla({ kompaniyaId: companyId, koefKod: kod, qiymat });
+      const r = await t2NakrutkaKoefSaqla({ kompaniyaId: companyId, shartnomaId: contractId, koefKod: kod, qiymat });
       if (!r.ok) { setXato(r.error || r.code || 'Saqlanmadi'); return; }
       await yukla();
     } finally { setSaving(null); }
@@ -75,7 +80,9 @@ function KoefTahrirchi({ companyId }: { companyId: number }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-text">Kompaniya standart koeffitsientlari</h3>
+        <h3 className="text-sm font-semibold text-text">
+          {contractId ? 'Shartnoma uchun koeffitsientlar' : 'Kompaniya standart koeffitsientlari'}
+        </h3>
         <button type="button" onClick={() => void yukla()} disabled={busy}
           className="text-[12px] flex items-center gap-1 px-2 py-1 border rounded disabled:opacity-40">
           <RefreshCw size={12} className={busy ? 'animate-spin' : ''} /> Yangilash
@@ -114,7 +121,7 @@ function KoefTahrirchi({ companyId }: { companyId: number }) {
   );
 }
 
-function ObyektKaskad({ obyektId }: { obyektId: number }) {
+function ObyektKaskad({ obyektId, contractId }: { obyektId: number; contractId: number | null }) {
   const [busy, setBusy] = useState(false);
   const [xato, setXato] = useState('');
   const [cats, setCats] = useState<{ chel: number; mash: number; mat: number; ob: number; mk: number; kab: number; bez: number } | null>(null);
@@ -124,13 +131,13 @@ function ObyektKaskad({ obyektId }: { obyektId: number }) {
   useEffect(() => {
     let active = true;
     setBusy(true); setXato('');
-    void t2ObyektNakrutka(obyektId).then(r => {
+    void t2ObyektNakrutka(obyektId, contractId).then(r => {
       if (!active) return;
       if (!r.ok) { setXato(r.error || r.code || 'Hisoblanmadi'); setCats(null); setKaskad(null); setJadval(null); return; }
       setCats(r.cats ?? null); setKaskad(r.nakrutka ?? null); setJadval(r.jadval ?? null);
     }).finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
-  }, [obyektId]);
+  }, [obyektId, contractId]);
 
   if (busy) return <p className="text-text-mute text-sm">Hisoblanmoqda…</p>;
   if (xato) return <p className="text-danger text-sm">{xato}</p>;
@@ -183,8 +190,109 @@ function ObyektKaskad({ obyektId }: { obyektId: number }) {
   );
 }
 
+function QamrovTahrirchi({
+  companyId, contractId, qatorlar, onRefresh,
+}: {
+  companyId: number;
+  contractId: number;
+  qatorlar: ShartnomaQamrovQatori[];
+  onRefresh: () => Promise<void>;
+}) {
+  const [qidiruv, setQidiruv] = useState('');
+  const [sabab, setSabab] = useState('Shartnoma qamrovi PTO tomonidan belgilandi');
+  const [savingId, setSavingId] = useState<number | null>(null);
+  const [xato, setXato] = useState('');
+  const filtr = qidiruv.trim().toLocaleLowerCase();
+  const rows = qatorlar.filter(q => !filtr || [q.obyekt_nom, q.kod, q.nom, q.birlik, q.kat]
+    .some(v => String(v || '').toLocaleLowerCase().includes(filtr)));
+
+  const almashtir = async (q: ShartnomaQamrovQatori, kiritilsin: boolean) => {
+    if (!sabab.trim()) { setXato('O‘zgarish sababi majburiy.'); return; }
+    setSavingId(q.qator_id); setXato('');
+    try {
+      const r = await t2ShartnomaQamrovSaqla({
+        kompaniyaId: companyId, shartnomaId: contractId, obyektId: q.obyekt_id, qatorId: q.qator_id,
+        holat: kiritilsin ? 'kiritilgan' : 'chiqarilgan',
+        hajmOverride: q.hajm_override, sabab: sabab.trim(),
+        dalilHujjatId: q.dalil_hujjat_id, kutilganVersiya: q.qamrov_versiya || 1,
+      });
+      if (!r.ok) { setXato(r.error || r.code || 'Qamrov saqlanmadi'); return; }
+      await onRefresh();
+    } finally { setSavingId(null); }
+  };
+
+  const hisobgaKiradigan = rows.filter(q => q.hisobga_kiradi);
+  return (
+    <div className="space-y-2 border rounded-lg p-3 bg-surface-1">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-text">Shartnoma qamrovi</h3>
+          <p className="text-xs text-text-mute">Smeta qatori o‘chmaydi. Faqat shu shartnoma hisobidan kiritiladi yoki chiqariladi.</p>
+        </div>
+        <div className="text-xs text-text-mute">
+          {hisobgaKiradigan.filter(q => q.amalda_qamrovda).length} / {hisobgaKiradigan.length} resurs qatori hisobda
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-2">
+        <input aria-label="Qamrov qidiruvi" className="border rounded px-2 py-1 text-sm"
+          placeholder="Obyekt, kod yoki nom bo‘yicha qidirish" value={qidiruv}
+          onChange={e => setQidiruv(e.target.value)} />
+        <input aria-label="Qamrov o'zgarish sababi" className="border rounded px-2 py-1 text-sm"
+          placeholder="O‘zgarish sababi" value={sabab} onChange={e => setSabab(e.target.value)} />
+      </div>
+      {xato && <p className="text-danger text-sm">{xato}</p>}
+      <div className="overflow-auto max-h-[420px] border rounded">
+        <table className="w-full text-xs border-collapse min-w-[760px]">
+          <thead className="sticky top-0 bg-surface-2 z-[1]">
+            <tr className="border-b border-border">
+              <th className="text-left px-2 py-1.5">Obyekt</th>
+              <th className="text-left px-2 py-1.5">Kod / nom</th>
+              <th className="text-left px-2 py-1.5">Birlik</th>
+              <th className="text-right px-2 py-1.5">Smeta hajmi</th>
+              <th className="text-right px-2 py-1.5">Summa</th>
+              <th className="text-left px-2 py-1.5">Holat</th>
+              <th className="px-2 py-1.5">Amal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(q => {
+              const parent = !q.hisobga_kiradi;
+              return (
+                <tr key={q.qator_id} className={'border-b border-border/50 ' + (q.amalda_qamrovda ? '' : 'opacity-60')}>
+                  <td className="px-2 py-1.5">{q.obyekt_nom}</td>
+                  <td className="px-2 py-1.5">
+                    <div className={parent ? 'font-medium' : ''}>{q.kod || '—'}</div>
+                    <div className="text-text-mute truncate max-w-[340px]" title={q.nom || ''}>{q.nom || 'Nomsiz qator'}</div>
+                  </td>
+                  <td className="px-2 py-1.5">{q.birlik || '—'}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{q.hajm ?? '—'}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{q.summa ?? '—'}</td>
+                  <td className="px-2 py-1.5">{parent ? 'Tarkib qatori' : q.amalda_qamrovda ? 'Kiritilgan' : 'Chiqarilgan'}</td>
+                  <td className="px-2 py-1.5 text-right">
+                    {!parent && <button type="button" disabled={savingId === q.qator_id}
+                      onClick={() => void almashtir(q, !q.amalda_qamrovda)}
+                      className="border rounded px-2 py-1 disabled:opacity-40">
+                      {savingId === q.qator_id ? 'Saqlanmoqda…' : q.amalda_qamrovda ? 'Chiqarish' : 'Kiritish'}
+                    </button>}
+                  </td>
+                </tr>
+              );
+            })}
+            {!rows.length && <tr><td colSpan={7} className="px-3 py-5 text-center text-text-mute">Qator topilmadi</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function Sessiya({ companyId }: { companyId: number }) {
   const [objects, setObjects] = useState<T2Obyekt[]>([]);
+  const [contracts, setContracts] = useState<Shartnoma[]>([]);
+  const [contractId, setContractId] = useState<number | null>(null);
+  const [qamrov, setQamrov] = useState<ShartnomaQamrovQatori[]>([]);
+  const [qamrovBusy, setQamrovBusy] = useState(false);
+  const [qamrovXato, setQamrovXato] = useState('');
   const [objectId, setObjectId] = useState('');
 
   useEffect(() => {
@@ -193,18 +301,61 @@ function Sessiya({ companyId }: { companyId: number }) {
     return () => { active = false; };
   }, [companyId]);
 
+  useEffect(() => {
+    let active = true;
+    void sbT2ShartnomalarOl(companyId).then(r => {
+      if (active && r.ok) setContracts((r.qatorlar || []) as Shartnoma[]);
+    });
+    return () => { active = false; };
+  }, [companyId]);
+
+  const qamrovYukla = async () => {
+    if (!contractId) { setQamrov([]); return; }
+    setQamrovBusy(true); setQamrovXato('');
+    try {
+      const r = await t2ShartnomaQamrovOl(contractId);
+      if (!r.ok) { setQamrovXato(r.error || r.code || 'Qamrov o‘qilmadi'); setQamrov([]); return; }
+      setQamrov(r.qatorlar || []);
+    } finally { setQamrovBusy(false); }
+  };
+
+  useEffect(() => {
+    setObjectId('');
+    void qamrovYukla();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractId]);
+
+  const contractObjectIds = new Set(qamrov.map(q => q.obyekt_id));
+  const visibleObjects = contractId && qamrov.length
+    ? objects.filter(o => contractObjectIds.has(Number(o.id)))
+    : objects;
+
   return (
     <div className="space-y-6 p-1">
-      <KoefTahrirchi companyId={companyId} />
+      <div className="border rounded-lg p-3 bg-surface-1 space-y-2">
+        <label className="block text-sm font-medium">Hisob qo‘llanadigan shartnoma
+          <select aria-label="Shartnoma" className="ml-2 border rounded px-2 py-1 font-normal"
+            value={contractId ?? ''} onChange={e => setContractId(e.target.value ? Number(e.target.value) : null)}>
+            <option value="">Kompaniya standarti</option>
+            {contracts.map(s => <option key={s.id} value={s.id}>{s.raqam}{s.nom ? ` — ${s.nom}` : ''}</option>)}
+          </select>
+        </label>
+        <p className="text-xs text-text-mute">Shartnoma tanlansa, uning nakrutka koeffitsientlari va qamrov qarorlari barcha ulangan obyektlarga bir xil qo‘llanadi.</p>
+      </div>
+      <KoefTahrirchi companyId={companyId} contractId={contractId} />
+      {contractId && (
+        qamrovBusy ? <p className="text-text-mute text-sm">Shartnoma qamrovi yuklanmoqda…</p> : qamrovXato ? <p className="text-danger text-sm">{qamrovXato}</p> :
+          <QamrovTahrirchi companyId={companyId} contractId={contractId} qatorlar={qamrov} onRefresh={qamrovYukla} />
+      )}
       <div className="space-y-2">
         <label className="block text-sm">Obyekt (nakrutka hisobini ko'rish uchun)
           <select aria-label="Obyekt" className="ml-2 border rounded px-2 py-1"
             value={objectId} onChange={e => setObjectId(e.target.value)}>
             <option value="">Tanlang</option>
-            {objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
+            {visibleObjects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
           </select>
         </label>
-        {objectId && <ObyektKaskad key={objectId} obyektId={Number(objectId)} />}
+        {objectId && <ObyektKaskad key={`${objectId}:${contractId ?? 'default'}`} obyektId={Number(objectId)} contractId={contractId} />}
       </div>
     </div>
   );

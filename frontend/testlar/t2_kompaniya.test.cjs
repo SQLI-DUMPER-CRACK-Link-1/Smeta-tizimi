@@ -108,7 +108,11 @@ console.log('\n── 1. YOZISH ESHIGI TOR QOLGANMI ──');
                          ustama koeffitsientlari. Uchalasi ham idempotent va
                          tenant/rol tekshiruvini RPC ichida bajaradi. */
                       't2_obyekt_yarat_v1', 't2_resurs_kategoriya_belgila_v1',
-                      't2_nakrutka_koef_saqla_v1'].sort();
+                      't2_nakrutka_koef_saqla_v1',
+                      /* 2026-09-20: contract-specific qator inclusion/
+                         exclusion is a named, soft-decision command over
+                         canonical t2_qator; it is not a second line writer. */
+                      't2_shartnoma_qamrov_saqla_v1'].sort();
     T('RPC ro\'yxati AYNAN belgilangan ' + KUTILGAN.length + ' ta domen amali',
       JSON.stringify(amallar) === JSON.stringify(KUTILGAN),
       'topildi: ' + amallar.join(', '));

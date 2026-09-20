@@ -113,6 +113,7 @@ const AMALLAR = {
   obyekt_yarat: { rpc: 't2_obyekt_yarat_v1' },
   resurs_kategoriya_belgila: { rpc: 't2_resurs_kategoriya_belgila_v1' },
   nakrutka_koef_saqla: { rpc: 't2_nakrutka_koef_saqla_v1' },
+  shartnoma_qamrov_saqla: { rpc: 't2_shartnoma_qamrov_saqla_v1' },
   loyiha_qatnashchi_biriktir: { rpc: 't2_loyiha_qatnashchi_biriktir' },
   loyiha_qatnashchi_ochir: { rpc: 't2_loyiha_qatnashchi_ochir' },
   kontragent_saqla: { rpc: 't2_kontragent_saqla' },
@@ -1465,6 +1466,49 @@ export const onRequestPost: PagesFunction<{
         p_koef_kod: String(so.koef_kod),
         p_qiymat: qiymat,
         p_operation_id: UUID_RE3.test(String(so.operation_id || '')) ? so.operation_id : crypto.randomUUID(),
+      };
+
+    /* Shartnoma qamrovi: canonical t2_qator satrini o'chirmasdan,
+       faqat shu shartnoma hisobidan kiritish/chiqarish qarorini saqlaydi. */
+    } else if (amal === 'shartnoma_qamrov_saqla') {
+      const kompaniyaId = Number(so.kompaniya_id);
+      const shartnomaId = Number(so.shartnoma_id);
+      const obyektId = Number(so.obyekt_id);
+      const qatorId = Number(so.qator_id);
+      const expectedVersion = Number(so.kutilgan_versiya);
+      if (![kompaniyaId, shartnomaId, obyektId, qatorId].every(n => Number.isInteger(n) && n > 0)) {
+        return Response.json({ ok: false, error: 'kompaniya/shartnoma/obyekt/qator ID noto\'g\'ri' });
+      }
+      if (!['kiritilgan', 'chiqarilgan'].includes(String(so.holat))) {
+        return Response.json({ ok: false, error: 'qamrov holati noto\'g\'ri' });
+      }
+      if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        return Response.json({ ok: false, error: 'kutilgan_versiya majburiy' });
+      }
+      const hajmOverride = so.hajm_override == null || so.hajm_override === '' ? null : Number(so.hajm_override);
+      if (hajmOverride != null && (!Number.isFinite(hajmOverride) || hajmOverride < 0)) {
+        return Response.json({ ok: false, error: 'hajm_override noto\'g\'ri' });
+      }
+      const sabab = String(so.sabab || '').trim();
+      if (!sabab || sabab.length > 500) {
+        return Response.json({ ok: false, error: 'sabab majburiy' });
+      }
+      const dalil = so.dalil_hujjat_id == null || so.dalil_hujjat_id === '' ? null : Number(so.dalil_hujjat_id);
+      if (dalil != null && (!Number.isInteger(dalil) || dalil <= 0)) {
+        return Response.json({ ok: false, error: 'dalil_hujjat_id noto\'g\'ri' });
+      }
+      yuk = {
+        p_kompaniya_id: kompaniyaId,
+        p_actor_id: sess.foydalanuvchi_id,
+        p_shartnoma_id: shartnomaId,
+        p_obyekt_id: obyektId,
+        p_qator_id: qatorId,
+        p_holat: String(so.holat),
+        p_hajm_override: hajmOverride,
+        p_sabab: sabab,
+        p_dalil_hujjat_id: dalil,
+        p_operation_id: uuidRe.test(String(so.operation_id || '')) ? so.operation_id : crypto.randomUUID(),
+        p_kutilgan_versiya: expectedVersion,
       };
 
     /* ⚠️ Polimorfik tashkilot bog'lanishi (MASTER_REJA band 1): taraf
