@@ -14,6 +14,10 @@ Before changing anything, read this chain in order:
 
 Run `node ops/governance-check.cjs` before handoff. A task may edit only paths in
 its `owns` list. Do not use `tizim02/MULOQOT.md` as current state: it is an
-append-only historical journal. Do not apply production migrations or push
-`main` without explicit human approval. Record changes in the task branch and
-leave unrelated worktree changes untouched.
+append-only historical journal. The active Product Owner standing authorization
+is recorded in `docs/governance/OWNER_AUTHORIZATION.md`: routine git work,
+additive safe migrations, normal deployment and `main` integration do not need
+repeated approval questions. Do not stop for routine permission bureaucracy.
+Only the destructive/key-rotation/irreversible cases listed in that document
+remain hard stops. Record changes in the task branch and leave unrelated
+worktree changes untouched.

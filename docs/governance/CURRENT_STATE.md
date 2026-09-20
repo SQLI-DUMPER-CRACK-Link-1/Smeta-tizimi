@@ -155,3 +155,17 @@ tekshirilgan holatdir. Eski jadval tarixiy dalil sifatida saqlanadi.
 | `production_migrations` | T2 native LRV uchun kerakli besh additive migration live katalogda mavjud; `t2_fakt_yoz_v2` ham qo‘llangan. Ushbu checkpoint yangi production migration qo‘llamadi. |
 | `sheets_bridge` | Kod va ko‘prik kontrakti tayyor, lekin real Google trigger/Sheet↔Supabase acceptance hali egasi tomonidan faollashtirilmagan. |
 | `remaining_evidence` | Authenticated production deep-smoke egasining real sessiyasini talab qiladi; bu muhit parol yoki cookie olmagan. |
+
+# 2026-09-20 — Owner authorization va governance checkpoint
+
+Quyidagi yozuv ushbu fayldagi oldingi tarixiy jadvaldan ustun bo‘lgan joriy
+checkpointdir. Eski yozuvlar o‘zgartirilmaydi.
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `0079c4a7aeed94f241744494340e8d77eae67f26` — `origin/main` dan remote tekshirildi. |
+| `integration_sha` | `e22a0f1218264bfd7d3bb234e0ca6e5cf4ab5477` — shartnoma qamrovi/nakrutka hardening integration branchga push qilindi. |
+| `owner_authorization` | ACTIVE — routine branch, commit, push, merge, additive safe migration, normal deployment va release ishlari uchun qayta-qayta approval so‘ralmaydi. |
+| `hard_stops` | Destruktiv o‘chirish, TRUNCATE/DROP/reset, qaytarib bo‘lmaydigan data rewrite, secret rotation, yangi pullik majburiyat va tiklab bo‘lmaydigan tashqi xavf. |
+| `production_change_boundary` | Ushbu checkpointda production main, production baza, secret va deploy o‘zgartirilmadi. |
+| `governance_warning` | `governance-check.cjs` endi append-only CURRENT_STATE ichidagi eng yangi `main_sha`ni va mavjud bo‘lsa `origin/main`ni solishtiradi. |

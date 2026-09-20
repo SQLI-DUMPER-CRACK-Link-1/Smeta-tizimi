@@ -55,10 +55,22 @@ if (!tasks || !Array.isArray(tasks.tasks)) {
   }
 }
 
-const shaMatch = stateText.match(/^\| `main_sha` \| `([0-9a-f]{40})` \|$/m);
+// CURRENT_STATE is append-only. Use the newest main_sha entry instead of the
+// first historical release row; otherwise every later checkpoint produces a
+// misleading stale warning forever.
+const shaMatches = [...stateText.matchAll(/^\| `main_sha` \| `([0-9a-f]{40})`[^|]*\|/gm)];
+const shaMatch = shaMatches.at(-1);
 try {
-  const actual = cp.execFileSync('git', ['rev-parse', 'main'], { cwd: root, encoding: 'utf8' }).trim();
-  if (shaMatch && actual !== shaMatch[1]) warnings.push(`CURRENT_STATE main_sha is stale: recorded ${shaMatch[1]}, git main is ${actual}`);
+  let actual;
+  let actualRef;
+  try {
+    actual = cp.execFileSync('git', ['rev-parse', 'refs/remotes/origin/main'], { cwd: root, encoding: 'utf8' }).trim();
+    actualRef = 'origin/main';
+  } catch {
+    actual = cp.execFileSync('git', ['rev-parse', 'main'], { cwd: root, encoding: 'utf8' }).trim();
+    actualRef = 'local main';
+  }
+  if (shaMatch && actual !== shaMatch[1]) warnings.push(`CURRENT_STATE main_sha is stale: recorded ${shaMatch[1]}, ${actualRef} is ${actual}`);
 } catch (err) {
   warnings.push(`could not resolve git main SHA: ${err.message}`);
 }

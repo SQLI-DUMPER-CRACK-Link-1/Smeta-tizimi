@@ -719,6 +719,19 @@
       ],
       "production_write_allowed": false,
       "_izoh": "Hermes source-only closure lane. Production migration, RLS/auth changes, deployment, real F2 import, and owner smoke remain approval/authentication gated. Scope is limited to the listed files; static and disposable/local validation must distinguish proven from unproven."
+    },
+    {
+      "id": "GOV-OWNER-AUTH-001",
+      "title": "Product Owner standing authorization and governance warning cleanup",
+      "owner": "codex",
+      "branch": "codex/governance-owner-policy-v1",
+      "base_sha": "e22a0f1218264bfd7d3bb234e0ca6e5cf4ab5477",
+      "status": "completed",
+      "owns": ["AGENTS.md", "docs/governance/OWNER_AUTHORIZATION.md", "ops/ACTIVE_TASKS.json", "ops/governance-check.cjs"],
+      "depends_on": [],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/governance/AGENT_COMMS_PROTOCOL.md"],
+      "production_write_allowed": false,
+      "_izoh": "Routine engineering actions use the active Owner standing authorization; irreversible destructive changes, secret rotation, data deletion and new financial commitments remain hard stops."
     }
   ]
 }
