@@ -7,10 +7,10 @@
       "title": "Owner topshirig‘i: yagona Smeta/Fakt ish joyi, F2 va yig‘ma hisob ishonchliligi",
       "owner": "codex",
       "machine": "pc-ishxona",
-      "branch": "codex/pto-workflow-hardening-v2",
+      "branch": "codex/pto-workflow-hardening-v3",
       "base_sha": "881e3bcffe21e0949deaa0c48ee472205af8a2c6",
       "status": "in_progress",
-      "owns": ["frontend/src/admin/sahifalar/FaktNative.tsx", "frontend/src/admin/sahifalar/FaktNative.test.tsx", "frontend/src/admin/sahifalar/FaktBulkControl.tsx", "frontend/src/admin/sahifalar/FaktBulkControl.test.tsx", "frontend/src/admin/sahifalar/HolatNative.tsx", "frontend/src/admin/AdminShell.tsx", "frontend/src/admin/sahifalar/F2ImportNative.tsx", "frontend/src/admin/sahifalar/F2ImportNative.ui.test.tsx", "frontend/src/admin/sahifalar/NakopitelniyVedomost.tsx", "frontend/src/admin/sahifalar/NakopitelniyVedomost.test.tsx", "frontend/src/admin/sahifalar/NakrutkaNative.tsx", "frontend/src/admin/sahifalar/NakrutkaNative.test.tsx", "ops/handoff/T2_PTO_WORKFLOW_HARDENING_002.md"],
+      "owns": ["frontend/src/admin/sahifalar/FaktNative.tsx", "frontend/src/admin/sahifalar/FaktNative.test.tsx", "frontend/src/admin/sahifalar/FaktBulkControl.tsx", "frontend/src/admin/sahifalar/FaktBulkControl.test.tsx", "frontend/src/admin/sahifalar/HolatNative.tsx", "frontend/src/admin/AdminShell.tsx", "frontend/src/admin/sahifalar/F2ImportNative.tsx", "frontend/src/admin/sahifalar/F2ImportNative.ui.test.tsx", "frontend/src/admin/sahifalar/NakopitelniyVedomost.tsx", "frontend/src/admin/sahifalar/NakopitelniyVedomost.test.tsx", "frontend/src/admin/sahifalar/NakrutkaNative.tsx", "frontend/src/admin/sahifalar/NakrutkaNative.test.tsx", "frontend/testlar/t2_pto_visible_surface.test.cjs", "ops/handoff/T2_PTO_WORKFLOW_HARDENING_002.md"],
       "depends_on": [],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/OWNER_AUTHORIZATION.md"],
       "production_write_allowed": false
