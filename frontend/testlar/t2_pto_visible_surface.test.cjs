@@ -38,7 +38,10 @@ for (const route of ['/admin/obyektlar', '/admin/f2', '/admin/f2-tayyorlash', '/
 }
 must('canonical nav uses production routes only', !/\/admin\/test\//.test(t2Menu),
   'oddiy PTO menyusida test/texnik marshrutlar ko‘rinmasligi kerak');
-for (const route of ['/admin/dashboard', '/admin/obyektlar', '/admin/holat', '/admin/fakt', '/admin/f2', '/admin/f2-tayyorlash', '/admin/f2-tarix', '/admin/hujjat-nazorat', '/admin/narxlar', '/admin/documents', '/admin/fayl-boglash']) {
+must('Smeta va Fakt bitta ishchi menyuda birlashtirilgan',
+  /yol:\s*['"]\/admin\/holat['"][\s\S]{0,120}nom:\s*['"]Smeta va Fakt \/ LRV['"]/.test(t2Menu) && !exactMenuPath(t2Menu, '/admin/fakt'),
+  'Fakt alohida dublikat menyu bo‘lib chiqmasligi kerak');
+for (const route of ['/admin/dashboard', '/admin/obyektlar', '/admin/holat', '/admin/f2', '/admin/f2-tayyorlash', '/admin/f2-tarix', '/admin/hujjat-nazorat', '/admin/narxlar', '/admin/documents', '/admin/fayl-boglash']) {
   must(route + ' is present in the canonical IA', exactMenuPath(t2Menu, route),
     route + ' production information architecture ichida bo‘lishi kerak');
 }

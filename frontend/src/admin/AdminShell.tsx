@@ -35,7 +35,6 @@ const TIZIM_02_GURUHLAR = [
       { yol: '/admin/documents', nom: 'Hujjatlar', Ikonka: FileStack },
       { yol: '/admin/hujjat-nazorat', nom: 'Hujjat nazorati (F2/Nakopitelniy)', Ikonka: FileOutput },
       { yol: '/admin/f2-tarix', nom: 'F2 tarixi / tasdiqlash', Ikonka: ClipboardList },
-      { yol: '/admin/fakt', nom: 'Bajarilgan ishlar (Fakt)', Ikonka: ClipboardList },
         { yol: '/admin/mindmap', nom: 'Mindmap (Xarita)', Ikonka: Map },
       { yol: '/admin/crm', nom: 'Tashqi Aloqa (CRM/EDO)', Ikonka: Users },
     ]
@@ -45,7 +44,7 @@ const TIZIM_02_GURUHLAR = [
     Ikonka: HardHat,
     id: 'operatsion',
     menyular: [
-      { yol: '/admin/holat', nom: 'Ishchi smeta / LRV', Ikonka: FileText },
+      { yol: '/admin/holat', nom: 'Smeta va Fakt / LRV', Ikonka: FileText },
       { yol: '/admin/f2', nom: 'F2 import (kanonik)', Ikonka: FileInput },
       { yol: '/admin/f2-tayyorlash', nom: 'F2 tayyorlash', Ikonka: FileOutput },
       { yol: '/admin/nakopitelniy', nom: 'Nakopitelniy vedomost', Ikonka: NotebookPen },
