@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Search, Download, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
-import { t2NakopitelniyOl, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami } from '../../api/t2-nakopitelniy';
+import { t2NakopitelniyOl, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami, type NakopitelniyJavob } from '../../api/t2-nakopitelniy';
 import { nakopitelniyVedomostExportXlsx } from '../../lib/nakopitelniy-vedomost-export';
 import { generateF2AktTn } from '../../lib/f2-akt-tn-export';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
@@ -29,7 +29,6 @@ function Sessiya({ companyId }: { companyId: number }) {
   const [davr, setDavr] = useState('');
   const [qatorlar, setQatorlar] = useState<NakopitelniyQator[]>([]);
   const [jami, setJami] = useState<NakopitelniyJami | null>(null);
-  const [obyektNom, setObyektNom] = useState('');
   const [qidiruv, setQidiruv] = useState('');
   const [busy, setBusy] = useState(false);
   const [xato, setXato] = useState('');
@@ -41,14 +40,17 @@ function Sessiya({ companyId }: { companyId: number }) {
     return () => { active = false; };
   }, [companyId]);
 
+  const natijaniQollash = (r: NakopitelniyJavob): Extract<NakopitelniyJavob, { ok: true }> | null => {
+    if (!r.ok) { setXato(r.xato || r.code || 'Yuklanmadi'); setQatorlar([]); return null; }
+    setQatorlar(r.qatorlar); setJami(r.jami); setDavrlar(r.davrlar); setDavr(r.davr);
+    setPage(0);
+    return r;
+  };
+
   const yukla = async (objId: number, tanlanganDavr: string) => {
     setBusy(true); setXato('');
-    try {
-      const r = await t2NakopitelniyOl(objId, tanlanganDavr || null);
-      if (!r.ok) { setXato(r.xato || r.code || 'Yuklanmadi'); setQatorlar([]); return; }
-      setQatorlar(r.qatorlar); setJami(r.jami); setDavrlar(r.davrlar); setDavr(r.davr); setObyektNom(r.obyekt.nom);
-      setPage(0);
-    } catch (e) { setXato(e instanceof Error ? e.message : 'Yuklanmadi'); }
+    try { natijaniQollash(await t2NakopitelniyOl(objId, tanlanganDavr || null)); }
+    catch (e) { setXato(e instanceof Error ? e.message : 'Yuklanmadi'); }
     finally { setBusy(false); }
   };
 
@@ -84,16 +86,40 @@ function Sessiya({ companyId }: { companyId: number }) {
   const sahifa = gorunumRows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
   const sahifaSoni = Math.max(1, Math.ceil(gorunumRows.length / PAGE_SIZE));
 
+  const eksportSnapshotiniOl = async (): Promise<Extract<NakopitelniyJavob, { ok: true }> | null> => {
+    if (!objectId) return null;
+    setBusy(true); setXato('');
+    try {
+      const r = natijaniQollash(await t2NakopitelniyOl(Number(objectId), davr || null));
+      if (!r || r.qatorlar.length === 0) {
+        setXato('Eksport uchun kanonik qatorlar topilmadi.');
+        return null;
+      }
+      return r;
+    } catch (e) {
+      setXato(e instanceof Error ? e.message : 'Eksport ma’lumotlari yangilanmadi.');
+      return null;
+    } finally { setBusy(false); }
+  };
+
   const eksportQil = async () => {
-    const bytes = await nakopitelniyVedomostExportXlsx(qatorlar, { obyektNom, davr });
-    downloadBlob(new Uint8Array(bytes), `nakopitelniy_${obyektNom}_${davr}.xlsx`.replace(/\s+/g, '_'));
+    const snapshot = await eksportSnapshotiniOl();
+    if (!snapshot) return;
+    try {
+      const bytes = await nakopitelniyVedomostExportXlsx(snapshot.qatorlar, { obyektNom: snapshot.obyekt.nom, davr: snapshot.davr });
+      downloadBlob(new Uint8Array(bytes), `nakopitelniy_${snapshot.obyekt.nom}_${snapshot.davr}.xlsx`.replace(/\s+/g, '_'));
+    } catch { setXato('Nakopitelniy hujjati tuzilmadi. Ma’lumot yangilandi, qayta urinib ko‘ring.'); }
   };
 
   /** T1->T2 PTO gap-close: rasmiy TN Akt-2 shaklidagi Ф2 hujjati -- mijoz/
    *  bankka topshiriladigan qog'oz format (apiF2TayyorHujjatYarat porti). */
   const aktEksportQil = async () => {
-    const bytes = await generateF2AktTn(qatorlar, { obyektNom, davr });
-    downloadBlob(new Uint8Array(bytes), `F2_akt_${obyektNom}_${davr}.xlsx`.replace(/\s+/g, '_'));
+    const snapshot = await eksportSnapshotiniOl();
+    if (!snapshot) return;
+    try {
+      const bytes = await generateF2AktTn(snapshot.qatorlar, { obyektNom: snapshot.obyekt.nom, davr: snapshot.davr });
+      downloadBlob(new Uint8Array(bytes), `F2_akt_${snapshot.obyekt.nom}_${snapshot.davr}.xlsx`.replace(/\s+/g, '_'));
+    } catch { setXato('Rasmiy F2 hujjati tuzilmadi. Ma’lumot yangilandi, qayta urinib ko‘ring.'); }
   };
 
   return (
@@ -130,13 +156,13 @@ function Sessiya({ companyId }: { companyId: number }) {
           <RefreshCw size={14} className={busy ? 'animate-spin' : ''} /> Yangilash
         </button>
         {qatorlar.length > 0 && (
-          <button type="button" onClick={() => void eksportQil()}
+          <button type="button" disabled={busy} onClick={() => void eksportQil()}
             className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-sm hover:opacity-90">
             <Download size={14} /> XLSX eksport
           </button>
         )}
         {qatorlar.length > 0 && (
-          <button type="button" onClick={() => void aktEksportQil()}
+          <button type="button" disabled={busy} onClick={() => void aktEksportQil()}
             title="Mijoz/bankka topshiriladigan rasmiy shakl (TN Akt-2)"
             className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-accent/50 text-accent text-sm hover:bg-accent/10">
             <Download size={14} /> Rasmiy Ф2 hujjati

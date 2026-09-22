@@ -30,6 +30,7 @@ export function F2TayyorlashNative() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const operationId = useRef(yangiOperationId());
   const obyektId = Number(params.get('obyekt'));
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
@@ -117,14 +118,40 @@ export function F2TayyorlashNative() {
 
   const excelYuklash = async () => {
     if (!validId || !tekshiruv.ok) return;
-    const object = obyektlar.find((item) => item.id === obyektId);
-    if (!object) { toast('Kanonik obyekt topilmadi.', 'danger'); return; }
+    setExporting(true);
     try {
-      const data = await generateForma2(f2NativeExportRowsQur(qatorlar, tekshiruv.qatorlar), {
+      // Eksport tugma bosilgan paytdagi kanonik Fakt qoldig'idan tuziladi.
+      // Foydalanuvchi draftlari qator ID orqali yangi snapshotga ulanadi;
+      // indeks yoki eski qator tartibi identifikator sifatida ishlatilmaydi.
+      const [latest, latestObjects] = await Promise.all([
+        sbQatorHolatOl(obyektId),
+        joriy?.id ? sbT2ObyektlarOlKomp(joriy.id) : Promise.resolve(null),
+      ]);
+      if (!latest.ok) { toast('Forma-2 uchun eng yangi kanonik ma’lumot o‘qilmadi.', 'danger'); return; }
+      const freshQatorlar = (latest.qatorlar || []).filter((row) => row.tur !== 'rz' && row.f2_mumkin_hajm > 0);
+      const freshTanlangan = freshQatorlar.flatMap((row) => {
+        const draft = drafts[row.qator_id];
+        return draft?.quantity.trim() ? [{ qatorId: row.qator_id, ...draft }] : [];
+      });
+      const freshTekshiruv = f2NativePayloadQur(
+        freshTanlangan,
+        freshQatorlar.map((row) => ({ qatorId: row.qator_id, f2Mumkin: row.f2_mumkin_hajm })),
+      );
+      setQatorlar(freshQatorlar);
+      if (!freshTekshiruv.ok) { toast('Forma-2 ma’lumotlari yangilandi, lekin qayta tekshiruv talab qilinadi.', 'danger'); return; }
+      const freshObject = latestObjects?.ok
+        ? (latestObjects.qatorlar || []).find((item) => item.id === obyektId)
+        : undefined;
+      if (latestObjects?.ok) setObyektlar((latestObjects.qatorlar || []) as T2Obyekt[]);
+      const object = freshObject ?? obyektlar.find((item) => item.id === obyektId);
+      if (!object) { toast('Kanonik obyekt topilmadi.', 'danger'); return; }
+      if (freshTekshiruv.qatorlar.length === 0) { toast('Eksport uchun tanlangan F2 qatorlari qolmadi.', 'danger'); return; }
+      const data = await generateForma2(f2NativeExportRowsQur(freshQatorlar, freshTekshiruv.qatorlar), {
         projectName: object.nom, objectName: object.nom, periodLabel: oy.slice(0, 7), documentNumber: `F2-QORALAMA-${obyektId}-${oy.slice(0, 7)}`,
       });
       downloadBlob(data, `Forma2_qoralama_${obyektId}_${oy.slice(0, 7)}.xlsx`);
     } catch { toast('Forma-2 Excel qoralamasini yaratib bo‘lmadi.', 'danger'); }
+    finally { setExporting(false); }
   };
 
   return <Sahifa sarlavha="F2 tayyorlash" tavsif="Fakt qoldig‘idan qoralama; narx va summa faqat F2 manbasidan">
@@ -160,7 +187,7 @@ export function F2TayyorlashNative() {
           <tbody>{qatorlar.length === 0 ? <tr><td colSpan={7} className="p-8 text-center text-text-dim">F2 olish mumkin bo‘lgan kanonik Fakt qoldig‘i yo‘q.</td></tr> : qatorlar.map((row) => { const draft = drafts[row.qator_id] || boshDraft; const issue = issueMap.get(row.qator_id); const label = row.kod || row.nom || 'Ish / resurs'; return <tr key={row.qator_id} className="border-t border-border/60 align-top"><td className="p-3"><div className="font-medium">{row.kod || '—'}</div><div>{row.nom}</div><div className="text-text-dim">{row.birlik}</div></td><td><FmtN val={row.f2_mumkin_hajm} /></td><td><input aria-label={`F2 hajmi: ${label}`} type="number" min="0" value={draft.quantity} onChange={(event) => ozgartir(row.qator_id, { quantity: event.target.value })} className="w-28 rounded border border-border bg-bg px-2 py-1 text-right" /></td><td><input aria-label={`F2 narxi: ${label}`} type="number" disabled={draft.priceIntentionallyAbsent} value={draft.unitPrice} onChange={(event) => ozgartir(row.qator_id, { unitPrice: event.target.value })} className="w-28 rounded border border-border bg-bg px-2 py-1 text-right disabled:opacity-50" /></td><td><input aria-label={`F2 summasi: ${label}`} type="number" disabled={draft.priceIntentionallyAbsent} value={draft.amount} onChange={(event) => ozgartir(row.qator_id, { amount: event.target.value })} className="w-32 rounded border border-border bg-bg px-2 py-1 text-right disabled:opacity-50" /></td><td><input aria-label={`F2 manbasi: ${label}`} value={draft.sourceReference} onChange={(event) => ozgartir(row.qator_id, { sourceReference: event.target.value })} placeholder="F2 №, sahifa" className="w-40 rounded border border-border bg-bg px-2 py-1" /><label className="mt-1 block text-[10px] text-text-dim"><input type="checkbox" checked={draft.priceIntentionallyAbsent} onChange={(event) => ozgartir(row.qator_id, { priceIntentionallyAbsent: event.target.checked })} /> narx hujjatda ataylab yo‘q</label></td><td className="p-3">{issue ? <span className={issue.blocking ? 'text-danger' : 'text-warn'}>{issueText(issue.code)}</span> : draft.quantity ? <span className="text-ok">Tayyor</span> : <span className="text-text-dim">Tanlanmagan</span>}</td></tr>; })}</tbody>
         </table>
       </section></>}
-      {validId && <section className="flex flex-wrap items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> Smeta narxi fallback emas. Arifmetik farq faqat ogohlantirish; hujjat summasi aynan saqlanadi.</p><div className="flex items-center gap-2"><button onClick={() => navigate(`/admin/f2-tarix?obyekt=${obyektId}&obyekt_nomi=${encodeURIComponent(obyektlar.find((item) => item.id === obyektId)?.nom || '')}`)} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-semibold text-text">F2 tarixini ko‘rish</button><button onClick={() => void excelYuklash()} disabled={!tekshiruv.ok || saving} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text disabled:opacity-50"><Download size={16} />Forma-2 Excel qoralama</button><button onClick={() => void saqlash()} disabled={!tekshiruv.ok || saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Yaratilmoqda…' : `F2 qoralama yaratish (${tekshiruv.qatorlar.length})`}</button></div></section>}
+      {validId && <section className="flex flex-wrap items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> Smeta narxi fallback emas. Arifmetik farq faqat ogohlantirish; hujjat summasi aynan saqlanadi.</p><div className="flex items-center gap-2"><button onClick={() => navigate(`/admin/f2-tarix?obyekt=${obyektId}&obyekt_nomi=${encodeURIComponent(obyektlar.find((item) => item.id === obyektId)?.nom || '')}`)} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-semibold text-text">F2 tarixini ko‘rish</button><button onClick={() => void excelYuklash()} disabled={!tekshiruv.ok || saving || exporting} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text disabled:opacity-50"><Download size={16} />{exporting ? 'Tuzilmoqda…' : 'Forma-2 Excel qoralama'}</button><button onClick={() => void saqlash()} disabled={!tekshiruv.ok || saving || exporting} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Yaratilmoqda…' : `F2 qoralama yaratish (${tekshiruv.qatorlar.length})`}</button></div></section>}
     </div>
   </Sahifa>;
 }

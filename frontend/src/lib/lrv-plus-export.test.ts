@@ -211,12 +211,13 @@ describe('LRV_PLUS — ishchi Excel ko‘rinishi va RESURS_VEDOMOST formulalari'
     const XLSX = await import('xlsx-js-style');
     const wb = XLSX.read(bytes, { type: 'array' });
     const ws = wb.Sheets['RESURS_VEDOMOST'];
-    expect(ws['F2'].f).toBe('SUM(F3:F3)');
-    expect(ws['H2'].f).toBe('SUM(H3:H3)');
+    expect(ws['G2'].f).toBe('SUM(G3:G3)');
     expect(ws['J2'].f).toBe('SUM(J3:J3)');
-    expect(ws['F4'].f).toBe('SUM(F5:F5)');
-    expect(ws['F2'].v).toBe(200000);
-    expect(ws['H4'].v).toBe(60000);
+    expect(ws['M2'].f).toBe('SUM(M3:M3)');
+    expect(ws['O2'].f).toBe('SUM(O3:O3)');
+    expect(ws['G4'].f).toBe('SUM(G5:G5)');
+    expect(ws['G2'].v).toBe(200000);
+    expect(ws['M4'].v).toBe(60000);
   });
 
   it('RES faylida kod bo‘lmasa ham resurs nomi/birligi yo‘qolmaydi va kategoriya jamiga kiradi', async () => {
@@ -228,8 +229,8 @@ describe('LRV_PLUS — ishchi Excel ko‘rinishi va RESURS_VEDOMOST formulalari'
     expect(ws['B3']?.v ?? '').toBe('');
     expect(ws['C3'].v).toBe('Amfiteatr uchun maxsus material');
     expect(ws['D3'].v).toBe('m3');
-    expect(ws['F2'].f).toBe('SUM(F3:F3)');
-    expect(ws['F2'].v).toBe(3456.78);
+    expect(ws['G2'].f).toBe('SUM(G3:G3)');
+    expect(ws['G2'].v).toBe(3456.78);
   });
 
   it('sarlavha banneri, filter, freeze, chop etish va bo‘sh kategoriya ixchamligi saqlanadi', async () => {
@@ -247,7 +248,7 @@ describe('LRV_PLUS — ishchi Excel ko‘rinishi va RESURS_VEDOMOST formulalari'
     expect(String(main.autoFilter)).toContain('A2');
     expect(rv.views[0]).toMatchObject({ state: 'frozen', ySplit: 1 });
     expect(rv.pageSetup.printTitlesRow).toBe('1:1');
-    expect(String(rv.autoFilter)).toContain('J');
+    expect(String(rv.autoFilter)).toContain('P');
   });
 });
 
@@ -353,6 +354,8 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
     const sheet = oqi('xl/worksheets/sheet1.xml');
     expect(sheet).toMatch(/<c r="A4" s="[1-9]/); // rz qatori
     expect(sheet).toMatch(/<c r="A5" s="[1-9]/); // bl qatori
+    expect(sheet).toMatch(/<c r="J5" s="[1-9]/); // bo‘sh kategoriya katagi ham ranglangan
+    expect(sheet).toMatch(/<c r="W5" s="[1-9]/); // nazorat qatori oxirigacha ranglangan
   });
 
   it('ustun sarlavhalari haqiqiy LRV tartibida yoziladi', async () => {

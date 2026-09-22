@@ -54,6 +54,22 @@ describe('resursVedomostQur', () => {
     ]);
     expect(v[0].kod).toBe('K-1');
   });
+
+  it('birlik narxlarini faqat yagona manba qiymati bo\'lsa chiqaradi', () => {
+    const aniq = resursVedomostQur([qator({
+      tur: 'mat', kat: 'МАТ', nom: 'Beton', birlik: 'm3',
+      smeta_narx: 100, fakt_narx: 110, f2_narx: 120,
+    })])[0];
+    expect(aniq).toMatchObject({ smetaNarx: 100, faktNarx: 110, f2Narx: 120 });
+    expect(aniq.narxHolati).toBe('Smeta: aniq; Fakt: aniq; F2: aniq');
+
+    const turli = resursVedomostQur([
+      qator({ tur: 'mat', kat: 'МАТ', nom: 'Beton', birlik: 'm3', smeta_narx: 100 }),
+      qator({ tur: 'mat', kat: 'МАТ', nom: 'Beton', birlik: 'm3', smeta_narx: 120 }),
+    ])[0];
+    expect(turli.smetaNarx).toBeNull();
+    expect(turli.narxHolati).toContain('Smeta: turli narxlar');
+  });
 });
 
 describe('resursVedomostKategoriyalarga', () => {
@@ -99,16 +115,18 @@ describe('resursVedomostAoa — LRV Excel ichiga qo\'shiladigan varaq qatorlari'
       qator({ tur: 'mat', kat: 'МАТ', kod: null, nom: 'Beton', birlik: 'm3', smeta_hajm: 5, smeta_summa: 500000, f2_hajm: 0, f2_summa: 0, qoldiq_hajm: 5, qoldiq_summa: 500000 }),
     ];
     const aoa = resursVedomostAoa(rows);
-    expect(aoa[0]).toEqual(['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa', 'F2 hajm', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa']);
-    expect(aoa[1]).toEqual(['ЧЕЛ (1 resurs)', '', '', '', '', 1000000, '', 400000, '', 600000]);
-    expect(aoa[2]).toEqual(['', 'K-1', 'Ishchi', 'chel-soat', 10, 1000000, 4, 400000, 6, 600000]);
-    expect(aoa[3]).toEqual(['МАТ (1 resurs)', '', '', '', '', 500000, '', 0, '', 500000]);
-    expect(aoa[4]).toEqual(['', '', 'Beton', 'm3', 5, 500000, 0, 0, 5, 500000]);
+    expect(aoa[0]).toEqual(['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta birlik narxi', 'Smeta summa', 'Fakt hajm', 'Fakt birlik narxi', 'Fakt summa', 'F2 hajm', 'F2 birlik narxi', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa', 'Narx holati']);
+    expect(aoa[1]).toEqual(['ЧЕЛ (1 resurs)', '', '', '', '', '', 1000000, '', '', 0, '', '', 400000, '', 600000, '']);
+    expect(aoa[2]).toHaveLength(16);
+    expect(aoa[2].slice(0, 15)).toEqual(['', 'K-1', 'Ishchi', 'chel-soat', 10, '', 1000000, 0, '', 0, 4, '', 400000, 6, 600000]);
+    expect(String(aoa[2][15])).toContain('Smeta: manba yo‘q');
+    expect(aoa[3]).toEqual(['МАТ (1 resurs)', '', '', '', '', '', 500000, '', '', 0, '', '', 0, '', 500000, '']);
+    expect(aoa[4].slice(0, 15)).toEqual(['', '', 'Beton', 'm3', 5, '', 500000, 0, '', 0, 0, '', 0, 5, 500000]);
   });
 
   it('bo\'sh kirishda faqat sarlavha qatorini qaytaradi, xato tashlamaydi', () => {
     expect(resursVedomostAoa([])).toEqual([
-      ['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa', 'F2 hajm', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa'],
+      ['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta birlik narxi', 'Smeta summa', 'Fakt hajm', 'Fakt birlik narxi', 'Fakt summa', 'F2 hajm', 'F2 birlik narxi', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa', 'Narx holati'],
     ]);
   });
 });

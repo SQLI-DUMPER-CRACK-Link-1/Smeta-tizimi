@@ -7,7 +7,7 @@ import { FmtN } from '../../lib/format';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
 import {
   sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur,
-  yangiOperationId, type T2Obyekt, type T2Qator, type T2QatorHolat,
+  yangiOperationId, type T2Obyekt, type T2Qator,
 } from '../../api/supabase';
 import { lrvPlusEksportGate, lrvPlusFaylBaytlari, lrvPlusYuklab, type LrvPlusExportContext, type LrvPlusRejim } from '../../lib/lrv-plus-export';
 import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
@@ -31,9 +31,6 @@ export function HolatNative() {
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [daraxtXom, setDaraxtXom] = useState<T2Qator[]>([]);
-  /* Eksport FAKT/OSTATKA/F2 ustunlarini shundan oladi -- daraxt qurish
-     uchun allaqachon o'qilyapti, qayta so'rov yo'q. */
-  const [holatXom, setHolatXom] = useState<T2QatorHolat[]>([]);
   const [priceControlLines, setPriceControlLines] = useState<PriceControlLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -120,16 +117,15 @@ export function HolatNative() {
       ]);
       if (!daraxt.ok || !holat.ok) {
         setError(daraxt.error || holat.error || 'Kanonik LRV o‘qilmadi.');
-        setTree([]); setDaraxtXom([]); setHolatXom([]);
+        setTree([]); setDaraxtXom([]);
         return;
       }
       setTree(sbT2TreeQur(daraxt.qatorlar || [], holat.qatorlar || []));
       setDaraxtXom(daraxt.qatorlar || []);
-      setHolatXom(holat.qatorlar || []);
       setPriceControlLines(nazorat.ok ? nazorat.qatorlar : []);
     } catch {
       setError('Kanonik LRV o‘qilmadi. Tarmoq yoki ruxsatni tekshiring.');
-      setTree([]); setDaraxtXom([]); setHolatXom([]);
+      setTree([]); setDaraxtXom([]);
     } finally { setLoading(false); }
   }, [obyektId, validId]);
 
@@ -151,23 +147,53 @@ export function HolatNative() {
    * (`exportGate`), eksport butunlay BLOKLANADI -- nakrutka bilan/siz
    * farqi yo'q, provenance hech qachon ixtiyoriy emas. */
   const eksportQil = useCallback(async (rejim: LrvPlusRejim) => {
-    if (!selected || !daraxtXom.length) return;
-    if (!exportGate.ok) {
-      setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
-      return;
-    }
+    if (!validId) return;
     setEksportBolmoqda(true);
     try {
-      const nakr = await t2ObyektNakrutka(obyektId).catch(() => null);
-      const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom, {
+      // Yuklab olish tugmasi bosilgan paytda yana bir marta kanonik read-modelni
+      // o‘qiymiz. Sahifa ochilgandan keyin fakt/F2/narx o‘zgargan bo‘lsa ham,
+      // eksport eski React snapshotidan emas, eng yangi ma’lumotdan tuziladi.
+      const [latestTree, latestState, latestObjects, nakr] = await Promise.all([
+        sbT2DaraxtOl(obyektId),
+        sbT2QatorHolatOl(obyektId),
+        joriy?.id ? sbT2ObyektlarOlKomp(joriy.id) : Promise.resolve(null),
+        t2ObyektNakrutka(obyektId).catch(() => null),
+      ]);
+      if (!latestTree.ok || !latestState.ok || !latestTree.qatorlar?.length) {
+        setError(latestTree.error || latestState.error || 'Eksport uchun eng yangi kanonik ma’lumot topilmadi.');
+        return;
+      }
+      const freshObject = latestObjects?.ok
+        ? latestObjects.qatorlar?.find((row) => row.id === obyektId)
+        : undefined;
+      const exportObject = freshObject ?? selected ?? obyektlar.find((row) => row.id === obyektId);
+      if (!exportObject) {
+        setError('Eksport qilinadigan obyekt kanonik ro‘yxatda topilmadi.');
+        return;
+      }
+      const freshContext: Partial<LrvPlusExportContext> = {
+        ...exportContext,
+        kompaniyaId: joriy?.id ?? exportContext.kompaniyaId,
+        loyihaId: exportObject.loyiha_id ?? exportContext.loyihaId,
+        obyektId,
+        dataComplete: true,
+      };
+      const freshGate = lrvPlusEksportGate(freshContext);
+      if (!freshGate.ok) {
+        setError(`Excel eksporti bloklandi: ${freshGate.reasons[0]}.`);
+        return;
+      }
+      setDaraxtXom(latestTree.qatorlar);
+      if (latestObjects?.ok) setObyektlar(latestObjects.qatorlar ?? []);
+      const bytes = await lrvPlusFaylBaytlari(latestTree.qatorlar, exportObject.nom, latestState.qatorlar, {
         rejim,
         nakrutka: nakr?.ok ? nakr.koeffitsientlar : undefined,
-      }, exportContext);
-      lrvPlusYuklab(bytes, selected.nom + (rejim === 'forma2' ? '_FORMA2' : ''));
+      }, freshContext);
+      lrvPlusYuklab(bytes, exportObject.nom + (rejim === 'forma2' ? '_FORMA2' : ''));
     } catch {
       setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason]);
+  }, [validId, obyektId, joriy?.id, selected, obyektlar, exportContext]);
 
   useEffect(() => { void yuklash(); }, [yuklash]);
 

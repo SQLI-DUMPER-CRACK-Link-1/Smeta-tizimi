@@ -607,7 +607,7 @@ function resursVedomostUslubla(
     const firstResourceRow = categoryExcelRow + 1;
     const lastResourceRow = nextCategoryIndex;
     if (lastResourceRow < firstResourceRow) continue;
-    for (const [column, source] of [['F', 'F'], ['H', 'H'], ['J', 'J']] as const) {
+    for (const [column, source] of [['G', 'G'], ['J', 'J'], ['M', 'M'], ['O', 'O']] as const) {
       const ref = `${column}${categoryExcelRow}`;
       const oldValue = ws[ref]?.v;
       ws[ref] = {
@@ -622,8 +622,11 @@ function resursVedomostUslubla(
   const rowInfo: Array<{ hpt?: number }> = [{ hpt: 34 }];
   for (let r = 1; r <= aoa.length; r++) {
     const group = isGroupRow(r - 1);
-    rowInfo[r - 1] = { hpt: group ? 25 : r === 1 ? 34 : 23 };
-    for (let c = 0; c < 10; c++) {
+    const resourceText = String(aoa[r - 1]?.[2] ?? '');
+    const statusText = String(aoa[r - 1]?.[15] ?? '');
+    const wrappedLines = Math.max(Math.ceil(resourceText.length / 72), Math.ceil(statusText.length / 42), 1);
+    rowInfo[r - 1] = { hpt: group ? 25 : r === 1 ? 38 : Math.min(60, 20 + (Math.min(4, wrappedLines) - 1) * 12) };
+    for (let c = 0; c < 16; c++) {
       const ref = XLSX.utils.encode_cell({ r: r - 1, c });
       const cell = ws[ref];
       if (!cell) continue;
@@ -638,10 +641,10 @@ function resursVedomostUslubla(
           alignment: { vertical: 'center', ...(c === 2 ? { wrapText: true } : {}) },
         };
       }
-      if (c === 2) {
+      if (c === 2 || c === 15) {
         cell.s = { ...(cell.s || {}), alignment: { ...(cell.s?.alignment || {}), vertical: 'top', wrapText: true } };
       } else if (cell.t === 'n') {
-        cell.z = [4, 6, 8].includes(c) ? RV_VOLUME : RV_MONEY;
+        cell.z = [4, 7, 10, 13].includes(c) ? RV_VOLUME : RV_MONEY;
         cell.s = { ...(cell.s || {}), alignment: { ...(cell.s?.alignment || {}), horizontal: 'right', vertical: 'center' } };
       }
     }
@@ -649,10 +652,11 @@ function resursVedomostUslubla(
   ws['!rows'] = rowInfo;
   ws['!cols'] = [
     { wch: 21 }, { wch: 16 }, { wch: 72 }, { wch: 12 },
-    { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 18 },
-    { wch: 15 }, { wch: 18 },
+    { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 15 },
+    { wch: 18 }, { wch: 18 }, { wch: 15 }, { wch: 18 },
+    { wch: 18 }, { wch: 15 }, { wch: 18 }, { wch: 42 },
   ];
-  ws['!autofilter'] = { ref: `A1:J${Math.max(1, aoa.length)}` };
+  ws['!autofilter'] = { ref: `A1:P${Math.max(1, aoa.length)}` };
 }
 
 export async function lrvPlusFaylBaytlari(
@@ -794,6 +798,7 @@ export async function lrvPlusFaylBaytlari(
   const HAJM_FORMAT = '#,##0.####';
   /** C = nom; E/F = hajm; G/H = narx va summa; J..O = kategoriya summalari. */
   const NOM_USTUN = 2;
+  const MATN_USTUNLARI = new Set([1, 2, 3, 8]);
   const HAJM_USTUN = new Set([4, 5]);
   const PUL_USTUN = new Set([6, 7, 9, 10, 11, 12, 13, 14]);
 
@@ -804,13 +809,16 @@ export async function lrvPlusFaylBaytlari(
     const rang = RANG[q.tur];
     for (let c = 0; c < NCOLS; c++) {
       const ref = XLSX.utils.encode_cell({ r: q.row - 1, c });
-      const cell = ws[ref];
-      if (!cell) continue;
+      // aoa_to_sheet bo‘sh/null qiymatlar uchun katak yaratmaydi. Katakni
+      // shu yerda materializatsiya qilmasak, BL/RZ ranglari bo‘sh ustunlarda
+      // uzilib qoladi va tayyor hujjat notekis ko‘rinadi.
+      const cell = ws[ref] ?? { t: 's', v: '' };
+      ws[ref] = cell;
       cell.s = {
         border: chegara(c),
         ...(rang || {}),
-        alignment: c === NOM_USTUN
-          ? { wrapText: true, vertical: 'top' }
+        alignment: MATN_USTUNLARI.has(c)
+          ? { wrapText: true, vertical: c === NOM_USTUN ? 'top' : 'center', horizontal: c === NOM_USTUN ? 'left' : 'center' }
           : { horizontal: cell.t === 'n' ? 'right' : 'center', vertical: 'center' },
       };
       if (cell.t === 'n') {
@@ -825,33 +833,33 @@ export async function lrvPlusFaylBaytlari(
   }
   // 1-qator — hujjat nomi, 2-qator — guruh rangli sarlavha, 3-qator — jami.
   for (let c = 0; c < NCOLS; c++) {
-    const titleCell = ws[XLSX.utils.encode_cell({ r: 0, c })];
-    if (titleCell) {
-      titleCell.s = {
+    const titleRef = XLSX.utils.encode_cell({ r: 0, c });
+    const titleCell = ws[titleRef] ?? { t: 's', v: '' };
+    ws[titleRef] = titleCell;
+    titleCell.s = {
         border: { top: QALIN, bottom: QALIN, left: QALIN, right: QALIN },
         font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 14 },
         fill: { patternType: 'solid', fgColor: { rgb: '1F4E78' } },
         alignment: { vertical: 'center', horizontal: 'left' },
       };
-    }
-    const headerCell = ws[XLSX.utils.encode_cell({ r: 1, c })];
-    if (headerCell) {
-      headerCell.s = {
+    const headerRef = XLSX.utils.encode_cell({ r: 1, c });
+    const headerCell = ws[headerRef] ?? { t: 's', v: '' };
+    ws[headerRef] = headerCell;
+    headerCell.s = {
         border: chegara(c),
         font: { bold: true, color: { rgb: 'FFFFFF' } },
         fill: { patternType: 'solid', fgColor: { rgb: headerRang(c) } },
         alignment: { wrapText: true, vertical: 'center', horizontal: 'center' },
-      };
-    }
-    const totalCell = ws[XLSX.utils.encode_cell({ r: 2, c })];
-    if (totalCell) {
-      totalCell.s = {
+    };
+    const totalRef = XLSX.utils.encode_cell({ r: 2, c });
+    const totalCell = ws[totalRef] ?? { t: 's', v: '' };
+    ws[totalRef] = totalCell;
+    totalCell.s = {
         border: chegara(c),
         font: { bold: true, color: { rgb: '5B3A00' } },
         fill: { patternType: 'solid', fgColor: { rgb: 'FFF2CC' } },
         alignment: { vertical: 'center', horizontal: totalCell.t === 'n' ? 'right' : 'left' },
-      };
-    }
+    };
   }
   // Obyekt nomi sarlavha zonasida bitta toza banner sifatida ko'rinadi.
   ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: Math.min(7, NCOLS - 1) } }];
@@ -872,9 +880,9 @@ export async function lrvPlusFaylBaytlari(
      keraksiz kengaytirmaslik uchun yashiriladi; foydalanuvchi Excel orqali
      ularni qayta ko'rsatishi mumkin. */
   const asosiyKengliklar = [
-    { wch: 6 }, { wch: 16 }, { wch: 62 }, { wch: 12 },
-    { wch: 13 }, { wch: 15 }, { wch: 16 }, { wch: 19 },
-    { wch: 8 },
+    { wch: 7 }, { wch: 20 }, { wch: 72 }, { wch: 16 },
+    { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
+    { wch: 10 },
   ];
   const kategoriyaKengliklari = KAT_TARTIB.map((kat) => ({
     wch: katQatorSoni[kat] > 0 ? 13 : 9,

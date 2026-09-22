@@ -211,6 +211,12 @@ function NativeSession({ companyId }: { companyId: number }) {
     }).catch(() => { if (active) setError('Obyektlar o‘qilmadi.'); });
     return () => { active = false; generationRef.current++; };
   }, [companyId]);
+  /* PTOWorkspace — shu kompaniya uchun barcha route'larda ishlatiladigan
+   * kanonik obyekt ro‘yxati. Alohida so‘rov kechiksa yoki eski endpoint bo‘sh
+   * qaytarsa ham F2 foydalanuvchisi obyekt tanlay olishi kerak. */
+  useEffect(() => {
+    if (workspace.objects.length > 0) setObjects(workspace.objects);
+  }, [workspace.objects]);
   /* Obyekt tanlanganda — o'sha obyekt uchun tugallanmagan job bormi tekshiramiz
    * (localStorage FAQAT job_id'ni eslab qoladi — haqiqat manbai Supabase'da). */
   useEffect(() => {
@@ -528,7 +534,7 @@ function NativeSession({ companyId }: { companyId: number }) {
           lastAutoMatchKey.current = ''; reset(); setObjectId(e.target.value); workspace.setObjectId(e.target.value ? Number(e.target.value) : null); rawFile.current = null;
           sourceDocId.current = undefined; sourceOperationId.current = '';
         }} className="input mt-1.5 block h-9 w-full px-2 text-[13px]">
-          <option value="">Tanlang</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
+          <option value="">{workspace.loading.hierarchy ? 'Obyektlar yuklanmoqda…' : objects.length ? 'Tanlang' : 'Obyekt topilmadi'}</option>{objects.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
         </select>
       </label>
       <label className="block text-[12px] font-medium text-text">F2 davri

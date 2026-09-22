@@ -298,6 +298,8 @@ export type T2QatorHolat = {
   kat: string | null;
   smeta_hajm: number | null;
   smeta_summa: number | null;
+  /** Smeta qatorining kanonik birlik narxi. NULL — manbada narx yo‘q. */
+  smeta_narx?: number | null;
   /** ⚠️ FAKT — barcha `tur='fakt'` hujjatlarning yig'indisi. */
   fakt_hajm: number;
   fakt_summa: number;
