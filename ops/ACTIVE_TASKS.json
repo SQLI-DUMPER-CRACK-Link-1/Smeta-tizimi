@@ -777,12 +777,26 @@
       "machine": "noutbuk",
       "branch": "claude/fakt-tezlik-v1",
       "base_sha": "9363751",
-      "status": "in_progress",
+      "status": "merged",
       "owns": ["frontend/src/admin/sahifalar/FaktNative.tsx", "frontend/src/admin/sahifalar/HolatNative.tsx", "frontend/src/umumiy/daraxt/SmetaTree.tsx", "frontend/src/umumiy/daraxt/useT2Daraxt.ts", "frontend/src/umumiy/daraxt/useT2Daraxt.test.ts", "frontend/src/lib/fakt-yangilash.ts", "frontend/src/lib/fakt-yangilash.test.ts", "frontend/src/api/t2-holat-qisman.ts"],
       "depends_on": [],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md"],
       "production_write_allowed": false,
       "_izoh": "Egasi 2026-09-23: 27000 qatorli smetada qotish. O‘lchov (Navoiy STR 25 037 qator): hisob ~100 ms, lekin har fakt saqlanganda ~16 MB qayta o‘qilib daraxt ekrandan olinardi."
+    },
+    {
+      "id": "SMETA-ANAT-001",
+      "title": "Yagona smeta anatomiya moduli (o‘qish, RZ yo‘li, profil, davom ettiruvchi yozuvchi)",
+      "owner": "claude",
+      "machine": "noutbuk",
+      "branch": "claude/smeta-anatomiya-v1",
+      "base_sha": "3e2e74b",
+      "status": "in_progress",
+      "owns": ["docs/architecture/SMETA_ANATOMIYA_V1.md", "frontend/src/lib/smeta-anatomiya/", "frontend/scripts/korpus/"],
+      "depends_on": [],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/architecture/SMETA_ANATOMIYA_V1.md"],
+      "production_write_allowed": false,
+      "_izoh": "Egasi 2026-09-23: har funksiya smetani alohida o‘qiydi, RZ faqat oxirgisi qoladi, 3 xil yuklash UI, 27k qatorda qotish. Oferta V2 (claude/t2-oferta-v2) shu modulning birinchi iste’molchisi."
     }
   ]
 }
