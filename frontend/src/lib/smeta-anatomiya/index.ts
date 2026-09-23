@@ -4,11 +4,14 @@
  * Kontrakt: docs/architecture/SMETA_ANATOMIYA_V1.md.
  */
 import { varaqniTahlilQil } from './varaq';
-import type { KirishKitob, ReviewBand, VaraqAnatomiyasi } from './turlar';
+import { erkinVaraqlar } from './erkin';
+import type { ErkinVaraq, KirishKitob, ReviewBand, VaraqAnatomiyasi } from './turlar';
 
 export interface KitobAnatomiyasi {
   fayl: string;
   varaqlar: VaraqAnatomiyasi[];
+  /** Transport/erkin hisob varaqlari — yakuniy summa va svod qatori bilan. */
+  erkin: ErkinVaraq[];
   /** Ish daraxti uchun asosiy varaq (LRV). F5_UZB kabi dublikatlar `dublikat` da. */
   asosiyLrv: string | null;
   dublikat: Array<{ varaq: string; asl: string; sabab: string }>;
@@ -44,7 +47,11 @@ export function kitobAnatomiyasi(kitob: KirishKitob): KitobAnatomiyasi {
   if (asosiylar.length > 1) {
     review.push({ kod: 'kop_lrv', izoh: `bitta faylda ${asosiylar.length} ta turli LRV: ${asosiylar.map((a) => a.varaq).join(', ')} — operator tanlaydi` });
   }
-  return { fayl: kitob.fayl, varaqlar, asosiyLrv: asosiylar[0]?.varaq ?? null, dublikat, review };
+  const erkin = erkinVaraqlar(kitob, varaqlar);
+  for (const e of erkin) {
+    if (!e.yakuniy) review.push({ kod: 'erkin_summa_yoq', izoh: `"${e.varaq}" varag'ida ИТОГО/ВСЕГО summasi topilmadi — operator ko'rib chiqadi` });
+  }
+  return { fayl: kitob.fayl, varaqlar, erkin, asosiyLrv: asosiylar[0]?.varaq ?? null, dublikat, review };
 }
 
 export { sarlavhaYoli } from './ierarxiya';

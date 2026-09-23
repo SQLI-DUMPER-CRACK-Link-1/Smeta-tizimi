@@ -15,6 +15,22 @@ export interface KirishVaraq {
   merges?: Array<{ r1: number; c1: number; r2: number; c2: number }>;
   /** Excel outline darajasi, 0-asosli qator indeksi bo'yicha (bo'lsa). */
   outline?: Array<number | undefined>;
+  /** Formulalar setkasi (`=` siz), `rows` bilan bir xil indekslar (bo'lsa).
+   *  Varaqlar orasidagi havola — bog'lanishning eng kuchli dalili. */
+  formulalar?: Array<Array<string | null | undefined>>;
+}
+
+/** Erkin hisob varag'i (transport, perevozka, shefmontaj…): resursga bo'linmaydi. */
+export interface ErkinVaraq {
+  fayl: string;
+  varaq: string;
+  rol: 'transport' | 'erkin';
+  /** Oxirgi ИТОГО/ВСЕГО qatoridagi summa; topilmasa null (0 EMAS). */
+  yakuniy: { xom: string; qiymat: number; manzil: Manzil } | null;
+  /** Shu summani o'qiydigan svod qatori (formula yoki qiymat tengligi). */
+  svodQatori: { xom: string; manzil: Manzil; dalil: Dalil } | null;
+  /** Operator qarori: yaxlit qator / svodga / ilova. Modul o'zi tanlamaydi. */
+  holat: 'kutmoqda';
 }
 export interface KirishKitob {
   fayl: string;

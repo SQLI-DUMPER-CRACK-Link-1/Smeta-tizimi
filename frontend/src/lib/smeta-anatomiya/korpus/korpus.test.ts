@@ -40,6 +40,9 @@ describe.skipIf(!DIR)('smeta anatomiya — real korpus', () => {
         const past = barcha.filter((s) => s.dalil.some((d) => d.ishonch === 'past')).length;
         qisqa.push(`  [${v.varaq}] rol=${v.rol} ish=${v.ishlar.length} res=${v.ishlar.reduce((n, i) => n + i.resurslar.length, 0)} vedomost=${v.vedomost.length} sarlavha=${v.sarlavhalar.length} chuqurlik=${chuqur} past=${past} review=${v.review.length}`);
       }
+      for (const e of a.erkin) {
+        qisqa.push(`  ~ erkin [${e.varaq}] ${e.rol} yakuniy=${e.yakuniy ? `${e.yakuniy.qiymat} (q${e.yakuniy.manzil.qator})` : 'YO‘Q'} svod=${e.svodQatori ? `${e.svodQatori.manzil.varaq}!q${e.svodQatori.manzil.qator} "${e.svodQatori.xom.slice(0, 40)}" [${e.svodQatori.dalil.qoida}:${e.svodQatori.dalil.ishonch}]` : '—'}`);
+      }
       if (OUT) {
         const daraxt: string[] = [];
         for (const v of a.varaqlar) {
