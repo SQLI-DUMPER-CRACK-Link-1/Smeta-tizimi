@@ -140,9 +140,15 @@ export function varaqniTahlilQil(fayl: string, varaq: KirishVaraq, sarlavhaBoshI
     // Birinchi 5 ta to'liq qatordan biri resurs guruhi bo'lsa (oldida titul izohi bo'lishi mumkin).
     const boshlari = malumot.filter((row) => toliqUstunlar(row).length).slice(0, 5);
     const guruhBilan = boshlari.some((row) => VEDOMOST_BOSHI.test(kalit(row[toliqUstunlar(row)[0]])));
-    if (!ichkiBor && guruhBilan) {
+    // TN titul: "ВЕДОМОСТЬ ПОТРЕБНЫХ РЕСУРСОВ" — RES hujjatining o'z nomi
+    // (Hermes/codex 7ed860f tahlilidan). Faqat ichki qatorlar yo'q bo'lsa.
+    const titulMatn = rows.slice(0, u.sarlavhaQatori).flatMap((row) => row.map(kalit)).join(' ');
+    const potrebnyh = /ВЕДОМОСТ.{0,30}ПОТРЕБН.{0,30}РЕСУРС/.test(titulMatn);
+    if (!ichkiBor && (guruhBilan || potrebnyh)) {
       rol = 'res';
-      rolDalil.push({ qoida: 'malumot_shakli', ishonch: 'yuqori', izoh: "ichki (1.1) qatorlar yo'q, resurs guruhi bilan boshlanadi — resurs ro'yxati" });
+      rolDalil.push(potrebnyh
+        ? { qoida: 'titul', ishonch: 'yuqori', izoh: 'titul: ведомость потребных ресурсов, ichki (1.1) qatorlar yo‘q' }
+        : { qoida: 'malumot_shakli', ishonch: 'yuqori', izoh: "ichki (1.1) qatorlar yo'q, resurs guruhi bilan boshlanadi — resurs ro'yxati" });
     }
   }
   const manzil = (r: number, c?: number): Manzil => ({ fayl, varaq: varaq.nom, qator: r + 1, ...(c != null && c >= 0 ? { ustun: c + 1 } : {}) });

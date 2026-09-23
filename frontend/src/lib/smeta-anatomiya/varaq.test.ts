@@ -71,6 +71,19 @@ describe('varaq anatomiyasi', () => {
     expect(v.jamilar[0].qiymat).toBe(362329333);
   });
 
+  it('TN titul "ВЕДОМОСТЬ ПОТРЕБНЫХ РЕСУРСОВ" — guruhsiz bo\'lsa ham RES', () => {
+    const rows: Katak[][] = [
+      ['ВЕДОМОСТЬ ПОТРЕБНЫХ РЕСУРСОВ'],
+      ['N п.п.', 'Шифр', 'Наименование работ и затрат', 'Единица измерения', 'Количество', 'Цена'],
+      [1, 2, 3, 4, 5, 6],
+      ['1', '1', 'ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ', 'ЧЕЛ.-Ч', 12.5, 29421.2],
+    ];
+    const v = kitobAnatomiyasi({ fayl: 't.xlsx', varaqlar: [{ nom: 'Лист1', rows }] }).varaqlar[0];
+    expect(v.rol).toBe('res');
+    expect(v.rolDalil.some((d) => d.qoida === 'titul')).toBe(true);
+    expect(v.vedomost).toHaveLength(1);
+  });
+
   it('F5_UZB va LRV bir xil ishlar bersa — biri asosiy, biri dublikat', () => {
     const a = kitobAnatomiyasi({ fayl: 'k.xls', varaqlar: [{ nom: 'F5_UZB', rows: ABC4_LRV }, { nom: 'LRV', rows: ABC4_LRV }] });
     expect(a.asosiyLrv).toBe('F5_UZB');
