@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useDeferredValue } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { TreeNode } from '../../api/types';
 import { flattenTree, getAllKeys } from './utils';
@@ -72,8 +72,11 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
      Mantiq: mos kelgan tugun VA uning butun ota-zanjiri qoladi (aks holda
      topilgan resurs qaysi razdelniki ekani ko'rinmaydi); mos kelganning
      bolalari ham qoladi. */
+  /* 27 000 qatorda har harf butun daraxtni filtrlaydi — kiritish darhol
+     ko'rinadi, filtr esa kechiktirilgan qiymatdan hisoblanadi (egasi 2026-09-23). */
+  const qidiruvKech = useDeferredValue(qidiruv);
   const filtrlangan = useMemo(() => {
-    const s = qidiruv.trim().toLowerCase();
+    const s = qidiruvKech.trim().toLowerCase();
     const mos = (n: TreeNode) =>
       !s || String(n.nom || '').toLowerCase().includes(s) ||
       String((n as any).kod || '').toLowerCase().includes(s);
@@ -96,15 +99,15 @@ export function SmetaTree({ data, oylar = [], isEditMode = false, edits = {}, se
       return chiq;
     };
     return quickFilter === 'all' && !s ? data : suz(data);
-  }, [data, qidiruv, quickFilter, priceControlByQatorId]);
+  }, [data, qidiruvKech, quickFilter, priceControlByQatorId]);
 
   /* Qidiruvda hamma shox ochiq bo'lishi kerak, aks holda mos kelgan
      ichkaridagi qator ko'rinmay qoladi. */
   const kengaytirilgan = useMemo(
-    () => (qidiruv.trim()
+    () => (qidiruvKech.trim()
       ? Object.fromEntries(getAllKeys(filtrlangan).map((k) => [k, true]))
       : expandedMap),
-    [qidiruv, filtrlangan, expandedMap]);
+    [qidiruvKech, filtrlangan, expandedMap]);
 
   const flatNodes = useMemo(
     () => flattenTree(filtrlangan, kengaytirilgan),

@@ -5,15 +5,12 @@ import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
-import {
-  sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2QatorHolatOl, sbT2TreeQur,
-  yangiOperationId, type T2Obyekt, type T2Qator, type T2QatorHolat,
-} from '../../api/supabase';
+import { sbT2ObyektlarOlKomp, yangiOperationId, type T2Obyekt } from '../../api/supabase';
+import { useT2Daraxt } from '../../umumiy/daraxt/useT2Daraxt';
 import { lrvPlusEksportGate, lrvPlusFaylBaytlari, lrvPlusYuklab, type LrvPlusExportContext, type LrvPlusRejim } from '../../lib/lrv-plus-export';
 import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
 import { t2ObyektNakrutka } from '../../api/t2-nakrutka';
 import type { TreeNode } from '../../api/types';
-import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
 import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import SmetaYuklaNative from './SmetaYuklaNative';
 import ResursVedomostNative from './ResursVedomostNative';
@@ -29,19 +26,20 @@ export function HolatNative() {
   const navigate = useNavigate();
   const { joriy } = useKompaniya();
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
-  const [tree, setTree] = useState<TreeNode[]>([]);
-  const [daraxtXom, setDaraxtXom] = useState<T2Qator[]>([]);
-  /* Eksport FAKT/OSTATKA/F2 ustunlarini shundan oladi -- daraxt qurish
-     uchun allaqachon o'qilyapti, qayta so'rov yo'q. */
-  const [holatXom, setHolatXom] = useState<T2QatorHolat[]>([]);
-  const [priceControlLines, setPriceControlLines] = useState<PriceControlLine[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  /* Sahifaning o'z xatolari (obyektlar ro'yxati, eksport). Daraxt xatosi hook'dan. */
+  const [sahifaXato, setError] = useState('');
   const [ochiqPanel, setOchiqPanel] = useState<string | null>(null);
   const [eksportBolmoqda, setEksportBolmoqda] = useState(false);
 
   const obyektId = Number(id);
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
+  /* Eksport FAKT/OSTATKA/F2 ustunlarini holatXom dan oladi -- daraxt qurish
+     uchun allaqachon o'qilyapti, qayta so'rov yo'q. */
+  const {
+    rows: daraxtXom, states: holatXom, tree, price: priceControlLines,
+    loading, yangilanmoqda, error: daraxtXato, yuklash, holatniYangila,
+  } = useT2Daraxt(validId ? obyektId : null);
+  const error = sahifaXato || daraxtXato;
   const selected = obyektlar.find((o) => o.id === obyektId) ?? null;
   const workspace = usePTOWorkspace();
   /* 2026-09-11 (egasi: "shu tepadagi belgilanadigan joy naxxuy kerak o'zi?"):
@@ -111,27 +109,6 @@ export function HolatNative() {
     workspace.setObjectId(obyektId);
   }, [obyektId, validId, workspace]);
 
-  const yuklash = useCallback(async () => {
-    if (!validId) { setTree([]); return; }
-    setLoading(true); setError(''); setPriceControlLines([]);
-    try {
-      const [daraxt, holat, nazorat] = await Promise.all([
-        sbT2DaraxtOl(obyektId), sbT2QatorHolatOl(obyektId), priceControlOl(obyektId),
-      ]);
-      if (!daraxt.ok || !holat.ok) {
-        setError(daraxt.error || holat.error || 'Kanonik LRV o‘qilmadi.');
-        setTree([]); setDaraxtXom([]); setHolatXom([]);
-        return;
-      }
-      setTree(sbT2TreeQur(daraxt.qatorlar || [], holat.qatorlar || []));
-      setDaraxtXom(daraxt.qatorlar || []);
-      setHolatXom(holat.qatorlar || []);
-      setPriceControlLines(nazorat.ok ? nazorat.qatorlar : []);
-    } catch {
-      setError('Kanonik LRV o‘qilmadi. Tarmoq yoki ruxsatni tekshiring.');
-      setTree([]); setDaraxtXom([]); setHolatXom([]);
-    } finally { setLoading(false); }
-  }, [obyektId, validId]);
 
   /* T2-LRV-PLUS-EXPORT-001: owner talabi -- T1'ning LRV_PLUS'idagi kabi,
    * lekin Excelning O'ZIDA ishlaydigan formula bilan: bl'ning ОБЪЁМини
@@ -169,7 +146,6 @@ export function HolatNative() {
     } finally { setEksportBolmoqda(false); }
   }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason]);
 
-  useEffect(() => { void yuklash(); }, [yuklash]);
 
   const smetaJami = tree.reduce((sum, n) => sum + (n.smeta || 0), 0);
   const faktJami = tree.reduce((sum, n) => sum + (n.stFakt || 0), 0);
@@ -203,9 +179,10 @@ export function HolatNative() {
         return { ok: false, conflict, message: conflict ? 'Qator serverda o‘zgargan. Yangilang va qayta urinib ko‘ring.' : (result.error || result.xabar || 'Fakt saqlanmadi.') };
       }
     }
-    await yuklash();
+    // Faqat shu qator, ota-bobolari va bolalari qayta o'qiladi; daraxt ekranda qoladi.
+    await holatniYangila(node.id);
     return { ok: true };
-  }, [obyektId, validId, yuklash]);
+  }, [obyektId, validId, holatniYangila]);
 
   return (
     <Sahifa sarlavha="Ishchi smeta / LRV" tavsif="Supabase kanonik qatorlari va tasdiqlangan F2 tarixi">
@@ -219,7 +196,7 @@ export function HolatNative() {
               {obyektlar.map((o) => <option key={o.id} value={o.id}>{o.nom}</option>)}
             </select>
           </label>
-          <button onClick={() => void yuklash()} disabled={!validId || loading} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40"><RefreshCw size={14} /> Yangilash</button>
+          <button onClick={() => void yuklash()} disabled={!validId || loading || yangilanmoqda} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40"><RefreshCw size={14} className={yangilanmoqda ? 'animate-spin' : undefined} /> Yangilash</button>
           {validId && tree.length > 0 && (<>
             <button onClick={() => void eksportQil('toliq')} disabled={eksportBolmoqda || !exportGate.ok}
               title={exportGate.ok ? "Excel'da: bl ОБЪЁМини o'zgartirsangiz, resurslar va summalar formula orqali avtomatik qayta hisoblanadi. Nakrutka kaskadi ham qo'shiladi." : `Eksport bloklangan: ${exportBlockReason}`}
@@ -246,7 +223,7 @@ export function HolatNative() {
           </section>
         )}
         {error && <section className="karta flex items-center gap-2 border-danger/40 bg-danger/5 p-4 text-[13px] text-danger"><AlertTriangle size={16} />{error}</section>}
-        {loading && <div className="skel min-h-[280px] flex-1 rounded-xl" />}
+        {loading && tree.length === 0 && <div className="skel min-h-[280px] flex-1 rounded-xl" />}
         {selected && !loading && !error && (
           <section className="karta flex flex-wrap gap-x-6 gap-y-1 p-3 text-[12px]">
             <span><Database size={13} className="mr-1 inline text-accent" />{selected.nom}</span>
@@ -260,7 +237,7 @@ export function HolatNative() {
             hajm (Fakt) uchun, `onQatorTahrirlandi` — smeta qatorining o'z
             maydonlari (nom/hajm/narx/birlik/kat) tahriridan keyin daraxtni
             qayta yuklash uchun. */}
-        {tree.length > 0 && !loading && <div className="min-h-0 flex-1"><SmetaTree data={tree} priceControlLines={priceControlLines} onFaktSave={faktSaqlash} onQatorTahrirlandi={yuklash} /></div>}
+        {tree.length > 0 && <div className="min-h-0 flex-1"><SmetaTree data={tree} priceControlLines={priceControlLines} onFaktSave={faktSaqlash} onQatorTahrirlandi={yuklash} /></div>}
         {selected && !loading && !error && (
           <div className="shrink-0 space-y-3" aria-label="LRV kundalik boshqaruv panellari">
             <details className="karta group p-3" open={ochiqPanel === 'smeta'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'smeta' : null)}>
