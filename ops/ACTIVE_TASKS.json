@@ -679,7 +679,7 @@
       "branch": "hermes/t2-pto-closure-v1",
       "base_sha": "6ebae58914fce627539aa4fcecc2461ec188c5a3",
       "base_ref": "origin/main",
-      "status": "active",
+      "status": "superseded",
       "owns": [
         "ops/ACTIVE_TASKS.json",
         "ops/mailbox/HERM-001/",
@@ -728,7 +728,7 @@
         "HERMES_UCHUN_MUAMMOLAR_2026-09-09.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "Hermes source-only closure lane. Production migration, RLS/auth changes, deployment, real F2 import, and owner smoke remain approval/authentication gated. Scope is limited to the listed files; static and disposable/local validation must distinguish proven from unproven."
+      "_izoh": "Hermes source-only closure lane. Production migration, RLS/auth changes, deployment, real F2 import, and owner smoke remain approval/authentication gated. Scope is limited to the listed files; static and disposable/local validation must distinguish proven from unproven. 2026-09-24 egasi: Hermes endi ishlatilmaydi — vazifa yopildi, fayl qulflari bo‘shatildi."
     },
     {
       "id": "GOV-OWNER-AUTH-001",
@@ -755,6 +755,20 @@
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "docs/governance/OWNER_AUTHORIZATION.md"],
       "production_write_allowed": false,
       "_izoh": "Claude routine integrator vakolatlari aniq yozildi; Antigravity audit-first, production/backend/release chegaralari bilan cheklangan."
+    },
+    {
+      "id": "LRV-EXPORT-FORMULA-001",
+      "title": "LRV_PLUS eksport: formulalarda $ yo‘q, ish (bl) qatorida G = birlik narxi",
+      "owner": "claude",
+      "machine": "noutbuk",
+      "branch": "claude/lrv-export-formula-v1",
+      "base_sha": "7b0a3f4651f2515f339253d76ec26116334c8739",
+      "status": "in_progress",
+      "owns": ["frontend/src/lib/lrv-plus-export.ts", "frontend/src/lib/lrv-plus-export.test.ts"],
+      "depends_on": [],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md"],
+      "production_write_allowed": false,
+      "_izoh": "Egasi 2026-09-24: qator ko‘chirilsa $ li formula begona katakni o‘qiydi; ish qatorida H dan oldingi bo‘sh katakda bir birlik narxi kerak."
     }
   ]
 }

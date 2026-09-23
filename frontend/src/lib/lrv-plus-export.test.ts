@@ -71,7 +71,7 @@ describe('lrvPlusQatorlarniHisobla — smeta kaskadi', () => {
     const bl = h.find((r) => r.nom === 'Qazish')!;
     const rs = h.filter((r) => r.tur === 'rs');
     const c1 = Math.min(...rs.map((r) => r.row)), c2 = Math.max(...rs.map((r) => r.row));
-    expect(bl.summaFormula).toBe(`SUMIF($X$${c1}:$X$${c2},${bl.daraja + 1},$H$${c1}:$H$${c2})`);
+    expect(bl.summaFormula).toBe(`SUMIF(X${c1}:X${c2},${bl.daraja + 1},H${c1}:H${c2})`);
     expect(bl.summaQiymat).toBe(190000 + 235000);
   });
 
@@ -109,8 +109,8 @@ describe('lrvPlusQatorlarniHisobla — FAKT / F2 (egasining talabi: har bir qato
   it('ЖАМИ formulasi berilgan ustun bo\'yicha faqat ildiz (daraja=0) qatorlarni yig\'adi', () => {
     const h = lrvPlusQatorlarniHisobla(DARAXT);
     const c1 = h[0].row, c2 = h[h.length - 1].row;
-    expect(lrvPlusJamiFormula(h, 'H')).toBe(`SUMIF($X$${c1}:$X$${c2},0,$H$${c1}:$H$${c2})`);
-    expect(lrvPlusJamiFormula(h, 'T')).toBe(`SUMIF($X$${c1}:$X$${c2},0,$T$${c1}:$T$${c2})`);
+    expect(lrvPlusJamiFormula(h, 'H')).toBe(`SUMIF(X${c1}:X${c2},0,H${c1}:H${c2})`);
+    expect(lrvPlusJamiFormula(h, 'T')).toBe(`SUMIF(X${c1}:X${c2},0,T${c1}:T${c2})`);
   });
 });
 
@@ -310,11 +310,19 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
     expect(ws[`W${ishchi.row}`].v).toBe(76000 - 38000);
 
     // Kategoriya ustunlari faqat bargda va faqat MOS ustunda
-    expect(ws[`J${ishchi.row}`].f).toBe(`$H${ishchi.row}`); // ЧЕЛ -- formula bilan
+    expect(ws[`J${ishchi.row}`].f).toBe(`H${ishchi.row}`); // ЧЕЛ -- formula bilan
     expect(ws[`K${ishchi.row}`]?.v ?? '').toBe(''); // МАШ -- bo'sh
     const ekskavator = h.find((r) => r.nom === 'Ekskavator')!;
-    expect(ws[`K${ekskavator.row}`].f).toBe(`$H${ekskavator.row}`); // МАШ
+    expect(ws[`K${ekskavator.row}`].f).toBe(`H${ekskavator.row}`); // МАШ
     expect(ws[`J${bl.row}`]?.v ?? '').toBe(''); // bl'da kategoriya bo'lmaydi
+
+    // Egasi (2026-09-24): ish (bl) qatorida G = bir birlik narxi = H / F.
+    expect(ws[`G${bl.row}`].f).toBe(`IF(N(F${bl.row})=0,"",H${bl.row}/F${bl.row})`);
+    expect(ws[`G${bl.row}`].v).toBe(425000 / 100);
+    expect(ws[`G${rz.row}`]?.f).toBeUndefined(); // razdelda hajm yo'q — birlik narx ham yo'q
+    // Egasi (2026-09-24): formulalarda $ yo'q — qator ko'chirilsa begona katakni o'qimaydi.
+    const dollarli = Object.entries(ws).filter(([k, c]) => !k.startsWith('!') && typeof (c as { f?: string }).f === 'string' && (c as { f: string }).f.includes('$'));
+    expect(dollarli.map(([k]) => k)).toEqual([]);
 
     // Sarlavha va jami
     expect(ws['A1'].v).toBe('Sinov Obyekti');
@@ -523,7 +531,7 @@ describe('Forma-2 rejimi — LRV_PLUS ning O ustunigacha bo\'lgan qismi bilan ay
     const bl = h.find((r) => r.tur === 'bl')!;
     expect(ws[`F${ishchi.row}`].f).toBe(`E${ishchi.row}*F${bl.row}`);
     expect(ws[`H${bl.row}`].f).toContain('SUMIF');
-    expect(ws[`H${bl.row}`].f).toContain('$Q$'); // forma2 rejimida yashirin Даража ustuni Q
+    expect(ws[`H${bl.row}`].f).toContain('SUMIF(Q'); // forma2 rejimida yashirin Даража ustuni Q
   });
 });
 

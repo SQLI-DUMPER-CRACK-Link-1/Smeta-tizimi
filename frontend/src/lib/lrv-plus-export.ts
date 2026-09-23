@@ -7,7 +7,12 @@
  *
  *   - «MARKIROVKA I GA KO'CHISHI KERAK»  → ТИП endi I ustunida (T1 dagidek).
  *   - «J K L M N O ham qiymatlarni formula bilan olishi kerak»
- *                                        → kategoriya ustunlari `=$H{qator}`.
+ *                                        → kategoriya ustunlari `=H{qator}`.
+ *
+ * Egasi (2026-09-24): «formulalarda $ dan iloji boricha foydalanmaydigan
+ * qilib ber, qayergadir ko'chirsam boshqa joylardan qiymat o'qib qoladi» →
+ * hamma formula nisbiy (T1 dagi `$` olib tashlandi). «ish turida summa
+ * turgan H dan oldingi bo'sh katakda bir birlik narxi» → bl qatorida G.
  *   - «eng keraklisi H gacha, shu yergacha jadval aniqroq chizilsin»
  *                                        → A..H chegaralari qalinroq.
  *   - «har bir ish turi va razdellar ichidagi bolachalari bilan
@@ -27,7 +32,8 @@
  *   F(rs, bl ostida) = E(norma) × F(ota bl)
  *   H(barg)          = F × G
  *   H(bl/rz)         = bevosita bolalar yig'indisi (SUMIF, yashirin X bo'yicha)
- *   J..O             = `=$H{qator}` — faqat mos kategoriyada, faqat bargda
+ *   G(bl)            = IF(N(F)=0,"",H/F) — ishning bir birlik narxi
+ *   J..O             = `=H{qator}` — faqat mos kategoriyada, faqat bargda
  *   Q = F − P        (ostatka ҳажм)
  *   S = P − R        (F2 olinishi mumkin = fakt − olingan)
  *   U = H − T        (ostatka сумма)
@@ -257,7 +263,7 @@ export function lrvPlusQatorlarniHisobla(
       summaQiymat = obyomQiymat != null && narx != null ? obyomQiymat * narx : null;
     } else if (OTA_TUR.has(tur)) {
       const sp = span.get(q.id);
-      if (sp) summaFormula = `SUMIF($${darajaUstun}$${sp.c1}:$${darajaUstun}$${sp.c2},${daraja + 1},$H$${sp.c1}:$H$${sp.c2})`;
+      if (sp) summaFormula = `SUMIF(${darajaUstun}${sp.c1}:${darajaUstun}${sp.c2},${daraja + 1},H${sp.c1}:H${sp.c2})`;
       // No known children -- unknown, not a fabricated zero (Constitution:
       // NULL is never silently converted to zero).
       else summaQiymat = null;
@@ -298,7 +304,15 @@ export function lrvPlusQatorlarniHisobla(
 export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string, darajaUstun = 'X'): string | null {
   if (!qatorlar.length) return null;
   const c1 = qatorlar[0].row, c2 = qatorlar[qatorlar.length - 1].row;
-  return `SUMIF($${darajaUstun}$${c1}:$${darajaUstun}$${c2},0,$${ustun}$${c1}:$${ustun}$${c2})`;
+  return `SUMIF(${darajaUstun}${c1}:${darajaUstun}${c2},0,${ustun}${c1}:${ustun}${c2})`;
+}
+
+/**
+ * Ish (bl) qatorining birlik narxi — G katagi, H (summa) dan oldingi bo'sh joy.
+ * Hajm bo'sh yoki 0 bo'lsa katak bo'sh qoladi (soxta 0 / #DIV/0! emas).
+ */
+export function lrvPlusBirlikNarxFormula(row: number): string {
+  return `IF(N(F${row})=0,"",H${row}/F${row})`;
 }
 
 export const LRV_PLUS_USTUNLAR = [
@@ -745,10 +759,16 @@ export async function lrvPlusFaylBaytlari(
   for (const q of hisob) {
     if (q.obyomFormula) ws[`F${q.row}`] = { t: 'n', f: q.obyomFormula, ...(q.obyomQiymat == null ? {} : { v: q.obyomQiymat }) };
     if (q.summaFormula) ws[`H${q.row}`] = { t: 'n', f: q.summaFormula, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat }) };
-    // Kategoriya ustunlari — T1 dagidek H ga havola (faqat bargda).
+    // Egasi (2026-09-24): ish qatorida H dan oldingi bo'sh katakda — bir birlik narxi.
+    if (q.tur === 'bl') {
+      const birlikNarx = q.summaQiymat != null && q.obyomQiymat != null && q.obyomQiymat !== 0
+        ? q.summaQiymat / q.obyomQiymat : null;
+      ws[`G${q.row}`] = { t: 'n', f: lrvPlusBirlikNarxFormula(q.row), ...(birlikNarx == null ? {} : { v: birlikNarx }) };
+    }
+    // Kategoriya ustunlari — H ga havola (faqat bargda).
     if (LEAF_TUR.has(q.tur)) {
       const ustun = KAT_USTUN[q.kat];
-      if (ustun) ws[`${ustun}${q.row}`] = { t: 'n', f: `$H${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat }) };
+      if (ustun) ws[`${ustun}${q.row}`] = { t: 'n', f: `H${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat }) };
     }
     if (rejim === 'toliq') {
       ws[`Q${q.row}`] = { t: 'n', f: `F${q.row}-P${q.row}`, ...(q.obyomQiymat == null ? {} : { v: q.obyomQiymat - q.faktHajm }) };
