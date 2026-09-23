@@ -1,107 +1,130 @@
 import { describe, expect, it } from 'vitest';
-import { ofertaQatorlariniHisobla, type OfertaQator } from './tender-oferta';
+import { ofertaHisobla, type OfertaQator } from './tender-oferta';
+import { NAKRUTKA_STANDART, nakrutkaKaskad } from './nakrutka-kaskad';
 
 const qator = (patch: Partial<OfertaQator> = {}): OfertaQator => ({
   sourceId: 'RES::r3', sourceSheet: 'RES', sourceRow: 3, tartibRaqami: 1, shifr: null,
-  nom: 'Бетон B25', birlik: 'м3', hajm: 10, smetaBirlikNarx: 123.45, smetaSumma: 1234.49,
+  nom: 'Бетон B25', birlik: 'м3', hajm: 10, smetaBirlikNarx: 123.45, smetaSumma: 1234.5,
+  rol: 'RESOURCE', hisobTuri: 'birlik', kategoriya: 'МАТ', kategoriyaManbasi: 'bolim',
   ...patch,
-  turi: patch.turi ?? 'resurs', hisobTuri: patch.hisobTuri ?? 'birlik', blokKaliti: patch.blokKaliti ?? null,
 });
 
-describe('tender oferta narx yadrosi', () => {
-  it('foiz bilan pasaytirganda taklif summasini hajm x pudratchi narxidan oladi', () => {
-    const result = ofertaQatorlariniHisobla([qator()], { rejim: 'foiz', yon: 'pasaytirish', foiz: 10 });
-    expect(result.valid).toBe(true);
-    expect(result.qatorlar[0].pudratchiBirlikNarx).toBe(111.105);
-    expect(result.qatorlar[0].pudratchiSumma).toBe(1111.05);
-    // Manba summasi hech qachon qty*price bilan qayta yozilmaydi.
-    expect(result.qatorlar[0].smetaSumma).toBe(1234.49);
+const foiz = (f: number, yon: 'pasaytirish' | 'oshirish' = 'pasaytirish') => ({ sozlama: { rejim: 'foiz' as const, yon, foiz: f } });
+
+describe('tender oferta V2 — barg narxlash', () => {
+  it('foiz bilan pasaytirganda summa = ROUND(taklif hajmi × pudratchi narxi; 2), manba o‘zgarmaydi', () => {
+    const r = ofertaHisobla([qator()], foiz(10));
+    expect(r.qatorlar[0].pudratchiBirlikNarx).toBe(111.105);
+    expect(r.qatorlar[0].pudratchiSumma).toBe(1111.05);
+    expect(r.qatorlar[0].smetaSumma).toBe(1234.5);
+    expect(r.qatorlar[0].hajm).toBe(10);
   });
 
-  it('foiz bilan oshirishni ham deterministic hisoblaydi', () => {
-    const result = ofertaQatorlariniHisobla([qator({ smetaBirlikNarx: 80, hajm: 100 })], { rejim: 'foiz', yon: 'oshirish', foiz: 50 });
-    expect(result.qatorlar[0].pudratchiBirlikNarx).toBe(120);
-    expect(result.qatorlar[0].pudratchiSumma).toBe(12000);
-  });
-
-  it('qolda kiritilgan narx global qoidaga bog‘liq bo‘lmaydi', () => {
-    const row = qator({ sourceId: 'a' });
-    const result = ofertaQatorlariniHisobla([row], { rejim: 'foiz', yon: 'pasaytirish', foiz: 90 }, { a: 77.25 });
-    expect(result.valid).toBe(true);
-    expect(result.qatorlar[0].pudratchiBirlikNarx).toBe(77.25);
-    expect(result.qatorlar[0].pudratchiSumma).toBe(772.5);
-    expect(result.qatorlar[0].narxManbasi).toBe('qolda');
-  });
-
-  it('qo‘lda rejimda kiritilmagan narxni nolga aylantirmaydi', () => {
-    const result = ofertaQatorlariniHisobla([qator()], { rejim: 'qolda' });
-    expect(result.valid).toBe(false);
-    expect(result.qatorlar[0].pudratchiBirlikNarx).toBeNull();
-    expect(result.qatorlar[0].pudratchiSumma).toBeNull();
-    expect(result.qatorlar[0].muammolar).toContain('PUDRATCHI_NARXI_YOQ');
-  });
-
-  it('smeta narxi yo‘q bo‘lsa foizli rejim fail-closed ishlaydi, qo‘lda esa ruxsat beradi', () => {
-    const row = qator({ sourceId: 'b', smetaBirlikNarx: null });
-    const percent = ofertaQatorlariniHisobla([row], { rejim: 'foiz', foiz: 10, yon: 'pasaytirish' });
-    expect(percent.valid).toBe(false);
-    expect(percent.qatorlar[0].muammolar).toContain('SMETA_NARXI_YOQ');
-    const manual = ofertaQatorlariniHisobla([row], { rejim: 'qolda' }, { b: 200 });
-    expect(manual.valid).toBe(true);
-    expect(manual.qatorlar[0].pudratchiSumma).toBe(2000);
-  });
-
-  it('hajm yo‘q bo‘lsa taklif summasi taxminan nol qilinmaydi', () => {
-    const result = ofertaQatorlariniHisobla([qator({ hajm: null })], { rejim: 'foiz', foiz: 0, yon: 'pasaytirish' });
-    expect(result.valid).toBe(false);
-    expect(result.qatorlar[0].pudratchiBirlikNarx).toBe(123.45);
-    expect(result.qatorlar[0].pudratchiSumma).toBeNull();
-    expect(result.qatorlar[0].muammolar).toContain('HAJM_YOQ');
-  });
-
-  it('pasaytirish foizi narxni manfiyga olib ketsa rad etadi', () => {
-    const result = ofertaQatorlariniHisobla([qator()], { rejim: 'foiz', yon: 'pasaytirish', foiz: 101 });
-    expect(result.valid).toBe(false);
-    expect(result.qatorlar[0].muammolar).toContain('NARX_MANFIY');
-  });
-
-  it('material jami, sklad va transport satrlarini ikki marta sanamaydi', () => {
-    const rows = [
-      qator({ sourceId: 'm1', smetaBirlikNarx: 100, smetaSumma: 1000, blokKaliti: 'mat' }),
-      qator({ sourceId: 's1', nom: 'Sklad xarajati 2%', turi: 'sklad_xarajati', hisobTuri: 'manba_jami', hajm: null, smetaBirlikNarx: null, smetaSumma: 100, blokKaliti: 'mat' }),
-      qator({ sourceId: 't1', nom: 'Transport xarajati', turi: 'transport_xarajati', hisobTuri: 'manba_jami', hajm: null, smetaBirlikNarx: null, smetaSumma: 50, blokKaliti: 'mat' }),
-      qator({ sourceId: 'j1', nom: 'ИТОГО МАТЕРИАЛОВ', turi: 'jami', hisobTuri: 'jami', hajm: null, smetaBirlikNarx: null, smetaSumma: 1150, blokKaliti: 'mat' }),
-    ];
-    const result = ofertaQatorlariniHisobla(rows, { rejim: 'foiz', yon: 'pasaytirish', foiz: 0 });
-    expect(result.valid).toBe(true);
-    expect(result.smetaJami).toBe(1150);
-    expect(result.resursJami).toBe(1000);
-    expect(result.skladJami).toBe(100);
-    expect(result.transportJami).toBe(50);
-    expect(result.ofertaJami).toBe(1150);
-    expect(result.qatorlar[3].pudratchiSumma).toBe(1150);
-  });
-
-  it('jami satri alohida foiz bilan qayta narxlanmaydi, faqat bolalar yig‘indisini ko‘rsatadi', () => {
-    const rows = [
-      qator({ sourceId: 'm1', smetaBirlikNarx: 100, smetaSumma: 1000, blokKaliti: 'mat' }),
-      qator({ sourceId: 'j1', nom: 'ИТОГО', turi: 'jami', hisobTuri: 'jami', hajm: null, smetaBirlikNarx: null, smetaSumma: 1000, blokKaliti: 'mat' }),
-    ];
-    const result = ofertaQatorlariniHisobla(rows, { rejim: 'foiz', yon: 'pasaytirish', foiz: 10 });
-    expect(result.qatorlar[0].pudratchiSumma).toBe(900);
-    expect(result.qatorlar[1].pudratchiSumma).toBe(900);
-    expect(result.ofertaJami).toBe(900);
-  });
-
-  it('TN transport varag‘ining ko‘p bosqichli hisobini hajm x narxga buzib yubormaydi', () => {
-    const row = qator({
-      sourceId: 'transport::r7', turi: 'transport_xarajati', hisobTuri: 'manba_jami',
-      nom: 'АСФАЛЬТОБЕТОННАЯ СМЕСЬ — перевозка', hajm: 1417.2186,
-      smetaBirlikNarx: 1390.96, smetaSumma: 74909186.586528,
+  it('qo‘lda narx global va kategoriya foizidan ustun', () => {
+    const r = ofertaHisobla([qator({ sourceId: 'a' })], {
+      sozlama: { rejim: 'foiz', yon: 'pasaytirish', foiz: 90, kategoriyaFoizlari: { МАТ: { yon: 'pasaytirish', foiz: 15 } } },
+      manualNarxlar: { a: 77.25 },
     });
-    const result = ofertaQatorlariniHisobla([row], { rejim: 'foiz', yon: 'pasaytirish', foiz: 10 });
-    expect(result.valid).toBe(true);
-    expect(result.qatorlar[0].pudratchiBirlikNarx).toBeNull();
-    expect(result.qatorlar[0].pudratchiSumma).toBeCloseTo(67418267.9278752, 6);
+    expect(r.qatorlar[0].pudratchiSumma).toBe(772.5);
+    expect(r.qatorlar[0].narxManbasi).toBe('qolda');
+  });
+
+  it('kategoriya foizi global foizdan ustun (Beton −15%, mashina +3%)', () => {
+    const r = ofertaHisobla([
+      qator({ sourceId: 'b', smetaBirlikNarx: 100, hajm: 1 }),
+      qator({ sourceId: 'm', smetaBirlikNarx: 100, hajm: 1, kategoriya: 'МАШ', birlik: 'маш-ч' }),
+      qator({ sourceId: 'c', smetaBirlikNarx: 100, hajm: 1, kategoriya: 'ЧЕЛ', birlik: 'чел-ч' }),
+    ], { sozlama: { rejim: 'foiz', yon: 'pasaytirish', foiz: 0, kategoriyaFoizlari: { МАТ: { yon: 'pasaytirish', foiz: 15 }, МАШ: { yon: 'oshirish', foiz: 3 } } } });
+    expect(r.qatorlar.map((q) => q.pudratchiSumma)).toEqual([85, 103, 100]);
+    expect(r.qatorlar[0].narxManbasi).toBe('kategoriya_foiz');
+  });
+
+  it('qo‘lda rejimda kiritilmagan narx 0 ga aylanmaydi, yakuniy oferta null', () => {
+    const r = ofertaHisobla([qator()], { sozlama: { rejim: 'qolda' } });
+    expect(r.qatorlar[0].pudratchiSumma).toBeNull();
+    expect(r.qatorlar[0].muammolar).toContain('PUDRATCHI_NARXI_YOQ');
+    expect(r.yakuniyOferta).toBeNull();
+    expect(r.halQilinmagan).toBe(1);
+  });
+
+  it('smeta narxi 0 bo‘lsa foiz narx yaratmaydi (NULL != 0)', () => {
+    const r = ofertaHisobla([qator({ smetaBirlikNarx: 0, smetaSumma: 0 })], foiz(10));
+    expect(r.qatorlar[0].pudratchiBirlikNarx).toBeNull();
+    expect(r.qatorlar[0].muammolar).toContain('SMETA_NARXI_NOL');
+  });
+
+  it('P0: manba hajmi bo‘sh, qo‘lda taklif hajmi 10 × 800 000 = 8 000 000; manba hajmi null qoladi', () => {
+    const r = ofertaHisobla([qator({ sourceId: 'q', hajm: null })], { sozlama: { rejim: 'qolda' }, manualNarxlar: { q: 800000 }, manualHajmlar: { q: 10 } });
+    const q = r.qatorlar[0];
+    expect(q.hajm).toBeNull();
+    expect(q.taklifHajmiOverride).toBe(10);
+    expect(q.taklifHajmi).toBe(10);
+    expect(q.hajmManbasi).toBe('qolda');
+    expect(q.pudratchiSumma).toBe(8000000);
+    expect(q.muammolar).toEqual([]);
+  });
+
+  it('hajm yo‘q va override yo‘q bo‘lsa summa null (HAJM_YOQ)', () => {
+    const r = ofertaHisobla([qator({ hajm: null })], foiz(0));
+    expect(r.qatorlar[0].pudratchiSumma).toBeNull();
+    expect(r.qatorlar[0].muammolar).toContain('HAJM_YOQ');
+  });
+
+  it('pasaytirish >100% rad etiladi', () => {
+    expect(ofertaHisobla([qator()], foiz(101)).qatorlar[0].muammolar).toContain('NARX_MANFIY');
+  });
+
+  it('manba_jami (RESURS_VEDOMOST/TN transport) summaga foiz, soxta birlik narx yo‘q', () => {
+    const r = ofertaHisobla([qator({ hisobTuri: 'manba_jami', smetaBirlikNarx: null, smetaSumma: 74909186.586528 })], foiz(10));
+    expect(r.qatorlar[0].pudratchiBirlikNarx).toBeNull();
+    expect(r.qatorlar[0].pudratchiSumma).toBe(67418267.93);
+  });
+});
+
+describe('tender oferta V2 — jami, kategoriya va kaskad', () => {
+  const rows: OfertaQator[] = [
+    qator({ sourceId: 'l', sourceRow: 2, kategoriya: 'ЧЕЛ', smetaBirlikNarx: 100, hajm: 10, smetaSumma: 1000 }),
+    qator({ sourceId: 'm', sourceRow: 3, kategoriya: 'МАТ', smetaBirlikNarx: 50, hajm: 20, smetaSumma: 1000 }),
+    qator({ sourceId: 'k', sourceRow: 4, kategoriya: 'КАБ', smetaBirlikNarx: 10, hajm: 50, smetaSumma: 500 }),
+    qator({ sourceId: 'j', sourceRow: 5, rol: 'SUBTOTAL', hisobTuri: 'yoq', kategoriya: null, nom: 'ИТОГО', hajm: null, smetaBirlikNarx: null, smetaSumma: 1500, jamiBolalari: ['m', 'k'], jamiMoslik: 'summa' }),
+    qator({ sourceId: 't', sourceRow: 6, rol: 'TRANSPORT', hosila: true, hisobTuri: 'yoq', kategoriya: null, nom: 'Транспортные расходы 5%', hajm: null, smetaBirlikNarx: null, smetaSumma: 75 }),
+    qator({ sourceId: 'g', sourceRow: 7, rol: 'GRAND_TOTAL', hisobTuri: 'yoq', kategoriya: null, nom: 'ИТОГО ПРЯМЫЕ ЗАТРАТЫ', hajm: null, smetaBirlikNarx: null, smetaSumma: 2575, jamiBolalari: ['l', 'j', 't'], jamiMoslik: 'summa' }),
+  ];
+
+  it('barg + uning jamisi ikki marta sanalmaydi; hosila podval summasi pulga qo‘shilmaydi', () => {
+    const r = ofertaHisobla(rows, foiz(10));
+    expect(r.togridanJami).toBe(900 + 900 + 450);
+    expect(r.manbaTogridanJami).toBe(2500);
+    expect(r.qatorlar.find((q) => q.sourceId === 'j')!.pudratchiSumma).toBe(1350);
+    expect(r.qatorlar.find((q) => q.sourceId === 'g')!.pudratchiSumma).toBe(2250);
+    expect(r.kategoriyaJami).toMatchObject({ ЧЕЛ: 900, МАТ: 900, КАБ: 450 });
+  });
+
+  it('hosila xarajatlar YANGI pudratchi asoslaridan kanonik kaskad bilan hisoblanadi', () => {
+    const r = ofertaHisobla(rows, foiz(10));
+    const kutilgan = nakrutkaKaskad({ chel: 900, mash: 0, mat: 1350, ob: 0, mk: 0, kab: 450, bez: 0 }, NAKRUTKA_STANDART);
+    expect(r.kaskad).toEqual(kutilgan);
+    expect(r.yakuniyOferta).toBe(kutilgan.vsego);
+    expect(r.kaskad.tr_mat).toBe(45); // (1350−450)×5%, eski podval 75 emas
+  });
+
+  it('noma’lum kategoriya yakuniy ofertani to‘sadi, operator tanlasa ochiladi', () => {
+    const u = [qator({ sourceId: 'x', kategoriya: 'UNKNOWN', kategoriyaManbasi: 'yoq', kategoriyaTaklifi: 'БЕЗСКЛАД' })];
+    const r1 = ofertaHisobla(u, foiz(0));
+    expect(r1.yakuniyOferta).toBeNull();
+    expect(r1.qatorlar[0].muammolar).toContain('KATEGORIYA_NOMALUM');
+    const r2 = ofertaHisobla(u, { ...foiz(0), manualKategoriyalar: { x: 'БЕЗСКЛАД' } });
+    expect(r2.asos.bez).toBe(1234.5);
+    expect(r2.yakuniyOferta).toBe(nakrutkaKaskad({ chel: 0, mash: 0, mat: 1234.5, ob: 0, mk: 0, kab: 0, bez: 1234.5 }, NAKRUTKA_STANDART).vsego);
+  });
+
+  it('transport varag‘i siyosati: varaq summasi material transporti o‘rnini egallaydi', () => {
+    const tr = qator({ sourceId: 'tv', sourceSheet: 'TR', rol: 'TRANSPORT', hosila: false, hisobTuri: 'manba_jami', kategoriya: null, smetaBirlikNarx: null, smetaSumma: 200 });
+    const base = [qator({ sourceId: 'm', kategoriya: 'МАТ', smetaBirlikNarx: 100, hajm: 10 }), tr];
+    const kaskad = ofertaHisobla(base, foiz(0));
+    const varaq = ofertaHisobla(base, { ...foiz(0), transportSiyosati: 'varaq' });
+    expect(kaskad.kaskad.tr_mat).toBe(50);
+    expect(kaskad.transportVaraqJami).toBe(200);
+    expect(varaq.kaskad.tr_mat).toBe(200);
   });
 });
