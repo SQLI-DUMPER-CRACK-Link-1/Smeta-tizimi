@@ -1,5 +1,7 @@
 import type { SheetGrid, XlsxWorkbook } from './f2-import-parse';
-import type { OfertaHisobTuri, OfertaQator, OfertaQatorTuri } from './tender-oferta';
+import type { T2ResursKategoriya } from '../api/supabase';
+import type { OfertaKategoriya, OfertaKategoriyaManbasi, OfertaMalumKategoriya, OfertaQator, OfertaRol } from './tender-oferta';
+import { podvalBlokTuri, resBolimKategoriya, resursMkKabAniqla } from './res-kategoriya';
 
 export type OfertaSheetRole = 'res' | 'lrv' | 'transport' | 'unknown';
 export type OfertaSheetConfidence = 'yuqori' | 'o‘rta' | 'past';
@@ -112,9 +114,13 @@ function findHeaders(rows: SheetGrid): OfertaResursUstunlar | null {
   for (let start = 0; start < Math.min(rows.length, 100); start++) {
     const end = Math.min(rows.length - 1, start + 5);
     const headers = Array.from({ length: cols }, (_, col) => columnHeader(rows, start, end, col));
+    // “Kategoriya” ustuni sarlavhasiga pastdagi “ЧЕЛ (1 resurs)” qo‘shilib
+    // RESURS so‘zini oladi — shuning uchun zaxira naqshda sarlavhasi aynan
+    // RESURS/РЕСУРС bilan BOSHLANADIGAN ustun afzal.
+    const nomFallbackStrict = firstColumn(headers, [/^(RESURS|РЕСУРС|RESOURCE)/]);
     const nom = firstColumn(headers, NAME_PRIMARY_PATTERNS) >= 0
       ? firstColumn(headers, NAME_PRIMARY_PATTERNS)
-      : firstColumn(headers, NAME_FALLBACK_PATTERNS);
+      : nomFallbackStrict >= 0 ? nomFallbackStrict : firstColumn(headers, NAME_FALLBACK_PATTERNS);
     const birlik = firstColumn(headers, UNIT_PATTERNS);
     const hajm = firstColumn(headers, QTY_PATTERNS, [/НА ВЕСЬ/]);
     const shifr = firstColumn(headers, CODE_PATTERNS);
@@ -182,6 +188,14 @@ function evidenceFor(rows: SheetGrid, sheetName: string): { resScore: number; lr
   if (/ЛОКАЛЬН.{0,30}СМЕТ|ЛОКАЛЬНО СМЕТ|ВИД РАБОТ|РАБОТ И ЗАТРАТ/.test(head)) { lrvScore += 5; evidence.push('LRV/ish sarlavhasi'); }
   if (/ШИФР.*НОРМ|НОРМ.*РАСХОД/.test(head)) { lrvScore += 2; evidence.push('ish normasi belgisi'); }
   if (/ЦЕНА|СТОИМОСТ/.test(head)) { resScore += 1; evidence.push('narx qiymati sarlavhasi'); }
+  // T1 LRV_PLUS: ТИП ustunida rz/bl/rs — bu ish/hajm ierarxiyasi (LRV),
+  // resurs ro'yxati emas, garchi rs qatorlari resurs nomiga o'xshasa ham.
+  const tipCounts = { rz: 0, bl: 0, rs: 0 };
+  for (const row of rows.slice(0, 400)) for (const cell of row) {
+    const v = String(cell ?? '').trim();
+    if (v === 'rz' || v === 'bl' || v === 'rs') tipCounts[v]++;
+  }
+  if (tipCounts.bl >= 2 && tipCounts.rs >= 2) { lrvScore += 12; evidence.push('LRV ТИП ustuni (rz/bl/rs)'); }
   const namedLrv = /LRV|СМЕТА|СМЕТНЫЙ/.test(normal(sheetName));
   const namedRes = /RES|РЕСУРС/.test(normal(sheetName));
   const transport = /ТРАНСП|ПЕРЕВОЗ|ГРУЗОПЕРЕВОЗ|ВОЗКА/.test(normal(sheetName))
@@ -199,55 +213,57 @@ function valueAt(row: readonly unknown[], index: number): unknown {
   return index >= 0 ? row[index] : null;
 }
 
+const MONEY_UNIT = /^(СУМ|СУММА|SUM|SUMMA|SOM|SO M|UZS|РУБ|%)?$/;
+const TRANSPORT_LABEL = /ТРАНСП|ТРАСП|ПЕРЕВОЗ|ДОСТАВ|ГРУЗОПЕРЕВОЗ|ВОЗКА/;
+const STORAGE_LABEL = /СКЛАДСК|ЗАГОТОВИТЕЛЬН|ХРАНЕН/;
+
 function isTotalLabel(name: string): boolean {
-  return /^(ИТОГО|ВСЕГО|JAMI|ЖАМИ|TOTAL|ОБЩАЯ СТОИМОСТЬ|УМУМИЙ|ИТОГО ПО|ВСЕГО МАТЕРИАЛОВ|ИТОГО РЕСУРСЫ)/.test(normal(name));
+  return /^(ИТОГО|ВСЕГО|JAMI|ЖАМИ|TOTAL|ОБЩАЯ СТОИМОСТЬ|УМУМИЙ)/.test(normal(name));
 }
 
 function isGlobalTotal(name: string): boolean {
   // Oddiy ВСЕГО/JAMI ko‘p ABC/TN fayllarida bo‘limning yakuniy satri bo‘ladi.
-  // Uni butun varaq jami deb olish keyingi bo‘limlarni vaqtincha “hali o‘qilmagan”
-  // qilib, oferta validatsiyasini noto‘g‘ri yiqitadi. Faqat aniq umumiy yorliqlar
-  // varaq darajasidagi qamrovni bildiradi.
-  return /^(ОБЩАЯ СТОИМОСТЬ|ВСЕГО МАТЕРИАЛОВ|ИТОГО РЕСУРСЫ ПО ПРОЕКТУ|ИТОГО ПО ПРОЕКТУ|УМУМИЙ ҚИЙМАТ)/.test(normal(name));
+  // Faqat aniq umumiy yorliqlar paket/varaq darajasidagi jami hisoblanadi.
+  return /^(ОБЩАЯ СТОИМОСТЬ|ВСЕГО МАТЕРИАЛОВ|ИТОГО РЕСУРСЫ ПО ПРОЕКТУ|ИТОГО ПО ПРОЕКТУ|УМУМИЙ ҚИЙМАТ)|ПРЯМЫЕ ЗАТРАТЫ/.test(normal(name));
 }
 
-function isCategorySummaryLabel(name: string): boolean {
-  // ABC/TN RES jadvallarida “ЧЕЛ (1 resurs)”, “МАШ (48 resurs)”,
-  // “МАТ (92 resurs)” kabi satrlar bo'lim subtotalidir. Ularning o'zida
-  // summa bo'lishi mumkin, lekin pastida aynan shu summa bo'yicha bolalar
-  // keladi. Ularni resurs deb narxlash umumiy qiymatni ikki marta oshiradi.
+/** ABC/TN/RESURS_VEDOMOST: “ЧЕЛ (1 resurs)”, “МАШ (48 resurs)” — kategoriya
+ * bo‘limi sarlavhasi (o‘z summasi bilan). Resurs emas, lekin KATEGORIYA
+ * dalili: pastidagi qatorlar shu toifaga tegishli. */
+function categorySummary(name: string): OfertaMalumKategoriya | 'UNKNOWN' | null {
   const raw = upper(name).replace(/\s+/g, ' ').trim();
-  return /\(\s*\d+\s+(?:RESURS|RESURSLAR|РЕСУРС|РЕСУРСА|РЕСУРСОВ|RESOURCE|RESOURCES)\s*\)$/.test(raw);
+  if (!/\(\s*\d+\s+(?:RESURS|RESURSLAR|РЕСУРС|РЕСУРСА|РЕСУРСОВ|RESOURCE|RESOURCES)\s*\)$/.test(raw)) return null;
+  // JS `\b` kirill harflarida ishlamaydi — chegara aniq yoziladi.
+  const m = raw.match(/^(ЧЕЛ|МАШ|МАТ|ОБ|М\s*\/\s*К|КАБ|БЕЗ\s*СКЛАД|БЕЗСКЛАД)(?=[\s(]|$)/);
+  if (!m) return 'UNKNOWN';
+  const k = m[1].replace(/\s+/g, '');
+  if (k === 'М/К') return 'М/К';
+  if (k === 'БЕЗСКЛАД') return 'БЕЗСКЛАД';
+  return k as OfertaMalumKategoriya;
 }
 
 function isSectionLabel(name: string): boolean {
   const normalized = normal(name);
   if (/^(РАЗДЕЛ|РЕСУРСЫ ПО|ЗАТРАТЫ ТРУДА|ТРУДОВЫЕ РЕСУРСЫ|СТРОИТЕЛЬНЫЕ МАШИН|СТРОИТЕЛЬНЫЕ МАТЕРИАЛ|МАТЕРИАЛЬНЫЕ РЕСУРСЫ|МЕСТНЫЕ МАТЕРИАЛ|ИНЕРТНЫЕ МАТЕРИАЛ|ОБОРУДОВАНИЕ|РАБОТЫ ВЕДУТСЯ|РЕСУРСЫ$|МАТЕРИАЛЫ$)/.test(normalized)) return true;
-  // ABC/TN fayllarida bo‘lim nomlari doim bir xil lug‘atdan kelmaydi:
-  // masalan, “МЕТАЛЛОКОНСТРУКЦИИ” alohida sarlavha bo‘lishi mumkin. Qatorning
-  // o‘zida birlik/hajm/narx bo‘lmasa, faqat katta harflardan iborat uzun nomni
-  // yangi blok deb olamiz. Resurs qatorlari esa odatda kamida birlik yoki summa
-  // bilan keladi va bu qoida ularga ta’sir qilmaydi.
+  // Qatorning o‘zida birlik/hajm/narx bo‘lmasa, faqat katta harflardan
+  // iborat uzun nomni yangi bo‘lim deb olamiz (masalan “МЕТАЛЛОКОНСТРУКЦИИ”).
   return normalized.length >= 5 && !/\d/.test(normalized) && /^[A-ZА-ЯЁЎҚҒҲІЇЄ\s-]+$/.test(normalized);
 }
 
-function lineType(name: string, row: readonly unknown[], columns: OfertaResursUstunlar): { turi: OfertaQatorTuri; jamiQamrovi?: 'blok' | 'varaq' } {
-  if (isTotalLabel(name)) return { turi: 'jami', jamiQamrovi: isGlobalTotal(name) ? 'varaq' : 'blok' };
-  if (isCategorySummaryLabel(name)) return { turi: 'bolim' };
-  const hasUnitOrAmount = Boolean(text(valueAt(row, columns.birlik)) || numberValue(valueAt(row, columns.hajm)) != null || numberValue(valueAt(row, columns.smetaNarx)) != null || numberValue(valueAt(row, columns.smetaSumma)) != null);
-  if (!hasUnitOrAmount && isSectionLabel(name)) return { turi: 'bolim' };
-  const normalized = normal(name);
-  if (/СКЛАДСК|СКЛАД|ХРАНЕН|ЗАГОТОВИТЕЛЬНО СКЛАД/.test(normalized)) return { turi: 'sklad_xarajati' };
-  if (/ТРАНСП|ПЕРЕВОЗ|ДОСТАВ|ГРУЗОПЕРЕВОЗ|ВОЗКА/.test(normalized)) return { turi: 'transport_xarajati' };
-  return { turi: 'resurs' };
+/** Ko‘p paketli RES (masalan Karting: “АР И КЖ”, keyin “НБШ”) ichida jadval
+ * sarlavhasi qayta keladi. U resurs emas — paket chegarasi. */
+function isRepeatedHeader(row: readonly unknown[], columns: OfertaResursUstunlar): boolean {
+  const nom = normal(valueAt(row, columns.nom));
+  const bir = normal(valueAt(row, columns.birlik));
+  return /НАИМЕНОВАН|^RESURS$|^РЕСУРС$/.test(nom) && /ЕДИНИЦ|ЕД ИЗМ|BIRLIK|UNIT/.test(bir);
 }
 
-function fallbackNumber(row: readonly unknown[], type: OfertaQatorTuri, columns: OfertaResursUstunlar): number | null {
+function fallbackNumber(row: readonly unknown[], rol: OfertaRol, columns: OfertaResursUstunlar): number | null {
   if (columns.smetaSumma >= 0) return numberValue(valueAt(row, columns.smetaSumma));
-  if (type === 'resurs' || type === 'bolim') return null;
+  if (rol === 'RESOURCE' || rol === 'SECTION' || rol === 'INFO') return null;
   const values = row.map(numberValue).filter((value): value is number => value != null);
   if (!values.length) return null;
-  return type === 'jami' ? values[0] : values[values.length - 1];
+  return rol === 'SUBTOTAL' || rol === 'GRAND_TOTAL' ? values[0] : values[values.length - 1];
 }
 
 function rowLabel(row: readonly unknown[], columns: OfertaResursUstunlar): string {
@@ -256,73 +272,200 @@ function rowLabel(row: readonly unknown[], columns: OfertaResursUstunlar): strin
   return row.map(text).find((value) => value && numberValue(value) == null && !/^(СУМ|SUM|№№|[0-9.]+)$/.test(normal(value))) ?? '';
 }
 
-function hisobTuri(turi: OfertaQatorTuri, hajm: number | null, smetaNarx: number | null, smetaSumma: number | null): OfertaHisobTuri {
-  if (turi === 'bolim') return 'bolim';
-  if (turi === 'jami') return 'jami';
-  if (turi !== 'resurs' && smetaNarx == null && smetaSumma != null) return 'manba_jami';
-  if (smetaNarx != null && hajm != null) return 'birlik';
-  return turi === 'resurs' ? 'birlik' : 'manba_jami';
+type Tasnif = { rol: OfertaRol; hosila?: boolean; vedomostKat?: OfertaMalumKategoriya | 'UNKNOWN' };
+
+function tasnifla(nom: string, row: readonly unknown[], columns: OfertaResursUstunlar, transportSheet: boolean): Tasnif | null {
+  const birlik = text(valueAt(row, columns.birlik));
+  const hajm = numberValue(valueAt(row, columns.hajm));
+  const narx = numberValue(valueAt(row, columns.smetaNarx));
+  const summa = columns.smetaSumma >= 0 ? numberValue(valueAt(row, columns.smetaSumma)) : null;
+  const hasUnitOrAmount = Boolean(birlik || hajm != null || narx != null || summa != null);
+  const n = normal(nom);
+
+  const vedomostKat = categorySummary(nom);
+  if (vedomostKat) return { rol: 'SECTION', vedomostKat };
+
+  // Foizli podval/hosila qatori: transport yoki sklad, lekin o‘zida
+  // hajm × narx tuzilmasi yo‘q (birligi СУМ/% yoki bo‘sh). Nomida ДОСТАВКА
+  // bo‘lgan HAQIQIY resurs (КОМПЛ, hajm va narx bilan) bu yerga tushmaydi.
+  const pulBirligi = MONEY_UNIT.test(normal(birlik));
+  const hajmNarxli = hajm != null && narx != null;
+  if (!transportSheet && pulBirligi && !hajmNarxli && (summa != null || hasUnitOrAmount)) {
+    if (STORAGE_LABEL.test(n)) return { rol: 'STORAGE', hosila: true };
+    if (TRANSPORT_LABEL.test(n)) return { rol: 'TRANSPORT', hosila: true };
+  }
+  if (isTotalLabel(nom)) return { rol: isGlobalTotal(nom) ? 'GRAND_TOTAL' : 'SUBTOTAL' };
+  if (!hasUnitOrAmount && (isSectionLabel(nom) || resBolimKategoriya(nom) != null)) return { rol: 'SECTION' };
+  if (!hasUnitOrAmount) return null;
+  // Mashinist mehnati mashina-soat narxining ichida: ABC/TN uni narxsiz
+  // ('--') ma'lumot qatori sifatida ko‘rsatadi. U narxlanmaydi.
+  if (/ТРУДА МАШИНИСТ/.test(n) && narx == null && summa == null) return { rol: 'INFO' };
+  if (transportSheet) return { rol: 'TRANSPORT', hosila: false };
+  return { rol: 'RESOURCE' };
+}
+
+type JoriyKat = { kat: OfertaMalumKategoriya; manba: 'bolim' | 'vedomost' } | null;
+
+function resursKategoriyasi(nom: string, birlik: string | null, joriy: JoriyKat): { kategoriya: OfertaKategoriya; manba: OfertaKategoriyaManbasi } {
+  const b = String(birlik || '').toUpperCase().replace(/Ё/g, 'Е').replace(/[.\s]/g, '');
+  const bolim = joriy && joriy.kat !== 'БЕЗСКЛАД' ? joriy.kat as T2ResursKategoriya : undefined;
+  const r = resursMkKabAniqla(nom, birlik ?? '', bolim);
+  if (b.startsWith('ЧЕЛ') || b.startsWith('МАШ')) return { kategoriya: r ?? 'UNKNOWN', manba: 'birlik' };
+  if (r == null) return joriy?.kat === 'БЕЗСКЛАД' ? { kategoriya: 'БЕЗСКЛАД', manba: joriy.manba } : { kategoriya: 'UNKNOWN', manba: 'yoq' };
+  if (joriy?.kat === 'БЕЗСКЛАД') return { kategoriya: r, manba: 'nom' };
+  if (r !== joriy?.kat) return { kategoriya: r, manba: 'nom' };
+  return { kategoriya: r, manba: joriy.manba };
+}
+
+type Birlik = { id: string; src: number; total: boolean; consumed: boolean };
+
+/**
+ * Jami ↔ bolalar munosabati DALIL bilan quriladi: jami qatorining manba
+ * summasi oxirgi iste'mol qilinmagan birliklar (barg, hosila, ichki jami)
+ * yig'indisiga aynan teng bo'lgan eng qisqa ketma-ketlik uning bolalari.
+ * Shu tariqa “ИТОГО → транспорт → ИТОГО ПО МАТЕРИАЛАМ → ИТОГО ПРЯМЫЕ”
+ * zanjiri o'z-o'zidan ierarxiyaga aylanadi va hech narsa ikki marta
+ * sanalmaydi. Manba summasi 0/bo'sh bo'lsa (narxsiz ABC) faqat oddiy
+ * bo'lim jamisi tuzilma bo'yicha bog'lanadi; boshqasi 'mos_emas'.
+ */
+function jamiBogla(qator: OfertaQator, units: Birlik[], sectionStart: number, paketStart: number): void {
+  const S = qator.smetaSumma;
+  let picked: number[] = [];
+  let moslik: OfertaQator['jamiMoslik'] = 'mos_emas';
+  if (S != null && Number.isFinite(S) && S !== 0) {
+    const tol = Math.max(0.05, Math.abs(S) * 1e-9);
+    let acc = 0;
+    const tried: number[] = [];
+    for (let j = units.length - 1; j >= paketStart; j--) {
+      if (units[j].consumed) continue;
+      acc += units[j].src;
+      tried.push(j);
+      if (Math.abs(acc - S) <= tol) { picked = tried; moslik = 'summa'; break; }
+    }
+    // Paket ichida topilmasa, varaq boshigacha (paketlararo umumiy jami).
+    if (moslik !== 'summa' && paketStart > 0) {
+      for (let j = paketStart - 1; j >= 0; j--) {
+        if (units[j].consumed) continue;
+        acc += units[j].src;
+        tried.push(j);
+        if (Math.abs(acc - S) <= tol) { picked = tried; moslik = 'summa'; break; }
+      }
+    }
+  } else if (qator.rol === 'SUBTOTAL') {
+    const open: number[] = [];
+    for (let j = sectionStart; j < units.length; j++) if (!units[j].consumed) open.push(j);
+    if (open.length && open.filter((j) => units[j].total).length <= 1) { picked = open; moslik = 'tuzilma'; }
+  }
+  for (const j of picked) units[j].consumed = true;
+  qator.jamiMoslik = moslik;
+  qator.jamiBolalari = picked.sort((a, b) => a - b).map((j) => units[j].id);
+  units.push({ id: qator.sourceId, src: S ?? picked.reduce((a, j) => a + units[j].src, 0), total: true, consumed: false });
 }
 
 function parseRows(sheetName: string, rows: SheetGrid, columns: OfertaResursUstunlar, transportSheet = false): { qatorlar: OfertaQator[]; skippedRows: number } {
   const qatorlar: OfertaQator[] = [];
   let skippedRows = 0;
-  let activeBlock: string | null = null;
+  let joriy: JoriyKat = null;
+  let joriyTaklif: OfertaMalumKategoriya | undefined;
+  let blokBoshi = 0;
+  const units: Birlik[] = [];
+  let sectionStart = 0;
+  let paketStart = 0;
   for (let i = columns.malumotBoshlanishi; i < rows.length; i++) {
     const row = rows[i] || [];
+    const hasAnyValue = row.some((cell) => text(cell));
+    if (!hasAnyValue) continue;
+    if (isRepeatedHeader(row, columns) || isOrdinalHeaderRow(row)) {
+      paketStart = sectionStart = units.length;
+      joriy = null; blokBoshi = qatorlar.length;
+      continue;
+    }
     const nom = rowLabel(row, columns);
+    const t = nom ? tasnifla(nom, row, columns, transportSheet) : null;
+    if (!t) { skippedRows++; continue; }
+
     const birlik = text(valueAt(row, columns.birlik)) || null;
     const hajm = numberValue(valueAt(row, columns.hajm));
     const smetaNarx = numberValue(valueAt(row, columns.smetaNarx));
-    const preliminary = lineType(nom, row, columns);
-    const smetaSumma = fallbackNumber(row, preliminary.turi, columns);
-    const hasAnyValue = Boolean(nom || row.some((cell) => text(cell)));
-    const hasNumericOrUnit = birlik != null || hajm != null || smetaNarx != null || smetaSumma != null;
-    if (!nom || (!hasNumericOrUnit && preliminary.turi !== 'bolim') || (preliminary.turi === 'jami' && smetaSumma == null)) {
-      if (hasAnyValue) skippedRows++;
-      continue;
-    }
-
-    const sourceId = `${sheetName}::r${i + 1}`;
-    const turi = transportSheet && preliminary.turi === 'resurs' ? 'transport_xarajati' : preliminary.turi;
-    const jamiQamrovi = preliminary.jamiQamrovi;
-    if (turi === 'bolim') activeBlock = sourceId;
+    const smetaSumma = fallbackNumber(row, t.rol, columns);
     const tartibRaw = valueAt(row, columns.tartib);
     const tartibText = text(tartibRaw);
     const tartibNumber = numberValue(tartibRaw);
-    const shifr = text(valueAt(row, columns.shifr)) || null;
-    const isAggregateCalculation = turi === 'transport_xarajati' && transportSheet;
-    // RESURS_VEDOMOST ko‘rinishida alohida birlik narxi bo‘lmasligi mumkin:
-    // manba faqat hajm va shu qatorning aniq summasini beradi. Bunday qatorni
-    // hajmga qayta ko‘paytirish uchun soxta birlik narx yaratmaymiz; manba jami
-    // sifatida foiz/qo‘lda berilgan taklif summasini qo‘llaymiz.
-    const parsedHisobTuri = turi === 'resurs' && columns.smetaNarx < 0 && smetaSumma != null
-      ? 'manba_jami'
-      : hisobTuri(turi, hajm, smetaNarx, smetaSumma);
-    qatorlar.push({
-      sourceId,
+    const qator: OfertaQator = {
+      sourceId: `${sheetName}::r${i + 1}`,
       sourceSheet: sheetName,
       sourceRow: i + 1,
       tartibRaqami: tartibText ? (tartibNumber == null ? tartibText : tartibNumber) : null,
-      shifr,
+      shifr: text(valueAt(row, columns.shifr)) || null,
       nom,
       birlik,
       hajm,
       smetaBirlikNarx: smetaNarx,
       smetaSumma,
-      turi,
-      hisobTuri: isAggregateCalculation ? 'manba_jami' : parsedHisobTuri,
-      blokKaliti: activeBlock,
-      jamiQamrovi,
+      rol: t.rol,
+      hisobTuri: 'yoq',
+      kategoriya: null,
+      kategoriyaManbasi: 'yoq',
+      ...(t.hosila != null ? { hosila: t.hosila } : {}),
       manbaHajmUstuni: columns.hajm,
+      manbaNarxUstuni: columns.smetaNarx,
       manbaSummaUstuni: columns.smetaSumma,
-    });
+      manbaHajmSon: typeof valueAt(row, columns.hajm) === 'number',
+      manbaSummaSon: typeof valueAt(row, columns.smetaSumma) === 'number',
+    };
+
+    if (t.rol === 'SECTION') {
+      joriyTaklif = /ИНЕРТН/.test(normal(nom)) ? 'БЕЗСКЛАД' : undefined;
+      if (t.vedomostKat) joriy = t.vedomostKat === 'UNKNOWN' ? null : { kat: t.vedomostKat, manba: 'vedomost' };
+      else {
+        const b = resBolimKategoriya(nom);
+        if (b === 'YAKUN') joriy = null;
+        else if (b) joriy = { kat: b, manba: 'bolim' };
+      }
+      sectionStart = units.length;
+      blokBoshi = qatorlar.length;
+    } else if (t.rol === 'RESOURCE') {
+      const k = resursKategoriyasi(nom, birlik, joriy);
+      qator.kategoriya = k.kategoriya;
+      qator.kategoriyaManbasi = k.manba;
+      if (k.kategoriya === 'UNKNOWN' && joriyTaklif) qator.kategoriyaTaklifi = joriyTaklif;
+      // RESURS_VEDOMOST: alohida birlik narx ustuni yo‘q — soxta narx
+      // yaratmaymiz, manba summasi bo‘yicha taklif beriladi.
+      qator.hisobTuri = columns.smetaNarx < 0 && smetaSumma != null ? 'manba_jami' : 'birlik';
+    } else if (t.rol === 'TRANSPORT' && t.hosila === false) {
+      // TN transport varag‘i ko‘p bosqichli (т/км × masofa × tonna) hisob:
+      // uni hajm × narxga buzmaymiz.
+      qator.hisobTuri = 'manba_jami';
+    }
+
+    // Podval (МАТ/ОБ ajratuvchi) — resSatrlariniOl bilan bir xil qoida:
+    // faqat bo‘lim/zaxiradan kelgan МАТ/ОБ/noma’lum qatorlar orqaga belgilanadi.
+    const blokTuri = podvalBlokTuri(nom);
+    if (blokTuri) {
+      for (let j = blokBoshi; j < qatorlar.length; j++) {
+        const q = qatorlar[j];
+        if (q.rol !== 'RESOURCE') continue;
+        if (q.kategoriyaManbasi === 'birlik' || q.kategoriyaManbasi === 'nom' || q.kategoriyaManbasi === 'vedomost') continue;
+        if (q.kategoriya === 'UNKNOWN' || q.kategoriya === 'МАТ' || q.kategoriya === 'ОБ') { q.kategoriya = blokTuri; q.kategoriyaManbasi = 'podval'; }
+      }
+      blokBoshi = qatorlar.length + 1;
+    }
+
+    if (t.rol === 'SUBTOTAL' || t.rol === 'GRAND_TOTAL') {
+      jamiBogla(qator, units, sectionStart, paketStart);
+      if (resBolimKategoriya(nom) === 'YAKUN') joriy = null;
+      blokBoshi = qatorlar.length + 1;
+    } else if (t.rol !== 'SECTION') {
+      units.push({ id: qator.sourceId, src: smetaSumma ?? 0, total: false, consumed: false });
+    }
+    qatorlar.push(qator);
   }
   return { qatorlar, skippedRows };
 }
 
+
 function resursSignature(sheet: OfertaSheetTahlili): Set<string> {
-  return new Set(sheet.qatorlar.filter((qator) => qator.turi === 'resurs').map((qator) => [
+  return new Set(sheet.qatorlar.filter((qator) => qator.rol === 'RESOURCE').map((qator) => [
     normal(qator.nom),
     normal(qator.birlik),
     qator.hajm == null ? '' : String(qator.hajm),
@@ -356,7 +499,7 @@ export function ofertaResursVaraqlariniAniqla(workbook: XlsxWorkbook): OfertaShe
     const evidenceData = evidenceFor(rows, sheet.name);
     const ustunlar = findHeaders(rows);
     const parsed = ustunlar ? parseRows(sheet.name, rows, ustunlar, evidenceData.roleHint === 'transport') : { qatorlar: [], skippedRows: 0 };
-    const hasResourceShape = Boolean(ustunlar && parsed.qatorlar.some((qator) => qator.turi !== 'bolim'));
+    const hasResourceShape = Boolean(ustunlar && parsed.qatorlar.some((qator) => qator.rol === 'RESOURCE' || qator.rol === 'TRANSPORT'));
     const namedLrv = /LRV|СМЕТА|СМЕТНЫЙ/.test(normal(sheet.name));
     const namedRes = /RES|РЕСУРС/.test(normal(sheet.name));
     let role: OfertaSheetRole = 'unknown';
@@ -371,7 +514,7 @@ export function ofertaResursVaraqlariniAniqla(workbook: XlsxWorkbook): OfertaShe
     const evidence = [...evidenceData.evidence];
     if (!ustunlar) evidence.push('RES ustunlari to‘liq aniqlanmadi');
     else if (!parsed.qatorlar.length) evidence.push('sarlavha topildi, lekin resurs satrlari topilmadi');
-    else evidence.push(`${parsed.qatorlar.filter((qator) => qator.turi === 'resurs').length} ta resurs, ${parsed.qatorlar.filter((qator) => qator.turi !== 'resurs').length} ta hisob/bo‘lim satri`);
+    else evidence.push(`${parsed.qatorlar.filter((qator) => qator.rol === 'RESOURCE').length} ta resurs, ${parsed.qatorlar.filter((qator) => qator.rol !== 'RESOURCE').length} ta hisob/bo‘lim satri`);
     return { nom: sheet.name, role, format: evidenceData.format, confidence, evidence, resScore: evidenceData.resScore, lrvScore: evidenceData.lrvScore, ustunlar, ...parsed };
   });
 

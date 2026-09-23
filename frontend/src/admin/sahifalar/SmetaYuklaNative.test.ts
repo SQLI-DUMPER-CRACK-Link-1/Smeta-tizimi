@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya, resursMkKabAniqla, podvalBlokTuri, tanlanganResManbalariniYig, tanlanganLrvVaraqlaridanDaraxtQur } from './SmetaYuklaNative';
+import { bolakniQaytaUrinibYubor, resSatrlariniOl, resNarxIndeksiQur, narxlarniDaraxtgaQoll, katTaxmini, varaqTuriTaxmin, resBolimKategoriya, resursMkKabAniqla, podvalBlokTuri, tanlanganResManbalariniYig, tanlanganLrvVaraqlaridanDaraxtQur } from './SmetaYuklaNative';
 import type { AktNode } from '../../lib/f2-match-engine';
 import type { F2ColumnConfig } from '../../lib/f2-import-parse';
 
@@ -599,5 +599,30 @@ describe('ko‘p varaqdan smeta/RES importi', () => {
     expect(tree[0].nom).toBe('1-uchastka / 4230_БВ');
     expect(JSON.stringify(tree)).toContain('Asfalt ishlari');
     expect(JSON.stringify(tree)).not.toContain('Ishchi-resurs ilovasi');
+  });
+});
+
+describe('bolakniQaytaUrinibYubor — katta smeta tarmoq uzilishiga chidamli', () => {
+  const tez = () => Promise.resolve();
+  it('NETWORK xatosidan keyin qayta yuborib muvaffaqiyatga yetadi', async () => {
+    let n = 0;
+    const urinishlar: number[] = [];
+    const r = await bolakniQaytaUrinibYubor({ bolak: 4 }, (u) => urinishlar.push(u),
+      async () => (++n < 3 ? { ok: false, code: 'NETWORK' } : { ok: true, jami: 10000 }), tez);
+    expect(r.ok).toBe(true);
+    expect(n).toBe(3);
+    expect(urinishlar).toEqual([1, 2]);
+  });
+  it('doimiy uzilishda 5 urinishdan keyin to‘xtaydi', async () => {
+    let n = 0;
+    const r = await bolakniQaytaUrinibYubor({}, undefined, async () => { n++; return { ok: false, code: 'NETWORK' }; }, tez);
+    expect(r.ok).toBe(false);
+    expect(n).toBe(5);
+  });
+  it('biznes xatosini (masalan IMPORT_SESSION_CLOSED) qayta yubormaydi', async () => {
+    let n = 0;
+    const r = await bolakniQaytaUrinibYubor({}, undefined, async () => { n++; return { ok: false, code: 'IMPORT_SESSION_CLOSED' }; }, tez);
+    expect(r.code).toBe('IMPORT_SESSION_CLOSED');
+    expect(n).toBe(1);
   });
 });
