@@ -158,6 +158,11 @@ faqat "qaysi katak nima" ni aytadi.
 - Yangi ustunlar eng o'ng ustundan keyin. Uslub **qo'shni asl ustundan klonlanadi**
   (shrift, chegara, son formati, qator balandligi). Yangi rang/uslub o'ylab topilmaydi;
   egasining ranglari tegilmaydi.
+- **Formulalarda `$` yo'q** (egasi, 2026-09-24): hamma havola nisbiy — qator yoki blok
+  boshqa joyga ko'chirilsa formula o'z qatoridan o'qiydi, begona katakdan emas.
+  Test: yozilgan varaqda `$` li formula soni = 0.
+- **Ish qatorida birlik narxi** (egasi, 2026-09-24): summa turgan ustundan (masalan H)
+  oldingi bo'sh katakka `=IF(N(hajm)=0,"",summa/hajm)`. Hajm bo'sh yoki 0 bo'lsa bo'sh.
 - `.xls` → xlsx ga aylantirish `qisman` deb belgilanadi va UI da aytiladi.
 - Oferta, Ostatka, Nakopitelniy, F2 eksportlari shu yozuvchidan foydalanadi.
 
