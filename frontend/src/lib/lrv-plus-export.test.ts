@@ -130,7 +130,10 @@ describe('LRV eksport — egasi so\'ragan tuzatishlar', () => {
     expect(LRV_PLUS_USTUNLAR).not.toContain('ВИД РАБОТ');
   });
 
-  it('faylda qatorlar guruhlanadi (rz > bl > resurs) va H gacha chegara chiziladi', async () => {
+  /* Fayldagi birinchi `xlsx-js-style` dinamik importi (sovuq transform) to'liq
+     parallel yurishda 5 s standart chegaradan oshardi (11 s o'lchandi) —
+     mantiq xatosi emas, vaqt beqarorligi. Shu test uchun chegara 30 s. */
+  it('faylda qatorlar guruhlanadi (rz > bl > resurs) va H gacha chegara chiziladi', { timeout: 30_000 }, async () => {
     const bytes = await lrvPlusFaylBaytlari(DARAXT, 'Guruh sinovi', HOLATLAR);
     const XLSX = await import('xlsx-js-style');
     const wb = XLSX.read(bytes, { type: 'array', bookFiles: true });
