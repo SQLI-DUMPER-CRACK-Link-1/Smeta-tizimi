@@ -230,6 +230,10 @@ function parseWorkbookSheetList(xml: string, relsXml: string | undefined): Array
   return out;
 }
 
+function hasMeaningfulCells(rows: SheetGrid): boolean {
+  return rows.some((row) => row.some((cell) => cell != null && String(cell).trim() !== ''));
+}
+
 /** Reads an .xlsx (or .xlsm) file's every non-hidden-by-name sheet into `{name, rows, merges}`. Hidden-sheet filtering (as GAS's `apiF2Varaqlar` does) is the CALLER's job — this returns everything found in the workbook. */
 export async function readXlsx(bytes: ArrayBuffer | Uint8Array): Promise<XlsxWorkbook> {
   const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -265,6 +269,26 @@ export async function readXlsx(bytes: ArrayBuffer | Uint8Array): Promise<XlsxWor
     const parsed = xml ? parseSheetXml(xml, sharedStrings) : { rows: [] as SheetGrid, merges: [] };
     return { name, rows: parsed.rows, merges: parsed.merges };
   });
+
+  // Ayrim Excel/ABC/TN fayllarida varaq XML'i to'g'ri ochiladi, lekin
+  // dependency-free regex o'quvchi ayrim hujayra shakllarini o'tkazib yuborib,
+  // butun bir varaqni bo'sh deb qaytarishi mumkin. Bunday holatda foydalanuvchi
+  // ko'rgan RES varag'i “topilmadi” bo'lib qolmasin: SheetJS bilan bir marta
+  // to'liq fallback qilamiz. Haqiqatan bo'sh, faqat format saqlaydigan varaqlar
+  // fallbackni majburlamaydi.
+  const incompleteSheet = sheetList.some(({ target }, index) => {
+    const xml = files['xl/' + target] ? dec.decode(files['xl/' + target]) : '';
+    const hasCellMarkup = /<row\b[\s\S]*?<c\b/.test(xml);
+    return hasCellMarkup && !hasMeaningfulCells(sheets[index]?.rows ?? []);
+  });
+  if (incompleteSheet) {
+    try {
+      return await readWithSheetJs(buf);
+    } catch {
+      // SheetJS optional bo'lib qoladi; dependency mavjud bo'lmagan Worker
+      // buildlarida custom natijani yo'qotmaymiz.
+    }
+  }
 
   return { sheets, sheet: (name: string) => sheets.find((s) => s.name === name) ?? null };
 }

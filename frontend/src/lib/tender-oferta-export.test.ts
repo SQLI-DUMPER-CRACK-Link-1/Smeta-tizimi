@@ -43,4 +43,34 @@ describe('tender oferta XLSX', () => {
     expect(ws['I2']?.v).toBe(180);
     expect(wb.SheetNames).not.toContain('Oferta');
   });
+
+  it('muammoli qator bo‘lsa ham manba faylni beradi va noma’lum natijani bo‘sh qoldiradi', async () => {
+    const calculated = ofertaQatorlariniHisobla([{ ...row, hajm: null }], { rejim: 'foiz', yon: 'pasaytirish', foiz: 10 });
+    expect(calculated.valid).toBe(false);
+    expect(calculated.qatorlar[0].muammolar).toContain('HAJM_YOQ');
+
+    const XLSX = await import('xlsx-js-style');
+    const sourceWb = XLSX.utils.book_new();
+    const source = XLSX.utils.aoa_to_sheet([
+      ['№', 'Код', 'Наименование ресурса', 'Единица измерения', 'Количество', 'Цена за ед.', 'Сумма'],
+      [1, '', 'Цемент', 'т', null, 100, 199.99],
+    ]);
+    XLSX.utils.book_append_sheet(sourceWb, source, 'RES');
+    const sourceBytes = XLSX.write(sourceWb, { type: 'array', bookType: 'xlsx' });
+    const rows = XLSX.utils.sheet_to_json(source, { header: 1, raw: true, defval: null }) as SheetGrid;
+    const parsed: XlsxWorkbook = {
+      sheets: [{ name: 'RES', rows, merges: [] }],
+      sheet: (name) => name === 'RES' ? { name: 'RES', rows, merges: [] } : null,
+    };
+    const tahlillar = ofertaResursVaraqlariniAniqla(parsed);
+    const data = await tenderOfertaXlsx({
+      obyektNomi: 'Sinov', manbaFaylNomi: 'res.xlsx', manbaBytes: sourceBytes,
+      tanlanganVaraqlar: ['RES'], tahlillar, sozlama: { rejim: 'foiz', yon: 'pasaytirish', foiz: 10 }, qatorlar: calculated.qatorlar,
+    });
+    const wb = XLSX.read(data, { type: 'array', cellStyles: true });
+    expect(wb.SheetNames).toEqual(['RES']);
+    expect(wb.Sheets.RES['G2']?.v).toBe(199.99);
+    expect(wb.Sheets.RES['H2']?.v).toBe(90);
+    expect(wb.Sheets.RES['I2']).toBeUndefined();
+  });
 });

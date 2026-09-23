@@ -60,7 +60,7 @@ function columnHeader(rows: SheetGrid, start: number, end: number, col: number):
   return rows.slice(start, end + 1).filter((row) => {
     const rowText = row.map(normal).join(' ');
     const standaloneTotal = /^(ИТОГО|ВСЕГО|JAMI|ЖАМИ|TOTAL)\b/.test(rowText);
-    return !standaloneTotal && /(НАИМЕНОВАНИЕ|РЕСУРС|ЕДИНИЦ|ЕД ИЗМ|НА ЕД|ЗА ОДИН|ЦЕНА|НАРХ|СТОИМОСТ|КОЛИЧЕСТВ|ОБЪЕМ|ҲАЖМ|ХАЖМ|ШИФР|КОД|СУММА|ОБЩАЯ|НА ВЕСЬ ОБЪЕМ|TOTAL|Т\/КМ)/.test(rowText);
+    return !standaloneTotal && /(НАИМЕНОВАНИЕ|РЕСУРС|RESURS|RESOURCE|ЕДИНИЦ|ЕД ИЗМ|БИРЛИК|BIRLIK|UNIT|НА ЕД|ЗА ОДИН|ЦЕНА|НАРХ|NARX|СТОИМОСТ|КОЛИЧЕСТВ|ОБЪЕМ|ҲАЖМ|ХАЖМ|HAJM|MIQDOR|ШИФР|SHIFR|КОД|CODE|СУММА|SUMMA|ОБЩАЯ|НА ВЕСЬ ОБЪЕМ|TOTAL|Т\/КМ)/.test(rowText);
   }).map((row) => normal(row[col])).filter(Boolean).join(' ');
 }
 
@@ -72,19 +72,19 @@ function firstColumn(headers: readonly string[], patterns: readonly RegExp[], av
 }
 
 const NAME_PRIMARY_PATTERNS = [/НАИМЕНОВАНИЕ/, /НАМЕНОВАН/, /НАЗВАНИЕ/];
-const NAME_FALLBACK_PATTERNS = [/РЕСУРС/, /RESOURCE/];
+const NAME_FALLBACK_PATTERNS = [/РЕСУРС/, /RESURS/, /RESOURCE/];
 const NAME_PATTERNS = [...NAME_PRIMARY_PATTERNS, ...NAME_FALLBACK_PATTERNS];
-const UNIT_PATTERNS = [/ЕДИНИЦ/, /ЕД ИЗМ/, /БИРЛИК/, /UNIT/];
-const QTY_PATTERNS = [/КОЛИЧЕСТВ/, /КОЛИ/, /КОЛ /, /ПОТРЕБ/, /ОБЪЕМ/, /ОБЬЕМ/, /ҲАЖМ/, /ХАЖМ/, /QTY/, /QUANTITY/];
-const CODE_PATTERNS = [/ШИФР/, /КОД/, /ОБОСНОВАН/, /НОМЕР НОРМАТИВ/, /CODE/];
+const UNIT_PATTERNS = [/ЕДИНИЦ/, /ЕД ИЗМ/, /БИРЛИК/, /BIRLIK/, /UNIT/];
+const QTY_PATTERNS = [/КОЛИЧЕСТВ/, /КОЛИ/, /КОЛ /, /ПОТРЕБ/, /ОБЪЕМ/, /ОБЬЕМ/, /ҲАЖМ/, /ХАЖМ/, /HAJM/, /MIQDOR/, /QTY/, /QUANTITY/];
+const CODE_PATTERNS = [/ШИФР/, /КОД/, /ОБОСНОВАН/, /НОМЕР НОРМАТИВ/, /SHIFR/, /KOD/, /CODE/];
 const ORDER_PATTERNS = [/^NO$/, /^NO NO$/, /N P P/, /П П/, /П П$/, /TARTIB/, /№/];
 const PRICE_PATTERNS = [
   /НА ЕД/, /ЗА ЕД/, /UNIT PRICE/, /ЦЕНА/, /НАРХ/, /СТОИМОСТЬ ЕД/,
-  /СТОИМОСТ.*ЕДИНИЦ/, /ЗА ОДИН/, /БИРЛИК НАРХ/, /Т КМ/,
+  /СТОИМОСТ.*ЕДИНИЦ/, /ЗА ОДИН/, /БИРЛИК НАРХ/, /BIRLIK NARX/, /NARX/, /Т КМ/,
 ];
-const TOTAL_PATTERNS = [/ОБЩ/, /ИТОГ/, /ВСЕГО/, /СУММА/, /ЖАМИ/, /УМУМИЙ/, /TOTAL/, /НА ВЕСЬ ОБЪЕМ/, /ГРУЗОПЕРЕВОЗ/];
+const TOTAL_PATTERNS = [/ОБЩ/, /ИТОГ/, /ВСЕГО/, /СУММА/, /SUMMA/, /ЖАМИ/, /JAMI/, /УМУМИЙ/, /TOTAL/, /НА ВЕСЬ ОБЪЕМ/, /ГРУЗОПЕРЕВОЗ/];
 const SUM_PATTERNS = [
-  /ОБЩ/, /ИТОГ/, /ВСЕГО/, /СУММА/, /ЖАМИ/, /УМУМИЙ/, /TOTAL/, /НА ВЕСЬ ОБЪЕМ/,
+  /ОБЩ/, /ИТОГ/, /ВСЕГО/, /СУММА/, /SUMMA/, /ЖАМИ/, /JAMI/, /УМУМИЙ/, /TOTAL/, /НА ВЕСЬ ОБЪЕМ/,
   /СТОИМОСТЬ ГРУЗОПЕРЕВОЗ/, /ОБЩАЯ ТОННА/,
 ];
 
@@ -176,9 +176,9 @@ function evidenceFor(rows: SheetGrid, sheetName: string): { resScore: number; lr
   const evidence: string[] = [];
   let resScore = 0;
   let lrvScore = 0;
-  if (/РЕСУРС|МАТЕРИАЛЬНЫЕ|ТРУДОВЫЕ|ОБОРУДОВАНИ|МАТЕРИАЛЛАР|РЕСУРСЛАР/.test(head)) { resScore += 4; evidence.push('RES/resurs sarlavhasi'); }
-  if (/НА ЕД|ЕДИНИЧН|ЕД ИЗМ|UNIT PRICE|НАРХ|ЗА ОДИН|Т КМ/.test(head)) { resScore += 3; evidence.push('birlik narx sarlavhasi'); }
-  if (/КОЛИЧЕСТВ|ОБЪЕМ|ОБЬЕМ|ҲАЖМ|ХАЖМ/.test(head)) { resScore += 1; evidence.push('hajm/miqdor sarlavhasi'); }
+  if (/РЕСУРС|RESURS|МАТЕРИАЛЬНЫЕ|ТРУДОВЫЕ|ОБОРУДОВАНИ|МАТЕРИАЛЛАР|РЕСУРСЛАР/.test(head)) { resScore += 4; evidence.push('RES/resurs sarlavhasi'); }
+  if (/НА ЕД|ЕДИНИЧН|ЕД ИЗМ|UNIT PRICE|НАРХ|NARX|ЗА ОДИН|Т КМ/.test(head)) { resScore += 3; evidence.push('birlik narx sarlavhasi'); }
+  if (/КОЛИЧЕСТВ|ОБЪЕМ|ОБЬЕМ|ҲАЖМ|ХАЖМ|HAJM|MIQDOR/.test(head)) { resScore += 1; evidence.push('hajm/miqdor sarlavhasi'); }
   if (/ЛОКАЛЬН.{0,30}СМЕТ|ЛОКАЛЬНО СМЕТ|ВИД РАБОТ|РАБОТ И ЗАТРАТ/.test(head)) { lrvScore += 5; evidence.push('LRV/ish sarlavhasi'); }
   if (/ШИФР.*НОРМ|НОРМ.*РАСХОД/.test(head)) { lrvScore += 2; evidence.push('ish normasi belgisi'); }
   if (/ЦЕНА|СТОИМОСТ/.test(head)) { resScore += 1; evidence.push('narx qiymati sarlavhasi'); }
@@ -211,6 +211,15 @@ function isGlobalTotal(name: string): boolean {
   return /^(ОБЩАЯ СТОИМОСТЬ|ВСЕГО МАТЕРИАЛОВ|ИТОГО РЕСУРСЫ ПО ПРОЕКТУ|ИТОГО ПО ПРОЕКТУ|УМУМИЙ ҚИЙМАТ)/.test(normal(name));
 }
 
+function isCategorySummaryLabel(name: string): boolean {
+  // ABC/TN RES jadvallarida “ЧЕЛ (1 resurs)”, “МАШ (48 resurs)”,
+  // “МАТ (92 resurs)” kabi satrlar bo'lim subtotalidir. Ularning o'zida
+  // summa bo'lishi mumkin, lekin pastida aynan shu summa bo'yicha bolalar
+  // keladi. Ularni resurs deb narxlash umumiy qiymatni ikki marta oshiradi.
+  const raw = upper(name).replace(/\s+/g, ' ').trim();
+  return /\(\s*\d+\s+(?:RESURS|RESURSLAR|РЕСУРС|РЕСУРСА|РЕСУРСОВ|RESOURCE|RESOURCES)\s*\)$/.test(raw);
+}
+
 function isSectionLabel(name: string): boolean {
   const normalized = normal(name);
   if (/^(РАЗДЕЛ|РЕСУРСЫ ПО|ЗАТРАТЫ ТРУДА|ТРУДОВЫЕ РЕСУРСЫ|СТРОИТЕЛЬНЫЕ МАШИН|СТРОИТЕЛЬНЫЕ МАТЕРИАЛ|МАТЕРИАЛЬНЫЕ РЕСУРСЫ|МЕСТНЫЕ МАТЕРИАЛ|ИНЕРТНЫЕ МАТЕРИАЛ|ОБОРУДОВАНИЕ|РАБОТЫ ВЕДУТСЯ|РЕСУРСЫ$|МАТЕРИАЛЫ$)/.test(normalized)) return true;
@@ -224,6 +233,7 @@ function isSectionLabel(name: string): boolean {
 
 function lineType(name: string, row: readonly unknown[], columns: OfertaResursUstunlar): { turi: OfertaQatorTuri; jamiQamrovi?: 'blok' | 'varaq' } {
   if (isTotalLabel(name)) return { turi: 'jami', jamiQamrovi: isGlobalTotal(name) ? 'varaq' : 'blok' };
+  if (isCategorySummaryLabel(name)) return { turi: 'bolim' };
   const hasUnitOrAmount = Boolean(text(valueAt(row, columns.birlik)) || numberValue(valueAt(row, columns.hajm)) != null || numberValue(valueAt(row, columns.smetaNarx)) != null || numberValue(valueAt(row, columns.smetaSumma)) != null);
   if (!hasUnitOrAmount && isSectionLabel(name)) return { turi: 'bolim' };
   const normalized = normal(name);
@@ -282,6 +292,13 @@ function parseRows(sheetName: string, rows: SheetGrid, columns: OfertaResursUstu
     const tartibNumber = numberValue(tartibRaw);
     const shifr = text(valueAt(row, columns.shifr)) || null;
     const isAggregateCalculation = turi === 'transport_xarajati' && transportSheet;
+    // RESURS_VEDOMOST ko‘rinishida alohida birlik narxi bo‘lmasligi mumkin:
+    // manba faqat hajm va shu qatorning aniq summasini beradi. Bunday qatorni
+    // hajmga qayta ko‘paytirish uchun soxta birlik narx yaratmaymiz; manba jami
+    // sifatida foiz/qo‘lda berilgan taklif summasini qo‘llaymiz.
+    const parsedHisobTuri = turi === 'resurs' && columns.smetaNarx < 0 && smetaSumma != null
+      ? 'manba_jami'
+      : hisobTuri(turi, hajm, smetaNarx, smetaSumma);
     qatorlar.push({
       sourceId,
       sourceSheet: sheetName,
@@ -294,7 +311,7 @@ function parseRows(sheetName: string, rows: SheetGrid, columns: OfertaResursUstu
       smetaBirlikNarx: smetaNarx,
       smetaSumma,
       turi,
-      hisobTuri: isAggregateCalculation ? 'manba_jami' : hisobTuri(turi, hajm, smetaNarx, smetaSumma),
+      hisobTuri: isAggregateCalculation ? 'manba_jami' : parsedHisobTuri,
       blokKaliti: activeBlock,
       jamiQamrovi,
       manbaHajmUstuni: columns.hajm,

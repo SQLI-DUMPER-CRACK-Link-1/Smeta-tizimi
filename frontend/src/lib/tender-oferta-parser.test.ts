@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ofertaResursVaraqlariniAniqla, ofertaTanlanganQatorlari } from './tender-oferta-parser';
+import { ofertaQatorlariniHisobla } from './tender-oferta';
 import type { SheetGrid, XlsxWorkbook } from './f2-import-parse';
 
 function workbook(sheets: Array<{ name: string; rows: unknown[][] }>): XlsxWorkbook {
@@ -111,5 +112,23 @@ describe('tender oferta RES parseri', () => {
     expect(result.find((sheet) => sheet.nom === 'RES_A')?.alternativVaraq).toBe('RES');
     expect(ofertaTanlanganQatorlari(result, ['RES', 'RES_A'])).toHaveLength(3);
     expect(ofertaTanlanganQatorlari(result, ['RES_A'])).toHaveLength(3);
+  });
+
+  it('lotincha RESURS_VEDOMOST sarlavhasini o‘qiydi va kategoriya subtotalini resursga qo‘shmaydi', () => {
+    const wb = workbook([{ name: 'RESURS_VEDOMOST', rows: [
+      ['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa'],
+      ['ЧЕЛ (1 resurs)', null, null, null, null, 2261477091.47],
+      [null, '1', 'ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ', 'ЧЕЛ.-Ч', 76865.56, 2261477091.47],
+      ['МАШ (1 resurs)', null, null, null, null, 5418830070.05],
+      [null, '107', 'АВТОГРЕЙДЕРЫ', 'МАШ.-Ч', 504.84, 185560562.07],
+    ] }]);
+    const [sheet] = ofertaResursVaraqlariniAniqla(wb);
+    expect(sheet.role).toBe('res');
+    expect(sheet.qatorlar).toHaveLength(4);
+    expect(sheet.qatorlar.filter((row) => row.turi === 'bolim').map((row) => row.nom)).toEqual(['ЧЕЛ (1 resurs)', 'МАШ (1 resurs)']);
+    expect(sheet.qatorlar.filter((row) => row.turi === 'resurs')).toHaveLength(2);
+    expect(sheet.qatorlar.filter((row) => row.turi === 'resurs').every((row) => row.hisobTuri === 'manba_jami')).toBe(true);
+    const hisob = ofertaQatorlariniHisobla(sheet.qatorlar, { rejim: 'foiz', yon: 'pasaytirish', foiz: 0 });
+    expect(hisob.smetaJami).toBeCloseTo(2261477091.47 + 185560562.07, 2);
   });
 });
