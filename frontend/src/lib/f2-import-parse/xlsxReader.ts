@@ -60,12 +60,12 @@ function isLegacyOle2(buf: Uint8Array): boolean {
  * every current real upload path is a real `.xlsx`, so this changes
  * nothing for the common case.
  */
-async function readLegacyXls(buf: Uint8Array): Promise<XlsxWorkbook> {
+async function readWithSheetJs(buf: Uint8Array): Promise<XlsxWorkbook> {
   let XLSX: typeof import('xlsx');
   try {
     XLSX = await import('xlsx');
   } catch {
-    throw new Error('XLS_LEGACY_READER_UNAVAILABLE: eski (.xls) formatni o‘qish kutubxonasi yuklanmadi.');
+    throw new Error('XLS_SPREADSHEET_READER_UNAVAILABLE: jadval formatini o‘qish kutubxonasi yuklanmadi.');
   }
   const wb = XLSX.read(buf, { type: 'array', cellDates: false });
   const sheets: XlsxSheet[] = wb.SheetNames.map((name) => {
@@ -82,6 +82,17 @@ async function readLegacyXls(buf: Uint8Array): Promise<XlsxWorkbook> {
     return { name, rows, merges };
   });
   return { sheets, sheet: (name: string) => sheets.find((s) => s.name === name) ?? null };
+}
+
+async function readLegacyXls(buf: Uint8Array): Promise<XlsxWorkbook> {
+  try {
+    return await readWithSheetJs(buf);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('XLS_SPREADSHEET_READER_UNAVAILABLE')) {
+      throw new Error('XLS_LEGACY_READER_UNAVAILABLE: eski (.xls) formatni o‘qish kutubxonasi yuklanmadi.');
+    }
+    throw error;
+  }
 }
 
 const EOCD_SIG = 0x06054b50;
@@ -223,7 +234,23 @@ function parseWorkbookSheetList(xml: string, relsXml: string | undefined): Array
 export async function readXlsx(bytes: ArrayBuffer | Uint8Array): Promise<XlsxWorkbook> {
   const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   if (isLegacyOle2(buf)) return readLegacyXls(buf);
-  const files = await unzip(buf);
+  let files: Record<string, Uint8Array>;
+  try {
+    files = await unzip(buf);
+  } catch (error) {
+    const looksLikeZip = buf.length >= 4 && buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
+    if (!looksLikeZip) throw error;
+    // Web unzipper browser/Worker uchun asosiy yo‘l. Lekin Node test muhiti,
+    // eski Chromium yoki ayrim Excel eksportlari Blob.stream/DEFLATE
+    // imkoniyatini bermasligi mumkin. Bunday holatda importni “Cannot read …”
+    // bilan sindirmay, mavjud SheetJS fallback orqali ayni jadvalni o‘qiymiz.
+    // Noto‘g‘ri fayl bo‘lsa fallback ham yiqiladi va asl parser xatosi qaytadi.
+    try {
+      return await readWithSheetJs(buf);
+    } catch {
+      throw error;
+    }
+  }
   const dec = new TextDecoder('utf-8');
 
   const workbookXml = files['xl/workbook.xml'] ? dec.decode(files['xl/workbook.xml']) : null;
