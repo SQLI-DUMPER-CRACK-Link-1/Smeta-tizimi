@@ -30,7 +30,9 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
 /** Bitta so'rovda yuboriladigan qatorlar soni. 4000 qator ~ 800 KB JSON --
  *  Pages Function uchun ham, Postgres uchun ham arzon (o'lchandi: bitta
  *  bo'lak ~70 ms). Serverdagi qattiq chegara 10 000. */
-const BOLAK_HAJMI = 4000;
+/* 2000: bitta so‘rov yengil bo‘lsin — 27k qatorli obyektda 4000 lik bo‘lak
+   Cloudflare orqali tarmoq uzilishiga uchragan (owner, 2026-09-23). */
+const BOLAK_HAJMI = 2000;
 
 type SmetaYuklaJavob = {
   ok: boolean; code?: string; xato?: string; xabar?: string;
@@ -85,6 +87,27 @@ async function smetaSorov(yuk: Record<string, unknown>): Promise<SmetaYuklaJavob
   } catch {
     return { ok: false, code: 'NETWORK', xato: 'Tarmoq uzildi. Qayta urinib ko‘ring.' };
   }
+}
+
+/** Vaqtinchalik (tarmoq/uzilish) xatolar — qayta urinish xavfsiz, chunki
+ *  server bo‘lakni (sessiya, bo‘lak) bo‘yicha upsert qiladi
+ *  (t2_smeta_import_bolak_v1): takror yuborish ikkinchi nusxa yaratmaydi. */
+const VAQTINCHALIK_KODLAR = new Set(['NETWORK', 'BAD_RESPONSE']);
+const QAYTA_KUTISH_MS = [2000, 5000, 10000, 20000];
+
+export async function bolakniQaytaUrinibYubor(
+  yuk: Record<string, unknown>,
+  onQaytaUrinish?: (urinish: number, jami: number) => void,
+  yuborish: (y: Record<string, unknown>) => Promise<SmetaYuklaJavob> = smetaSorov,
+  kutish: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<SmetaYuklaJavob> {
+  let javob = await yuborish(yuk);
+  for (let i = 0; i < QAYTA_KUTISH_MS.length && !javob.ok && VAQTINCHALIK_KODLAR.has(String(javob.code)); i++) {
+    onQaytaUrinish?.(i + 1, QAYTA_KUTISH_MS.length);
+    await kutish(QAYTA_KUTISH_MS[i]);
+    javob = await yuborish(yuk);
+  }
+  return javob;
 }
 
 /**
@@ -1239,7 +1262,8 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       const chunks = bolaklarga(flatRows, BOLAK_HAJMI);
       for (let i = 0; i < chunks.length; i++) {
         setPhase(`Paket qatorlari yuborilmoqda: ${i + 1}/${chunks.length}`);
-        const part = await smetaSorov({ amal: 'paket_import_bolak', kompaniyaId: companyId, sessiyaId, bolak: i, qatorlar: chunks[i] });
+        const part = await bolakniQaytaUrinibYubor({ amal: 'paket_import_bolak', kompaniyaId: companyId, sessiyaId, bolak: i, qatorlar: chunks[i] },
+          (n, jami) => setPhase(`Paket qatorlari yuborilmoqda: ${i + 1}/${chunks.length} — tarmoq uzildi, qayta urinish ${n}/${jami}`));
         if (!part.ok) throw new Error('Paketning ' + (i + 1) + '-bo‘lagi qabul qilinmadi (' + (part.code || 'xato') + ').');
       }
       setPhase('Paket kanonik bazaga yozilmoqda');
@@ -1437,9 +1461,9 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
       const bolaklar = bolaklarga(flatRows, BOLAK_HAJMI);
       qadam(`Qatorlar yuborilmoqda (${flatRows.length} ta, ${bolaklar.length} bo‘lak)`);
       for (let i = 0; i < bolaklar.length; i++) {
-        const b = await smetaSorov({
+        const b = await bolakniQaytaUrinibYubor({
           amal: 'import_bolak', kompaniyaId: companyId, sessiyaId, bolak: i, qatorlar: bolaklar[i],
-        });
+        }, (n, jami) => tafsilotYangila(`${i + 1}/${bolaklar.length} bo‘lak — tarmoq uzildi, qayta urinish ${n}/${jami}…`));
         if (!jonli()) return;
         if (!b.ok) {
           yakunla('xato', `${i + 1}-bo‘lak: ` + (b.xato || b.code || 'noma’lum xato'));
