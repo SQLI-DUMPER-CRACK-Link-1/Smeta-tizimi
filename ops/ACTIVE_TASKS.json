@@ -792,11 +792,25 @@
       "branch": "claude/smeta-anatomiya-v1",
       "base_sha": "3e2e74b",
       "status": "in_progress",
-      "owns": ["docs/architecture/SMETA_ANATOMIYA_V1.md", "frontend/src/lib/smeta-anatomiya/", "frontend/scripts/korpus/", "frontend/src/admin/sahifalar/SmetaYuklaNative.tsx", "frontend/src/admin/sahifalar/SmetaYuklaNative.ierarxiya.test.ts", "frontend/src/api/supabase.ts", "frontend/src/api/supabase.t2-tree.test.ts", "frontend/vitest.config.ts"],
+      "owns": ["docs/architecture/SMETA_ANATOMIYA_V1.md", "frontend/src/lib/smeta-anatomiya/", "frontend/scripts/korpus/", "frontend/src/admin/sahifalar/SmetaYuklaNative.tsx", "frontend/src/admin/sahifalar/SmetaYuklaNative.test.ts", "frontend/src/admin/sahifalar/SmetaYuklaNative.ierarxiya.test.ts", "frontend/src/lib/smeta-source-analysis.ts", "frontend/src/lib/smeta-lrv-boundary.ts", "frontend/src/lib/f2-import-parse/", "frontend/src/lib/smeta-package-import.ts", "frontend/vitest.config.ts", "ops/handoff/SMETA_ANATOMIYA_IKKI_QISM_2026-09-25.md"],
       "depends_on": [],
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/architecture/SMETA_ANATOMIYA_V1.md"],
       "production_write_allowed": false,
       "_izoh": "Egasi 2026-09-23: har funksiya smetani alohida o‘qiydi, RZ faqat oxirgisi qoladi, 3 xil yuklash UI, 27k qatorda qotish. Oferta V2 (claude/t2-oferta-v2) shu modulning birinchi iste’molchisi."
+    },
+    {
+      "id": "SMETA-ANAT-002-A",
+      "title": "A qismi (GitHub agenti): Oferta V2 anatomiya ustida, katta obyekt tezligi, Ostatka eksporti, lint qoidasi, CURRENT_STATE",
+      "owner": "github-agent",
+      "machine": "github",
+      "branch": "claude/t2-oferta-v2",
+      "base_sha": "4e6dcce",
+      "status": "in_progress",
+      "owns": ["frontend/src/lib/tender-oferta.ts", "frontend/src/lib/tender-oferta.test.ts", "frontend/src/lib/tender-oferta-parser.ts", "frontend/src/lib/tender-oferta-parser.test.ts", "frontend/src/lib/tender-oferta-export.ts", "frontend/src/lib/tender-oferta-export.test.ts", "frontend/src/lib/nakrutka-kaskad.ts", "frontend/src/lib/nakrutka-kaskad.test.ts", "frontend/src/lib/res-kategoriya.ts", "frontend/src/admin/sahifalar/OfertaNative.tsx", "frontend/src/lib/ostatka-export.ts", "frontend/src/lib/ostatka-export.test.ts", "frontend/src/api/supabase.ts", "frontend/src/api/supabase.t2-tree.test.ts", "frontend/src/umumiy/daraxt/useT2Daraxt.ts", "frontend/src/umumiy/daraxt/useT2Daraxt.test.ts", "frontend/src/admin/sahifalar/HolatNative.tsx", "frontend/src/admin/sahifalar/FaktNative.tsx", "frontend/.oxlintrc.json", "docs/governance/CURRENT_STATE.md"],
+      "depends_on": ["SMETA-ANAT-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/architecture/SMETA_ANATOMIYA_V1.md", "ops/handoff/SMETA_ANATOMIYA_IKKI_QISM_2026-09-25.md"],
+      "production_write_allowed": false,
+      "_izoh": "Egasi 2026-09-25: ishni 2 qismga bo‘lish. A — faqat repo (real fayl/Excel/login yo‘q). B — Claude noutbukda (SMETA-ANAT-001)."
     }
   ]
 }
