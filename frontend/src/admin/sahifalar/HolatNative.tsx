@@ -12,6 +12,8 @@ import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
 import { t2ObyektNakrutka } from '../../api/t2-nakrutka';
 import type { TreeNode } from '../../api/types';
 import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
+import { ostatkaQatorlari } from '../../lib/ostatka-export';
+import { toast } from '../../umumiy/ui/Toast';
 import SmetaYuklaNative from './SmetaYuklaNative';
 import ResursVedomostNative from './ResursVedomostNative';
 import NarxNazoratNative from './NarxNazoratNative';
@@ -146,6 +148,36 @@ export function HolatNative() {
     } finally { setEksportBolmoqda(false); }
   }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason]);
 
+  /* Egasi (2026-09-23): "tizim ostatka ishlarni ham bittada smeta shaklida bera
+     oladigan bo'lishi kerak". Ostatka = smeta − fakt (LRV_PLUS Q ustuni bilan bir
+     xil); hujjat Forma-2 ko'rinishida LRV_PLUS yozuvchisidan chiqadi. */
+  const ostatkaEksport = useCallback(async () => {
+    if (!selected || !daraxtXom.length) return;
+    if (!exportGate.ok) {
+      setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
+      return;
+    }
+    const ost = ostatkaQatorlari(daraxtXom, holatXom);
+    if (!ost.barglar) {
+      toast(`Ostatka yo‘q: barcha ishlar bajarilgan${ost.oshibKetgan ? `, ${ost.oshibKetgan} ta qatorda fakt smetadan oshgan` : ''}.`, 'warn');
+      return;
+    }
+    setEksportBolmoqda(true);
+    try {
+      const bytes = await lrvPlusFaylBaytlari(ost.qatorlar, selected.nom, undefined, {
+        rejim: 'forma2', sarlavha: `ОСТАТКА ИШЛАР — ${selected.nom}`,
+      }, exportContext);
+      lrvPlusYuklab(bytes, selected.nom + '_OSTATKA');
+      const izoh = [
+        ost.oshibKetgan ? `${ost.oshibKetgan} ta qatorda fakt smetadan oshgan — kirmadi` : '',
+        ost.nomalum ? `${ost.nomalum} ta qatorda smeta hajmi noma’lum — kirmadi` : '',
+      ].filter(Boolean).join('; ');
+      toast(`Ostatka: ${ost.barglar} ta qator.${izoh ? ' ' + izoh + '.' : ''}`, izoh ? 'warn' : 'ok');
+    } catch {
+      setError('Ostatka Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
+    } finally { setEksportBolmoqda(false); }
+  }, [selected, daraxtXom, holatXom, exportContext, exportGate.ok, exportBlockReason]);
+
 
   const smetaJami = tree.reduce((sum, n) => sum + (n.smeta || 0), 0);
   const faktJami = tree.reduce((sum, n) => sum + (n.stFakt || 0), 0);
@@ -207,6 +239,11 @@ export function HolatNative() {
               title={exportGate.ok ? "Forma-2 -- LRV'ning O ustunigacha bo'lgan qismi + nakrutka kaskadi. Buyurtmachiga tasdiqlash uchun yuboriladigan shakl." : `Eksport bloklangan: ${exportBlockReason}`}
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Forma-2 Excel'}
+            </button>
+            <button onClick={() => void ostatkaEksport()} disabled={eksportBolmoqda || !exportGate.ok}
+              title={exportGate.ok ? "Bajarilmay qolgan ishlar (smeta − fakt) smeta shaklida: RZ ierarxiyasi, formulalar $ siz." : `Eksport bloklangan: ${exportBlockReason}`}
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
+              <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Ostatka Excel'}
             </button>
           </>)}
           {validId && tree.length > 0 && !exportGate.ok && (

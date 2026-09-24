@@ -86,7 +86,7 @@ describe('universal smeta package sheet analysis', () => {
 
 describe('package selection safety', () => {
   it('bitta XLSX ichidagi RES faqat o‘sha XLSX LRV manbasiga birikadi', () => {
-    const sheets = [base(), base({ id: 'sheet-2', sourceKey: 'res-a', selectedRole: 'res', targetLrvSourceKey: 'source-b' }), base({ id: 'sheet-3', workbookId: 'book-b', sourceKey: 'source-b' })];
+    const sheets = [base(), base({ id: 'sheet-2', sourceKey: 'res-a', selectedRole: 'res', targetLrvSourceKeys: ['source-b'] }), base({ id: 'sheet-3', workbookId: 'book-b', sourceKey: 'source-b' })];
     expect(smetaPaketTanloviniTekshir(sheets, smetaPaketTasdiqImzosi(sheets))).toEqual({ ok: false, code: 'PACKAGE_INTERNAL_RES_TARGET_MISMATCH', sheetId: 'sheet-2' });
   });
 
@@ -95,8 +95,34 @@ describe('package selection safety', () => {
     expect(smetaPaketTanloviniTekshir(sheets, smetaPaketTasdiqImzosi(sheets))).toEqual({ ok: false, code: 'PACKAGE_RES_TARGET_REQUIRED', sheetId: 'sheet-2' });
   });
 
+  it('tashqi RES checkbox bilan BIR NECHTA LRVga birikadi (egasi 2026-09-23)', () => {
+    const lrvB = base({ id: 'sheet-b', workbookId: 'book-b', sourceKey: 'source-b' });
+    const res = base({ id: 'sheet-r', workbookId: 'book-res', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKeys: ['source-a', 'source-b'] });
+    const sheets = [base(), lrvB, res];
+    expect(smetaPaketTanloviniTekshir(sheets, smetaPaketTasdiqImzosi(sheets))).toEqual({ ok: true });
+  });
+
+  it('takroriy yoki mavjud bo‘lmagan nishon — rad; ichki RES boshqa fayl LRVsiga — rad', () => {
+    const lrvB = base({ id: 'sheet-b', workbookId: 'book-b', sourceKey: 'source-b' });
+    const takror = [base(), lrvB, base({ id: 'r', workbookId: 'book-res', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKeys: ['source-a', 'source-a'] })];
+    expect(smetaPaketTanloviniTekshir(takror, smetaPaketTasdiqImzosi(takror))).toMatchObject({ ok: false, code: 'PACKAGE_RES_TARGET_INVALID' });
+    const begona = [base(), base({ id: 'r', workbookId: 'book-res', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKeys: ['yoq'] })];
+    expect(smetaPaketTanloviniTekshir(begona, smetaPaketTasdiqImzosi(begona))).toMatchObject({ ok: false, code: 'PACKAGE_RES_TARGET_INVALID' });
+    const ichki = [base(), lrvB, base({ id: 'r', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKeys: ['source-a', 'source-b'] })];
+    expect(smetaPaketTanloviniTekshir(ichki, smetaPaketTasdiqImzosi(ichki))).toMatchObject({ ok: false, code: 'PACKAGE_INTERNAL_RES_TARGET_MISMATCH' });
+  });
+
+  it('tasdiq imzosi nishonlar tartibiga bog‘liq emas, lekin nishon o‘zgarsa tasdiq yaroqsiz', () => {
+    const lrvB = base({ id: 'sheet-b', workbookId: 'book-b', sourceKey: 'source-b' });
+    const ab = [base(), lrvB, base({ id: 'r', workbookId: 'book-res', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKeys: ['source-a', 'source-b'] })];
+    const ba = [base(), lrvB, base({ id: 'r', workbookId: 'book-res', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKeys: ['source-b', 'source-a'] })];
+    const faqatA = [base(), lrvB, base({ id: 'r', workbookId: 'book-res', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKeys: ['source-a'] })];
+    expect(smetaPaketTasdiqImzosi(ab)).toBe(smetaPaketTasdiqImzosi(ba));
+    expect(smetaPaketTanloviniTekshir(faqatA, smetaPaketTasdiqImzosi(ab))).toMatchObject({ ok: false, code: 'PACKAGE_CONFIRMATION_REQUIRED' });
+  });
+
   it('tasdiqlashsiz importni va tahlil o‘zgargan eski tasdiqni bloklaydi', () => {
-    const sheets = [base(), base({ id: 'sheet-2', workbookId: 'book-res', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKey: 'source-a' })];
+    const sheets = [base(), base({ id: 'sheet-2', workbookId: 'book-res', sourceKey: 'res', selectedRole: 'res', targetLrvSourceKeys: ['source-a'] })];
     const signature = smetaPaketTasdiqImzosi(sheets);
     expect(smetaPaketTanloviniTekshir(sheets)).toEqual({ ok: false, code: 'PACKAGE_CONFIRMATION_REQUIRED' });
     expect(smetaPaketTanloviniTekshir([...sheets.slice(0, 1), { ...sheets[1], analysisKey: 'changed' }], signature)).toEqual({ ok: false, code: 'PACKAGE_CONFIRMATION_REQUIRED' });
@@ -112,7 +138,7 @@ describe('package selection safety', () => {
       base({ id: 'summary', sourceKey: 'summary', selectedRole: 'ignore' }),
       base({ id: 'transport', sourceKey: 'transport', selectedRole: 'ignore' }),
       base({ id: 'lrv-4230', sourceKey: 'lrv-4230', selectedRole: 'lrv' }),
-      base({ id: 'res-4230', sourceKey: 'res-4230', selectedRole: 'res', targetLrvSourceKey: 'lrv-4230' }),
+      base({ id: 'res-4230', sourceKey: 'res-4230', selectedRole: 'res', targetLrvSourceKeys: ['lrv-4230'] }),
     ];
     expect(smetaPaketTanloviniTekshir(sheets, smetaPaketTasdiqImzosi(sheets))).toEqual({ ok: true });
   });
@@ -122,7 +148,7 @@ describe('package selection safety', () => {
       base({ id: 'lrv', sourceKey: 'lrv', workbookId: 'book-a' }),
       base({ id: 'res', sourceKey: 'res', workbookId: 'book-a', selectedRole: 'res' }),
     ];
-    expect(smetaPaketResTargetlariniTaklifQil(sheets)[1].targetLrvSourceKey).toBe('lrv');
+    expect(smetaPaketResTargetlariniTaklifQil(sheets)[1].targetLrvSourceKeys).toEqual(['lrv']);
   });
 
   it('bir nechta LRV bo‘lsa RESni indeks yoki nom bilan taxminan aralashtirmaydi', () => {
@@ -131,6 +157,6 @@ describe('package selection safety', () => {
       base({ id: 'lrv-b', sourceKey: 'lrv-b', workbookId: 'book-a' }),
       base({ id: 'res', sourceKey: 'res', workbookId: 'book-a', selectedRole: 'res' }),
     ];
-    expect(smetaPaketResTargetlariniTaklifQil(sheets)[2].targetLrvSourceKey).toBeUndefined();
+    expect(smetaPaketResTargetlariniTaklifQil(sheets)[2].targetLrvSourceKeys).toBeUndefined();
   });
 });

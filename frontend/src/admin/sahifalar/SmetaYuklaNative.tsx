@@ -57,7 +57,10 @@ type PaketVaraq = SmetaPackageSheetChoice & {
   /** LRV yakunidan keyingi ichki RES ilovasi bo'lsa, operatorga
    * ko'rinadigan Excel satr chegarasi. Bu ilova ish daraxtiga kirmaydi. */
   embeddedResBoundaryRow?: number;
+  /** LRV hujjati (yoki eski yagona RES) R2 dagi ID — qayta urinishda qayta yuklanmaydi. */
   documentId?: number;
+  /** RES: har nishon LRV uchun alohida hujjat (server slot i manbaga bog'langan). */
+  resDocumentIdByTarget?: Record<string, number>;
 };
 
 /** XLSX parser boundary: malformed/legacy worksheet data must never reach a
@@ -1107,7 +1110,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         }], { harManbagaRz: true });
         if (!tree.length) throw new Error(`«${lrv.file.name} / ${lrv.sheetName}» LRV daraxti bo‘sh chiqdi.`);
         const tashqiResRows = tanlanganResManbalariniYig(reses
-          .filter((res) => res.targetLrvSourceKey === lrv.sourceKey)
+          .filter((res) => res.targetLrvSourceKeys?.includes(lrv.sourceKey))
           .map((res) => ({ rows: res.rows, cols: res.resCols })));
         /* LRV ostidagi RES ilovasi faqat alohida/aniq ulangan RES yo'q bo'lsa
            narx manbasiga aylanadi. Ikkalasi birga bo'lsa ilova ikkinchi
@@ -1128,22 +1131,30 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         const documentId = lrv.documentId ?? await paketHujjatiniR2gaYukla(lrv.file, objId, 'smeta_lrv', `smeta-paket:${paketKalit}:${lrv.sourceKey}:lrv`);
         uploadedDocumentIds.set(lrv.id, documentId);
       }
+      /* Bitta RES bir nechta LRV ga belgilangan bo'lsa — har nishon uchun o'z
+         hujjati (server slot i `smeta-paket:<paket>:<lrv>:res:<n>` manbaga
+         bog'langan; bitta hujjat ikki manbada — PACKAGE_RES_SOURCE_DUPLICATE).
+         Shunday har bog'lanish provenance i bazada alohida qayd bo'ladi. */
       const resOrdinalByTarget = new Map<string, number>();
+      const resDocByTarget = new Map<string, Record<string, number>>();
       for (const res of reses) {
-        const target = res.targetLrvSourceKey!;
-        const ordinal = (resOrdinalByTarget.get(target) || 0) + 1;
-        resOrdinalByTarget.set(target, ordinal);
-        const documentId = res.documentId ?? await paketHujjatiniR2gaYukla(res.file, objId, 'smeta_res', `smeta-paket:${paketKalit}:${target}:res:${ordinal}`);
-        uploadedDocumentIds.set(res.id, documentId);
+        const byTarget: Record<string, number> = { ...(res.resDocumentIdByTarget ?? {}) };
+        for (const target of res.targetLrvSourceKeys ?? []) {
+          const ordinal = (resOrdinalByTarget.get(target) || 0) + 1;
+          resOrdinalByTarget.set(target, ordinal);
+          byTarget[target] ??= await paketHujjatiniR2gaYukla(res.file, objId, 'smeta_res', `smeta-paket:${paketKalit}:${target}:res:${ordinal}`);
+        }
+        resDocByTarget.set(res.id, byTarget);
       }
       setPaketVaraqlar((prev) => prev.map((sheet) => uploadedDocumentIds.has(sheet.id)
-        ? { ...sheet, documentId: uploadedDocumentIds.get(sheet.id) } : sheet));
+        ? { ...sheet, documentId: uploadedDocumentIds.get(sheet.id) }
+        : resDocByTarget.has(sheet.id) ? { ...sheet, resDocumentIdByTarget: resDocByTarget.get(sheet.id) } : sheet));
 
       const plan: SmetaPaketManbaReja[] = lrvs.map((lrv) => ({
         key: lrv.sourceKey,
         nom: `${lrv.file.name} / ${lrv.sheetName}`,
         lrvDocumentId: uploadedDocumentIds.get(lrv.id)!,
-        resDocumentIds: reses.filter((res) => res.targetLrvSourceKey === lrv.sourceKey).map((res) => uploadedDocumentIds.get(res.id)!),
+        resDocumentIds: reses.filter((res) => res.targetLrvSourceKeys?.includes(lrv.sourceKey)).map((res) => resDocByTarget.get(res.id)![lrv.sourceKey]),
       }));
       const check = smetaPaketRejasiniTekshir(paketKalit, paketNom, plan);
       if (!check.ok) throw new Error('Smeta paketi manba kontrakti bajarilmadi: ' + check.code + (check.sourceKey ? ` (${check.sourceKey})` : '') + '.');
@@ -1498,13 +1509,26 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
                         <td className="py-1 pr-2">{sheet.file.name}<br /><span className="text-text-mute">{sheet.sheetName}</span></td>
                         <td className="py-1 pr-2"><span className="capitalize">{sheet.selectedRole === 'ignore' ? 'e’tiborsiz' : sheet.analysis.detectedRole}</span> · {sheet.analysis.confidence}<br /><span className="text-text-mute">{sheet.analysis.ignoreReason || sheet.analysis.evidence[0] || 'signal yo‘q'}</span>{sheet.embeddedResBoundaryRow && <><br /><span className="text-warn">LRV yakunidan keyingi RES ilovasi {sheet.embeddedResBoundaryRow}-qatordan ajratiladi</span></>}</td>
                         <td className="py-1 pr-2"><select aria-label={`${sheet.file.name} ${sheet.sheetName} roli`} className="border rounded px-1" value={sheet.selectedRole || ''} disabled={paketBand}
-                          onChange={e => paketVaraqniYangila(sheet.id, { selectedRole: (e.target.value || undefined) as PaketVaraq['selectedRole'], targetLrvSourceKey: e.target.value === 'res' ? sheet.targetLrvSourceKey : undefined })}>
+                          onChange={e => paketVaraqniYangila(sheet.id, { selectedRole: (e.target.value || undefined) as PaketVaraq['selectedRole'], targetLrvSourceKeys: e.target.value === 'res' ? sheet.targetLrvSourceKeys : undefined })}>
                           <option value="">Tanlang</option><option value="lrv">LRV</option><option value="res">RES</option><option value="ignore">E’tiborsiz</option>
                         </select></td>
-                        <td className="py-1 pr-2">{sheet.selectedRole === 'res' ? <><select aria-label={`${sheet.file.name} ${sheet.sheetName} RES manbasi`} className="border rounded px-1" value={sheet.targetLrvSourceKey || ''} disabled={paketBand}
-                          onChange={e => paketVaraqniYangila(sheet.id, { targetLrvSourceKey: e.target.value || undefined })}>
-                          <option value="">Tanlang — global qo‘llanmaydi</option>{targets.map(target => <option key={target.id} value={target.sourceKey}>{target.file.name} / {target.sheetName}</option>)}
-                        </select><br /><span className="text-text-mute">{internal ? 'Ichki RES: faqat shu XLSX LRVsi' : 'Tashqi RES: operator tanlagan bitta LRV'}</span></> : '—'}</td>
+                        <td className="py-1 pr-2">{sheet.selectedRole === 'res' ? <>
+                          <fieldset aria-label={`${sheet.file.name} ${sheet.sheetName} RES qaysi LRVlarga`} className="space-y-0.5" disabled={paketBand}>
+                            {targets.map(target => {
+                              const belgi = sheet.targetLrvSourceKeys?.includes(target.sourceKey) ?? false;
+                              return <label key={target.id} className="flex items-center gap-1.5">
+                                <input type="checkbox" checked={belgi}
+                                  onChange={() => {
+                                    const joriy = sheet.targetLrvSourceKeys ?? [];
+                                    const yangi = belgi ? joriy.filter(k => k !== target.sourceKey) : [...joriy, target.sourceKey];
+                                    paketVaraqniYangila(sheet.id, { targetLrvSourceKeys: yangi.length ? yangi : undefined });
+                                  }} />
+                                <span>{target.file.name} / {target.sheetName}</span>
+                              </label>;
+                            })}
+                            {!targets.length && <span className="text-warn">Avval kamida bitta varaqni LRV deb belgilang</span>}
+                          </fieldset>
+                          <span className="text-text-mute">{internal ? 'Ichki RES: faqat shu XLSX LRV(lar)i' : 'Tashqi RES: belgilangan har LRV ga — boshqasiga avtomatik tarqatilmaydi'}</span></> : '—'}</td>
                         <td className="py-1"><button type="button" className="text-danger underline disabled:opacity-50" disabled={paketBand}
                           onClick={() => { setPaketVaraqlar(prev => prev.filter(item => item.id !== sheet.id)); setPaketTasdiqImzosi(null); paketImportOperationId.current = ''; }}>Olib tashlash</button></td>
                       </tr>;

@@ -27,7 +27,10 @@ export type SmetaPackageSheetChoice = {
   sourceKey: string;
   analysisKey: string;
   selectedRole?: Exclude<SmetaSheetRole, 'unknown'>;
-  targetLrvSourceKey?: string;
+  /** RES qaysi LRV(lar)ga narx manbasi (egasi 2026-09-23: bitta RES ni checkbox
+   *  bilan BIR NECHTA LRV ga bog'lash). Faqat operator belgilaganlari — RES hech
+   *  qachon boshqa LRV ga avtomatik tarqatilmaydi. */
+  targetLrvSourceKeys?: string[];
 };
 
 export type SmetaPackageSelectionCode =
@@ -171,7 +174,7 @@ export function smetaVaraqniTahlilQil(rows: SheetGrid | null | undefined): Smeta
 /** Tanlov yoki manba tahlili o'zgarsa oldingi tasdiq avtomatik yaroqsiz bo'ladi. */
 export function smetaPaketTasdiqImzosi(sheets: readonly SmetaPackageSheetChoice[]): string {
   return sheets.slice().sort((a, b) => a.id.localeCompare(b.id)).map((sheet) =>
-    [sheet.id, sheet.sourceKey, sheet.analysisKey, sheet.selectedRole || '', sheet.targetLrvSourceKey || ''].join(':')
+    [sheet.id, sheet.sourceKey, sheet.analysisKey, sheet.selectedRole || '', [...(sheet.targetLrvSourceKeys ?? [])].sort().join(',')].join(':')
   ).join('|');
 }
 
@@ -192,10 +195,10 @@ export function smetaPaketResTargetlariniTaklifQil<T extends SmetaPackageSheetCh
     byWorkbook.set(lrv.workbookId, list);
   }
   return sheets.map((sheet) => {
-    if (sheet.selectedRole !== 'res' || sheet.targetLrvSourceKey) return sheet;
+    if (sheet.selectedRole !== 'res' || sheet.targetLrvSourceKeys?.length) return sheet;
     const sameWorkbook = byWorkbook.get(sheet.workbookId) || [];
     const candidate = sameWorkbook.length === 1 ? sameWorkbook[0] : lrvs.length === 1 ? lrvs[0] : undefined;
-    return candidate ? { ...sheet, targetLrvSourceKey: candidate.sourceKey } : sheet;
+    return candidate ? { ...sheet, targetLrvSourceKeys: [candidate.sourceKey] } : sheet;
   });
 }
 
@@ -216,10 +219,14 @@ export function smetaPaketTanloviniTekshir(
   }
   const lrvKeys = new Set(lrvs.map((sheet) => sheet.sourceKey));
   for (const sheet of active.filter((item) => item.selectedRole === 'res')) {
-    if (!sheet.targetLrvSourceKey) return { ok: false, code: 'PACKAGE_RES_TARGET_REQUIRED', sheetId: sheet.id };
-    if (!lrvKeys.has(sheet.targetLrvSourceKey)) return { ok: false, code: 'PACKAGE_RES_TARGET_INVALID', sheetId: sheet.id };
+    const targets = sheet.targetLrvSourceKeys ?? [];
+    if (!targets.length) return { ok: false, code: 'PACKAGE_RES_TARGET_REQUIRED', sheetId: sheet.id };
+    if (new Set(targets).size !== targets.length || targets.some((t) => !lrvKeys.has(t))) {
+      return { ok: false, code: 'PACKAGE_RES_TARGET_INVALID', sheetId: sheet.id };
+    }
+    // LRV bilan bir XLSX dagi ichki RES faqat o'z faylining LRV(lar)iga.
     const ownWorkbookLrvs = lrvs.filter((lrv) => lrv.workbookId === sheet.workbookId);
-    if (ownWorkbookLrvs.length && !ownWorkbookLrvs.some((lrv) => lrv.sourceKey === sheet.targetLrvSourceKey)) {
+    if (ownWorkbookLrvs.length && targets.some((t) => !ownWorkbookLrvs.some((lrv) => lrv.sourceKey === t))) {
       return { ok: false, code: 'PACKAGE_INTERNAL_RES_TARGET_MISMATCH', sheetId: sheet.id };
     }
   }
