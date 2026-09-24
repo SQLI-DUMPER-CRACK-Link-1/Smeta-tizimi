@@ -169,3 +169,13 @@ checkpointdir. Eski yozuvlar o‘zgartirilmaydi.
 | `hard_stops` | Destruktiv o‘chirish, TRUNCATE/DROP/reset, qaytarib bo‘lmaydigan data rewrite, secret rotation, yangi pullik majburiyat va tiklab bo‘lmaydigan tashqi xavf. |
 | `production_change_boundary` | Ushbu checkpointda production main, production baza, secret va deploy o‘zgartirilmadi. |
 | `governance_warning` | `governance-check.cjs` endi append-only CURRENT_STATE ichidagi eng yangi `main_sha`ni va mavjud bo‘lsa `origin/main`ni solishtiradi. |
+
+# 2026-09-25 — PTO liniya checkpoint (Smeta anatomiya + Oferta V2)
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `bd5ddb485937ef83619114e9457d35fd14b7cefd` — `origin/main` (Tender Oferta V2) remote tekshirildi; Cloudflare Pages check `completed success`, `/api/soglik` ok. |
+| `landed` | Smeta anatomiya moduli (ichma-ich RZ, svod bog‘lash, erkin varaqlar), import sifat qo‘riqchisi, RES → bir nechta LRV (checkbox), Ostatka Excel, LRV eksport ($ siz formulalar, BL birlik narxi), Fakt qisman yangilash, read-model tezlik kontrakti, Tender Oferta V2. |
+| `production_migrations` | `20261028090000_t2_qator_holat_obyekt_filtr_v1`, `20261028091000_t2_obyekt_read_model_filtr_v2` (owner ruxsati bilan; additive view qayta ta’rifi, rollback bor). |
+| `open_owner_decisions` | `t2_qator_holat` anon SELECT grant; `/api/agent/call` (Hermes) yo‘nalishi; ruflo hook shell:true; "Suniy Ko‘l" (84) 2413 dublikat vedomost qatori — qayta import kerak; ТЕПЛОТРАССА 02-04/02-05 −1.70 чел-ч. |
+| `remaining_evidence` | Authenticated live smoke (Suniy Ko‘l 2 import, fakt, ostatka, oferta) egasining sessiyasini talab qiladi. Excel COM tekshiruvi ofis PC real fayllarida. |
