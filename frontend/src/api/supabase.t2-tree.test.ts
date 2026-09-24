@@ -92,4 +92,22 @@ describe('kanonik LRV daraxti', () => {
     expect(node.qoldiq).toBeNull();
     expect(node.qoldiqSumma).toBeNull();
   });
+
+  it('ichma-ich RZ: ota RZ smetasi bola RZ lar bilan yig‘iladi; null 0 ga aylanmaydi (SMETA_ANATOMIYA_V1)', () => {
+    const q = (id: number, ota_id: number | null, tur: string, summa: number | null) => ({
+      id, obyekt_id: 7, kompaniya_id: 3, ota_id, daraja: 0, tartib: id, tur, kod: null, nom: 'q' + id, birlik: null,
+      hajm: null, narx: null, summa, kat: null, narx_usul: null, qoshimcha: false, zamena: false,
+      d1: null, d2: null, d3: null, xom_qator: null, yangilandi: null, manba_id: null, versiya: 1, raqam: null, norma: null, obyekt: 'X',
+    }) as T2Qator;
+    // ОЗЕРА(rz, o'z ishlari yo'q) → КАНАЛ(rz, 100) → КЖ(rz, 50); bo'sh(rz, null)
+    const [ozera, bosh] = sbT2TreeQur([
+      q(1, null, 'rz', null), q(2, 1, 'rz', 100), q(3, 2, 'rz', 50),
+      q(4, 2, 'bl', 100), q(5, 3, 'bl', 50), q(6, null, 'rz', null),
+    ]);
+    expect(ozera.smeta).toBe(150);
+    expect(ozera.children![0].smeta).toBe(150);
+    expect(ozera.children![0].children!.find((n) => n.type === 'rz')!.smeta).toBe(50);
+    expect(ozera.children![0].children!.find((n) => n.type === 'bl')!.smeta).toBe(100);
+    expect(bosh.smeta).toBeNull();
+  });
 });

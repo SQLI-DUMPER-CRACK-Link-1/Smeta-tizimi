@@ -12,6 +12,8 @@ import {
   smetaPaketResTargetlariniTaklifQil, type SmetaPackageSheetChoice, type SmetaSheetAnalysis,
 } from '../../lib/smeta-source-analysis';
 import type { AktNode } from '../../lib/f2-match-engine';
+import { varaqniTahlilQil } from '../../lib/smeta-anatomiya/varaq';
+import { anatomiyadanAktDaraxt, daraxtlarTengmi } from '../../lib/smeta-anatomiya/akt-daraxt';
 import { smetaQaytaImportDiff, type SmetaReimportDiff, type SmetaReimportLine } from '../../lib/smeta-reimport-diff';
 
 /**
@@ -779,9 +781,47 @@ export function resKategoriyaNomzodlariniOl(satrlar: ResNarxYozuv[]): ResKategor
  * yuqori RZ bo'lib saqlanadi: uchastkalar aralashmaydi va manba faylida
  * qaysi qism qayerdan kelgani daraxtning o'zida ko'rinadi.
  */
+export type AnatomiyaHisobot = {
+  manba: string;
+  /** true — ichma-ich RZ (anatomiya) daraxti ishlatildi; false — eski tekis daraxt. */
+  ierarxiya: boolean;
+  rzChuqurlik: number;
+  /** Eski usul ish deb qo'shadigan "ВЕДОМОСТЬ РЕСУРСОВ" qatorlari — chiqarildi. */
+  vedomostChiqarildi: number;
+  sabab: string | null;
+};
+
+function rzChuqurligi(tree: readonly AktNode[], d = 0): number {
+  return tree.reduce((m, n) => (n.type === 'rz' ? Math.max(m, rzChuqurligi(n.children ?? [], d + 1)) : m), d);
+}
+
+/**
+ * SMETA_ANATOMIYA_V1: eski `treeBuild` daraxti quriladi (operator tuzatgan
+ * ustunlar bilan), anatomiya daraxti esa tenglik qo'riqchisidan o'tsa —
+ * ish/resurs barglari (tur, kod, nom, hajm, tartib) aynan bir xil — uning
+ * ichma-ich RZ ierarxiyasi ishlatiladi. Teng bo'lmasa eski daraxt qoladi va
+ * sababi hisobotga yoziladi. Korpus: Navoiy 180/180, Faravon 18/18 LRV varaq teng.
+ */
+function ierarxikDaraxt(name: string, rows: SheetGrid, eski: AktNode[]): { tree: AktNode[]; hisobot: AnatomiyaHisobot } {
+  try {
+    const v = varaqniTahlilQil(name, { nom: name, rows });
+    if (v.rol !== 'lrv' || !v.ishlar.length) {
+      return { tree: eski, hisobot: { manba: name, ierarxiya: false, rzChuqurlik: rzChuqurligi(eski), vedomostChiqarildi: 0, sabab: 'anatomiya varaqni LRV deb tanimadi' } };
+    }
+    const yangi = anatomiyadanAktDaraxt(v);
+    const t = daraxtlarTengmi(eski, yangi.tree, v.vedomost.map((r) => r.xom));
+    if (!t.teng) {
+      return { tree: eski, hisobot: { manba: name, ierarxiya: false, rzChuqurlik: rzChuqurligi(eski), vedomostChiqarildi: 0, sabab: `qatorlar mos emas (eski ${t.eski}, yangi ${t.yangi}, ${t.birinchiFarq + 1}-qatordan farq) — eski daraxt ishlatildi` } };
+    }
+    return { tree: yangi.tree, hisobot: { manba: name, ierarxiya: true, rzChuqurlik: rzChuqurligi(yangi.tree), vedomostChiqarildi: t.vedomostChiqarildi, sabab: null } };
+  } catch {
+    return { tree: eski, hisobot: { manba: name, ierarxiya: false, rzChuqurlik: rzChuqurligi(eski), vedomostChiqarildi: 0, sabab: 'anatomiya xatosi — eski daraxt ishlatildi' } };
+  }
+}
+
 export function tanlanganLrvVaraqlaridanDaraxtQur(
   manbalar: ReadonlyArray<{ name: string; rows: SheetGrid; cols: F2ColumnConfig }>,
-  options?: { harManbagaRz?: boolean },
+  options?: { harManbagaRz?: boolean; hisobot?: (h: AnatomiyaHisobot) => void },
 ): AktNode[] {
   const koP = options?.harManbagaRz || manbalar.length > 1;
   const namespace = (nodes: AktNode[], prefix: string): AktNode[] => nodes.map((node) => ({
@@ -794,7 +834,9 @@ export function tanlanganLrvVaraqlaridanDaraxtQur(
     const { lrvRows } = lrvVaIchkiResniAjrat(manba.rows);
     const parsed = f2FaylOqiCore(lrvRows, manba.cols);
     if (!('tree' in parsed) || !parsed.tree.length) continue;
-    const tree = namespace(parsed.tree, `varaq_${index}`);
+    const ier = ierarxikDaraxt(manba.name, lrvRows, parsed.tree);
+    options?.hisobot?.(ier.hisobot);
+    const tree = namespace(ier.tree, `varaq_${index}`);
     if (koP) {
       out.push({ uid: `varaq_${index}::ildiz`, type: 'rz', nom: manba.name, children: tree });
     } else {
@@ -1398,12 +1440,19 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         const lrvCols = inFileLrvCols[s.name] || (s.name === sheetName ? cols : null);
         return sheet && lrvCols ? [{ name: s.name, rows: sheet.rows, cols: lrvCols }] : [];
       });
-      const lrvTree = tanlanganLrvVaraqlaridanDaraxtQur(lrvManbalar);
+      const ierHisobot: AnatomiyaHisobot[] = [];
+      const lrvTree = tanlanganLrvVaraqlaridanDaraxtQur(lrvManbalar, { hisobot: (h) => ierHisobot.push(h) });
       if (!lrvTree.length) {
         yakunla('xato', 'daraxt bo‘sh chiqdi');
         throw new Error('Kamida bitta LRV varag‘i va uning ustunlari tanlangan bo‘lishi kerak.');
       }
       yakunla('tayyor', lrvManbalar.length + ' ta LRV varag‘i, ' + lrvTree.length + ' ta yuqori bo‘lim topildi');
+      for (const h of ierHisobot) {
+        qadam(`RZ ierarxiyasi — ${h.manba}`);
+        yakunla('tayyor', h.ierarxiya
+          ? `ichma-ich RZ, ${h.rzChuqurlik} daraja${h.vedomostChiqarildi ? `; «ВЕДОМОСТЬ РЕСУРСОВ» bo‘limidan ${h.vedomostChiqarildi} ta qator ish sifatida qo‘shilmadi (ikki marta sanalmasin)` : ''}`
+          : `tekis RZ: ${h.sabab}`);
+      }
 
       // RES tanlangan bo'lsa, indeks aynan HOZIRGI varaqlardan quriladi.
       // Shuning uchun ichki RES + alohida RES ko'p varaqda tanlangan holatda

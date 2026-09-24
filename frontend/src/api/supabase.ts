@@ -445,6 +445,24 @@ export function sbT2TreeQur(qatorlar: T2Qator[], holatlar?: T2QatorHolat[]): Tre
     if (ota) ota.children!.push(tugun);
     else ildiz.push(tugun);
   }
+
+  /* 3-o'tish: ichma-ich RZ smeta jamisi (SMETA_ANATOMIYA_V1).
+   * `t2_rollup` RZ summasini faqat bevosita bl/mat/ob/rs bolalardan yig'adi —
+   * obyekt jamilari (`t2_obyekt_jami` va b.) BARCHA RZ larni qo'shgani uchun
+   * bu to'g'ri va o'zgarmaydi. Ota RZ ko'rinishi uchun esa bola RZ larning
+   * jamisi qo'shiladi (pastdan yuqoriga). SQL `sum()` kabi: null tashlanadi,
+   * hammasi null bo'lsa — null (0 emas). */
+  const rzJami = (n: TreeNode): number | null => {
+    let jami: number | null = n.smeta ?? null;
+    for (const b of n.children ?? []) {
+      if (b.type !== 'rz') continue;
+      const bj = rzJami(b);
+      if (bj != null) jami = (jami ?? 0) + bj;
+    }
+    n.smeta = jami;
+    return jami;
+  };
+  for (const n of ildiz) if (n.type === 'rz') rzJami(n);
   return ildiz;
 }
 
