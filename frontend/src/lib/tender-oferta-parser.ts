@@ -58,8 +58,16 @@ function maxCols(rows: SheetGrid): number {
   return rows.slice(0, 100).reduce((max, row) => Math.max(max, row.length), 0);
 }
 
+/** Ikki va undan ko'p son katakli satr — ma'lumot, sarlavha emas (kod ustunidagi
+ * "ЦЕНА" kabi qiymat sarlavhaga qo'shilib, kod ustunini narx ustuni qilib qo'yardi).
+ * smeta-anatomiya/ustun.ts dagi chegara bilan bir xil qoida. */
+function isDataLikeRow(row: readonly unknown[]): boolean {
+  return row.filter((cell) => typeof cell === 'number' || (text(cell) !== '' && numberValue(cell) != null)).length >= 2;
+}
+
 function columnHeader(rows: SheetGrid, start: number, end: number, col: number): string {
   return rows.slice(start, end + 1).filter((row) => {
+    if (isDataLikeRow(row)) return false;
     const rowText = row.map(normal).join(' ');
     const standaloneTotal = /^(ИТОГО|ВСЕГО|JAMI|ЖАМИ|TOTAL)\b/.test(rowText);
     return !standaloneTotal && /(НАИМЕНОВАНИЕ|РЕСУРС|RESURS|RESOURCE|ЕДИНИЦ|ЕД ИЗМ|БИРЛИК|BIRLIK|UNIT|НА ЕД|ЗА ОДИН|ЦЕНА|НАРХ|NARX|СТОИМОСТ|КОЛИЧЕСТВ|ОБЪЕМ|ҲАЖМ|ХАЖМ|HAJM|MIQDOR|ШИФР|SHIFR|КОД|CODE|СУММА|SUMMA|ОБЩАЯ|НА ВЕСЬ ОБЪЕМ|TOTAL|Т\/КМ)/.test(rowText);
@@ -112,7 +120,12 @@ function findHeaders(rows: SheetGrid): OfertaResursUstunlar | null {
   const cols = maxCols(rows);
   let best: { score: number; result: OfertaResursUstunlar } | null = null;
   for (let start = 0; start < Math.min(rows.length, 100); start++) {
-    const end = Math.min(rows.length - 1, start + 5);
+    // smeta-anatomiya/ustun.ts bilan bir xil chegara: titul ("НАИМЕНОВАНИЕ СТРОЙКИ: …",
+    // 1–2 katakli) sarlavha boshi bo'lolmaydi — aks holda A ustuni nom ustuni bo'lib
+    // qolardi; blok "1 | 2 | 3 …" tartib qatorida tugaydi.
+    if ((rows[start] || []).filter((c) => text(c) !== '').length < 3) continue;
+    let end = Math.min(rows.length - 1, start + 5);
+    for (let k = start + 1; k <= end; k++) if (isOrdinalHeaderRow(rows[k] || [])) { end = k - 1; break; }
     const headers = Array.from({ length: cols }, (_, col) => columnHeader(rows, start, end, col));
     // “Kategoriya” ustuni sarlavhasiga pastdagi “ЧЕЛ (1 resurs)” qo‘shilib
     // RESURS so‘zini oladi — shuning uchun zaxira naqshda sarlavhasi aynan
@@ -126,7 +139,7 @@ function findHeaders(rows: SheetGrid): OfertaResursUstunlar | null {
     const shifr = firstColumn(headers, CODE_PATTERNS);
     const tartib = firstColumn(headers, ORDER_PATTERNS);
     const priceCandidates = headers.map((h, i) => ({ h, i }))
-      .filter(({ h }) => PRICE_PATTERNS.some((p) => p.test(h)) && !TOTAL_PATTERNS.some((p) => p.test(h)));
+      .filter(({ h, i }) => i !== shifr && PRICE_PATTERNS.some((p) => p.test(h)) && !TOTAL_PATTERNS.some((p) => p.test(h)));
     const smetaNarx = priceCandidates[0]?.i ?? -1;
     const totalCandidates = headers.map((h, i) => ({ h, i }))
       .filter(({ h, i }) => i !== smetaNarx && SUM_PATTERNS.some((p) => p.test(h)) && !PRICE_PATTERNS.some((p) => p.test(h)));
@@ -139,6 +152,7 @@ function findHeaders(rows: SheetGrid): OfertaResursUstunlar | null {
     if (!best || score > best.score) {
       let lastHeader = start;
       for (let rowIndex = start; rowIndex <= end; rowIndex++) {
+        if (isDataLikeRow(rows[rowIndex] || [])) break;
         const rowText = (rows[rowIndex] || []).map(normal).join(' ');
         const isStandaloneTotal = /^(ИТОГО|ВСЕГО|JAMI|TOTAL)\b/.test(rowText);
         if (!isStandaloneTotal && /(НАИМЕНОВАНИЕ|РЕСУРС|ЕДИНИЦ|НА ЕД|ЗА ОДИН|ЦЕНА|СТОИМОСТ|КОЛИЧЕСТВ|ОБЪЕМ|ҲАЖМ|ХАЖМ|ШИФР|КОД|СУММА|НА ВЕСЬ ОБЪЕМ|ГРУЗОПЕРЕВОЗ)/.test(rowText)) lastHeader = rowIndex;

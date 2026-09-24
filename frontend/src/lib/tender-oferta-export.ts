@@ -152,33 +152,27 @@ function appendToList(xml: string, tag: string, childTag: string, items: string[
   return { xml: xml.replace(re, () => replaced), firstIndex: existing };
 }
 
+/* Egasi (2026-09-24): "ranglashni man o'zim uchun vizual qulaylikda bo'lishi
+   uchun qilganman … hamma berayotgan hujjatingda o'zing ijod qilib tashlayapsan".
+   Shuning uchun styles.xml ga RANG (fill) qo'shilmaydi. Asl varaqlardagi yangi
+   kataklar uslubni o'sha qatordagi qo'shni asl katakdan oladi (varaqniPatchla);
+   bu uslublar faqat yangi OFERTA_JAMI varag'i va qo'shni katak topilmagan holat
+   uchun: default shrift, faqat qalinlik va son formati. */
 function stillarQosh(stylesXml: string): { xml: string; s: Stillar } {
   let xml = stylesXml;
-  const fonts = appendToList(xml, 'fonts', 'font', [
-    '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>',
-    '<font><b/><sz val="10"/><name val="Arial"/></font>',
-    '<font><sz val="10"/><name val="Arial"/></font>',
-  ]);
+  const fonts = appendToList(xml, 'fonts', 'font', ['<font><b/></font>']);
   xml = fonts.xml;
-  const fills = appendToList(xml, 'fills', 'fill', [
-    '<fill><patternFill patternType="solid"><fgColor rgb="FF1F4E79"/><bgColor indexed="64"/></patternFill></fill>',
-    '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF2CC"/><bgColor indexed="64"/></patternFill></fill>',
-    '<fill><patternFill patternType="solid"><fgColor rgb="FFE2F0D9"/><bgColor indexed="64"/></patternFill></fill>',
-    '<fill><patternFill patternType="solid"><fgColor rgb="FFD9EAF7"/><bgColor indexed="64"/></patternFill></fill>',
-  ]);
-  xml = fills.xml;
-  const fW = fonts.firstIndex, fB = fonts.firstIndex + 1, fN = fonts.firstIndex + 2;
-  const [flH, flIn, flRes, flTot] = [0, 1, 2, 3].map((i) => fills.firstIndex + i);
+  const fB = fonts.firstIndex;
   const al = '<alignment wrapText="1" vertical="center"/>';
   const xfs = appendToList(xml, 'cellXfs', 'xf', [
-    `<xf numFmtId="0" fontId="${fW}" fillId="${flH}" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">${al}</xf>`,
-    `<xf numFmtId="0" fontId="${fN}" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">${al}</xf>`,
-    `<xf numFmtId="4" fontId="${fN}" fillId="${flIn}" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>`,
-    `<xf numFmtId="4" fontId="${fN}" fillId="${flRes}" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>`,
-    `<xf numFmtId="4" fontId="${fB}" fillId="${flTot}" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>`,
-    `<xf numFmtId="4" fontId="${fN}" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>`,
+    `<xf numFmtId="0" fontId="${fB}" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">${al}</xf>`,
+    `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1">${al}</xf>`,
+    `<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`,
+    `<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`,
+    `<xf numFmtId="4" fontId="${fB}" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>`,
+    `<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`,
     `<xf numFmtId="0" fontId="${fB}" fillId="0" borderId="0" xfId="0" applyFont="1"/>`,
-    `<xf numFmtId="2" fontId="${fN}" fillId="${flIn}" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>`,
+    `<xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`,
   ]);
   xml = xfs.xml;
   const b = xfs.firstIndex;
@@ -213,10 +207,21 @@ function varaqniPatchla(xml: string, patch: VaraqPatch, maxCol: number): string 
   if (!sd) throw new Error('SHEETDATA_YOQ');
   const inner = sd[3] ?? '';
   const qolgan = new Map(patch.rows);
-  const cellsXml = (r: number, cells: YangiHujayra[]) => [...cells]
+  /* Yangi katak uslubi — shu qatordagi eng o'ng ASL katakniki (egasining shrifti,
+     chegarasi, son formati, rangi aynan davom etadi; yangi uslub o'ylab topilmaydi).
+     Qatorda asl katak bo'lmasa — o'zimizning rangsiz uslub. */
+  const qoshniUslub = (rowInner: string | undefined): string | null => {
+    if (!rowInner) return null;
+    const cs = [...rowInner.matchAll(new RegExp(`<${p}c\\b([^>]*?)\\/?>`, 'g'))];
+    if (!cs.length) return null;
+    const s = cs[cs.length - 1][1].match(/\bs="(\d+)"/);
+    return s ? s[1] : '0';
+  };
+  const cellsXml = (r: number, cells: YangiHujayra[], qoshni: string | null = null) => [...cells]
     .sort((a, b) => a.col - b.col)
     .map((c) => c.xml(`${ustunHarfi(c.col)}${r}`))
     .join('')
+    .replace(/ s="\d+"/g, (m) => (qoshni == null ? m : ` s="${qoshni}"`))
     .replace(/<(\/?)(c|f|v|is|t)\b/g, (_m, sl, tag) => `<${sl}${p}${tag}`);
   const newRow = (r: number, cells: YangiHujayra[]) => `<${p}row r="${r}">${cellsXml(r, cells)}</${p}row>`;
   const oldingilar = (rNum: number) => [...qolgan.keys()].filter((r) => r < rNum).sort((a, b) => a - b);
@@ -233,7 +238,7 @@ function varaqniPatchla(xml: string, patch: VaraqPatch, maxCol: number): string 
       qolgan.delete(rNum);
       // spans — ixtiyoriy optimallashtirish atributi; yangi ustun uni buzmasin.
       const a = attrs.replace(/\sspans="[^"]*"/, '');
-      out += m[2] === '/>' ? `<${p}row${a}>${cellsXml(rNum, cells)}</${p}row>` : `<${p}row${a}>${m[3]}${cellsXml(rNum, cells)}</${p}row>`;
+      out += m[2] === '/>' ? `<${p}row${a}>${cellsXml(rNum, cells)}</${p}row>` : `<${p}row${a}>${m[3]}${cellsXml(rNum, cells, qoshniUslub(m[3]))}</${p}row>`;
     } else {
       out += m[0];
     }
@@ -343,7 +348,7 @@ function jamiVaraqXml(
   const rows: Array<YangiHujayra[]> = [];
   const put = (cells: YangiHujayra[]) => { rows.push(cells); return rows.length; };
   const sumifs = (kat: string) => varaqlar.length
-    ? varaqlar.map((v) => `SUMIFS(${sheetRef(v.nom)}!$${v.L.summa}:$${v.L.summa},${sheetRef(v.nom)}!$${v.L.kategoriya}:$${v.L.kategoriya},"${kat}")`).join('+')
+    ? varaqlar.map((v) => `SUMIFS(${sheetRef(v.nom)}!${v.L.summa}:${v.L.summa},${sheetRef(v.nom)}!${v.L.kategoriya}:${v.L.kategoriya},"${kat}")`).join('+')
     : '0';
 
   put([strCell(0, s.sarlavha, 'TENDER OFERTA — YAKUNIY HISOB')]);
@@ -384,7 +389,7 @@ function jamiVaraqXml(
   put([]);
   put([strCell(0, s.header, 'Kaskad (t2_nakrutka_hisobla_v1)'), strCell(1, s.header, 'Pudratchi taklifi'), strCell(2, s.header, 'Manba (smeta)'), strCell(3, s.header, 'Formula')]);
   const B = (kat: OfertaKategoriya) => `B${katRow[kat]}`;
-  const K = (kod: string) => `$B$${kRow[kod]}`;
+  const K = (kod: string) => `B${kRow[kod]}`;
   const x = h.kaskadXom, m = h.manbaKaskad;
   const step = (label: string, f: string, v: number, mv: number | null, izoh: string) =>
     put([strCell(0, s.text, label), fCell(1, s.son, f, v), ...(mv == null ? [] : [numCell(2, s.son, mv)]), strCell(3, s.text, izoh)]);
@@ -415,8 +420,8 @@ function jamiVaraqXml(
   const rVs = step('ВСЕГО (yaxlitlanmagan)', `${c(rI4)}+${c(rNds)}`, x.vsego, m.vsego, '');
   put([]);
   const unresolved = varaqlar.length ? varaqlar.map((v) => {
-    const kat = `${sheetRef(v.nom)}!$${v.L.kategoriya}:$${v.L.kategoriya}`;
-    const sum = `${sheetRef(v.nom)}!$${v.L.summa}:$${v.L.summa}`;
+    const kat = `${sheetRef(v.nom)}!${v.L.kategoriya}:${v.L.kategoriya}`;
+    const sum = `${sheetRef(v.nom)}!${v.L.summa}:${v.L.summa}`;
     return [`COUNTIFS(${kat},"UNKNOWN")`, ...OFERTA_KATEGORIYALAR.map((k) => `COUNTIFS(${kat},"${k}",${sum},"")`)].join('+');
   }).join('+') : '0';
   const rUn = put([strCell(0, s.text, 'Hal qilinmagan resurs qatorlari'), fCell(1, s.son, unresolved, h.halQilinmagan), strCell(3, s.text, 'narxi/hajmi yoki kategoriyasi yo‘q — 0 bo‘lmaguncha yakuniy summa bo‘sh')]);
