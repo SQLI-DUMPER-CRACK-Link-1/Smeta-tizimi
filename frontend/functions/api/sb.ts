@@ -127,6 +127,9 @@ const T2_GLOBAL_JADVALLAR = new Set([
   't2_ish_turi', 't2_hujjat_turi', 't2_material_alias_royxat',
 ]);
 
+/** Bitta `/api/sb` o'qishining vaqt byudjeti (ms). Oshsa — log + `sekin: true`. */
+const TEZLIK_BYUDJETI_MS = 3000;
+
 /** Company-scoped `t2_*` jadvalmi (a'zolik anchori majburiy)? */
 function t2CompanyScoped(jadval: string): boolean {
   return jadval.startsWith('t2_') && !T2_GLOBAL_JADVALLAR.has(jadval);
@@ -535,6 +538,20 @@ export const onRequestPost: PagesFunction<{
       ? soro < MAX_SORO
       : qatorlar.length >= jamiServerda;
 
+    /* ⏱ TEZLIK BYUDJETI (2026-09-25, egasi: "har safar tezlatib berish yechim
+       emas — tizim moslashishi kerak"). Byudjetdan oshgan o'qish jim qolmaydi:
+       Cloudflare logiga tuzilgan yozuv (jadval, obyekt, qator soni, vaqt
+       taqsimoti) va javobda `sekin: true`. Baza tomoni:
+       supabase/tests/t2_obyekt_read_model_tezlik_contract.sql. */
+    const ms = Date.now() - t0;
+    const sekin = ms > TEZLIK_BYUDJETI_MS;
+    if (sekin) {
+      console.warn(JSON.stringify({
+        hodisa: 'sb_sekin_oqish', jadval, obyekt_id: mosObyekt ? Number(mosObyekt[1]) : null,
+        soni: qatorlar.length, soro, msBirinchi, msQolgan, ms, byudjet: TEZLIK_BYUDJETI_MS,
+      }));
+    }
+
     return Response.json({
       ok: true,
       qatorlar,
@@ -547,7 +564,8 @@ export const onRequestPost: PagesFunction<{
          MASOFASIDA (Supabase regioni), msQolgan katta bo'lsa — HAJMDA. */
       msBirinchi,
       msQolgan,
-      ms: Date.now() - t0,
+      ms,
+      ...(sekin ? { sekin: true } : {}),
     });
   } catch (err: unknown) {
     return xavfsizUpstream(502, err);
