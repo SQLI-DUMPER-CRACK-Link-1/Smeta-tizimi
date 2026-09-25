@@ -17,7 +17,7 @@
  * chaqirilganda dinamik yuklanadi.
  */
 import { resursVedomostQur } from './resurs-vedomost';
-import { IMZO_IMZO_CHIZIQ, IMZO_MP, IMZO_PODPIS, RasmiyVaraq, hujjatFaylNomi, imzoMatni, imzoMuhrli, imzoTomonlari, rasmiyKitob, sumFormula, type RasmiyUstun } from './hujjat-yozuvchi';
+import { IMZO_IMZO_CHIZIQ, IMZO_MP, IMZO_PODPIS, RasmiyVaraq, hujjatFaylNomi, imzoMatni, imzoMuhrli, imzoTomonlari, rasmiyKitob, sumFormula, bosRefs, type RasmiyUstun } from './hujjat-yozuvchi';
 import type { T2QatorHolat } from '../api/supabase';
 
 export type PtoHujjatTuri = 'forma2' | 'nakopitelniy' | 'slichitelniy' | 'forma3' | 'm29';
@@ -185,7 +185,7 @@ export async function ptoHujjatXlsx(h: PtoHujjat): Promise<Uint8Array> {
       const nomalum = h.qatorlar.some((q) => !q.bolim && q.qiymatlar[i] == null);
       const f = sumFormula(harf, qatorlar)!;
       const jami = h.qatorlar.reduce((a, q) => a + (!q.bolim && typeof q.qiymatlar[i] === 'number' ? q.qiymatlar[i] as number : 0), 0);
-      return nomalum ? { f: `IF(COUNTBLANK(${qatorlar.map((r) => `${harf}${r}`).join(',')})>0,"",${f})`, v: '' } : { f, v: jami };
+      return nomalum ? { f: `IF(${bosRefs(harf, qatorlar)}>0,"",${f})`, v: '' } : { f, v: jami };
     })]);
   }
   v.bosh();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NakopitelniyQator } from '../api/t2-nakopitelniy';
-import { nakopitelniyJamilar, nakopitelniyNds, nakopitelniyVedomostHujjat, HujjatToliqEmasXato, NDS_SUKUT_FOIZ } from './nakopitelniy-vedomost-export';
+import { nakopitelniyJamilar, nakopitelniyVedomostHujjat, HujjatToliqEmasXato, NDS_SUKUT_FOIZ } from './nakopitelniy-vedomost-export';
+import { yaxlit2 as yaxlit } from './hujjat-yozuvchi';
 import { f2AktHujjat } from './f2-akt-tn-export';
 import { hujjatTekshir, imzoRollariBormi } from './hujjat-yozuvchi';
 import { namunaSaqla } from './hujjat-yozuvchi/test-yordam';
@@ -21,11 +22,11 @@ function q(p: Partial<NakopitelniyQator> & { tur: NakopitelniyQator['tur'] }): N
 const ROWS: NakopitelniyQator[] = [
   q({ tur: 'rz', nom: 'РАЗДЕЛ 1. ЗЕМЛЯНЫЕ РАБОТЫ', smeta_summa: 1_600_000 }),
   q({ tur: 'bl', kod: 'Е01-01', nom: 'РАЗРАБОТКА ГРУНТА', birlik: 'м3', smeta_hajm: 100, smeta_summa: 1_600_000, fakt_hajm: 60, oldingi_hajm: 30, joriy_hajm: 20 }),
-  q({ tur: 'rs', kod: '1-100', nom: 'ЗАТРАТЫ ТРУДА РАБОЧИХ', birlik: 'чел.-ч', smeta_hajm: 200, smeta_narx: 5000, smeta_summa: 1_000_000, fakt_hajm: 120, oldingi_hajm: 60, oldingi_summa: 300_000, joriy_hajm: 40, joriy_summa: 200_000.5 }),
-  q({ tur: 'mat', kod: 'С101', nom: 'ПЕСОК', birlik: 'м3', smeta_hajm: 50, smeta_narx: 12_000, smeta_summa: 600_000, fakt_hajm: 20, oldingi_hajm: 10, oldingi_summa: 120_000, joriy_hajm: 15, joriy_summa: 180_000 }),
+  q({ tur: 'rs', kat: 'ЧЕЛ', kod: '1-100', nom: 'ЗАТРАТЫ ТРУДА РАБОЧИХ', birlik: 'чел.-ч', smeta_hajm: 200, smeta_narx: 5000, smeta_summa: 1_000_000, fakt_hajm: 120, oldingi_hajm: 60, oldingi_summa: 300_000, joriy_hajm: 40, joriy_summa: 200_000.5 }),
+  q({ tur: 'mat', kat: 'МАТ', kod: 'С101', nom: 'ПЕСОК', birlik: 'м3', smeta_hajm: 50, smeta_narx: 12_000, smeta_summa: 600_000, fakt_hajm: 20, oldingi_hajm: 10, oldingi_summa: 120_000, joriy_hajm: 15, joriy_summa: 180_000 }),
   q({ tur: 'rz', nom: 'РАЗДЕЛ 2. БЕТОННЫЕ РАБОТЫ' }),
   q({ tur: 'bl', kod: 'Е06-01', nom: 'БЕТОНИРОВАНИЕ', birlik: 'м3', smeta_hajm: 10, oldingi_hajm: 0, joriy_hajm: 5 }),
-  q({ tur: 'mat', kod: 'С401', nom: 'БЕТОН В25', birlik: 'м3', smeta_hajm: 10.2, smeta_narx: 900_000, smeta_summa: 9_180_000, fakt_hajm: 5, joriy_hajm: 5.1, joriy_summa: 4_590_000 }),
+  q({ tur: 'mat', kat: 'МАТ', kod: 'С401', nom: 'БЕТОН В25', birlik: 'м3', smeta_hajm: 10.2, smeta_narx: 900_000, smeta_summa: 9_180_000, fakt_hajm: 5, joriy_hajm: 5.1, joriy_summa: 4_590_000 }),
 ];
 
 describe('Накопительная ведомость — hujjat standarti', () => {
@@ -46,12 +47,12 @@ describe('Накопительная ведомость — hujjat standarti', (
     expect(t.fullCalcOnLoad).toBe(true);
     const v = t.varaqlar[0];
     expect(v.a4 && v.bittaEnli && v.yonalish === 'landscape').toBe(true);
-    expect(v.printArea).toMatch(/!\$A\$1:\$Q\$\d+$/);
+    expect(v.printArea).toMatch(/!\$A\$1:\$S\$\d+$/);
     expect(v.printTitles).toBeTruthy();
     expect(imzoRollariBormi(t, ['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ']).yoq).toEqual([]);
     expect(t.matnlar).toEqual(expect.arrayContaining(['НАКОПИТЕЛЬНАЯ ВЕДОМОСТЬ ВЫПОЛНЕННЫХ РАБОТ', 'за отчетный период: сентябрь 2026 г. (учтены только утвержденные акты формы № 2)', 'ВСЕГО ПО ОБЪЕКТУ', 'ИТОГО ПО РАЗДЕЛУ: РАЗДЕЛ 1. ЗЕМЛЯНЫЕ РАБОТЫ']));
     // UI == Excel: ВСЕГО "с начала строительства" keshi = jamilar.jami.
-    const vsego = v.kataklar.filter((k) => k.f?.startsWith('SUM(') && Number(k.v) === jamilar.jami);
+    const vsego = v.kataklar.filter((k) => k.f?.includes('SUMIF(U') && Number(k.v) === jamilar.jami);
     expect(vsego.length).toBeGreaterThan(0);
   });
 
@@ -62,37 +63,43 @@ describe('Накопительная ведомость — hujjat standarti', (
     expect(jamilar.qoldiq).toBeNull();
     const t = hujjatTekshir(bytes);
     // ПЕСОК: smeta noma'lum + qabul qilingan > fakt; БЕТОН: qabul qilingan > fakt.
-    expect(t.matnlar.some((s) => s.startsWith('ПОЗИЦИИ, ТРЕБУЮЩИЕ ВНИМАНИЯ (3)'))).toBe(true);
+    // + nakrutka foizlari berilmagan (4-band)
+    expect(t.matnlar.some((s) => s.startsWith('ПОЗИЦИИ, ТРЕБУЮЩИЕ ВНИМАНИЯ (4)'))).toBe(true);
     expect(t.matnlar.some((s) => s.includes('нет объема или стоимости по смете'))).toBe(true);
     expect(t.taqiqlangan).toEqual([]);
   });
 
-  it('Q2: НДС hujjat oxirida bir marta (sukut 12 %), faqat akt summalari ustunlarida', () => {
+  it('ikki narx: to‘g‘ri xarajat va к оплате (Kf × summa), nakrutka podvali kaskadi, НДС ichida', () => {
     expect(NDS_SUKUT_FOIZ).toBe(12);
+    // Amfiteatr (kompaniya 1) foizlari.
+    const nakrutka = { ТРАНСПОРТ_МАТЕРИАЛ: 5, СКЛАДСКИЕ_МАТЕРИАЛ: 2, СКЛАДСКИЕ_МК: 0.75, ТРАНСПОРТ_КАБЕЛЬ: 1.5, ПРОЧИЕ_ПОДРЯДЧИК: 18, ТРАНСПОРТ_ОБОРУД: 2, ЗАГОТ_СКЛАД_ОБОРУД: 1.2, СТРАХОВАНИЕ: 0.32, РИСК: 0, НДС: 12 };
     const smetaNakrutka = { pryamye: 43_596_859_620.62, itogo4: 50_556_791_619.97, nds: 6_066_814_994.4, nds_foiz: 12, vsego: 56_623_606_614.37 };
-    const { bytes, jamilar } = nakopitelniyVedomostHujjat(ROWS, { obyektNom: 'Объект', davr: '2026-09', ndsFoiz: 12, smetaNakrutka });
-    namunaSaqla('nakopitelniy_nds.xlsx', bytes);
-    const nds = nakopitelniyNds(jamilar, 12);
-    expect(nds).toEqual({ foiz: 12, oldingi: 50_400, joriy: 596_400.06, jami: 646_800.06 });
-    const t = hujjatTekshir(bytes);
+    const r = nakopitelniyVedomostHujjat(ROWS, { obyektNom: 'Объект', davr: '2026-09', ndsFoiz: 12, nakrutka, smetaNakrutka });
+    namunaSaqla('nakopitelniy_nds.xlsx', r.bytes);
+    const t = hujjatTekshir(r.bytes);
     expect(t.taqiqlangan).toEqual([]);
     expect(t.dollarFormulalar).toEqual([]);
     expect(t.keshsizFormulalar).toEqual([]);
-    expect(t.matnlar).toEqual(expect.arrayContaining(['ВСЕГО ПО ОБЪЕКТУ (без НДС)', 'НДС 12 %', 'ВСЕГО С НДС']));
-    expect(t.matnlar.filter((m) => /^НДС \d/.test(m))).toHaveLength(1);
-    expect(t.matnlar.map((m) => m.replace(/[\s\u00a0\u202f]/g, '')).some((m) => m.includes('всегосНДС56623606614,37сум'))).toBe(true);
+    expect(t.matnlar).toEqual(expect.arrayContaining(['К ОПЛАТЕ (с накладными расходами и НДС)', 'ВСЕГО К ОПЛАТЕ (с накладными расходами и НДС)', 'ПРЯМЫЕ ЗАТРАТЫ — ВСЕГО', 'ИТОГО-4 (без НДС)']));
+    // Kaskad (за период, L): ЧЕЛ 200 000,50; МАТ 180 000 + 4 590 000.
+    const L = r.kaskad!.L;
+    expect(L.pryamye).toBe(4_970_000.5);
+    expect(L.vsego).toBeGreaterThan(L.pryamye);
+    // Qator к оплате yig'indisi podval ВСЕГО bilan teng (faqat yaxlitlash farqi).
+    expect(Math.abs((r.kOplata.davr ?? 0) - L.vsego)).toBeLessThan(0.05);
+    expect(Math.abs((r.kOplata.jami ?? 0) - r.kaskad!.N.vsego)).toBeLessThan(0.05);
     const k = t.varaqlar[0].kataklar;
-    // НДС = ROUND(ВСЕГО × 12 / 100, 2) — kesh UI hisobiga teng; smeta/остаток ustunida НДС yo'q.
-    expect(k.some((c) => /^ROUND\(N\d+\*12\/100,2\)$/.test(c.f ?? '') && Number(c.v) === 646_800.06)).toBe(true);
-    expect(k.some((c) => /^ROUND\([GP]\d+/.test(c.f ?? ''))).toBe(false);
-    expect(k.some((c) => /^N\d+\+N\d+$/.test(c.f ?? '') && Math.abs(Number(c.v) - (jamilar.jami + 646_800.06)) < 1e-6)).toBe(true);
+    // Qator formulasi: ROUND(L×Kf) — Kf katagi foiz kataklaridan formula.
+    expect(k.some((c) => /^ROUND\(L\d+\*F\d+,2\)$/.test(c.f ?? ''))).toBe(true);
+    expect(k.some((c) => /^\(1\+F\d+\/100\)\*\(1\+F\d+\/100\+F\d+\/100\)\*\(1\+F\d+\/100\)$/.test(c.f ?? ''))).toBe(true);
+    expect(k.some((c) => /^SUMIF\(T\d+:T\d+,"МАТ",L\d+:L\d+\)$/.test(c.f ?? ''))).toBe(true);
   });
 
-  it('НДС stavkasi berilmasa — НДС qatorlari yo‘q, izohda aytiladi', () => {
-    const t = hujjatTekshir(nakopitelniyVedomostHujjat(ROWS, { obyektNom: 'Объект', davr: '2026-09' }).bytes);
-    expect(t.matnlar).toContain('ВСЕГО ПО ОБЪЕКТУ');
-    expect(t.matnlar.some((m) => m.startsWith('НДС '))).toBe(false);
-    expect(t.matnlar.some((m) => m.includes('НДС в ведомости не начислен'))).toBe(true);
+  it('nakrutka foizlari berilmasa — 0 %, к оплате = прямые + НДС, hujjatda aytiladi', () => {
+    const r = nakopitelniyVedomostHujjat(ROWS, { obyektNom: 'Объект', davr: '2026-09', ndsFoiz: 12 });
+    const t = hujjatTekshir(r.bytes);
+    expect(r.kaskad!.L.vsego).toBe(yaxlit(4_970_000.5 * 1.12));
+    expect(t.matnlar.some((m) => m.includes('Проценты накладных и прочих расходов') && m.includes('не заданы'))).toBe(true);
   });
 
   it('qirqilgan ro‘yxatdan hujjat yasalmaydi (chala hujjat — rasmiy emas)', () => {

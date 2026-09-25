@@ -18,7 +18,7 @@
  * resurs narxi bilan ikki marta hisoblangan bo'lardi.
  */
 import type { T2QatorHolat } from '../api/supabase';
-import { RasmiyVaraq, bugunSana, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, type ImzoNomlar } from './hujjat-yozuvchi';
+import { RasmiyVaraq, bugunSana, sumRefs, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, type ImzoNomlar } from './hujjat-yozuvchi';
 
 export type ResursVedomostQator = {
   kat: string;
@@ -211,7 +211,7 @@ export function resursVedomostHujjat(holatlar: readonly T2QatorHolat[], o: Resur
     }
   }
   if (guruhlar.length) {
-    const s = (c: string) => `SUM(${guruhlar.map((r) => `${c}${r}`).join(',')})`;
+    const s = (c: string) => sumRefs(c, guruhlar);
     const j = (f: (k: ResursVedomostKategoriya) => number) => kategoriyalar.reduce((x, k) => x + f(k), 0);
     v.qator('vsego', [null, null, 'ВСЕГО ПО ВЕДОМОСТИ', null, null, { f: s('F'), v: j((k) => k.jamiSmetaSumma) }, null, { f: s('H'), v: j((k) => k.jamiF2Summa) }, null, { f: s('J'), v: j((k) => k.jamiQoldiqSumma) }]);
   }

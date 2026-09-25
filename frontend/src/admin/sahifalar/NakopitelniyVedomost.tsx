@@ -5,6 +5,7 @@ import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
 import { t2NakopitelniyOl, t2NakopitelniyToliq, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami } from '../../api/t2-nakopitelniy';
 import { HujjatToliqEmasXato, NDS_SUKUT_FOIZ, nakopitelniyVedomostHujjat } from '../../lib/nakopitelniy-vedomost-export';
 import { f2AktHujjat } from '../../lib/f2-akt-tn-export';
+import { t2ObyektNakrutka, type NakrutkaKoeffitsientlar } from '../../api/t2-nakrutka';
 import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 import { FmtN } from '../../lib/format';
@@ -41,6 +42,16 @@ function Sessiya({ companyId }: { companyId: number }) {
     void sbT2ObyektlarOlKomp(companyId).then(r => { if (active && r.ok) setObjects((r.qatorlar || []) as T2Obyekt[]); });
     return () => { active = false; };
   }, [companyId]);
+
+  // Ikki narx (egasi): hujjatda к оплате = прямые × Kf — obyekt/shartnoma nakrutka foizlari.
+  const [nakrutka, setNakrutka] = useState<NakrutkaKoeffitsientlar | null>(null);
+  useEffect(() => {
+    let active = true;
+    setNakrutka(null);
+    if (!objectId) return;
+    void t2ObyektNakrutka(Number(objectId)).then((r) => { if (active && r.ok && r.koeffitsientlar) setNakrutka(r.koeffitsientlar); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [objectId]);
 
   const yukla = async (objId: number, tanlanganDavr: string) => {
     setBusy(true); setXato('');
@@ -118,7 +129,7 @@ function Sessiya({ companyId }: { companyId: number }) {
     try {
       const rows = await toliqQatorlar();
       if (!rows) return;
-      const h = nakopitelniyVedomostHujjat(rows, { obyektNom, davr, imzo: tomonlar, ndsFoiz: stavkaOl(), smetaNakrutka: jami?.smeta_nakrutka ?? null });
+      const h = nakopitelniyVedomostHujjat(rows, { obyektNom, davr, imzo: tomonlar, ndsFoiz: stavkaOl(), smetaNakrutka: jami?.smeta_nakrutka ?? null, nakrutka });
       downloadBlob(h.bytes, h.faylNomi);
     } catch (e) { setXato(e instanceof HujjatToliqEmasXato ? 'Hujjat to‘liq emas — eksport bloklandi.' : 'Excel fayli tuzilmadi.'); }
   };

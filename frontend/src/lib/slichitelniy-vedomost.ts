@@ -1,6 +1,6 @@
 import type { T2Qator, T2QatorHolat } from '../api/supabase';
 import {
-  RasmiyVaraq, bugunSana, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2,
+  RasmiyVaraq, bugunSana, sumRefs, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2,
   type ImzoNomlar, type Qiymat, type RasmiyUstun,
 } from './hujjat-yozuvchi';
 import type { OstatkaIstisno } from './ostatka-export';
@@ -227,7 +227,7 @@ export function slichitelniyHujjatXlsx(model: SlichitelniyModel, o: Slichitelniy
   const bosh = v.malumotBoshi;
   const rowOf = (i: number) => bosh + i;
   const qiy = (x: number | null): Qiymat => (x == null ? null : x);
-  const sumKid = (q: SlichitelniyQator, col: string) => `SUM(${q.bolalar.map((k) => `${col}${rowOf(k)}`).join(',')})`;
+  const sumKid = (q: SlichitelniyQator, col: string) => sumRefs(col, q.bolalar.map(rowOf));
   const pulYig = (q: SlichitelniyQator, col: string, val: number | null, n: number): Qiymat =>
     (q.bolalar.length ? { f: `IF(O${n}>0,"",${sumKid(q, col)})`, v: val ?? '' } : null);
   model.qatorlar.forEach((q, i) => {
@@ -269,14 +269,14 @@ export function slichitelniyHujjatXlsx(model: SlichitelniyModel, o: Slichitelniy
   });
   if (model.ildizlar.length) {
     const nomalum = model.ildizlar.reduce((s, i) => s + model.qatorlar[i].nomalum, 0);
-    const ref = (c: string) => model.ildizlar.map((i) => `${c}${rowOf(i)}`).join(',');
+    const ref = (c: string) => sumRefs(c, model.ildizlar.map(rowOf));
     v.qator('vsego', (n) => [
       null, null, 'ВСЕГО ПО ОБЪЕКТУ', null, null, null,
-      { f: `IF(O${n}>0,"",SUM(${ref('G')}))`, v: model.jami.smeta ?? '' }, null,
-      { f: `IF(O${n}>0,"",SUM(${ref('I')}))`, v: model.jami.fakt ?? '' }, null,
-      { f: `SUM(${ref('K')})`, v: model.jami.f2 }, null,
-      { f: `IF(O${n}>0,"",SUM(${ref('M')}))`, v: model.jami.farq ?? '' }, null,
-      { f: `SUM(${ref('O')})`, v: nomalum },
+      { f: `IF(O${n}>0,"",${ref('G')})`, v: model.jami.smeta ?? '' }, null,
+      { f: `IF(O${n}>0,"",${ref('I')})`, v: model.jami.fakt ?? '' }, null,
+      { f: ref('K'), v: model.jami.f2 }, null,
+      { f: `IF(O${n}>0,"",${ref('M')})`, v: model.jami.farq ?? '' }, null,
+      { f: ref('O'), v: nomalum },
     ]);
   }
   v.bosh();

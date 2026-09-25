@@ -25,7 +25,8 @@
  * hujjat rasmiy: qora matn, ingichka ramka, qalin jami.
  */
 import { strToU8, zipSync, type Zippable } from 'fflate';
-import { num, sheetRef, sumArgs, ustunHarfi, xmlEsc } from './ooxml';
+import { num, sheetRef, ustunHarfi, xmlEsc } from './ooxml';
+import { sumRefs } from './formula';
 import { IMZO_IMZO_CHIZIQ, IMZO_IZOH, IMZO_IZOH_SHAXS, IMZO_MP, IMZO_PODPIS, imzoMatni, imzoMuhrli, type ImzoTomon } from './imzo';
 
 export type UstunTuri = 'tartib' | 'kod' | 'matn' | 'birlik' | 'hajm' | 'narx' | 'pul' | 'foiz' | 'norma' | 'texnik';
@@ -44,7 +45,12 @@ export type RasmiyUstun = {
 export type RasmiyQatorTuri = 'oddiy' | 'ish' | 'bolim' | 'jami' | 'vsego';
 
 /** Katak qiymati: matn, son, bo'sh (null) yoki formula + keshlangan natija. */
-export type Qiymat = string | number | null | undefined | { f: string; v: number | string | null };
+export type Qiymat = string | number | null | undefined
+  | { f: string; v: number | string | null; uslub?: KatakUslub }
+  /** Formulasiz son, lekin boshqa son formati bilan (masalan foiz, koeffitsient). */
+  | { n: number | null; uslub: KatakUslub };
+/** Katak darajasidagi son formati: `norma` — 0.0000## (koeffitsient), `foiz` — foiz. */
+export type KatakUslub = 'norma' | 'foiz';
 
 export type RasmiyVaraqSozlama = {
   /** Varaq (list) nomi — Excel cheklovi 31 belgi. */
@@ -164,6 +170,7 @@ function katakXml(col: number, s: number, q: Qiymat): Katak {
       if (q == null || q === '') return `<c r="${ref}" s="${s}"/>`;
       if (typeof q === 'number') return Number.isFinite(q) ? `<c r="${ref}" s="${s}"><v>${num(q)}</v></c>` : `<c r="${ref}" s="${s}"/>`;
       if (typeof q === 'string') return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(q)}</t></is></c>`;
+      if ('n' in q) return q.n == null || !Number.isFinite(q.n) ? `<c r="${ref}" s="${s}"/>` : `<c r="${ref}" s="${s}"><v>${num(q.n)}</v></c>`;
       const f = q.f.replace(/^=/, '');
       if (q.v == null) return `<c r="${ref}" s="${s}"><f>${xmlEsc(f)}</f></c>`;
       if (typeof q.v === 'string') return `<c r="${ref}" s="${s}" t="str"><f>${xmlEsc(f)}</f><v>${xmlEsc(q.v)}</v></c>`;
@@ -278,7 +285,11 @@ export class RasmiyVaraq {
   qator(tur: RasmiyQatorTuri, qiymatlar: readonly Qiymat[] | ((r: number) => readonly Qiymat[]), o?: { daraja?: number }): number {
     const r = this.r;
     const q = typeof qiymatlar === 'function' ? qiymatlar(r) : qiymatlar;
-    const cells = this.ustunlar.map((u, i) => katakXml(i, uslub(tur, u.tur), q[i]));
+    const cells = this.ustunlar.map((u, i) => {
+      const v = q[i];
+      const ku = v != null && typeof v === 'object' ? v.uslub : undefined;
+      return katakXml(i, ku === 'norma' ? RS.norma : ku === 'foiz' ? RS.foiz : uslub(tur, u.tur), v);
+    });
     let ht: number | undefined;
     this.ustunlar.forEach((u, i) => {
       const v = q[i];
@@ -417,7 +428,7 @@ export function rasmiyKitob(varaqlar: readonly RasmiyVaraq[]): RasmiyKitobNatija
 
 /** Ro'yxatdagi qatorlar yig'indisi formulasi: `SUM(H5:H9,H12)`; bo'sh bo'lsa null. */
 export function sumFormula(harf: string, qatorlar: readonly number[]): string | null {
-  return qatorlar.length ? `SUM(${sumArgs(harf, [...qatorlar])})` : null;
+  return qatorlar.length ? sumRefs(harf, qatorlar) : null;
 }
 
 /** Pul yaxlitlash — Excel ROUND(x;2) bilan bir xil: yarmi noldan uzoqqa,

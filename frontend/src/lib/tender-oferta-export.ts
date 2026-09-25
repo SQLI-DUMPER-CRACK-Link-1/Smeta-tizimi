@@ -42,7 +42,7 @@ const NAKRUTKA_KOEF_RU: Record<NakrutkaKoefKod, string> = {
 };
 import {
   aslFormula, sahifaEnigaSigdir, bosCell, boshUstun, colAttr, colsOqi, engOngUstun, fCell, formulaKochir, isZip, numCell, num, printAreaKengaytir,
-  sheetRef, strCell, sumArgs, ustunHarfi, varaqniPatchla, varaqXaritasi, varaqYollari, workbookgaVaraqQosh, xfNusxa, xlsdanXlsx,
+  sheetRef, strCell, sumRefs, ustunHarfi, varaqniPatchla, varaqXaritasi, varaqYollari, workbookgaVaraqQosh, xfNusxa, xlsdanXlsx,
   zaxiraStillarQosh, imzoMatni, bugunSana, definedNameQosh, printAreaQiymati, printTitlesQiymati, IMZO_IZOH, IMZO_PODPIS, IMZO_MP, IMZO_IMZO_CHIZIQ,
   type VaraqPatch, type VaraqXarita, type YangiHujayra, type ZaxiraStillar,
 } from './hujjat-yozuvchi';
@@ -207,7 +207,7 @@ function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQato
     } else if ((q.rol === 'SUBTOTAL' || q.rol === 'GRAND_TOTAL') && q.pudratchiSumma != null) {
       const kids = (q.jamiBolalari ?? []).map((id) => byId.get(id)).filter((k): k is OfertaQatorNatija => !!k)
         .filter((k) => k.pudratchiSumma != null && (k.rol === 'RESOURCE' || k.rol === 'TRANSPORT' || k.rol === 'STORAGE' || k.rol === 'SUBTOTAL' || k.rol === 'GRAND_TOTAL'));
-      if (kids.length) add(r, fCell(cS, s.jami, `SUM(${sumArgs(L.summa, kids.map((k) => k.sourceRow))})`, q.pudratchiSumma, cF));
+      if (kids.length) add(r, fCell(cS, s.jami, sumRefs(L.summa, kids.map((k) => k.sourceRow)), q.pudratchiSumma, cF));
       if (namuna.jamiSon == null) { namuna.jamiSon = aslS(r, cF); namuna.jamiMatn = aslS(r, u.nom) ?? aslS(r, 0); }
     } else if (q.podval && q.pudratchiSumma != null) {
       // Podval (транспорт 5%, склад, ВСЕГО С УЧЕТОМ …): asl formula bo'lsa —
@@ -228,7 +228,7 @@ function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQato
           f = `ROUND(${pv.qismlar.map((qq) => `(${qq.kat.map(sumif).join('+')})*${num(qq.foiz)}/100`).join('+')},2)`;
         }
       } else if (kochirilgan) f = /^\s*SUM\(/i.test(kochirilgan) ? kochirilgan : `ROUND(${kochirilgan},2)`;
-      else if (pv.tur === 'yigindi') f = `SUM(${sumArgs(L.summa, pv.bazalar.map(bazaQator).filter((n): n is number => n != null))})`;
+      else if (pv.tur === 'yigindi') f = sumRefs(L.summa, pv.bazalar.map(bazaQator).filter((n): n is number => n != null));
       else if (pv.tur === 'foiz' && bazaQator(pv.baza) != null) {
         f = pv.foiz != null ? `ROUND(${L.summa}${bazaQator(pv.baza)}*${num(pv.foiz)}/100,2)` : `ROUND(${L.summa}${bazaQator(pv.baza)}*${num(pv.koef)},2)`;
       }

@@ -45,3 +45,19 @@ describe('hujjatTekshir — salbiy nazorat (tekshiruvchi haqiqatan ushlaydi)', (
     expect(t.taqiqlangan.map((x) => x.qoida).sort()).toEqual(['RPC/jadval nomi', 'TAYYOR', 'o‘zbekcha kirill (ў қ ғ ҳ)']);
   });
 });
+
+describe('sumRefs / bosRefs — Excel 255 argument cheklovi', () => {
+  it('ketma-ket qatorlar oraliqqa siqiladi', async () => {
+    const { sumRefs, bosRefs } = await import('./formula');
+    expect(sumRefs('G', [5, 6, 7, 9])).toBe('SUM(G5:G7,G9)');
+    expect(bosRefs('G', [5, 6, 9])).toBe('SUM(COUNTBLANK(G5:G6),COUNTBLANK(G9:G9))');
+  });
+  it('1000 ta alohida katak — ichma-ich SUM, har funksiyada ≤ 250 argument', async () => {
+    const { sumRefs } = await import('./formula');
+    const f = sumRefs('G', Array.from({ length: 1000 }, (_, i) => 10 + i * 2));
+    const ichki = f.slice(4, -1).split('),SUM(');
+    expect(f.startsWith('SUM(SUM(')).toBe(true);
+    expect(ichki).toHaveLength(4);
+    for (const b of ichki) expect(b.replace(/^SUM\(|\)$/g, '').split(',').length).toBeLessThanOrEqual(250);
+  });
+});

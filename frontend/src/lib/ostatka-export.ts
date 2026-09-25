@@ -1,6 +1,6 @@
 import type { T2Qator, T2QatorHolat } from '../api/supabase';
 import {
-  RasmiyVaraq, bugunSana, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2,
+  RasmiyVaraq, bugunSana, sumRefs, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2,
   type ImzoNomlar, type Qiymat, type RasmiyUstun,
 } from './hujjat-yozuvchi';
 
@@ -345,7 +345,7 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
   const rowOf = (i: number) => bosh + i;
   const qiy = (x: number | null): Qiymat => (x == null ? null : x);
   model.qatorlar.forEach((q, i) => {
-    const kid = (col: string) => `SUM(${q.bolalar.map((k) => `${col}${rowOf(k)}`).join(',')})`;
+    const kid = (col: string) => sumRefs(col, q.bolalar.map(rowOf));
     let r = 0;
     if (q.tur === 'rz') r = v.bolim(q.nom, { daraja: q.daraja });
     else if (q.tur === 'barg') {
@@ -377,8 +377,8 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
     const nomalum = model.ildizlar.reduce((s, i) => s + model.qatorlar[i].nomalum, 0);
     v.qator('vsego', (n) => [
       null, null, 'ВСЕГО ОСТАТОК РАБОТ ПО ОБЪЕКТУ', null, null, null, null, null,
-      { f: `IF(J${n}>0,"",SUM(${model.ildizlar.map((i) => `I${rowOf(i)}`).join(',')}))`, v: model.jami ?? '' },
-      { f: `SUM(${model.ildizlar.map((i) => `J${rowOf(i)}`).join(',')})`, v: nomalum },
+      { f: `IF(J${n}>0,"",${sumRefs('I', model.ildizlar.map(rowOf))})`, v: model.jami ?? '' },
+      { f: sumRefs('J', model.ildizlar.map(rowOf)), v: nomalum },
     ]);
   }
   if (model.chiqarilgan.length) {
@@ -398,8 +398,8 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
     const nomalumCh = model.chiqarilgan.filter((c) => c.summa == null).length;
     v.qator('jami', (n) => [
       null, null, 'ИТОГО ИСКЛЮЧЕНО ИЗ ОСТАТКА (в остаток не включено)', null, null, null, null, null,
-      { f: `IF(J${n}>0,"",SUM(${qatorlar.map((r) => `I${r}`).join(',')}))`, v: model.chiqarilganJami ?? '' },
-      { f: `SUM(${qatorlar.map((r) => `J${r}`).join(',')})`, v: nomalumCh },
+      { f: `IF(J${n}>0,"",${sumRefs('I', qatorlar)})`, v: model.chiqarilganJami ?? '' },
+      { f: sumRefs('J', qatorlar), v: nomalumCh },
     ], { daraja: 0 });
   }
   v.bosh();

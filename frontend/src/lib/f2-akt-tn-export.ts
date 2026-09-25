@@ -1,5 +1,5 @@
 import type { NakopitelniyQator } from '../api/t2-nakopitelniy';
-import { RasmiyVaraq, bugunSana, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2, type ImzoNomlar, type RasmiyUstun } from './hujjat-yozuvchi';
+import { RasmiyVaraq, bugunSana, sumRefs, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2, type ImzoNomlar, type RasmiyUstun } from './hujjat-yozuvchi';
 import { HujjatToliqEmasXato, davrMatni } from './nakopitelniy-vedomost-export';
 
 /**
@@ -195,7 +195,7 @@ export function f2AktHujjat(qatorlar: readonly NakopitelniyQator[], o: F2AktHujj
     else if (r.kind === 'chiziq_mustaqil') { joriyBl = -1; rzQismi.push(i); }
     else if (r.kind === 'itogo') { itogoBolalari.set(i, rzQismi); itogolar.push(i); }
   });
-  const sumH = (ids: number[]) => `SUM(${ids.map((k) => `H${rowOf(k)}`).join(',')})`;
+  const sumH = (ids: number[]) => sumRefs('H', ids.map(rowOf));
   const summaOf = (i: number): number => {
     const r = rows[i];
     return r.kind === 'rz' ? 0 : r.cells[7] as number;

@@ -38,3 +38,50 @@ export function aslFormula(katak: AslKatak | undefined): string | null {
   if (!m || /\bt="(?:shared|array|dataTable)"/.test(m[1])) return null;
   return unEsc(m[2]);
 }
+
+/** Excel funksiyasi ko'pi bilan 255 argument oladi — zaxira bilan 250. */
+const MAX_ARG = 250;
+
+/** Qatorlar ro'yxatini ketma-ket oraliqlarga siqadi: [5,6,7,9] → ["G5:G7","G9"]. */
+export function oraliqlar(harf: string, qatorlar: readonly number[]): string[] {
+  const r = [...new Set(qatorlar)].sort((a, b) => a - b);
+  const out: string[] = [];
+  for (let i = 0; i < r.length;) {
+    let j = i;
+    while (j + 1 < r.length && r[j + 1] === r[j] + 1) j++;
+    out.push(r[i] === r[j] ? `${harf}${r[i]}` : `${harf}${r[i]}:${harf}${r[j]}`);
+    i = j + 1;
+  }
+  return out;
+}
+
+/**
+ * Kataklar yig'indisi formulasi (`=` siz): oraliqlarga siqilgan, 250 dan ortiq
+ * bo'lak bo'lsa ichma-ich `SUM(SUM(…),SUM(…))` — Excelning 255 argument
+ * cheklovidan (katta bo'limlar: minglab resurs qatori) oshmaydi.
+ */
+export function sumRefs(harf: string, qatorlar: readonly number[]): string {
+  let parts = oraliqlar(harf, qatorlar);
+  if (!parts.length) return '0';
+  while (parts.length > MAX_ARG) {
+    const next: string[] = [];
+    for (let i = 0; i < parts.length; i += MAX_ARG) next.push(`SUM(${parts.slice(i, i + MAX_ARG).join(',')})`);
+    parts = next;
+  }
+  return `SUM(${parts.join(',')})`;
+}
+
+/** Bo'sh kataklar soni (`COUNTBLANK` faqat bitta oraliq oladi — har oraliq alohida qo'shiladi). */
+export function bosRefs(harf: string, qatorlar: readonly number[]): string {
+  const parts = oraliqlar(harf, qatorlar).map((p) => `COUNTBLANK(${p.includes(':') ? p : `${p}:${p}`})`);
+  if (!parts.length) return '0';
+  // Qo'shish operatori argument cheklovi emas, lekin formula uzunligi 8192 belgi —
+  // ko'p bo'lakda SUM ichiga guruhlanadi.
+  let g = parts;
+  while (g.length > MAX_ARG) {
+    const next: string[] = [];
+    for (let i = 0; i < g.length; i += MAX_ARG) next.push(`SUM(${g.slice(i, i + MAX_ARG).join(',')})`);
+    g = next;
+  }
+  return g.length === 1 ? g[0] : `SUM(${g.join(',')})`;
+}
