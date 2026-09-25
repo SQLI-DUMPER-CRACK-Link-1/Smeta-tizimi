@@ -25,6 +25,15 @@ import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
 import { OFERTA_KATEGORIYALAR, narxlanadiganmi, type OfertaHisoblash, type OfertaKategoriya, type OfertaQatorNatija } from './tender-oferta';
 import type { OfertaSheetTahlili } from './tender-oferta-parser';
 import { NAKRUTKA_KOEF_IZOH, NAKRUTKA_KOEF_KODLAR } from '../api/t2-nakrutka';
+import {
+  aslFormula, bosCell, boshUstun, colAttr, colsOqi, engOngUstun, fCell, formulaKochir, isZip, numCell, num, printAreaKengaytir,
+  sheetRef, strCell, sumArgs, ustunHarfi, varaqniPatchla, varaqXaritasi, varaqYollari, workbookgaVaraqQosh, xfNusxa, xlsdanXlsx,
+  zaxiraStillarQosh, imzoMatni, IMZO_IZOH, IMZO_PODPIS, IMZO_MP, IMZO_IMZO_CHIZIQ,
+  type VaraqPatch, type VaraqXarita, type YangiHujayra, type ZaxiraStillar,
+} from './hujjat-yozuvchi';
+
+// Oferta V3 API si o'zgarmaydi: umumiy qismlar hujjat-yozuvchi modulidan qayta eksport.
+export { ustunHarfi, engOngUstun, formulaKochir } from './hujjat-yozuvchi';
 
 export type OfertaEksportInput = {
   obyektNomi?: string;
@@ -85,27 +94,6 @@ export function ofertaHolatMatni(q: OfertaQatorNatija): string {
 
 // ───────────────────────── yordamchilar ─────────────────────────
 
-export function ustunHarfi(col: number): string {
-  let n = col + 1;
-  let s = '';
-  while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
-  return s;
-}
-
-function ustunIndeksi(letters: string): number {
-  let n = 0;
-  for (const ch of letters.toUpperCase()) n = n * 26 + ch.charCodeAt(0) - 64;
-  return n - 1;
-}
-
-const xmlEsc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const sheetRef = (name: string): string => `'${name.replace(/'/g, "''")}'`;
-const num = (n: number): string => (Object.is(n, -0) ? '0' : String(n));
-
-function isZip(b: Uint8Array): boolean {
-  return b.length > 4 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04;
-}
-
 function safeFilePart(value: string): string {
   return value.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 120) || 'resurs';
 }
@@ -119,369 +107,7 @@ export function ofertaFaylNomi(manbaFaylNomi?: string, xlsdanOgirilgan = false):
   return `${stem}_OFERTA.${ext}`;
 }
 
-// ───────────────────────── hujayra modeli ─────────────────────────
-
-/** Yangi katak. Uslub `klon` (shu qatordagi ASL ustun) katagidan olinadi —
- * egasining shrifti, chegarasi, son formati va rangi aynan davom etadi;
- * u yo‘q bo‘lsa `s` (ustun sukut uslubi yoki rangsiz zaxira). */
-type YangiHujayra = { col: number; klon?: number; s: number; xml: (ref: string, s: number) => string };
-
-function strCell(col: number, s: number, text: string, klon?: number): YangiHujayra {
-  return { col, s, klon, xml: (ref, st) => `<c r="${ref}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(text)}</t></is></c>` };
-}
-function numCell(col: number, s: number, v: number, klon?: number): YangiHujayra {
-  return { col, s, klon, xml: (ref, st) => `<c r="${ref}" s="${st}"><v>${num(v)}</v></c>` };
-}
-function fCell(col: number, s: number, f: string, v: number | string | null, klon?: number): YangiHujayra {
-  return {
-    col, s, klon, xml: (ref, st) => {
-      if (v == null) return `<c r="${ref}" s="${st}"><f>${xmlEsc(f)}</f></c>`;
-      if (typeof v === 'string') return `<c r="${ref}" s="${st}" t="str"><f>${xmlEsc(f)}</f><v>${xmlEsc(v)}</v></c>`;
-      return `<c r="${ref}" s="${st}"><f>${xmlEsc(f)}</f><v>${num(v)}</v></c>`;
-    },
-  };
-}
-function bosCell(col: number, s: number, klon?: number): YangiHujayra {
-  return { col, s, klon, xml: (ref, st) => `<c r="${ref}" s="${st}"/>` };
-}
-
-// ───────────────────────── styles.xml ─────────────────────────
-
-type Stillar = { header: number; text: number; son: number; jami: number; jamiMatn: number; foiz: number };
-
-function appendToList(xml: string, tag: string, childTag: string, items: string[]): { xml: string; firstIndex: number } {
-  const re = new RegExp(`<(\\w+:)?${tag}\\b([^>]*?)(\\/>|>([\\s\\S]*?)<\\/(?:\\w+:)?${tag}>)`);
-  const m = xml.match(re);
-  if (!m) throw new Error(`STYLES_${tag.toUpperCase()}_YOQ`);
-  const p = m[1] ?? '';
-  const inner = m[4] ?? '';
-  const existing = (inner.match(new RegExp(`<${p}${childTag}\\b`, 'g')) || []).length;
-  const attrs = m[2].replace(/\scount="\d+"/, '');
-  const prefixed = items.map((it) => it.replace(/<(\/?)([a-zA-Z]+)/g, (_x, sl, t) => `<${sl}${p}${t}`));
-  const replaced = `<${p}${tag}${attrs} count="${existing + items.length}">${inner}${prefixed.join('')}</${p}${tag}>`;
-  return { xml: xml.replace(re, () => replaced), firstIndex: existing };
-}
-
-function cellXfRoyxati(stylesXml: string): string[] {
-  const m = stylesXml.match(/<(?:\w+:)?cellXfs\b[^>]*>([\s\S]*?)<\/(?:\w+:)?cellXfs>/);
-  if (!m) return [];
-  return [...m[1].matchAll(/<(?:\w+:)?xf\b[^>]*?(?:\/>|>[\s\S]*?<\/(?:\w+:)?xf>)/g)].map((x) => x[0]);
-}
-
-/* Egasi (2026-09-24): "ranglashni man o'zim uchun vizual qulaylikda bo'lishi
-   uchun qilganman … hamma berayotgan hujjatingda o'zing ijod qilib tashlayapsan".
-   Shuning uchun styles.xml ga RANG (fill) qo'shilmaydi. Asl varaqlardagi yangi
-   kataklar uslubni o'sha qatordagi ASL ustun katagidan oladi. Bu zaxira
-   uslublar faqat asl katak topilmaganda: default shrift, qalinlik, son formati. */
-function stillarQosh(stylesXml: string): { xml: string; s: Stillar } {
-  let xml = stylesXml;
-  const fonts = appendToList(xml, 'fonts', 'font', ['<font><b/></font>']);
-  xml = fonts.xml;
-  const fB = fonts.firstIndex;
-  const al = '<alignment wrapText="1" vertical="center"/>';
-  const xfs = appendToList(xml, 'cellXfs', 'xf', [
-    `<xf numFmtId="0" fontId="${fB}" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">${al}</xf>`,
-    `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1">${al}</xf>`,
-    `<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`,
-    `<xf numFmtId="4" fontId="${fB}" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>`,
-    `<xf numFmtId="0" fontId="${fB}" fillId="0" borderId="0" xfId="0" applyFont="1"/>`,
-    `<xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`,
-  ]);
-  xml = xfs.xml;
-  const b = xfs.firstIndex;
-  return { xml, s: { header: b, text: b + 1, son: b + 2, jami: b + 3, jamiMatn: b + 4, foiz: b + 5 } };
-}
-
-/** Egasining mavjud uslubini (chegara, shrift, rang) aynan nusxalab, faqat son
- * formatini almashtiradi — masalan foiz uchun "0.00". Yangi rang yo‘q. */
-function xfNusxa(stylesXml: string, idx: number, numFmtId: number): { xml: string; s: number | null } {
-  const xf = cellXfRoyxati(stylesXml)[idx];
-  if (!xf) return { xml: stylesXml, s: null };
-  const yangi = xf.replace(/\snumFmtId="\d+"/, '').replace(/<((?:\w+:)?xf)\b/, `<$1 numFmtId="${numFmtId}"`)
-    .replace(/\sapplyNumberFormat="\d"/, '').replace(/<((?:\w+:)?xf)\b/, '<$1 applyNumberFormat="1"')
-    .replace(/<(\/?)\w+:/g, '<$1');
-  const r = appendToList(stylesXml, 'cellXfs', 'xf', [yangi]);
-  return { xml: r.xml, s: r.firstIndex };
-}
-
-// ───────────────────────── varaq XML o'qish ─────────────────────────
-
-type VaraqPatch = {
-  rows: Map<number, YangiHujayra[]>;
-  /** Yangi ustunlar kengligi: `nusxa` — asl ustun (kengligi/uslubi olinadi). */
-  ustunlar: Array<{ col: number; nusxa?: number; width?: number; hidden?: boolean }>;
-  /** Yangi ustunlar oralig‘i [bosh, oxirgiKorinadigan, oxirgi] (0-based). */
-  oraliq: [number, number, number];
-  /** Asl jadvalning oxirgi (СУММА) ustuni — chop etish eni shu bo'yicha. */
-  aslOxirgi: number;
-  /** Birlashmalarni kengaytirish: shu ustunda tugagan merge yangi ustunga cho‘ziladi. */
-  mergeChoz: { dan: number; gacha: number };
-  /** Yangi birlashmalar (masalan sarlavha bloki). */
-  yangiMerge: string[];
-};
-
-function prefiks(xml: string): string {
-  const m = xml.match(/<(\w+:)?sheetData\b/);
-  if (!m) throw new Error('SHEETDATA_YOQ');
-  return m[1] ?? '';
-}
-
-/** Varaqdagi eng o'ng band ustun (hujayralar, dimension, merge). */
-export function engOngUstun(xml: string): number {
-  let max = 0;
-  for (const m of xml.matchAll(/<(?:\w+:)?c\b[^>]*?\br="([A-Z]+)\d+"/g)) max = Math.max(max, ustunIndeksi(m[1]));
-  for (const m of xml.matchAll(/<(?:\w+:)?mergeCell\b[^>]*?\bref="[A-Z]+\d+:([A-Z]+)\d+"/g)) max = Math.max(max, ustunIndeksi(m[1]));
-  const dim = xml.match(/<(?:\w+:)?dimension\b[^>]*?\bref="([A-Z]+)\d+(?::([A-Z]+)\d+)?"/);
-  if (dim) max = Math.max(max, ustunIndeksi(dim[2] ?? dim[1]));
-  return max;
-}
-
-type AslKatak = { col: number; xml: string; s: string | null; bosh: boolean; v: string | null };
-
-const cellRe = (p: string) => new RegExp(`<${p}c\\b[^>]*?(?:\\/>|>[\\s\\S]*?<\\/${p}c>)`, 'g');
-
-function qatorKataklari(rowInner: string, p: string): AslKatak[] {
-  return [...rowInner.matchAll(cellRe(p))].map((m) => {
-    const x = m[0];
-    const open = x.match(new RegExp(`^<${p}c\\b([^>]*?)\\/?>`))?.[1] ?? '';
-    const ref = open.match(/\br="([A-Z]+)\d+"/)?.[1] ?? 'A';
-    const bosh = !new RegExp(`<${p}(?:v|f|is)\\b`).test(x);
-    const t = open.match(/\bt="([^"]+)"/)?.[1];
-    const v = t === 's' || t === 'inlineStr' ? null : x.match(new RegExp(`<${p}v>([^<]*)<\\/${p}v>`))?.[1] ?? null;
-    return { col: ustunIndeksi(ref), xml: x, s: open.match(/\bs="(\d+)"/)?.[1] ?? null, bosh, v };
-  });
-}
-
-type VaraqXarita = { qatorlar: Map<number, AslKatak[]>; oxirgiQator: number; merges: Array<{ r1: number; c1: number; r2: number; c2: number }> };
-
-function varaqXaritasi(xml: string): VaraqXarita {
-  const p = prefiks(xml);
-  const qatorlar = new Map<number, AslKatak[]>();
-  let oxirgiQator = 0;
-  for (const m of xml.matchAll(new RegExp(`<${p}row\\b([^>]*?)(\\/>|>([\\s\\S]*?)<\\/${p}row>)`, 'g'))) {
-    const r = Number(m[1].match(/\br="(\d+)"/)?.[1]);
-    if (!r) continue;
-    const cells = m[3] ? qatorKataklari(m[3], p) : [];
-    qatorlar.set(r, cells);
-    if (cells.some((c) => !c.bosh)) oxirgiQator = Math.max(oxirgiQator, r);
-  }
-  const merges = [...xml.matchAll(/<(?:\w+:)?mergeCell\b[^>]*?\bref="([A-Z]+)(\d+):([A-Z]+)(\d+)"/g)]
-    .map((m) => ({ c1: ustunIndeksi(m[1]), r1: Number(m[2]), c2: ustunIndeksi(m[3]), r2: Number(m[4]) }));
-  return { qatorlar, oxirgiQator, merges };
-}
-
-type ColYozuv = { min: number; max: number; attrs: string };
-
-function colsOqi(xml: string): ColYozuv[] {
-  const m = xml.match(/<(?:\w+:)?cols\b[^>]*>([\s\S]*?)<\/(?:\w+:)?cols>/);
-  if (!m) return [];
-  return [...m[1].matchAll(/<(?:\w+:)?col\b([^>]*?)\/?>/g)].map((c) => ({
-    min: Number(c[1].match(/\bmin="(\d+)"/)?.[1]),
-    max: Number(c[1].match(/\bmax="(\d+)"/)?.[1]),
-    attrs: c[1].replace(/\s(?:min|max)="\d+"/g, '').trim(),
-  })).filter((c) => c.min && c.max);
-}
-
-const colAttr = (cols: ColYozuv[], col: number, nom: string): string | null => {
-  const c = cols.find((x) => col + 1 >= x.min && col + 1 <= x.max);
-  return c?.attrs.match(new RegExp(`\\b${nom}="([^"]*)"`))?.[1] ?? null;
-};
-
-/** Yangi ustunlar asl jadvalning OXIRGI ustunidan (smeta summa) keyin darhol
- * boshlanadi — agar u yerdagi kataklar faqat bo‘sh formatlangan bo‘lsa.
- * Ma’lumot yoki birlashma bo‘lsa, butun band hududdan keyin qo‘yiladi. */
-function boshUstun(x: VaraqXarita, summaUstuni: number, kenglik: number, engOng: number): number {
-  const bosh = summaUstuni + 1;
-  const oxir = bosh + kenglik - 1;
-  for (const cells of x.qatorlar.values()) {
-    if (cells.some((c) => c.col >= bosh && c.col <= oxir && !c.bosh)) return engOng + 1;
-  }
-  if (x.merges.some((m) => m.c2 >= bosh && m.c1 <= oxir)) return engOng + 1;
-  return bosh;
-}
-
-// ───────────────────────── varaq XML patch ─────────────────────────
-
-function varaqniPatchla(xml: string, patch: VaraqPatch, x: VaraqXarita): string {
-  const p = prefiks(xml);
-  const cols = colsOqi(xml);
-  const [bosh, , oxirgi] = patch.oraliq;
-  const rowRe = new RegExp(`<${p}row\\b([^>]*?)(\\/>|>([\\s\\S]*?)<\\/${p}row>)`, 'g');
-  const sdRe = new RegExp(`<${p}sheetData\\b([^>]*?)(\\/>|>([\\s\\S]*?)<\\/${p}sheetData>)`);
-  const sd = xml.match(sdRe);
-  if (!sd) throw new Error('SHEETDATA_YOQ');
-  const inner = sd[3] ?? '';
-  const qolgan = new Map(patch.rows);
-
-  const uslub = (r: number, h: YangiHujayra): number => {
-    if (h.klon != null) {
-      const asl = x.qatorlar.get(r)?.find((c) => c.col === h.klon);
-      if (asl?.s != null) return Number(asl.s);
-      const colS = colAttr(cols, h.klon, 'style');
-      if (colS != null) return Number(colS);
-    }
-    return h.s;
-  };
-  const yangiXml = (r: number, cells: YangiHujayra[]) => cells.map((c) => ({ col: c.col, xml: c.xml(`${ustunHarfi(c.col)}${r}`, uslub(r, c)) }));
-  const prefiksla = (s: string) => (p ? s.replace(/<(\/?)(c|f|v|is|t)\b/g, (_m, sl, tag) => `<${sl}${p}${tag}`) : s);
-  const birlashtir = (r: number, asl: AslKatak[], cells: YangiHujayra[]) => {
-    const yangi = yangiXml(r, cells);
-    const band = new Set(yangi.map((c) => c.col));
-    // Yangi ustundagi BO‘SH formatlangan asl katak o‘rniga yangisi yoziladi;
-    // qiymatli asl katakka hech qachon tegilmaydi (boshUstun buni kafolatlaydi).
-    const saqlanadi = asl.filter((c) => !(band.has(c.col) && c.bosh));
-    return [...saqlanadi.map((c) => ({ col: c.col, xml: c.xml })), ...yangi.map((c) => ({ col: c.col, xml: prefiksla(c.xml) }))]
-      .sort((a, b) => a.col - b.col).map((c) => c.xml).join('');
-  };
-  const newRow = (r: number, cells: YangiHujayra[]) => `<${p}row r="${r}">${birlashtir(r, [], cells)}</${p}row>`;
-  const oldingilar = (rNum: number) => [...qolgan.keys()].filter((r) => r < rNum).sort((a, b) => a - b);
-
-  let out = '';
-  let lastIndex = 0;
-  for (const m of inner.matchAll(rowRe)) {
-    const attrs = m[1];
-    const rNum = Number((attrs.match(/\br="(\d+)"/) || [])[1]);
-    out += inner.slice(lastIndex, m.index);
-    for (const r of oldingilar(rNum)) { out += newRow(r, qolgan.get(r)!); qolgan.delete(r); }
-    const cells = qolgan.get(rNum);
-    if (cells) {
-      qolgan.delete(rNum);
-      // spans — ixtiyoriy optimallashtirish atributi; yangi ustun uni buzmasin.
-      const a = attrs.replace(/\sspans="[^"]*"/, '');
-      out += `<${p}row${a}>${birlashtir(rNum, m[3] ? qatorKataklari(m[3], p) : [], cells)}</${p}row>`;
-    } else {
-      out += m[0];
-    }
-    lastIndex = (m.index ?? 0) + m[0].length;
-  }
-  out += inner.slice(lastIndex);
-  for (const r of [...qolgan.keys()].sort((a, b) => a - b)) out += newRow(r, qolgan.get(r)!);
-
-  let res = xml.replace(sdRe, () => `<${p}sheetData${sd[1]}>${out}</${p}sheetData>`);
-
-  const oxirgiQator = Math.max(x.oxirgiQator, ...patch.rows.keys());
-  res = res.replace(new RegExp(`(<${p}dimension\\b[^>]*?\\bref=")([A-Z]+)(\\d+)(?::([A-Z]+)(\\d+))?(")`), (_m, a, c1, r1, c2, r2, z) => {
-    const endCol = Math.max(ustunIndeksi(c2 ?? c1), oxirgi);
-    const endRow = Math.max(Number(r2 ?? r1), oxirgiQator);
-    return `${a}${c1}${r1}:${ustunHarfi(endCol)}${endRow}${z}`;
-  });
-
-  // Birlashmalar: sarlavha va bo‘lim qatorlari asl jadvalning oxirgi
-  // ustunida tugagan bo‘lsa — yangi ustunlargacha cho‘ziladi (matn butun
-  // hujjat ustida markazda qoladi). Yangi birlashmalar qo‘shiladi.
-  const { dan, gacha } = patch.mergeChoz;
-  res = res.replace(new RegExp(`(<${p}mergeCell\\b[^>]*?\\bref=")([A-Z]+)(\\d+:)([A-Z]+)(\\d+")`, 'g'), (all, a, c1, m1, c2, z) => (ustunIndeksi(c2) === dan && ustunIndeksi(c1) < dan ? `${a}${c1}${m1}${ustunHarfi(gacha)}${z}` : all));
-  if (patch.yangiMerge.length) {
-    const mc = new RegExp(`<${p}mergeCells\\b([^>]*?)(?:\\/>|>([\\s\\S]*?)<\\/${p}mergeCells>)`);
-    const yangi = patch.yangiMerge.map((ref) => `<${p}mergeCell ref="${ref}"/>`).join('');
-    if (mc.test(res)) {
-      res = res.replace(mc, (_all, attrs: string, ichki: string | undefined) => {
-        const n = ((ichki ?? '').match(new RegExp(`<${p}mergeCell\\b`, 'g')) || []).length + patch.yangiMerge.length;
-        return `<${p}mergeCells${attrs.replace(/\scount="\d+"/, '')} count="${n}">${ichki ?? ''}${yangi}</${p}mergeCells>`;
-      });
-    } else {
-      res = res.replace(new RegExp(`(<\\/${p}sheetData>)`), `$1<${p}mergeCells count="${patch.yangiMerge.length}">${yangi}</${p}mergeCells>`);
-    }
-  }
-
-  // Ustunlar: asl D/E/F ustunlarining kengligi va sukut uslubi nusxalanadi.
-  res = colsYoz(res, p, cols, patch.ustunlar);
-
-  // Chop etish: asl sahifa masshtabi eni oshgan ulushda kamaytiriladi, hujjat
-  // avvalgidek bitta sahifa eniga sig‘adi (fitToPage bo‘lsa Excel o‘zi sig‘diradi).
-  const kengligi = (c: number) => Number(colAttr(cols, c, 'width') ?? 9.14);
-  // Asl chop eni — A..СУММА; yangisi — A..oferta СУММА (oradagi egasining
-  // yozuv ustunlari ham chop hududiga kiradi).
-  const korinadi = (c: number) => colAttr(cols, c, 'hidden') !== '1';
-  let aslEni = 0;
-  for (let c = 0; c <= patch.aslOxirgi; c++) if (korinadi(c)) aslEni += kengligi(c);
-  let qoshildi = 0;
-  for (let c = patch.aslOxirgi + 1; c <= patch.oraliq[1]; c++) {
-    const u = patch.ustunlar.find((x) => x.col === c);
-    if (u) { if (!u.hidden) qoshildi += u.width ?? (u.nusxa != null ? kengligi(u.nusxa) : 9.14); } else if (korinadi(c)) qoshildi += kengligi(c);
-  }
-  void bosh;
-  // Egasi jadval oxiriga (СУММА dan keyin) qo'lda sahifa bo'linishi qo'ygan
-  // bo'lsa — maqsad "jadval shu yerda tugaydi": bo'linish oferta bloki oxiriga ko'chadi.
-  res = res.replace(new RegExp(`<${p}colBreaks\\b[^>]*>[\\s\\S]*?<\\/${p}colBreaks>`), (blok) =>
-    blok.replace(/(\bid=")(\d+)(")/g, (all, a: string, id: string, z: string) => (Number(id) === patch.aslOxirgi + 1 ? `${a}${patch.oraliq[1] + 1}${z}` : all)));
-  res = res.replace(new RegExp(`<${p}pageSetup\\b([^>]*?)\\/?>`), (all, attrs: string) => {
-    const sc = attrs.match(/\bscale="(\d+)"/);
-    if (!sc || /\bfitToPage="1"/.test(res) || aslEni <= 0) return all;
-    const yangiScale = Math.max(10, Math.floor(Number(sc[1]) * aslEni / (aslEni + qoshildi)));
-    return all.replace(/\bscale="\d+"/, `scale="${yangiScale}"`);
-  });
-  return res;
-}
-
-function colsYoz(xml: string, p: string, cols: ColYozuv[], yangi: VaraqPatch['ustunlar']): string {
-  if (!yangi.length) return xml;
-  let list = cols.map((c) => ({ ...c }));
-  for (const u of yangi) {
-    const idx = u.col + 1;
-    const nusxa = u.nusxa != null ? cols.find((c) => u.nusxa! + 1 >= c.min && u.nusxa! + 1 <= c.max) : undefined;
-    let attrs = nusxa ? nusxa.attrs.replace(/\s*\bhidden="\d"/, '').replace(/\s*\bbestFit="\d"/, '') : `width="${u.width ?? 12}" customWidth="1"`;
-    if (u.width != null) attrs = attrs.replace(/\bwidth="[^"]*"/, `width="${u.width}"`);
-    if (!/\bwidth=/.test(attrs)) attrs += ` width="${u.width ?? 12}" customWidth="1"`;
-    if (u.hidden) attrs += ' hidden="1"';
-    const next: ColYozuv[] = [];
-    for (const c of list) {
-      if (idx < c.min || idx > c.max) { next.push(c); continue; }
-      if (c.min < idx) next.push({ min: c.min, max: idx - 1, attrs: c.attrs });
-      if (c.max > idx) next.push({ min: idx + 1, max: c.max, attrs: c.attrs });
-    }
-    next.push({ min: idx, max: idx, attrs: attrs.trim() });
-    list = next.sort((a, b) => a.min - b.min);
-  }
-  const body = list.map((c) => `<${p}col min="${c.min}" max="${c.max}" ${c.attrs}/>`).join('');
-  const colsRe = new RegExp(`<${p}cols\\b[^>]*>[\\s\\S]*?<\\/${p}cols>`);
-  if (colsRe.test(xml)) return xml.replace(colsRe, () => `<${p}cols>${body}</${p}cols>`);
-  return xml.replace(new RegExp(`<${p}sheetData\\b`), (m) => `<${p}cols>${body}</${p}cols>${m}`);
-}
-
 // ───────────────────────── formulalar ─────────────────────────
-
-/** Ketma-ket qatorlarni diapazonga siqib SUM argumentlarini yasaydi. */
-function sumArgs(col: string, rows: number[]): string {
-  const sorted = [...new Set(rows)].sort((a, b) => a - b);
-  const parts: string[] = [];
-  for (let i = 0; i < sorted.length;) {
-    let j = i;
-    while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) j++;
-    parts.push(i === j ? `${col}${sorted[i]}` : `${col}${sorted[i]}:${col}${sorted[j]}`);
-    i = j + 1;
-  }
-  return parts.join(',');
-}
-
-/** Asl katak formulasini oferta ustunlariga ko'chiradi: xaritadagi ustunlarga
- * havola — mos yangi ustunga (qator raqami o'zgarmaydi). \`boshqasiQoladi\`:
- * xaritada yo'q ustun (masalan =F237*E238 dagi koeffitsient katagi E238)
- * asl joyiga havola bo'lib qoladi; aks holda bunday formula ko'chirilmaydi.
- * Boshqa varaq/kitob havolasi yoki birorta ham ko'chgan havola bo'lmasa — null
- * (bunday formula taklif narxiga bog'lanmagan bo'lardi). */
-export function formulaKochir(f: string, xarita: ReadonlyMap<number, number>, boshqasiQoladi = false): string | null {
-  if (!f || /[![\]]/.test(f)) return null;
-  let buzildi = false;
-  let kochdi = 0;
-  const natija = f.replace(/("[^"]*")|(\$?)([A-Z]{1,3})(\$?)(\d+)(?![\w(])/g, (all, str, d1, col, d2, row, offset, whole) => {
-    if (str) return all;
-    const oldin = whole[offset - 1];
-    if (oldin && /[A-Za-z0-9_.]/.test(oldin)) return all; // funksiya nomi ichida (LOG10 …)
-    const yangi = xarita.get(ustunIndeksi(col));
-    if (yangi == null) { if (!boshqasiQoladi) buzildi = true; return all; }
-    kochdi++;
-    return `${d1}${ustunHarfi(yangi)}${d2}${row}`;
-  });
-  return buzildi || !kochdi ? null : natija;
-}
-
-function aslFormula(katak: AslKatak | undefined): string | null {
-  if (!katak) return null;
-  const m = katak.xml.match(/<(?:\w+:)?f\b([^>]*)>([^<]*)<\/(?:\w+:)?f>/);
-  if (!m || /\bt="(?:shared|array|dataTable)"/.test(m[1])) return null;
-  return unEsc(m[2]);
-}
 
 function foizFormula(f: { yon: string; foiz: number }): string {
   return `(1${f.yon === 'oshirish' ? '+' : '-'}${num(f.foiz)}/100)`;
@@ -489,19 +115,18 @@ function foizFormula(f: { yon: string; foiz: number }): string {
 
 export const OFERTA_USTUN_SARLAVHALARI = ['КОЛ-ВО\n(оферта)', 'ЦЕНА ЗА ЕД.\n(оферта)', 'СУММА\n(оферта), сум', 'КАТЕГОРИЯ'] as const;
 
-/** Ikki tomon imzosi — har bir oferta varag‘i va yakuniy varaq oxirida. */
-const IMZO_TOMONLARI = ['ЗАКАЗЧИК:', 'ПОДРЯДЧИК:'] as const;
+/** Ikki tomon imzosi — har bir oferta varag‘i va yakuniy varaq oxirida (H3). */
+const IMZO_TOMONLARI = ['ЗАКАЗЧИК', 'ПОДРЯДЧИК'] as const;
 
-function imzoMatni(tomon: typeof IMZO_TOMONLARI[number], imzo?: OfertaEksportInput['imzo']): string {
-  const nom = (tomon === 'ЗАКАЗЧИК:' ? imzo?.zakazchik : imzo?.pudratchi)?.trim();
-  return `${tomon}  ${nom || '________________________________________'}`;
+function ofertaImzoMatni(tomon: typeof IMZO_TOMONLARI[number], imzo?: OfertaEksportInput['imzo']): string {
+  return imzoMatni(tomon, tomon === 'ЗАКАЗЧИК' ? imzo?.zakazchik : imzo?.pudratchi);
 }
 
 /** Asl jadvaldan uslub namunalari — yakuniy varaq ham egasining shrifti,
  * chegarasi va son formatida chiqadi (yangi rang yo‘q). */
 type UslubNamuna = { sarlavha?: number; raqam?: number; matn?: number; son?: number; jamiMatn?: number; jamiSon?: number; bolim?: number; oddiy?: number };
 
-function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQatorNatija[], x: VaraqXarita, xml: string, s: Stillar, imzo?: OfertaEksportInput['imzo']): { patch: VaraqPatch; harflar: OfertaUstunHarflari; namuna: UslubNamuna } {
+function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQatorNatija[], x: VaraqXarita, xml: string, s: ZaxiraStillar, imzo?: OfertaEksportInput['imzo']): { patch: VaraqPatch; harflar: OfertaUstunHarflari; namuna: UslubNamuna } {
   const u = tahlil.ustunlar!;
   const cols = colsOqi(xml);
   const cF = u.smetaSumma, cD = u.hajm >= 0 ? u.hajm : cF, cE = u.smetaNarx >= 0 ? u.smetaNarx : cF;
@@ -600,11 +225,11 @@ function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQato
   namuna.oddiy = oddiy;
   let r0 = Math.max(x.oxirgiQator, ...rows.keys()) + 3;
   for (const tomon of IMZO_TOMONLARI) {
-    add(r0, strCell(u.nom, oddiy, imzoMatni(tomon, imzo)));
-    add(r0, strCell(cP, oddiy, '____________________'));
-    add(r0 + 1, strCell(u.nom, oddiy, '(наименование организации, должность, Ф.И.О.)'));
-    add(r0 + 1, strCell(cP, oddiy, '(подпись)'));
-    add(r0 + 1, strCell(cS, oddiy, 'М.П.'));
+    add(r0, strCell(u.nom, oddiy, ofertaImzoMatni(tomon, imzo)));
+    add(r0, strCell(cP, oddiy, IMZO_IMZO_CHIZIQ));
+    add(r0 + 1, strCell(u.nom, oddiy, IMZO_IZOH));
+    add(r0 + 1, strCell(cP, oddiy, IMZO_PODPIS));
+    add(r0 + 1, strCell(cS, oddiy, IMZO_MP));
     r0 += 3;
   }
 
@@ -618,22 +243,6 @@ function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQato
   };
   return { patch, harflar: L, namuna };
 }
-
-// ───────────────────────── print area ─────────────────────────
-
-/** Varaqning _xlnm.Print_Area nomi: ustunlar yangi oxirgi ustungacha, qatorlar
- * (agar u jadval oxirini qamragan bo‘lsa) imzo blokigacha kengayadi. */
-function printAreaKengaytir(wbXml: string, sheetIndex: number, oxirgiUstun: number, jadvalOxiri: number, imzoOxiri: number): string {
-  const re = new RegExp(`(<(?:\\w+:)?definedName\\b[^>]*?\\bname="_xlnm\\.Print_Area"[^>]*?\\blocalSheetId="${sheetIndex}"[^>]*>)([^<]*)(<\\/(?:\\w+:)?definedName>)`);
-  return wbXml.replace(re, (all, a: string, ref: string, z: string) => {
-    const m = ref.match(/^(.*!)\$([A-Z]+)\$(\d+):\$([A-Z]+)\$(\d+)$/);
-    if (!m) return all; // bir nechta hudud yoki boshqa shakl — tegilmaydi
-    const endCol = Math.max(ustunIndeksi(m[4]), oxirgiUstun);
-    const endRow = Number(m[5]) >= jadvalOxiri ? Math.max(Number(m[5]), imzoOxiri) : Number(m[5]);
-    return `${a}${m[1]}$${m[2]}$${m[3]}:$${ustunHarfi(endCol)}$${endRow}${z}`;
-  });
-}
-
 // ───────────────────────── OFERTA_JAMI ─────────────────────────
 
 /** Tartib `ofertaHisobla` dagi kategoriya yig'ish tartibi bilan bir xil. */
@@ -766,8 +375,8 @@ function jamiVaraqXml(
 
   put([]); put([]);
   for (const tomon of IMZO_TOMONLARI) {
-    put([strCell(1, st.oddiy, imzoMatni(tomon, input.imzo)), strCell(2, st.oddiy, '____________________')]);
-    put([strCell(1, st.oddiy, '(наименование организации, должность, Ф.И.О.)'), strCell(2, st.oddiy, '(подпись)          М.П.')]);
+    put([strCell(1, st.oddiy, ofertaImzoMatni(tomon, input.imzo)), strCell(2, st.oddiy, IMZO_IMZO_CHIZIQ)]);
+    put([strCell(1, st.oddiy, IMZO_IZOH), strCell(2, st.oddiy, `${IMZO_PODPIS}          ${IMZO_MP}`)]);
     put([]);
   }
 
@@ -792,70 +401,9 @@ function jamiVaraqXml(
 
 // ───────────────────────── workbook darajasi ─────────────────────────
 
-const unEsc = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+/** Workbook varaqlari (nom → yo'l). Eski nom — mavjud chaqiruvchilar uchun. */
+export const ofertaVaraqYollari = varaqYollari;
 
-export function ofertaVaraqYollari(files: Record<string, Uint8Array>): Array<{ name: string; path: string }> {
-  const wb = strFromU8(files['xl/workbook.xml']);
-  const rels = strFromU8(files['xl/_rels/workbook.xml.rels'] ?? new Uint8Array());
-  const relMap = new Map<string, string>();
-  for (const m of rels.matchAll(/<(?:\w+:)?Relationship\b([^>]*)\/?>/g)) {
-    const id = (m[1].match(/\bId="([^"]+)"/) || [])[1];
-    const target = (m[1].match(/\bTarget="([^"]+)"/) || [])[1];
-    if (id && target) relMap.set(id, target);
-  }
-  const out: Array<{ name: string; path: string }> = [];
-  for (const m of wb.matchAll(/<(?:\w+:)?sheet\b([^>]*)\/?>/g)) {
-    const name = (m[1].match(/\bname="([^"]+)"/) || [])[1];
-    const rid = (m[1].match(/\b\w+:id="([^"]+)"/) || [])[1];
-    const target = rid ? relMap.get(rid) : undefined;
-    if (!name || !target) continue;
-    const path = target.startsWith('/') ? target.slice(1) : `xl/${target}`;
-    out.push({ name: unEsc(name), path });
-  }
-  return out;
-}
-
-function workbookgaVaraqQosh(files: Record<string, Uint8Array>, nom: string, xml: string): void {
-  let n = 1;
-  while (files[`xl/worksheets/sheet${n}.xml`]) n++;
-  const path = `xl/worksheets/sheet${n}.xml`;
-  files[path] = strToU8(xml);
-
-  let rels = strFromU8(files['xl/_rels/workbook.xml.rels']);
-  let rid = 1;
-  while (new RegExp(`\\bId="rId${rid}"`).test(rels)) rid++;
-  const relP = (rels.match(/<(\w+:)?Relationships\b/) || [])[1] ?? '';
-  rels = rels.replace(new RegExp(`<\\/${relP}Relationships>`), `<${relP}Relationship Id="rId${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${n}.xml"/></${relP}Relationships>`);
-  files['xl/_rels/workbook.xml.rels'] = strToU8(rels);
-
-  let wb = strFromU8(files['xl/workbook.xml']);
-  const wp = (wb.match(/<(\w+:)?sheets\b/) || [])[1] ?? '';
-  const idAttr = (wb.match(/<(?:\w+:)?sheet\b[^>]*?\b(\w+):id="/) || [])[1] ?? 'r';
-  const maxId = Math.max(0, ...[...wb.matchAll(/\bsheetId="(\d+)"/g)].map((m) => Number(m[1])));
-  wb = wb.replace(new RegExp(`<\\/${wp}sheets>`), `<${wp}sheet name="${xmlEsc(nom)}" sheetId="${maxId + 1}" ${idAttr}:id="rId${rid}"/></${wp}sheets>`);
-  // Excel ochilganda formulalarni to'liq qayta hisoblasin.
-  const calc = new RegExp(`<${wp}calcPr\\b([^>]*?)\\/?>`);
-  if (calc.test(wb)) {
-    wb = wb.replace(calc, (all: string, attrs: string) => /fullCalcOnLoad=/.test(attrs) ? all : all.replace(/\s*\/?>$/, (e) => ` fullCalcOnLoad="1"${e.trim()}`));
-  } else {
-    const after = ['oleSize', 'customWorkbookViews', 'pivotCaches', 'smartTagPr', 'smartTagTypes', 'webPublishing', 'fileRecoveryPr', 'webPublishObjects', 'extLst'];
-    const anchor = after.map((t) => wb.search(new RegExp(`<${wp}${t}\\b`))).filter((i) => i >= 0).sort((a, b) => a - b)[0];
-    const tag = `<${wp}calcPr calcId="0" fullCalcOnLoad="1"/>`;
-    wb = anchor != null ? wb.slice(0, anchor) + tag + wb.slice(anchor) : wb.replace(new RegExp(`<\\/${wp}workbook>`), `${tag}</${wp}workbook>`);
-  }
-  files['xl/workbook.xml'] = strToU8(wb);
-
-  let ct = strFromU8(files['[Content_Types].xml']);
-  ct = ct.replace(/<\/Types>/, `<Override PartName="/${path}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`);
-  files['[Content_Types].xml'] = strToU8(ct);
-}
-
-async function xlsdanXlsx(bytes: Uint8Array): Promise<Uint8Array> {
-  const XLSX = await import('xlsx-js-style');
-  const wb = XLSX.read(bytes, { type: 'array', cellStyles: true, cellNF: true, cellFormula: true });
-  const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx', cellStyles: true });
-  return out instanceof Uint8Array ? out : new Uint8Array(out as ArrayBuffer);
-}
 
 /**
  * Asl RES workbookini saqlagan holda oferta ustunlari va OFERTA_JAMI
@@ -868,7 +416,7 @@ export async function tenderOfertaXlsx(input: OfertaEksportInput): Promise<Ofert
   const files = unzipSync(base);
   if (!files['xl/workbook.xml'] || !files['xl/styles.xml']) throw new Error('OOXML_TUZILMA_TOLIQ_EMAS: workbook.xml yoki styles.xml topilmadi');
 
-  const st = stillarQosh(strFromU8(files['xl/styles.xml']));
+  const st = zaxiraStillarQosh(strFromU8(files['xl/styles.xml']));
   let stylesXml = st.xml;
 
   const paths = ofertaVaraqYollari(files);
