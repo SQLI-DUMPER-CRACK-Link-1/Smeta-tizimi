@@ -99,16 +99,16 @@ describe('resursVedomostAoa — LRV Excel ichiga qo\'shiladigan varaq qatorlari'
       qator({ tur: 'mat', kat: 'МАТ', kod: null, nom: 'Beton', birlik: 'm3', smeta_hajm: 5, smeta_summa: 500000, f2_hajm: 0, f2_summa: 0, qoldiq_hajm: 5, qoldiq_summa: 500000 }),
     ];
     const aoa = resursVedomostAoa(rows);
-    expect(aoa[0]).toEqual(['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa', 'F2 hajm', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa']);
-    expect(aoa[1]).toEqual(['ЧЕЛ (1 resurs)', '', '', '', '', 1000000, '', 400000, '', 600000]);
+    expect(aoa[0]).toEqual(['Категория', 'Код', 'Наименование ресурса', 'Ед. изм.', 'Кол-во по смете', 'Сумма по смете, сум', 'Кол-во по Ф-2', 'Сумма по Ф-2, сум', 'Остаток, кол-во', 'Остаток, сумма, сум']);
+    expect(aoa[1]).toEqual(['ЧЕЛ — Затраты труда рабочих (1 ресурс)', '', '', '', '', 1000000, '', 400000, '', 600000]);
     expect(aoa[2]).toEqual(['', 'K-1', 'Ishchi', 'chel-soat', 10, 1000000, 4, 400000, 6, 600000]);
-    expect(aoa[3]).toEqual(['МАТ (1 resurs)', '', '', '', '', 500000, '', 0, '', 500000]);
+    expect(aoa[3]).toEqual(['МАТ — Строительные материалы (1 ресурс)', '', '', '', '', 500000, '', 0, '', 500000]);
     expect(aoa[4]).toEqual(['', '', 'Beton', 'm3', 5, 500000, 0, 0, 5, 500000]);
   });
 
   it('bo\'sh kirishda faqat sarlavha qatorini qaytaradi, xato tashlamaydi', () => {
     expect(resursVedomostAoa([])).toEqual([
-      ['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa', 'F2 hajm', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa'],
+      ['Категория', 'Код', 'Наименование ресурса', 'Ед. изм.', 'Кол-во по смете', 'Сумма по смете, сум', 'Кол-во по Ф-2', 'Сумма по Ф-2, сум', 'Остаток, кол-во', 'Остаток, сумма, сум'],
     ]);
   });
 });

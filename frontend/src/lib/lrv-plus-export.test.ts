@@ -56,7 +56,7 @@ describe('lrvPlusQatorlarniHisobla — smeta kaskadi', () => {
     const bl = h.find((r) => r.nom === 'Qazish')!;
     expect(ishchi.obyomFormula).toBe(`E${ishchi.row}*F${bl.row}`);
     expect(ishchi.birlikHajm).toBe(0.095);
-    expect(ishchi.summaFormula).toBe(`F${ishchi.row}*G${ishchi.row}`);
+    expect(ishchi.summaFormula).toBe(`IF(OR(F${ishchi.row}="",G${ishchi.row}=""),"",F${ishchi.row}*G${ishchi.row})`);
   });
 
   it('bl ustunidagi ОБЪЁМ -- literal qiymat (formula emas), tahrirlanadigan katak', () => {
@@ -71,7 +71,7 @@ describe('lrvPlusQatorlarniHisobla — smeta kaskadi', () => {
     const bl = h.find((r) => r.nom === 'Qazish')!;
     const rs = h.filter((r) => r.tur === 'rs');
     const c1 = Math.min(...rs.map((r) => r.row)), c2 = Math.max(...rs.map((r) => r.row));
-    expect(bl.summaFormula).toBe(`SUMIF(X${c1}:X${c2},${bl.daraja + 1},H${c1}:H${c2})`);
+    expect(bl.summaFormula).toBe(`IF(COUNTIFS(X${c1}:X${c2},${bl.daraja + 1},H${c1}:H${c2},"")>0,"",SUMIF(X${c1}:X${c2},${bl.daraja + 1},H${c1}:H${c2}))`);
     expect(bl.summaQiymat).toBe(190000 + 235000);
   });
 
@@ -109,8 +109,8 @@ describe('lrvPlusQatorlarniHisobla — FAKT / F2 (egasining talabi: har bir qato
   it('ЖАМИ formulasi berilgan ustun bo\'yicha faqat ildiz (daraja=0) qatorlarni yig\'adi', () => {
     const h = lrvPlusQatorlarniHisobla(DARAXT);
     const c1 = h[0].row, c2 = h[h.length - 1].row;
-    expect(lrvPlusJamiFormula(h, 'H')).toBe(`SUMIF(X${c1}:X${c2},0,H${c1}:H${c2})`);
-    expect(lrvPlusJamiFormula(h, 'T')).toBe(`SUMIF(X${c1}:X${c2},0,T${c1}:T${c2})`);
+    expect(lrvPlusJamiFormula(h, 'H')).toBe(`IF(COUNTIFS(X${c1}:X${c2},0,H${c1}:H${c2},"")>0,"",SUMIF(X${c1}:X${c2},0,H${c1}:H${c2}))`);
+    expect(lrvPlusJamiFormula(h, 'T')).toBe(`IF(COUNTIFS(X${c1}:X${c2},0,T${c1}:T${c2},"")>0,"",SUMIF(X${c1}:X${c2},0,T${c1}:T${c2}))`);
   });
 });
 
@@ -296,7 +296,7 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
 
     // Smeta kaskadi -- Excelning O'ZIDA jonli
     expect(ws[`F${ishchi.row}`].f).toBe(`E${ishchi.row}*F${bl.row}`);
-    expect(ws[`H${ishchi.row}`].f).toBe(`F${ishchi.row}*G${ishchi.row}`);
+    expect(ws[`H${ishchi.row}`].f).toBe(`IF(OR(F${ishchi.row}="",G${ishchi.row}=""),"",F${ishchi.row}*G${ishchi.row})`);
     expect(ws[`H${ishchi.row}`].v).toBe(190000);
     expect(ws[`H${bl.row}`].f).toContain('SUMIF');
     expect(ws[`H${bl.row}`].v).toBe(425000);
@@ -305,7 +305,7 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
     // Egasining talabi: fakt / ostatka / f2 olingan / f2 olinishi mumkin
     expect(ws[`P${ishchi.row}`].v).toBe(3.8); // ФАКТ ҳажм
     expect(ws[`T${ishchi.row}`].v).toBe(76000); // ФАКТ сумма
-    expect(ws[`Q${ishchi.row}`].f).toBe(`F${ishchi.row}-P${ishchi.row}`); // ОСТАТКА = smeta - fakt
+    expect(ws[`Q${ishchi.row}`].f).toBe(`IF(F${ishchi.row}="","",F${ishchi.row}-P${ishchi.row})`); // ОСТАТКА = smeta - fakt
     expect(ws[`Q${ishchi.row}`].v).toBeCloseTo(9.5 - 3.8, 6);
     expect(ws[`R${ishchi.row}`].v).toBe(1.9); // F2 ОЛИНГАН
     expect(ws[`S${ishchi.row}`].f).toBe(`P${ishchi.row}-R${ishchi.row}`); // F2 МУМКИН = fakt - olingan
@@ -320,7 +320,7 @@ describe('lrvPlusFaylBaytlari — haqiqiy .xlsx yoziladi va qayta o\'qiladi', ()
     expect(ws[`J${bl.row}`]?.v ?? '').toBe(''); // bl'da kategoriya bo'lmaydi
 
     // Egasi (2026-09-24): ish (bl) qatorida G = bir birlik narxi = H / F.
-    expect(ws[`G${bl.row}`].f).toBe(`IF(N(F${bl.row})=0,"",H${bl.row}/F${bl.row})`);
+    expect(ws[`G${bl.row}`].f).toBe(`IF(OR(H${bl.row}="",N(F${bl.row})=0),"",H${bl.row}/F${bl.row})`);
     expect(ws[`G${bl.row}`].v).toBe(425000 / 100);
     expect(ws[`G${rz.row}`]?.f).toBeUndefined(); // razdelda hajm yo'q — birlik narx ham yo'q
     // Egasi (2026-09-24): formulalarda $ yo'q — qator ko'chirilsa begona katakni o'qimaydi.

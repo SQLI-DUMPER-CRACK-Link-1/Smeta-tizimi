@@ -46,6 +46,7 @@ import type { T2Qator, T2QatorHolat } from '../api/supabase';
 import type { NakrutkaKoeffitsientlar } from '../api/t2-nakrutka';
 import { lrvKalitYoz } from './lrv-qayta-import';
 import { resursVedomostAoa } from './resurs-vedomost';
+import { boshKeshQoy, chopNomlariAbsolyut, bugunSana, hujjatFaylNomi, imzoMatni, imzoMuhrli, imzoTomonlari, IMZO_IMZO_CHIZIQ, IMZO_IZOH, IMZO_IZOH_SHAXS, IMZO_MP, IMZO_PODPIS, type ImzoNomlar } from './hujjat-yozuvchi';
 
 /**
  * `toliq` — butun LRV_PLUS (A..W + yashirin Даража).
@@ -77,6 +78,8 @@ export type LrvPlusOptions = {
    * o'zgartirsa butun zanjir qayta hisoblanadi.
    */
   nakrutka?: NakrutkaKoeffitsientlar;
+  /** Imzo blokidagi tomonlar (saytdan; bo'sh — chiziq). */
+  imzo?: ImzoNomlar;
 };
 
 export interface LrvPlusQator {
@@ -257,13 +260,15 @@ export function lrvPlusQatorlarniHisobla(
 
     if (LEAF_TUR.has(tur)) {
       narx = q.narx ?? null;
-      summaFormula = `F${r}*G${r}`;
+      // Hajm yoki narx noma'lum — natija bo'sh (Excel 0 chiqarmasin: NULL ≠ 0).
+      summaFormula = `IF(OR(F${r}="",G${r}=""),"",F${r}*G${r})`;
       // Missing input is unknown, not zero. The formula remains live in
       // Excel, but its cached value stays blank until both inputs are known.
       summaQiymat = obyomQiymat != null && narx != null ? obyomQiymat * narx : null;
     } else if (OTA_TUR.has(tur)) {
       const sp = span.get(q.id);
-      if (sp) summaFormula = `SUMIF(${darajaUstun}${sp.c1}:${darajaUstun}${sp.c2},${daraja + 1},H${sp.c1}:H${sp.c2})`;
+      // Bevosita bolalardan birortasining summasi noma'lum bo'lsa — ota ham noma'lum.
+      if (sp) summaFormula = `IF(COUNTIFS(${darajaUstun}${sp.c1}:${darajaUstun}${sp.c2},${daraja + 1},H${sp.c1}:H${sp.c2},"")>0,"",SUMIF(${darajaUstun}${sp.c1}:${darajaUstun}${sp.c2},${daraja + 1},H${sp.c1}:H${sp.c2}))`;
       // No known children -- unknown, not a fabricated zero (Constitution:
       // NULL is never silently converted to zero).
       else summaQiymat = null;
@@ -304,7 +309,7 @@ export function lrvPlusQatorlarniHisobla(
 export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string, darajaUstun = 'X'): string | null {
   if (!qatorlar.length) return null;
   const c1 = qatorlar[0].row, c2 = qatorlar[qatorlar.length - 1].row;
-  return `SUMIF(${darajaUstun}${c1}:${darajaUstun}${c2},0,${ustun}${c1}:${ustun}${c2})`;
+  return `IF(COUNTIFS(${darajaUstun}${c1}:${darajaUstun}${c2},0,${ustun}${c1}:${ustun}${c2},"")>0,"",SUMIF(${darajaUstun}${c1}:${darajaUstun}${c2},0,${ustun}${c1}:${ustun}${c2}))`;
 }
 
 /**
@@ -312,7 +317,7 @@ export function lrvPlusJamiFormula(qatorlar: LrvPlusQator[], ustun: string, dara
  * Hajm bo'sh yoki 0 bo'lsa katak bo'sh qoladi (soxta 0 / #DIV/0! emas).
  */
 export function lrvPlusBirlikNarxFormula(row: number): string {
-  return `IF(N(F${row})=0,"",H${row}/F${row})`;
+  return `IF(OR(H${row}="",N(F${row})=0),"",H${row}/F${row})`;
 }
 
 export const LRV_PLUS_USTUNLAR = [
@@ -476,7 +481,7 @@ function nakrutkaQatorlarQur(): NakrutkaQator[] {
     },
     {
       label: 'ИТОГО-3 (+ ОБ + транспорт/заготовка)', pctKoef: null,
-      summaFormula: (r) => `=ROUND(F${r - 4}+M3+F${r - 2}+F${r - 1},2)`,
+      summaFormula: (r) => `=ROUND(F${r - 3}+M3+F${r - 2}+F${r - 1},2)`, // ИТОГО-2 + ОБ + транспорт + заготовка
       summaJS: (kat, _koef, s) => s[7] + kat.ob + s[8] + s[9],
       jami: true,
     },
@@ -521,7 +526,7 @@ function nakrutkaKaskadYoz(
   startRow: number, koef: NakrutkaKoeffitsientlar, kat: NakrutkaHisob,
 ): number {
   ws[XLSX.utils.encode_cell({ r: startRow - 1, c: 1 })] = {
-    t: 's', v: 'НАКРУТКА (қўшимча харажатлар ва ҚҚС)', s: { font: { bold: true, sz: 12 } },
+    t: 's', v: 'НАКРУТКА (накладные расходы и НДС)', s: { font: { bold: true, sz: 12 } },
   };
   const boshQator = startRow + 1;
   const bosh = [['Показатель', 1], ['%', 4], ['Сумма', 5]] as const;
@@ -609,7 +614,7 @@ function resursVedomostUslubla(
   const RV_MONEY = '#,##0.00';
   const isGroupRow = (index: number): boolean => {
     const first = String(aoa[index]?.[0] ?? '');
-    return index > 0 && /\(\d+\s+resurs\)$/i.test(first);
+    return index > 0 && /\(\d+\s+ресурс(?:а|ов)?\)$/i.test(first);
   };
   const groupIndexes = aoa.map((_row, index) => index).filter(isGroupRow);
 
@@ -755,25 +760,29 @@ export async function lrvPlusFaylBaytlari(
   }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
+  /** Formula + keshlangan natija (H6). Natija noma'lum bo'lsa — formula ""
+   *  qaytaradi va kesh ham bo'sh matn: qayta hisoblamaydigan ko'ruvchi ham 0
+   *  emas, bo'sh ko'radi (NULL ≠ 0). */
+  const kesh = (f: string, v: number | null) => (v == null ? { t: 's' as const, f, v: '' } : { t: 'n' as const, f, v });
 
   for (const q of hisob) {
     if (q.obyomFormula) ws[`F${q.row}`] = { t: 'n', f: q.obyomFormula, ...(q.obyomQiymat == null ? {} : { v: q.obyomQiymat }) };
-    if (q.summaFormula) ws[`H${q.row}`] = { t: 'n', f: q.summaFormula, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat }) };
+    if (q.summaFormula) ws[`H${q.row}`] = kesh(q.summaFormula, q.summaQiymat);
     // Egasi (2026-09-24): ish qatorida H dan oldingi bo'sh katakda — bir birlik narxi.
     if (q.tur === 'bl') {
       const birlikNarx = q.summaQiymat != null && q.obyomQiymat != null && q.obyomQiymat !== 0
         ? q.summaQiymat / q.obyomQiymat : null;
-      ws[`G${q.row}`] = { t: 'n', f: lrvPlusBirlikNarxFormula(q.row), ...(birlikNarx == null ? {} : { v: birlikNarx }) };
+      ws[`G${q.row}`] = kesh(lrvPlusBirlikNarxFormula(q.row), birlikNarx);
     }
     // Kategoriya ustunlari — H ga havola (faqat bargda).
     if (LEAF_TUR.has(q.tur)) {
       const ustun = KAT_USTUN[q.kat];
-      if (ustun) ws[`${ustun}${q.row}`] = { t: 'n', f: `H${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat }) };
+      if (ustun) ws[`${ustun}${q.row}`] = kesh(`H${q.row}`, q.summaQiymat);
     }
     if (rejim === 'toliq') {
-      ws[`Q${q.row}`] = { t: 'n', f: `F${q.row}-P${q.row}`, ...(q.obyomQiymat == null ? {} : { v: q.obyomQiymat - q.faktHajm }) };
+      ws[`Q${q.row}`] = kesh(`IF(F${q.row}="","",F${q.row}-P${q.row})`, q.obyomQiymat == null ? null : q.obyomQiymat - q.faktHajm);
       ws[`S${q.row}`] = { t: 'n', f: `P${q.row}-R${q.row}`, v: q.faktHajm - q.f2Hajm };
-      ws[`U${q.row}`] = { t: 'n', f: `H${q.row}-T${q.row}`, ...(q.summaQiymat == null ? {} : { v: q.summaQiymat - q.faktSumma }) };
+      ws[`U${q.row}`] = kesh(`IF(H${q.row}="","",H${q.row}-T${q.row})`, q.summaQiymat == null ? null : q.summaQiymat - q.faktSumma);
       ws[`W${q.row}`] = { t: 'n', f: `T${q.row}-V${q.row}`, v: q.faktSumma - q.f2Summa };
     }
   }
@@ -787,7 +796,7 @@ export async function lrvPlusFaylBaytlari(
   }
   for (const [ustun, qiymat] of jamiUstunlar) {
     const f = lrvPlusJamiFormula(hisob, ustun, darajaUstun);
-    if (f) ws[`${ustun}3`] = { t: 'n', f, ...(qiymat == null ? {} : { v: qiymat }) };
+    if (f) ws[`${ustun}3`] = kesh(f, qiymat);
   }
   if (hisob.length) {
     const c1 = hisob[0].row, c2 = hisob[hisob.length - 1].row;
@@ -1023,19 +1032,64 @@ export async function lrvPlusFaylBaytlari(
       showGridLines: false,
     };
   }
+  if (asosiy) {
+    /* Hujjat standarti (docs/architecture/HUJJAT_STANDARTI_V1.md):
+       H7 — narxi/hajmi noma'lum barglar hujjatda ochiq ro'yxat (jamilar bo'sh
+       qoladi, taxmin yo'q); H3 — imzo bloki; H4 — chop hududi hujjat + imzo. */
+    const nomalumlar = hisob.filter((q) => LEAF_TUR.has(q.tur) && q.summaQiymat == null);
+    let r = Math.max(asosiy.rowCount, oxirgiMalumotQator) + 2;
+    const matn = (row: number, col: number, v: string, font?: Partial<import('exceljs').Font>) => {
+      const c = asosiy.getCell(row, col);
+      c.value = v;
+      if (font) c.font = font;
+      c.alignment = { vertical: 'top', wrapText: false };
+    };
+    if (nomalumlar.length) {
+      matn(r++, 3, `ПОЗИЦИИ, ТРЕБУЮЩИЕ ВНИМАНИЯ (${nomalumlar.length})`, { bold: true });
+      const LIMIT = 500;
+      nomalumlar.slice(0, LIMIT).forEach((q, i) => {
+        const sabab = q.obyomQiymat == null && q.narx == null ? 'нет количества и цены' : q.obyomQiymat == null ? 'нет количества' : 'нет цены';
+        matn(r++, 3, `${i + 1}. ${q.kod ? q.kod + ' ' : ''}${q.nom}${q.birlik ? ', ' + q.birlik : ''} (стр. ${q.row}): ${sabab} — сумма и итоги по разделу не определены`, { italic: true });
+      });
+      if (nomalumlar.length > LIMIT) matn(r++, 3, `… и еще ${nomalumlar.length - LIMIT} позиций (см. строки без суммы в графе «СУММА»)`, { italic: true });
+      r++;
+    }
+    for (const t of imzoTomonlari(['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ'], options?.imzo)) {
+      r++;
+      matn(r, 3, imzoMatni(t.rol, t.nom));
+      matn(r, 7, IMZO_IMZO_CHIZIQ);
+      r++;
+      matn(r, 3, imzoMuhrli(t.rol) ? IMZO_IZOH : IMZO_IZOH_SHAXS, { italic: true, size: 8 });
+      matn(r, 7, IMZO_PODPIS, { italic: true, size: 8 });
+      if (imzoMuhrli(t.rol)) matn(r, 8, IMZO_MP, { italic: true, size: 8 });
+      r++;
+    }
+    // Chop hududi: ko'rinadigan oxirgi ustungacha (yashirin Даража/КАЛИТ kirmaydi) va imzogacha.
+    const oxirgiKorinadigan = rejim === 'toliq' ? 'W' : 'P';
+    asosiy.pageSetup.printArea = `A1:${oxirgiKorinadigan}${r}`;
+  }
+  const manbaWs = ewb.getWorksheet('МАНБА');
+  // Provenance — texnik ma'lumot (H5): faylda saqlanadi, lekin chop etilmaydi va ko'rinmaydi.
+  if (manbaWs) manbaWs.state = 'hidden';
+
   const out = (await ewb.xlsx.writeBuffer()) as ArrayBuffer;
-  return new Uint8Array(out);
+  return chopNomlariAbsolyut(boshKeshQoy(new Uint8Array(out), [rejim === 'forma2' ? 'FORMA_2' : 'LRV_PLUS']));
+}
+
+/** LRV_PLUS / Forma-2 fayl nomi (H8): `<Obyekt>_LRV_PLUS_<sana>.xlsx`. */
+export function lrvPlusFaylNomi(obyektNomi: string, rejim: LrvPlusRejim = 'toliq', sana = bugunSana()): string {
+  return hujjatFaylNomi({ obyekt: obyektNomi || 'Смета', hujjat: rejim === 'forma2' ? 'ФОРМА-2_ЛРВ' : 'LRV_PLUS', davr: sana });
 }
 
 /** Brauzerda faylni yuklab olishga majburlaydi (blob + vaqtinchalik link). */
-export function lrvPlusYuklab(bytes: Uint8Array, obyektNomi: string): void {
+export function lrvPlusYuklab(bytes: Uint8Array, obyektNomi: string, rejim: LrvPlusRejim = 'toliq'): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const blob = new Blob([bytes as any], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   try {
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${(obyektNomi || 'smeta').replace(/[\\/:*?"<>|]/g, '_')}_LRV_PLUS.xlsx`;
+    a.download = lrvPlusFaylNomi(obyektNomi, rejim);
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

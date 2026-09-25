@@ -144,12 +144,13 @@ export function HolatNative() {
       const bytes = await lrvPlusFaylBaytlari(daraxtXom, selected.nom, holatXom, {
         rejim,
         nakrutka: nakr?.ok ? nakr.koeffitsientlar : undefined,
+        imzo: tomonlar,
       }, exportContext);
-      lrvPlusYuklab(bytes, selected.nom + (rejim === 'forma2' ? '_FORMA2' : ''));
+      lrvPlusYuklab(bytes, selected.nom, rejim);
     } catch {
       setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason]);
+  }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason, tomonlar]);
 
   /* Egasi (2026-09-23): "tizim ostatka ishlarni ham bittada smeta shaklida bera
      oladigan bo'lishi kerak". Ostatka = smeta − fakt; hujjat — rasmiy

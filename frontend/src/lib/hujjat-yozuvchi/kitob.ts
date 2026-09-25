@@ -3,7 +3,7 @@
  * yangi varaq qo'shish, chop etish nomlari (Print_Area / Print_Titles),
  * `.xls` → `.xlsx` o'girish.
  */
-import { strFromU8, strToU8 } from 'fflate';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { ustunHarfi, ustunIndeksi, unEsc, xmlEsc, sheetRef } from './ooxml';
 
 /** Workbookdagi varaqlar: nom → ZIP ichidagi yo'l (workbook tartibida). */
@@ -119,4 +119,42 @@ export async function xlsdanXlsx(bytes: Uint8Array): Promise<Uint8Array> {
   const wb = XLSX.read(bytes, { type: 'array', cellStyles: true, cellNF: true, cellFormula: true });
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx', cellStyles: true });
   return out instanceof Uint8Array ? out : new Uint8Array(out as ArrayBuffer);
+}
+
+/**
+ * Keshsiz formula kataklariga bo'sh matn keshini qo'yadi (`t="str"`, `<v></v>`).
+ * exceljs qayta yozishda natijasi "" bo'lgan formulaning keshini tashlab
+ * yuboradi; bunday katak qayta hisoblamaydigan ko'ruvchida 0 emas, bo'sh
+ * ko'rinishi kerak (NULL ≠ 0). Faqat natijasi haqiqatan "" bo'lgan formulalar
+ * uchun chaqiriladi — `scripts/hujjat-lo-tekshir.mjs` buni qayta hisoblash
+ * bilan tasdiqlaydi.
+ */
+export function boshKeshQoy(bytes: Uint8Array, varaqlar?: readonly string[]): Uint8Array {
+  const files = unzipSync(bytes);
+  const yollar = varaqYollari(files).filter((y) => !varaqlar || varaqlar.includes(y.name));
+  for (const y of yollar) {
+    const x = files[y.path];
+    if (!x) continue;
+    const xml = strFromU8(x);
+    const yangi = xml.replace(/<((?:\w+:)?c)\b([^>]*?)>(<(?:\w+:)?f\b[^>]*>[^<]*<\/(?:\w+:)?f>)<\/\1>/g, (_m, tag: string, attrs: string, f: string) => {
+      const p = tag.includes(':') ? tag.split(':')[0] + ':' : '';
+      const at = attrs.replace(/\s+t="[^"]*"/, '');
+      return `<${tag}${at} t="str">${f}<${p}v></${p}v></${tag}>`;
+    });
+    if (yangi !== xml) files[y.path] = strToU8(yangi);
+  }
+  return zipSync(files, { level: 6 });
+}
+
+/** Chop nomlarini (Print_Area / Print_Titles) to'liq absolyut shaklga keltiradi:
+ * exceljs `$A1:$W42` yozadi — nisbiy qator raqami defined name da faol katakka
+ * bog'lanib siljishi mumkin; standart shakl `$A$1:$W$42`. */
+export function chopNomlariAbsolyut(bytes: Uint8Array): Uint8Array {
+  const files = unzipSync(bytes);
+  const wb = strFromU8(files['xl/workbook.xml']);
+  const yangi = wb.replace(/(<(?:\w+:)?definedName\b[^>]*\bname="_xlnm\.Print_(?:Area|Titles)"[^>]*>)([^<]*)(<\/)/g, (_m, a: string, ref: string, z: string) =>
+    `${a}${ref.replace(/\$([A-Z]{1,3})(\d+)/g, '$$$1$$$2')}${z}`);
+  if (yangi === wb) return bytes;
+  files['xl/workbook.xml'] = strToU8(yangi);
+  return zipSync(files, { level: 6 });
 }

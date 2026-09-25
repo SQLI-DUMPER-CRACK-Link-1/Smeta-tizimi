@@ -109,12 +109,37 @@ export type ResursVedomostKategoriya = {
  * Xuddi shu `resursVedomostKategoriyalarga` natijasidan quriladi — ekrandagi
  * va Excel'dagi vedomost IKKI XIL HISOB-KITOB emas, bitta manba.
  */
+export const RESURS_VEDOMOST_SARLAVHA = ['Категория', 'Код', 'Наименование ресурса', 'Ед. изм.', 'Кол-во по смете', 'Сумма по смете, сум', 'Кол-во по Ф-2', 'Сумма по Ф-2, сум', 'Остаток, кол-во', 'Остаток, сумма, сум'];
+
+/** Hujjatdagi kategoriya nomi (H9: rus tilida). */
+export const RESURS_KATEGORIYA_NOMI: Record<string, string> = {
+  ЧЕЛ: 'Затраты труда рабочих',
+  МАШ: 'Строительные машины и механизмы',
+  МАТ: 'Строительные материалы',
+  ОБ: 'Оборудование',
+  КАБ: 'Кабельно-проводниковая продукция',
+  'М/К': 'Металлоконструкции',
+  BOSHQA: 'Прочие ресурсы (категория не указана)',
+};
+
+/** 1 ресурс, 2 ресурса, 5 ресурсов. */
+export function resursSoni(n: number): string {
+  const m10 = n % 10, m100 = n % 100;
+  const soz = m10 === 1 && m100 !== 11 ? 'ресурс' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'ресурса' : 'ресурсов';
+  return `${n} ${soz}`;
+}
+
+/** Kategoriya guruh qatori matni: "ЧЕЛ — Затраты труда рабочих (3 ресурса)".
+ *  Oferta parseri (`categorySummary`) shu shaklni kategoriya dalili sifatida taniydi. */
+export function resursKategoriyaSarlavha(kat: string, n: number): string {
+  const kod = kat === 'BOSHQA' ? 'ПРОЧИЕ' : kat;
+  return `${kod} — ${RESURS_KATEGORIYA_NOMI[kat] ?? kat} (${resursSoni(n)})`;
+}
+
 export function resursVedomostAoa(qatorlar: readonly T2QatorHolat[]): (string | number)[][] {
-  const aoa: (string | number)[][] = [
-    ['Kategoriya', 'Kod', 'Resurs', 'Birlik', 'Smeta hajm', 'Smeta summa', 'F2 hajm', 'F2 summa', 'Qoldiq hajm', 'Qoldiq summa'],
-  ];
+  const aoa: (string | number)[][] = [[...RESURS_VEDOMOST_SARLAVHA]];
   for (const k of resursVedomostKategoriyalarga(qatorlar)) {
-    aoa.push([`${k.kat} (${k.qatorlar.length} resurs)`, '', '', '', '', k.jamiSmetaSumma, '', k.jamiF2Summa, '', k.jamiQoldiqSumma]);
+    aoa.push([resursKategoriyaSarlavha(k.kat, k.qatorlar.length), '', '', '', '', k.jamiSmetaSumma, '', k.jamiF2Summa, '', k.jamiQoldiqSumma]);
     for (const r of k.qatorlar) {
       aoa.push(['', r.kod || '', r.nom, r.birlik || '', r.smetaHajm, r.smetaSumma, r.f2Hajm, r.f2Summa, r.qoldiqHajm, r.qoldiqSumma]);
     }
