@@ -38,7 +38,8 @@ describe('Накопительная ведомость — hujjat standarti', (
     const { bytes, faylNomi, jamilar } = nakopitelniyVedomostHujjat(ROWS, { obyektNom: 'Сунъий кўл', davr: '2026-09-01', imzo: { zakazchik: 'Дирекция' } });
     namunaSaqla('nakopitelniy.xlsx', bytes);
     expect(faylNomi).toBe('Сунъий кўл_НАКОПИТЕЛЬНАЯ_ВЕДОМОСТЬ_2026-09.xlsx');
-    const t = hujjatTekshir(bytes);
+    // Obyekt nomi — saytdagi egasining matni (o'zbekcha bo'lishi mumkin, H9 istisno).
+    const t = hujjatTekshir(bytes, { ruxsat: [/^Сунъий кўл$/] });
     expect(t.taqiqlangan).toEqual([]);
     expect(t.dollarFormulalar).toEqual([]);
     expect(t.keshsizFormulalar).toEqual([]);
@@ -80,7 +81,7 @@ describe('АКТ Ф-2 — hujjat standarti', () => {
     expect(r.ndsSumma).toBe(596_400.06);
     expect(r.jamiNds).toBeCloseTo(5_566_400.56, 6);
     expect(r.faylNomi).toBe('Сунъий кўл_АКТ_Ф-2_2026-09.xlsx');
-    const t = hujjatTekshir(r.bytes);
+    const t = hujjatTekshir(r.bytes, { ruxsat: [/^Сунъий кўл$/] });
     expect(t.taqiqlangan).toEqual([]);
     expect(t.dollarFormulalar).toEqual([]);
     expect(t.keshsizFormulalar).toEqual([]);

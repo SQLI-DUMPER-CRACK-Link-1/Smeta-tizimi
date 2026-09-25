@@ -24,11 +24,26 @@
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
 import { OFERTA_KATEGORIYALAR, narxlanadiganmi, type OfertaHisoblash, type OfertaKategoriya, type OfertaQatorNatija } from './tender-oferta';
 import type { OfertaSheetTahlili } from './tender-oferta-parser';
-import { NAKRUTKA_KOEF_IZOH, NAKRUTKA_KOEF_KODLAR } from '../api/t2-nakrutka';
+import { NAKRUTKA_KOEF_KODLAR, type NakrutkaKoefKod } from '../api/t2-nakrutka';
+
+/** H9: hujjatdagi начисления nomlari — rus tilida (UI dagi o'zbekcha izoh hujjatga chiqmaydi). */
+const NAKRUTKA_KOEF_RU: Record<NakrutkaKoefKod, string> = {
+  ЗТР_СОЦСТРАХ: 'Отчисления на соцстрах в составе ЗТР, % (справочно, в расчет не входит)',
+  ТРАНСПОРТ_МАТЕРИАЛ: 'Транспортные расходы — материалы, %',
+  СКЛАДСКИЕ_МАТЕРИАЛ: 'Заготовительно-складские расходы — материалы, %',
+  СКЛАДСКИЕ_МК: 'Заготовительно-складские расходы — металлоконструкции (М/К), %',
+  ТРАНСПОРТ_КАБЕЛЬ: 'Транспортные расходы — кабель и провод, %',
+  ПРОЧИЕ_ПОДРЯДЧИК: 'Прочие расходы подрядчика, %',
+  ТРАНСПОРТ_ОБОРУД: 'Транспортные расходы — оборудование, %',
+  ЗАГОТ_СКЛАД_ОБОРУД: 'Заготовительно-складские расходы — оборудование, %',
+  СТРАХОВАНИЕ: 'Страхование объекта, %',
+  РИСК: 'Риск, %',
+  НДС: 'НДС, %',
+};
 import {
-  aslFormula, bosCell, boshUstun, colAttr, colsOqi, engOngUstun, fCell, formulaKochir, isZip, numCell, num, printAreaKengaytir,
+  aslFormula, sahifaEnigaSigdir, bosCell, boshUstun, colAttr, colsOqi, engOngUstun, fCell, formulaKochir, isZip, numCell, num, printAreaKengaytir,
   sheetRef, strCell, sumArgs, ustunHarfi, varaqniPatchla, varaqXaritasi, varaqYollari, workbookgaVaraqQosh, xfNusxa, xlsdanXlsx,
-  zaxiraStillarQosh, imzoMatni, IMZO_IZOH, IMZO_PODPIS, IMZO_MP, IMZO_IMZO_CHIZIQ,
+  zaxiraStillarQosh, imzoMatni, bugunSana, definedNameQosh, printAreaQiymati, printTitlesQiymati, IMZO_IZOH, IMZO_PODPIS, IMZO_MP, IMZO_IMZO_CHIZIQ,
   type VaraqPatch, type VaraqXarita, type YangiHujayra, type ZaxiraStillar,
 } from './hujjat-yozuvchi';
 
@@ -46,6 +61,8 @@ export type OfertaEksportInput = {
   koeffitsientManbasi?: string;
   /** Imzo blokidagi tomonlar nomi (tashkilot, F.I.O.) — bo'sh bo'lsa chiziq. */
   imzo?: { zakazchik?: string; pudratchi?: string };
+  /** Fayl nomidagi sana (YYYY-MM-DD); sukut — bugun. */
+  sana?: string;
 };
 
 /** Yangi ustunlar: hajm/narx/summa — asl D/E/F davomi; kategoriya — yashirin texnik ustun (SUMIFS uchun). */
@@ -98,13 +115,14 @@ function safeFilePart(value: string): string {
   return value.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 120) || 'resurs';
 }
 
-export function ofertaFaylNomi(manbaFaylNomi?: string, xlsdanOgirilgan = false): string {
+/** H8: `<Obyekt (asl fayl nomi)>_ОФЕРТА_<sana>.xlsx|xlsm` — .xls manba .xlsx bo'ladi. */
+export function ofertaFaylNomi(manbaFaylNomi?: string, xlsdanOgirilgan = false, sana = bugunSana()): string {
   const source = safeFilePart(manbaFaylNomi || 'resurs.xlsx');
   const match = source.match(/\.(xlsx|xlsm|xls)$/i);
   const stem = match ? source.slice(0, -match[0].length) : source;
   let ext = match?.[1].toLowerCase() ?? 'xlsx';
   if (ext === 'xls' || xlsdanOgirilgan) ext = 'xlsx';
-  return `${stem}_OFERTA.${ext}`;
+  return `${stem}_ОФЕРТА_${sana}.${ext}`;
 }
 
 // ───────────────────────── formulalar ─────────────────────────
@@ -126,7 +144,7 @@ function ofertaImzoMatni(tomon: typeof IMZO_TOMONLARI[number], imzo?: OfertaEksp
  * chegarasi va son formatida chiqadi (yangi rang yo‘q). */
 type UslubNamuna = { sarlavha?: number; raqam?: number; matn?: number; son?: number; jamiMatn?: number; jamiSon?: number; bolim?: number; oddiy?: number };
 
-function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQatorNatija[], x: VaraqXarita, xml: string, s: ZaxiraStillar, imzo?: OfertaEksportInput['imzo']): { patch: VaraqPatch; harflar: OfertaUstunHarflari; namuna: UslubNamuna } {
+function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQatorNatija[], x: VaraqXarita, xml: string, s: ZaxiraStillar, imzo?: OfertaEksportInput['imzo']): { patch: VaraqPatch; harflar: OfertaUstunHarflari; namuna: UslubNamuna; sarlavha: [number, number] } {
   const u = tahlil.ustunlar!;
   const cols = colsOqi(xml);
   const cF = u.smetaSumma, cD = u.hajm >= 0 ? u.hajm : cF, cE = u.smetaNarx >= 0 ? u.smetaNarx : cF;
@@ -150,6 +168,7 @@ function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQato
   namuna.sarlavha = aslS(headerRow, cF);
 
   // Ustun raqamlari qatori (1 | 2 | … | 6) — 7, 8, 9 bo‘lib davom etadi.
+  let raqamQatori: number | undefined;
   for (let r = headerRow; r <= u.malumotBoshlanishi + 1; r++) {
     const f = x.qatorlar.get(r)?.find((c) => c.col === cF);
     const d = x.qatorlar.get(r)?.find((c) => c.col === cD);
@@ -157,6 +176,7 @@ function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQato
     if (Number.isInteger(n) && n > 0 && n < 100 && d?.v != null && Number(d.v) === n - (cF - cD)) {
       add(r, numCell(cQ, s.header, n + 1, cD)); add(r, numCell(cP, s.header, n + 2, cE)); add(r, numCell(cS, s.header, n + 3, cF));
       namuna.raqam = aslS(r, cF);
+      raqamQatori = r;
       break;
     }
   }
@@ -241,7 +261,7 @@ function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQato
     aslOxirgi: cF,
     yangiMerge,
   };
-  return { patch, harflar: L, namuna };
+  return { patch, harflar: L, namuna, sarlavha: [headerRow, raqamQatori ?? (hMerge ? hMerge.r2 : headerRow)] };
 }
 // ───────────────────────── OFERTA_JAMI ─────────────────────────
 
@@ -276,7 +296,7 @@ function jamiVaraqXml(
   input: OfertaEksportInput,
   varaqlar: Array<{ nom: string; L: OfertaUstunHarflari }>,
   st: JamiStil,
-): { xml: string; yakuniyHujayra: string } {
+): { xml: string; yakuniyHujayra: string; sarlavhaQatori: number; oxirgiQator: number } {
   const h = input.hisob;
   const rows: Array<YangiHujayra[]> = [];
   const put = (cells: YangiHujayra[]) => { rows.push(cells); return rows.length; };
@@ -296,6 +316,7 @@ function jamiVaraqXml(
   put([strCell(1, st.oddiy, input.obyektNomi || '')]);
   put([strCell(1, st.oddiy, `Основание: ${input.manbaFaylNomi}`)]);
   put([]);
+  const rSarlavha = rows.length + 1;
   put(['№ п/п', 'НАИМЕНОВАНИЕ', 'ОФЕРТА ПОДРЯДЧИКА, сум', 'ПО СМЕТЕ, сум', 'ПРИМЕЧАНИЕ'].map((t, i) => strCell(i, st.sarlavha, t)));
   put([1, 2, 3, 4, 5].map((n, i) => numCell(i, st.raqam, n)));
 
@@ -319,7 +340,7 @@ function jamiVaraqXml(
   bolim('НАЧИСЛЕНИЯ, %');
   const kRow: Record<string, number> = {};
   for (const kod of NAKRUTKA_KOEF_KODLAR) {
-    kRow[kod] = put([bosCell(0, st.matn), strCell(1, st.matn, NAKRUTKA_KOEF_IZOH[kod]), numCell(2, st.foiz, h.koeffitsientlar[kod]), bosCell(3, st.son), strCell(4, st.matn, kod)]);
+    kRow[kod] = put([bosCell(0, st.matn), strCell(1, st.matn, NAKRUTKA_KOEF_RU[kod]), numCell(2, st.foiz, h.koeffitsientlar[kod]), bosCell(3, st.son), bosCell(4, st.matn)]);
   }
   const K = (kod: string) => `C${kRow[kod]}`;
   const B = (kat: OfertaKategoriya) => (katRow[kat] ? `C${katRow[kat]}` : '0');
@@ -394,9 +415,9 @@ function jamiVaraqXml(
     + '<cols><col min="1" max="1" width="6" customWidth="1"/><col min="2" max="2" width="58" customWidth="1"/><col min="3" max="4" width="22" customWidth="1"/><col min="5" max="5" width="46" customWidth="1"/></cols>'
     + `<sheetData>${sheetData}</sheetData>`
     + '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
-    + '<pageSetup paperSize="9" orientation="portrait" fitToHeight="0"/>'
+    + '<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>'
     + '</worksheet>';
-  return { xml, yakuniyHujayra: `C${rFinal}` };
+  return { xml, yakuniyHujayra: `C${rFinal}`, sarlavhaQatori: rSarlavha, oxirgiQator: rows.length };
 }
 
 // ───────────────────────── workbook darajasi ─────────────────────────
@@ -436,9 +457,11 @@ export async function tenderOfertaXlsx(input: OfertaEksportInput): Promise<Ofert
     const xml = strFromU8(files[path]);
     const xarita = varaqXaritasi(xml);
     const q = varaqPatchQur(tahlil, qatorlar, xarita, xml, st.s, input.imzo);
-    files[path] = strToU8(varaqniPatchla(xml, q.patch, xarita));
+    files[path] = strToU8(sahifaEnigaSigdir(varaqniPatchla(xml, q.patch, xarita)));
     const jadvalOxiri = Math.max(...qatorlar.map((r) => r.sourceRow));
     wbXml = printAreaKengaytir(wbXml, idx, q.patch.oraliq[1], jadvalOxiri, Math.max(...q.patch.rows.keys()));
+    // H4: egasi sarlavha takrorini qo'ymagan bo'lsa — jadval sarlavhasi (1-2-3 raqam qatorigacha) har sahifada.
+    wbXml = definedNameQosh(wbXml, '_xlnm.Print_Titles', idx, printTitlesQiymati(tahlil.nom, q.sarlavha[0], q.sarlavha[1]));
     namuna ??= q.namuna;
     ustunlar[tahlil.nom] = q.harflar;
     jamiUchun.push({ nom: tahlil.nom, L: q.harflar });
@@ -460,10 +483,15 @@ export async function tenderOfertaXlsx(input: OfertaEksportInput): Promise<Ofert
   for (let i = 2; mavjud.has(jamiVaraq.toUpperCase()); i++) jamiVaraq = `OFERTA_JAMI_${i}`;
   const jami = jamiVaraqXml(input, jamiUchun, jamiStil);
   workbookgaVaraqQosh(files, jamiVaraq, jami.xml);
+  // H4: yakuniy varaq — chop hududi butun hujjat + imzo, sarlavha har sahifada.
+  let wb2 = strFromU8(files['xl/workbook.xml']);
+  wb2 = definedNameQosh(wb2, '_xlnm.Print_Area', paths.length, printAreaQiymati(jamiVaraq, 4, jami.oxirgiQator));
+  wb2 = definedNameQosh(wb2, '_xlnm.Print_Titles', paths.length, printTitlesQiymati(jamiVaraq, jami.sarlavhaQatori, jami.sarlavhaQatori + 1));
+  files['xl/workbook.xml'] = strToU8(wb2);
 
   // Asl ZIP'dagi yozuvlar tartibi saqlanadi; yangi qismlar oxirida.
   const zippable: Zippable = {};
   for (const [k, v] of Object.entries(files)) zippable[k] = [v, { level: 6 }];
   const bytes = zipSync(zippable);
-  return { bytes, faylNomi: ofertaFaylNomi(input.manbaFaylNomi, qisman), saqlanish: qisman ? 'qisman' : 'toliq', ustunlar, jamiVaraq, yakuniyHujayra: jami.yakuniyHujayra };
+  return { bytes, faylNomi: ofertaFaylNomi(input.manbaFaylNomi, qisman, input.sana), saqlanish: qisman ? 'qisman' : 'toliq', ustunlar, jamiVaraq, yakuniyHujayra: jami.yakuniyHujayra };
 }

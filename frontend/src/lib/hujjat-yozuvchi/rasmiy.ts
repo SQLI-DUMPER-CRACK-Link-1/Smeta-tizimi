@@ -208,8 +208,9 @@ export class RasmiyVaraq {
     }
     if (o.titul?.length) {
       this.put([]);
-      const mc = this.matnUstuni;
-      const yorliqOxiri = Math.max(0, mc - 1);
+      // Yorliq ustun(lar)i: chapdan kamida 16 belgi eni (tor № ustunida kesilmasin).
+      let yorliqOxiri = 0;
+      while (yorliqOxiri < oxir - 1 && this.kenglikJami(0, yorliqOxiri) < 16) yorliqOxiri++;
       for (const [yorliq, qiymat] of o.titul) {
         const q = (qiymat ?? '').trim() || '________________________________________';
         const r = this.put([katakXml(0, RS.titulYorliq, yorliq), katakXml(yorliqOxiri + 1, RS.titulQiymat, q)], balandlik(q, this.kenglikJami(yorliqOxiri + 1, oxir)));

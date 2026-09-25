@@ -58,6 +58,7 @@ export const TAQIQLANGAN_QOIDALAR: ReadonlyArray<{ nom: string; re: RegExp }> = 
   { nom: 'sayt ko‘rsatgan', re: /\bsayt\b/i },
   { nom: 'o‘zbekcha lotin yorliq', re: /\b(Hajm|Narx|Summa|Birlik|Nomi|Jami|Qoldiq|Obyekt|Davr|Kategoriya|Resurs|Smeta|Oldingi|Joriy|Hujjat|Shartnoma|Bajarilgan|Ishlar|Tayyor|Holat)\b/ },
   { nom: 'o‘zbek apostrofi', re: /[a-zA-Z][ʻ‘’'][a-z]/ },
+  { nom: 'o‘zbekcha kirill (ў қ ғ ҳ)', re: /[ўқғҳЎҚҒҲ]/ },
   { nom: 'inglizcha yorliq', re: /\b(Total|Amount|Quantity|Price|Unit|Description|Warning|Error|Status|Pending|Draft)\b/ },
 ];
 

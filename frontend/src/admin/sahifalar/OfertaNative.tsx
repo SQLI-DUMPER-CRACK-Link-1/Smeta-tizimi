@@ -8,6 +8,7 @@ import {
 } from '../../lib/tender-oferta';
 import { ofertaHolatMatni, ofertaMuammoMatni, tenderOfertaXlsx } from '../../lib/tender-oferta-export';
 import { ofertaResursVaraqlariniAniqla, type OfertaSheetTahlili } from '../../lib/tender-oferta-parser';
+import { bugunSana, hujjatFaylNomi } from '../../lib/hujjat-yozuvchi';
 import { paketFaylHisobi, paketQatorlari, paketSvodXlsx, paketZip, type OfertaPaketFayl } from '../../lib/tender-oferta-paket';
 import { NAKRUTKA_STANDART, type NakrutkaQadamlar } from '../../lib/nakrutka-kaskad';
 import { NAKRUTKA_KOEF_IZOH, NAKRUTKA_KOEF_KODLAR, t2NakrutkaKoefOl, type NakrutkaKoefKod, type NakrutkaKoeffitsientlar } from '../../api/t2-nakrutka';
@@ -269,9 +270,11 @@ function Sessiya() {
       } else {
         const svod = paketSvodXlsx(obyektHisoblari.map((o) => ({ nom: o.fayl.nom, faylNomi: o.fayl.faylNomi, hisob: o.hisob })), imzo,
           paketNomi.trim() ? `СВОДНЫЙ РАСЧЕТ ОФЕРТЫ — ${paketNomi.trim()}` : undefined);
-        const nom = (paketNomi.trim() || 'OFERTA_PAKET').replace(/[\\/:*?"<>|]/g, '_');
-        downloadBlob(paketZip([...natijalar, { nom: `${nom}_СВОД.xlsx`, bytes: svod }]), `${nom}.zip`);
-        setMessage(`Paket tayyor: ${natijalar.length} ta obyekt + svod (${nom}.zip).${qisman}`);
+        const nom = paketNomi.trim() || 'ПАКЕТ';
+        const svodNomi = hujjatFaylNomi({ obyekt: nom, hujjat: 'СВОД_ОФЕРТЫ', davr: bugunSana() });
+        const zipNomi = hujjatFaylNomi({ obyekt: nom, hujjat: 'ОФЕРТА', davr: bugunSana(), kengaytma: 'zip' });
+        downloadBlob(paketZip([...natijalar, { nom: svodNomi, bytes: svod }]), zipNomi, 'application/zip');
+        setMessage(`Paket tayyor: ${natijalar.length} ta obyekt + svod (${zipNomi}).${qisman}`);
       }
     } catch (e) { setError(e instanceof Error ? e.message : 'Oferta fayli yaratilmadi.'); }
     finally { setBusy(false); }

@@ -246,3 +246,49 @@ export function colsYoz(xml: string, p: string, cols: ColYozuv[], yangi: VaraqPa
   if (colsRe.test(xml)) return xml.replace(colsRe, () => `<${p}cols>${body}</${p}cols>`);
   return xml.replace(new RegExp(`<${p}sheetData\\b`), (m) => `<${p}cols>${body}</${p}cols>${m}`);
 }
+
+/**
+ * H4: varaq chop etilganda bitta sahifa eniga sig'sin — FAQAT egasi o'zi
+ * masshtab (`scale`) yoki `fitToPage` qo'ymagan bo'lsa. Mavjud sozlamaga
+ * tegilmaydi (egasining qarori ustun). Qo'shiladi: `pageSetUpPr fitToPage`,
+ * `fitToWidth=1 fitToHeight=0`, qog'oz ko'rsatilmagan bo'lsa — A4.
+ */
+export function sahifaEnigaSigdir(xml: string): string {
+  const p = prefiks(xml);
+  if (/<(?:\w+:)?pageSetUpPr\b[^>]*\bfitToPage="(?:1|true)"/.test(xml)) return xml;
+  if (new RegExp(`<${p}pageSetup\\b[^>]*\\bscale="`).test(xml)) return xml;
+  let res = xml;
+  // sheetPr → pageSetUpPr (sheetPr — worksheet ning birinchi bolasi).
+  const spFull = new RegExp(`<${p}sheetPr\\b([^>]*)>([\\s\\S]*?)<\\/${p}sheetPr>`);
+  const spSelf = new RegExp(`<${p}sheetPr\\b([^>]*?)\\/>`);
+  if (spFull.test(res)) {
+    res = res.replace(spFull, (_a, attrs: string, ichki: string) => {
+      const yangi = /<(?:\w+:)?pageSetUpPr\b/.test(ichki)
+        ? ichki.replace(/<((?:\w+:)?pageSetUpPr)\b([^>]*?)\/?>/, (_m, t: string, at: string) => `<${t}${at.replace(/\s*fitToPage="[^"]*"/, '')} fitToPage="1"/>`)
+        : `${ichki}<${p}pageSetUpPr fitToPage="1"/>`;
+      return `<${p}sheetPr${attrs}>${yangi}</${p}sheetPr>`;
+    });
+  } else if (spSelf.test(res)) {
+    res = res.replace(spSelf, (_a, attrs: string) => `<${p}sheetPr${attrs}><${p}pageSetUpPr fitToPage="1"/></${p}sheetPr>`);
+  } else {
+    res = res.replace(new RegExp(`(<${p}worksheet\\b[^>]*>)`), `$1<${p}sheetPr><${p}pageSetUpPr fitToPage="1"/></${p}sheetPr>`);
+  }
+  const ps = new RegExp(`<${p}pageSetup\\b([^>]*?)\\/?>`);
+  if (ps.test(res)) {
+    res = res.replace(ps, (_a, attrs: string) => {
+      let at = attrs.replace(/\s*\bfitTo(?:Width|Height)="[^"]*"/g, '');
+      if (!/\bpaperSize=/.test(at)) at += ' paperSize="9"';
+      return `<${p}pageSetup${at} fitToWidth="1" fitToHeight="0"/>`;
+    });
+  } else {
+    const tag = `<${p}pageSetup paperSize="9" fitToWidth="1" fitToHeight="0"/>`;
+    const pm = new RegExp(`<${p}pageMargins\\b[^>]*\\/>`);
+    if (pm.test(res)) res = res.replace(pm, (m) => m + tag);
+    else {
+      const keyin = ['headerFooter', 'rowBreaks', 'colBreaks', 'customProperties', 'cellWatches', 'ignoredErrors', 'smartTags', 'drawing', 'legacyDrawing', 'legacyDrawingHF', 'picture', 'oleObjects', 'controls', 'webPublishItems', 'tableParts', 'extLst'];
+      const idx = keyin.map((t) => res.search(new RegExp(`<${p}${t}\\b`))).filter((i) => i >= 0).sort((a, b) => a - b)[0];
+      res = idx != null ? res.slice(0, idx) + tag + res.slice(idx) : res.replace(new RegExp(`<\\/${p}worksheet>`), `${tag}</${p}worksheet>`);
+    }
+  }
+  return res;
+}
