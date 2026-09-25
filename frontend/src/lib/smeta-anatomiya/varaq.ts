@@ -1,6 +1,6 @@
 import { IerarxiyaQuruvchi } from './ierarxiya';
 import { bosh, kalit, son, toliqUstunlar, xom } from './matn';
-import { sarlavhaBlokiniTop, ustunXaritasi, type SarlavhaBloki } from './ustun';
+import { sarlavhaBlokiniTop, tartibRaqamlariQatorimi, ustunXaritasi, type SarlavhaBloki } from './ustun';
 import { qoshimchaUstunlar, uchlikniMoslashtir } from './ustun-dalil';
 import { varaqProfili } from './profil';
 import type {
@@ -8,6 +8,10 @@ import type {
 } from './turlar';
 
 const IMZO = /^(СОСТАВИЛ|ПРОВЕРИЛ|TUZDI|TEKSHIRDI|ИСПОЛНИТЕЛЬ)/;
+/** F2/akt imzo bloki (ЗАКАЗЧИК / Представитель Тех.надзора / ПОДРЯДЧИК / Производитель
+ *  работ / (Дата.Подп) / Директор / Гл. бухгалтер) — faqat sonsiz, 1–2 katakli qatorda:
+ *  bundan keyin ma'lumot yo'q. Sarlavha sifatida o'qilmasin. */
+const AKT_IMZO = /^(ЗАКАЗЧИК|ПОДРЯДЧИК|ПРЕДСТАВИТЕЛЬ|ПРОИЗВОДИТЕЛЬ РАБОТ|ДИРЕКТОР|ГЛ\.? ?БУХГАЛТЕР|\(ДАТА)/;
 const JAMI = /^(ИТОГО|ВСЕГО|JAMI|ЖАМИ)/;
 /** Jamiga tegishli hisob qatorlari: resurs emas, lekin o'z summasi bilan saqlanadi. */
 const HISOB_QATORI = /^(В Т\.? ?Ч\.?|В ТОМ ЧИСЛЕ|ТРАНСПОРТНЫЕ РАСХОДЫ|ЗАГОТОВИТЕЛЬНО|СКЛАДСКИЕ РАСХОДЫ)/;
@@ -133,6 +137,14 @@ export function varaqniTahlilQil(fayl: string, varaq: KirishVaraq, sarlavhaBoshI
   let rol = aniqlangan.rol;
   const rolDalil = aniqlangan.dalil;
   const u: UstunXaritasi | null = blok ? ustunXaritasi(blok) : null;
+  // Tartib ustuni sarlavhasiz bo'lsa (real F2: "№" katagi bo'sh, raqamlash B dan) —
+  // shifrdan chapdagi ustunda tartib raqamlari (1, 1.1, 2 …) bo'lsa, o'sha tartib.
+  if (u && u.tartib < 0 && u.shifr > 0) {
+    const c = u.shifr - 1;
+    const namuna = rows.slice(u.malumotBoshi, u.malumotBoshi + 300).map((row) => row[c]).filter((v) => !bosh(v));
+    const tartibli = namuna.filter((v) => butunTartib(v) || ichkiTartib(v)).length;
+    if (tartibli >= 3 && tartibli >= namuna.length * 0.6) u.tartib = c;
+  }
   // ABC4 "БР" (resurs smeta) sarlavhasi "БВ" (vedomost) bilan bir xil — rolni
   // ma'lumot shakli hal qiladi: ichki "1.1" qatorlar yo'q va ma'lumot resurs
   // guruhi bilan boshlansa — bu resurs ro'yxati.
@@ -222,6 +234,9 @@ export function varaqniTahlilQil(fayl: string, varaq: KirishVaraq, sarlavhaBoshI
     const birinchiMatn = xom(row[toliq[0]]);
     const bk = kalit(birinchiMatn);
     if (toliq.some((i) => IMZO.test(kalit(row[i])))) break;
+    if (toliq.length <= 2 && AKT_IMZO.test(bk) && !toliq.some((i) => typeof row[i] === 'number')) break;
+    // Ma'lumot ichida takrorlangan "1 | 2 | 3 | 4 …" ustun raqamlari qatori — ma'lumot emas.
+    if (tartibRaqamlariQatorimi(row)) continue;
 
     const nomK = kalit(ol(row, u.nom));
     if (JAMI.test(bk) || JAMI.test(nomK) || HISOB_QATORI.test(bk)) {
@@ -248,6 +263,16 @@ export function varaqniTahlilQil(fayl: string, varaq: KirishVaraq, sarlavhaBoshI
       continue;
     }
 
+    // Ish ostidagi resurs, lekin tartibi butun son ko'rinishida: Google Sheets "3.1" ni
+    // sanaga aylantiradi (46025), ba'zi eksportlar "1,10" ni 1.1 emas matn qiladi.
+    // Resurs kodi sof raqam (000001, 3, 1941) — ish shifri hech qachon sof raqam emas.
+    if (joriyIsh && nomBor && butunTartib(tartibKatak) && /^\d{1,6}$/.test(xom(ol(row, u.shifr)))
+      && (Number(xom(tartibKatak)) >= 1000 || son(ol(row, u.hajmBirlikka)) != null)) {
+      iq.ishKeldi();
+      joriyIsh.resurslar.push(resursOl(row, r, false));
+      continue;
+    }
+
     if (butunTartib(tartibKatak) && (nomBor || !bosh(ol(row, u.shifr)))) {
       iq.ishKeldi();
       const hajmL = son(ol(row, u.hajmLoyiha));
@@ -267,9 +292,12 @@ export function varaqniTahlilQil(fayl: string, varaq: KirishVaraq, sarlavhaBoshI
       continue;
     }
 
-    if (ichkiTartib(tartibKatak) && nomBor) {
+    // Resurs nomi bo'sh kelishi mumkin (real F2: formula havolasi uzilgan, "21.10 |
+    // 006327 | ' ' | М3 | … | 441 mln") — kod bo'lsa resurs, nomsizligi review'da.
+    if (ichkiTartib(tartibKatak) && (nomBor || !bosh(ol(row, u.shifr)))) {
       iq.ishKeldi();
       if (!joriyIsh) { review('resurs_ishsiz', `resurs "${xom(tartibKatak)}" hech bir ishga tegishli emas`, r); continue; }
+      if (!nomBor) review('resurs_nomsiz', `resurs ${xom(tartibKatak)} (kod ${xom(ol(row, u.shifr))}) nomi bo'sh`, r);
       joriyIsh.resurslar.push(resursOl(row, r, false));
       continue;
     }
