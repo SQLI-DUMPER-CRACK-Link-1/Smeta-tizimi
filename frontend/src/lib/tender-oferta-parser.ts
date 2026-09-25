@@ -2,6 +2,7 @@ import type { SheetGrid, XlsxWorkbook } from './f2-import-parse';
 import type { T2ResursKategoriya } from '../api/supabase';
 import type { OfertaKategoriya, OfertaKategoriyaManbasi, OfertaMalumKategoriya, OfertaQator, OfertaRol } from './tender-oferta';
 import { podvalBlokTuri, resBolimKategoriya, resursMkKabAniqla } from './res-kategoriya';
+import { sarlavhaBlokiniTop, ustunXaritasi, type UstunXaritasi } from './smeta-anatomiya';
 
 export type OfertaSheetRole = 'res' | 'lrv' | 'transport' | 'unknown';
 export type OfertaSheetConfidence = 'yuqori' | 'o‘rta' | 'past';
@@ -35,6 +36,10 @@ export type OfertaSheetTahlili = {
   alternativVaraq?: string;
   /** Excelda yashirin varaq — odatda eski davr qoralamasi; sukut bo‘yicha tanlanmaydi. */
   yashirin?: boolean;
+  /** Yagona smeta anatomiyasi (smeta-anatomiya) bergan ustun xaritasi va Oferta
+   * ustunlari bilan solishtiruv. `mos: false` — farq bor, `farqlar` da qaysi
+   * ustun (real korpus bilan anatomiyaga to'liq o'tishdan oldingi dalil). */
+  anatomiya?: { ustunlar: UstunXaritasi | null; mos: boolean; farqlar: string[] };
 };
 
 const text = (value: unknown): string => String(value ?? '').replace(/Ё/g, 'Е').replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
@@ -282,6 +287,24 @@ function fallbackNumber(row: readonly unknown[], rol: OfertaRol, columns: Oferta
   return rol === 'SUBTOTAL' || rol === 'GRAND_TOTAL' ? values[0] : values[values.length - 1];
 }
 
+/** Podval/НДС qatorining nom va summa ustunidan boshqa kataklaridagi foizlar:
+ * `0,05` → 5; `5%` → 5; НДС qatorida `1,12` → 12 (P4.2, Pomoshnik PTO saboqi). */
+function katakFoizlari(row: readonly unknown[], columns: OfertaResursUstunlar, ndsQatori: boolean): number[] {
+  const out: number[] = [];
+  row.forEach((cell, i) => {
+    if (i === columns.nom || i === columns.smetaSumma || i === columns.tartib) return;
+    const t = text(cell);
+    if (!t) return;
+    const pm = t.match(/^(\d+(?:[.,]\d+)?)\s*%$/);
+    if (pm) { out.push(Number(pm[1].replace(',', '.'))); return; }
+    const n = typeof cell === 'number' ? cell : numberValue(cell);
+    if (n == null || !/^[\d\s.,]+$/.test(t)) return;
+    if (n > 0 && n < 1) out.push(Number((n * 100).toPrecision(12)));
+    else if (ndsQatori && n > 1 && n < 1.5) out.push(Number(((n - 1) * 100).toPrecision(12)));
+  });
+  return out;
+}
+
 function rowLabel(row: readonly unknown[], columns: OfertaResursUstunlar): string {
   const preferred = text(valueAt(row, columns.nom));
   if (preferred) return preferred;
@@ -430,6 +453,10 @@ function parseRows(sheetName: string, rows: SheetGrid, columns: OfertaResursUstu
       manbaHajmSon: typeof valueAt(row, columns.hajm) === 'number',
       manbaSummaSon: typeof valueAt(row, columns.smetaSumma) === 'number',
     };
+    if (t.hosila || ((t.rol === 'SUBTOTAL' || t.rol === 'GRAND_TOTAL') && /НДС|ҚҚС|QQS/.test(normal(nom)))) {
+      const kf = katakFoizlari(row, columns, /НДС|ҚҚС|QQS/.test(normal(nom)));
+      if (kf.length) qator.katakFoizlari = kf;
+    }
 
     if (t.rol === 'SECTION') {
       joriyTaklif = /ИНЕРТН/.test(normal(nom)) ? 'БЕЗСКЛАД' : undefined;
@@ -510,6 +537,19 @@ function primaryDuplicateSheet(left: OfertaSheetTahlili, right: OfertaSheetTahli
   return score(left) >= score(right) ? left : right;
 }
 
+/** Anatomiya ustun xaritasi ↔ Oferta ustunlari solishtiruvi (faqat dalil — natijaga ta'sir qilmaydi). */
+export function anatomiyaSolishtir(rows: SheetGrid, ustunlar: OfertaResursUstunlar | null): NonNullable<OfertaSheetTahlili['anatomiya']> {
+  const blok = sarlavhaBlokiniTop(rows);
+  const a = blok ? ustunXaritasi(blok) : null;
+  if (!a || !ustunlar) return { ustunlar: a, mos: !a && !ustunlar, farqlar: a ? ['oferta ustunlari topilmadi'] : ustunlar ? ['anatomiya sarlavha blokini topmadi'] : [] };
+  const juftlar: Array<[string, number, number]> = [
+    ['nom', ustunlar.nom, a.nom], ['birlik', ustunlar.birlik, a.birlik], ['hajm', ustunlar.hajm, a.hajmLoyiha],
+    ['narx', ustunlar.smetaNarx, a.narx], ['summa', ustunlar.smetaSumma, a.summa],
+  ];
+  const farqlar = juftlar.filter(([, o, x]) => o !== x).map(([nom, o, x]) => `${nom}: oferta ${o}, anatomiya ${x}`);
+  return { ustunlar: a, mos: !farqlar.length, farqlar };
+}
+
 export function ofertaResursVaraqlariniAniqla(workbook: XlsxWorkbook): OfertaSheetTahlili[] {
   const analyses: OfertaSheetTahlili[] = workbook.sheets.map((sheet) => {
     const rows = safeRows(workbook.sheet(sheet.name)?.rows ?? sheet.rows);
@@ -533,7 +573,9 @@ export function ofertaResursVaraqlariniAniqla(workbook: XlsxWorkbook): OfertaShe
     else if (!parsed.qatorlar.length) evidence.push('sarlavha topildi, lekin resurs satrlari topilmadi');
     else evidence.push(`${parsed.qatorlar.filter((qator) => qator.rol === 'RESOURCE').length} ta resurs, ${parsed.qatorlar.filter((qator) => qator.rol !== 'RESOURCE').length} ta hisob/bo‘lim satri`);
     if (sheet.hidden) evidence.push('Excelda yashirin varaq — sukut bo‘yicha tanlanmaydi');
-    return { nom: sheet.name, role, format: evidenceData.format, confidence, evidence, resScore: evidenceData.resScore, lrvScore: evidenceData.lrvScore, ustunlar, ...parsed, ...(sheet.hidden ? { yashirin: true } : {}) };
+    const anatomiya = anatomiyaSolishtir(rows, ustunlar);
+    if (ustunlar && !anatomiya.mos) evidence.push(`anatomiya ustun xaritasi farq qiladi (${anatomiya.farqlar.join('; ')})`);
+    return { nom: sheet.name, role, format: evidenceData.format, confidence, evidence, resScore: evidenceData.resScore, lrvScore: evidenceData.lrvScore, ustunlar, ...parsed, ...(sheet.hidden ? { yashirin: true } : {}), anatomiya };
   });
 
   // ABC eksportlarida RES va RES_A ko‘pincha ayni ma’lumotning ikki ko‘rinishi:

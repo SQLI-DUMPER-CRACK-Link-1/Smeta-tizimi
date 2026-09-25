@@ -55,4 +55,5 @@ export function kitobAnatomiyasi(kitob: KirishKitob): KitobAnatomiyasi {
 }
 
 export { sarlavhaYoli } from './ierarxiya';
+export { sarlavhaBlokiniTop, ustunXaritasi, tartibRaqamlariQatorimi, type SarlavhaBloki } from './ustun';
 export type * from './turlar';

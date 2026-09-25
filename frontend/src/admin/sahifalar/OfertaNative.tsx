@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { CheckCheck, Download, FileSpreadsheet, FolderOpen, Info, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { readXlsx } from '../../lib/f2-import-parse';
 import {
-  OFERTA_KATEGORIYALAR, ofertaHisobla, ofertaResursKaliti,
+  OFERTA_KATEGORIYALAR, fayldagiFoizlar, ofertaHisobla, ofertaResursKaliti,
   type OfertaFoiz, type OfertaFoizYon, type OfertaGuruh, type OfertaMalumKategoriya, type OfertaNarxRejimi,
   type OfertaNarxSozlamasi, type OfertaQatorNatija, type OfertaTransportSiyosati,
 } from '../../lib/tender-oferta';
@@ -48,7 +48,7 @@ const KASKAD_QADAMLARI: Array<[keyof NakrutkaQadamlar, string]> = [
   ['risk', 'Risk'], ['itogo4', 'Itogo 4'], ['nds', 'QQS (NDS)'], ['vsego', 'JAMI (yakuniy)'],
 ];
 
-type Koef = { qiymatlar: NakrutkaKoeffitsientlar; manba: 'kompaniya' | 'standart' | 'tahrirlangan' };
+type Koef = { qiymatlar: NakrutkaKoeffitsientlar; manba: 'kompaniya' | 'standart' | 'tahrirlangan' | 'fayl' };
 type PaketFayl = OfertaPaketFayl & { bytes: Uint8Array };
 
 /** Sukut tanlov: RES/transport, alternativ ko'rinish va YASHIRIN (eski qoralama) emas. */
@@ -76,6 +76,7 @@ function Sessiya() {
   const [guruhNarx, setGuruhNarx] = useState<Record<string, string>>({});
   const [guruhKat, setGuruhKat] = useState<Record<string, OfertaMalumKategoriya>>({});
   const [qatorNarx, setQatorNarx] = useState<Record<string, string>>({});
+  const [asosNarx, setAsosNarx] = useState<Record<string, number>>({});
   const [qatorHajm, setQatorHajm] = useState<Record<string, string>>({});
   const [qatorKat, setQatorKat] = useState<Record<string, OfertaMalumKategoriya>>({});
   const [rejim, setRejim] = useState<OfertaNarxRejimi>('foiz');
@@ -130,8 +131,11 @@ function Sessiya() {
 
   const hisob = useMemo(() => ofertaHisobla(qatorlar, {
     sozlama, manualNarxlar: kirishlar.narx, manualHajmlar: kirishlar.hajm, manualKategoriyalar: kirishlar.kat,
-    nakrutka: koef.qiymatlar, transportSiyosati: transport,
-  }), [qatorlar, sozlama, kirishlar, koef.qiymatlar, transport]);
+    nakrutka: koef.qiymatlar, transportSiyosati: transport, asosNarxTanlovi: asosNarx,
+  }), [qatorlar, sozlama, kirishlar, koef.qiymatlar, transport, asosNarx]);
+  /** P4.3: podvaldagi foizlar (barcha varaqlarda bir xil bo'lsa) — faqat taklif. */
+  const fayldagi = useMemo(() => fayldagiFoizlar(qatorlar), [qatorlar]);
+  const fayldagiQollanmagan = fayldagi.taklif.filter((f) => koef.qiymatlar[f.kod] !== f.foiz);
 
   const obyektHisoblari = useMemo(() => fayllar.map((f) => ({
     fayl: f, hisob: paketFaylHisobi(hisob, f, fayllar.length > 1, hisob.koeffitsientlar, transport),
@@ -252,7 +256,7 @@ function Sessiya() {
     setBusy(true);
     try {
       const imzo = { zakazchik, pudratchi };
-      const koeffitsientManbasi = koef.manba === 'kompaniya' ? 'kompaniya koeffitsientlari' : koef.manba === 'tahrirlangan' ? 'qo‘lda tahrirlangan' : 'T1 standarti';
+      const koeffitsientManbasi = koef.manba === 'kompaniya' ? 'kompaniya koeffitsientlari' : koef.manba === 'tahrirlangan' ? 'qo‘lda tahrirlangan' : koef.manba === 'fayl' ? 'fayldagi foizlar' : 'T1 standarti';
       const natijalar: Array<{ nom: string; bytes: Uint8Array; saqlanish: string }> = [];
       for (const o of obyektHisoblari) {
         if (!o.fayl.tanlanganVaraqlar.length || !o.hisob.qatorlar.length) continue;
@@ -386,8 +390,16 @@ function Sessiya() {
           })}
           <button type="button" className="tugma tugma-asosiy h-9" onClick={foizniQollash}><RefreshCw size={14} /> Foizlarni qo‘llash</button>
         </div>}
+        {(fayldagiQollanmagan.length > 0 || fayldagi.ziddiyat.length > 0) && <div role="status" className="rounded-lg border border-accent/40 bg-accent/5 p-2 text-[11px] text-text">
+          {fayldagiQollanmagan.length > 0 && <div className="flex flex-wrap items-center gap-2">
+            <span><b>Fayldagi foizlar:</b> {fayldagiQollanmagan.map((f) => `${NAKRUTKA_KOEF_IZOH[f.kod]} ${f.foiz}% (${f.varaqlar.join(', ')})`).join('; ')}</span>
+            <button type="button" className="tugma h-7 px-2 text-[11px]" onClick={() => setKoef((old) => ({ qiymatlar: { ...old.qiymatlar, ...Object.fromEntries(fayldagiQollanmagan.map((f) => [f.kod, f.foiz])) }, manba: 'fayl' }))}>Qo‘llash</button>
+            <span className="text-text-dim">avtomatik qo‘llanmaydi — tekshirib qo‘llang</span>
+          </div>}
+          {fayldagi.ziddiyat.map((z) => <p key={z.kod} className="mt-1 text-warn">{NAKRUTKA_KOEF_IZOH[z.kod]}: varaqlarda har xil — {z.qiymatlar.map((x) => `${x.varaq}: ${x.foiz}%`).join(', ')} (taklif qilinmaydi, qo‘lda kiriting)</p>)}
+        </div>}
         <details className="rounded-lg border border-border/70 p-2 text-[11px]">
-          <summary className="cursor-pointer font-medium text-text">Nakrutka koeffitsientlari — {koef.manba === 'kompaniya' ? 'kompaniyaniki' : koef.manba === 'tahrirlangan' ? 'qo‘lda tahrirlangan' : 'T1 standarti'}</summary>
+          <summary className="cursor-pointer font-medium text-text">Nakrutka koeffitsientlari — {koef.manba === 'kompaniya' ? 'kompaniyaniki' : koef.manba === 'tahrirlangan' ? 'qo‘lda tahrirlangan' : koef.manba === 'fayl' ? 'fayldagi foizlar' : 'T1 standarti'}</summary>
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
             {NAKRUTKA_KOEF_KODLAR.map((kod) => <label key={kod} className="flex items-center justify-between gap-2 text-text-dim" title={NAKRUTKA_KOEF_IZOH[kod]}>
               <span className="truncate">{NAKRUTKA_KOEF_IZOH[kod]}</span>
@@ -471,7 +483,21 @@ function Sessiya() {
                   <option value="">{kat && kat !== 'UNKNOWN' ? `${kat} (fayldan)` : g.kategoriyaTaklifi ? `? taklif: ${g.kategoriyaTaklifi}` : g.kategoriyalar.length > 1 ? g.kategoriyalar.join(' / ') : 'Noma’lum'}</option>
                   {OFERTA_KATEGORIYALAR.map((k) => <option key={k} value={k}>{k}</option>)}
                 </select>}</td>
-                <td className="max-w-[380px] px-2 py-1.5 font-medium text-text" title={g.varaqlar.join('\n')}>{g.nom}</td>
+                <td className="max-w-[380px] px-2 py-1.5 font-medium text-text" title={g.varaqlar.join('\n')}>{g.nom}
+                  {g.smetaNarxlar.length > 1 && <details className="mt-1 font-normal text-text-dim">
+                    <summary className="cursor-pointer text-warn">Smeta narxi har xil: {g.smetaNarxlar.length} xil — qaysi varaqda qaysi narx</summary>
+                    <ul className="mt-1 space-y-0.5">{g.smetaNarxlar.map((narx) => {
+                      const joylar = hisob.qatorlar.filter((q) => g.sourceIds.includes(q.sourceId) && q.smetaBirlikNarx === narx);
+                      const asosiy = asosNarx[g.kalit] === narx;
+                      return <li key={narx} className="flex flex-wrap items-center gap-2">
+                        <span className="tabular-nums">{fmt(narx)}</span>
+                        <span>— {joylar.map((q) => `${q.sourceSheet} (${q.sourceRow}-qator)`).join(', ')}</span>
+                        {asosiy ? <span className="text-ok">asosiy (tanlangan)</span>
+                          : <button type="button" className="tugma h-6 px-1.5 text-[10px]" onClick={() => setAsosNarx((o) => ({ ...o, [g.kalit]: narx }))}>Shu narxni asosiy qilish</button>}
+                      </li>;
+                    })}</ul>
+                  </details>}
+                </td>
                 <td className="px-2 py-1.5 text-text-dim">{g.birlik ?? '—'}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-text-dim" title={g.varaqlar.join('\n')}>{g.sourceIds.length} joy / {g.varaqlar.length} varaq</td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-text-dim">{fmt(g.jamiHajm)}</td>

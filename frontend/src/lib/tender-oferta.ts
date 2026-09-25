@@ -16,7 +16,7 @@
  * nakrutka kaskadi (nakrutka-kaskad.ts = SQL t2_nakrutka_hisobla_v1) bilan
  * hisoblanadi.
  */
-import type { NakrutkaKoeffitsientlar } from '../api/t2-nakrutka';
+import type { NakrutkaKoefKod, NakrutkaKoeffitsientlar } from '../api/t2-nakrutka';
 import { NAKRUTKA_STANDART, nakrutkaKaskadXom, pulYaxlitla, type NakrutkaAsos, type NakrutkaQadamlar } from './nakrutka-kaskad';
 
 export type OfertaNarxRejimi = 'foiz' | 'qolda';
@@ -84,6 +84,10 @@ export type OfertaQator = {
    * faqat shunda unga havola qiladi, aks holda qiymat konstanta yoziladi. */
   manbaHajmSon?: boolean;
   manbaSummaSon?: boolean;
+  /** Podval/НДС qatorining NOM EMAS kataklaridagi foizlar (C/D/E: `0,05`,
+   * `5%`, НДС qatorida `1,12` → 12). Pomoshnik PTO saboqi: foiz ko'pincha
+   * yozuvda emas, alohida katakda turadi. */
+  katakFoizlari?: number[];
 };
 
 export type OfertaFoiz = { yon: OfertaFoizYon; foiz: number };
@@ -113,6 +117,9 @@ export type OfertaKirish = {
   /** true (standart): ayni material (nom + birlik) barcha varaqlarda BIR XIL
    * taklif narxini oladi — foiz bir xil asos narxga qo‘llanadi. */
   birXilNarx?: boolean;
+  /** Operator tanlagan asosiy smeta narxi (guruh kaliti → narx) — "smeta
+   * narxi har xil" guruhlarida eng ko'p uchragan narx o'rniga. */
+  asosNarxTanlovi?: Readonly<Record<string, number | undefined>>;
 };
 
 /** Panelda bir marta ko‘rinadigan resurs: barcha varaqlardagi ayni material. */
@@ -278,7 +285,7 @@ export function ofertaResursKaliti(q: Pick<OfertaQator, 'sourceId' | 'nom' | 'bi
 
 /** Guruh bo‘yicha tayyorlash: yagona fayl-kategoriyani noma’lum qatorlarga
  * yoyish va bir xil taklif narxi uchun guruhning asosiy smeta narxi. */
-function guruhTayyorla(qatorlar: readonly OfertaQator[], birXilNarx: boolean): { qatorlar: OfertaQator[]; asosNarx: Map<string, number>; harXil: Set<string> } {
+function guruhTayyorla(qatorlar: readonly OfertaQator[], birXilNarx: boolean, tanlov: Readonly<Record<string, number | undefined>> = {}): { qatorlar: OfertaQator[]; asosNarx: Map<string, number>; harXil: Set<string> } {
   const guruh = new Map<string, OfertaQator[]>();
   for (const q of qatorlar) {
     if (!narxlanadiganmi(q)) continue;
@@ -290,7 +297,7 @@ function guruhTayyorla(qatorlar: readonly OfertaQator[], birXilNarx: boolean): {
   const katYoy = new Map<string, OfertaMalumKategoriya>();
   const asosNarx = new Map<string, number>();
   const harXil = new Set<string>();
-  for (const a of guruh.values()) {
+  for (const [kalit, a] of guruh.entries()) {
     if (a.length < 2) continue;
     const mal = new Set(a.map((q) => q.kategoriya).filter((k): k is OfertaMalumKategoriya => !!k && k !== 'UNKNOWN'));
     if (mal.size === 1) {
@@ -307,7 +314,10 @@ function guruhTayyorla(qatorlar: readonly OfertaQator[], birXilNarx: boolean): {
     }
     if (stat.size < 2) continue;
     // Asosiy narx: eng ko‘p uchragani; teng bo‘lsa — smeta summasi kattasi.
-    const [asos] = [...stat.entries()].sort((x, y) => y[1].soni - x[1].soni || y[1].summa - x[1].summa || y[0] - x[0])[0];
+    const tanlangan = tanlov[kalit];
+    const [asos] = tanlangan != null && stat.has(tanlangan)
+      ? [tanlangan]
+      : [...stat.entries()].sort((x, y) => y[1].soni - x[1].soni || y[1].summa - x[1].summa || y[0] - x[0])[0];
     for (const q of a) { asosNarx.set(q.sourceId, asos); harXil.add(q.sourceId); }
   }
   const yangi = katYoy.size
@@ -434,6 +444,56 @@ function jamiBarglari(jami: OfertaQatorNatija, byId: ReadonlyMap<string, OfertaQ
 
 const foizlarOqi = (nom: string) => [...nom.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g)].map((m) => ({ foiz: Number(m[1].replace(',', '.')), joy: m.index ?? 0 }));
 
+/** Podval foizlari: avval qatorning alohida kataklaridagi (joy −1 — yozuvdagi
+ * "М/К=…" dan oldin turadi, ya'ni asosiy foiz), keyin yozuvdagi. */
+function podvalFoizlari(n: Pick<OfertaQator, 'nom' | 'katakFoizlari'>): Array<{ foiz: number; joy: number }> {
+  return [...(n.katakFoizlari ?? []).map((foiz) => ({ foiz, joy: -1 })), ...foizlarOqi(n.nom.toUpperCase().replace(/Ё/g, 'Е'))];
+}
+
+/** Fayldan o'qilgan nakrutka foizi taklifi (P4.3). Avtomatik qo'llanmaydi. */
+export type FayldagiFoiz = { kod: NakrutkaKoefKod; foiz: number; varaqlar: string[] };
+export type FayldagiFoizlar = { taklif: FayldagiFoiz[]; ziddiyat: Array<{ kod: NakrutkaKoefKod; qiymatlar: Array<{ foiz: number; varaq: string }> }> };
+
+/**
+ * Tanlangan varaqlar podvalidagi foizlarni (транспорт 5%, склад 2%, М/К 0,75%,
+ * кабель 1,5%, оборудование 1,2%/2%) nakrutka koeffitsientlariga moslaydi.
+ * Kod barcha varaqlarda bir xil bo'lsagina taklif qilinadi; farq bo'lsa —
+ * ziddiyat (operator hal qiladi).
+ */
+export function fayldagiFoizlar(qatorlar: readonly OfertaQator[]): FayldagiFoizlar {
+  const topildi = new Map<NakrutkaKoefKod, Array<{ foiz: number; varaq: string }>>();
+  const qosh = (kod: NakrutkaKoefKod, foiz: number | undefined, varaq: string) => {
+    if (foiz == null || !Number.isFinite(foiz) || foiz <= 0 || foiz >= 100) return;
+    const a = topildi.get(kod) ?? [];
+    if (!a.some((x) => x.varaq === varaq && x.foiz === foiz)) a.push({ foiz, varaq });
+    topildi.set(kod, a);
+  };
+  for (const q of qatorlar) {
+    if (!q.hosila || (q.rol !== 'TRANSPORT' && q.rol !== 'STORAGE')) continue;
+    const nom = q.nom.toUpperCase().replace(/Ё/g, 'Е');
+    const f = podvalFoizlari(q);
+    if (!f.length) continue;
+    const ob = /ОБОРУД/.test(nom);
+    if (q.rol === 'TRANSPORT') {
+      qosh(/КАБЕЛ/.test(nom) ? 'ТРАНСПОРТ_КАБЕЛЬ' : ob ? 'ТРАНСПОРТ_ОБОРУД' : 'ТРАНСПОРТ_МАТЕРИАЛ', f[0].foiz, q.sourceSheet);
+    } else {
+      const mk = nom.search(/М\s*\/\s*К/);
+      const mkFoiz = mk >= 0 ? f.find((x) => x.joy > mk) : undefined;
+      const asosiy = f.find((x) => x !== mkFoiz);
+      qosh(ob ? 'ЗАГОТ_СКЛАД_ОБОРУД' : 'СКЛАДСКИЕ_МАТЕРИАЛ', asosiy?.foiz, q.sourceSheet);
+      if (mkFoiz) qosh('СКЛАДСКИЕ_МК', mkFoiz.foiz, q.sourceSheet);
+    }
+  }
+  const taklif: FayldagiFoiz[] = [];
+  const ziddiyat: FayldagiFoizlar['ziddiyat'] = [];
+  for (const [kod, a] of topildi) {
+    const qiymatlar = new Set(a.map((x) => x.foiz));
+    if (qiymatlar.size === 1) taklif.push({ kod, foiz: a[0].foiz, varaqlar: [...new Set(a.map((x) => x.varaq))] });
+    else ziddiyat.push({ kod, qiymatlar: a });
+  }
+  return { taklif, ziddiyat };
+}
+
 /** Manbada 0 bo'lgan podval qatori uchun kategoriya qoidasi — kanonik kaskad
  * kabi HAR KATEGORIYAGA o'z foizi: sklad (МАТ+КАБ)×2% + М/К×0,75% + ОБ×1,2%;
  * transport (МАТ+М/К+БЕЗСКЛАД)×5% + ОБ×2%; kabel transporti КАБ×1,5%.
@@ -441,7 +501,7 @@ const foizlarOqi = (nom: string) => [...nom.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g)].
  * nakrutka koeffitsienti. Bo'limda yo'q kategoriya formulaga kirmaydi. */
 function kategoriyaQoidasi(n: OfertaQatorNatija, barglar: readonly OfertaQatorNatija[], nk: NakrutkaKoeffitsientlar): Array<{ kat: OfertaKategoriya[]; foiz: number }> | null {
   const nom = n.nom.toUpperCase().replace(/Ё/g, 'Е');
-  const f = foizlarOqi(nom);
+  const f = podvalFoizlari(n);
   const k = (kod: keyof NakrutkaKoeffitsientlar) => Number(nk[kod] ?? 0);
   const bor = new Set<OfertaKategoriya>(barglar.map((b) => b.samaraliKategoriya ?? 'UNKNOWN'));
   const faqatOb = bor.size > 0 && [...bor].every((x) => x === 'ОБ');
@@ -494,7 +554,7 @@ function podvalniHisobla(n: OfertaQatorNatija, jami: OfertaQatorNatija | null, k
     return;
   }
   if (jami.pudratchiSumma == null || !jami.smetaSumma) return;
-  const foizlar = foizlarOqi(n.nom).map((x) => x.foiz);
+  const foizlar = podvalFoizlari(n).map((x) => x.foiz);
   const mos = foizlar.find((f) => teng(src, jami.smetaSumma! * f / 100));
   const koef = mos != null ? mos / 100 : src / jami.smetaSumma;
   n.podval = { tur: 'foiz', baza: jami.sourceId, koef, foiz: mos ?? null };
@@ -522,7 +582,7 @@ export function ofertaHisobla(qatorlar: readonly OfertaQator[], kirish: OfertaKi
   const transportSiyosati = kirish.transportSiyosati ?? 'kaskad';
   const byId = new Map<string, OfertaQatorNatija>();
   const natijalar: OfertaQatorNatija[] = [];
-  const tayyor = guruhTayyorla(qatorlar, kirish.birXilNarx !== false);
+  const tayyor = guruhTayyorla(qatorlar, kirish.birXilNarx !== false, kirish.asosNarxTanlovi);
 
   for (const qator of tayyor.qatorlar) {
     const n = narxlanadiganmi(qator) ? bargNatija(qator, kirish, tayyor.asosNarx.get(qator.sourceId)) : bosNatija(qator);
