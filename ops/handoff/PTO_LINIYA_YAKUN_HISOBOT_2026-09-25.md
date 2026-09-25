@@ -148,3 +148,19 @@ Egasidan kerak: АОСР / oraliq qabul / sinov / laboratoriya real blanklari;
 ruxsat. Qo'lda tekshirish: Nakopitelniy (Suniy Ko'l) Excel — to'liq chiqishi va
 oxirida НДС 12 %; LRV → «Bajarilmaydigan / bekor qilingan ishlar» → bitta
 sinov ishini qoralama qilib, keyin "Qaytarish" (tasdiqlamasdan).
+
+## Qo'shimcha: Сличительная ведомость (egasi so'rovi, 2026-09-25)
+
+Egasi: "Slichitelniy vedomost ham yasay oladigan bo'lishi kerak".
+LRV sahifasida **«Slichitelniy Excel»** tugmasi (+ "faqat farqi borlar"
+belgisi). Hujjat `frontend/src/lib/slichitelniy-vedomost.ts` (H1–H9):
+har pozitsiya bo'yicha ПО СМЕТЕ ↔ ФАКТИЧЕСКИ ВЫПОЛНЕНО ↔ ПРИНЯТО ПО АКТАМ Ф-2,
+ОТКЛОНЕНИЕ (факт − смета, + ortiq / − kam) summasi smeta narxida (Excel
+formulasi), RZ ierarxiyasi, ИТОГО/ВСЕГО, «Примечание» (qo'shimcha ish,
+almashtirish, ostatkadan chiqarilgan ish asosi bilan), noma'lum pozitsiyalar
+«ТРЕБУЮТ ВНИМАНИЯ» da (jami bo'sh), imzo: ЗАКАЗЧИК / ПОДРЯДЧИК / ТЕХНАДЗОР /
+СОСТАВИЛ. Hech narsani o'zgartirmaydi — faqat farqni ko'rsatadi.
+Dalil: vitest 5 test; LibreOffice qayta hisoblash farqi 0, 1 sahifa A4
+landshaft. Real obyektda Excel — UNKNOWN (egasi tekshiradi).
+Eslatma: "Hujjat nazorati" sahifasidagi eski Codex prototipi (smeta limiti ↔
+Ф-2, MOS/FARQ) tegilmadi — alohida modul.

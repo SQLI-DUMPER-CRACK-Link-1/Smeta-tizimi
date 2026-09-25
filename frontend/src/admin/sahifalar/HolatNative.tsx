@@ -13,6 +13,7 @@ import { t2ObyektNakrutka } from '../../api/t2-nakrutka';
 import type { TreeNode } from '../../api/types';
 import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import { ostatkaHujjatModeli, ostatkaHujjatXlsx } from '../../lib/ostatka-export';
+import { slichitelniyHujjatXlsx, slichitelniyModeli } from '../../lib/slichitelniy-vedomost';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { toast } from '../../umumiy/ui/Toast';
@@ -36,6 +37,7 @@ export function HolatNative() {
   const [sahifaXato, setError] = useState('');
   const [ochiqPanel, setOchiqPanel] = useState<string | null>(null);
   const [eksportBolmoqda, setEksportBolmoqda] = useState(false);
+  const [slichFaqatFarq, setSlichFaqatFarq] = useState(false);
 
   const obyektId = Number(id);
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
@@ -191,6 +193,33 @@ export function HolatNative() {
   }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno]);
 
 
+  /* Egasi (2026-09-25): "slichitelniy vedomost ham yasay oladigan bo'lishi
+     kerak". СЛИЧИТЕЛЬНАЯ ВЕДОМОСТЬ: smeta ↔ fakt (↔ tasdiqlangan Ф-2) har
+     pozitsiya bo'yicha, farq (+ ortiq / − kam) summasi bilan. Farqni faqat
+     ko'rsatadi — hech narsani o'zgartirmaydi. */
+  const slichitelniyEksport = useCallback(async () => {
+    if (!selected || !daraxtXom.length) return;
+    if (!exportGate.ok) {
+      setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
+      return;
+    }
+    let istisnolar;
+    try { istisnolar = await istisno.yangila(); } catch {
+      setError('Slichitelniy: bekor qilingan ishlar ro‘yxati o‘qilmadi — hujjat tuzilmadi. Qayta urinib ko‘ring.');
+      return;
+    }
+    const model = slichitelniyModeli(daraxtXom, holatXom, { faqatFarq: slichFaqatFarq, istisnolar });
+    if (!model.barglar) { toast(slichFaqatFarq ? 'Farq yo‘q: barcha pozitsiyalarda fakt smeta bilan teng.' : 'Solishtiriladigan pozitsiya yo‘q.', 'warn'); return; }
+    setEksportBolmoqda(true);
+    try {
+      const { bytes, faylNomi } = slichitelniyHujjatXlsx(model, { obyektNomi: selected.nom, imzo: tomonlar, faqatFarq: slichFaqatFarq, istisnolar });
+      downloadBlob(bytes, faylNomi);
+      toast(`Slichitelniy: ${model.barglar} ta pozitsiya, ${model.ortiq} tasida smetadan ortiq, ${model.kam} tasida kam bajarilgan${model.diqqat.length ? `; ${model.diqqat.length} ta pozitsiyada ma’lumot yetishmaydi — jami bo‘sh qoldirildi` : ''}.`, model.diqqat.length ? 'warn' : 'ok');
+    } catch {
+      setError('Slichitelniy Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
+    } finally { setEksportBolmoqda(false); }
+  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno, slichFaqatFarq]);
+
   const smetaJami = tree.reduce((sum, n) => sum + (n.smeta || 0), 0);
   const faktJami = tree.reduce((sum, n) => sum + (n.stFakt || 0), 0);
   const f2Jami = tree.reduce((sum, n) => sum + (n.stF2 || 0), 0);
@@ -257,6 +286,14 @@ export function HolatNative() {
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Ostatka Excel'}
             </button>
+            <button onClick={() => void slichitelniyEksport()} disabled={eksportBolmoqda || !exportGate.ok}
+              title={exportGate.ok ? "СЛИЧИТЕЛЬНАЯ ВЕДОМОСТЬ: smeta va haqiqatda bajarilgan hajm (va tasdiqlangan Ф-2) har pozitsiya bo'yicha, farq (+/−) summasi bilan, imzolar." : `Eksport bloklangan: ${exportBlockReason}`}
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
+              <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Slichitelniy Excel'}
+            </button>
+            <label className="inline-flex items-center gap-1.5 text-[11px] text-text-dim" title="Slichitelniy vedomostga faqat fakt smetadan farq qiladigan pozitsiyalar kirsin">
+              <input type="checkbox" checked={slichFaqatFarq} onChange={(e) => setSlichFaqatFarq(e.target.checked)} /> faqat farqi borlar
+            </label>
           </>)}
           {validId && tree.length > 0 && !exportGate.ok && (
             <span role="status" className="max-w-[280px] text-[11px] text-warn">
