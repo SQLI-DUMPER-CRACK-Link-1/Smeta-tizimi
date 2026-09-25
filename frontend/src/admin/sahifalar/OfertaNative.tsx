@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCheck, Download, FileSpreadsheet, Info, RefreshCw } from 'lucide-react';
-import { readXlsx, type XlsxWorkbook } from '../../lib/f2-import-parse';
+import { memo, useEffect, useMemo, useState } from 'react';
+import { CheckCheck, Download, FileSpreadsheet, FolderOpen, Info, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { readXlsx } from '../../lib/f2-import-parse';
 import {
-  OFERTA_KATEGORIYALAR, ofertaHisobla,
-  type OfertaFoiz, type OfertaFoizYon, type OfertaMalumKategoriya, type OfertaNarxRejimi,
+  OFERTA_KATEGORIYALAR, ofertaHisobla, ofertaResursKaliti,
+  type OfertaFoiz, type OfertaFoizYon, type OfertaGuruh, type OfertaMalumKategoriya, type OfertaNarxRejimi,
   type OfertaNarxSozlamasi, type OfertaQatorNatija, type OfertaTransportSiyosati,
 } from '../../lib/tender-oferta';
-import { ofertaHolatMatni, tenderOfertaXlsx } from '../../lib/tender-oferta-export';
-import { ofertaResursVaraqlariniAniqla, ofertaTanlanganQatorlari, type OfertaSheetTahlili } from '../../lib/tender-oferta-parser';
+import { ofertaHolatMatni, ofertaMuammoMatni, tenderOfertaXlsx } from '../../lib/tender-oferta-export';
+import { ofertaResursVaraqlariniAniqla, type OfertaSheetTahlili } from '../../lib/tender-oferta-parser';
+import { paketFaylHisobi, paketQatorlari, paketSvodXlsx, paketZip, type OfertaPaketFayl } from '../../lib/tender-oferta-paket';
 import { NAKRUTKA_STANDART, type NakrutkaQadamlar } from '../../lib/nakrutka-kaskad';
 import { NAKRUTKA_KOEF_IZOH, NAKRUTKA_KOEF_KODLAR, t2NakrutkaKoefOl, type NakrutkaKoefKod, type NakrutkaKoeffitsientlar } from '../../api/t2-nakrutka';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
@@ -15,6 +16,7 @@ import { useKompaniya } from '../../test02/KompaniyaTanlov';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 
 const MAX_FILE_BYTES = 80 * 1024 * 1024;
+const SAHIFA = 200;
 const NUMBER = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
 const fmt = (value: number | null | undefined): string => (value == null ? '—' : NUMBER.format(value));
 
@@ -46,17 +48,35 @@ const KASKAD_QADAMLARI: Array<[keyof NakrutkaQadamlar, string]> = [
 ];
 
 type Koef = { qiymatlar: NakrutkaKoeffitsientlar; manba: 'kompaniya' | 'standart' | 'tahrirlangan' };
+type PaketFayl = OfertaPaketFayl & { bytes: Uint8Array };
+
+/** Sukut tanlov: RES/transport, alternativ ko'rinish va YASHIRIN (eski qoralama) emas. */
+function sukutTanlov(t: OfertaSheetTahlili[]): string[] {
+  const auto = t.filter((s) => (s.role === 'res' || s.role === 'transport') && !s.alternativVaraq && !s.yashirin && s.qatorlar.length > 0).map((s) => s.nom);
+  return auto.length ? auto : t.filter((s) => s.role === 'unknown' && !s.yashirin && s.qatorlar.length > 0).map((s) => s.nom);
+}
+
+/** Son kiritish maydoni — har klavishda emas, chiqqanda/Enter bilan qo'llanadi
+ * (27 ming qatorli paketda har tugmada qayta hisoblash sahifani qotiradi). */
+const SonKiritish = memo(function SonKiritish({ qiymat, onQollash, placeholder, label, className }: {
+  qiymat: string; onQollash: (v: string) => void; placeholder?: string; label: string; className?: string;
+}) {
+  const [v, setV] = useState(qiymat);
+  useEffect(() => setV(qiymat), [qiymat]);
+  const qolla = () => { if (v !== qiymat) onQollash(v); };
+  return <input aria-label={label} inputMode="decimal" value={v} placeholder={placeholder}
+    onChange={(e) => setV(e.target.value)} onBlur={qolla} onKeyDown={(e) => { if (e.key === 'Enter') qolla(); }}
+    className={className ?? 'w-32 rounded border border-border bg-surface-2 px-1.5 py-1 text-right tabular-nums'} />;
+});
 
 function Sessiya() {
   const { joriy } = useKompaniya();
-  const [workbook, setWorkbook] = useState<XlsxWorkbook | null>(null);
-  const [manbaBytes, setManbaBytes] = useState<Uint8Array | null>(null);
-  const [fileName, setFileName] = useState('');
-  const [tahlillar, setTahlillar] = useState<OfertaSheetTahlili[]>([]);
-  const [tanlanganVaraqlar, setTanlanganVaraqlar] = useState<string[]>([]);
-  const [manualNarxlar, setManualNarxlar] = useState<Record<string, string>>({});
-  const [manualHajmlar, setManualHajmlar] = useState<Record<string, string>>({});
-  const [manualKategoriyalar, setManualKategoriyalar] = useState<Record<string, OfertaMalumKategoriya>>({});
+  const [fayllar, setFayllar] = useState<PaketFayl[]>([]);
+  const [guruhNarx, setGuruhNarx] = useState<Record<string, string>>({});
+  const [guruhKat, setGuruhKat] = useState<Record<string, OfertaMalumKategoriya>>({});
+  const [qatorNarx, setQatorNarx] = useState<Record<string, string>>({});
+  const [qatorHajm, setQatorHajm] = useState<Record<string, string>>({});
+  const [qatorKat, setQatorKat] = useState<Record<string, OfertaMalumKategoriya>>({});
   const [rejim, setRejim] = useState<OfertaNarxRejimi>('foiz');
   const [yon, setYon] = useState<OfertaFoizYon>('pasaytirish');
   const [foiz, setFoiz] = useState('0');
@@ -64,9 +84,13 @@ function Sessiya() {
   const [sozlama, setSozlama] = useState<OfertaNarxSozlamasi>({ rejim: 'foiz', yon: 'pasaytirish', foiz: 0 });
   const [transport, setTransport] = useState<OfertaTransportSiyosati>('kaskad');
   const [koef, setKoef] = useState<Koef>({ qiymatlar: { ...NAKRUTKA_STANDART }, manba: 'standart' });
+  const [korinish, setKorinish] = useState<'guruh' | 'batafsil'>('guruh');
   const [qidiruv, setQidiruv] = useState('');
   const [faqatMuammo, setFaqatMuammo] = useState(false);
-  const [obyektNomi, setObyektNomi] = useState('');
+  const [sahifa, setSahifa] = useState(1);
+  const [zakazchik, setZakazchik] = useState('');
+  const [pudratchi, setPudratchi] = useState('');
+  const [paketNomi, setPaketNomi] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -83,85 +107,101 @@ function Sessiya() {
     return () => { active = false; };
   }, [joriy?.id]);
 
-  const qatorlar = useMemo(() => ofertaTanlanganQatorlari(tahlillar, tanlanganVaraqlar), [tahlillar, tanlanganVaraqlar]);
-  const raqamlar = (m: Record<string, string>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [k, parseInput(v)]));
+  const qatorlar = useMemo(() => paketQatorlari(fayllar), [fayllar]);
+  const kalitlar = useMemo(() => new Map(qatorlar.map((q) => [q.sourceId, ofertaResursKaliti(q)])), [qatorlar]);
+
+  /* Qo'lda kiritilganlar: qator darajasidagi (batafsil ko'rinish) guruhnikidan
+     ustun; guruh narxi shu materialning BARCHA varaq/obyektdagi qatorlariga. */
+  const kirishlar = useMemo(() => {
+    const narx: Record<string, number | null> = {};
+    const kat: Record<string, OfertaMalumKategoriya> = {};
+    const hajm: Record<string, number | null> = {};
+    for (const q of qatorlar) {
+      const k = kalitlar.get(q.sourceId)!;
+      const n = qatorNarx[q.sourceId] ?? guruhNarx[k];
+      if (n != null) narx[q.sourceId] = parseInput(n);
+      const kt = qatorKat[q.sourceId] ?? guruhKat[k];
+      if (kt) kat[q.sourceId] = kt;
+      if (qatorHajm[q.sourceId] != null) hajm[q.sourceId] = parseInput(qatorHajm[q.sourceId]);
+    }
+    return { narx, kat, hajm };
+  }, [qatorlar, kalitlar, qatorNarx, guruhNarx, qatorKat, guruhKat, qatorHajm]);
+
   const hisob = useMemo(() => ofertaHisobla(qatorlar, {
-    sozlama,
-    manualNarxlar: raqamlar(manualNarxlar),
-    manualHajmlar: raqamlar(manualHajmlar),
-    manualKategoriyalar,
-    nakrutka: koef.qiymatlar,
-    transportSiyosati: transport,
-  }), [qatorlar, sozlama, manualNarxlar, manualHajmlar, manualKategoriyalar, koef.qiymatlar, transport]);
+    sozlama, manualNarxlar: kirishlar.narx, manualHajmlar: kirishlar.hajm, manualKategoriyalar: kirishlar.kat,
+    nakrutka: koef.qiymatlar, transportSiyosati: transport,
+  }), [qatorlar, sozlama, kirishlar, koef.qiymatlar, transport]);
 
-  const taklifKutmoqda = hisob.qatorlar.filter((q) => q.kategoriyaTaklifi && !manualKategoriyalar[q.sourceId] && q.samaraliKategoriya === 'UNKNOWN');
+  const obyektHisoblari = useMemo(() => fayllar.map((f) => ({
+    fayl: f, hisob: paketFaylHisobi(hisob, f, fayllar.length > 1, hisob.koeffitsientlar, transport),
+  })), [fayllar, hisob, transport]);
+  const paketJami = obyektHisoblari.every((o) => o.hisob.yakuniyOferta != null) && obyektHisoblari.length
+    ? obyektHisoblari.reduce((a, o) => a + (o.hisob.yakuniyOferta ?? 0), 0) : null;
+
+  const taklifKutmoqda = hisob.qatorlar.filter((q) => q.kategoriyaTaklifi && !kirishlar.kat[q.sourceId] && q.samaraliKategoriya === 'UNKNOWN');
   const filtr = qidiruv.trim().toUpperCase();
-  const korinadigan = hisob.qatorlar.filter((q) =>
-    (!faqatMuammo || q.muammolar.length > 0)
-    && (!filtr || `${q.nom} ${q.shifr ?? ''} ${q.sourceSheet}`.toUpperCase().includes(filtr)));
+  const korGuruh = useMemo(() => hisob.guruhlar.filter((g) => (!faqatMuammo || g.muammolar.length > 0)
+    && (!filtr || `${g.nom} ${g.varaqlar.join(' ')}`.toUpperCase().includes(filtr))), [hisob.guruhlar, faqatMuammo, filtr]);
+  const korQator = useMemo(() => hisob.qatorlar.filter((q) => (!faqatMuammo || q.muammolar.length > 0)
+    && (!filtr || `${q.nom} ${q.shifr ?? ''} ${q.sourceSheet}`.toUpperCase().includes(filtr))), [hisob.qatorlar, faqatMuammo, filtr]);
+  const jamiKor = korinish === 'guruh' ? korGuruh.length : korQator.length;
+  const sahifalar = Math.max(1, Math.ceil(jamiKor / SAHIFA));
+  const joriySahifa = Math.min(sahifa, sahifalar);
+  useEffect(() => setSahifa(1), [korinish, faqatMuammo, filtr]);
 
-  async function faylniOqish(file: File) {
-    setError(''); setMessage(''); setWorkbook(null); setManbaBytes(null); setTahlillar([]); setTanlanganVaraqlar([]);
-    setManualNarxlar({}); setManualHajmlar({}); setManualKategoriyalar({});
-    if (file.size > MAX_FILE_BYTES) { setError('Fayl 80 MB dan katta. Kichikroq RES faylini tanlang.'); return; }
-    setBusy(true);
+  async function fayllarniQosh(list: FileList | null) {
+    if (!list?.length) return;
+    setError(''); setMessage(''); setBusy(true);
+    const yangi: PaketFayl[] = [];
+    const xatolar: string[] = [];
     try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const parsed = await readXlsx(bytes);
-      const analyzed = ofertaResursVaraqlariniAniqla(parsed);
-      const auto = analyzed.filter((s) => (s.role === 'res' || s.role === 'transport') && !s.alternativVaraq && s.qatorlar.length > 0).map((s) => s.nom);
-      const fallback = auto.length ? auto : analyzed.filter((s) => s.role === 'unknown' && s.qatorlar.length > 0).map((s) => s.nom);
-      if (!analyzed.some((s) => s.qatorlar.length > 0)) {
-        throw new Error('RES_RESOURCE_SHEETS_NOT_FOUND: resurs nomi, birlik va narx ustunlari bo‘lgan satrlar topilmadi.');
+      for (const file of Array.from(list)) {
+        if (!/\.(xlsx|xlsm|xls)$/i.test(file.name) || file.name.startsWith('~$')) continue;
+        if (file.size > MAX_FILE_BYTES) { xatolar.push(`${file.name}: 80 MB dan katta`); continue; }
+        try {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const tahlillar = ofertaResursVaraqlariniAniqla(await readXlsx(bytes));
+          if (!tahlillar.some((s) => s.qatorlar.length > 0)) { xatolar.push(`${file.name}: resurs jadvali topilmadi`); continue; }
+          yangi.push({ id: `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, nom: file.name.replace(/\.(xlsx|xlsm|xls)$/i, ''), faylNomi: file.name, bytes, tahlillar, tanlanganVaraqlar: sukutTanlov(tahlillar) });
+        } catch (e) { xatolar.push(`${file.name}: ${e instanceof Error ? e.message : 'o‘qilmadi'}`); }
       }
-      setWorkbook(parsed); setManbaBytes(bytes); setFileName(file.name); setTahlillar(analyzed); setTanlanganVaraqlar(fallback);
-      setObyektNomi(file.name.replace(/\.(xlsx|xlsm|xls)$/i, ''));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'RES fayli o‘qilmadi.');
+      if (yangi.length) setFayllar((old) => [...old, ...yangi]);
+      if (xatolar.length) setError(xatolar.join(' · '));
+      else if (!yangi.length) setError('Excel (XLSX/XLSM/XLS) RES fayli topilmadi.');
     } finally { setBusy(false); }
   }
 
-  function varaqniTanlash(name: string, checked: boolean) {
-    const sheet = tahlillar.find((item) => item.nom === name);
-    if (sheet?.role === 'lrv') return;
-    if (checked && sheet?.alternativVaraq && tanlanganVaraqlar.includes(sheet.alternativVaraq)) {
-      setError(`${name} — ${sheet.alternativVaraq} varag‘ining alternativ ko‘rinishi. Ikki variantni birga tanlash mumkin emas.`);
-      return;
-    }
-    setError('');
-    setTanlanganVaraqlar((old) => {
-      if (!checked) return old.filter((item) => item !== name);
-      const alternativ = [
-        ...(sheet?.alternativVaraq ? [sheet.alternativVaraq] : []),
-        ...tahlillar.filter((item) => item.alternativVaraq === name).map((item) => item.nom),
-      ];
-      return [...old.filter((item) => !alternativ.includes(item)), ...(old.includes(name) ? [] : [name])];
-    });
+  function faylniOchir(id: string) {
+    setFayllar((old) => old.filter((f) => f.id !== id));
+    const tozala = <T,>(m: Record<string, T>) => Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith(`${id}|`)));
+    setQatorNarx(tozala); setQatorHajm(tozala); setQatorKat(tozala);
   }
 
-  const matnniYoz = (set: (f: (o: Record<string, string>) => Record<string, string>) => void) => (sourceId: string, value: string) =>
-    set((old) => {
-      const next = { ...old };
-      if (!value.trim()) delete next[sourceId]; else next[sourceId] = value;
-      return next;
-    });
-  const narxniOzgartir = matnniYoz(setManualNarxlar);
-  const hajmniOzgartir = matnniYoz(setManualHajmlar);
-
-  function kategoriyaniOzgartir(sourceId: string, value: string) {
-    setManualKategoriyalar((old) => {
-      const next = { ...old };
-      if (!value) delete next[sourceId]; else next[sourceId] = value as OfertaMalumKategoriya;
-      return next;
-    });
+  function varaqniTanlash(faylId: string, name: string, checked: boolean) {
+    setFayllar((old) => old.map((f) => {
+      if (f.id !== faylId) return f;
+      const sheet = f.tahlillar.find((s) => s.nom === name);
+      if (sheet?.role === 'lrv') return f;
+      if (!checked) return { ...f, tanlanganVaraqlar: f.tanlanganVaraqlar.filter((s) => s !== name) };
+      const alternativ = [...(sheet?.alternativVaraq ? [sheet.alternativVaraq] : []), ...f.tahlillar.filter((s) => s.alternativVaraq === name).map((s) => s.nom)];
+      return { ...f, tanlanganVaraqlar: [...f.tanlanganVaraqlar.filter((s) => !alternativ.includes(s)), ...(f.tanlanganVaraqlar.includes(name) ? [] : [name])] };
+    }));
   }
+
+  const yoz = <T,>(set: (f: (o: Record<string, T>) => Record<string, T>) => void) => (key: string, value: T | '') =>
+    set((old) => { const next = { ...old }; if (value === '' || value == null) delete next[key]; else next[key] = value as T; return next; });
+  const guruhNarxYoz = yoz(setGuruhNarx);
+  const guruhKatYoz = yoz(setGuruhKat);
+  const qatorNarxYoz = yoz(setQatorNarx);
+  const qatorHajmYoz = yoz(setQatorHajm);
+  const qatorKatYoz = yoz(setQatorKat);
 
   /* БЕЗСКЛАД va boshqa kategoriya takliflari avtomatik qo'llanmaydi (dalil to'liq
      isbotlanmagan) — operator bitta tugma bilan barchasini tasdiqlaydi. */
   function takliflarniQabulQilish() {
-    setManualKategoriyalar((old) => {
+    setGuruhKat((old) => {
       const next = { ...old };
-      for (const q of taklifKutmoqda) next[q.sourceId] = q.kategoriyaTaklifi!;
+      for (const q of taklifKutmoqda) next[kalitlar.get(q.sourceId)!] = q.kategoriyaTaklifi!;
       return next;
     });
   }
@@ -179,14 +219,24 @@ function Sessiya() {
     setError(''); setRejim('foiz'); setSozlama({ rejim: 'foiz', yon, foiz: value, kategoriyaFoizlari });
   }
 
+  /* Qo'lda rejim: smeta narxlari boshlang'ich qiymat — bir material uchun bitta
+     (guruhning eng ko'p uchragan smeta narxi), summa bo'yicha qatorlar alohida. */
   function smetaNarxiniBoshlangichQil() {
-    const next: Record<string, string> = {};
-    for (const q of qatorlar) {
-      if (q.rol !== 'RESOURCE' && q.rol !== 'TRANSPORT') continue;
-      if (q.hisobTuri === 'manba_jami' && q.smetaSumma != null) next[q.sourceId] = String(q.smetaSumma);
-      else if (q.smetaBirlikNarx != null) next[q.sourceId] = String(q.smetaBirlikNarx);
+    const gNarx: Record<string, string> = {};
+    const qNarx: Record<string, string> = {};
+    for (const g of hisob.guruhlar) {
+      if (g.kalit.startsWith('#')) {
+        const q = hisob.qatorlar.find((x) => x.sourceId === g.sourceIds[0]);
+        const v = q?.hisobTuri === 'manba_jami' ? q.smetaSumma : q?.smetaBirlikNarx;
+        if (v != null) qNarx[g.sourceIds[0]] = String(v);
+        continue;
+      }
+      const soni = new Map<number, number>();
+      for (const id of g.sourceIds) { const v = hisob.qatorlar.find((x) => x.sourceId === id)?.smetaBirlikNarx; if (v != null) soni.set(v, (soni.get(v) ?? 0) + 1); }
+      const eng = [...soni.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
+      if (eng) gNarx[g.kalit] = String(eng[0]);
     }
-    setManualNarxlar(next); setSozlama({ rejim: 'qolda' }); setRejim('qolda');
+    setGuruhNarx(gNarx); setQatorNarx(qNarx); setSozlama({ rejim: 'qolda' }); setRejim('qolda');
   }
 
   function koefniOzgartir(kod: NakrutkaKoefKod, value: string) {
@@ -198,37 +248,70 @@ function Sessiya() {
   async function eksportQilish() {
     setError(''); setMessage('');
     if (!qatorlar.length) { setError('Avval kamida bitta RES varag‘ini tanlang.'); return; }
-    if (!manbaBytes) { setError('Asl RES fayli topilmadi. Faylni qayta tanlang.'); return; }
     setBusy(true);
     try {
-      const natija = await tenderOfertaXlsx({
-        obyektNomi, manbaFaylNomi: fileName, manbaBytes, tanlanganVaraqlar, tahlillar, hisob,
-        koeffitsientManbasi: koef.manba === 'kompaniya' ? 'kompaniya koeffitsientlari' : koef.manba === 'tahrirlangan' ? 'qo‘lda tahrirlangan' : 'T1 standarti',
-      });
-      downloadBlob(natija.bytes, natija.faylNomi);
-      const saqlanish = natija.saqlanish === 'toliq'
-        ? 'Asl faylning barcha qismlari bayt-bayt saqlandi.'
-        : '.xls fayl .xlsx ga o‘girildi — ba’zi stil/format qisman o‘zgargan bo‘lishi mumkin.';
-      setMessage(`${saqlanish} Yakuniy oferta ${natija.jamiVaraq}!${natija.yakuniyHujayra} katagida.${hisob.halQilinmagan ? ` ${hisob.halQilinmagan} ta resurs hal qilinmagan — yakuniy summa bo‘sh.` : ''}`);
+      const imzo = { zakazchik, pudratchi };
+      const koeffitsientManbasi = koef.manba === 'kompaniya' ? 'kompaniya koeffitsientlari' : koef.manba === 'tahrirlangan' ? 'qo‘lda tahrirlangan' : 'T1 standarti';
+      const natijalar: Array<{ nom: string; bytes: Uint8Array; saqlanish: string }> = [];
+      for (const o of obyektHisoblari) {
+        if (!o.fayl.tanlanganVaraqlar.length || !o.hisob.qatorlar.length) continue;
+        const n = await tenderOfertaXlsx({
+          obyektNomi: o.fayl.nom, manbaFaylNomi: o.fayl.faylNomi, manbaBytes: o.fayl.bytes,
+          tanlanganVaraqlar: o.fayl.tanlanganVaraqlar, tahlillar: o.fayl.tahlillar, hisob: o.hisob, koeffitsientManbasi, imzo,
+        });
+        natijalar.push({ nom: n.faylNomi, bytes: n.bytes, saqlanish: n.saqlanish });
+      }
+      if (!natijalar.length) { setError('Eksport uchun tanlangan varaq yo‘q.'); return; }
+      const qisman = natijalar.some((n) => n.saqlanish !== 'toliq') ? ' .xls fayllar .xlsx ga o‘girildi — ba’zi format qisman o‘zgargan bo‘lishi mumkin.' : '';
+      if (natijalar.length === 1 && fayllar.length === 1) {
+        downloadBlob(natijalar[0].bytes, natijalar[0].nom);
+        setMessage(`Oferta tayyor: ${natijalar[0].nom}.${qisman}${hisob.halQilinmagan ? ` ${hisob.halQilinmagan} ta resurs hal qilinmagan — yakuniy summa bo‘sh.` : ''}`);
+      } else {
+        const svod = paketSvodXlsx(obyektHisoblari.map((o) => ({ nom: o.fayl.nom, faylNomi: o.fayl.faylNomi, hisob: o.hisob })), imzo,
+          paketNomi.trim() ? `СВОДНЫЙ РАСЧЕТ ОФЕРТЫ — ${paketNomi.trim()}` : undefined);
+        const nom = (paketNomi.trim() || 'OFERTA_PAKET').replace(/[\\/:*?"<>|]/g, '_');
+        downloadBlob(paketZip([...natijalar, { nom: `${nom}_СВОД.xlsx`, bytes: svod }]), `${nom}.zip`);
+        setMessage(`Paket tayyor: ${natijalar.length} ta obyekt + svod (${nom}.zip).${qisman}`);
+      }
     } catch (e) { setError(e instanceof Error ? e.message : 'Oferta fayli yaratilmadi.'); }
     finally { setBusy(false); }
   }
 
   const tahrirlanadi = (q: OfertaQatorNatija) => q.rol === 'RESOURCE' || (q.rol === 'TRANSPORT' && !q.hosila);
+  const bosh = (joriySahifa - 1) * SAHIFA;
+  const guruhSmetaNarx = (g: OfertaGuruh) => (g.smetaNarxlar.length > 1 ? `${fmt(g.smetaNarxlar[0])} … ${fmt(g.smetaNarxlar[g.smetaNarxlar.length - 1])}` : fmt(g.smetaNarxlar[0]));
+  const holatRangi = (m: readonly string[]) => (m.some((x) => x !== 'SMETA_NARXI_NOL' && x !== 'NARX_HAR_XIL') ? 'font-semibold text-danger' : m.length ? 'text-warn' : 'text-ok');
 
   return <div className="space-y-3">
-    <div className="karta grid gap-3 p-3 md:grid-cols-[1fr_1fr_1fr]">
-      <label className="block text-[12px] font-medium text-text">RES fayli (XLSX/XLSM/XLS)
-        <input aria-label="Oferta RES fayli" type="file" accept=".xlsx,.xlsm,.xls" disabled={busy}
-          onChange={(e) => { const file = e.target.files?.[0]; if (file) void faylniOqish(file); }}
-          className="input mt-1.5 block h-9 w-full px-2 py-1.5 text-[12px] file:mr-2 file:rounded file:border-0 file:bg-surface file:px-2 file:py-1 file:text-[12px] file:text-text" />
-      </label>
-      <label className="block text-[12px] font-medium text-text">Obyekt nomi
-        <input aria-label="Oferta obyekt nomi" value={obyektNomi} onChange={(e) => setObyektNomi(e.target.value)} className="input mt-1.5 block h-9 w-full px-2 text-[13px]" placeholder="Obyekt nomi" />
-      </label>
+    <div className="karta grid gap-3 p-3 lg:grid-cols-[1.2fr_1fr_1fr]">
+      <div className="space-y-2">
+        <div className="text-[12px] font-medium text-text">RES fayllari — bitta obyekt yoki tender paketi (bir nechta obyekt)</div>
+        <div className="flex flex-wrap gap-2">
+          <label className="tugma tugma-asosiy h-9 cursor-pointer"><Plus size={14} /> Fayl(lar) qo‘shish
+            <input aria-label="Oferta RES fayllari" type="file" multiple accept=".xlsx,.xlsm,.xls" disabled={busy} className="hidden"
+              onChange={(e) => { void fayllarniQosh(e.target.files); e.target.value = ''; }} />
+          </label>
+          <label className="tugma h-9 cursor-pointer"><FolderOpen size={14} /> Papka qo‘shish
+            <input aria-label="Oferta RES papkasi" type="file" multiple disabled={busy} className="hidden"
+              {...{ webkitdirectory: '', directory: '' } as Record<string, string>}
+              onChange={(e) => { void fayllarniQosh(e.target.files); e.target.value = ''; }} />
+          </label>
+        </div>
+        {fayllar.length > 1 && <label className="block text-[12px] font-medium text-text">Paket nomi
+          <input aria-label="Paket nomi" value={paketNomi} onChange={(e) => setPaketNomi(e.target.value)} className="input mt-1 block h-8 w-full px-2 text-[12px]" placeholder="masalan: Navoiy bog‘ — 1-lot" />
+        </label>}
+      </div>
+      <div className="grid gap-2">
+        <label className="block text-[12px] font-medium text-text">Buyurtmachi (ЗАКАЗЧИК) — imzo uchun
+          <input aria-label="Buyurtmachi nomi" value={zakazchik} onChange={(e) => setZakazchik(e.target.value)} className="input mt-1 block h-8 w-full px-2 text-[12px]" placeholder="tashkilot, lavozim, F.I.O." />
+        </label>
+        <label className="block text-[12px] font-medium text-text">Pudratchi (ПОДРЯДЧИК) — imzo uchun
+          <input aria-label="Pudratchi nomi" value={pudratchi} onChange={(e) => setPudratchi(e.target.value)} className="input mt-1 block h-8 w-full px-2 text-[12px]" placeholder="tashkilot, lavozim, F.I.O." />
+        </label>
+      </div>
       <div className="rounded-lg border border-border/70 bg-surface-2 p-2 text-[11px] text-text-dim">
         <div className="flex items-center gap-1.5 font-semibold text-text"><Info size={14} /> Ishlash qoidasi</div>
-        <p className="mt-1">Asl RES faylining barcha varaqlari saqlanadi: tanlangan varaqlarga 5 ta ustun va OFERTA_JAMI varag‘i qo‘shiladi. Manba hajm va summasi o‘zgarmaydi; noma’lum narx yoki kategoriya — yakuniy summa bo‘sh (taxmin yo‘q).</p>
+        <p className="mt-1">Asl fayl saqlanadi: tanlangan varaqlarda asl jadval davomida КОЛ-ВО / ЦЕНА / СУММА (оферта), podval foizlari manbadagidek, oxirida imzo. Bir xil material barcha varaq va obyektlarda bitta narx oladi. Yashirin (eski) varaqlar sukut bo‘yicha tanlanmaydi.</p>
       </div>
     </div>
 
@@ -236,17 +319,23 @@ function Sessiya() {
     {error && <p role="alert" className="karta border-danger/40 bg-danger/5 p-3 text-[13px] text-danger">{error}</p>}
     {message && <p role="status" className="karta border-ok/40 bg-ok/5 p-3 text-[13px] text-success">{message}</p>}
 
-    {workbook && <section className="karta space-y-3 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[13px] font-semibold text-text">Varaq roli — foydalanuvchi tasdig‘i</h2>
-        <span className="rounded bg-surface-2 px-2 py-1 text-[11px] text-text-dim">{tanlanganVaraqlar.length} ta varaq / {qatorlar.length} ta qator</span>
-      </div>
-      <div className="overflow-x-auto">
+    {fayllar.map((f) => <details key={f.id} className="karta p-3" open={fayllar.length === 1}>
+      <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2">
+        <span className="text-[13px] font-semibold text-text">{f.faylNomi}</span>
+        <span className="flex items-center gap-2">
+          <span className="rounded bg-surface-2 px-2 py-1 text-[11px] text-text-dim">{f.tanlanganVaraqlar.length} ta varaq tanlangan</span>
+          <button type="button" className="tugma h-7 px-2 text-[11px]" onClick={(e) => { e.preventDefault(); faylniOchir(f.id); }} aria-label={`${f.faylNomi} faylini olib tashlash`}><Trash2 size={12} /></button>
+        </span>
+      </summary>
+      {fayllar.length > 1 && <label className="mt-2 block text-[12px] font-medium text-text">Obyekt nomi
+        <input aria-label={`${f.faylNomi} obyekt nomi`} value={f.nom} onChange={(e) => { const v = e.target.value; setFayllar((old) => old.map((x) => (x.id === f.id ? { ...x, nom: v } : x))); }} className="input mt-1 block h-8 w-full max-w-md px-2 text-[12px]" />
+      </label>}
+      <div className="mt-2 overflow-x-auto">
         <table className="w-full min-w-[900px] text-[11px]">
           <thead><tr className="border-b border-border text-left text-text-mute"><th className="py-2">Qo‘shish</th><th>Varaq</th><th>Rol</th><th>Format</th><th>Ishonch</th><th>Topilmalar</th><th>Qator</th></tr></thead>
-          <tbody>{tahlillar.map((sheet) => <tr key={sheet.nom} className="border-b border-border/50 align-top">
-            <td className="py-2">{sheet.role === 'lrv' ? <span className="text-text-mute">—</span> : <input aria-label={`${sheet.nom} varag‘ini tanlash`} type="checkbox" checked={tanlanganVaraqlar.includes(sheet.nom)} onChange={(e) => varaqniTanlash(sheet.nom, e.target.checked)} />}</td>
-            <td className="py-2 font-medium text-text">{sheet.nom}</td>
+          <tbody>{f.tahlillar.map((sheet) => <tr key={sheet.nom} className={`border-b border-border/50 align-top ${sheet.yashirin ? 'opacity-60' : ''}`}>
+            <td className="py-2">{sheet.role === 'lrv' ? <span className="text-text-mute">—</span> : <input aria-label={`${sheet.nom} varag‘ini tanlash`} type="checkbox" checked={f.tanlanganVaraqlar.includes(sheet.nom)} onChange={(e) => varaqniTanlash(f.id, sheet.nom, e.target.checked)} />}</td>
+            <td className="py-2 font-medium text-text">{sheet.nom}{sheet.yashirin && <span className="ml-1 rounded bg-surface-2 px-1 text-[10px] text-text-mute">yashirin</span>}</td>
             <td className={sheet.role === 'res' ? 'py-2 font-semibold text-ok' : 'py-2 text-warn'}>{roleText(sheet.role)}</td>
             <td className="py-2 text-text-dim">{sheet.format.toUpperCase()}</td>
             <td className="py-2 text-text-dim">{sheet.confidence}</td>
@@ -255,7 +344,7 @@ function Sessiya() {
           </tr>)}</tbody>
         </table>
       </div>
-    </section>}
+    </details>)}
 
     {qatorlar.length > 0 && <>
       <section className="karta space-y-3 p-3" aria-label="Narx sozlamasi">
@@ -263,7 +352,7 @@ function Sessiya() {
           <label className="block text-[12px] font-medium text-text">Narx berish usuli
             <select aria-label="Oferta narx usuli" value={rejim} onChange={(e) => { const r = e.target.value as OfertaNarxRejimi; setRejim(r); if (r === 'qolda') setSozlama({ rejim: 'qolda' }); }} className="input mt-1 block h-9 px-2 text-[12px]">
               <option value="foiz">Smeta narxidan foiz bilan</option>
-              <option value="qolda">Har qator bo‘yicha qo‘lda</option>
+              <option value="qolda">Har material bo‘yicha qo‘lda</option>
             </select>
           </label>
           {rejim === 'foiz' && <>
@@ -283,7 +372,7 @@ function Sessiya() {
           </label>
         </div>
         {rejim === 'foiz' && <div className="flex flex-wrap items-end gap-2">
-          <span className="text-[11px] text-text-mute">Kategoriya foizi (bo‘sh — umumiy foiz; qatordagi qo‘lda narx ustun):</span>
+          <span className="text-[11px] text-text-mute">Kategoriya foizi (bo‘sh — umumiy foiz; qo‘lda narx ustun):</span>
           {OFERTA_KATEGORIYALAR.map((kat) => {
             const v = katFoizMatn[kat] ?? { yon, foiz: '' };
             return <label key={kat} className="flex items-center gap-1 text-[11px] text-text">
@@ -305,7 +394,7 @@ function Sessiya() {
           </div>
         </details>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="tugma tugma-asosiy h-9" onClick={() => void eksportQilish()} disabled={busy}><Download size={14} /> Asl RES faylini oferta qilish</button>
+          <button type="button" className="tugma tugma-asosiy h-9" onClick={() => void eksportQilish()} disabled={busy}><Download size={14} /> {fayllar.length > 1 ? `Paketni oferta qilish (${fayllar.length} obyekt, ZIP)` : 'Asl RES faylini oferta qilish'}</button>
           {taklifKutmoqda.length > 0 && <button type="button" className="tugma h-9" onClick={takliflarniQabulQilish}><CheckCheck size={14} /> {taklifKutmoqda.length} ta kategoriya taklifini qabul qilish ({[...new Set(taklifKutmoqda.map((q) => q.kategoriyaTaklifi))].join(', ')})</button>}
         </div>
       </section>
@@ -313,14 +402,22 @@ function Sessiya() {
       <section className="karta grid gap-3 p-3 lg:grid-cols-[1fr_1.4fr]" aria-label="Oferta jamilari">
         <div className="space-y-2">
           <div className="grid gap-2 sm:grid-cols-2">
-            <div className="rounded-lg border border-border p-2"><span className="text-[10px] text-text-mute">SOURCE TOTAL (manba resurslar)</span><strong className="mt-1 block text-base text-text">{fmt(hisob.manbaTogridanJami)}</strong></div>
-            <div className="rounded-lg border border-border p-2"><span className="text-[10px] text-text-mute">DIRECT (pudratchi resurslar)</span><strong className="mt-1 block text-base text-text">{fmt(hisob.togridanJami)}</strong></div>
-            <div className="rounded-lg border border-border p-2"><span className="text-[10px] text-text-mute">QQS</span><strong className="mt-1 block text-base text-text">{fmt(hisob.kaskad.nds)}</strong></div>
-            <div className={`rounded-lg border p-2 ${hisob.yakuniyOferta != null ? 'border-ok/40 bg-ok/5' : 'border-warn/40 bg-warn/5'}`}>
-              <span className="text-[10px] text-text-mute">FINAL OFFER</span>
-              <strong className="mt-1 block text-base text-ok">{hisob.yakuniyOferta != null ? fmt(hisob.yakuniyOferta) : `hal qilinmagan: ${hisob.halQilinmagan} ta`}</strong>
+            <div className="rounded-lg border border-border p-2"><span className="text-[10px] text-text-mute">Smeta bo‘yicha resurslar</span><strong className="mt-1 block text-base text-text">{fmt(hisob.manbaTogridanJami)}</strong></div>
+            <div className="rounded-lg border border-border p-2"><span className="text-[10px] text-text-mute">Pudratchi resurslari</span><strong className="mt-1 block text-base text-text">{fmt(hisob.togridanJami)}</strong></div>
+            <div className="rounded-lg border border-border p-2"><span className="text-[10px] text-text-mute">Noyob material / qator</span><strong className="mt-1 block text-base text-text">{fmt(hisob.guruhlar.length)} / {fmt(hisob.qatorlar.filter(tahrirlanadi).length)}</strong></div>
+            <div className={`rounded-lg border p-2 ${paketJami != null ? 'border-ok/40 bg-ok/5' : 'border-warn/40 bg-warn/5'}`}>
+              <span className="text-[10px] text-text-mute">Yakuniy oferta (QQS bilan){fayllar.length > 1 ? ' — paket' : ''}</span>
+              <strong className="mt-1 block text-base text-ok">{paketJami != null ? fmt(paketJami) : `hal qilinmagan: ${hisob.halQilinmagan} ta`}</strong>
             </div>
           </div>
+          {fayllar.length > 1 && <table className="w-full text-[11px]">
+            <thead><tr className="text-left text-text-mute"><th>Obyekt</th><th className="text-right">Smeta (QQS bilan)</th><th className="text-right">Oferta (QQS bilan)</th></tr></thead>
+            <tbody>{obyektHisoblari.map((o) => <tr key={o.fayl.id} className="border-t border-border/40">
+              <td className="py-0.5">{o.fayl.nom}</td>
+              <td className="text-right tabular-nums">{fmt(o.hisob.manbaKaskad.vsego)}</td>
+              <td className={`text-right tabular-nums ${o.hisob.yakuniyOferta == null ? 'text-warn' : ''}`}>{o.hisob.yakuniyOferta != null ? fmt(o.hisob.yakuniyOferta) : `${o.hisob.halQilinmagan} ta hal qilinmagan`}</td>
+            </tr>)}</tbody>
+          </table>}
           <table className="w-full text-[11px]">
             <thead><tr className="text-left text-text-mute"><th>Kategoriya</th><th className="text-right">Manba</th><th className="text-right">Taklif</th></tr></thead>
             <tbody>{[...OFERTA_KATEGORIYALAR, 'UNKNOWN' as const].map((kat) => <tr key={kat} className={`border-t border-border/40 ${kat === 'UNKNOWN' && hisob.kategoriyaJami.UNKNOWN ? 'text-danger' : ''}`}>
@@ -332,7 +429,7 @@ function Sessiya() {
           {hisob.transportVaraqJami > 0 && <p className="text-[11px] text-text-dim">Transport varag‘i (pudratchi): {fmt(hisob.transportVaraqJami)} — {transport === 'varaq' ? 'material transporti o‘rnida ishlatiladi' : 'faqat dalil (kaskad foizi ishlatiladi)'}.</p>}
         </div>
         <table className="w-full text-[11px]">
-          <thead><tr className="text-left text-text-mute"><th>Kaskad qadami</th><th className="text-right">Manba asosida</th><th className="text-right">Taklif</th></tr></thead>
+          <thead><tr className="text-left text-text-mute"><th>Kaskad qadami{fayllar.length > 1 ? ' (paket bo‘yicha)' : ''}</th><th className="text-right">Manba asosida</th><th className="text-right">Taklif</th></tr></thead>
           <tbody>{KASKAD_QADAMLARI.map(([k, nom]) => <tr key={k} className={`border-t border-border/40 ${k.startsWith('itogo') || k === 'vsego' ? 'font-semibold text-text' : 'text-text-dim'}`}>
             <td className="py-0.5">{nom}</td>
             <td className="text-right tabular-nums">{fmt(hisob.manbaKaskad[k])}</td>
@@ -343,27 +440,62 @@ function Sessiya() {
 
       <section className="karta p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[13px] font-semibold text-text"><FileSpreadsheet className="mr-1 inline" size={15} />Oferta satrlari <span className="font-normal text-text-mute">({korinadigan.length} / {hisob.qatorlar.length}; muammo: {hisob.muammolarSoni})</span></h2>
-          <div className="flex items-center gap-2">
+          <h2 className="text-[13px] font-semibold text-text"><FileSpreadsheet className="mr-1 inline" size={15} />
+            {korinish === 'guruh' ? 'Materiallar (har biri bir marta)' : 'Varaqlar bo‘yicha batafsil'}
+            <span className="font-normal text-text-mute"> ({fmt(jamiKor)}; muammo: {hisob.muammolarSoni})</span></h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex overflow-hidden rounded border border-border text-[12px]">
+              <button type="button" className={`px-2 py-1 ${korinish === 'guruh' ? 'bg-surface-2 font-semibold text-text' : 'text-text-dim'}`} onClick={() => setKorinish('guruh')}>Materiallar</button>
+              <button type="button" className={`px-2 py-1 ${korinish === 'batafsil' ? 'bg-surface-2 font-semibold text-text' : 'text-text-dim'}`} onClick={() => setKorinish('batafsil')}>Batafsil</button>
+            </div>
             <label className="flex items-center gap-1 text-[12px] text-text"><input type="checkbox" checked={faqatMuammo} onChange={(e) => setFaqatMuammo(e.target.checked)} /> Faqat muammolar</label>
-            <input aria-label="Oferta qatorlarini qidirish" value={qidiruv} onChange={(e) => setQidiruv(e.target.value)} placeholder="Kod, resurs yoki varaq…" className="input h-8 w-56 px-2 text-[12px]" />
+            <input aria-label="Oferta qatorlarini qidirish" value={qidiruv} onChange={(e) => setQidiruv(e.target.value)} placeholder="Resurs yoki varaq…" className="input h-8 w-56 px-2 text-[12px]" />
           </div>
         </div>
         <div className="max-h-[58vh] overflow-auto rounded border border-border/60">
-          <table className="w-full min-w-[1400px] text-[11px]">
+          {korinish === 'guruh' ? <table className="w-full min-w-[1200px] text-[11px]">
             <thead className="sticky top-0 z-10 bg-surface-2 text-left text-text-mute"><tr>
-              <th className="px-2 py-2">№</th><th className="px-2">Shifr</th><th className="px-2">Rol</th><th className="px-2">Kategoriya</th><th className="px-2">Nomi</th><th className="px-2">Birlik</th>
+              <th className="px-2 py-2">Kategoriya</th><th className="px-2">Nomi</th><th className="px-2">Birlik</th><th className="px-2 text-right">Uchraydi</th>
+              <th className="px-2 text-right">Jami hajm</th><th className="px-2 text-right">Smeta narx</th><th className="px-2 text-right">Pudratchi narxi</th>
+              <th className="px-2 text-right">Taklif summa</th><th className="px-2">Holat</th>
+            </tr></thead>
+            <tbody>{korGuruh.slice(bosh, bosh + SAHIFA).map((g) => {
+              const yakka = g.kalit.startsWith('#');
+              const kat = g.kategoriyalar.length === 1 ? g.kategoriyalar[0] : null;
+              return <tr key={g.kalit} className="border-t border-border/50 align-top">
+                <td className="px-2 py-1">{g.hisobTuri === 'yoq' ? '—' : <select aria-label={`${g.nom} kategoriyasi`} value={guruhKat[g.kalit] ?? ''} onChange={(e) => guruhKatYoz(g.kalit, e.target.value as OfertaMalumKategoriya | '')}
+                  className={`rounded border px-1 py-0.5 ${g.kategoriyalar.includes('UNKNOWN') && !guruhKat[g.kalit] ? 'border-danger/60 text-danger' : 'border-border'}`}>
+                  <option value="">{kat && kat !== 'UNKNOWN' ? `${kat} (fayldan)` : g.kategoriyaTaklifi ? `? taklif: ${g.kategoriyaTaklifi}` : g.kategoriyalar.length > 1 ? g.kategoriyalar.join(' / ') : 'Noma’lum'}</option>
+                  {OFERTA_KATEGORIYALAR.map((k) => <option key={k} value={k}>{k}</option>)}
+                </select>}</td>
+                <td className="max-w-[380px] px-2 py-1.5 font-medium text-text" title={g.varaqlar.join('\n')}>{g.nom}</td>
+                <td className="px-2 py-1.5 text-text-dim">{g.birlik ?? '—'}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums text-text-dim" title={g.varaqlar.join('\n')}>{g.sourceIds.length} joy / {g.varaqlar.length} varaq</td>
+                <td className="px-2 py-1.5 text-right tabular-nums text-text-dim">{fmt(g.jamiHajm)}</td>
+                <td className={`px-2 py-1.5 text-right tabular-nums ${g.smetaNarxlar.length > 1 ? 'text-warn' : 'text-text-dim'}`}>{guruhSmetaNarx(g)}</td>
+                <td className="bg-surface-2 px-2 py-1">{yakka
+                  ? <SonKiritish label={`${g.nom} pudratchi ${g.hisobTuri === 'manba_jami' ? 'summasi' : 'narxi'}`} qiymat={qatorNarx[g.sourceIds[0]] ?? ''} onQollash={(v) => qatorNarxYoz(g.sourceIds[0], v)}
+                      placeholder={g.hisobTuri === 'manba_jami' ? 'Taklif summasi' : fmt(g.pudratchiNarxlar[0])} />
+                  : <SonKiritish label={`${g.nom} pudratchi narxi`} qiymat={guruhNarx[g.kalit] ?? ''} onQollash={(v) => guruhNarxYoz(g.kalit, v)}
+                      placeholder={g.pudratchiNarxlar.length === 1 ? fmt(g.pudratchiNarxlar[0]) : g.pudratchiNarxlar.length ? 'har xil' : '—'} />}</td>
+                <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-ok">{fmt(g.jamiTaklifSumma)}</td>
+                <td className={`px-2 py-1.5 ${holatRangi(g.muammolar)}`}>{g.muammolar.length ? g.muammolar.map(ofertaMuammoMatni).join('; ') : 'TAYYOR'}</td>
+              </tr>;
+            })}</tbody>
+          </table> : <table className="w-full min-w-[1400px] text-[11px]">
+            <thead className="sticky top-0 z-10 bg-surface-2 text-left text-text-mute"><tr>
+              <th className="px-2 py-2">Varaq</th><th className="px-2">№</th><th className="px-2">Rol</th><th className="px-2">Kategoriya</th><th className="px-2">Nomi</th><th className="px-2">Birlik</th>
               <th className="px-2 text-right">Manba hajm</th><th className="px-2 text-right">Taklif hajmi</th><th className="px-2 text-right">Smeta narx</th><th className="px-2 text-right">Smeta summa</th>
               <th className="px-2 text-right">Pudratchi narx/summa</th><th className="px-2 text-right">Taklif summa</th><th className="px-2">Holat</th>
             </tr></thead>
-            <tbody>{korinadigan.map((q) => <tr key={q.sourceId} className={`border-t border-border/50 align-top ${q.rol === 'SUBTOTAL' || q.rol === 'GRAND_TOTAL' ? 'font-semibold' : ''}`}>
+            <tbody>{korQator.slice(bosh, bosh + SAHIFA).map((q) => <tr key={q.sourceId} className={`border-t border-border/50 align-top ${q.rol === 'SUBTOTAL' || q.rol === 'GRAND_TOTAL' ? 'font-semibold' : ''}`}>
+              <td className="px-2 py-1.5 text-text-dim">{q.sourceSheet}</td>
               <td className="px-2 py-1.5 text-text-dim">{q.tartibRaqami ?? '—'}</td>
-              <td className="px-2 py-1.5 text-text-dim">{q.shifr ?? '—'}</td>
-              <td className="px-2 py-1.5 text-text-dim">{ROL_MATNI[q.rol] ?? q.rol}{q.hosila ? ' (hosila)' : ''}</td>
+              <td className="px-2 py-1.5 text-text-dim">{ROL_MATNI[q.rol] ?? q.rol}{q.hosila ? ' (podval)' : ''}</td>
               <td className="px-2 py-1">{q.rol === 'RESOURCE'
-                ? <select aria-label={`${q.nom} kategoriyasi`} value={manualKategoriyalar[q.sourceId] ?? ''} onChange={(e) => kategoriyaniOzgartir(q.sourceId, e.target.value)}
+                ? <select aria-label={`${q.nom} kategoriyasi`} value={qatorKat[q.sourceId] ?? ''} onChange={(e) => qatorKatYoz(q.sourceId, e.target.value as OfertaMalumKategoriya | '')}
                     className={`rounded border px-1 py-0.5 ${q.samaraliKategoriya === 'UNKNOWN' ? 'border-danger/60 text-danger' : 'border-border'}`}>
-                    <option value="">{q.kategoriya && q.kategoriya !== 'UNKNOWN' ? `${q.kategoriya} (fayldan)` : q.kategoriyaTaklifi ? `? taklif: ${q.kategoriyaTaklifi}` : 'Noma’lum'}</option>
+                    <option value="">{q.samaraliKategoriya && q.samaraliKategoriya !== 'UNKNOWN' ? `${q.samaraliKategoriya}` : q.kategoriyaTaklifi ? `? taklif: ${q.kategoriyaTaklifi}` : 'Noma’lum'}</option>
                     {OFERTA_KATEGORIYALAR.map((k) => <option key={k} value={k}>{k}</option>)}
                   </select>
                 : <span className="text-text-mute">—</span>}</td>
@@ -371,28 +503,33 @@ function Sessiya() {
               <td className="px-2 py-1.5 text-text-dim">{q.birlik ?? '—'}</td>
               <td className="px-2 py-1.5 text-right tabular-nums text-text-dim">{fmt(q.hajm)}</td>
               <td className="px-2 py-1">{tahrirlanadi(q) && q.hisobTuri === 'birlik'
-                ? <input aria-label={`${q.nom} taklif hajmi`} inputMode="decimal" value={manualHajmlar[q.sourceId] ?? ''} onChange={(e) => hajmniOzgartir(q.sourceId, e.target.value)}
-                    placeholder={fmt(q.hajm)} className={`w-24 rounded border px-1.5 py-1 text-right tabular-nums ${q.hajm == null && !manualHajmlar[q.sourceId] ? 'border-warn/60' : 'border-border'}`} />
+                ? <SonKiritish label={`${q.nom} taklif hajmi`} qiymat={qatorHajm[q.sourceId] ?? ''} onQollash={(v) => qatorHajmYoz(q.sourceId, v)} placeholder={fmt(q.hajm)}
+                    className={`w-24 rounded border px-1.5 py-1 text-right tabular-nums ${q.hajm == null && !qatorHajm[q.sourceId] ? 'border-warn/60' : 'border-border'}`} />
                 : <span className="block text-right text-text-mute">—</span>}</td>
               <td className="px-2 py-1.5 text-right tabular-nums text-text-dim">{fmt(q.smetaBirlikNarx)}</td>
               <td className="px-2 py-1.5 text-right tabular-nums text-text-dim">{fmt(q.smetaSumma)}</td>
               <td className="bg-surface-2 px-2 py-1">{tahrirlanadi(q)
-                ? <input aria-label={`${q.nom} pudratchi ${q.hisobTuri === 'manba_jami' ? 'summasi' : 'narxi'}`} inputMode="decimal" value={manualNarxlar[q.sourceId] ?? ''} onChange={(e) => narxniOzgartir(q.sourceId, e.target.value)}
-                    placeholder={q.hisobTuri === 'manba_jami' ? 'Taklif summasi' : fmt(q.pudratchiBirlikNarx)} className="w-32 rounded border border-border bg-surface-2 px-1.5 py-1 text-right tabular-nums" />
+                ? <SonKiritish label={`${q.nom} pudratchi ${q.hisobTuri === 'manba_jami' ? 'summasi' : 'narxi'} (faqat shu qator)`} qiymat={qatorNarx[q.sourceId] ?? ''} onQollash={(v) => qatorNarxYoz(q.sourceId, v)}
+                    placeholder={q.hisobTuri === 'manba_jami' ? 'Taklif summasi' : fmt(q.pudratchiBirlikNarx)} />
                 : '—'}</td>
               <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-ok">{fmt(q.pudratchiSumma)}</td>
-              <td className={`px-2 py-1.5 ${q.muammolar.some((m) => m !== 'SMETA_NARXI_NOL') ? 'font-semibold text-danger' : q.muammolar.length ? 'text-warn' : 'text-ok'}`}>{ofertaHolatMatni(q)}</td>
+              <td className={`px-2 py-1.5 ${holatRangi(q.muammolar)}`}>{ofertaHolatMatni(q)}</td>
             </tr>)}</tbody>
-          </table>
+          </table>}
         </div>
-        {!korinadigan.length && <p className="py-6 text-center text-[12px] text-text-mute">{faqatMuammo ? 'Muammoli qator yo‘q.' : 'Qidiruv bo‘yicha qator topilmadi.'}</p>}
+        {!jamiKor && <p className="py-6 text-center text-[12px] text-text-mute">{faqatMuammo ? 'Muammoli qator yo‘q.' : 'Qidiruv bo‘yicha topilmadi.'}</p>}
+        {sahifalar > 1 && <div className="mt-2 flex items-center justify-end gap-2 text-[12px] text-text-dim">
+          <button type="button" className="tugma h-7 px-2" disabled={joriySahifa <= 1} onClick={() => setSahifa(joriySahifa - 1)}>‹</button>
+          <span>{joriySahifa} / {sahifalar}</span>
+          <button type="button" className="tugma h-7 px-2" disabled={joriySahifa >= sahifalar} onClick={() => setSahifa(joriySahifa + 1)}>›</button>
+        </div>}
       </section>
     </>}
   </div>;
 }
 
 export default function OfertaNative() {
-  return <Sahifa sarlavha="Tender oferta" tavsif="RES faylidan pudratchi taklifini hisoblash: kategoriya foizlari, nakrutka kaskadi, asl faylni saqlagan holda XLSX">
+  return <Sahifa sarlavha="Tender oferta" tavsif="RES fayli yoki tender paketidan pudratchi taklifi: materiallar bir marta narxlanadi, asl fayl shaklida XLSX, imzo va paket svodi">
     <Sessiya />
   </Sahifa>;
 }

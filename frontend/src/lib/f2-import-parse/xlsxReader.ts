@@ -27,6 +27,8 @@ export interface XlsxSheet {
   name: string;
   rows: SheetGrid;
   merges: Array<{ r1: number; c1: number; r2: number; c2: number }>;
+  /** Excelda yashirin varaq (state=hidden/veryHidden) — odatda eski qoralama. */
+  hidden?: boolean;
 }
 export interface XlsxWorkbook {
   sheets: XlsxSheet[];
@@ -79,7 +81,8 @@ async function readWithSheetJs(buf: Uint8Array): Promise<XlsxWorkbook> {
     const merges: XlsxSheet['merges'] = (ws['!merges'] || []).map((m) => ({
       r1: m.s.r, c1: m.s.c, r2: m.e.r, c2: m.e.c,
     }));
-    return { name, rows, merges };
+    const hidden = !!wb.Workbook?.Sheets?.find((s) => s.name === name)?.Hidden;
+    return { name, rows, merges, ...(hidden ? { hidden } : {}) };
   });
   return { sheets, sheet: (name: string) => sheets.find((s) => s.name === name) ?? null };
 }
@@ -226,15 +229,15 @@ function parseSheetXml(xml: string, sharedStrings: string[]): { rows: SheetGrid;
   return { rows, merges };
 }
 
-function parseWorkbookSheetList(xml: string, relsXml: string | undefined): Array<{ name: string; target: string }> {
+function parseWorkbookSheetList(xml: string, relsXml: string | undefined): Array<{ name: string; target: string; hidden: boolean }> {
   const relMap: Record<string, string> = {};
   if (relsXml) {
     for (const m of relsXml.matchAll(/<Relationship[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"[^>]*\/>/g)) relMap[m[1]] = m[2];
   }
-  const out: Array<{ name: string; target: string }> = [];
+  const out: Array<{ name: string; target: string; hidden: boolean }> = [];
   for (const m of xml.matchAll(/<sheet[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"[^>]*\/>/g)) {
     const target = (relMap[m[2]] || '').replace(/^\/?xl\//, '');
-    out.push({ name: decodeXmlEntities(m[1]), target });
+    out.push({ name: decodeXmlEntities(m[1]), target, hidden: /\bstate="(?:hidden|veryHidden)"/.test(m[0]) });
   }
   return out;
 }
@@ -272,11 +275,11 @@ export async function readXlsx(bytes: ArrayBuffer | Uint8Array): Promise<XlsxWor
   const sharedStrings = parseSharedStrings(files['xl/sharedStrings.xml'] ? dec.decode(files['xl/sharedStrings.xml']) : undefined);
 
   const sheetList = parseWorkbookSheetList(workbookXml, relsXml);
-  const sheets: XlsxSheet[] = sheetList.map(({ name, target }) => {
+  const sheets: XlsxSheet[] = sheetList.map(({ name, target, hidden }) => {
     const path = 'xl/' + target;
     const xml = files[path] ? dec.decode(files[path]) : null;
     const parsed = xml ? parseSheetXml(xml, sharedStrings) : { rows: [] as SheetGrid, merges: [] };
-    return { name, rows: parsed.rows, merges: parsed.merges };
+    return { name, rows: parsed.rows, merges: parsed.merges, ...(hidden ? { hidden } : {}) };
   });
 
   // Ayrim Excel/ABC/TN fayllarida varaq XML'i to'g'ri ochiladi, lekin

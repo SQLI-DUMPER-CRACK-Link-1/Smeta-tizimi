@@ -89,9 +89,9 @@ describe('tender oferta V2 — barg narxlash', () => {
 
 describe('tender oferta V2 — jami, kategoriya va kaskad', () => {
   const rows: OfertaQator[] = [
-    qator({ sourceId: 'l', sourceRow: 2, kategoriya: 'ЧЕЛ', smetaBirlikNarx: 100, hajm: 10, smetaSumma: 1000 }),
-    qator({ sourceId: 'm', sourceRow: 3, kategoriya: 'МАТ', smetaBirlikNarx: 50, hajm: 20, smetaSumma: 1000 }),
-    qator({ sourceId: 'k', sourceRow: 4, kategoriya: 'КАБ', smetaBirlikNarx: 10, hajm: 50, smetaSumma: 500 }),
+    qator({ sourceId: 'l', sourceRow: 2, nom: 'ЗАТРАТЫ ТРУДА', kategoriya: 'ЧЕЛ', smetaBirlikNarx: 100, hajm: 10, smetaSumma: 1000 }),
+    qator({ sourceId: 'm', sourceRow: 3, nom: 'ПЕСОК', kategoriya: 'МАТ', smetaBirlikNarx: 50, hajm: 20, smetaSumma: 1000 }),
+    qator({ sourceId: 'k', sourceRow: 4, nom: 'КАБЕЛЬ', kategoriya: 'КАБ', smetaBirlikNarx: 10, hajm: 50, smetaSumma: 500 }),
     qator({ sourceId: 'j', sourceRow: 5, rol: 'SUBTOTAL', hisobTuri: 'yoq', kategoriya: null, nom: 'ИТОГО', hajm: null, smetaBirlikNarx: null, smetaSumma: 1500, jamiBolalari: ['m', 'k'], jamiMoslik: 'summa' }),
     qator({ sourceId: 't', sourceRow: 6, rol: 'TRANSPORT', hosila: true, hisobTuri: 'yoq', kategoriya: null, nom: 'Транспортные расходы 5%', hajm: null, smetaBirlikNarx: null, smetaSumma: 75 }),
     qator({ sourceId: 'g', sourceRow: 7, rol: 'GRAND_TOTAL', hisobTuri: 'yoq', kategoriya: null, nom: 'ИТОГО ПРЯМЫЕ ЗАТРАТЫ', hajm: null, smetaBirlikNarx: null, smetaSumma: 2575, jamiBolalari: ['l', 'j', 't'], jamiMoslik: 'summa' }),
@@ -102,7 +102,9 @@ describe('tender oferta V2 — jami, kategoriya va kaskad', () => {
     expect(r.togridanJami).toBe(900 + 900 + 450);
     expect(r.manbaTogridanJami).toBe(2500);
     expect(r.qatorlar.find((q) => q.sourceId === 'j')!.pudratchiSumma).toBe(1350);
-    expect(r.qatorlar.find((q) => q.sourceId === 'g')!.pudratchiSumma).toBe(2250);
+    // Podval (транспорт 5%) manbadagidek taklifga ham qo‘llanadi: 1350 × 5% = 67,5.
+    expect(r.qatorlar.find((q) => q.sourceId === 't')!.pudratchiSumma).toBe(67.5);
+    expect(r.qatorlar.find((q) => q.sourceId === 'g')!.pudratchiSumma).toBe(900 + 1350 + 67.5);
     expect(r.kategoriyaJami).toMatchObject({ ЧЕЛ: 900, МАТ: 900, КАБ: 450 });
   });
 

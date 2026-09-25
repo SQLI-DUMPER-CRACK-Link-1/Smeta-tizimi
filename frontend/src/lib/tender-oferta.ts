@@ -36,7 +36,7 @@ export type OfertaRol =
 export const OFERTA_KATEGORIYALAR = ['ЧЕЛ', 'МАШ', 'МАТ', 'ОБ', 'М/К', 'КАБ', 'БЕЗСКЛАД'] as const;
 export type OfertaMalumKategoriya = typeof OFERTA_KATEGORIYALAR[number];
 export type OfertaKategoriya = OfertaMalumKategoriya | 'UNKNOWN';
-export type OfertaKategoriyaManbasi = 'birlik' | 'nom' | 'bolim' | 'podval' | 'vedomost' | 'qolda' | 'yoq';
+export type OfertaKategoriyaManbasi = 'birlik' | 'nom' | 'bolim' | 'podval' | 'vedomost' | 'qolda' | 'guruh' | 'yoq';
 
 /** 'birlik' — taklif = hajm × pudratchi birlik narxi; 'manba_jami' — manbada
  * faqat summa bor (RESURS_VEDOMOST, TN transport varag'i): taklif summasi
@@ -110,6 +110,29 @@ export type OfertaKirish = {
    * pudratchi summasi material transporti o'rnida ishlatiladi (ikki marta
    * sanalmasligi uchun foiz qadami almashtiriladi). */
   transportSiyosati?: OfertaTransportSiyosati;
+  /** true (standart): ayni material (nom + birlik) barcha varaqlarda BIR XIL
+   * taklif narxini oladi — foiz bir xil asos narxga qo‘llanadi. */
+  birXilNarx?: boolean;
+};
+
+/** Panelda bir marta ko‘rinadigan resurs: barcha varaqlardagi ayni material. */
+export type OfertaGuruh = {
+  kalit: string;
+  nom: string;
+  birlik: string | null;
+  hisobTuri: OfertaHisobTuri;
+  sourceIds: string[];
+  varaqlar: string[];
+  /** Taklif hajmlari yig‘indisi; birortasi noma’lum bo‘lsa null. */
+  jamiHajm: number | null;
+  smetaNarxlar: number[];
+  pudratchiNarxlar: number[];
+  kategoriyalar: OfertaKategoriya[];
+  kategoriyaTaklifi?: OfertaMalumKategoriya;
+  jamiSmetaSumma: number;
+  /** Birorta qator summasi noma’lum bo‘lsa null. */
+  jamiTaklifSumma: number | null;
+  muammolar: OfertaMuammo[];
 };
 
 export type OfertaMuammo =
@@ -120,7 +143,10 @@ export type OfertaMuammo =
   | 'FOIZ_XATO'
   | 'NARX_MANFIY'
   | 'KATEGORIYA_NOMALUM'
-  | 'JAMI_MOS_EMAS';
+  | 'JAMI_MOS_EMAS'
+  /** Ogohlantirish: ayni material turli varaqlarda turli smeta narxida —
+   * taklif uchun guruhning asosiy (eng ko‘p uchragan) narxi olindi. */
+  | 'NARX_HAR_XIL';
 
 export type OfertaQatorNatija = OfertaQator & {
   /** offerQuantityOverride — foydalanuvchi kiritgan taklif hajmi. */
@@ -138,7 +164,20 @@ export type OfertaQatorNatija = OfertaQator & {
   /** Foydalanuvchi o'zgartirgan bo'lsa ham shu qiymat hisobga kiradi. */
   samaraliKategoriya: OfertaKategoriya | null;
   muammolar: OfertaMuammo[];
+  /** Varaq podvalidagi hosila qator (транспорт 5%, склад 2%, ВСЕГО С УЧЕТОМ…)
+   * pudratchi narxlariga AYNAN manbadagidek qo'llanadi. Faqat hujjat
+   * ko'rinishi — kanonik kaskad (OFERTA_JAMI) ularni qayta sanamaydi. */
+  podval?: OfertaPodval;
 };
+
+export type OfertaPodval =
+  /** baza × koef. `foiz` — yozuvdan o'qilgan va manba bilan tasdiqlangan foiz;
+   * null bo'lsa koef manba nisbatidan (hosila ÷ baza) olingan. */
+  | { tur: 'foiz'; baza: string; koef: number; foiz: number | null }
+  /** Manbada ham 0 (masalan kabel transporti yo'q) — taklifda ham 0. */
+  | { tur: 'nol' }
+  /** Oldingi jami + undan keyingi hosilalar yig'indisi (ВСЕГО С УЧЕТОМ …). */
+  | { tur: 'yigindi'; bazalar: string[] };
 
 export type OfertaKategoriyaJami = Record<OfertaKategoriya, number>;
 
@@ -167,6 +206,8 @@ export type OfertaHisoblash = {
   halQilinmagan: number;
   muammolarSoni: number;
   valid: boolean;
+  /** Narxlanadigan qatorlar resurs bo‘yicha guruhlangan (panel uchun). */
+  guruhlar: OfertaGuruh[];
 };
 
 function finiteNonNegative(value: unknown): number | null {
@@ -217,13 +258,93 @@ function qatorFoizi(kat: OfertaKategoriya | null, sozlama: OfertaNarxSozlamasi):
   return { foiz: { yon: sozlama.yon ?? 'pasaytirish', foiz: Number(sozlama.foiz ?? 0) }, manba: 'foiz' };
 }
 
+/** Resurs nomi/birligi kaliti (Pomoshnik PTO PriceKey tajribasi): NBSP va qator
+ * ko'chishi bo'shliq, Ё→Е, `. , ; : -` bo'shliqqa; bo'shliqlar bittaga. "2,0Х2"
+ * va "20Х2" farqli qoladi (vergul olib tashlanmaydi, bo'shliqqa aylanadi). */
+const kalitMatn = (v: unknown): string => String(v ?? '').toUpperCase().replace(/Ё/g, 'Е').replace(/[ \r\n\t]/g, ' ')
+  .replace(/[.,;:-]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Ayni resurs kaliti: faqat hajm × narx qatorlari nom + birlik bo‘yicha
+ * birlashadi; summa bo‘yicha narxlanadiganlar (manba_jami, transport varag‘i)
+ * har biri alohida qoladi — ularning summasini guruhlab bo‘lmaydi. */
+export function ofertaResursKaliti(q: Pick<OfertaQator, 'sourceId' | 'nom' | 'birlik' | 'hisobTuri' | 'rol'>): string {
+  if (q.rol !== 'RESOURCE' || q.hisobTuri !== 'birlik') return `#${q.sourceId}`;
+  return `${kalitMatn(q.nom)}|${kalitMatn(q.birlik)}`;
+}
+
+/** Guruh bo‘yicha tayyorlash: yagona fayl-kategoriyani noma’lum qatorlarga
+ * yoyish va bir xil taklif narxi uchun guruhning asosiy smeta narxi. */
+function guruhTayyorla(qatorlar: readonly OfertaQator[], birXilNarx: boolean): { qatorlar: OfertaQator[]; asosNarx: Map<string, number>; harXil: Set<string> } {
+  const guruh = new Map<string, OfertaQator[]>();
+  for (const q of qatorlar) {
+    if (!narxlanadiganmi(q)) continue;
+    const k = ofertaResursKaliti(q);
+    if (k.startsWith('#')) continue;
+    const a = guruh.get(k);
+    if (a) a.push(q); else guruh.set(k, [q]);
+  }
+  const katYoy = new Map<string, OfertaMalumKategoriya>();
+  const asosNarx = new Map<string, number>();
+  const harXil = new Set<string>();
+  for (const a of guruh.values()) {
+    if (a.length < 2) continue;
+    const mal = new Set(a.map((q) => q.kategoriya).filter((k): k is OfertaMalumKategoriya => !!k && k !== 'UNKNOWN'));
+    if (mal.size === 1) {
+      const k = [...mal][0];
+      for (const q of a) if (!q.kategoriya || q.kategoriya === 'UNKNOWN') katYoy.set(q.sourceId, k);
+    }
+    if (!birXilNarx) continue;
+    const stat = new Map<number, { soni: number; summa: number }>();
+    for (const q of a) {
+      if (q.smetaBirlikNarx == null || !Number.isFinite(q.smetaBirlikNarx)) continue;
+      const st = stat.get(q.smetaBirlikNarx) ?? { soni: 0, summa: 0 };
+      st.soni++; st.summa += q.smetaSumma ?? 0;
+      stat.set(q.smetaBirlikNarx, st);
+    }
+    if (stat.size < 2) continue;
+    // Asosiy narx: eng ko‘p uchragani; teng bo‘lsa — smeta summasi kattasi.
+    const [asos] = [...stat.entries()].sort((x, y) => y[1].soni - x[1].soni || y[1].summa - x[1].summa || y[0] - x[0])[0];
+    for (const q of a) { asosNarx.set(q.sourceId, asos); harXil.add(q.sourceId); }
+  }
+  const yangi = katYoy.size
+    ? qatorlar.map((q) => (katYoy.has(q.sourceId) ? { ...q, kategoriya: katYoy.get(q.sourceId)!, kategoriyaManbasi: 'guruh' as const } : q))
+    : [...qatorlar];
+  return { qatorlar: yangi, asosNarx, harXil };
+}
+
+function guruhlarQur(natijalar: readonly OfertaQatorNatija[]): OfertaGuruh[] {
+  const map = new Map<string, OfertaGuruh>();
+  for (const n of natijalar) {
+    if (!narxlanadiganmi(n)) continue;
+    const kalit = ofertaResursKaliti(n);
+    let g = map.get(kalit);
+    if (!g) {
+      g = { kalit, nom: n.nom, birlik: n.birlik, hisobTuri: n.hisobTuri, sourceIds: [], varaqlar: [], jamiHajm: 0, smetaNarxlar: [], pudratchiNarxlar: [], kategoriyalar: [], jamiSmetaSumma: 0, jamiTaklifSumma: 0, muammolar: [] };
+      map.set(kalit, g);
+    }
+    g.sourceIds.push(n.sourceId);
+    if (!g.varaqlar.includes(n.sourceSheet)) g.varaqlar.push(n.sourceSheet);
+    g.jamiHajm = g.jamiHajm == null || n.taklifHajmi == null ? null : g.jamiHajm + n.taklifHajmi;
+    if (n.smetaBirlikNarx != null && !g.smetaNarxlar.includes(n.smetaBirlikNarx)) g.smetaNarxlar.push(n.smetaBirlikNarx);
+    if (n.pudratchiBirlikNarx != null && !g.pudratchiNarxlar.includes(n.pudratchiBirlikNarx)) g.pudratchiNarxlar.push(n.pudratchiBirlikNarx);
+    const k = n.samaraliKategoriya ?? 'UNKNOWN';
+    if (!g.kategoriyalar.includes(k)) g.kategoriyalar.push(k);
+    if (n.kategoriyaTaklifi && !g.kategoriyaTaklifi) g.kategoriyaTaklifi = n.kategoriyaTaklifi;
+    g.jamiSmetaSumma += n.smetaSumma ?? 0;
+    g.jamiTaklifSumma = g.jamiTaklifSumma == null || n.pudratchiSumma == null ? null : g.jamiTaklifSumma + n.pudratchiSumma;
+    for (const m of n.muammolar) if (!g.muammolar.includes(m)) g.muammolar.push(m);
+  }
+  for (const g of map.values()) { g.smetaNarxlar.sort((a, b) => a - b); g.pudratchiNarxlar.sort((a, b) => a - b); }
+  return [...map.values()];
+}
+
 /** Pul chiqaradigan (narxlanadigan) qatorlar: resurs va alohida transport
  * varag'i qatorlari. Podval hosilalari kaskad bilan qayta hisoblanadi. */
 export function narxlanadiganmi(qator: Pick<OfertaQator, 'rol' | 'hosila'>): boolean {
   return qator.rol === 'RESOURCE' || (qator.rol === 'TRANSPORT' && qator.hosila === false);
 }
 
-function bargNatija(qator: OfertaQator, kirish: OfertaKirish): OfertaQatorNatija {
+function bargNatija(qator: OfertaQator, kirish: OfertaKirish, asosNarx?: number): OfertaQatorNatija {
   const muammolar: OfertaMuammo[] = [];
   const manualKat = kirish.manualKategoriyalar?.[qator.sourceId];
   const samaraliKategoriya: OfertaKategoriya | null = qator.rol === 'RESOURCE' ? (manualKat ?? qator.kategoriya ?? 'UNKNOWN') : null;
@@ -249,7 +370,7 @@ function bargNatija(qator: OfertaQator, kirish: OfertaKirish): OfertaQatorNatija
     const f = qatorFoizi(samaraliKategoriya, kirish.sozlama);
     if (!f) muammolar.push('PUDRATCHI_NARXI_YOQ');
     else {
-      const base = qator.hisobTuri === 'manba_jami' ? qator.smetaSumma : qator.smetaBirlikNarx;
+      const base = qator.hisobTuri === 'manba_jami' ? qator.smetaSumma : (asosNarx ?? qator.smetaBirlikNarx);
       if (base == null || !Number.isFinite(base)) muammolar.push('SMETA_NARXI_YOQ');
       else if (base < 0) muammolar.push('SMETA_NARXI_NOL');
       else if (base === 0) {
@@ -287,6 +408,34 @@ function bargNatija(qator: OfertaQator, kirish: OfertaKirish): OfertaQatorNatija
   };
 }
 
+const teng = (a: number, b: number) => Math.abs(a - b) <= Math.max(0.5, Math.abs(b) * 1e-9);
+
+/** Podval hosilasini manbaning O'ZIDAN tushunadi (formula bo'lmasa ham):
+ *  - manba summasi = oldingi jami + keyingi hosilalar → yig'indi;
+ *  - yozuvdagi foiz (`=5%`) manba bilan mos → baza × foiz;
+ *  - aks holda manba nisbati (hosila ÷ baza) — xuddi o'sha ulush;
+ *  - manbada 0 → taklifda ham 0. Asos yo'q/noma'lum → null (taxmin yo'q). */
+function podvalniHisobla(n: OfertaQatorNatija, jami: OfertaQatorNatija | null, keyingi: OfertaQatorNatija[]): void {
+  const src = n.smetaSumma;
+  if (src == null || !Number.isFinite(src) || !jami || jami.smetaSumma == null) return;
+  const yigindiManba = jami.smetaSumma + keyingi.reduce((a, k) => a + (k.smetaSumma ?? 0), 0);
+  if (keyingi.length && teng(src, yigindiManba)) {
+    const qism = [jami, ...keyingi];
+    if (qism.every((k) => k.pudratchiSumma != null)) {
+      n.podval = { tur: 'yigindi', bazalar: qism.map((k) => k.sourceId) };
+      n.pudratchiSumma = qism.reduce((a, k) => a + (k.pudratchiSumma as number), 0);
+    }
+    return;
+  }
+  if (src === 0) { n.podval = { tur: 'nol' }; n.pudratchiSumma = 0; return; }
+  if (jami.pudratchiSumma == null || !jami.smetaSumma) return;
+  const foizlar = [...n.nom.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g)].map((m) => Number(m[1].replace(',', '.')));
+  const mos = foizlar.find((f) => teng(src, jami.smetaSumma! * f / 100));
+  const koef = mos != null ? mos / 100 : src / jami.smetaSumma;
+  n.podval = { tur: 'foiz', baza: jami.sourceId, koef, foiz: mos ?? null };
+  n.pudratchiSumma = pulYaxlitla(jami.pudratchiSumma * koef);
+}
+
 function bosNatija(qator: OfertaQator, muammolar: OfertaMuammo[] = []): OfertaQatorNatija {
   return {
     ...qator, taklifHajmiOverride: null, taklifHajmi: null, hajmManbasi: 'yoq',
@@ -308,22 +457,45 @@ export function ofertaHisobla(qatorlar: readonly OfertaQator[], kirish: OfertaKi
   const transportSiyosati = kirish.transportSiyosati ?? 'kaskad';
   const byId = new Map<string, OfertaQatorNatija>();
   const natijalar: OfertaQatorNatija[] = [];
+  const tayyor = guruhTayyorla(qatorlar, kirish.birXilNarx !== false);
 
-  for (const qator of qatorlar) {
-    const n = narxlanadiganmi(qator) ? bargNatija(qator, kirish) : bosNatija(qator);
+  for (const qator of tayyor.qatorlar) {
+    const n = narxlanadiganmi(qator) ? bargNatija(qator, kirish, tayyor.asosNarx.get(qator.sourceId)) : bosNatija(qator);
+    if (tayyor.harXil.has(qator.sourceId)) n.muammolar.push('NARX_HAR_XIL');
     byId.set(qator.sourceId, n);
     natijalar.push(n);
   }
-  // Jami qatorlar — bevosita bolalar yig'indisi (Excel SUM bilan bir tartibda).
-  // Qatorlar yuqoridan pastga yurgani uchun ichki jami tashqisidan oldin tayyor.
+  // Jami va podval qatorlari — yuqoridan pastga, varaq bo'yicha (Excel SUM /
+  // podval formulalari bilan bir tartibda). Ichki jami tashqisidan oldin tayyor.
+  let joriyVaraq = '';
+  let oxirgiJami: OfertaQatorNatija | null = null;
+  let jamidanKeyin: OfertaQatorNatija[] = [];
   for (const n of natijalar) {
-    if (n.rol !== 'SUBTOTAL' && n.rol !== 'GRAND_TOTAL') continue;
-    if (n.jamiMoslik === 'mos_emas') { n.muammolar.push('JAMI_MOS_EMAS'); continue; }
-    const bolalar = (n.jamiBolalari ?? []).map((id) => byId.get(id)).filter((x): x is OfertaQatorNatija => !!x);
-    const qiymatlar = bolalar.map((b) => b.pudratchiSumma).filter((v): v is number => v != null);
-    n.pudratchiSumma = qiymatlar.length ? qiymatlar.reduce((a, b) => a + b, 0) : null;
+    if (n.sourceSheet !== joriyVaraq) { joriyVaraq = n.sourceSheet; oxirgiJami = null; jamidanKeyin = []; }
+    if (n.rol === 'SUBTOTAL' || n.rol === 'GRAND_TOTAL') {
+      if (n.jamiMoslik === 'mos_emas') { n.muammolar.push('JAMI_MOS_EMAS'); continue; }
+      const bolalar = (n.jamiBolalari ?? []).map((id) => byId.get(id)).filter((x): x is OfertaQatorNatija => !!x);
+      const qiymatlar = bolalar.map((b) => b.pudratchiSumma).filter((v): v is number => v != null);
+      n.pudratchiSumma = qiymatlar.length ? qiymatlar.reduce((a, b) => a + b, 0) : null;
+      oxirgiJami = n; jamidanKeyin = [];
+      continue;
+    }
+    if (n.hosila && (n.rol === 'TRANSPORT' || n.rol === 'STORAGE')) {
+      podvalniHisobla(n, oxirgiJami, jamidanKeyin);
+      jamidanKeyin.push(n);
+    }
   }
 
+  return ofertaYigish(natijalar, nk, transportSiyosati);
+}
+
+/**
+ * Hisoblangan qatorlardan yig'indilar, kanonik kaskad va yakuniy oferta.
+ * Paketda har bir obyekt (fayl) o'z qatorlari bilan alohida yig'iladi —
+ * narxlar esa butun paket bo'yicha bir marta hisoblangan (bir xil material =
+ * bir xil narx).
+ */
+export function ofertaYigish(natijalar: OfertaQatorNatija[], nk: NakrutkaKoeffitsientlar, transportSiyosati: OfertaTransportSiyosati): OfertaHisoblash {
   // Varaq bo'yicha, keyin varaqlar tartibida yig'amiz (Excel SUMIFS + '+').
   const varaqlar: string[] = [];
   const perSheet = new Map<string, { kat: OfertaKategoriyaJami; manba: OfertaKategoriyaJami; transport: number }>();
@@ -376,5 +548,6 @@ export function ofertaHisobla(qatorlar: readonly OfertaQator[], kirish: OfertaKi
     halQilinmagan,
     muammolarSoni,
     valid: muammolarSoni === 0 && yakuniyOferta != null,
+    guruhlar: guruhlarQur(natijalar),
   };
 }

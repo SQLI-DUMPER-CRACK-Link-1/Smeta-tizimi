@@ -33,6 +33,8 @@ export type OfertaSheetTahlili = {
   /** Bir fayldagi ayni RES jadvalining alternativ ko‘rinishi (masalan RES_A).
    * Ikkalasi birga tanlansa, bitta resurs ikki marta hisoblanib ketadi. */
   alternativVaraq?: string;
+  /** Excelda yashirin varaq — odatda eski davr qoralamasi; sukut bo‘yicha tanlanmaydi. */
+  yashirin?: boolean;
 };
 
 const text = (value: unknown): string => String(value ?? '').replace(/Ё/g, 'Е').replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
@@ -530,7 +532,8 @@ export function ofertaResursVaraqlariniAniqla(workbook: XlsxWorkbook): OfertaShe
     if (!ustunlar) evidence.push('RES ustunlari to‘liq aniqlanmadi');
     else if (!parsed.qatorlar.length) evidence.push('sarlavha topildi, lekin resurs satrlari topilmadi');
     else evidence.push(`${parsed.qatorlar.filter((qator) => qator.rol === 'RESOURCE').length} ta resurs, ${parsed.qatorlar.filter((qator) => qator.rol !== 'RESOURCE').length} ta hisob/bo‘lim satri`);
-    return { nom: sheet.name, role, format: evidenceData.format, confidence, evidence, resScore: evidenceData.resScore, lrvScore: evidenceData.lrvScore, ustunlar, ...parsed };
+    if (sheet.hidden) evidence.push('Excelda yashirin varaq — sukut bo‘yicha tanlanmaydi');
+    return { nom: sheet.name, role, format: evidenceData.format, confidence, evidence, resScore: evidenceData.resScore, lrvScore: evidenceData.lrvScore, ustunlar, ...parsed, ...(sheet.hidden ? { yashirin: true } : {}) };
   });
 
   // ABC eksportlarida RES va RES_A ko‘pincha ayni ma’lumotning ikki ko‘rinishi:
