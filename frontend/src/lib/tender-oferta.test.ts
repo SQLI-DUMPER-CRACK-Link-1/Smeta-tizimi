@@ -47,10 +47,16 @@ describe('tender oferta V2 — barg narxlash', () => {
     expect(r.halQilinmagan).toBe(1);
   });
 
-  it('smeta narxi 0 bo‘lsa foiz narx yaratmaydi (NULL != 0)', () => {
+  it('smeta narxi ANIQ 0 — taklif 0, yakuniy to‘silmaydi, ogohlantirish qoladi; NULL esa hal qilinmagan', () => {
     const r = ofertaHisobla([qator({ smetaBirlikNarx: 0, smetaSumma: 0 })], foiz(10));
-    expect(r.qatorlar[0].pudratchiBirlikNarx).toBeNull();
+    expect(r.qatorlar[0].pudratchiBirlikNarx).toBe(0);
+    expect(r.qatorlar[0].pudratchiSumma).toBe(0);
     expect(r.qatorlar[0].muammolar).toContain('SMETA_NARXI_NOL');
+    expect(r.halQilinmagan).toBe(0);
+    const n = ofertaHisobla([qator({ smetaBirlikNarx: null, smetaSumma: null })], foiz(10));
+    expect(n.qatorlar[0].pudratchiSumma).toBeNull();
+    expect(n.halQilinmagan).toBe(1);
+    expect(n.yakuniyOferta).toBeNull();
   });
 
   it('P0: manba hajmi bo‘sh, qo‘lda taklif hajmi 10 × 800 000 = 8 000 000; manba hajmi null qoladi', () => {

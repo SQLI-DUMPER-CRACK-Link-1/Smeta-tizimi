@@ -381,7 +381,7 @@ function Sessiya() {
                     placeholder={q.hisobTuri === 'manba_jami' ? 'Taklif summasi' : fmt(q.pudratchiBirlikNarx)} className="w-32 rounded border border-border bg-surface-2 px-1.5 py-1 text-right tabular-nums" />
                 : '—'}</td>
               <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-ok">{fmt(q.pudratchiSumma)}</td>
-              <td className={`px-2 py-1.5 ${q.muammolar.length ? 'font-semibold text-danger' : 'text-ok'}`}>{ofertaHolatMatni(q)}</td>
+              <td className={`px-2 py-1.5 ${q.muammolar.some((m) => m !== 'SMETA_NARXI_NOL') ? 'font-semibold text-danger' : q.muammolar.length ? 'text-warn' : 'text-ok'}`}>{ofertaHolatMatni(q)}</td>
             </tr>)}</tbody>
           </table>
         </div>

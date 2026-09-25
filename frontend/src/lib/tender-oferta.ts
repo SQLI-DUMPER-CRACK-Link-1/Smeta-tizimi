@@ -251,8 +251,17 @@ function bargNatija(qator: OfertaQator, kirish: OfertaKirish): OfertaQatorNatija
     else {
       const base = qator.hisobTuri === 'manba_jami' ? qator.smetaSumma : qator.smetaBirlikNarx;
       if (base == null || !Number.isFinite(base)) muammolar.push('SMETA_NARXI_YOQ');
-      else if (base <= 0) muammolar.push('SMETA_NARXI_NOL');
-      else {
+      else if (base < 0) muammolar.push('SMETA_NARXI_NOL');
+      else if (base === 0) {
+        // Smeta narxni ANIQ 0 deb yozgan (ВОДА, ОЧЕС ЛЬНЯНОЙ…): bu noma'lum
+        // pul emas — ma'lum 0. Taklif ham 0, yakuniy summa to'silmaydi;
+        // qator ogohlantirish sifatida ko'rinadi (qo'lda narx kiritish mumkin).
+        narxManbasi = f.manba;
+        qollanganFoiz = f.foiz;
+        if (qator.hisobTuri === 'manba_jami') pudratchiSumma = 0;
+        else pudratchiBirlikNarx = 0;
+        muammolar.push('SMETA_NARXI_NOL');
+      } else {
         const r = adjusted(base, f.foiz);
         if (r.value == null) muammolar.push(r.muammo ?? 'FOIZ_XATO');
         else {

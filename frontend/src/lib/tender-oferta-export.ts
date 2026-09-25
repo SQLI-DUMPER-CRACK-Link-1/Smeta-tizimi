@@ -57,7 +57,7 @@ const MUAMMO_MATNI: Record<string, string> = {
   HAJM_YOQ: 'hajm yo‘q',
   PUDRATCHI_NARXI_YOQ: 'pudratchi narxi kiritilmagan',
   SMETA_NARXI_YOQ: 'smeta narxi yo‘q',
-  SMETA_NARXI_NOL: 'smeta narxi 0 — foiz qo‘llanmaydi, narxni kiriting',
+  SMETA_NARXI_NOL: 'smeta narxi 0 — taklif 0 (kerak bo‘lsa narx kiriting)',
   FOIZ_XATO: 'foiz noto‘g‘ri',
   NARX_MANFIY: 'narx manfiy chiqdi',
   KATEGORIYA_NOMALUM: 'kategoriya noma’lum — kaskadga kirmaydi',

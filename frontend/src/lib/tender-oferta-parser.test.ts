@@ -136,7 +136,7 @@ describe('tender oferta RES parseri V2', () => {
     expect(s.qatorlar.find((q) => q.nom === 'ВСЕГО МАТЕРИАЛОВ')!.jamiMoslik).toBe('mos_emas');
     const pesok = s.qatorlar.find((q) => q.nom.startsWith('ПЕСОК'))!;
     expect(pesok).toMatchObject({ kategoriya: 'UNKNOWN', kategoriyaTaklifi: 'БЕЗСКЛАД' });
-    // Narx 0 — foiz summa yaratmaydi; hal qilinmagan qator sifatida qoladi.
+    // Narx ANIQ 0 — taklif 0 + ogohlantirish; yakuniyni UNKNOWN kategoriya (ПЕСОК) to‘sadi.
     const h = ofertaHisobla(s.qatorlar, { sozlama: { rejim: 'foiz', yon: 'pasaytirish', foiz: 10 } });
     expect(h.yakuniyOferta).toBeNull();
     expect(h.qatorlar.find((q) => q.nom === 'ЦЕМЕНТ')!.muammolar).toContain('SMETA_NARXI_NOL');
