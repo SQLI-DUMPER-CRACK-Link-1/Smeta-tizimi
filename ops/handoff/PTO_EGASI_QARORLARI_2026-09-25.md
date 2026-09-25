@@ -158,3 +158,74 @@ GAS yo‘li flag ortida; siz ikkala natijani solishtirgach GAS yo‘li o‘chiri
 Holat: P9 bo‘limida.
 
 **Qaror:** _(egasi yozadi)_
+
+---
+
+## Q12. Ijro hujjatlari: АОСР (скрытые работы), промежуточная приемка ответственных конструкций, акты испытаний, лаборатория — smeta bilan integratsiya (egasi so'rovi, 2026-09-25)
+
+**Egasi:** "AKT SKRITI RABOT, AKT PROMEJUTOCHNIY OTVETSTVENNOY KONSTRUKSIYA,
+ISPITANIYA AKTLARI, LABORATORIYA HUJJATLARI … smeta va hujjatlar integratsiya
+bo'lishi kerak. T1 da akt generator bor edi, lekin GAS da ishlaydi —
+T2 ga integratsiya qilamizmi yoki xuddi shu shaklda qoldiramizmi?"
+
+**Hozirgi holat (kod bilan tekshirildi):**
+- T1 (GAS): `Smeta tizimi/45_Hujjatlar.js` — akt REYESTR (Google Sheet,
+  `DOC_AKT`), `apiAktIshlar` (fakt > 0 ishlar), yashirin ish kalit so'zlari
+  (`_YASHIRIN_KW`: ФУНДАМЕНТ, АРМАТУР, ГИДРОИЗОЛ …), `apiAktCoverage`
+  ("fakt bor, akt yo'q"), `apiAktSmetadan` (ish nomi/hajm/materiallar
+  smetadan), `workKey = obyekt||KOD`; `67_AI_Akt.js` — AOSR matnini AI
+  tozalaydi (raqam/material o'ylab topilmaydi, faqat smetadan).
+- T2: `docs/architecture/UZ_CONSTRUCTION_DOCUMENT_CATALOG_AND_TEMPLATES_V1.md`
+  da `aosr_v1` (ShNQ 3.01.01-22, 6-ilova blanki) va `aosr_register_v1`
+  kanonik hujjat turlari rejalashtirilgan, lekin jadval/RPC/UI **yo'q**.
+- Laboratoriya/sinov: T2 da faqat umumiy fayl saqlash (R2 `t2_obyekt_hujjat`),
+  smeta qatoriga bog'lanish yo'q.
+
+**Variantlar:**
+
+| | A — GAS da qoldirish | B — T2 ga to'liq ko'chirish | C — Bosqichli (tavsiya) |
+|---|---|---|---|
+| Haqiqat manbai | Google Sheet REYESTR (Konstitutsiyaga zid: Supabase yagona haqiqat) | Supabase | Supabase; T1 REYESTR bir martalik import, keyin faqat o'qish |
+| Smeta bog'lanishi | `workKey` matn (kod/nom) — qayta importda uziladi | `t2_qator.id` (kanonik ID) | `t2_qator.id` + eski workKey dan moslash hisoboti |
+| Hujjat shakli | GAS shablonlari | hujjat-yozuvchi (H1–H9, A4, imzolar, ShNQ blanki) | shu |
+| Nazorat | coverage GAS da | "fakt bor — АОСР yo'q" qizil signal Fakt/LRV/F2 da; F2 ga kiritishdan oldin ogohlantirish | shu |
+| Xavf | past (hozir ishlaydi), lekin ikki haqiqat | yangi migratsiya + UI hajmi katta | ish to'xtamaydi |
+
+**Tavsiya — C (T2 native, bosqichma-bosqich):**
+1. *Ma'lumot modeli* (additive migratsiya, ruxsatingiz bilan):
+   `t2_ijro_hujjat` (tur: `aosr` | `promejutochnaya_priemka` | `ispytanie` |
+   `laboratoriya` | `boshqa`; raqam, sana, holat qoralama→imzolangan→bekor,
+   komissiya, keyingi ishga ruxsat, fayl R2) + `t2_ijro_hujjat_qator`
+   (→ `t2_qator.id`, hajm, materiallar/sertifikatlar) — tenant, audit,
+   operation_id, versiya bilan.
+2. *Generator*: ish qatoridan (LRV) АОСР qoralamasi — nom, hajm, materiallar
+   smetadan; blank ShNQ 6-ilova (subpudratchili/subpudratchisiz); Excel + PDF
+   hujjat-yozuvchi orqali. AI faqat matnni tozalaydi (T1 dagi qoida).
+3. *Nazorat*: yashirin ishlar ro'yxati (T1 `_YASHIRIN_KW` + operator
+   belgilashi), "fakt bor — akt yo'q" hisobi; F2 tayyorlashda ogohlantirish
+   (bloklash — sizning qaroringiz bilan).
+4. *Laboratoriya/sinov*: fayl yuklanadi va ish qatoriga/АОСР ga bog'lanadi
+   (bir protokol — ko'p ish).
+5. *T1 dan ko'chish*: REYESTR bir martalik import (dry-run hisoboti bilan),
+   GAS generatori faqat o'qish rejimiga o'tadi, keyin o'chiriladi.
+
+**Sizdan kerak:** (a) variant tanlovi (A/B/C); (b) real blanklar
+(`AKT_SYSTEM_TEMPLATES`, promejutochnaya priemka, sinov akti namunalari —
+ofis PC dan) — shakl o'ylab topilmaydi; (c) АОСР yo'qligida F2 ni bloklash
+yoki faqat ogohlantirish; (d) migratsiyani prodga qo'llashga ruxsat.
+
+**Qaror:** _(egasi yozadi)_
+
+---
+
+## Q13. Moslashuvchan ustun aniqlash — sizning qoidangiz tasdig'i
+
+PTO qo'shgan/o'zgartirgan ustunlar endi barcha Excel o'quvchilarida (smeta
+anatomiyasi, F2 import, Oferta, RES narxlash) ma'lumot bilan isbotlanadi:
+hajm × narx ≈ summa eng ko'p qatorda bajarilgan uchlik tanlanadi; isbot
+yetarli bo'lmasa sarlavha natijasi qoladi va "ishonch past" deb ko'rsatiladi.
+Savol: isbot bilan sarlavha **farq qilganda** tizim avtomatik ma'lumot
+isbotini oladi (hozirgi xatti-harakat, operatorga izoh ko'rsatiladi) — yoki
+har safar operator tasdiqlasinmi?
+
+**Qaror:** _(egasi yozadi)_
