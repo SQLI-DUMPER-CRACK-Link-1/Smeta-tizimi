@@ -338,17 +338,6 @@ export type T2Qator = {
   norma: number | null;
 };
 
-/** P7 (katta obyekt tezligi): LRV/Fakt daraxti, LRV_PLUS/Forma-2, Ostatka va
- *  resurs vedomosti ishlatadigan ustunlargina. Iste'molchilar grep bilan
- *  tekshirilgan (sbT2TreeQur, lrvPlusFaylBaytlari, resursVedomostAoa,
- *  ostatkaHujjatModeli, FaktNative). Olib tashlangan: id, obyekt_id, f2_narx,
- *  fakt_narx, f2_narx_farq_foiz — daraxt yo'lida o'qilmaydi. */
-export const T2_HOLAT_DARAXT_USTUNLARI = 'qator_id,tur,kod,nom,birlik,kat,smeta_hajm,smeta_summa,fakt_hajm,fakt_summa,f2_hajm,f2_summa,qoldiq_hajm,qoldiq_summa,f2_mumkin_hajm,f2_mumkin_summa';
-
-/** Daraxt yo'li uchun t2_daraxt ustunlari. Olib tashlangan: kompaniya_id, d1–d3,
- *  yangilandi, manba_id, raqam — daraxt/eksport/ostatka/fakt ularni o'qimaydi. */
-export const T2_DARAXT_USTUNLARI = 'id,obyekt_id,obyekt,ota_id,daraja,tartib,tur,kod,nom,birlik,hajm,narx,summa,kat,narx_usul,qoshimcha,zamena,xom_qator,versiya,norma';
-
 export function sbT2QatorHolatOl(obyektId: number, ustunlar?: string) {
   return sbOqi<T2QatorHolat>({
     jadval: 't2_qator_holat',

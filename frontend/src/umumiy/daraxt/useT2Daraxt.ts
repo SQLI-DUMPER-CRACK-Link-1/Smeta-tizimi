@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { T2_DARAXT_USTUNLARI, T2_HOLAT_DARAXT_USTUNLARI, sbT2DaraxtOl, sbT2QatorHolatOl, sbT2TreeQur, type T2Qator, type T2QatorHolat } from '../../api/supabase';
+import { T2_DARAXT_USTUNLARI, T2_HOLAT_DARAXT_USTUNLARI } from '../../api/t2-daraxt-ustunlar';
+import { sbT2DaraxtOl, sbT2QatorHolatOl, sbT2TreeQur, type T2Qator, type T2QatorHolat } from '../../api/supabase';
 import { sbT2QatorHolatQisman } from '../../api/t2-holat-qisman';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
 import { faktTaalluqliIdlar, holatlarniAlmashtir } from '../../lib/fakt-yangilash';
