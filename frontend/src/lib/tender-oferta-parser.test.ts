@@ -54,6 +54,8 @@ describe('tender oferta RES parseri V2', () => {
       [null, null, 'ТРУДОВЫЕ РЕСУРСЫ'],
       [1, 1, 'ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ', 'ЧЕЛ.-Ч', 10, 100, 1000],
       [2, 3, 'ЗАТРАТЫ ТРУДА МАШИНИСТОВ', 'ЧЕЛ.-Ч', 5, '--', '--'],
+      [2, 4, 'ЗАТРАТЫ ТРУДА МАШИНИСТОВ (0)', 'ЧЕЛ.-Ч', 7, 0, 0],
+      [2, 5, 'ЗАТРАТЫ ТРУДА МАШИНИСТОВ (bo‘sh)', 'ЧЕЛ.-Ч', 8, null, null],
       [null, 'ИТОГО ПО ТРУДОВЫМ РЕСУРСАМ:', null, 'СУМ', null, null, 1000],
       [null, null, 'МАТЕРИАЛЬНЫЕ РЕСУРСЫ'],
       [3, 'С', 'ПЕСОК', 'М3', 10, 50, 500],
@@ -75,6 +77,9 @@ describe('tender oferta RES parseri V2', () => {
     expect(s.role).toBe('res');
     expect(by('ЗАТРАТЫ ТРУДА РАБОЧИХ-СТРОИТЕЛЕЙ')).toMatchObject({ rol: 'RESOURCE', kategoriya: 'ЧЕЛ', kategoriyaManbasi: 'birlik' });
     expect(by('ЗАТРАТЫ ТРУДА МАШИНИСТОВ').rol).toBe('INFO');
+    // Mashinistning o‘z narxi bo‘lmaydi: 0 yoki bo‘sh ham “narxsiz” emas, INFO.
+    expect(by('ЗАТРАТЫ ТРУДА МАШИНИСТОВ (0)').rol).toBe('INFO');
+    expect(by('ЗАТРАТЫ ТРУДА МАШИНИСТОВ (bo‘sh)').rol).toBe('INFO');
     expect(by('ПЕСОК')).toMatchObject({ kategoriya: 'МАТ', kategoriyaManbasi: 'bolim' });
     expect(by('КАБЕЛЬ СИЛОВОЙ')).toMatchObject({ kategoriya: 'КАБ', kategoriyaManbasi: 'nom' });
     // Nomida ДОСТАВКА bor, lekin hajm+narx — haqiqiy resurs.

@@ -311,9 +311,10 @@ function tasnifla(nom: string, row: readonly unknown[], columns: OfertaResursUst
   if (isTotalLabel(nom)) return { rol: isGlobalTotal(nom) ? 'GRAND_TOTAL' : 'SUBTOTAL' };
   if (!hasUnitOrAmount && (isSectionLabel(nom) || resBolimKategoriya(nom) != null)) return { rol: 'SECTION' };
   if (!hasUnitOrAmount) return null;
-  // Mashinist mehnati mashina-soat narxining ichida: ABC/TN uni narxsiz
-  // ('--') ma'lumot qatori sifatida ko‘rsatadi. U narxlanmaydi.
-  if (/ТРУДА МАШИНИСТ/.test(n) && narx == null && summa == null) return { rol: 'INFO' };
+  // Mashinist mehnati mashina-soat narxining ichida: ABC/TN uni o‘z narxisiz
+  // (bo‘sh, '--' yoki 0) ma'lumot qatori sifatida ko‘rsatadi. U narxlanmaydi va
+  // “narxsiz” deb ogohlantirilmaydi. Musbat narx/summa bo‘lsagina resurs.
+  if (/ТРУДА МАШИНИСТ/.test(n) && !((narx ?? 0) > 0) && !((summa ?? 0) > 0)) return { rol: 'INFO' };
   if (transportSheet) return { rol: 'TRANSPORT', hosila: false };
   return { rol: 'RESOURCE' };
 }
