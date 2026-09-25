@@ -179,3 +179,17 @@ checkpointdir. Eski yozuvlar o‘zgartirilmaydi.
 | `production_migrations` | `20261028090000_t2_qator_holat_obyekt_filtr_v1`, `20261028091000_t2_obyekt_read_model_filtr_v2` (owner ruxsati bilan; additive view qayta ta’rifi, rollback bor). |
 | `open_owner_decisions` | `t2_qator_holat` anon SELECT grant; `/api/agent/call` (Hermes) yo‘nalishi; ruflo hook shell:true; "Suniy Ko‘l" (84) 2413 dublikat vedomost qatori — qayta import kerak; ТЕПЛОТРАССА 02-04/02-05 −1.70 чел-ч. |
 | `remaining_evidence` | Authenticated live smoke (Suniy Ko‘l 2 import, fakt, ostatka, oferta) egasining sessiyasini talab qiladi. Excel COM tekshiruvi ofis PC real fayllarida. |
+
+# 2026-09-25 (kech) — PTO liniyasi yakuni: hujjat standarti (PTO-LINIYA-YAKUN-001)
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `d3c89e886faec2fbf92e3fe1b08e2205fd58d5fb` — PTO liniyasi kod commit'lari + origin/main merge; shu addendum commit'i undan keyin (bir qadam). Yakuniy deploy SHA — `ops/handoff/PTO_LINIYA_YAKUN_HISOBOT_2026-09-25.md`. |
+| `base_sha` | `e0d44855d193e960e75283df7fa73ec32ac8482d` |
+| `landed` | `frontend/src/lib/hujjat-yozuvchi/` (asl hujjatni davom ettirish + noldan rasmiy hujjat + H1–H9 tekshiruvchi); barcha PTO eksportlari hujjat standartida: Oferta, paket svodi, LRV_PLUS/Forma-2 (ЛРВ), Ведомость остатка работ, Накопительная ведомость, АКТ Ф-2 (TN), Проект акта Ф-2, Ресурсная ведомость, PTO hujjat (Excel+PDF). Kontrakt: `docs/architecture/HUJJAT_STANDARTI_V1.md`. |
+| `fixed_bugs` | LRV_PLUS nakrutka ИТОГО-3 Excel formulasi noto'g'ri qatorga havola qilardi (sayt ≠ Excel); narxsiz bargda Excel 0 chiqarardi (NULL→0); Nakopitelniy/Ф-2 eksporti RPC 500-qator chegarasida jimgina chala hujjat yasardi. |
+| `adaptive_columns` | `smeta-anatomiya/ustun-dalil.ts`: hajm × narx ≈ summa isboti — anatomiya, F2 import, Oferta, RES narxlash (egasi so'rovi). |
+| `perf` | Daraxt yo'li kerakli ustunlar (sintetik 27k: t2_daraxt −26 %, t2_qator_holat −40 % payload); Excel o'qish Web Worker da. Jonli <4 s — o'lchanmagan (UNKNOWN). |
+| `production_changes` | Yo'q: migratsiya, DDL, real ma'lumotga yozish qilinmadi. Production faqat o'qildi (list_migrations, information_schema, agregat SELECT). |
+| `open_owner_decisions` | `ops/handoff/PTO_EGASI_QARORLARI_2026-09-25.md` Q1–Q13 (Forma-3 qoidasi, Ф-2 НДС asosi, RPC smeta_summa ikki marta sanash, 3000 qator chegarasi, anon grant, Hermes marshruti, Suniy Ko'l 84, ТЕПЛОТРАССА, Faravon, АОСР/ijro hujjatlari integratsiyasi, ustun moslashuvi siyosati). |
+| `remaining_evidence` | Microsoft Excel va real fayllar bilan tekshiruv, authenticated live smoke — egasi (UNKNOWN shu muhitda). LibreOffice qayta hisoblash farqi 0 (sintetik namunalar). |
