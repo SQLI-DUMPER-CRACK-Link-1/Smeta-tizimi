@@ -1,0 +1,451 @@
+/**
+ * F2 MOSLASH V3 — qavatma-qavat moslik bali (egasi, 2026-09-25):
+ *   "avto bog'lashda razdel nomi, ish turi shifri, ish turi nomi, birligi, ish turi obyomi,
+ *    ish turi resurslari (mat, ob …) — xuddi shu tartibdagi qavatlarda qanchalik moslik
+ *    bo'lsa, shunchalik mos variant hisoblanadi."
+ * Kontrakt: docs/architecture/F2_IMPORT_V3.md §2.
+ *
+ * Tizim1 (`Smeta tizimi/35_F2Moslash.js`) himoyalari saqlanadi: lotin→kirill, kod-kanon,
+ * razdel nomi tozalash, chizma kodlari; BIRLIK QALQONI (Т↔КГ — hech qachon avto emas),
+ * MARKA FARQI (ПК↔ПБ → ehtimoliy zamena), resurslar faqat bog'langan ish ichida, har smeta
+ * qatori bir marta band. Avto-bog'lash faqat eng yaxshi nomzod ikkinchisidan ANIQ ustun
+ * bo'lganda; qolganlari — "◐ taklif" (operator tasdiqlaydi) yoki "✕ topilmadi" (nomzodlar,
+ * qo'shimcha/zamena).
+ *
+ * Qavatlar va ballar (jami ≈ 120):
+ *   1. Razdel     0…25  — eng yaqin razdel nomi, lokal smeta nomi ("СМЕТА № … НА X" — raqam
+ *                          e'tiborga olinmaydi, F2 va smetada farq qiladi), ЛИСТ, chizma kodi
+ *   2. Shifr      0…25  — aynan 25, kod-kanon 18
+ *   3. Nom        0…20  — aynan 20, o'xshash (raqamlari teng) Dice×15
+ *   4. Birlik     qalqon — farqli bo'lsa −100 (avto yo'q)
+ *   5. Hajm     −10…+10 — F2 hajmi ≤ smeta (qoldiq) +6; teng +10; oshsa −10
+ *   6. Resurslar −5…+25 — tarkib (kod/nom+birlik) Jaccard×15, norma tengligi ×7, tartib ×3
+ *   + xotira (o'tgan oy tasdiqlangan) — ball emas, darhol; marka farqi −30; tartib +2
+ */
+import { kodKanon, normBir, normKod, normNom, normRz, rzKodlar } from '../f2-match-engine';
+import type { F2Tugun } from '../smeta-anatomiya/f2';
+
+// ─── Kirish/chiqish ──────────────────────────────────────────────────────────
+
+/** Smeta (LRV) qatori — `t2_qator` dan. */
+export interface SmetaQator {
+  id: number;
+  otaId: number | null;
+  tur: 'rz' | 'bl' | 'rs' | 'mat' | 'ob' | string;
+  kod: string | null;
+  nom: string | null;
+  birlik: string | null;
+  hajm: number | null;
+  narx?: number | null;
+  tartib?: number | null;
+}
+
+export type F2Holat = 'aniq' | 'xotira' | 'taklif' | 'topilmadi';
+
+export interface Qavat { nom: 'razdel' | 'shifr' | 'nom' | 'birlik' | 'hajm' | 'resurslar' | 'marka' | 'tartib'; ball: number; izoh: string }
+
+export interface Nomzod {
+  qatorId: number;
+  ball: number;
+  /** Smetadagi yo'li (RZ nomlari). */
+  yol: string;
+  qavatlar: Qavat[];
+  /** Qisqa: ['razdel ✓', 'shifr ✓', …]. */
+  sabab: string[];
+}
+
+export interface F2QatorNatija {
+  uid: string;
+  holat: F2Holat;
+  qatorId: number | null;
+  usul?: string;
+  nomzodlar: Nomzod[];
+  sabab: string;
+}
+
+export interface RzDiag { f2Uid: string; nom: string; smetaRzIdlar: number[]; ok: boolean; usul: string }
+
+export interface F2MoslashOpts {
+  /** F2 imzosi → smeta qator id (o'tgan oylarda tasdiqlangan). */
+  xotira?: ReadonlyMap<string, number>;
+  /** F2 razdel uid → smeta razdel id (operator o'rgatgan). */
+  rzBog?: ReadonlyMap<string, number>;
+  /** smeta qator id → qolgan hajm (smeta − oldingi F2). Berilmasa smeta hajmi. */
+  qoldiq?: ReadonlyMap<number, number>;
+  /** Avto-bog'lash chegaralari (sinov uchun). */
+  avtoMin?: number;
+  avtoFarq?: number;
+}
+
+export interface F2MoslashNatija {
+  natijalar: Map<string, F2QatorNatija>;
+  rzDiag: RzDiag[];
+  stat: { aniq: number; xotira: number; taklif: number; topilmadi: number };
+}
+
+// ─── Normallashtirish ────────────────────────────────────────────────────────
+
+const nb = (nom: unknown, bir: unknown) => normNom(nom) + '||' + normBir(bir);
+const birMos = (a: unknown, b: unknown) => { const x = normBir(a), y = normBir(b); return !x || !y || x === y; };
+
+/** Razdel/lokal nomi kaliti: "СМЕТА № 01-01 НА X" → X (raqam F2 va smetada farq qiladi). */
+export function rzKalit(s: unknown): string {
+  const t = String(s ?? '').toUpperCase().replace(/Ё/g, 'Е')
+    .replace(/^\s*(РАЗДЕЛ\s*[:№.\-]*\s*)?(ЛОКАЛЬНАЯ\s+)?СМЕТА\s*№?\s*[\dA-ZА-Я.\-/]*\s*(НА\s+)?/, ' ');
+  return normRz(t);
+}
+function listRaqamlari(s: unknown): string {
+  const m = String(s ?? '').toUpperCase().match(/ЛИСТ[\s.\-№]*(?:[А-Я]{1,3}[\s.\-]*)?([0-9][0-9,\s.\-]*)/);
+  return m ? m[1].replace(/[^0-9,]/g, '').replace(/,+/g, ',').replace(/^,|,$/g, '') : '';
+}
+function tokenlar(s: unknown): string[] {
+  return String(s ?? '').toUpperCase().replace(/Ё/g, 'Е').split(/[^0-9A-Za-zА-Яа-я]+/).map(normNom).filter((t) => t.length >= 2);
+}
+function raqamlar(s: unknown): string {
+  return (String(s ?? '').match(/\d+([.,]\d+)?/g) || []).map((x) => x.replace(',', '.')).sort().join('|');
+}
+function dice(a: readonly string[], b: readonly string[]): number {
+  if (!a.length || !b.length) return 0;
+  const m = new Map<string, number>();
+  b.forEach((t) => m.set(t, (m.get(t) ?? 0) + 1));
+  let hit = 0;
+  a.forEach((t) => { const n = m.get(t) ?? 0; if (n > 0) { hit++; m.set(t, n - 1); } });
+  return (2 * hit) / (a.length + b.length);
+}
+/** Marka farqi (ПК↔ПБ, АI↔АIII) — boshqa mahsulot, avtomat bog'lanmaydi (Tizim1). */
+export function gradeFarq(a: unknown, b: unknown): boolean {
+  const A = tokenlar(a).filter((t) => /^[А-Я]{2,3}$/.test(t));
+  const B = tokenlar(b).filter((t) => /^[А-Я]{2,3}$/.test(t));
+  if (!A.length || !B.length) return false;
+  const sa = new Set(A), sb = new Set(B);
+  return A.some((t) => !sb.has(t)) && B.some((t) => !sa.has(t));
+}
+const resKalit = (kod: unknown, nom: unknown, bir: unknown) => normKod(kod) || nb(nom, bir);
+function lcsNisbat(a: readonly string[], b: readonly string[]): number {
+  if (!a.length || !b.length) return 0;
+  const dp = new Array(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = 0;
+    for (let j = 1; j <= b.length; j++) {
+      const t = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev + 1 : Math.max(dp[j], dp[j - 1]);
+      prev = t;
+    }
+  }
+  return dp[b.length] / Math.max(a.length, b.length);
+}
+
+/** Oy-dan-oyga barqaror F2 imzosi (xotira kaliti). */
+export function f2Imzo(t: Pick<F2Tugun, 'tur' | 'kod' | 'nom' | 'birlik' | 'yol'>, otaImzo?: string): string {
+  const yol = t.yol.map(rzKalit).filter(Boolean).join('/');
+  if (t.tur === 'rs') return `${otaImzo ?? yol}>${normKod(t.kod) || ''}|${nb(t.nom, t.birlik)}`;
+  return `${yol}|${kodKanon(t.kod) || normKod(t.kod)}|${nb(t.nom, t.birlik)}`;
+}
+
+// ─── Smeta indeksi ───────────────────────────────────────────────────────────
+
+interface STugun extends SmetaQator {
+  bolalar: STugun[]; ota: STugun | null; yol: string;
+  // oldindan hisoblangan kalitlar
+  kKod: string; kKanon: string; kNb: string; kTok: string[]; kRaq: string;
+  rzZanjir: string[];   // rzKalit lar ildizdan
+  rzTok: string[];      // eng yaqin razdel tokenlari
+  lokalTok: string[];   // eng yuqori (lokal) razdel tokenlari
+  rzList: string[];     // ЛИСТ raqamlari zanjirda
+  rzChizma: string[];
+  resKalitlar: string[];
+  resNorma: Map<string, number>;
+}
+
+function smetaIndeksi(qatorlar: readonly SmetaQator[]) {
+  const byId = new Map<number, STugun>();
+  for (const q of qatorlar) {
+    byId.set(q.id, {
+      ...q, bolalar: [], ota: null, yol: '', kKod: normKod(q.kod), kKanon: kodKanon(q.kod), kNb: nb(q.nom, q.birlik),
+      kTok: tokenlar(q.nom), kRaq: raqamlar(q.nom), rzZanjir: [], rzTok: [], lokalTok: [], rzList: [], rzChizma: [], resKalitlar: [], resNorma: new Map(),
+    });
+  }
+  const tartibli = [...qatorlar].sort((a, b) => (a.tartib ?? a.id) - (b.tartib ?? b.id) || a.id - b.id);
+  const ildiz: STugun[] = [];
+  for (const q of tartibli) {
+    const t = byId.get(q.id)!;
+    const ota = q.otaId != null ? byId.get(q.otaId) : undefined;
+    if (ota) { t.ota = ota; ota.bolalar.push(t); } else ildiz.push(t);
+  }
+  const yur = (t: STugun, yol: string, zanjir: STugun[]) => {
+    t.yol = yol;
+    const rzlar = zanjir;
+    t.rzZanjir = rzlar.map((r) => rzKalit(r.nom));
+    t.rzTok = rzlar.length ? tokenlar(rzKalit(rzlar[rzlar.length - 1].nom)) : [];
+    t.lokalTok = rzlar.length ? tokenlar(rzKalit(rzlar[0].nom)) : [];
+    t.rzList = rzlar.map((r) => listRaqamlari(r.nom)).filter(Boolean);
+    t.rzChizma = rzlar.flatMap((r) => rzKodlar(r.nom));
+    const bu = t.tur === 'rz' ? (yol ? `${yol} › ${t.nom ?? ''}` : String(t.nom ?? '')) : yol;
+    const keyingi = t.tur === 'rz' ? [...zanjir, t] : zanjir;
+    for (const b of t.bolalar) yur(b, bu, keyingi);
+    if (t.tur !== 'rz' && t.bolalar.length) {
+      t.resKalitlar = t.bolalar.map((b) => resKalit(b.kod, b.nom, b.birlik));
+      for (const b of t.bolalar) if (b.hajm != null && t.hajm) t.resNorma.set(resKalit(b.kod, b.nom, b.birlik), b.hajm / t.hajm);
+    }
+  };
+  for (const t of ildiz) yur(t, '', []);
+  const ishlar = [...byId.values()].filter((t) => t.tur !== 'rz' && (t.tur === 'bl' || !t.ota || t.ota.tur === 'rz'));
+  const idx = (f: (t: STugun) => string) => {
+    const m = new Map<string, STugun[]>();
+    for (const t of ishlar) { const k = f(t); if (k) { const a = m.get(k); if (a) a.push(t); else m.set(k, [t]); } }
+    return m;
+  };
+  const tokIdx = new Map<string, STugun[]>();
+  for (const t of ishlar) for (const tok of new Set(t.kTok)) if (tok.length >= 4) { const a = tokIdx.get(tok); if (a) a.push(t); else tokIdx.set(tok, [t]); }
+  return { byId, ildiz, ishlar, byKod: idx((t) => t.kKod), byKanon: idx((t) => t.kKanon), byNb: idx((t) => t.kNb), tokIdx };
+}
+
+// ─── Dvigatel ────────────────────────────────────────────────────────────────
+
+export function f2MoslashV3(f2: readonly F2Tugun[], smeta: readonly SmetaQator[], opts: F2MoslashOpts = {}): F2MoslashNatija {
+  const S = smetaIndeksi(smeta);
+  const natijalar = new Map<string, F2QatorNatija>();
+  const rzDiag: RzDiag[] = [];
+  const band = new Set<number>();
+  const AVTO_MIN = opts.avtoMin ?? 75;
+  const AVTO_FARQ = opts.avtoFarq ?? 12;
+  const barchaRz = [...S.byId.values()].filter((t) => t.tur === 'rz');
+  const ajdodmi = (a: STugun, b: STugun) => { for (let t = b.ota; t; t = t.ota) if (t === a) return true; return false; };
+  /** Oxirgi bog'langan smeta tartibi (lokal bo'yicha) — tartib bonusi. */
+  let oxirgiTartib = -1;
+
+  // ── Razdel doirasi (ierarxik): bonus uchun, qat'iy cheklov emas ──
+  type Doira = { rzlar: STugun[] | null };
+  function doiraTop(rz: F2Tugun, ota: Doira): Doira {
+    const qolda = opts.rzBog?.get(rz.uid);
+    if (qolda != null && S.byId.get(qolda)) {
+      rzDiag.push({ f2Uid: rz.uid, nom: rz.nom, smetaRzIdlar: [qolda], ok: true, usul: 'qolda' });
+      return { rzlar: [S.byId.get(qolda)!] };
+    }
+    const nomzod = ota.rzlar ? barchaRz.filter((s) => ota.rzlar!.some((o) => ajdodmi(o, s))) : barchaRz;
+    const k = rzKalit(rz.nom);
+    let mos = k ? nomzod.filter((s) => rzKalit(s.nom) === k) : [];
+    let usul = 'nom';
+    if (!mos.length) {
+      const kodlar = new Set(rzKodlar(rz.nom));
+      if (kodlar.size) { mos = nomzod.filter((s) => rzKodlar(s.nom).some((x) => kodlar.has(x))); usul = 'chizma_kodi'; }
+    }
+    if (!mos.length && k) {
+      const ft = tokenlar(rzKalit(rz.nom));
+      const ball = nomzod.map((s) => ({ s, d: dice(ft, tokenlar(rzKalit(s.nom))) })).filter((x) => x.d >= 0.75).sort((a, b) => b.d - a.d);
+      if (ball.length) { mos = ball.filter((x) => x.d >= ball[0].d - 0.01).map((x) => x.s); usul = 'nom_oxshash'; }
+    }
+    if (mos.length > 1) {
+      // F2 razdeli bir nechta varaqni qamrashi mumkin ("ЛИСТ.-8,9,15") — to'plam bo'yicha.
+      const lr = new Set(listRaqamlari(rz.nom).split(',').filter(Boolean));
+      const aniq = lr.size ? mos.filter((s) => listRaqamlari(s.nom).split(',').some((x) => lr.has(x))) : [];
+      if (aniq.length) { mos = aniq; usul += '+list'; }
+    }
+    if (mos.length > 1) mos = mos.filter((s) => !mos.some((b) => b !== s && ajdodmi(s, b)));
+    if (!mos.length) {
+      rzDiag.push({ f2Uid: rz.uid, nom: rz.nom, smetaRzIdlar: [], ok: false, usul: 'ota_doirasi' });
+      return ota;
+    }
+    rzDiag.push({ f2Uid: rz.uid, nom: rz.nom, smetaRzIdlar: mos.map((s) => s.id), ok: true, usul });
+    return { rzlar: mos };
+  }
+  const doiradami = (d: Doira, t: STugun) => !!d.rzlar && d.rzlar.some((r) => ajdodmi(r, t));
+
+  // ── Qavatma-qavat ball ──
+  function ballHisobla(f: F2Tugun, t: STugun, d: Doira): Nomzod {
+    const q: Qavat[] = [];
+    // 1. Razdel
+    let rz = 0;
+    const fYol = f.yol.map(rzKalit).filter(Boolean);
+    const fYaqin = fYol.length ? tokenlar(fYol[fYol.length - 1]) : [];
+    const fLokal = fYol.length ? tokenlar(fYol[0]) : [];
+    if (doiradami(d, t)) rz += 8;
+    const dYaqin = dice(fYaqin, t.rzTok);
+    rz += Math.round(dYaqin * 8);
+    const dLokal = fLokal.length ? Math.max(...t.rzZanjir.map((z) => dice(fLokal, tokenlar(z))), 0) : 0;
+    rz += Math.round(dLokal * 5);
+    const fList = new Set(f.yol.flatMap((y) => listRaqamlari(y).split(',')).filter(Boolean));
+    if (fList.size && t.rzList.some((l) => l.split(',').some((x) => fList.has(x)))) rz += 4;
+    const fCh = new Set(f.yol.flatMap((y) => rzKodlar(y)));
+    if (fCh.size && t.rzChizma.some((c) => fCh.has(c))) rz += 3;
+    rz = Math.min(rz, 25);
+    q.push({ nom: 'razdel', ball: rz, izoh: rz >= 15 ? 'razdel ✓' : rz >= 6 ? 'razdel ≈' : 'razdel ✗' });
+    // 2. Shifr
+    const fk = normKod(f.kod), fkan = kodKanon(f.kod);
+    const sh = fk && t.kKod === fk ? 25 : fkan && t.kKanon === fkan ? 18 : 0;
+    q.push({ nom: 'shifr', ball: sh, izoh: sh === 25 ? 'shifr ✓' : sh ? 'shifr ≈ (kanon)' : f.kod ? 'shifr ✗' : 'shifr —' });
+    // 3. Nom
+    let nm = 0;
+    if (normNom(f.nom) === normNom(t.nom)) nm = 20;
+    else if (raqamlar(f.nom) === t.kRaq) nm = Math.round(dice(tokenlar(f.nom), t.kTok) * 15);
+    q.push({ nom: 'nom', ball: nm, izoh: nm === 20 ? 'nom ✓' : nm >= 10 ? 'nom ≈' : 'nom ✗' });
+    // 4. Birlik — qalqon
+    const bm = birMos(f.birlik, t.birlik);
+    q.push({ nom: 'birlik', ball: bm ? 0 : -100, izoh: bm ? 'birlik ✓' : `birlik ✗ (${f.birlik ?? '?'} ↔ ${t.birlik ?? '?'})` });
+    // 5. Hajm
+    let hj = 0; let hIzoh = 'hajm —';
+    const chegara = opts.qoldiq?.get(t.id) ?? t.hajm;
+    if (f.hajm != null && chegara != null && chegara > 0) {
+      if (t.hajm != null && Math.abs(f.hajm - t.hajm) <= Math.abs(t.hajm) * 0.005) { hj = 10; hIzoh = 'hajm = smeta'; }
+      else if (f.hajm <= chegara * 1.001) { hj = 6; hIzoh = 'hajm ≤ qoldiq'; }
+      else { hj = -10; hIzoh = `hajm > qoldiq (${f.hajm} > ${+chegara.toFixed(4)})`; }
+    }
+    q.push({ nom: 'hajm', ball: hj, izoh: hIzoh });
+    // 6. Resurslar
+    let rs = 0; let rIzoh = 'resurslar —';
+    if (f.bolalar.length && t.resKalitlar.length) {
+      const fk2 = f.bolalar.map((r) => resKalit(r.kod, r.nom, r.birlik));
+      const A = new Set(fk2), B = new Set(t.resKalitlar);
+      const kesish = [...A].filter((x) => B.has(x));
+      const jac = kesish.length / new Set([...A, ...B]).size;
+      let normaTeng = 0;
+      for (const r of f.bolalar) {
+        const k = resKalit(r.kod, r.nom, r.birlik);
+        const sn = t.resNorma.get(k);
+        if (sn != null && r.norma != null && Math.abs(sn - r.norma) <= Math.max(Math.abs(r.norma) * 0.01, 1e-6)) normaTeng++;
+      }
+      rs = Math.round(jac * 15 + (normaTeng / Math.max(f.bolalar.length, 1)) * 7 + lcsNisbat(fk2, t.resKalitlar) * 3);
+      rIzoh = `resurslar ${kesish.length}/${Math.max(A.size, B.size)}${normaTeng ? `, norma ${normaTeng}` : ''}`;
+    } else if (f.bolalar.length && !t.resKalitlar.length) { rs = -5; rIzoh = 'smetada resurssiz'; }
+    q.push({ nom: 'resurslar', ball: rs, izoh: rIzoh });
+    // Marka farqi, tartib
+    if (gradeFarq(f.nom, t.nom)) q.push({ nom: 'marka', ball: -30, izoh: 'marka farqli — ehtimoliy zamena' });
+    if (oxirgiTartib >= 0 && (t.tartib ?? t.id) > oxirgiTartib) q.push({ nom: 'tartib', ball: 2, izoh: 'tartib ✓' });
+    const ball = q.reduce((s, x) => s + x.ball, 0);
+    return { qatorId: t.id, ball, yol: t.yol, qavatlar: q, sabab: q.filter((x) => x.nom !== 'tartib').map((x) => x.izoh) };
+  }
+
+  function nomzodHovuz(f: F2Tugun, d: Doira): STugun[] {
+    const out = new Set<STugun>();
+    const qosh = (a?: STugun[]) => a?.forEach((t) => out.add(t));
+    const fk = normKod(f.kod), fkan = kodKanon(f.kod);
+    if (fk) qosh(S.byKod.get(fk));
+    if (fkan) qosh(S.byKanon.get(fkan));
+    qosh(S.byNb.get(nb(f.nom, f.birlik)));
+    if (out.size < 3) {
+      // Noyob so'zlar (≥4 harf) — kamida 2 tasi umumiy nomzodlar, doira ichidagilar ustun.
+      const hisob = new Map<STugun, number>();
+      for (const tok of new Set(tokenlar(f.nom))) {
+        const a = S.tokIdx.get(tok);
+        if (!a || a.length > 400) continue;
+        for (const t of a) hisob.set(t, (hisob.get(t) ?? 0) + 1);
+      }
+      [...hisob.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 60).forEach(([t]) => out.add(t));
+    }
+    const turMos = (t: STugun) => (f.tur === 'bl' ? t.tur === 'bl' || !t.bolalar.length : true);
+    return [...out].filter((t) => !band.has(t.id) && turMos(t) && (d.rzlar ? true : true));
+  }
+
+  function yoz(uid: string, n: F2QatorNatija) {
+    natijalar.set(uid, n);
+    if (n.qatorId != null) {
+      band.add(n.qatorId);
+      const t = S.byId.get(n.qatorId);
+      if (t && (n.holat === 'aniq' || n.holat === 'xotira')) oxirgiTartib = t.tartib ?? t.id;
+    }
+  }
+
+  function ishniMosla(f: F2Tugun, d: Doira, otaImzo: string): STugun | null {
+    const imzo = f2Imzo(f, otaImzo);
+    const x = opts.xotira?.get(imzo);
+    const xt = x != null ? S.byId.get(x) : undefined;
+    if (xt && !band.has(xt.id) && birMos(f.birlik, xt.birlik)) {
+      yoz(f.uid, { uid: f.uid, holat: 'xotira', qatorId: xt.id, usul: 'xotira', nomzodlar: [], sabab: 'o‘tgan oylarda tasdiqlangan bog‘lanish' });
+      return xt;
+    }
+    // Tizim1: doira ichida nomzod bo'lsa — faqat doira; global faqat doira bo'sh bo'lsa.
+    const hovuz = nomzodHovuz(f, d);
+    const ichida = d.rzlar ? hovuz.filter((t) => doiradami(d, t)) : [];
+    const nz = (ichida.length ? ichida : hovuz).map((t) => ballHisobla(f, t, d))
+      .sort((a, b) => b.ball - a.ball || (S.byId.get(a.qatorId)!.tartib ?? a.qatorId) - (S.byId.get(b.qatorId)!.tartib ?? b.qatorId)).slice(0, 12);
+    const [b1, b2] = nz;
+    const toza = (n: Nomzod) => !n.qavatlar.some((q) => (q.nom === 'birlik' || q.nom === 'marka') && q.ball < 0);
+    // EGIZAKLAR (Tizim1 `ekvivmi` → birinchi bo'sh): eng yuqori ballli nomzodlar shifr, nom,
+    // birlik va resurs tarkibi bo'yicha AYNAN bir xil bo'lsa — qaysi biri ekani ma'lumotdan
+    // ajralmaydi; F2 tartibi smeta tartibiga tekislanadi (nz tartib bo'yicha saralangan).
+    if (b1 && b2 && toza(b1) && b1.ball >= AVTO_MIN && b1.ball - b2.ball < AVTO_FARQ) {
+      const t1 = S.byId.get(b1.qatorId)!;
+      const egizak = (n: Nomzod) => { const t = S.byId.get(n.qatorId)!; return t.kKod === t1.kKod && t.kNb === t1.kNb && t.resKalitlar.join() === t1.resKalitlar.join(); };
+      const teng = nz.filter((n) => b1.ball - n.ball < AVTO_FARQ);
+      if (teng.every(egizak) && teng.every((n) => n.ball === b1.ball)) {
+        yoz(f.uid, { uid: f.uid, holat: 'aniq', qatorId: b1.qatorId, usul: 'tartib', nomzodlar: nz, sabab: `bir xil ish ${teng.length} joyda (shifr, nom, birlik, resurslar teng) — tartib bo‘yicha birinchi bo‘shi` });
+        return t1;
+      }
+    }
+    if (b1 && toza(b1) && b1.ball >= AVTO_MIN && (!b2 || b1.ball - b2.ball >= AVTO_FARQ)) {
+      yoz(f.uid, { uid: f.uid, holat: 'aniq', qatorId: b1.qatorId, usul: 'ball', nomzodlar: nz, sabab: `${b1.ball} ball: ${b1.sabab.join(', ')}` });
+      return S.byId.get(b1.qatorId)!;
+    }
+    // Hal qiluvchi dalil: F2 hajmi aynan b1 ning smeta hajmiga teng, qolganlariniki emas —
+    // PTO shu ishni to'liq yopgan (bu tasodif bo'lishi ehtimoli juda past).
+    const hajmTeng = (n?: Nomzod) => !!n?.qavatlar.some((q) => q.nom === 'hajm' && q.ball === 10);
+    if (b1 && toza(b1) && b1.ball >= AVTO_MIN && hajmTeng(b1) && nz.slice(1).every((n) => !hajmTeng(n) && b1.ball > n.ball)) {
+      yoz(f.uid, { uid: f.uid, holat: 'aniq', qatorId: b1.qatorId, usul: 'hajm_aynan', nomzodlar: nz, sabab: `${b1.ball} ball, F2 hajmi aynan shu qatorning smeta hajmiga teng: ${b1.sabab.join(', ')}` });
+      return S.byId.get(b1.qatorId)!;
+    }
+    if (b1 && toza(b1) && b1.ball >= 45) {
+      const izoh = b2 && b1.ball - b2.ball < AVTO_FARQ ? `2 ta nomzod yaqin (${b1.ball} va ${b2.ball})` : `${b1.ball} ball`;
+      yoz(f.uid, { uid: f.uid, holat: 'taklif', qatorId: b1.qatorId, usul: 'ball', nomzodlar: nz, sabab: `${izoh}: ${b1.sabab.join(', ')} — tasdiqlang` });
+      return S.byId.get(b1.qatorId)!;
+    }
+    const sab = !nz.length ? 'smetada mos shifr/nom yo‘q — qo‘shimcha ish yoki zamena'
+      : !toza(nz[0]) ? `eng yaqin nomzod: ${nz[0].sabab.filter((s) => s.includes('✗') || s.includes('farqli')).join(', ')} — qo‘lda tekshiring (zamena bo‘lishi mumkin)`
+        : `${nz.length} ta nomzod, eng yuqori ${nz[0].ball} ball — qo‘lda tanlang yoki qo‘shimcha/zamena`;
+    yoz(f.uid, { uid: f.uid, holat: 'topilmadi', qatorId: null, nomzodlar: nz, sabab: sab });
+    return null;
+  }
+
+  /** Resurslar faqat bog'langan ish ichida (Tizim1). Topilmasa — zamena material/qo'shimcha resurs. */
+  function resurslarniMosla(fIsh: F2Tugun, sIsh: STugun | null, otaImzo: string) {
+    for (const r of fIsh.bolalar) {
+      if (!sIsh) {
+        yoz(r.uid, { uid: r.uid, holat: 'topilmadi', qatorId: null, nomzodlar: [], sabab: 'ishi bog‘lanmagan — ish hal qilinganda resurs ham hal bo‘ladi' });
+        continue;
+      }
+      const ichki = sIsh.bolalar.filter((t) => t.tur !== 'rz' && !band.has(t.id));
+      const x = opts.xotira?.get(f2Imzo(r, otaImzo));
+      if (x != null && ichki.some((t) => t.id === x)) {
+        yoz(r.uid, { uid: r.uid, holat: 'xotira', qatorId: x, usul: 'xotira', nomzodlar: [], sabab: 'o‘tgan oylarda tasdiqlangan' });
+        continue;
+      }
+      const rk = normKod(r.kod), rkan = kodKanon(r.kod), rnb = nb(r.nom, r.birlik);
+      let topildi: STugun | null = null; let usul = '';
+      for (const [u, c] of [
+        ['kod', rk ? ichki.filter((t) => t.kKod === rk) : []],
+        ['kanon', rkan ? ichki.filter((t) => t.kKanon === rkan) : []],
+        ['nomBir', ichki.filter((t) => t.kNb === rnb)],
+      ] as Array<[string, STugun[]]>) {
+        if (c.length === 1) { topildi = c[0]; usul = u; break; }
+      }
+      if (topildi && birMos(r.birlik, topildi.birlik) && !gradeFarq(r.nom, topildi.nom)) {
+        yoz(r.uid, { uid: r.uid, holat: 'aniq', qatorId: topildi.id, usul: `ish_ichida:${usul}`, nomzodlar: [], sabab: 'ish ichida yagona' });
+        continue;
+      }
+      const nz: Nomzod[] = ichki.map((t) => {
+        const qv: Qavat[] = [];
+        const kb = rk && t.kKod === rk ? 30 : 0;
+        qv.push({ nom: 'shifr', ball: kb, izoh: kb ? 'kod ✓' : 'kod ✗' });
+        const nmb = Math.round(dice(tokenlar(r.nom), t.kTok) * 25);
+        qv.push({ nom: 'nom', ball: nmb, izoh: `nom ${Math.round(nmb * 4)}%` });
+        const bmb = birMos(r.birlik, t.birlik);
+        qv.push({ nom: 'birlik', ball: bmb ? 10 : -40, izoh: bmb ? 'birlik ✓' : 'birlik ✗' });
+        const ball = qv.reduce((s, y) => s + y.ball, 0);
+        return { qatorId: t.id, ball, yol: t.yol, qavatlar: qv, sabab: qv.map((y) => y.izoh) };
+      }).filter((n) => n.ball > 0).sort((a, b) => b.ball - a.ball).slice(0, 8);
+      yoz(r.uid, { uid: r.uid, holat: 'topilmadi', qatorId: null, nomzodlar: nz, sabab: topildi ? 'birlik yoki marka farqli — zamena material bo‘lishi mumkin' : 'smeta ishida bu resurs yo‘q — zamena material yoki qo‘shimcha resurs' });
+    }
+  }
+
+  function yur(tugunlar: readonly F2Tugun[], d: Doira) {
+    for (const t of tugunlar) {
+      if (t.tur === 'rz') { yur(t.bolalar, doiraTop(t, d)); continue; }
+      const s = ishniMosla(t, d, t.yol.map(rzKalit).join('/'));
+      if (t.tur === 'bl') resurslarniMosla(t, s, f2Imzo(t));
+    }
+  }
+  yur(f2, { rzlar: null });
+
+  const stat = { aniq: 0, xotira: 0, taklif: 0, topilmadi: 0 };
+  for (const n of natijalar.values()) stat[n.holat]++;
+  return { natijalar, rzDiag, stat };
+}
