@@ -13,6 +13,7 @@ import { f2QoralamaHujjat } from '../../lib/f2-native-export';
 import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 import { NDS_SUKUT_FOIZ } from '../../lib/nakopitelniy-vedomost-export';
+import { t2ObyektNakrutka } from '../../api/t2-nakrutka';
 
 type Draft = Omit<F2NativeInput, 'qatorId'>;
 const boshDraft: Draft = { quantity: '', unitPrice: '', amount: '', sourceReference: '', priceIntentionallyAbsent: false };
@@ -124,8 +125,11 @@ export function F2TayyorlashNative() {
     if (!object) { toast('Kanonik obyekt topilmadi.', 'danger'); return; }
     try {
       const stavka = ndsFoiz.trim() === '' ? null : Number(ndsFoiz.replace(',', '.'));
+      // Ikki narx (egasi): к оплате = прямые × Kf — obyekt nakrutka foizlari.
+      const nk = await t2ObyektNakrutka(obyektId).catch(() => null);
       const h = f2QoralamaHujjat(qatorlar, tekshiruv.qatorlar, {
         obyektNom: object.nom, davr: oy, imzo: tomonlar, ndsFoiz: stavka != null && Number.isFinite(stavka) ? stavka : null,
+        nakrutka: nk?.ok ? nk.koeffitsientlar ?? null : null,
       });
       downloadBlob(h.bytes, h.faylNomi);
     } catch { toast('Forma-2 Excel qoralamasini yaratib bo‘lmadi.', 'danger'); }

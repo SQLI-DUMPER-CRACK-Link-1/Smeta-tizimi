@@ -3,6 +3,8 @@ import type { F2NativePayloadRow } from './f2-native-preparation';
 import type { QatorHolat } from '../api/t2-fakt';
 import { RasmiyVaraq, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2, type ImzoNomlar, type RasmiyUstun } from './hujjat-yozuvchi';
 import { davrMatni } from './nakopitelniy-vedomost-export';
+import type { NakrutkaKoeffitsientlar } from '../api/t2-nakrutka';
+import { NAKRUTKA_KATLAR, kOplate, kategoriyaKf, nakrutkaKat, nakrutkaPodvaliYoz, podvalKfQatorlari, type KatSummalar } from './nakrutka-podval';
 
 /**
  * Native F2 qoralamasini mavjud rasmiy Excel proyeksiyasiga o‘giradi.
@@ -62,6 +64,8 @@ export type F2QoralamaOpsiya = {
   imzo?: ImzoNomlar;
   shartnoma?: string | null;
   ndsFoiz?: number | null;
+  /** Obyekt nakrutka foizlari — к оплате = прямые × Kf. Berilmasa 0 %. */
+  nakrutka?: Partial<NakrutkaKoeffitsientlar> | null;
 };
 
 const QORALAMA_USTUNLAR: RasmiyUstun[] = [
@@ -77,6 +81,8 @@ const QORALAMA_USTUNLAR: RasmiyUstun[] = [
   { sarlavha: 'принято ранее', kenglik: 12, tur: 'hajm', guruh: 'КОЛИЧЕСТВО НАРАСТАЮЩИМ ИТОГОМ' },
   { sarlavha: 'с начала строительства', kenglik: 13, tur: 'hajm', guruh: 'КОЛИЧЕСТВО НАРАСТАЮЩИМ ИТОГОМ' },
   { sarlavha: 'Основание (документ, стр.)', kenglik: 18, tur: 'matn' },
+  { sarlavha: 'К оплате (с накладными расходами и НДС), сум', kenglik: 17, tur: 'pul' },
+  { sarlavha: 'Кат.', kenglik: 6, tur: 'texnik', yashirin: true },
 ];
 
 /**
@@ -85,7 +91,7 @@ const QORALAMA_USTUNLAR: RasmiyUstun[] = [
  * bilan to'ldirilmaydi); "Расчет" va "Отклонение" — faqat nazorat ustunlari.
  * Narx/summa manbada ataylab yo'q bo'lsa — katak bo'sh, jami bo'sh (H7).
  */
-export function f2QoralamaHujjat(qatorlar: readonly QatorHolat[], certified: readonly F2NativePayloadRow[], o: F2QoralamaOpsiya): { bytes: Uint8Array; faylNomi: string; jami: number | null } {
+export function f2QoralamaHujjat(qatorlar: readonly QatorHolat[], certified: readonly F2NativePayloadRow[], o: F2QoralamaOpsiya): { bytes: Uint8Array; faylNomi: string; jami: number | null; kOplata: number | null; jamiNds: number | null } {
   const rows = f2NativeExportRowsQur(qatorlar, certified);
   if (!rows.length) throw new Error('F2_QORALAMA_BOSH');
   const holat = new Map(qatorlar.map((q) => [q.qator_id, q]));
@@ -100,6 +106,14 @@ export function f2QoralamaHujjat(qatorlar: readonly QatorHolat[], certified: rea
   });
   const diqqat: Array<{ nom: string; sabab: string }> = [];
   const dataRows: number[] = [];
+  // Ikki narx: M = ROUND(G × Kf[kat], 2); podval ИТОГО dan keyin bitta bo'sh qatordan so'ng.
+  const nk: Partial<NakrutkaKoeffitsientlar> = { ...(o.nakrutka ?? {}) };
+  if (o.ndsFoiz != null && Number.isFinite(o.ndsFoiz) && o.ndsFoiz >= 0) nk.НДС = o.ndsFoiz;
+  const kfJS = kategoriyaKf(nk);
+  const bosh0 = v.malumotBoshi;
+  const kfQ = podvalKfQatorlari(bosh0 + rows.length + 2);
+  const ks = Object.fromEntries(NAKRUTKA_KATLAR.map((k) => [k, 0])) as KatSummalar;
+  let kOplata: number | null = 0;
   let jami: number | null = 0;
   rows.forEach((row, i) => {
     const kod = holat.get(Number(row.lineId))?.kod ?? '';
@@ -110,6 +124,11 @@ export function f2QoralamaHujjat(qatorlar: readonly QatorHolat[], certified: rea
     const nom = `${row.description}${row.unit ? `, ${row.unit}` : ''}`;
     if (summa == null) diqqat.push({ nom, sabab: 'в документе нет цены/суммы — итог не определен' });
     else if (hisob != null && Math.abs(hisob - summa) > 0.005) diqqat.push({ nom, sabab: `сумма документа отличается от расчета кол-во × цена на ${(summa - hisob).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} сум — принята сумма документа` });
+    const kat = nakrutkaKat(holat.get(Number(row.lineId))?.kat);
+    const ko = kOplate(summa, kat, kfJS);
+    kOplata = kOplata == null || ko == null ? null : kOplata + ko;
+    if (kat && summa != null) ks[kat] += summa;
+    if (!kat) diqqat.push({ nom, sabab: 'не указан вид затрат — стоимость к оплате не определена' });
     dataRows.push(v.qator('oddiy', (r) => [
       i + 1, kod, row.description, row.unit, row.currentQuantity, narx, summa,
       { f: `IF(F${r}="","",ROUND(E${r}*F${r},2))`, v: hisob ?? '' },
@@ -117,24 +136,25 @@ export function f2QoralamaHujjat(qatorlar: readonly QatorHolat[], certified: rea
       row.previousQuantity,
       { f: `J${r}+E${r}`, v: row.previousQuantity + row.currentQuantity },
       manba.get(Number(row.lineId)) ?? '',
+      kat ? { f: `IF(G${r}="","",ROUND(G${r}*F${kfQ[kat]},2))`, v: ko ?? '' } : null,
+      kat,
     ]));
   });
   const a = dataRows[0], b = dataRows[dataRows.length - 1];
-  const itogoRow = v.qator('vsego', (r) => [null, null, 'ИТОГО ПО АКТУ', null, null, null,
-    { f: `IF(COUNTBLANK(G${a}:G${b})>0,"",SUM(G${a}:G${b}))`, v: jami ?? '' }, null, null, null, null, null]);
-  void itogoRow;
-  const stavka = o.ndsFoiz != null && Number.isFinite(o.ndsFoiz) && o.ndsFoiz >= 0 ? o.ndsFoiz : null;
+  const kJami = kOplata as number | null;
+  v.qator('vsego', () => [null, null, 'ИТОГО ПО АКТУ (прямые затраты)', null, null, null,
+    { f: `IF(COUNTBLANK(G${a}:G${b})>0,"",SUM(G${a}:G${b}))`, v: jami ?? '' }, null, null, null, null, null,
+    { f: `IF(COUNTBLANK(M${a}:M${b})>0,"",SUM(M${a}:M${b}))`, v: kJami == null ? '' : yaxlit2(kJami) }, null]);
   const jamiQ = jami as number | null;
-  const nds = stavka == null || jamiQ == null ? null : yaxlit2(jamiQ * stavka / 100);
-  const ndsRow = v.qator('jami', (r) => [null, null, stavka == null ? 'НДС (ставка не указана)' : `НДС ${String(stavka).replace('.', ',')}%`, null, null, null,
-    stavka == null ? null : { f: `IF(G${r - 1}="","",ROUND(G${r - 1}*${stavka}/100,2))`, v: nds ?? '' }, null, null, null, null, null]);
-  v.qator('vsego', (r) => [null, null, 'ВСЕГО ПО АКТУ С НДС', null, null, null,
-    stavka == null ? null : { f: `IF(OR(G${r - 2}="",G${ndsRow}=""),"",G${r - 2}+G${ndsRow})`, v: nds == null || jamiQ == null ? '' : jamiQ + nds }, null, null, null, null, null]);
-  if (stavka == null) diqqat.push({ nom: 'НДС', sabab: 'ставка НДС не указана — сумма НДС и итог с НДС не определены' });
   v.bosh();
-  v.izoh('Проект акта сформирован по данным документов формы № 2 за период. Сумма по позиции — сумма документа; графа «Расчет» приведена для контроля и не заменяет сумму документа.');
+  const p = nakrutkaPodvaliYoz(v, { katUstun: 'N', oraliq: [a, b], pulUstunlar: ['G'], foizUstun: 'F', nk, katSummalar: { G: ks } });
+  if (p.kfQator.ЧЕЛ !== kfQ.ЧЕЛ) throw new Error('F2_QORALAMA_PODVAL_SILJIDI');
+  if (!o.nakrutka || !Object.keys(o.nakrutka).length) diqqat.push({ nom: 'Проценты накладных и прочих расходов', sabab: 'не заданы для объекта (договора) — в расчете приняты 0 %' });
+  v.bosh();
+  v.izoh('Проект акта сформирован по данным документов формы № 2 за период. Сумма по позиции — сумма документа (прямые затраты); графа «Расчет» приведена для контроля и не заменяет сумму документа.');
+  v.izoh('Графа 13 — стоимость к оплате: прямые затраты × коэффициент по виду затрат (раздел «Расчет стоимости к оплате»); расхождение с итогом расчета — только округление.');
   v.diqqat(diqqat);
   v.imzo(imzoTomonlari(['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'ТЕХНАДЗОР'], o.imzo));
   const { bytes } = rasmiyKitob([v]);
-  return { bytes, faylNomi: hujjatFaylNomi({ obyekt: o.obyektNom, hujjat: 'ПРОЕКТ_АКТА_Ф-2', davr: o.davr.slice(0, 7) }), jami: jamiQ };
+  return { bytes, faylNomi: hujjatFaylNomi({ obyekt: o.obyektNom, hujjat: 'ПРОЕКТ_АКТА_Ф-2', davr: o.davr.slice(0, 7) }), jami: jamiQ, kOplata: kJami == null ? null : yaxlit2(kJami), jamiNds: jamiQ == null ? null : p.kaskad.G.vsego };
 }

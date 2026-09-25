@@ -3,6 +3,9 @@ import {
   RasmiyVaraq, bugunSana, sumRefs, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2,
   type ImzoNomlar, type Qiymat, type RasmiyUstun,
 } from './hujjat-yozuvchi';
+import type { NakrutkaKoeffitsientlar } from '../api/t2-nakrutka';
+import { NAKRUTKA_KATLAR, kOplate, kategoriyaKf, nakrutkaKat, nakrutkaPodvaliYoz, podvalKfQatorlari, type KatSummalar } from './nakrutka-podval';
+import { bosRefs } from './hujjat-yozuvchi';
 
 /**
  * OSTATKA — bajarilmay qolgan ishlar smeta shaklida (egasi 2026-09-23: "tizim
@@ -142,6 +145,10 @@ export type OstatkaHujjatOpsiya = {
   /** "По состоянию на" — sana (YYYY-MM-DD). Berilmasa — bugun. */
   sana?: string;
   imzo?: ImzoNomlar;
+  /** Obyekt nakrutka foizlari — остаток к оплате = прямые × Kf. Berilmasa 0 %. */
+  nakrutka?: Partial<NakrutkaKoeffitsientlar> | null;
+  /** НДС stavkasi (sukut: nakrutkadagi НДС, u ham bo'lmasa 12 %). */
+  ndsFoiz?: number | null;
 };
 
 /** Hujjat modeli qatori — UI va Excel bir xil sonni shu modeldan oladi. */
@@ -160,6 +167,8 @@ export type OstatkaModelQator = {
   summa: number | null;
   /** Noma'lum pul pozitsiyalari soni (bu qator va uning ostida). */
   nomalum: number;
+  /** Resurs kategoriyasi (barg) — к оплате koeffitsienti uchun. */
+  kat?: string | null;
   /** Qaysi qatorlar yig'indisi (itogo/bl/rz uchun) — model indekslari. */
   bolalar: number[];
 };
@@ -239,7 +248,7 @@ export function ostatkaHujjatModeli(qatorlar: readonly T2Qator[], holatlar: read
       if (kutilmoqda?.holat === 'qoralama') diqqat.push({ nom: `${q.nom ?? ''}${q.birlik ? `, ${q.birlik}` : ''}`, sabab: `исключение из остатка на согласовании (${kutilmoqda.asos}${kutilmoqda.sabab ? `; ${kutilmoqda.sabab}` : ''}) — до утверждения учитывается в остатке`, joy: yolOf(q) || undefined });
       barglar++;
       const tartib = blNo ? `${blNo}.${k}` : String(++no);
-      out.push({ id: q.id, tur: 'barg', daraja, tartib, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', smetaHajm: smeta, faktHajm: fakt, ostatkaHajm: o, narx, summa, nomalum: summa == null ? 1 : 0, bolalar: [] });
+      out.push({ id: q.id, tur: 'barg', daraja, tartib, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', smetaHajm: smeta, faktHajm: fakt, ostatkaHajm: o, narx, summa, nomalum: summa == null ? 1 : 0, kat: q.kat ?? null, bolalar: [] });
       return out.length - 1;
     }
     if (tur === 'bl') {
@@ -320,10 +329,13 @@ const OSTATKA_USTUNLAR: RasmiyUstun[] = [
   { sarlavha: 'сумма, сум', kenglik: 17, tur: 'pul', guruh: 'СТОИМОСТЬ ОСТАТКА' },
   // Yashirin texnik ustun: noma'lum pul pozitsiyalari soni (jamini bo'sh qoldirish uchun).
   { sarlavha: 'Н', kenglik: 4, tur: 'texnik', yashirin: true },
+  { sarlavha: 'Стоимость остатка к оплате (с накладными расходами и НДС), сум', kenglik: 19, tur: 'pul' },
+  { sarlavha: 'Кат.', kenglik: 6, tur: 'texnik', yashirin: true },
 ];
+// A № B код C наим. D ед. E смета F выполн. G остаток H цена I сумма J Н(яш.) K к оплате L кат(яш.)
 
 /** Ostatka — bajarilmay qolgan ishlar smeta shaklida (.xlsx). */
-export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): { bytes: Uint8Array; faylNomi: string } {
+export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): { bytes: Uint8Array; faylNomi: string; kOplata: number | null; kOplataVsego: number | null } {
   const sana = o.sana ?? bugunSana();
   const sanaRu = sana.split('-').reverse().join('.');
   const v = new RasmiyVaraq({
@@ -344,6 +356,29 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
   const bosh = v.malumotBoshi;
   const rowOf = (i: number) => bosh + i;
   const qiy = (x: number | null): Qiymat => (x == null ? null : x);
+  // Ikki narx: K = ROUND(I × Kf[kat], 2); podval ВСЕГО dan keyin bitta bo'sh qatordan so'ng.
+  const nk: Partial<NakrutkaKoeffitsientlar> = { ...(o.nakrutka ?? {}) };
+  nk.НДС = o.ndsFoiz ?? nk.НДС ?? 12;
+  const kfJS = kategoriyaKf(nk);
+  const kfQ = podvalKfQatorlari(bosh + model.qatorlar.length + 2);
+  const koMemo = new Map<number, number | null>();
+  const koOf = (i: number): number | null => {
+    if (koMemo.has(i)) return koMemo.get(i)!;
+    const q = model.qatorlar[i];
+    let val: number | null;
+    if (q.tur === 'barg') val = kOplate(q.summa, nakrutkaKat(q.kat), kfJS);
+    else if (q.tur === 'rz') val = null;
+    else { const vs = q.bolalar.map(koOf); val = !vs.length || vs.some((x) => x == null) ? null : yaxlit2(vs.reduce<number>((a2, b2) => a2 + (b2 ?? 0), 0)); }
+    koMemo.set(i, val);
+    return val;
+  };
+  const koYig = (idx: readonly number[]): Qiymat => {
+    if (!idx.length) return null;
+    const rows = idx.map(rowOf);
+    const vs = idx.map(koOf);
+    return { f: `IF(${bosRefs('K', rows)}>0,"",${sumRefs('K', rows)})`, v: vs.some((x) => x == null) ? '' : yaxlit2(vs.reduce<number>((a2, b2) => a2 + (b2 ?? 0), 0)) };
+  };
+  const katsiz: string[] = [];
   model.qatorlar.forEach((q, i) => {
     const kid = (col: string) => sumRefs(col, q.bolalar.map(rowOf));
     let r = 0;
@@ -355,6 +390,11 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
         qiy(q.narx),
         { f: `IF(OR(G${n}="",H${n}=""),"",ROUND(G${n}*H${n},2))`, v: q.summa ?? '' },
         { f: `IF(I${n}="",1,0)`, v: q.nomalum },
+        ...((): Qiymat[] => {
+          const kat = nakrutkaKat(q.kat);
+          if (!kat) { katsiz.push(`${q.nom}${q.birlik ? `, ${q.birlik}` : ''}`); return [null, null]; }
+          return [{ f: `IF(I${n}="","",ROUND(I${n}*H${kfQ[kat]},2))`, v: koOf(i) ?? '' }, kat];
+        })(),
       ], { daraja: q.daraja });
     } else if (q.tur === 'bl') {
       r = v.qator('ish', (n) => [
@@ -363,12 +403,14 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
         { f: `IF(OR(I${n}="",N(G${n})=0),"",I${n}/G${n})`, v: q.narx ?? '' },
         { f: `IF(J${n}>0,"",${kid('I')})`, v: q.summa ?? '' },
         { f: kid('J'), v: q.nomalum },
+        koYig(q.bolalar), null,
       ], { daraja: q.daraja });
     } else {
       r = v.qator('jami', (n) => [
         null, null, q.nom, null, null, null, null, null,
         { f: `IF(J${n}>0,"",${kid('I')})`, v: q.summa ?? '' },
         { f: kid('J'), v: q.nomalum },
+        koYig(q.bolalar), null,
       ], { daraja: q.daraja });
     }
     if (r !== rowOf(i)) throw new Error('OSTATKA_QATOR_SILJIDI');
@@ -379,7 +421,18 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
       null, null, 'ВСЕГО ОСТАТОК РАБОТ ПО ОБЪЕКТУ', null, null, null, null, null,
       { f: `IF(J${n}>0,"",${sumRefs('I', model.ildizlar.map(rowOf))})`, v: model.jami ?? '' },
       { f: sumRefs('J', model.ildizlar.map(rowOf)), v: nomalum },
+      koYig(model.ildizlar), null,
     ]);
+  }
+  // Nakrutka podvali (остаток к оплате) — ВСЕГО dan keyin.
+  let kOplataVsego: number | null = null;
+  if (model.ildizlar.length) {
+    v.bosh();
+    const ks = Object.fromEntries(NAKRUTKA_KATLAR.map((k) => [k, 0])) as KatSummalar;
+    for (const q of model.qatorlar) { const kat = q.tur === 'barg' ? nakrutkaKat(q.kat) : null; if (kat && q.summa != null) ks[kat] += q.summa; }
+    const p = nakrutkaPodvaliYoz(v, { katUstun: 'L', oraliq: [bosh, bosh + model.qatorlar.length - 1], pulUstunlar: ['I'], foizUstun: 'H', nk, katSummalar: { I: ks } });
+    if (p.kfQator.ЧЕЛ !== kfQ.ЧЕЛ) throw new Error('OSTATKA_PODVAL_SILJIDI');
+    kOplataVsego = model.jami == null ? null : p.kaskad.I.vsego;
   }
   if (model.chiqarilgan.length) {
     // «ИСКЛЮЧЕНО ИЗ ОСТАТКА» — ВСЕГО dan KEYIN, unga kirmaydi. Графа 5 — объем по
@@ -403,7 +456,9 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
     ], { daraja: 0 });
   }
   v.bosh();
-  v.izoh('Стоимость остатка определена по сметным ценам (прямые затраты), без накладных расходов, прибыли и НДС. Позиции с неизвестным количеством, выполнением или ценой оставлены без суммы; итоги по ним не подводятся до уточнения.');
+  v.izoh('Графа 9 — стоимость остатка по сметным ценам (прямые затраты), без накладных расходов и НДС; графа 10 — стоимость остатка к оплате: прямые затраты × коэффициент по виду затрат (раздел «Расчет стоимости к оплате»). Позиции с неизвестным количеством, выполнением или ценой оставлены без суммы; итоги по ним не подводятся до уточнения.');
+  if (katsiz.length) v.diqqat(katsiz.map((nom) => ({ nom, sabab: 'не указан вид затрат — стоимость к оплате не определена' })), 'ВИД ЗАТРАТ НЕ УКАЗАН');
+  if (!o.nakrutka || !Object.keys(o.nakrutka).length) v.izoh('Проценты накладных и прочих расходов для объекта не заданы — в расчете стоимости к оплате приняты 0 % (учтен только НДС).');
   if (model.jami == null && model.ildizlar.length) v.izoh('Итог не определен: есть позиции без суммы — см. перечень ниже.');
   v.diqqat(model.diqqat);
   if (model.oshibKetgan.length) {
@@ -422,7 +477,8 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
   }
   v.imzo(imzoTomonlari(['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ'], o.imzo));
   const { bytes } = rasmiyKitob([v]);
-  return { bytes, faylNomi: hujjatFaylNomi({ obyekt: o.obyektNomi, hujjat: 'ОСТАТОК_РАБОТ', davr: sana }) };
+  const kv = model.ildizlar.map(koOf);
+  return { bytes, faylNomi: hujjatFaylNomi({ obyekt: o.obyektNomi, hujjat: 'ОСТАТОК_РАБОТ', davr: sana }), kOplata: kv.length && !kv.some((x) => x == null) ? yaxlit2(kv.reduce<number>((a2, b2) => a2 + (b2 ?? 0), 0)) : null, kOplataVsego };
 }
 
 function fmt(n: number): string {

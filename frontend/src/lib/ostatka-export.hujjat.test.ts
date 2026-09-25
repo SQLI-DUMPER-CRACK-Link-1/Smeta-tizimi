@@ -60,7 +60,7 @@ describe('Ostatka — rasmiy hujjat (H1–H9)', () => {
     const t = hujjatTekshir(bytes);
     const [v] = t.varaqlar;
     expect(v.a4 && v.bittaEnli).toBe(true);
-    expect(v.printArea).toMatch(/^'Остаток работ'!\$A\$1:\$I\$\d+$/);
+    expect(v.printArea).toMatch(/^'Остаток работ'!\$A\$1:\$K\$\d+$/);
     expect(v.printTitles).toMatch(/^'Остаток работ'!\$\d+:\$\d+$/);
     expect(t.fullCalcOnLoad).toBe(true);
     expect(t.dollarFormulalar).toEqual([]);
@@ -146,5 +146,23 @@ describe('Ostatka — bajarilmaydigan / bekor qilingan ishlar (egasi 2026-09-25)
     const vsego = k.find((x) => x.matn === 'ВСЕГО ОСТАТОК РАБОТ ПО ОБЪЕКТУ');
     const row = vsego ? vsego.ref.replace(/^[A-Z]+/, '') : '';
     expect(Number(k.find((x) => x.ref === `I${row}`)?.v)).toBe(300_000);
+  });
+});
+
+describe('Ostatka — ikki narx (прямые va к оплате) + nakrutka podvali', () => {
+  it('Σ qator к оплате = podval ВСЕГО К ОПЛАТЕ (yaxlitlash), formulalar keshlangan', () => {
+    const qator = TOZA.map((r) => (r.tur === 'mat' || r.tur === 'rs' ? { ...r, kat: r.id === 4 ? 'ЧЕЛ' : 'МАТ' } : r));
+    const m = ostatkaHujjatModeli(qator, TOZA_H);
+    const nakrutka = { ТРАНСПОРТ_МАТЕРИАЛ: 5, СКЛАДСКИЕ_МАТЕРИАЛ: 2, ПРОЧИЕ_ПОДРЯДЧИК: 18, СТРАХОВАНИЕ: 0.32, НДС: 12 };
+    const r = ostatkaHujjatXlsx(m, { obyektNomi: 'Объект', sana: '2026-09-25', nakrutka });
+    namunaSaqla('ostatka_k_oplate.xlsx', r.bytes);
+    expect(r.kOplata).not.toBeNull();
+    expect(Math.abs(r.kOplata! - r.kOplataVsego!)).toBeLessThan(0.05);
+    expect(r.kOplata!).toBeGreaterThan(m.jami! * 1.3);
+    const t = hujjatTekshir(r.bytes);
+    expect(t.keshsizFormulalar).toEqual([]);
+    expect(t.dollarFormulalar).toEqual([]);
+    expect(t.taqiqlangan).toEqual([]);
+    expect(t.matnlar).toContain('ВСЕГО К ОПЛАТЕ (с накладными расходами и НДС)');
   });
 });

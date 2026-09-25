@@ -140,7 +140,7 @@ function Sessiya({ companyId }: { companyId: number }) {
     try {
       const rows = await toliqQatorlar();
       if (!rows) return;
-      const h = f2AktHujjat(rows, { obyektNom, davr, imzo: tomonlar, ndsFoiz: stavkaOl() });
+      const h = f2AktHujjat(rows, { obyektNom, davr, imzo: tomonlar, ndsFoiz: stavkaOl(), nakrutka });
       downloadBlob(h.bytes, h.faylNomi);
     } catch (e) {
       const m = e instanceof Error ? e.message : '';

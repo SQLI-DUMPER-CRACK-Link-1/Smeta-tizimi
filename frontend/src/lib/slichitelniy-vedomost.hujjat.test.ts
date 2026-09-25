@@ -84,3 +84,18 @@ describe('Сличительная ведомость (H1–H9)', () => {
     expect(m.qatorlar.find((x) => x.id === 6)!.izoh).toContain('исключено из остатка: изменение № ИЗМ-1 от 21.09.2026; исключено заказчиком');
   });
 });
+
+describe('Сличительная ведомость — ikki narx', () => {
+  it('выполнено и отклонение к оплате; podval 4 ustun; kesh = formula', () => {
+    const rows = QATOR.map((r) => (r.tur === 'rs' ? { ...r, kat: 'ЧЕЛ' } : r.tur === 'mat' ? { ...r, kat: 'МАТ' } : r));
+    const m = slichitelniyModeli(rows, HOLAT);
+    const r = slichitelniyHujjatXlsx(m, { obyektNomi: 'Объект', sana: '2026-09-25', nakrutka: { ПРОЧИЕ_ПОДРЯДЧИК: 18, НДС: 12 } });
+    namunaSaqla('slichitelniy_k_oplate.xlsx', r.bytes);
+    // ЧЕЛ Kf = 1,18 × 1,12; МАТ Kf = 1,18 × 1,12 (transport/sklad 0 %).
+    expect(r.kOplata.fakt).toBeCloseTo(660_000 * 1.18 * 1.12, 0);
+    expect(r.kOplata.farq).toBeCloseTo(-3_500_000 * 1.18 * 1.12, 0);
+    const t = hujjatTekshir(r.bytes);
+    expect(t.keshsizFormulalar).toEqual([]);
+    expect(t.taqiqlangan).toEqual([]);
+  });
+});

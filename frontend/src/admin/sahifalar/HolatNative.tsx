@@ -179,7 +179,8 @@ export function HolatNative() {
     }
     setEksportBolmoqda(true);
     try {
-      const { bytes, faylNomi } = ostatkaHujjatXlsx(model, { obyektNomi: selected.nom, imzo: tomonlar });
+      const nk = await t2ObyektNakrutka(obyektId).catch(() => null);
+      const { bytes, faylNomi } = ostatkaHujjatXlsx(model, { obyektNomi: selected.nom, imzo: tomonlar, nakrutka: nk?.ok ? nk.koeffitsientlar ?? null : null });
       downloadBlob(bytes, faylNomi);
       const izoh = [
         model.oshibKetgan.length ? `${model.oshibKetgan.length} ta qatorda fakt smetadan oshgan — alohida ro‘yxatda` : '',
@@ -190,7 +191,7 @@ export function HolatNative() {
     } catch {
       setError('Ostatka Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno]);
+  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno, obyektId]);
 
 
   /* Egasi (2026-09-25): "slichitelniy vedomost ham yasay oladigan bo'lishi
@@ -212,13 +213,14 @@ export function HolatNative() {
     if (!model.barglar) { toast(slichFaqatFarq ? 'Farq yo‘q: barcha pozitsiyalarda fakt smeta bilan teng.' : 'Solishtiriladigan pozitsiya yo‘q.', 'warn'); return; }
     setEksportBolmoqda(true);
     try {
-      const { bytes, faylNomi } = slichitelniyHujjatXlsx(model, { obyektNomi: selected.nom, imzo: tomonlar, faqatFarq: slichFaqatFarq, istisnolar });
+      const nk = await t2ObyektNakrutka(obyektId).catch(() => null);
+      const { bytes, faylNomi } = slichitelniyHujjatXlsx(model, { obyektNomi: selected.nom, imzo: tomonlar, faqatFarq: slichFaqatFarq, istisnolar, nakrutka: nk?.ok ? nk.koeffitsientlar ?? null : null });
       downloadBlob(bytes, faylNomi);
       toast(`Slichitelniy: ${model.barglar} ta pozitsiya, ${model.ortiq} tasida smetadan ortiq, ${model.kam} tasida kam bajarilgan${model.diqqat.length ? `; ${model.diqqat.length} ta pozitsiyada ma’lumot yetishmaydi — jami bo‘sh qoldirildi` : ''}.`, model.diqqat.length ? 'warn' : 'ok');
     } catch {
       setError('Slichitelniy Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno, slichFaqatFarq]);
+  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno, slichFaqatFarq, obyektId]);
 
   const smetaJami = tree.reduce((sum, n) => sum + (n.smeta || 0), 0);
   const faktJami = tree.reduce((sum, n) => sum + (n.stFakt || 0), 0);

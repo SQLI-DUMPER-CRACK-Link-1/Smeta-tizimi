@@ -31,7 +31,7 @@ describe('f2AktTnQatorlarQur — rasmiy Ф2 (TN Akt-2) qator qurish', () => {
     const { qatorlar, jamiSumma, qatorSoni } = f2AktTnQatorlarQur(rows);
     expect(qatorlar[0]).toEqual({ kind: 'rz', cells: ['Fundament ishlari'] });
     expect(qatorlar[1]).toEqual({ kind: 'bl', cells: [1, 'Ш-1', 'Betonlash', 'm3', 10, '', '', 500000] });
-    expect(qatorlar[2]).toEqual({ kind: 'chiziq_bl', cells: ['', 'R-1', 'Beton B25', 'm3', 0.5, 5, 100000, 500000] });
+    expect(qatorlar[2]).toMatchObject({ kind: 'chiziq_bl', cells: ['', 'R-1', 'Beton B25', 'm3', 0.5, 5, 100000, 500000] });
     expect(qatorlar[3]).toEqual({ kind: 'itogo', cells: ['', '', 'ИТОГО ПО РАЗДЕЛУ:', '', '', '', '', 500000] });
     expect(qatorlar[4]).toEqual({ kind: 'vsego', cells: ['', '', 'ВСЕГО ПО АКТУ:', '', '', '', '', 500000] });
     expect(jamiSumma).toBe(500000);
@@ -57,7 +57,7 @@ describe('f2AktTnQatorlarQur — rasmiy Ф2 (TN Akt-2) qator qurish', () => {
       q({ tur: 'mat', kod: 'M-1', nom: 'Mustaqil material', birlik: 'kg', joriy_hajm: 4, joriy_summa: 40000 }),
     ];
     const { qatorlar } = f2AktTnQatorlarQur(rows);
-    expect(qatorlar[1]).toEqual({ kind: 'chiziq_mustaqil', cells: [1, 'M-1', 'Mustaqil material', 'kg', 4, '', 10000, 40000] });
+    expect(qatorlar[1]).toMatchObject({ kind: 'chiziq_mustaqil', cells: [1, 'M-1', 'Mustaqil material', 'kg', 4, '', 10000, 40000] });
   });
 
   it('joriy_hajm=0 va joriy_summa=0 bo\'lgan qator (harakatsiz) hujjatga chiqmaydi', () => {
