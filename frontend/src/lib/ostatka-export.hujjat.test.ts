@@ -95,3 +95,56 @@ describe('Ostatka — rasmiy hujjat (H1–H9)', () => {
     expect(jamilar.every((k) => k.v === '')).toBe(true);
   });
 });
+
+describe('Ostatka — bajarilmaydigan / bekor qilingan ishlar (egasi 2026-09-25)', () => {
+  // ПАРК: bl9 УКЛАДКА ПЛИТКИ bekor qilindi (tasdiqlangan): smeta 4 → fakt 1;
+  // rs10 normali (2 м2 / ед) — server kaskadi bilan 8 → 2. ОЗЕРА: rs4 qoralama.
+  const ozgarishlar = [
+    { id: 11, raqam: 'ИЗМ-3', tur: 'olib_tashlash', holat: 'tasdiqlangan', sabab: 'заказчик исключил из проекта', evidence_izoh: 'письмо № 45 от 20.09.2026',
+      yaratildi: '2026-09-20T10:00:00Z', tasdiqlandi: '2026-09-21T10:00:00Z', qatorlar: [{ qator_id: 9, amal: 'hajm', eski_hajm: 4, yangi_hajm: 1 }] },
+    { id: 12, raqam: null, tur: 'olib_tashlash', holat: 'qoralama', sabab: 'передано другому подрядчику', yaratildi: '2026-09-22T10:00:00Z',
+      qatorlar: [{ qator_id: 4, amal: 'hajm', eski_hajm: 20, yangi_hajm: 8 }] },
+    { id: 13, tur: 'olib_tashlash', holat: 'rad', sabab: 'x', qatorlar: [{ qator_id: 3, amal: 'olib_tashlash', eski_hajm: 10 }] },
+    { id: 14, tur: 'hajm_ozgarish', holat: 'tasdiqlangan', qatorlar: [{ qator_id: 5, amal: 'hajm', eski_hajm: 5, yangi_hajm: 6 }] },
+  ];
+  // Tasdiqlangandan keyingi kanonik holat: bl9 = 1, rs10 = 2 (norma 2).
+  const QATOR = TOZA.map((r) => (r.id === 9 ? { ...r, hajm: 1 } : r.id === 10 ? { ...r, hajm: 2, norma: 2 } : r));
+
+  it('istisnolar: faqat olib_tashlash, tasdiqlangan/qoralama; rad va boshqa turlar kirmaydi', async () => {
+    const { ostatkaIstisnolari } = await import('./ostatka-export');
+    const ist = ostatkaIstisnolari(ozgarishlar);
+    expect(ist.map((x) => [x.qatorId, x.holat, x.eskiHajm, x.yangiHajm])).toEqual([[9, 'tasdiqlangan', 4, 1], [4, 'qoralama', 20, 8]]);
+    expect(ist[0].asos).toBe('изменение № ИЗМ-3 от 21.09.2026, письмо № 45 от 20.09.2026');
+  });
+
+  it('tasdiqlangan istisno — ostatkada yo‘q, «ИСКЛЮЧЕНО ИЗ ОСТАТКА» bo‘limida asosi bilan, ВСЕГО ga kirmaydi; qoralama — ostatkada va diqqatda', async () => {
+    const { ostatkaIstisnolari } = await import('./ostatka-export');
+    const m = ostatkaHujjatModeli(QATOR, TOZA_H, ostatkaIstisnolari(ozgarishlar));
+    // ПАРК bo'limi butunlay chiqdi (qolgan ostatka 0); ВСЕГО faqat ОЗЕРА.
+    expect(m.qatorlar.some((r) => r.nom === 'СМЕТА № 02-01 ПАРК')).toBe(false);
+    expect(m.jami).toBe(300_000);
+    expect(m.chiqarilgan).toHaveLength(1);
+    const c = m.chiqarilgan[0];
+    expect([c.nom, c.bl, c.eskiHajm, c.faktHajm, c.chiqarilgan]).toEqual(['УКЛАДКА ПЛИТКИ', true, 4, 1, 3]);
+    // Σ norma × Δ × narx = 2 × 3 × 1234,567 = 7407,40
+    expect(c.summa).toBe(7407.4);
+    expect(m.chiqarilganJami).toBe(7407.4);
+    expect(m.diqqat.some((d) => d.nom.startsWith('ЗАТРАТЫ ТРУДА') && d.sabab.includes('на согласовании'))).toBe(true);
+
+    const { bytes } = ostatkaHujjatXlsx(m, { obyektNomi: 'Объект', sana: '2026-09-25' });
+    namunaSaqla('ostatka_istisno.xlsx', bytes);
+    const t = hujjatTekshir(bytes);
+    expect(t.taqiqlangan).toEqual([]);
+    expect(t.dollarFormulalar).toEqual([]);
+    expect(t.keshsizFormulalar).toEqual([]);
+    expect(t.matnlar.some((s) => s.startsWith('ИСКЛЮЧЕНО ИЗ ОСТАТКА'))).toBe(true);
+    expect(t.matnlar).toContain('ИТОГО ИСКЛЮЧЕНО ИЗ ОСТАТКА (в остаток не включено)');
+    expect(t.matnlar.some((s) => s.startsWith('ОСНОВАНИЯ ИСКЛЮЧЕНИЯ ИЗ ОСТАТКА (1)'))).toBe(true);
+    expect(t.matnlar.some((s) => s.includes('изменение № ИЗМ-3 от 21.09.2026') && s.includes('причина: заказчик исключил из проекта'))).toBe(true);
+    // ВСЕГО ОСТАТОК keshi = 300 000 (chiqarilgan kirmagan).
+    const k = t.varaqlar[0].kataklar;
+    const vsego = k.find((x) => x.matn === 'ВСЕГО ОСТАТОК РАБОТ ПО ОБЪЕКТУ');
+    const row = vsego ? vsego.ref.replace(/^[A-Z]+/, '') : '';
+    expect(Number(k.find((x) => x.ref === `I${row}`)?.v)).toBe(300_000);
+  });
+});

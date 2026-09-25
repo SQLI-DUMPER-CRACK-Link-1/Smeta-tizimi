@@ -156,7 +156,12 @@ const app = R('frontend', 'src', 'App.tsx');
 const shell = R('frontend', 'src', 'admin', 'AdminShell.tsx');
 const routes = R('frontend', 'src', 'umumiy', 'marshrutTekshir.ts');
 must('Cloudflare fn resolves actor from session + forwards to canonical RPCs only',
-  /from '\.\.\/_shared\/auth'/.test(fn) && /t2_workbench_v1/.test(fn) && /t2_smeta_ozgarish_tasdiqlash_v1/.test(fn) && /t2_forma3_yarat_v1/.test(fn));
+  /from '\.\.\/_shared\/auth'/.test(fn) && /t2_workbench_v1/.test(fn) && /t2_smeta_ozgarish_tasdiqlash_v[12]/.test(fn) && /t2_forma3_yarat_v1/.test(fn));
+// 2026-09-25: tasdiqlash v2 = v1 ning o'rami (signal oxirida bir marta) — semantika v1 da qoladi.
+const m6 = R('supabase', 'migrations', '20261101091000_t2_ozgarish_tasdiqlash_signal_bir_marta.sql');
+must('ozgarish tasdiqlash v2 wraps v1 unchanged (signal refresh once at end)',
+  /public\.t2_smeta_ozgarish_tasdiqlash_v1\(p_ozgarish_id, p_actor_id, p_kutilgan_versiya, p_operation_id\)/.test(m6)
+  && /t2_signal_refresh_object\(v_komp, v_obyekt\)/.test(m6) && /revoke all on function public\.t2_smeta_ozgarish_tasdiqlash_v2/.test(m6));
 must('Cloudflare fn does NOT touch Drive/Sheets/GAS', !/DriveApp|SpreadsheetApp|\/api\/gas|clasp/i.test(fn));
 must('Cloudflare fn surfaces "not applied" as 501 (migration missing)', /not applied|PGRST202|does not exist/.test(fn) && /501/.test(fn));
 must('adapter normalizes SQL nulls out of optional CertifiedLine fields (unknown stays unknown)',

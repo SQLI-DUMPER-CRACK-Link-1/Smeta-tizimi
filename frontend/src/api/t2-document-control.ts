@@ -205,3 +205,28 @@ export const forma3Yarat = (p: { obyektId: number; loyihaId?: number | null; akt
   post({ amal: 'forma3-yarat', obyekt_id: p.obyektId, loyiha_id: p.loyihaId ?? null, akt_ids: p.aktIds, davr_boshi: p.davrBoshi, davr_oxiri: p.davrOxiri, raqam: p.raqam, operation_id: p.operationId });
 export const forma3QoidaBelgila = (p: { forma3Id: number; qoidaManba: string; operationId?: string }) =>
   post({ amal: 'forma3-qoida', forma3_id: p.forma3Id, qoida_manba: p.qoidaManba, operation_id: p.operationId });
+
+// ── Ostatka istisnolari (egasi 2026-09-25: "smetada qilinmagan ishlar yoki
+// bekor qilingan ishlar bo'lishi mumkin — bunga ham yechim bo'lishi kerak").
+// Yangi jadval yo'q: kanonik o'zgartirish nazorati (t2_smeta_ozgarish,
+// tur='olib_tashlash') — qoralama → tasdiq, audit, revision. Tasdiqlanganda
+// t2_qator.hajm yangi hajmga tushadi (to'liq: 0, qolgan qismi: fakt).
+export type OstatkaIstisnoQator = { qatorId: number; yangiHajm: number };
+export async function ostatkaIstisnoYarat(p: {
+  obyektId: number; qatorlar: OstatkaIstisnoQator[]; sabab: string; asos?: string | null; raqam?: string | null; operationId: string;
+}): Promise<{ ozgarishId: number }> {
+  const toliq = p.qatorlar.every((q) => q.yangiHajm === 0);
+  const j = await post({
+    amal: 'ozgarish-yarat', obyekt_id: p.obyektId, operation_id: p.operationId,
+    tur: 'olib_tashlash', kind: toliq ? 'removed_work' : 'quantity_decrease',
+    sabab: p.sabab, raqam: p.raqam || null, evidence_izoh: p.asos || null,
+    qatorlar: p.qatorlar.map((q) => (q.yangiHajm === 0
+      ? { qator_id: q.qatorId, amal: 'olib_tashlash', yangi_hajm: 0 }
+      : { qator_id: q.qatorId, amal: 'hajm', yangi_hajm: q.yangiHajm })),
+  });
+  return { ozgarishId: Number(j.ozgarish_id) };
+}
+export const ozgarishTasdiqla = (p: { ozgarishId: number; versiya: number; operationId: string }) =>
+  post({ amal: 'ozgarish-tasdiqlash', ozgarish_id: p.ozgarishId, kutilgan_versiya: p.versiya, operation_id: p.operationId });
+export const ozgarishQaytar = (p: { ozgarishId: number; sabab: string; operationId: string }) =>
+  post({ amal: 'ozgarish-qaytar', ozgarish_id: p.ozgarishId, sabab: p.sabab, operation_id: p.operationId });

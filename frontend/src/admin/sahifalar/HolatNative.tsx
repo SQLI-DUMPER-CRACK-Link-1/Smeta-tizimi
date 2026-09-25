@@ -19,6 +19,7 @@ import { toast } from '../../umumiy/ui/Toast';
 import SmetaYuklaNative from './SmetaYuklaNative';
 import ResursVedomostNative from './ResursVedomostNative';
 import NarxNazoratNative from './NarxNazoratNative';
+import { OstatkaIstisnoPanel, useOstatkaIstisnolari } from './OstatkaIstisnoPanel';
 
 /**
  * Kundalik ISHCHI SMETA/LRV sahifasi. Bu komponentda Sheet nomi, Drive
@@ -45,6 +46,7 @@ export function HolatNative() {
     loading, yangilanmoqda, error: daraxtXato, yuklash, holatniYangila,
   } = useT2Daraxt(validId ? obyektId : null);
   const error = sahifaXato || daraxtXato;
+  const istisno = useOstatkaIstisnolari(validId ? obyektId : null);
   const selected = obyektlar.find((o) => o.id === obyektId) ?? null;
   const workspace = usePTOWorkspace();
   /* 2026-09-11 (egasi: "shu tepadagi belgilanadigan joy naxxuy kerak o'zi?"):
@@ -162,7 +164,13 @@ export function HolatNative() {
       setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
       return;
     }
-    const model = ostatkaHujjatModeli(daraxtXom, holatXom);
+    // Bajarilmaydigan/bekor qilingan ishlar — eng so'nggi holat bilan (jim yo'qotish yo'q).
+    let istisnolar;
+    try { istisnolar = await istisno.yangila(); } catch {
+      setError('Ostatka: bekor qilingan ishlar ro‘yxati o‘qilmadi — hujjat tuzilmadi. Qayta urinib ko‘ring.');
+      return;
+    }
+    const model = ostatkaHujjatModeli(daraxtXom, holatXom, istisnolar);
     if (!model.barglar) {
       toast(`Ostatka yo‘q: barcha ishlar bajarilgan${model.oshibKetgan.length ? `, ${model.oshibKetgan.length} ta qatorda fakt smetadan oshgan` : ''}.`, 'warn');
       return;
@@ -173,13 +181,14 @@ export function HolatNative() {
       downloadBlob(bytes, faylNomi);
       const izoh = [
         model.oshibKetgan.length ? `${model.oshibKetgan.length} ta qatorda fakt smetadan oshgan — alohida ro‘yxatda` : '',
-        model.diqqat.length ? `${model.diqqat.length} ta pozitsiyada hajm/fakt/narx noma’lum — jami bo‘sh qoldirildi` : '',
+        model.diqqat.length ? `${model.diqqat.length} ta pozitsiya diqqat ro‘yxatida` : '',
+        model.chiqarilgan.length ? `${model.chiqarilgan.length} ta ish ostatkadan chiqarilgan (asosi bilan alohida bo‘limda)` : '',
       ].filter(Boolean).join('; ');
       toast(`Ostatka: ${model.barglar} ta pozitsiya${model.jami != null ? `, jami ${model.jami.toLocaleString('ru-RU')} so‘m` : ''}.${izoh ? ' ' + izoh + '.' : ''}`, izoh ? 'warn' : 'ok');
     } catch {
       setError('Ostatka Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar]);
+  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno]);
 
 
   const smetaJami = tree.reduce((sum, n) => sum + (n.smeta || 0), 0);
@@ -292,6 +301,15 @@ export function HolatNative() {
                 <span>Resurs vedomosti</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
               </summary>
               {ochiqPanel === 'resurs' && <div className="mt-3 max-h-[520px] overflow-auto"><ResursVedomostNative obyektId={obyektId} /></div>}
+            </details>
+            <details className="karta group p-3" open={ochiqPanel === 'istisno'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'istisno' : null)}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">
+                <span>Bajarilmaydigan / bekor qilingan ishlar{istisno.royxat.some((o) => o.holat === 'qoralama') ? ' • tasdiq kutilmoqda' : ''}</span><span className="text-[11px] font-normal text-text-mute group-open:hidden">ochish ▾</span><span className="hidden text-[11px] font-normal text-text-mute group-open:inline">yopish ▴</span>
+              </summary>
+              {ochiqPanel === 'istisno' && <div className="mt-3 max-h-[520px] overflow-auto">
+                {istisno.xato && <p role="alert" className="mb-2 text-danger">{istisno.xato}</p>}
+                <OstatkaIstisnoPanel obyektId={obyektId} qatorlar={daraxtXom} holatlar={holatXom} royxat={istisno.royxat} yangila={istisno.yangila} onSmetaOzgardi={() => void yuklash()} />
+              </div>}
             </details>
             <details className="karta group p-3" open={ochiqPanel === 'narx'} onToggle={(e) => setOchiqPanel(e.currentTarget.open ? 'narx' : null)}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-text">

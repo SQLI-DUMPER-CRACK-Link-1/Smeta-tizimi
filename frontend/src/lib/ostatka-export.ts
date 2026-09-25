@@ -78,6 +78,65 @@ export function ostatkaQatorlari(qatorlar: readonly T2Qator[], holatlar: readonl
 // ═══════════════════ OSTATKA — rasmiy hujjat (P2, H1–H9) ═══════════════════
 
 
+/**
+ * Ostatkadan chiqarilgan ish (egasi 2026-09-25: "smetada qilinmagan ishlar yoki
+ * bekor qilingan ishlar bo'lishi mumkin"). Manba — kanonik o'zgartirish
+ * nazorati `t2_smeta_ozgarish` (tur = 'olib_tashlash'):
+ *  - `tasdiqlangan`: t2_qator.hajm allaqachon yangi hajmda (0 yoki fakt) —
+ *    ostatka o'zi 0; hujjatda «ИСКЛЮЧЕНО ИЗ ОСТАТКА» bo'limida asl hajm,
+ *    chiqarilgan hajm va asos bilan ko'rsatiladi, ВСЕГО ga kirmaydi;
+ *  - `qoralama`: hali tasdiqlanmagan — ostatkada qoladi, «ТРЕБУЮТ ВНИМАНИЯ».
+ * Jim yo'qotish yo'q: har chiqarilgan pozitsiya hujjatda sababi bilan turadi.
+ */
+export type OstatkaIstisno = {
+  qatorId: number;
+  holat: 'tasdiqlangan' | 'qoralama';
+  /** Smeta hajmi o'zgarishdan oldin (asl). */
+  eskiHajm: number | null;
+  /** O'zgarishdan keyingi hajm (to'liq bekor — 0, qolgan qismi — fakt). */
+  yangiHajm: number | null;
+  /** Asos: "изменение № … от dd.mm.yyyy" (+ hujjat izohi). */
+  asos: string;
+  sabab: string;
+};
+
+type OzgarishXom = {
+  id: number; raqam?: string | null; tur?: string | null; holat?: string | null; sabab?: string | null;
+  evidence_izoh?: string | null; tasdiqlandi?: string | null; yaratildi?: string | null;
+  qatorlar?: Array<{ qator_id?: number | null; amal?: string | null; eski_hajm?: number | string | null; yangi_hajm?: number | string | null }>;
+};
+
+const sonYoki = (x: unknown): number | null => (x == null || x === '' ? null : Number.isFinite(Number(x)) ? Number(x) : null);
+const sanaRu = (iso?: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('.') : '');
+
+/** `ozgarish-royxat` javobidan ostatka istisnolari (faqat olib_tashlash, faol holatlar). */
+export function ostatkaIstisnolari(ozgarishlar: readonly OzgarishXom[]): OstatkaIstisno[] {
+  const out = new Map<number, OstatkaIstisno>();
+  // Eskisidan yangisiga: bir qatorga keyingi o'zgarish oldingisini almashtiradi.
+  const tartib = [...ozgarishlar].sort((a, b) => String(a.yaratildi ?? '').localeCompare(String(b.yaratildi ?? '')) || a.id - b.id);
+  for (const o of tartib) {
+    if (o.tur !== 'olib_tashlash' || (o.holat !== 'tasdiqlangan' && o.holat !== 'qoralama')) continue;
+    const asos = [`изменение № ${o.raqam || o.id} от ${sanaRu(o.tasdiqlandi || o.yaratildi)}`, o.evidence_izoh?.trim()].filter(Boolean).join(', ');
+    for (const z of o.qatorlar ?? []) {
+      if (z.qator_id == null || (z.amal !== 'olib_tashlash' && z.amal !== 'hajm')) continue;
+      const yangi = z.amal === 'olib_tashlash' ? 0 : sonYoki(z.yangi_hajm);
+      const oldin = out.get(z.qator_id);
+      // Tasdiqlangan istisno ustiga qoralama kelsa — tasdiqlangani hujjatda qoladi.
+      if (oldin?.holat === 'tasdiqlangan' && o.holat === 'qoralama') continue;
+      out.set(z.qator_id, { qatorId: z.qator_id, holat: o.holat, eskiHajm: sonYoki(z.eski_hajm), yangiHajm: yangi, asos, sabab: (o.sabab ?? '').trim() });
+    }
+  }
+  return [...out.values()];
+}
+
+export type OstatkaIstisnoQator = {
+  id: number; kod: string; nom: string; birlik: string; yol: string;
+  /** Ish (bl) darajasidagi istisno — summa normali resurslar bo'yicha. */
+  bl: boolean;
+  eskiHajm: number | null; faktHajm: number | null; chiqarilgan: number | null;
+  narx: number | null; summa: number | null; asos: string; sabab: string;
+};
+
 export type OstatkaHujjatOpsiya = {
   obyektNomi: string;
   /** "По состоянию на" — sana (YYYY-MM-DD). Berilmasa — bugun. */
@@ -114,6 +173,10 @@ export type OstatkaModel = {
   oshibKetgan: Array<{ nom: string; birlik: string; smetaHajm: number; faktHajm: number; yol: string }>;
   diqqat: Array<{ nom: string; sabab: string; joy?: string }>;
   barglar: number;
+  /** Tasdiqlangan istisnolar — «ИСКЛЮЧЕНО ИЗ ОСТАТКА», ВСЕГО ga kirmaydi. */
+  chiqarilgan: OstatkaIstisnoQator[];
+  /** Chiqarilganlar jami summasi (noma'lum bo'lsa null). */
+  chiqarilganJami: number | null;
 };
 
 const OST_BARG = new Set(['rs', 'mat', 'ob']);
@@ -130,7 +193,7 @@ const ost = (x: number): number => (Math.abs(x) < OST_EPS ? 0 : x);
  *  - smeta hajmi, fakt yoki narx noma'lum — qator jadvalda qoladi, summa bo'sh,
  *    yuqoridagi barcha jamilar ham bo'sh (NULL ≠ 0), "ТРЕБУЮТ ВНИМАНИЯ" da.
  */
-export function ostatkaHujjatModeli(qatorlar: readonly T2Qator[], holatlar: readonly T2QatorHolat[]): OstatkaModel {
+export function ostatkaHujjatModeli(qatorlar: readonly T2Qator[], holatlar: readonly T2QatorHolat[], istisnolar: readonly OstatkaIstisno[] = []): OstatkaModel {
   const rows = [...qatorlar].sort((a, b) => (a.tartib ?? 0) - (b.tartib ?? 0) || a.id - b.id);
   const byId = new Map(rows.map((q) => [q.id, q]));
   const holat = new Map(holatlar.map((h) => [h.qator_id, h]));
@@ -145,6 +208,7 @@ export function ostatkaHujjatModeli(qatorlar: readonly T2Qator[], holatlar: read
     for (let o = q.ota_id == null ? undefined : byId.get(q.ota_id); o; o = o.ota_id == null ? undefined : byId.get(o.ota_id)) if (o.tur === 'rz' || o.tur === 'bl') y.unshift(o.nom ?? '');
     return y.join(' › ');
   };
+  const istisnoOf = new Map(istisnolar.map((x) => [x.qatorId, x]));
   const out: OstatkaModelQator[] = [];
   const oshib: OstatkaModel['oshibKetgan'] = [];
   const diqqat: OstatkaModel['diqqat'] = [];
@@ -171,6 +235,8 @@ export function ostatkaHujjatModeli(qatorlar: readonly T2Qator[], holatlar: read
       const summa = o != null && narx != null ? yaxlit2(o * narx) : null;
       const sabablar = [smeta == null ? 'нет количества по смете' : '', fakt == null ? 'нет данных о выполнении' : '', narx == null ? 'нет сметной цены' : ''].filter(Boolean);
       if (sabablar.length) diqqat.push({ nom: `${q.nom ?? ''}${q.birlik ? `, ${q.birlik}` : ''}`, sabab: sabablar.join('; '), joy: yolOf(q) || undefined });
+      const kutilmoqda = istisnoOf.get(q.id);
+      if (kutilmoqda?.holat === 'qoralama') diqqat.push({ nom: `${q.nom ?? ''}${q.birlik ? `, ${q.birlik}` : ''}`, sabab: `исключение из остатка на согласовании (${kutilmoqda.asos}${kutilmoqda.sabab ? `; ${kutilmoqda.sabab}` : ''}) — до утверждения учитывается в остатке`, joy: yolOf(q) || undefined });
       barglar++;
       const tartib = blNo ? `${blNo}.${k}` : String(++no);
       out.push({ id: q.id, tur: 'barg', daraja, tartib, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', smetaHajm: smeta, faktHajm: fakt, ostatkaHajm: o, narx, summa, nomalum: summa == null ? 1 : 0, bolalar: [] });
@@ -210,7 +276,36 @@ export function ostatkaHujjatModeli(qatorlar: readonly T2Qator[], holatlar: read
   for (const q of bolalar.get(null) ?? []) { const i = qayta(q, 0, null, 0); if (i != null) ildizlar.push(i); }
   const nomalum = ildizlar.reduce((s, i) => s + out[i].nomalum, 0);
   const jami = !ildizlar.length || nomalum ? null : yaxlit2(ildizlar.reduce((s, i) => s + (out[i].summa ?? 0), 0));
-  return { qatorlar: out, jami, ildizlar, oshibKetgan: oshib, diqqat, barglar };
+  // Tasdiqlangan istisnolar: chiqarilgan hajm = asl smeta hajmi − yangi hajm.
+  const chiqarilgan: OstatkaIstisnoQator[] = [];
+  for (const x of istisnolar) {
+    if (x.holat !== 'tasdiqlangan') continue;
+    const q = byId.get(x.qatorId);
+    if (!q) continue;
+    const h = holat.get(q.id);
+    const fakt = h ? Number(h.fakt_hajm ?? 0) : null;
+    const ch = x.eskiHajm == null || x.yangiHajm == null ? null : ost(x.eskiHajm - x.yangiHajm);
+    let narx = q.narx ?? null;
+    let summa = ch != null && narx != null ? yaxlit2(ch * narx) : null;
+    const kids = bolalar.get(q.id) ?? [];
+    if (q.tur === 'bl' && kids.length) {
+      // Ish (bl) hajmi kamaysa, normali resurslar norma bo'yicha kamayadi
+      // (t2_qator_tahrir norma kaskadi): chiqarilgan summa = Σ norma × Δ × narx.
+      // Normasiz resurslar o'zgarishda alohida qator bo'lib keladi.
+      const normali = kids.filter((k) => OST_BARG.has(k.tur ?? '') && k.norma != null);
+      summa = ch == null || !normali.length || normali.some((k) => k.narx == null) ? null
+        : yaxlit2(normali.reduce((s2, k) => s2 + yaxlit2(Number(k.norma) * ch * Number(k.narx)), 0));
+      narx = summa != null && ch ? summa / ch : null;
+    }
+    chiqarilgan.push({
+      id: q.id, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', yol: yolOf(q), bl: q.tur === 'bl',
+      eskiHajm: x.eskiHajm, faktHajm: fakt, chiqarilgan: ch, narx, summa, asos: x.asos, sabab: x.sabab,
+    });
+  }
+  const rowIdx = new Map(rows.map((q, i) => [q.id, i]));
+  chiqarilgan.sort((a, b) => (rowIdx.get(a.id) ?? 0) - (rowIdx.get(b.id) ?? 0));
+  const chiqarilganJami = chiqarilgan.some((c) => c.summa == null) ? null : yaxlit2(chiqarilgan.reduce((s, c) => s + (c.summa ?? 0), 0));
+  return { qatorlar: out, jami, ildizlar, oshibKetgan: oshib, diqqat, barglar, chiqarilgan, chiqarilganJami };
 }
 
 const OSTATKA_USTUNLAR: RasmiyUstun[] = [
@@ -286,6 +381,27 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
       { f: `SUM(${model.ildizlar.map((i) => `J${rowOf(i)}`).join(',')})`, v: nomalum },
     ]);
   }
+  if (model.chiqarilgan.length) {
+    // «ИСКЛЮЧЕНО ИЗ ОСТАТКА» — ВСЕГО dan KEYIN, unga kirmaydi. Графа 5 — объем по
+    // смете до изменения, графа 7 — исключенный объем (по утвержденному изменению).
+    v.bosh();
+    v.bolim('ИСКЛЮЧЕНО ИЗ ОСТАТКА (работы не выполняются / аннулированы по утвержденным изменениям; графа 5 — объем по смете до изменения, графа 7 — исключенный объем)', { daraja: 0 });
+    const qatorlar: number[] = [];
+    model.chiqarilgan.forEach((c, i) => {
+      qatorlar.push(v.qator('oddiy', (n) => [
+        `И-${i + 1}`, c.kod, c.nom, c.birlik, qiy(c.eskiHajm), qiy(c.faktHajm),
+        qiy(c.chiqarilgan), qiy(c.narx),
+        c.bl ? qiy(c.summa) : { f: `IF(OR(G${n}="",H${n}=""),"",ROUND(G${n}*H${n},2))`, v: c.summa ?? '' },
+        { f: `IF(I${n}="",1,0)`, v: c.summa == null ? 1 : 0 },
+      ], { daraja: 1 }));
+    });
+    const nomalumCh = model.chiqarilgan.filter((c) => c.summa == null).length;
+    v.qator('jami', (n) => [
+      null, null, 'ИТОГО ИСКЛЮЧЕНО ИЗ ОСТАТКА (в остаток не включено)', null, null, null, null, null,
+      { f: `IF(J${n}>0,"",SUM(${qatorlar.map((r) => `I${r}`).join(',')}))`, v: model.chiqarilganJami ?? '' },
+      { f: `SUM(${qatorlar.map((r) => `J${r}`).join(',')})`, v: nomalumCh },
+    ], { daraja: 0 });
+  }
   v.bosh();
   v.izoh('Стоимость остатка определена по сметным ценам (прямые затраты), без накладных расходов, прибыли и НДС. Позиции с неизвестным количеством, выполнением или ценой оставлены без суммы; итоги по ним не подводятся до уточнения.');
   if (model.jami == null && model.ildizlar.length) v.izoh('Итог не определен: есть позиции без суммы — см. перечень ниже.');
@@ -296,6 +412,13 @@ export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): 
       joy: x.yol || undefined,
       sabab: `выполнено ${fmt(x.faktHajm)} при объеме по смете ${fmt(x.smetaHajm)} (превышение ${fmt(x.faktHajm - x.smetaHajm)}); в остаток не включено`,
     })), 'ВЫПОЛНЕНО СВЕРХ СМЕТНОГО ОБЪЕМА');
+  }
+  if (model.chiqarilgan.length) {
+    v.diqqat(model.chiqarilgan.map((c, i) => ({
+      nom: `поз. И-${i + 1} ${c.nom}${c.birlik ? `, ${c.birlik}` : ''}`,
+      joy: c.yol || undefined,
+      sabab: `${c.asos}${c.sabab ? `; причина: ${c.sabab}` : ''}`,
+    })), 'ОСНОВАНИЯ ИСКЛЮЧЕНИЯ ИЗ ОСТАТКА');
   }
   v.imzo(imzoTomonlari(['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ'], o.imzo));
   const { bytes } = rasmiyKitob([v]);
