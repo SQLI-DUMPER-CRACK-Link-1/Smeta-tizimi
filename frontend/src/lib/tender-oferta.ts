@@ -174,8 +174,12 @@ export type OfertaPodval =
   /** baza × koef. `foiz` — yozuvdan o'qilgan va manba bilan tasdiqlangan foiz;
    * null bo'lsa koef manba nisbatidan (hosila ÷ baza) olingan. */
   | { tur: 'foiz'; baza: string; koef: number; foiz: number | null }
-  /** Manbada ham 0 (masalan kabel transporti yo'q) — taklifda ham 0. */
+  /** Manbada ham 0 va yozuvda foiz yo'q — taklifda ham 0. */
   | { tur: 'nol' }
+  /** Manbada 0, lekin yozuvda foiz bor (`СКЛАДСКИЕ =2% И М/К=0,75%`,
+   * `КАБЕЛЬ…=1,5%`): o'sha bo'lim resurslaridan kategoriya bo'yicha —
+   * kanonik kaskad qoidasi bilan (sklad: (МАТ+КАБ)×p + М/К×p₂). */
+  | { tur: 'kategoriya'; bazaQatorlar: string[]; qismlar: Array<{ kat: OfertaKategoriya[]; foiz: number }> }
   /** Oldingi jami + undan keyingi hosilalar yig'indisi (ВСЕГО С УЧЕТОМ …). */
   | { tur: 'yigindi'; bazalar: string[] };
 
@@ -415,7 +419,53 @@ const teng = (a: number, b: number) => Math.abs(a - b) <= Math.max(0.5, Math.abs
  *  - yozuvdagi foiz (`=5%`) manba bilan mos → baza × foiz;
  *  - aks holda manba nisbati (hosila ÷ baza) — xuddi o'sha ulush;
  *  - manbada 0 → taklifda ham 0. Asos yo'q/noma'lum → null (taxmin yo'q). */
-function podvalniHisobla(n: OfertaQatorNatija, jami: OfertaQatorNatija | null, keyingi: OfertaQatorNatija[]): void {
+/** Jami qatorning barcha RESOURCE barglari (ichki jamilar orqali). */
+function jamiBarglari(jami: OfertaQatorNatija, byId: ReadonlyMap<string, OfertaQatorNatija>): OfertaQatorNatija[] {
+  const out: OfertaQatorNatija[] = [];
+  const yur = (id: string, chuqur: number) => {
+    const n = byId.get(id);
+    if (!n || chuqur > 20) return;
+    if (n.rol === 'RESOURCE') out.push(n);
+    else if (n.rol === 'SUBTOTAL' || n.rol === 'GRAND_TOTAL') for (const b of n.jamiBolalari ?? []) yur(b, chuqur + 1);
+  };
+  for (const b of jami.jamiBolalari ?? []) yur(b, 0);
+  return out;
+}
+
+const foizlarOqi = (nom: string) => [...nom.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g)].map((m) => ({ foiz: Number(m[1].replace(',', '.')), joy: m.index ?? 0 }));
+
+/** Manbada 0 bo'lgan podval qatori uchun kategoriya qoidasi — kanonik kaskad
+ * kabi HAR KATEGORIYAGA o'z foizi: sklad (МАТ+КАБ)×2% + М/К×0,75% + ОБ×1,2%;
+ * transport (МАТ+М/К+БЕЗСКЛАД)×5% + ОБ×2%; kabel transporti КАБ×1,5%.
+ * Yozuvdagi foiz (`=2% И М/К=0,75%`) koeffitsientdan ustun; yozuvda bo'lmasa —
+ * nakrutka koeffitsienti. Bo'limda yo'q kategoriya formulaga kirmaydi. */
+function kategoriyaQoidasi(n: OfertaQatorNatija, barglar: readonly OfertaQatorNatija[], nk: NakrutkaKoeffitsientlar): Array<{ kat: OfertaKategoriya[]; foiz: number }> | null {
+  const nom = n.nom.toUpperCase().replace(/Ё/g, 'Е');
+  const f = foizlarOqi(nom);
+  const k = (kod: keyof NakrutkaKoeffitsientlar) => Number(nk[kod] ?? 0);
+  const bor = new Set<OfertaKategoriya>(barglar.map((b) => b.samaraliKategoriya ?? 'UNKNOWN'));
+  const faqatOb = bor.size > 0 && [...bor].every((x) => x === 'ОБ');
+  const q: Array<{ kat: OfertaKategoriya[]; foiz: number }> = [];
+  const qosh = (kat: OfertaKategoriya[], foiz: number) => {
+    const bori = kat.filter((x) => bor.has(x));
+    if (bori.length && foiz > 0) q.push({ kat: bori, foiz });
+  };
+  if (n.rol === 'TRANSPORT' && /КАБЕЛ/.test(nom)) qosh(['КАБ'], f[0]?.foiz ?? k('ТРАНСПОРТ_КАБЕЛЬ'));
+  else if (n.rol === 'STORAGE') {
+    const mk = nom.search(/М\s*\/\s*К/);
+    const mkFoiz = mk >= 0 ? f.find((x) => x.joy > mk) : undefined;
+    const asosiy = f.find((x) => x !== mkFoiz);
+    qosh(mkFoiz || !asosiy ? ['МАТ', 'КАБ'] : ['МАТ', 'КАБ', 'М/К'], faqatOb ? 0 : asosiy?.foiz ?? k('СКЛАДСКИЕ_МАТЕРИАЛ'));
+    if (mkFoiz || !asosiy) qosh(['М/К'], mkFoiz?.foiz ?? k('СКЛАДСКИЕ_МК'));
+    qosh(['ОБ'], faqatOb && asosiy ? asosiy.foiz : k('ЗАГОТ_СКЛАД_ОБОРУД'));
+  } else if (n.rol === 'TRANSPORT') {
+    qosh(['МАТ', 'М/К', 'БЕЗСКЛАД'], faqatOb ? 0 : f[0]?.foiz ?? k('ТРАНСПОРТ_МАТЕРИАЛ'));
+    qosh(['ОБ'], faqatOb && f[0] ? f[0].foiz : k('ТРАНСПОРТ_ОБОРУД'));
+  } else return null;
+  return q;
+}
+
+function podvalniHisobla(n: OfertaQatorNatija, jami: OfertaQatorNatija | null, keyingi: OfertaQatorNatija[], byId: ReadonlyMap<string, OfertaQatorNatija>, nk: NakrutkaKoeffitsientlar): void {
   const src = n.smetaSumma;
   if (src == null || !Number.isFinite(src) || !jami || jami.smetaSumma == null) return;
   const yigindiManba = jami.smetaSumma + keyingi.reduce((a, k) => a + (k.smetaSumma ?? 0), 0);
@@ -427,9 +477,24 @@ function podvalniHisobla(n: OfertaQatorNatija, jami: OfertaQatorNatija | null, k
     }
     return;
   }
-  if (src === 0) { n.podval = { tur: 'nol' }; n.pudratchiSumma = 0; return; }
+  if (src === 0) {
+    // Egasi (2026-09-25): asl smetada qo'lda 0 bo'lsa ham, yozuvdagi foiz
+    // bo'lim resurslaridan hisoblansin — varaq OFERTA_JAMI kaskadi bilan mos.
+    const barglar = jamiBarglari(jami, byId);
+    const qismlar = kategoriyaQoidasi(n, barglar, nk);
+    if (!qismlar?.length) { n.podval = { tur: 'nol' }; n.pudratchiSumma = 0; return; }
+    if (barglar.some((b) => b.pudratchiSumma == null)) return;
+    let v = 0;
+    for (const q of qismlar) {
+      const asos = barglar.filter((b) => q.kat.includes(b.samaraliKategoriya ?? 'UNKNOWN')).reduce((a, b) => a + (b.pudratchiSumma as number), 0);
+      v += asos * q.foiz / 100;
+    }
+    n.podval = { tur: 'kategoriya', bazaQatorlar: barglar.map((b) => b.sourceId), qismlar };
+    n.pudratchiSumma = pulYaxlitla(v);
+    return;
+  }
   if (jami.pudratchiSumma == null || !jami.smetaSumma) return;
-  const foizlar = [...n.nom.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g)].map((m) => Number(m[1].replace(',', '.')));
+  const foizlar = foizlarOqi(n.nom).map((x) => x.foiz);
   const mos = foizlar.find((f) => teng(src, jami.smetaSumma! * f / 100));
   const koef = mos != null ? mos / 100 : src / jami.smetaSumma;
   n.podval = { tur: 'foiz', baza: jami.sourceId, koef, foiz: mos ?? null };
@@ -481,7 +546,7 @@ export function ofertaHisobla(qatorlar: readonly OfertaQator[], kirish: OfertaKi
       continue;
     }
     if (n.hosila && (n.rol === 'TRANSPORT' || n.rol === 'STORAGE')) {
-      podvalniHisobla(n, oxirgiJami, jamidanKeyin);
+      podvalniHisobla(n, oxirgiJami, jamidanKeyin, byId, nk);
       jamidanKeyin.push(n);
     }
   }

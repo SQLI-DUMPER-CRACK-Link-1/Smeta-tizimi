@@ -574,7 +574,15 @@ function varaqPatchQur(tahlil: OfertaSheetTahlili, qatorlar: readonly OfertaQato
       const pv = q.podval;
       const bazaQator = (id: string) => byId.get(id)?.sourceRow;
       let f: string | null = null;
-      if (kochirilgan) f = /^\s*SUM\(/i.test(kochirilgan) ? kochirilgan : `ROUND(${kochirilgan},2)`;
+      if (pv.tur === 'kategoriya') {
+        // Asl'da 0 — bo'lim resurslaridan kategoriya bo'yicha (yashirin КАТЕГОРИЯ ustuni).
+        const qr = pv.bazaQatorlar.map(bazaQator).filter((n): n is number => n != null);
+        if (qr.length) {
+          const [a, b] = [Math.min(...qr), Math.max(...qr)];
+          const sumif = (k: string) => `SUMIFS(${L.summa}${a}:${L.summa}${b},${L.kategoriya}${a}:${L.kategoriya}${b},"${k}")`;
+          f = `ROUND(${pv.qismlar.map((qq) => `(${qq.kat.map(sumif).join('+')})*${num(qq.foiz)}/100`).join('+')},2)`;
+        }
+      } else if (kochirilgan) f = /^\s*SUM\(/i.test(kochirilgan) ? kochirilgan : `ROUND(${kochirilgan},2)`;
       else if (pv.tur === 'yigindi') f = `SUM(${sumArgs(L.summa, pv.bazalar.map(bazaQator).filter((n): n is number => n != null))})`;
       else if (pv.tur === 'foiz' && bazaQator(pv.baza) != null) {
         f = pv.foiz != null ? `ROUND(${L.summa}${bazaQator(pv.baza)}*${num(pv.foiz)}/100,2)` : `ROUND(${L.summa}${bazaQator(pv.baza)}*${num(pv.koef)},2)`;

@@ -94,6 +94,61 @@ describe('oferta v3 — hujjat shakli', () => {
     expect(katak(xml, 'H6')?.[1]).toContain('<f>E6*2</f>');
   });
 
+  it('asl podvalda qo‘lda 0 (склад 2%+М/К 0,75%, кабель 1,5%) — bo‘lim resurslaridan kategoriya bo‘yicha hisoblanadi', async () => {
+    const rows: Katak[][] = [
+      ['НАИМЕНОВАНИЕ СТРОЙКИ: SINOV'], [],
+      ['№№', 'НАИМЕНОВАНИЕ РЕСУРСА', 'ЕД.ИЗМ', 'КОЛ-ВО', 'ЦЕНА', 'СУММА'],
+      [1, 2, 3, 4, 5, 6],
+      ['СТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ'],
+      [1, 'ПЕСОК', 'М3', 10, 1000, { f: 'D6*E6', v: 10000 }],
+      [2, 'КАБЕЛЬ СИЛОВОЙ ВВГ 3Х2,5', 'М', 100, 100, { f: 'D7*E7', v: 10000 }],
+      [3, 'КОНСТРУКЦИИ СТАЛЬНЫЕ', 'Т', 1, 20000, { f: 'D8*E8', v: 20000 }],
+      [null, 'ИТОГО', 'СУМ', null, null, { f: 'SUM(F6:F8)', v: 40000 }],
+      [null, 'ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ =2%  И  М/К=0,75%', 'СУМ', null, null, 0],
+      [null, 'ТРАНСПОРТНЫЕ УСЛУГИ НА КАБЕЛЬНО ПРОВОД.ПРОДУК.=1,5%', 'СУМ', null, null, 0],
+      [null, 'ТРАНСПОРТНЫЕ УСЛУГИ=5%', 'СУМ', null, null, { f: 'F9*0.05', v: 2000 }],
+      [null, 'ВСЕГО С УЧЕТОМ ЗАГОТОВИТЕЛЬНО-СКЛАДСКИХ РАСХОДОВ И ТРАНСПОРТА', 'СУМ', null, null, { f: 'SUM(F9:F12)', v: 42000 }],
+    ];
+    const bytes = kitob([{ nom: 'RES', ws: resVaraq(rows) }]);
+    const { t, tan, q } = await tahlil(bytes);
+    const hisob = ofertaHisobla(q, { ...foiz10, sozlama: { rejim: 'foiz', yon: 'pasaytirish', foiz: 0 } });
+    const kat = (nom: string) => hisob.qatorlar.find((x) => x.nom.startsWith(nom))!;
+    expect([kat('ПЕСОК').samaraliKategoriya, kat('КАБЕЛЬ').samaraliKategoriya, kat('КОНСТРУКЦИИ').samaraliKategoriya]).toEqual(['МАТ', 'КАБ', 'М/К']);
+    // склад = (10000 + 10000) × 2% + 20000 × 0,75% = 400 + 150
+    expect(kat('ЗАГОТОВИТЕЛЬНО').pudratchiSumma).toBe(550);
+    expect(kat('ТРАНСПОРТНЫЕ УСЛУГИ НА КАБЕЛЬНО').pudratchiSumma).toBe(150);
+    expect(kat('ТРАНСПОРТНЫЕ УСЛУГИ=5%').pudratchiSumma).toBe(2000);
+    expect(kat('ВСЕГО С УЧЕТОМ').pudratchiSumma).toBe(40000 + 550 + 150 + 2000);
+    const n = await tenderOfertaXlsx({ manbaFaylNomi: 'r.xlsx', manbaBytes: bytes, tanlanganVaraqlar: tan, tahlillar: t, hisob });
+    const xml = strFromU8(unzipSync(n.bytes)['xl/worksheets/sheet1.xml']);
+    expect(katak(xml, 'I10')?.[1]).toContain('<f>ROUND((SUMIFS(I6:I8,J6:J8,&quot;МАТ&quot;)+SUMIFS(I6:I8,J6:J8,&quot;КАБ&quot;))*2/100+(SUMIFS(I6:I8,J6:J8,&quot;М/К&quot;))*0.75/100,2)</f>');
+    expect(katak(xml, 'I11')?.[1]).toContain('<f>ROUND((SUMIFS(I6:I8,J6:J8,&quot;КАБ&quot;))*1.5/100,2)</f>');
+    expect(katak(xml, 'I13')?.[1]).toContain('<f>SUM(I9:I12)</f>');
+    expect(xml).not.toMatch(/<f>[^<]*\$[^<]*<\/f>/);
+  });
+
+  it('uskuna bloki: foizsiz СКЛАД (asl 0) — koeffitsient 1,2%; transport asl formula bilan', async () => {
+    const rows: Katak[][] = [
+      ['НАИМЕНОВАНИЕ СТРОЙКИ: SINOV'], [],
+      ['№№', 'НАИМЕНОВАНИЕ РЕСУРСА', 'ЕД.ИЗМ', 'КОЛ-ВО', 'ЦЕНА', 'СУММА'],
+      [1, 2, 3, 4, 5, 6],
+      ['ОБОРУДОВАНИЕ'],
+      [1, 'НАСОС ФИЛЬТРАЦИОННЫЙ 50М3/H', 'ШТ', 4, 25000, { f: 'D6*E6', v: 100000 }],
+      [null, 'ИТОГО', 'СУМ', null, null, { f: 'SUM(F6:F6)', v: 100000 }],
+      [null, 'ЗАГОТОВИТЕЛЬНО-СКЛАДСКИЕ РАСХОДЫ', 'СУМ', null, null, 0],
+      [null, 'ТРАНСПОРТНЫЕ УСЛУГИ', 'СУМ', null, null, { f: 'F7*0.02', v: 2000 }],
+      [null, 'ИТОГО ОБОРУДОВАНИЕ С УЧЕТОМ ЗАГОТОВИТЕЛЬНО-СКЛАДСКИХ И ТРАНСПОРТНЫХ', 'СУМ', null, null, { f: 'SUM(F7:F9)', v: 102000 }],
+    ];
+    const bytes = kitob([{ nom: 'RES', ws: resVaraq(rows) }]);
+    const { q } = await tahlil(bytes);
+    const h = ofertaHisobla(q, { ...foiz10, sozlama: { rejim: 'foiz', yon: 'pasaytirish', foiz: 0 } });
+    const r = (nom: string) => h.qatorlar.find((x) => x.nom.startsWith(nom))!;
+    expect(r('НАСОС').samaraliKategoriya).toBe('ОБ');
+    expect(r('ЗАГОТОВИТЕЛЬНО').pudratchiSumma).toBe(1200);
+    expect(r('ТРАНСПОРТНЫЕ').pudratchiSumma).toBe(2000);
+    expect(r('ИТОГО ОБОРУДОВАНИЕ').pudratchiSumma).toBe(103200);
+  });
+
   it('formulaKochir: boshqa varaq havolasi va ko‘chmaydigan formula rad etiladi', () => {
     const m = new Map([[5, 8]]);
     expect(formulaKochir("F8*'RES 2'!E9", m, true)).toBeNull();
