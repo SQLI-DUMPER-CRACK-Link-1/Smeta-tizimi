@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Search, Download, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
-import { t2NakopitelniyOl, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami } from '../../api/t2-nakopitelniy';
-import { nakopitelniyVedomostExportXlsx } from '../../lib/nakopitelniy-vedomost-export';
-import { generateF2AktTn } from '../../lib/f2-akt-tn-export';
+import { NAKOPITELNIY_MAX_LIMIT, t2NakopitelniyOl, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami } from '../../api/t2-nakopitelniy';
+import { HujjatToliqEmasXato, nakopitelniyVedomostHujjat } from '../../lib/nakopitelniy-vedomost-export';
+import { f2AktHujjat } from '../../lib/f2-akt-tn-export';
+import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 import { FmtN } from '../../lib/format';
 
@@ -46,7 +47,7 @@ function Sessiya({ companyId }: { companyId: number }) {
     try {
       const r = await t2NakopitelniyOl(objId, tanlanganDavr || null);
       if (!r.ok) { setXato(r.xato || r.code || 'Yuklanmadi'); setQatorlar([]); return; }
-      setQatorlar(r.qatorlar); setJami(r.jami); setDavrlar(r.davrlar); setDavr(r.davr); setObyektNom(r.obyekt.nom);
+      setQatorlar(r.qatorlar); setJami(r.jami); setDavrlar(r.davrlar); setDavr(r.davr); setObyektNom(r.obyekt.nom); setTruncated(Boolean(r.truncated));
       setPage(0);
     } catch (e) { setXato(e instanceof Error ? e.message : 'Yuklanmadi'); }
     finally { setBusy(false); }
@@ -84,16 +85,47 @@ function Sessiya({ companyId }: { companyId: number }) {
   const sahifa = gorunumRows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
   const sahifaSoni = Math.max(1, Math.ceil(gorunumRows.length / PAGE_SIZE));
 
-  const eksportQil = async () => {
-    const bytes = await nakopitelniyVedomostExportXlsx(qatorlar, { obyektNom, davr });
-    downloadBlob(new Uint8Array(bytes), `nakopitelniy_${obyektNom}_${davr}.xlsx`.replace(/\s+/g, '_'));
+  const [tomonlar, setTomonlar] = useHujjatTomonlari(companyId);
+  const [ndsFoiz, setNdsFoiz] = useState('');
+  const [truncated, setTruncated] = useState(false);
+
+  /** Hujjat faqat TO'LIQ ro'yxatdan yasaladi: sahifa ro'yxati qirqilgan bo'lsa
+   *  (server sukuti 500 qator) — maksimum chegara bilan qayta o'qiladi; u ham
+   *  yetmasa eksport bloklanadi (chala hujjat rasmiy hujjat emas). */
+  const toliqQatorlar = async (): Promise<NakopitelniyQator[] | null> => {
+    if (!truncated) return qatorlar;
+    const r = await t2NakopitelniyOl(Number(objectId), davr || null, NAKOPITELNIY_MAX_LIMIT);
+    if (!r.ok) { setXato(r.xato || r.code || 'Yuklanmadi'); return null; }
+    if (r.truncated) {
+      setXato(`Hujjat yasalmadi: obyektda ${r.qatorlar_jami} ta qator, server bir so‘rovda ${r.qatorlar_korsatildi} tagacha beradi — chala hujjat chiqarilmaydi.`);
+      return null;
+    }
+    return r.qatorlar;
   };
 
-  /** T1->T2 PTO gap-close: rasmiy TN Akt-2 shaklidagi Ф2 hujjati -- mijoz/
-   *  bankka topshiriladigan qog'oz format (apiF2TayyorHujjatYarat porti). */
+  const eksportQil = async () => {
+    setXato('');
+    try {
+      const rows = await toliqQatorlar();
+      if (!rows) return;
+      const h = nakopitelniyVedomostHujjat(rows, { obyektNom, davr, imzo: tomonlar });
+      downloadBlob(h.bytes, h.faylNomi);
+    } catch (e) { setXato(e instanceof HujjatToliqEmasXato ? 'Hujjat to‘liq emas — eksport bloklandi.' : 'Excel fayli tuzilmadi.'); }
+  };
+
+  /** Rasmiy АКТ ПРИЕМКИ ВЫПОЛНЕННЫХ РАБОТ (ФОРМА № 2) — TN Akt-2 shakli. */
   const aktEksportQil = async () => {
-    const bytes = await generateF2AktTn(qatorlar, { obyektNom, davr });
-    downloadBlob(new Uint8Array(bytes), `F2_akt_${obyektNom}_${davr}.xlsx`.replace(/\s+/g, '_'));
+    setXato('');
+    try {
+      const rows = await toliqQatorlar();
+      if (!rows) return;
+      const stavka = ndsFoiz.trim() === '' ? null : Number(ndsFoiz.replace(',', '.'));
+      const h = f2AktHujjat(rows, { obyektNom, davr, imzo: tomonlar, ndsFoiz: stavka != null && Number.isFinite(stavka) ? stavka : null });
+      downloadBlob(h.bytes, h.faylNomi);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : '';
+      setXato(m.startsWith('F2_AKT_BOSH') ? 'Tanlangan davrda tasdiqlangan F2 qatori yo‘q — akt yasalmadi.' : 'Ф2 akt fayli tuzilmadi.');
+    }
   };
 
   return (
@@ -143,6 +175,16 @@ function Sessiya({ companyId }: { companyId: number }) {
           </button>
         )}
       </div>
+
+      {qatorlar.length > 0 && (
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="min-w-[280px] flex-1"><HujjatTomonlariPanel qiymat={tomonlar} onChange={setTomonlar} /></div>
+          <label className="text-[12px] text-text-dim">Ф2 akt uchun QQS (НДС) stavkasi, %
+            <input aria-label="QQS stavkasi" value={ndsFoiz} onChange={e => setNdsFoiz(e.target.value)} placeholder="bo‘sh — hujjatda ko‘rsatilmaydi"
+              className="ml-2 w-44 border rounded px-2 py-1" inputMode="decimal" />
+          </label>
+        </div>
+      )}
 
       {busy && <p role="status">Yuklanmoqda…</p>}
       {xato && <p role="alert" className="text-danger flex items-center gap-1.5"><AlertTriangle size={14} /> {xato}</p>}

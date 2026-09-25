@@ -9,8 +9,8 @@ import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
 import { sbT2AktYaratV2, sbT2ObyektlarOlKomp, yangiOperationId, type T2Obyekt } from '../../api/supabase';
 import { sbQatorHolatOl, type QatorHolat } from '../../api/t2-fakt';
 import { f2NativePayloadQur, type F2NativeInput } from '../../lib/f2-native-preparation';
-import { f2NativeExportRowsQur } from '../../lib/f2-native-export';
-import { generateForma2 } from '../../lib/construction-document-control/export/forma2-export';
+import { f2QoralamaHujjat } from '../../lib/f2-native-export';
+import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 
 type Draft = Omit<F2NativeInput, 'qatorId'>;
@@ -20,6 +20,8 @@ const oyBoshlanishi = () => `${new Date().getFullYear()}-${String(new Date().get
 /** T1 GASsiz F2 qoralama: only canonical Fakt qoldig'i + exact F2 document values. */
 export function F2TayyorlashNative() {
   const { joriy } = useKompaniya();
+  const [tomonlar, setTomonlar] = useHujjatTomonlari(joriy?.id);
+  const [ndsFoiz, setNdsFoiz] = useState('');
   const workspace = usePTOWorkspace();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -120,10 +122,11 @@ export function F2TayyorlashNative() {
     const object = obyektlar.find((item) => item.id === obyektId);
     if (!object) { toast('Kanonik obyekt topilmadi.', 'danger'); return; }
     try {
-      const data = await generateForma2(f2NativeExportRowsQur(qatorlar, tekshiruv.qatorlar), {
-        projectName: object.nom, objectName: object.nom, periodLabel: oy.slice(0, 7), documentNumber: `F2-QORALAMA-${obyektId}-${oy.slice(0, 7)}`,
+      const stavka = ndsFoiz.trim() === '' ? null : Number(ndsFoiz.replace(',', '.'));
+      const h = f2QoralamaHujjat(qatorlar, tekshiruv.qatorlar, {
+        obyektNom: object.nom, davr: oy, imzo: tomonlar, ndsFoiz: stavka != null && Number.isFinite(stavka) ? stavka : null,
       });
-      downloadBlob(data, `Forma2_qoralama_${obyektId}_${oy.slice(0, 7)}.xlsx`);
+      downloadBlob(h.bytes, h.faylNomi);
     } catch { toast('Forma-2 Excel qoralamasini yaratib bo‘lmadi.', 'danger'); }
   };
 
@@ -160,6 +163,7 @@ export function F2TayyorlashNative() {
           <tbody>{qatorlar.length === 0 ? <tr><td colSpan={7} className="p-8 text-center text-text-dim">F2 olish mumkin bo‘lgan kanonik Fakt qoldig‘i yo‘q.</td></tr> : qatorlar.map((row) => { const draft = drafts[row.qator_id] || boshDraft; const issue = issueMap.get(row.qator_id); const label = row.kod || row.nom || 'Ish / resurs'; return <tr key={row.qator_id} className="border-t border-border/60 align-top"><td className="p-3"><div className="font-medium">{row.kod || '—'}</div><div>{row.nom}</div><div className="text-text-dim">{row.birlik}</div></td><td><FmtN val={row.f2_mumkin_hajm} /></td><td><input aria-label={`F2 hajmi: ${label}`} type="number" min="0" value={draft.quantity} onChange={(event) => ozgartir(row.qator_id, { quantity: event.target.value })} className="w-28 rounded border border-border bg-bg px-2 py-1 text-right" /></td><td><input aria-label={`F2 narxi: ${label}`} type="number" disabled={draft.priceIntentionallyAbsent} value={draft.unitPrice} onChange={(event) => ozgartir(row.qator_id, { unitPrice: event.target.value })} className="w-28 rounded border border-border bg-bg px-2 py-1 text-right disabled:opacity-50" /></td><td><input aria-label={`F2 summasi: ${label}`} type="number" disabled={draft.priceIntentionallyAbsent} value={draft.amount} onChange={(event) => ozgartir(row.qator_id, { amount: event.target.value })} className="w-32 rounded border border-border bg-bg px-2 py-1 text-right disabled:opacity-50" /></td><td><input aria-label={`F2 manbasi: ${label}`} value={draft.sourceReference} onChange={(event) => ozgartir(row.qator_id, { sourceReference: event.target.value })} placeholder="F2 №, sahifa" className="w-40 rounded border border-border bg-bg px-2 py-1" /><label className="mt-1 block text-[10px] text-text-dim"><input type="checkbox" checked={draft.priceIntentionallyAbsent} onChange={(event) => ozgartir(row.qator_id, { priceIntentionallyAbsent: event.target.checked })} /> narx hujjatda ataylab yo‘q</label></td><td className="p-3">{issue ? <span className={issue.blocking ? 'text-danger' : 'text-warn'}>{issueText(issue.code)}</span> : draft.quantity ? <span className="text-ok">Tayyor</span> : <span className="text-text-dim">Tanlanmagan</span>}</td></tr>; })}</tbody>
         </table>
       </section></>}
+      {validId && qatorlar.length > 0 && <section className="flex flex-wrap items-start gap-3"><div className="min-w-[280px] flex-1"><HujjatTomonlariPanel qiymat={tomonlar} onChange={setTomonlar} /></div><label className="text-[12px] text-text-dim">QQS (НДС) stavkasi, %<input aria-label="QQS stavkasi" value={ndsFoiz} onChange={(event) => setNdsFoiz(event.target.value)} placeholder="bo‘sh — hujjatda ko‘rsatilmaydi" inputMode="decimal" className="ml-2 w-44 rounded border border-border bg-bg px-2 py-1" /></label></section>}
       {validId && <section className="flex flex-wrap items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> Smeta narxi fallback emas. Arifmetik farq faqat ogohlantirish; hujjat summasi aynan saqlanadi.</p><div className="flex items-center gap-2"><button onClick={() => navigate(`/admin/f2-tarix?obyekt=${obyektId}&obyekt_nomi=${encodeURIComponent(obyektlar.find((item) => item.id === obyektId)?.nom || '')}`)} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-semibold text-text">F2 tarixini ko‘rish</button><button onClick={() => void excelYuklash()} disabled={!tekshiruv.ok || saving} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text disabled:opacity-50"><Download size={16} />Forma-2 Excel qoralama</button><button onClick={() => void saqlash()} disabled={!tekshiruv.ok || saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Yaratilmoqda…' : `F2 qoralama yaratish (${tekshiruv.qatorlar.length})`}</button></div></section>}
     </div>
   </Sahifa>;

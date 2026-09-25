@@ -1,5 +1,6 @@
-import ExcelJS from 'exceljs';
 import type { NakopitelniyQator } from '../api/t2-nakopitelniy';
+import { RasmiyVaraq, bugunSana, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2, type ImzoNomlar, type RasmiyUstun } from './hujjat-yozuvchi';
+import { HujjatToliqEmasXato, davrMatni } from './nakopitelniy-vedomost-export';
 
 /**
  * f2-akt-tn-export.ts — rasmiy "АКТ ПРИЕМКИ ВЫПОЛНЕННЫХ РАБОТ (Ф-2)" hujjati,
@@ -132,93 +133,113 @@ export function f2AktTnQatorlarQur(qatorlar: readonly NakopitelniyQator[]): {
   return { qatorlar: out, jamiSumma, qatorSoni: no };
 }
 
-const KOK_FON = 'FFD9E1F2';
-const SARIQ_FON = 'FFFFF2CC';
-const YASHIL_FON = 'FFE2EFDA';
-const TOQ_YASHIL_FON = 'FFC6E0B4';
-const KULRANG_FON = 'FFF2F2F2';
+/**
+ * АКТ ПРИЕМКИ ВЫПОЛНЕННЫХ РАБОТ (ФОРМА № 2) — rasmiy hujjat (H1–H9).
+ *
+ * Jadval shakli T1 da tasdiqlangan TN Akt-2 shakli bilan aynan (8 ustun,
+ * КОЛИЧЕСТВО: на единицу / по проектным данным; СТОИМОСТЬ: на ед. изм. /
+ * общая). Summa — tasdiqlangan F2 summasi (manba haqiqati, qayta
+ * hisoblanmaydi); ish va bo'lim jamilari, ВСЕГО — tirik SUM formulalari.
+ * НДС: stavka berilsa — ROUND(ВСЕГО × stavka / 100; 2) va ВСЕГО С НДС;
+ * berilmasa — НДС va ВСЕГО С НДС bo'sh, hujjatda ochiq ogohlantirish (H7).
+ */
+export type F2AktHujjatOpsiya = F2AktTnOptions & {
+  imzo?: ImzoNomlar;
+  /** Shartnoma raqami va sanasi (bo'sh — chiziq). */
+  shartnoma?: string | null;
+  /** НДС stavkasi, % (masalan 12). null/undefined — ko'rsatilmagan. */
+  ndsFoiz?: number | null;
+  truncated?: boolean;
+};
 
-export async function generateF2AktTn(qatorlar: readonly NakopitelniyQator[], options: F2AktTnOptions): Promise<Uint8Array> {
-  const { qatorlar: rows } = f2AktTnQatorlarQur(qatorlar);
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Smeta tizimi';
-  const ws = wb.addWorksheet('F2');
+const F2_USTUNLAR: RasmiyUstun[] = [
+  { sarlavha: '№ п/п', kenglik: 6, tur: 'tartib' },
+  { sarlavha: 'Шифр', kenglik: 14, tur: 'kod' },
+  { sarlavha: 'Наименование работ и затрат', kenglik: 55, tur: 'matn' },
+  { sarlavha: 'Ед. изм.', kenglik: 9, tur: 'birlik' },
+  { sarlavha: 'на единицу', kenglik: 12, tur: 'norma', guruh: 'КОЛИЧЕСТВО' },
+  { sarlavha: 'по проектным данным', kenglik: 14, tur: 'hajm', guruh: 'КОЛИЧЕСТВО' },
+  { sarlavha: 'на ед. изм.', kenglik: 15, tur: 'narx', guruh: 'СТОИМОСТЬ, сум' },
+  { sarlavha: 'общая', kenglik: 17, tur: 'pul', guruh: 'СТОИМОСТЬ, сум' },
+];
 
-  ws.addRow([]);
-  const titleRow = ws.addRow(['АКТ ПРИЕМКИ ВЫПОЛНЕННЫХ РАБОТ (Ф-2)']);
-  const objRow = ws.addRow([`Объект: ${options.obyektNom}`]);
-  const sana = options.sana || new Date().toLocaleDateString('ru-RU');
-  const perRow = ws.addRow([`За: ${options.davr}   (тузилди: ${sana})`]);
-  ws.addRow([]);
-  const hdr1 = ws.addRow(['№', 'ШИФР', 'НАИМЕНОВАНИЕ РАБОТ И ЗАТРАТ', 'ЕД. ИЗМ.', 'КОЛИЧЕСТВО', '', 'СТОИМОСТЬ, СУМ', '']);
-  const hdr2 = ws.addRow(['', '', '', '', 'на единицу', 'по проектным данным', 'на.ед.изм', 'общая']);
-  const numRow = ws.addRow([1, 2, 3, 4, 5, 6, 7, 8]);
-
-  const rzRows: number[] = []; const blRows: number[] = []; const itogoRows: number[] = []; let vsegoRow = 0;
-  for (const r of rows) {
-    const row = ws.addRow(r.cells as (string | number)[]);
-    if (r.kind === 'rz') rzRows.push(row.number);
-    else if (r.kind === 'bl') blRows.push(row.number);
-    else if (r.kind === 'itogo') itogoRows.push(row.number);
-    else if (r.kind === 'vsego') vsegoRow = row.number;
-  }
-  ws.addRow([]);
-  ws.addRow(['', 'Сдал (Подрядчик): ____________________', '', '', '', 'Принял (Заказчик): ____________________', '', '']);
-
-  /* ── Formatlash (haqiqiy akt ko'rinishi, T1 bilan bir xil) ── */
-  [titleRow, objRow, perRow].forEach((r) => { ws.mergeCells(r.number, 1, r.number, 8); r.alignment = { horizontal: 'center' }; });
-  titleRow.font = { bold: true, size: 14 };
-
-  ws.mergeCells(hdr1.number, 5, hdr1.number, 6);
-  ws.mergeCells(hdr1.number, 7, hdr1.number, 8);
-  for (let c = 1; c <= 4; c++) ws.mergeCells(hdr1.number, c, hdr2.number, c);
-  [hdr1, hdr2].forEach((r) => {
-    r.eachCell((c) => {
-      c.font = { bold: true };
-      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: KOK_FON } };
-      c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    });
+export function f2AktHujjat(qatorlar: readonly NakopitelniyQator[], o: F2AktHujjatOpsiya): { bytes: Uint8Array; faylNomi: string; jamiSumma: number; ndsSumma: number | null; jamiNds: number | null } {
+  if (o.truncated) throw new HujjatToliqEmasXato('ro‘yxat server chegarasida qirqilgan');
+  const { qatorlar: rows, jamiSumma } = f2AktTnQatorlarQur(qatorlar);
+  if (!rows.length) throw new Error('F2_AKT_BOSH: joriy davrda tasdiqlangan F2 qatori yo‘q');
+  const sana = o.sana || bugunSana();
+  const v = new RasmiyVaraq({
+    nom: 'Акт Ф-2',
+    sarlavha: 'АКТ ПРИЕМКИ ВЫПОЛНЕННЫХ РАБОТ (ФОРМА № 2)',
+    ostSarlavha: [`за отчетный период: ${davrMatni(o.davr)}`],
+    titul: [
+      ['Объект:', o.obyektNom], ['Заказчик:', o.imzo?.zakazchik], ['Подрядчик:', o.imzo?.pudratchi],
+      ['Договор:', o.shartnoma], ['Дата составления:', sana.split('-').reverse().join('.')],
+    ],
+    ustunlar: F2_USTUNLAR,
+    yonalish: 'portrait',
   });
-  numRow.eachCell((c) => {
-    c.font = { italic: true, size: 9 };
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: KULRANG_FON } };
-    c.alignment = { horizontal: 'center' };
+  const bosh = v.malumotBoshi;
+  // Har `F2AktTnQator` — aynan bitta hujjat qatori (qator raqami oldindan ma'lum).
+  const rowOf = (i: number) => bosh + i;
+  // Guruhlar: bl → uning chiziqlari; rz → bl/mustaqil qatorlari (itogo gacha).
+  const blBolalari = new Map<number, number[]>();
+  const itogoBolalari = new Map<number, number[]>();
+  const itogolar: number[] = [];
+  let joriyBl = -1;
+  let rzQismi: number[] = [];
+  rows.forEach((r, i) => {
+    if (r.kind === 'rz') { rzQismi = []; joriyBl = -1; }
+    else if (r.kind === 'bl') { joriyBl = i; blBolalari.set(i, []); rzQismi.push(i); }
+    else if (r.kind === 'chiziq_bl') blBolalari.get(joriyBl)?.push(i);
+    else if (r.kind === 'chiziq_mustaqil') { joriyBl = -1; rzQismi.push(i); }
+    else if (r.kind === 'itogo') { itogoBolalari.set(i, rzQismi); itogolar.push(i); }
   });
-  rzRows.forEach((rn) => {
-    ws.mergeCells(rn, 1, rn, 8);
-    const r = ws.getRow(rn);
-    r.font = { bold: true };
-    r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: SARIQ_FON } };
-  });
-  blRows.forEach((rn) => { ws.getRow(rn).font = { bold: true }; });
-  itogoRows.forEach((rn) => {
-    const r = ws.getRow(rn);
-    r.font = { bold: true };
-    r.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: YASHIL_FON } }; });
-  });
-  if (vsegoRow) {
-    const r = ws.getRow(vsegoRow);
-    r.font = { bold: true, size: 12 };
-    r.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOQ_YASHIL_FON } }; });
-  }
-
-  const lastDataRow = vsegoRow || numRow.number;
-  for (let rn = hdr1.number; rn <= lastDataRow; rn++) {
-    for (let cn = 1; cn <= 8; cn++) {
-      ws.getCell(rn, cn).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  const sumH = (ids: number[]) => `SUM(${ids.map((k) => `H${rowOf(k)}`).join(',')})`;
+  const summaOf = (i: number): number => {
+    const r = rows[i];
+    return r.kind === 'rz' ? 0 : r.cells[7] as number;
+  };
+  rows.forEach((r, i) => {
+    let n = 0;
+    if (r.kind === 'rz') n = v.bolim(r.cells[0], { daraja: 0 });
+    else if (r.kind === 'bl') {
+      const kids = blBolalari.get(i) ?? [];
+      n = v.qator('ish', [r.cells[0], r.cells[1], r.cells[2], r.cells[3], r.cells[4] === '' ? null : r.cells[4], null, null,
+        { f: sumH(kids), v: kids.reduce((s, k) => s + summaOf(k), 0) }], { daraja: 1 });
+    } else if (r.kind === 'chiziq_bl') {
+      const blRow = rowOf([...blBolalari.entries()].find(([, k]) => k.includes(i))![0]);
+      n = v.qator('oddiy', (rr) => [null, r.cells[1], r.cells[2], r.cells[3],
+        { f: `IF(AND(N(E${blRow})>0,N(F${rr})>0),F${rr}/E${blRow},"")`, v: r.cells[4] === '' ? '' : r.cells[4] },
+        r.cells[5], r.cells[6], r.cells[7]], { daraja: 2 });
+    } else if (r.kind === 'chiziq_mustaqil') {
+      // T1 TN Akt-2 konvensiyasi: mustaqil qatorning o'z hajmi "на единицу" (E) ustunida.
+      n = v.qator('oddiy', [r.cells[0], r.cells[1], r.cells[2], r.cells[3], r.cells[4], null, r.cells[6], r.cells[7]], { daraja: 1 });
+    } else if (r.kind === 'itogo') {
+      const kids = itogoBolalari.get(i) ?? [];
+      n = v.qator('jami', [null, null, 'ИТОГО ПО РАЗДЕЛУ', null, null, null, null, { f: sumH(kids), v: kids.reduce((s, k) => s + summaOf(k), 0) }]);
+    } else {
+      n = v.qator('vsego', [null, null, 'ВСЕГО ПО АКТУ', null, null, null, null, { f: sumH(itogolar), v: jamiSumma }]);
     }
-  }
-  for (let rn = numRow.number + 1; rn <= lastDataRow; rn++) {
-    for (let cn = 5; cn <= 8; cn++) {
-      const cell = ws.getCell(rn, cn);
-      if (typeof cell.value === 'number') cell.numFmt = '#,##0.###';
-    }
-  }
+    if (n !== rowOf(i)) throw new Error('F2_AKT_QATOR_SILJIDI');
+  });
+  const vsegoRow = rowOf(rows.length - 1);
+  const stavka = o.ndsFoiz != null && Number.isFinite(o.ndsFoiz) && o.ndsFoiz >= 0 ? o.ndsFoiz : null;
+  const ndsSumma = stavka == null ? null : yaxlit2(jamiSumma * stavka / 100);
+  const jamiNds = ndsSumma == null ? null : jamiSumma + ndsSumma;
+  const ndsRow = v.qator('jami', [null, null, stavka == null ? 'НДС (ставка не указана)' : `НДС ${String(stavka).replace('.', ',')}%`, null, null, null, null,
+    stavka == null ? null : { f: `ROUND(H${vsegoRow}*${stavka}/100,2)`, v: ndsSumma }]);
+  v.qator('vsego', [null, null, 'ВСЕГО ПО АКТУ С НДС', null, null, null, null,
+    stavka == null ? null : { f: `H${vsegoRow}+H${ndsRow}`, v: jamiNds }]);
+  v.bosh();
+  v.izoh('Стоимость по позициям — по утвержденным документам формы № 2 за отчетный период; в акт включены только позиции с объемом за период.');
+  v.diqqat(stavka == null ? [{ nom: 'НДС', sabab: 'ставка НДС не указана — сумма НДС и итог с НДС не определены' }] : []);
+  v.imzo(imzoTomonlari(['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'ТЕХНАДЗОР'], o.imzo));
+  const { bytes } = rasmiyKitob([v]);
+  return { bytes, faylNomi: hujjatFaylNomi({ obyekt: o.obyektNom, hujjat: 'АКТ_Ф-2', davr: o.davr.slice(0, 7) }), jamiSumma, ndsSumma, jamiNds };
+}
 
-  ws.getColumn(9).width = 4;
-  ws.getColumn(1).width = 5; ws.getColumn(2).width = 14; ws.getColumn(3).width = 55; ws.getColumn(4).width = 9;
-  ws.getColumn(5).width = 12; ws.getColumn(6).width = 14; ws.getColumn(7).width = 14; ws.getColumn(8).width = 16;
-  ws.views = [{ state: 'frozen', ySplit: numRow.number }];
-
-  return new Uint8Array(await wb.xlsx.writeBuffer());
+/** Eski nom (NakopitelniyVedomost sahifasi) — endi rasmiy hujjat standartida. */
+export async function generateF2AktTn(qatorlar: readonly NakopitelniyQator[], options: F2AktHujjatOpsiya): Promise<Uint8Array> {
+  return f2AktHujjat(qatorlar, options).bytes;
 }

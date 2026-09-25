@@ -45,9 +45,14 @@ export type NakopitelniyJavob = {
   davrlar: NakopitelniyDavr[];
 } | { ok: false; code: string; xato?: string };
 
-export async function t2NakopitelniyOl(obyektId: number, davr?: string | null): Promise<NakopitelniyJavob> {
+/** `limit` — qator chegarasi (server sukuti 500, RPC maksimumi 3000). Hujjat
+ *  eksporti to'liq ro'yxat bilan ishlaydi: javobdagi `truncated` tekshiriladi. */
+export const NAKOPITELNIY_MAX_LIMIT = 3000;
+
+export async function t2NakopitelniyOl(obyektId: number, davr?: string | null, limit?: number): Promise<NakopitelniyJavob> {
   const q = new URLSearchParams({ amal: 'nakopitelniy', obyekt_id: String(obyektId), faqat_faol: '0' });
   if (davr) q.set('davr', davr);
+  if (limit) q.set('limit', String(limit));
   const r = await fetch('/api/hujjat-nazorat?' + q.toString());
   const j = await r.json().catch(() => null);
   if (!j) return { ok: false, code: 'NETWORK_ERROR' };
