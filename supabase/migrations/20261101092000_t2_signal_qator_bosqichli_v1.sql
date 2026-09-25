@@ -1,5 +1,4 @@
 -- T2_SIGNAL_QATOR_BOSQICHLI_V1 — signallar faqat O'ZGARGAN qator bo'yicha.
--- HOLAT: QO'LLANMAGAN (2026-09-25) — prodda sinov egasi tomonidan to'xtatildi; egasi tasdig'ini kutadi.
 --
 -- Egasi (2026-09-25, 8-band): "Amfiteatrda topgan muammoyingni bajar va buni
 -- tizimli darajada birinchi o'rinda hal qilib ber."
@@ -20,6 +19,8 @@
 -- o'zgarmaydi (import konveyeri va qo'lda tekshiruv uchun qoladi); import
 -- markerlari va t2.signal_kechiktir bayrog'i ham saqlanadi.
 -- Rollback: *.rollback.sql (20261101091000 dagi trigger funksiyasi).
+-- Prod: 2026-09-25 qo'llandi (version 20260925173506). Tranzaksiya testi: tahrir
+-- ~10 s → 0,28 s; bosqichli natija to'liq refresh bilan aynan bir xil (917 = 917, md5 teng).
 
 begin;
 
