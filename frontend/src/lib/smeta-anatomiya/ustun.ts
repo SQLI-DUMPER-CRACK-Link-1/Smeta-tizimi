@@ -10,17 +10,24 @@ import type { Katak, UstunXaritasi } from './turlar';
 const NOM = /НАИМЕНОВАН|NOMI\b/;
 const QIDIRUV_CHEGARASI = 60;
 
-/** `1 | 2 | 3 | 4 …` — ketma-ket butun sonlar qatori (kamida 4 ta). */
+/** `1 | 2 | 3 | 4 …` — ketma-ket butun sonlar qatori (kamida 4 ta). Real F2 larda
+ *  raqamlash `2` dan boshlanadi (tartib ustuni bo'sh) yoki oxirida takror/ortiqcha
+ *  katak bor (`… H=8 | J=8`) — shuning uchun boshidan kamida 4 ta ketma-ket son yetarli,
+ *  boshlanishi 1 bo'lishi shart emas (lekin ≤ 3). */
 export function tartibRaqamlariQatorimi(row: readonly Katak[]): boolean {
   const idx = toliqUstunlar(row);
   if (idx.length < 4) return false;
-  let oldingi = 0;
+  let oldingi: number | null = null;
+  let ketma = 0;
   for (const i of idx) {
     const n = son(row[i]);
-    if (n == null || !Number.isInteger(n) || n !== oldingi + 1) return false;
+    if (n == null || !Number.isInteger(n) || typeof row[i] === 'string' && !/^\d+$/.test(String(row[i]).trim())) break;
+    if (oldingi == null) { if (n < 1 || n > 3) return false; }
+    else if (n !== oldingi + 1) break;
     oldingi = n;
+    ketma++;
   }
-  return true;
+  return ketma >= 4;
 }
 
 function ustunSarlavhalari(rows: readonly Katak[][], bosh: number, oxir: number): string[] {
