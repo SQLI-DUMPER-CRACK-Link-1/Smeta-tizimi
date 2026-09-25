@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { sbT2DaraxtOl, sbT2QatorHolatOl, sbT2TreeQur, type T2Qator, type T2QatorHolat } from '../../api/supabase';
+import { T2_DARAXT_USTUNLARI, T2_HOLAT_DARAXT_USTUNLARI, sbT2DaraxtOl, sbT2QatorHolatOl, sbT2TreeQur, type T2Qator, type T2QatorHolat } from '../../api/supabase';
 import { sbT2QatorHolatQisman } from '../../api/t2-holat-qisman';
 import { priceControlOl, type PriceControlLine } from '../../api/t2-price-control';
 import { faktTaalluqliIdlar, holatlarniAlmashtir } from '../../lib/fakt-yangilash';
@@ -42,7 +42,7 @@ export function useT2Daraxt(obyektId: number | null) {
     if (birinchi) setLoading(true); else setYangilanmoqda(true);
     setError('');
     try {
-      const [d, h] = await Promise.all([sbT2DaraxtOl(obyektId), sbT2QatorHolatOl(obyektId)]);
+      const [d, h] = await Promise.all([sbT2DaraxtOl(obyektId, T2_DARAXT_USTUNLARI), sbT2QatorHolatOl(obyektId, T2_HOLAT_DARAXT_USTUNLARI)]);
       if (raqam !== navbat.current) return;
       if (!d.ok || !h.ok) {
         setError(d.error || h.error || 'Kanonik daraxt o‘qilmadi.');
@@ -75,7 +75,7 @@ export function useT2Daraxt(obyektId: number | null) {
           return;
         }
       }
-      const h = await sbT2QatorHolatOl(obyektId);
+      const h = await sbT2QatorHolatOl(obyektId, T2_HOLAT_DARAXT_USTUNLARI);
       if (raqam !== navbat.current) return;
       if (h.ok) setStates((h.qatorlar || []) as T2QatorHolat[]);
       else setError(h.error || 'Holat yangilanmadi — sahifani yangilang.');

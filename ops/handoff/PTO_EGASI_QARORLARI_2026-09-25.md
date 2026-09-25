@@ -144,12 +144,16 @@ konvensiyasini real fayl bilan tasdiqlang (UNKNOWN).
 
 **Qaror:** _(egasi yozadi)_
 
-## Q10. Additional/Replacement migratsiyasi
+## Q10. Additional/Replacement migratsiyasi — HAL QILINGAN (qaror kerak emas)
 
-Tekshiruv natijasi `ops/handoff/PTO_LINIYA_YAKUN_HISOBOT_2026-09-25.md` (P9)
-da. Agar prodda qo‘llanmagan bo‘lsa — qo‘llash uchun ruxsatingiz kerak.
-
-**Qaror:** _(egasi yozadi)_
+Tekshirildi (production, faqat o'qish, 2026-09-25): migratsiya prodda
+qo'llangan (`20260905043049 t2_additional_replacement_v1`), RPC'lar
+`t2_addrepl_execute_v1`, `t2_qoshimcha_ish_yarat_v1`, `t2_zamena_ish_yarat_v1`
+va `t2_addrepl_command` jadvali mavjud; `sb-yoz.ts` whitelist'ida bor. UI —
+sizning avvalgi qaroringiz bo'yicha F2 import ikki oynali panelida
+(drag-drop, `F2AddReplModal`); `HolatNative` dagi forma ataylab olib
+tashlangan (test bilan himoyalangan). Ma'lumot uchun: repodagi fayl nomi
+`20260924120000_…` prod versiyasidan farq qiladi (qo'llangan sana).
 
 ## Q11. Narxlar GAS → native o‘tkazish strategiyasi
 
