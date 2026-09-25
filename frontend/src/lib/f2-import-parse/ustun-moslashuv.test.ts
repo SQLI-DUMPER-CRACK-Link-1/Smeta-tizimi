@@ -8,6 +8,7 @@ import { f2UstunAniqla } from './columnDetect';
 import { f2FaylOqiCore } from './treeBuild';
 import { kitobAnatomiyasi } from '../smeta-anatomiya';
 import type { SheetGrid } from './types';
+import { resUstunlariniAniqla } from '../res-narxlash';
 
 /** Asl F2 akt shakli (TN/ABC4): 8 ustun. Resurs: norma × ish hajmi, narx, summa. */
 const ASL_SARLAVHA = ['№', 'ШИФР', 'НАИМЕНОВАНИЕ РАБОТ И РЕСУРСОВ', 'ЕД.ИЗМ', 'НА ЕДИНИЦУ', 'ПО ПРОЕКТУ', 'НА.ЕД.ИЗМ', 'ОБЩАЯ'];
@@ -89,5 +90,20 @@ describe('Smeta anatomiyasi — PTO o‘zgartirgan LRV ustunlari', () => {
     expect([v.ustunlar?.hajmLoyiha, v.ustunlar?.narx, v.ustunlar?.summa]).toEqual([6, 7, 8]);
     expect(v.rolDalil.some((d) => d.qoida === 'ustunlar:arifmetika')).toBe(true);
     expect(v.qoshimchaUstunlar?.map((q) => q.sarlavha)).toEqual(['КОЛ-ВО ПО СМЕТЕ', 'ПРИМЕЧАНИЕ']);
+  });
+});
+
+describe('RES narxlash — ustun o‘zgarishiga moslashish', () => {
+  const qatorlar = RESURSLAR.map((r, i) => [i + 1, r[0], r[1], r[2], r[4], r[5], r[4] * r[5]]);
+  it('"НА ЕД.ИЗМ" o‘rniga "ЦЕНА, СУМ" yozilgan — narx ustuni baribir topiladi', () => {
+    const cols = resUstunlariniAniqla([['№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ', 'КОЛ-ВО', 'ЦЕНА, СУМ', 'СУММА'], ...qatorlar] as SheetGrid);
+    expect(cols?.narx).toBe(5);
+  });
+  it('PTO "ЦЕНА ПО СМЕТЕ" (boshqa narx) ustuni qo‘shgan — haqiqiy narx ma’lumot bilan isbotlanadi', () => {
+    const rows = [['№', 'КОД', 'НАИМЕНОВАНИЕ', 'ЕД.ИЗМ', 'КОЛ-ВО', 'ЦЕНА ПО СМЕТЕ 2025', 'ЦЕНА', 'СУММА'],
+      ...RESURSLAR.map((r, i) => [i + 1, r[0], r[1], r[2], r[4], r[5] * 0.8, r[5], r[4] * r[5]])] as SheetGrid;
+    const cols = resUstunlariniAniqla(rows);
+    expect(cols?.narx).toBe(6);
+    expect(cols?.dalil).toContain('narx: 6→7-ustun');
   });
 });

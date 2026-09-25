@@ -176,6 +176,8 @@ function NativeSession({ companyId }: { companyId: number }) {
   const [book, setBook] = useState<XlsxWorkbook | null>(null);
   const [sheetName, setSheetName] = useState('');
   const [cols, setCols] = useState<F2ColumnConfig | null>(null);
+  /** Ustunlar qanday aniqlandi va PTO qo'shgan qo'shimcha ustunlar (operatorga). */
+  const [ustunIzoh, setUstunIzoh] = useState<{ dalil?: { ishonch: string; izoh: string }; qoshimcha?: Array<{ ustun: number; sarlavha: string }> } | null>(null);
   const [source, setSource] = useState<F2ExactManbaTugun[]>([]);
   const [mapping, setMapping] = useState(new Map<string, number>());
   const [labels, setLabels] = useState(new Map<string, string>());
@@ -281,6 +283,7 @@ function NativeSession({ companyId }: { companyId: number }) {
     const sheet = workbook.sheet(name);
     const preview = sheet && f2FaylOqiCore(sheet.rows);
     setCols(preview && 'cols' in preview ? preview.cols : null);
+    setUstunIzoh(preview && 'cols' in preview ? { dalil: preview.ustunDalil, qoshimcha: preview.qoshimchaUstunlar } : null);
   }
   async function upload(file: File) {
     lastAutoMatchKey.current = ''; reset(); setBook(null); setCols(null); setBusy(true); setPhase('Fayl o‘qilmoqda');
@@ -548,6 +551,8 @@ function NativeSession({ companyId }: { companyId: number }) {
     </fieldset>
     {cols && <fieldset disabled={busy || done} className="karta p-3">
       <legend className="px-1 text-[12px] font-medium text-text-dim">Ustun raqamlari (1 dan boshlab) — fayl bilan solishtiring</legend>
+      {ustunIzoh?.dalil && <p className={`text-[11px] ${ustunIzoh.dalil.ishonch === 'past' ? 'text-warn' : 'text-text-dim'}`}>{ustunIzoh.dalil.izoh}</p>}
+      {!!ustunIzoh?.qoshimcha?.length && <p className="text-[11px] text-text-dim">Qo‘shimcha ustunlar (o‘qilmaydi): {ustunIzoh.qoshimcha.map((q) => `${q.ustun + 1}: ${q.sarlavha}`).join('; ')}</p>}
       <div className="mt-2 flex flex-wrap items-end gap-2 sm:gap-3">
         {(Object.keys(cols) as (keyof F2ColumnConfig)[]).map(k => (
           <label key={k} className="text-[12px] text-text-dim">{k}

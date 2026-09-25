@@ -1,7 +1,9 @@
 import type { SheetGrid, XlsxWorkbook } from './f2-import-parse';
+import { HAJM_NAQSH, NARX_NAQSH, SUMMA_NAQSH, uchlikniMoslashtir } from './smeta-anatomiya/ustun-dalil';
 
 export type ResNarx = { kod?: string; nom: string; birlik: string; narx: number };
-export type ResUstunlar = { kod: number; nom: number; birlik: number; narx: number; sarlavha: number };
+/** `dalil` — narx ustuni qanday isbotlandi (sarlavha / ma'lumot arifmetikasi). */
+export type ResUstunlar = { kod: number; nom: number; birlik: number; narx: number; sarlavha: number; dalil?: string };
 export type NarxsizQator = { id: number; tur: string | null; kod: string | null; nom: string | null; birlik: string | null; narx: number | null };
 export type ResMoslashmaganSabab = 'QATOR_IDENTIYASI_YOQ' | 'RES_MANBASI_TOPILMADI' | 'RES_MANBA_ZIDDIYATI' | 'BIR_NECHTA_NARX_VARIANTI';
 export type ResMoslashmagan = { tur: string; kod: string | null; nom: string | null; birlik: string | null; sabab: ResMoslashmaganSabab };
@@ -39,7 +41,12 @@ function son(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** RES sarlavhasi ikki yoki uch qatorga bo'linishini hisobga oladi. */
+/** RES sarlavhasi ikki yoki uch qatorga bo'linishini hisobga oladi.
+ *
+ * Egasi (2026-09-25): PTO ustun qo'shishi yoki nomini o'zgartirishi mumkin —
+ * narx ustuni sarlavha so'zi bilan emas, oxir-oqibat MA'LUMOT bilan
+ * isbotlanadi: hajm × narx ≈ summa (smeta-anatomiya/ustun-dalil.ts, barcha
+ * hujjat o'quvchilari uchun yagona mexanizm). */
 export function resUstunlariniAniqla(rows: SheetGrid): ResUstunlar | null {
   for (let r = 0; r < Math.min(rows.length, 80); r++) {
     const row = rows[r] ?? [];
@@ -51,15 +58,25 @@ export function resUstunlariniAniqla(rows: SheetGrid): ResUstunlar | null {
       if (kod < 0 && /ШИФР|КОД/.test(cell)) kod = c;
     }
     if (nom < 0 || birlik < 0) continue;
-    let narx = -1;
+    // Sarlavha matnlari (asosiy qator + keyingi 3 qator, raqamlash/ma'lumotgacha).
+    const sarQatorlar: number[] = [];
     for (let rr = r; rr < Math.min(rows.length, r + 4); rr++) {
-      const hdr = rows[rr] ?? [];
-      for (let c = 0; c < hdr.length; c++) {
-        if (/НА\.?\s*ЕД\.?\s*(ИЗМ|ИЗМЕР)|НА\s*ЕДИНИЦУ/.test(up(hdr[c]))) { narx = c; break; }
-      }
-      if (narx >= 0) break;
+      const q = rows[rr] ?? [];
+      const sonlar = q.filter((v) => son(v) != null).length;
+      if (rr > r && sonlar >= 2) break;
+      sarQatorlar.push(rr);
     }
-    return narx >= 0 ? { kod, nom, birlik, narx, sarlavha: r } : null;
+    const kenglik = Math.max(0, ...sarQatorlar.map((rr) => (rows[rr] ?? []).length));
+    const matnlar = Array.from({ length: kenglik }, (_, c) => sarQatorlar.map((rr) => up((rows[rr] ?? [])[c]).replace(/\s+/g, ' ')).filter(Boolean).join(' '));
+    let narx = matnlar.findIndex((t) => /НА\.?\s*ЕД\.?\s*(ИЗМ|ИЗМЕР)|НА\s*ЕДИНИЦУ/.test(t));
+    if (narx < 0) narx = matnlar.findIndex((t, i) => i !== nom && i !== birlik && NARX_NAQSH.test(t) && !/ОБЩ|ВСЕГО|ВЕСЬ/.test(t));
+    const hajm = matnlar.findIndex((t, i) => i !== narx && HAJM_NAQSH.test(t) && !/ЦЕНА|НАРХ|СУММ|СТОИМ/.test(t));
+    const summa = matnlar.findIndex((t, i) => i !== narx && SUMMA_NAQSH.test(t) && !NARX_NAQSH.test(t));
+    const band = new Set([kod, nom, birlik].filter((i) => i >= 0));
+    const oxirgiSar = sarQatorlar[sarQatorlar.length - 1] ?? r;
+    const m = uchlikniMoslashtir(matnlar, rows.slice(oxirgiSar + 1, oxirgiSar + 2001), { hajm, narx, summa }, band);
+    if (m.qoida === 'arifmetika') narx = m.uchlik.narx;
+    return narx >= 0 ? { kod, nom, birlik, narx, sarlavha: r, dalil: m.izoh } : null;
   }
   return null;
 }
