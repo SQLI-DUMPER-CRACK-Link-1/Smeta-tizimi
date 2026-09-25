@@ -119,3 +119,32 @@ Excel CalculateFull — UNKNOWN.
   Egasi brauzerda `/api/soglik` → `ok:true` ni tekshiradi (yoki muhit sozlamasida
   domenga ruxsat beradi).
 - Shu hisobot faylining o'zi keyingi hujjat commit'ida (faqat hujjat, kod o'zgarmagan).
+
+---
+
+# Qo'shimcha: egasi javoblari bo'yicha ish (2026-09-25, kechqurun) — `PTO-EGASI-JAVOB-001`
+
+Egasi javoblari: "1 — ha, tuzat (Amfiteatr foizlari bilan 56 mlrd); 2 — F2
+resurslari НДС siz, nakopitelniy oxirida bitta 12 % НДС, o'zgartiriladigan;
+3 — serverda to'g'rila, avtomat ishlasin; 4 — A; 5 — A; 6 — ostatkada
+bajarilmaydigan/bekor qilingan ishlar uchun yechim".
+
+| # | Nima qilindi | Dalil | Holat |
+|---|---|---|---|
+| 1 (Q3) | `t2_nakopitelniy_v2`: smeta jami faqat barglardan + `smeta_nakrutka`; sahifada "to'g'ri xarajat" va "nakrutka va QQS bilan" | prod tranzaksiya testi: Amfiteatr 43 596 859 620,62 / **56 623 606 614,37**; 28 obyekt acceptance PASS | production da (20260925151924) |
+| 3 (Q4) | `p_offset`/`keyingi_offset` + mijoz `t2NakopitelniyToliq` (qator chegarasi yo'q, chala hujjat yo'q) | Suniy Ko'l 27 309 qator — 6 sahifa, ~2,9 s (serverda); vitest 3 test | production da; brauzerda real login bilan vaqt — UNKNOWN |
+| 2 (Q2) | Накопительная oxirida «ВСЕГО ПО ОБЪЕКТУ (без НДС) → НДС 12 % → ВСЕГО С НДС»; sukut 12 % (tahrirlanadi) — Nakopitelniy, АКТ Ф-2, F2 qoralama | vitest; LibreOffice farq 0 (`nakopitelniy_nds.xlsx`) | tayyor (sintetik); real Excel — UNKNOWN |
+| 6 | Ostatka: kanonik `t2_smeta_ozgarish` (olib_tashlash) — LRV sahifasida panel (sabab majburiy, qoralama → tasdiq); hujjatda «ИСКЛЮЧЕНО ИЗ ОСТАТКА» + asoslar, ВСЕГО ga kirmaydi | vitest (model, hujjat, panel); LibreOffice farq 0 (`ostatka_istisno.xlsx`); prod tranzaksiya: tasdiqlash to'g'ri (bl → 0, normali resurs kaskad → 0, revision) | tayyor; UI da real login bilan — UNKNOWN |
+| 6 (topilma) | Tasdiqlash 31,7 s edi (har qator + audit uchun signal refresh) — PostgREST 30 s chegarasidan oshib, UI dan yiqilardi. `t2_smeta_ozgarish_tasdiqlash_v2`: signal oxirida bir marta | prod tranzaksiya: 31,7 s → **5,0 s**, natija bir xil | production da (20260925160504) |
+| 4 (Q12) | Reja: `ops/handoff/IJRO_HUJJATLARI_T2_REJA_2026-09-25.md` (ma'lumot modeli, generator, nazorat, T1 REYESTR importi) | T1 `Akt generator/Code.js` tahlili | **real blanklar kutilmoqda** — kod yo'q |
+| 5 (Q13) | O'zgarish kerak emas (avtomatik + izoh) | — | yopildi |
+
+Gate'lar: `tsc -b` ✓, functions tsc ✓, oxlint 0 xato, vitest 640/640 ✓
+(5 skip), `testlar/hammasi.cjs` ✓, governance PASS, `vite build` ✓,
+LibreOffice qayta hisoblash 19/19 farq 0.
+
+Egasidan kerak: АОСР / oraliq qabul / sinov / laboratoriya real blanklari;
+АОСР yo'qligida F2 — bloklash yoki ogohlantirish; ijro hujjatlari migratsiyasiga
+ruxsat. Qo'lda tekshirish: Nakopitelniy (Suniy Ko'l) Excel — to'liq chiqishi va
+oxirida НДС 12 %; LRV → «Bajarilmaydigan / bekor qilingan ishlar» → bitta
+sinov ishini qoralama qilib, keyin "Qaytarish" (tasdiqlamasdan).

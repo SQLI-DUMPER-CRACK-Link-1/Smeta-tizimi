@@ -60,9 +60,25 @@ ingichka ramka, ВСЕГО — qalin chegara.
 | PTO hujjati (Ф-2/накоп./слич./Ф-3/М-29) | `pto-hujjat-export.ts` | noldan | turga qarab; ИТОГО faqat pul ustunida; Ф-3 yuridik jami yo'q | turga qarab | Excel + PDF |
 
 Qo'shimcha qoidalar: pul faqat barglarda yig'iladi (bl/rz summasi takror — ikki marta
-sanalmaydi); qirqilgan (`truncated`) RPC ro'yxatidan hujjat yasalmaydi; НДС stavkasi
-berilmasa НДС va ВСЕГО С НДС bo'sh; Forma-3 yuridik jami — egasi qarori
+sanalmaydi; server `t2_nakopitelniy_v2` ham shunday — Q3); qirqilgan (`truncated`) RPC
+ro'yxatidan hujjat yasalmaydi, ro'yxat server sahifalarida avtomat to'liq o'qiladi
+(`t2NakopitelniyToliq`, Q4); Forma-3 yuridik jami — egasi qarori
 (`ops/handoff/PTO_EGASI_QARORLARI_2026-09-25.md` Q1).
+
+НДС (egasi qarori Q2): F2 resurs qatorlari НДС siz; НДС hujjat **oxirida bir marta** —
+Накопительная: «ВСЕГО ПО ОБЪЕКТУ (без НДС)» → «НДС n %» → «ВСЕГО С НДС» (akt summalari
+ustunlarida); АКТ Ф-2 va F2 qoralamasi: «НДС» → «ВСЕГО ПО АКТУ С НДС». Stavka sukuti
+**12 %** (`NDS_SUKUT_FOIZ`), sahifada tahrirlanadi; bo'sh — НДС qo'shilmaydi va hujjatda
+aytiladi. Smeta nakrutka kaskadi (to'g'ri xarajat → ИТОГО-4 → НДС → ВСЕГО) Накопительная
+izohida ma'lumot sifatida.
+
+Ostatka — bajarilmaydigan / bekor qilingan ishlar (egasi, 2026-09-25): kanonik
+o'zgartirish nazorati `t2_smeta_ozgarish` (tur `olib_tashlash`, sabab majburiy,
+qoralama → tasdiq, audit, revision). Tasdiqlangani ostatkadan chiqadi va hujjatda
+ВСЕГО dan keyin «ИСКЛЮЧЕНО ИЗ ОСТАТКА» bo'limida (asl hajm, bajarilgan, chiqarilgan
+hajm, summa) va «ОСНОВАНИЯ ИСКЛЮЧЕНИЯ ИЗ ОСТАТКА» ro'yxatida (изменение №, sana,
+sabab) turadi — ВСЕГО ga kirmaydi; qoralamasi ostatkada qoladi va «ТРЕБУЮТ
+ВНИМАНИЯ» da. UI: LRV sahifasi → «Bajarilmaydigan / bekor qilingan ishlar».
 
 ## 4. Tekshirish
 

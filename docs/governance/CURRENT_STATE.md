@@ -193,3 +193,15 @@ checkpointdir. Eski yozuvlar o‘zgartirilmaydi.
 | `production_changes` | Yo'q: migratsiya, DDL, real ma'lumotga yozish qilinmadi. Production faqat o'qildi (list_migrations, information_schema, agregat SELECT). |
 | `open_owner_decisions` | `ops/handoff/PTO_EGASI_QARORLARI_2026-09-25.md` Q1–Q13 (Forma-3 qoidasi, Ф-2 НДС asosi, RPC smeta_summa ikki marta sanash, 3000 qator chegarasi, anon grant, Hermes marshruti, Suniy Ko'l 84, ТЕПЛОТРАССА, Faravon, АОСР/ijro hujjatlari integratsiyasi, ustun moslashuvi siyosati). |
 | `remaining_evidence` | Microsoft Excel va real fayllar bilan tekshiruv, authenticated live smoke — egasi (UNKNOWN shu muhitda). LibreOffice qayta hisoblash farqi 0 (sintetik namunalar). |
+
+# 2026-09-25 (kechqurun) — Egasi javoblari: Nakopitelniy, sahifalash, НДС, ostatka istisnosi (PTO-EGASI-JAVOB-001)
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `8df37424f6ea5bd4d8aa053fff96d86e736c9c8c` — egasi javoblari kod commit'lari (d6a7222 ustida); shu addendum commit'i undan keyin. |
+| `owner_decisions` | `ops/handoff/PTO_EGASI_QARORLARI_2026-09-25.md`: Q2 (НДС oxirida bir marta, sukut 12 %), Q3 (tuzat — 56 mlrd), Q4 (serverda, avtomat), Q12 (АОСР va ijro hujjatlari T2 ga to'liq — blanklar kutilmoqda), Q13 (avtomatik + izoh) — javob berildi. |
+| `production_migrations` | `20261101090000_t2_nakopitelniy_v2_sahifa_barg_jami` (prod 20260925151924) va `20261101091000_t2_ozgarish_tasdiqlash_signal_bir_marta` (prod 20260925160504) — egasi chatda aniq ruxsat bergan; additiv funksiyalar, rollback fayllari bor. Biznes ma'lumotiga yozuv yo'q (barcha tekshiruvlar tranzaksiyada, rollback). |
+| `verified` | Amfiteatr smeta 43 596 859 620,62 (to'g'ri xarajat), nakrutka+НДС bilan 56 623 606 614,37; 28 obyekt acceptance PASS; Suniy Ko'l 27 309 qator 6 sahifada ~2,9 s; ostatka istisnosini tasdiqlash 31,7 s → 5,0 s. LibreOffice qayta hisoblash farqi 0 (19 namuna). |
+| `landed` | Накопительная: НДС 12 % oxirida (tahrirlanadi), smeta nakrutka izohi; mijoz avtomat sahifalash; Ostatka: «ИСКЛЮЧЕНО ИЗ ОСТАТКА» + LRV sahifasida «Bajarilmaydigan / bekor qilingan ishlar» paneli. |
+| `open_owner_decisions` | Q1 Forma-3; Q5–Q9, Q11; Q12 uchun real blanklar va F2 bloklash/ogohlantirish (`ops/handoff/IJRO_HUJJATLARI_T2_REJA_2026-09-25.md`). |
+| `remaining_evidence` | Real login bilan brauzerda: Suniy Ko'l Nakopitelniy Excel vaqti, istisno yaratish/tasdiqlash — UNKNOWN (egasi sessiyasi kerak). |

@@ -825,6 +825,20 @@
       "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/PTO_LINIYA_YAKUNIY_TOPSHIRIQ_2026-09-25.md", "docs/architecture/SMETA_ANATOMIYA_V1.md"],
       "production_write_allowed": false,
       "_izoh": "Topshiriq: ops/handoff/PTO_LINIYA_YAKUNIY_TOPSHIRIQ_2026-09-25.md. Handoffdagi branch nomi claude/pto-liniya-yakun-v1; sessiya muhiti claude/ecstatic-cerf-0h899k ni belgilagan — ish shu branchda. SMETA-ANAT-001/002-A owns shu vazifaga ko‘chirildi (egasi 2026-09-25 ishni bitta agentga berdi). 2026-09-25: main ga birlashtirildi; hisobot ops/handoff/PTO_LINIYA_YAKUN_HISOBOT_2026-09-25.md; qisman qolganlar (P4.1 to‘liq anatomiya, P5 yagona UI, P6 to‘liq ko‘chirish) — hisobotda."
+    },
+    {
+      "id": "PTO-EGASI-JAVOB-001",
+      "title": "Egasi javoblari (2026-09-25): Nakopitelniy barg jami + nakrutka (Q3), server sahifalash (Q4), НДС 12 % oxirida (Q2), ostatka — bajarilmaydigan/bekor ishlar, ijro hujjatlari rejasi (Q12), Q13",
+      "owner": "claude",
+      "machine": "server (claude.ai/code bulut konteyneri)",
+      "branch": "claude/ecstatic-cerf-0h899k",
+      "base_sha": "d6a7222b792470ad4e5c9916c82b97aa845d42ad",
+      "status": "merged",
+      "owns": ["supabase/migrations/20261101090000_t2_nakopitelniy_v2_sahifa_barg_jami.sql", "supabase/migrations/20261101090000_t2_nakopitelniy_v2_sahifa_barg_jami.rollback.sql", "supabase/migrations/20261101090000_t2_nakopitelniy_v2_sahifa_barg_jami.acceptance.sql", "supabase/migrations/20261101091000_t2_ozgarish_tasdiqlash_signal_bir_marta.sql", "supabase/migrations/20261101091000_t2_ozgarish_tasdiqlash_signal_bir_marta.rollback.sql", "frontend/functions/api/hujjat-nazorat.ts", "frontend/src/api/t2-nakopitelniy.ts", "frontend/src/api/t2-nakopitelniy.test.ts", "frontend/src/api/t2-document-control.ts", "frontend/src/lib/nakopitelniy-vedomost-export.ts", "frontend/src/lib/nakopitelniy-vedomost-export.hujjat.test.ts", "frontend/src/lib/ostatka-export.ts", "frontend/src/lib/ostatka-export.hujjat.test.ts", "frontend/src/admin/sahifalar/NakopitelniyVedomost.tsx", "frontend/src/admin/sahifalar/F2TayyorlashNative.tsx", "frontend/src/admin/sahifalar/HolatNative.tsx", "frontend/src/admin/sahifalar/OstatkaIstisnoPanel.tsx", "frontend/src/admin/sahifalar/OstatkaIstisnoPanel.test.tsx", "frontend/testlar/t2_smeta_f2_nakopitelniy.test.cjs", "ops/handoff/PTO_EGASI_QARORLARI_2026-09-25.md", "ops/handoff/IJRO_HUJJATLARI_T2_REJA_2026-09-25.md", "ops/handoff/PTO_LINIYA_YAKUN_HISOBOT_2026-09-25.md", "docs/architecture/HUJJAT_STANDARTI_V1.md"],
+      "depends_on": ["PTO-LINIYA-YAKUN-001"],
+      "must_read": ["AGENTS.md", "docs/governance/CONSTITUTION.md", "docs/governance/CURRENT_STATE.md", "ops/handoff/PTO_EGASI_QARORLARI_2026-09-25.md"],
+      "production_write_allowed": false,
+      "_izoh": "Production: egasi chatda aniq ruxsat bergan ikki additiv funksiya migratsiyasi qo'llandi (Q3/Q4: 20260925151924; ostatka istisnosini tasdiqlash tezligi: 20260925160504). Biznes ma'lumotiga yozuv yo'q — barcha testlar tranzaksiyada, rollback. Boshqa production yozuvi uchun yangi ruxsat kerak."
     }
   ]
 }

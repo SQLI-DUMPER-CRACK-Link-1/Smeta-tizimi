@@ -59,7 +59,15 @@ xil); C — НДС F2 hujjatning o‘zidan olinadi.
 **Tavsiya:** A, stavka obyekt nakrutkasidagi `НДС` bilan oldindan
 to‘ldirilsin (tahrirlanadigan).
 
-**Qaror:** _(egasi yozadi)_
+**Qaror (egasi, 2026-09-25):** "F2 da resurslar qatoridagi hamma narsa НДС siz
+bo'ladi va nakopitelniyda eng oxirida bitta 12 % НДС qo'yiladi. Asosan 12 %,
+lekin o'zgartirish mumkin bo'lsin."
+**Bajarildi:** Накопительная ведомость oxirida «ВСЕГО ПО ОБЪЕКТУ (без НДС)» →
+«НДС 12 %» (`ROUND(x*12/100,2)`, faqat akt summalari ustunlarida — принято
+ранее / за период / с начала) → «ВСЕГО С НДС». Stavka sukuti 12 %
+(`NDS_SUKUT_FOIZ`), sahifada tahrirlanadi (bo'sh — НДС qo'shilmaydi). АКТ Ф-2
+va F2 qoralamasida ham sukut 12 %. Smeta ustunida НДС qo'shilmaydi (u to'g'ri
+xarajat); smeta nakrutka va НДС bilan jami izohda ko'rsatiladi (Q3).
 
 ---
 
@@ -85,7 +93,17 @@ jamilarni faqat barglar bo‘yicha formulalar bilan quradi
 `where q.tur in ('rs','mat','ob')` filtri (additive `create or replace`,
 rollback — eski ta’rif). Migratsiya yozilmagan va qo‘llanmagan.
 
-**Qaror:** _(egasi yozadi)_
+**Qaror (egasi, 2026-09-25):** "Ha, tuzat. Amfiteatr foizlari bilan 56 mlrd
+bo'lishi kerak."
+**Bajarildi (production, egasi ruxsati bilan):** migratsiya
+`20261101090000_t2_nakopitelniy_v2_sahifa_barg_jami.sql` (prod version
+20260925151924): `t2_nakopitelniy_v2` — smeta summasi faqat barglardan +
+`smeta_nakrutka` (t2_obyekt_nakrutka); `t2_nakopitelniy_v1` — v2 o'rami.
+Tekshiruv: Amfiteatr `smeta_summa` = 43 596 859 620,62 (to'g'ri xarajat),
+`smeta_nakrutka.vsego` = **56 623 606 614,37** (ИТОГО-4 50 556 791 619,97 +
+НДС 12 % 6 066 814 994,40) — egasi kutgan 56 mlrd bilan mos. 28 obyektning
+hammasida acceptance PASS (barg jami = RPC). Sahifa: "Smeta jami (to'g'ri
+xarajat)" + "nakrutka va QQS bilan".
 
 ---
 
@@ -103,7 +121,13 @@ qatorlar + ularning rz/bl otalari" RPC si; C — hozirgidek bloklash.
 
 **Tavsiya:** B (Ф-2 akti uchun kichik va aniq), Накопительная uchun A.
 
-**Qaror:** _(egasi yozadi)_
+**Qaror (egasi, 2026-09-25):** "Bu juda yomon muammo, serverning o'zida
+to'g'rila, lekin keyingi ishlarda bu avtomat ishlashi shart."
+**Bajarildi (production):** o'sha migratsiya — `p_offset` + `keyingi_offset`
+(sahifa ≤ 5 000); mijoz `t2NakopitelniyToliq` sahifalarni avtomat oxirigacha
+o'qiydi (qator chegarasi yo'q; sahifalar orasida qator soni o'zgarsa — xato,
+chala hujjat yo'q). Suniy Ko'l (27 309 qator) — 6 sahifa, ~2,9 s (serverda
+o'lchandi). Brauzerda real login bilan vaqt — UNKNOWN (egasi tekshiradi).
 
 ---
 
@@ -218,7 +242,14 @@ T2 ga integratsiya qilamizmi yoki xuddi shu shaklda qoldiramizmi?"
 ofis PC dan) — shakl o'ylab topilmaydi; (c) АОСР yo'qligida F2 ni bloklash
 yoki faqat ogohlantirish; (d) migratsiyani prodga qo'llashga ruxsat.
 
-**Qaror:** _(egasi yozadi)_
+**Qaror (egasi, 2026-09-25):** "A variant" — chatdagi savolda (a) = "Tizim2 ga
+to'liq ko'chiramiz: aktlar smeta qatoriga bog'lanadi, 'fakt bor, akt yo'q'
+ogohlantirishi, eski GAS aktlari bir marta ko'chiriladi" (yuqoridagi jadvalda
+bu **C** yo'li; GAS da qoldirish rad etildi).
+**Holat:** reja `ops/handoff/IJRO_HUJJATLARI_T2_REJA_2026-09-25.md`;
+migratsiya va generator **real blanklarsiz boshlanmaydi** (shakl o'ylab
+topilmaydi). Sizdan: (b) real blanklar, (c) АОСР yo'qligida F2 bloklash yoki
+ogohlantirish, (d) migratsiyaga ruxsat.
 
 ---
 
@@ -232,4 +263,6 @@ Savol: isbot bilan sarlavha **farq qilganda** tizim avtomatik ma'lumot
 isbotini oladi (hozirgi xatti-harakat, operatorga izoh ko'rsatiladi) — yoki
 har safar operator tasdiqlasinmi?
 
-**Qaror:** _(egasi yozadi)_
+**Qaror (egasi, 2026-09-25):** "A variant" — avtomatik (ma'lumot isboti
+olinadi), operatorga izoh ko'rsatiladi. Hozirgi xatti-harakat shu — o'zgarish
+kerak emas.
