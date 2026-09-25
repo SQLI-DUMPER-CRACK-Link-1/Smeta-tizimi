@@ -64,6 +64,7 @@ const DocumentCenterDemo = lazy(() => import('./admin/document-center/DocumentCe
 const ParticipantNetworkDemo = lazy(() => import('./admin/participants/ParticipantNetworkDemo'));
 const SystemControlDemo = lazy(() => import('./admin/system-control/SystemControlDemo'));
 import F2ImportNative from './admin/sahifalar/F2ImportNative';
+import F2ImportV3 from './admin/sahifalar/F2ImportV3';
 import { F2TayyorlashNative } from './admin/sahifalar/F2TayyorlashNative';
 import NakopitelniyVedomost from './admin/sahifalar/NakopitelniyVedomost';
 import NakrutkaNative from './admin/sahifalar/NakrutkaNative';
@@ -124,7 +125,9 @@ export default function App() {
           <Route path="holat" element={<HolatNative />} />
           <Route path="holat/:id" element={<HolatNative />} />
           <Route path="fakt" element={<FaktNative />} />
-          <Route path="f2" element={<F2ImportNative />} />
+          <Route path="f2" element={<F2ImportV3 />} />
+          {/* Eski F2 import (V2) — V3 barqarorlashguncha zaxira yo'l. */}
+          <Route path="f2-eski" element={<F2ImportNative />} />
           <Route path="f2-tayyorlash" element={<F2TayyorlashNative />} />
           <Route path="nakopitelniy" element={<NakopitelniyVedomost />} />
           <Route path="nakrutka" element={<NakrutkaNative />} />

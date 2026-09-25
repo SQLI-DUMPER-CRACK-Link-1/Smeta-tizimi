@@ -118,3 +118,17 @@ qilinmagan, Enter — taklifni tasdiqlash. Katta F2 da virtual ro'yxat.
 | F3 | Ikki oynali UI (`F2ImportNative` qayta yoziladi): drag-drop, modal, nomzodlar, jonli panel | UI testlari; 1000+ qatorda silliq |
 | F4 | Yozish: qoralama → tasdiq; qo'shimcha/zamena RPC; REESTR solishtiruvi; F2 imzosi xotirasi | integratsiya testi; prodda egasi bilan |
 | F5 | Nakopitelniy va F2 hujjat eksporti hujjat standartida | H1–H9 |
+
+## Qavatlar tartibi — egasi tuzatishi (2026-09-25)
+
+Avto-bog'lash qavatlari: **razdel → shifr → nom → birlik → resurslar (rs/mat/ob) → hajm**.
+Hajm ENG OXIRGI va eng kuchsiz qavat (0…+2): F2 ish hajmini ko'pincha qisman oladi, shuning
+uchun hajm hech qachon jarima bermaydi va nomzodni yo'qotmaydi — faqat teng ballli nomzodlarni
+ajratadi (teng smeta +2, ≤ qoldiq +1). Qoldiqdan oshish — ball emas, ogohlantirish
+(o'ng oynadagi qizil "qoldiq").
+
+## F3 — ikki oynali ish joyi (amalga oshirildi)
+
+`/admin/f2` → `F2ImportV3.tsx` + `F2V3Workbench.tsx`, holat mantig'i `lib/f2-moslash-v3/ishJoyi.ts`.
+Eski V2 ekran `/admin/f2-eski` da zaxira. Yozish: ish qatori — hajm, resurslar — pul;
+`raw_snapshot.manba='f2_v3'` + imzolar → keyingi oylarda xotira orqali avto-bog'lash.
