@@ -18,6 +18,7 @@
  * resurs narxi bilan ikki marta hisoblangan bo'lardi.
  */
 import type { T2QatorHolat } from '../api/supabase';
+import { RasmiyVaraq, bugunSana, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, type ImzoNomlar } from './hujjat-yozuvchi';
 
 export type ResursVedomostQator = {
   kat: string;
@@ -163,4 +164,60 @@ export function resursVedomostKategoriyalarga(qatorlar: readonly T2QatorHolat[])
       jamiF2Summa: list.reduce((s, r) => s + r.f2Summa, 0),
       jamiQoldiqSumma: list.reduce((s, r) => s + r.qoldiqSumma, 0),
     }));
+}
+
+// ═══════════ Ресурсная ведомость — rasmiy hujjat (P1, H1–H9) ═══════════
+
+export type ResursVedomostHujjatOpsiya = { obyektNomi: string; sana?: string; imzo?: ImzoNomlar };
+
+/**
+ * РЕСУРСНАЯ ВЕДОМОСТЬ объекта: ЧЕЛ → МАШ → МАТ → ОБ → КАБ → М/К; har resurs
+ * bo'yicha smeta, qabul qilingan (Ф-2) va qoldiq. Qatorlar — read-model
+ * qiymatlari (qayta hisoblanmaydi), kategoriya va umumiy jamilar — SUM
+ * formulalari. Hech qanday yangi biznes hisobi yo'q (sahifadagi bilan bir manba).
+ */
+export function resursVedomostHujjat(holatlar: readonly T2QatorHolat[], o: ResursVedomostHujjatOpsiya): { bytes: Uint8Array; faylNomi: string } {
+  const kategoriyalar = resursVedomostKategoriyalarga(holatlar);
+  const sana = o.sana ?? bugunSana();
+  const v = new RasmiyVaraq({
+    nom: 'Ресурсная ведомость',
+    sarlavha: 'РЕСУРСНАЯ ВЕДОМОСТЬ',
+    ostSarlavha: [`(потребность в ресурсах по смете, принято по актам формы № 2 и остаток — по состоянию на ${sana.split('-').reverse().join('.')})`],
+    titul: [['Объект:', o.obyektNomi], ['Заказчик:', o.imzo?.zakazchik], ['Подрядчик:', o.imzo?.pudratchi]],
+    ustunlar: [
+      { sarlavha: '№ п/п', kenglik: 6, tur: 'tartib' },
+      { sarlavha: 'Код', kenglik: 13, tur: 'kod' },
+      { sarlavha: 'Наименование ресурса', kenglik: 50, tur: 'matn' },
+      { sarlavha: 'Ед. изм.', kenglik: 9, tur: 'birlik' },
+      { sarlavha: 'кол-во', kenglik: 13, tur: 'hajm', guruh: 'ПО СМЕТЕ' },
+      { sarlavha: 'сумма, сум', kenglik: 17, tur: 'pul', guruh: 'ПО СМЕТЕ' },
+      { sarlavha: 'кол-во', kenglik: 13, tur: 'hajm', guruh: 'ПРИНЯТО ПО АКТАМ Ф-2' },
+      { sarlavha: 'сумма, сум', kenglik: 17, tur: 'pul', guruh: 'ПРИНЯТО ПО АКТАМ Ф-2' },
+      { sarlavha: 'кол-во', kenglik: 13, tur: 'hajm', guruh: 'ОСТАТОК' },
+      { sarlavha: 'сумма, сум', kenglik: 17, tur: 'pul', guruh: 'ОСТАТОК' },
+    ],
+    yonalish: 'landscape',
+  });
+  let no = 0;
+  const guruhlar: number[] = [];
+  const sum = (c: string, a: number, b: number) => `SUM(${c}${a}:${c}${b})`;
+  for (const k of kategoriyalar) {
+    const r0 = v.r;
+    const a = r0 + 1, b = r0 + k.qatorlar.length;
+    guruhlar.push(v.qator('ish', [null, null, resursKategoriyaSarlavha(k.kat, k.qatorlar.length), null,
+      null, { f: sum('F', a, b), v: k.jamiSmetaSumma }, null, { f: sum('H', a, b), v: k.jamiF2Summa }, null, { f: sum('J', a, b), v: k.jamiQoldiqSumma }]));
+    for (const r of k.qatorlar) {
+      v.qator('oddiy', [++no, r.kod ?? '', r.nom, r.birlik ?? '', r.smetaHajm, r.smetaSumma, r.f2Hajm, r.f2Summa, r.qoldiqHajm, r.qoldiqSumma], { daraja: 1 });
+    }
+  }
+  if (guruhlar.length) {
+    const s = (c: string) => `SUM(${guruhlar.map((r) => `${c}${r}`).join(',')})`;
+    const j = (f: (k: ResursVedomostKategoriya) => number) => kategoriyalar.reduce((x, k) => x + f(k), 0);
+    v.qator('vsego', [null, null, 'ВСЕГО ПО ВЕДОМОСТИ', null, null, { f: s('F'), v: j((k) => k.jamiSmetaSumma) }, null, { f: s('H'), v: j((k) => k.jamiF2Summa) }, null, { f: s('J'), v: j((k) => k.jamiQoldiqSumma) }]);
+  }
+  v.bosh();
+  v.izoh('Количество по разделам и объекту не суммируется (разные единицы измерения). Затраты труда машинистов учтены в стоимости машино-часа.');
+  v.imzo(imzoTomonlari(['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ'], o.imzo));
+  const { bytes } = rasmiyKitob([v]);
+  return { bytes, faylNomi: hujjatFaylNomi({ obyekt: o.obyektNomi, hujjat: 'РЕСУРСНАЯ_ВЕДОМОСТЬ', davr: sana }) };
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { sbT2ObyektlarOlKomp, sbT2QatorHolatOl, type T2Obyekt, type T2QatorHolat } from '../../api/supabase';
-import { resursVedomostKategoriyalarga, type ResursVedomostKategoriya } from '../../lib/resurs-vedomost';
+import { resursVedomostHujjat, resursVedomostKategoriyalarga, type ResursVedomostKategoriya } from '../../lib/resurs-vedomost';
+import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
+import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { FmtN } from '../../lib/format';
 
@@ -17,6 +19,8 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [qidiruv, setQidiruv] = useState('');
+  const [holatlar, setHolatlar] = useState<T2QatorHolat[]>([]);
+  const [tomonlar, setTomonlar] = useHujjatTomonlari(companyId);
 
   useEffect(() => {
     let active = true;
@@ -39,7 +43,9 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
     try {
       const r = await sbT2QatorHolatOl(Number(id));
       if (!r.ok) throw new Error('Ma’lumot o‘qilmadi.');
-      setKategoriyalar(resursVedomostKategoriyalarga((r.qatorlar || []) as T2QatorHolat[]));
+      const rows = (r.qatorlar || []) as T2QatorHolat[];
+      setHolatlar(rows);
+      setKategoriyalar(resursVedomostKategoriyalarga(rows));
     } catch (e) { setError(e instanceof Error ? e.message : 'O‘qish bajarilmadi.'); }
     finally { setLoading(false); }
   }
@@ -63,6 +69,15 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
       {error && <p role="alert" className="text-danger">{error}</p>}
       {kategoriyalar.length > 0 && (
         <>
+          <div className="flex flex-wrap items-start gap-3">
+            <button type="button" className="h-8 rounded-lg border px-3 text-sm hover:border-accent/50"
+              onClick={() => {
+                const nom = objects.find((o) => String(o.id) === objectId)?.nom || `Obyekt ${objectId}`;
+                const h = resursVedomostHujjat(holatlar, { obyektNomi: nom, imzo: tomonlar });
+                downloadBlob(h.bytes, h.faylNomi);
+              }}>Ресурсная ведомость (Excel)</button>
+            <div className="min-w-[260px] flex-1"><HujjatTomonlariPanel qiymat={tomonlar} onChange={setTomonlar} /></div>
+          </div>
           <label className="block text-sm">Resurs qidirish
             <input aria-label="Resurs qidirish" className="ml-2 border rounded px-2 py-1"
               value={qidiruv} onChange={e => setQidiruv(e.target.value)} />

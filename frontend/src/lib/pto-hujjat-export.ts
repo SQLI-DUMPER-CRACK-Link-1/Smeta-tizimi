@@ -17,6 +17,7 @@
  * chaqirilganda dinamik yuklanadi.
  */
 import { resursVedomostQur } from './resurs-vedomost';
+import { IMZO_IMZO_CHIZIQ, IMZO_MP, IMZO_PODPIS, RasmiyVaraq, hujjatFaylNomi, imzoMatni, imzoMuhrli, imzoTomonlari, rasmiyKitob, sumFormula, type RasmiyUstun } from './hujjat-yozuvchi';
 import type { T2QatorHolat } from '../api/supabase';
 
 export type PtoHujjatTuri = 'forma2' | 'nakopitelniy' | 'slichitelniy' | 'forma3' | 'm29';
@@ -135,174 +136,97 @@ function resurslarniGuruhla(resurslar: readonly PtoResursQator[]): ResursGuruh[]
     }));
 }
 
-export function ptoFaylNomi(h: PtoHujjat, kengaytma: 'xlsx' | 'pdf'): string {
-  const tur = h.turi.toUpperCase();
-  const obyekt = (h.obyekt || 'obyekt').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
-  const davr = (h.davr || '').replace(/[\\/:*?"<>|]/g, '-');
-  return [tur, obyekt, davr].filter(Boolean).join('_') + '.' + kengaytma;
-}
-
-/* ═══════════════════ EXCEL ═══════════════════ */
-
-const RANG = {
-  sarlavha: 'FF1F4E79',
-  sarlavhaMatn: 'FFFFFFFF',
-  bolim: 'FFDDEBF7',
-  kategoriya: 'FFFCE4D6',
-  jami: 'FFFFF2CC',
-  ogoh: 'FFFFC7CE',
+/** H8: `<Obyekt>_<Hujjat>_<davr>.xlsx|pdf` (hujjat nomi rus tilida). */
+export const PTO_HUJJAT_FAYL: Record<PtoHujjatTuri, string> = {
+  forma2: 'ФОРМА-2', nakopitelniy: 'НАКОПИТЕЛЬНАЯ', slichitelniy: 'СЛИЧИТЕЛЬНАЯ', forma3: 'ФОРМА-3', m29: 'М-29',
 };
 
-export async function ptoHujjatXlsx(h: PtoHujjat): Promise<Uint8Array> {
-  const ExcelJS = (await import('exceljs')).default;
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Smeta tizimi (Tizim-2)';
-  wb.created = new Date();
-
-  const ustunlar = PTO_HUJJAT_USTUNLARI[h.turi];
-  const ws = wb.addWorksheet('Hujjat', {
-    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
-  });
-  const jamiUstun = 4 + ustunlar.length;
-
-  // ── Sarlavha bloki ──
-  const sarlavhaQatorlari: Array<[string, string]> = [
-    [PTO_HUJJAT_NOMI[h.turi], ''],
-    ['Объект:', h.obyekt],
-    ['Период:', h.davr],
-  ];
-  if (h.raqam) sarlavhaQatorlari.push(['Документ №:', h.raqam]);
-  if (h.buyurtmachi) sarlavhaQatorlari.push(['Заказчик:', h.buyurtmachi]);
-  if (h.pudratchi) sarlavhaQatorlari.push(['Подрядчик:', h.pudratchi]);
-
-  sarlavhaQatorlari.forEach(([yorliq, qiymat], i) => {
-    const r = ws.addRow(i === 0 ? [yorliq] : [yorliq, qiymat]);
-    if (i === 0) {
-      ws.mergeCells(r.number, 1, r.number, jamiUstun);
-      r.getCell(1).font = { bold: true, size: 14 };
-      r.getCell(1).alignment = { horizontal: 'center' };
-      r.height = 24;
-    } else {
-      r.getCell(1).font = { bold: true };
-      ws.mergeCells(r.number, 2, r.number, jamiUstun);
-    }
-  });
-  ws.addRow([]);
-
-  // ── Jadval sarlavhasi ──
-  const bosh = ws.addRow(['№', 'Код', 'Наименование', 'Ед.изм.', ...ustunlar]);
-  bosh.eachCell((c) => {
-    c.font = { bold: true, color: { argb: RANG.sarlavhaMatn } };
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RANG.sarlavha } };
-    c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    c.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-  });
-  bosh.height = 32;
-  ws.views = [{ state: 'frozen', ySplit: bosh.number }];
-
-  // ── Qatorlar ──
-  const jami = ustunlar.map(() => 0);
-  for (const q of h.qatorlar) {
-    const r = ws.addRow([
-      q.bolim ? '' : q.no, q.kod, q.nom, q.birlik,
-      ...q.qiymatlar.map((v) => (v == null ? '' : v)),
-    ]);
-    r.eachCell({ includeEmpty: true }, (c, i) => {
-      c.border = { top: { style: 'hair' }, bottom: { style: 'hair' }, left: { style: 'hair' }, right: { style: 'hair' } };
-      if (i > 4) c.numFmt = '#,##0.00';
-      if (i === 3) c.alignment = { wrapText: true, vertical: 'top' };
-    });
-    if (q.bolim) {
-      r.eachCell({ includeEmpty: true }, (c) => {
-        c.font = { bold: true };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RANG.bolim } };
-      });
-    } else {
-      q.qiymatlar.forEach((v, i) => { if (typeof v === 'number') jami[i] += v; });
-    }
-    if (q.ogohlantirish) {
-      r.getCell(3).note = q.ogohlantirish;
-      r.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RANG.ogoh } };
-    }
-  }
-
-  // ── ЖАМИ ──
-  const jamiQator = ws.addRow(['', '', 'ИТОГО', '', ...jami]);
-  jamiQator.eachCell({ includeEmpty: true }, (c, i) => {
-    c.font = { bold: true };
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RANG.jami } };
-    c.border = { top: { style: 'double' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-    if (i > 4) c.numFmt = '#,##0.00';
-  });
-
-  ws.columns = [
-    { width: 6 }, { width: 16 }, { width: 52 }, { width: 10 },
-    ...ustunlar.map(() => ({ width: 16 })),
-  ];
-
-  // ── Resurs vedomosti — ALOHIDA VARAQ ──
-  ptoResursVaragi(wb, h);
-
-  const buf = await wb.xlsx.writeBuffer();
-  return new Uint8Array(buf as ArrayBuffer);
+export function ptoFaylNomi(h: PtoHujjat, kengaytma: 'xlsx' | 'pdf'): string {
+  return hujjatFaylNomi({ obyekt: (h.obyekt || '').slice(0, 60), hujjat: PTO_HUJJAT_FAYL[h.turi], davr: h.davr, kengaytma });
 }
 
-function ptoResursVaragi(wb: import('exceljs').Workbook, h: PtoHujjat) {
-  const ws = wb.addWorksheet('Ресурсная ведомость', {
-    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+/** ИТОГО faqat pul ustunlarida (turli birlikdagi hajm yoki narx yig'ilmaydi).
+ *  Forma-3 yuridik jami qoidasi hal qilinmagan (FORMA3_RULE_UNRESOLVED) — jami yo'q. */
+export function ptoJamlanadi(turi: PtoHujjatTuri): boolean[] {
+  if (turi === 'forma3') return PTO_HUJJAT_USTUNLARI[turi].map(() => false);
+  return PTO_HUJJAT_USTUNLARI[turi].map((u) => /сумм/i.test(u));
+}
+
+/* ═══════════════════ EXCEL (hujjat standarti H1–H9) ═══════════════════ */
+
+export async function ptoHujjatXlsx(h: PtoHujjat): Promise<Uint8Array> {
+  const ustunlar = PTO_HUJJAT_USTUNLARI[h.turi];
+  const jamlanadi = ptoJamlanadi(h.turi);
+  const ust: RasmiyUstun[] = [
+    { sarlavha: '№ п/п', kenglik: 6, tur: 'tartib' },
+    { sarlavha: 'Код', kenglik: 16, tur: 'kod' },
+    { sarlavha: 'Наименование', kenglik: 52, tur: 'matn' },
+    { sarlavha: 'Ед. изм.', kenglik: 10, tur: 'birlik' },
+    ...ustunlar.map((u, i): RasmiyUstun => ({ sarlavha: u, kenglik: 16, tur: jamlanadi[i] ? 'pul' : /цена/i.test(u) ? 'narx' : 'hajm' })),
+  ];
+  const v = new RasmiyVaraq({
+    nom: 'Документ',
+    sarlavha: PTO_HUJJAT_NOMI[h.turi],
+    titul: [['Объект:', h.obyekt], ['Период:', h.davr], ['Документ №:', h.raqam], ['Заказчик:', h.buyurtmachi], ['Подрядчик:', h.pudratchi]],
+    ustunlar: ust,
+    yonalish: 'landscape',
   });
+  const qatorlar: number[] = [];
+  const diqqat: Array<{ nom: string; sabab: string }> = [];
+  for (const q of h.qatorlar) {
+    if (q.bolim) { v.bolim(q.nom); continue; }
+    qatorlar.push(v.qator('oddiy', [q.no, q.kod, q.nom, q.birlik, ...q.qiymatlar]));
+    if (q.ogohlantirish) diqqat.push({ nom: `${q.nom}${q.birlik ? `, ${q.birlik}` : ''}`, sabab: q.ogohlantirish });
+  }
+  if (jamlanadi.some(Boolean) && qatorlar.length) {
+    v.qator('vsego', [null, null, 'ИТОГО', null, ...ustunlar.map((_u, i) => {
+      if (!jamlanadi[i]) return null;
+      const harf = v.harf(4 + i);
+      const nomalum = h.qatorlar.some((q) => !q.bolim && q.qiymatlar[i] == null);
+      const f = sumFormula(harf, qatorlar)!;
+      const jami = h.qatorlar.reduce((a, q) => a + (!q.bolim && typeof q.qiymatlar[i] === 'number' ? q.qiymatlar[i] as number : 0), 0);
+      return nomalum ? { f: `IF(COUNTBLANK(${qatorlar.map((r) => `${harf}${r}`).join(',')})>0,"",${f})`, v: '' } : { f, v: jami };
+    })]);
+  }
+  v.bosh();
+  if (h.turi === 'forma3') v.izoh('Итог формы № 3 не подводится: правило определения юридического итога (накладные, НДС, удержания) не утверждено.');
+  for (const s of h.izoh ?? []) v.izoh(s);
+  v.diqqat(diqqat);
+  v.imzo(imzoTomonlari(h.turi === 'forma2' || h.turi === 'forma3' ? ['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'ТЕХНАДЗОР'] : ['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ'], { zakazchik: h.buyurtmachi, pudratchi: h.pudratchi }));
+  return rasmiyKitob([v, ptoResursVaragi(h)]).bytes;
+}
 
-  const bosh1 = ws.addRow(['РЕСУРСНАЯ ВЕДОМОСТЬ']);
-  ws.mergeCells(bosh1.number, 1, bosh1.number, 6);
-  bosh1.getCell(1).font = { bold: true, size: 14 };
-  bosh1.getCell(1).alignment = { horizontal: 'center' };
-  bosh1.height = 24;
-  const bosh2 = ws.addRow([`${PTO_HUJJAT_NOMI[h.turi]} · ${h.obyekt} · ${h.davr}`]);
-  ws.mergeCells(bosh2.number, 1, bosh2.number, 6);
-  bosh2.getCell(1).alignment = { horizontal: 'center' };
-  ws.addRow([]);
-
-  const bosh = ws.addRow(['№', 'Код', 'Наименование ресурса', 'Ед.изм.', 'Количество', 'Цена за ед.', 'Сумма']);
-  bosh.eachCell((c) => {
-    c.font = { bold: true, color: { argb: RANG.sarlavhaMatn } };
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RANG.sarlavha } };
-    c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    c.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+function ptoResursVaragi(h: PtoHujjat): RasmiyVaraq {
+  const v = new RasmiyVaraq({
+    nom: 'Ресурсная ведомость',
+    sarlavha: 'РЕСУРСНАЯ ВЕДОМОСТЬ',
+    ostSarlavha: [`${PTO_HUJJAT_NOMI[h.turi]} · ${h.obyekt} · ${h.davr}`],
+    ustunlar: [
+      { sarlavha: '№ п/п', kenglik: 6, tur: 'tartib' },
+      { sarlavha: 'Код', kenglik: 14, tur: 'kod' },
+      { sarlavha: 'Наименование ресурса', kenglik: 56, tur: 'matn' },
+      { sarlavha: 'Ед. изм.', kenglik: 10, tur: 'birlik' },
+      { sarlavha: 'Количество', kenglik: 15, tur: 'hajm' },
+      { sarlavha: 'Цена за ед., сум', kenglik: 16, tur: 'narx' },
+      { sarlavha: 'Сумма, сум', kenglik: 18, tur: 'pul' },
+    ],
+    yonalish: 'landscape',
   });
-  bosh.height = 30;
-  ws.views = [{ state: 'frozen', ySplit: bosh.number }];
-
   let no = 0;
+  const guruhQatorlari: number[] = [];
   let umumiy = 0;
   for (const g of resurslarniGuruhla(h.resurslar)) {
-    const kr = ws.addRow([g.nom]);
-    ws.mergeCells(kr.number, 1, kr.number, 6);
-    kr.getCell(1).font = { bold: true };
-    kr.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RANG.kategoriya } };
-    kr.getCell(7).value = g.jami;
-    kr.getCell(7).numFmt = '#,##0.00';
-    kr.getCell(7).font = { bold: true };
-    kr.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RANG.kategoriya } };
-
+    const bosh = v.r;
+    const oxir = bosh + g.qatorlar.length;
+    guruhQatorlari.push(v.qator('ish', [null, null, g.nom, null, null, null, { f: `SUM(G${bosh + 1}:G${oxir})`, v: g.jami }]));
     for (const r of g.qatorlar) {
-      const row = ws.addRow([++no, r.kod, r.nom, r.birlik, r.hajm, r.narx ?? '', r.summa]);
-      row.eachCell({ includeEmpty: true }, (c, i) => {
-        c.border = { top: { style: 'hair' }, bottom: { style: 'hair' }, left: { style: 'hair' }, right: { style: 'hair' } };
-        if (i >= 5) c.numFmt = i === 5 ? '#,##0.000' : '#,##0.00';
-      });
+      v.qator('oddiy', (n) => [++no, r.kod, r.nom, r.birlik, r.hajm, r.narx == null ? null : { f: `IF(N(E${n})=0,"",G${n}/E${n})`, v: r.narx }, r.summa], { daraja: 1 });
     }
     umumiy += g.jami;
   }
-
-  const jamiQator = ws.addRow(['', '', 'ВСЕГО ПО ВЕДОМОСТИ', '', '', '', umumiy]);
-  jamiQator.eachCell({ includeEmpty: true }, (c, i) => {
-    c.font = { bold: true };
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RANG.jami } };
-    c.border = { top: { style: 'double' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-    if (i === 7) c.numFmt = '#,##0.00';
-  });
-
-  ws.columns = [{ width: 6 }, { width: 14 }, { width: 56 }, { width: 10 }, { width: 15 }, { width: 16 }, { width: 18 }];
+  if (guruhQatorlari.length) v.qator('vsego', [null, null, 'ВСЕГО ПО ВЕДОМОСТИ', null, null, null, { f: sumFormula('G', guruhQatorlari)!, v: umumiy }]);
+  v.imzo(imzoTomonlari(['СОСТАВИЛ', 'ПРОВЕРИЛ']));
+  return v;
 }
 
 /* ═══════════════════ PDF ═══════════════════ */
@@ -381,6 +305,20 @@ export async function ptoHujjatPdf(h: PtoHujjat): Promise<Uint8Array> {
       }
     },
   });
+
+  // ── Imzo bloki (H3) ──
+  {
+    const tomonlar = imzoTomonlari(h.turi === 'forma2' || h.turi === 'forma3' ? ['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'ТЕХНАДЗОР'] : ['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ'], { zakazchik: h.buyurtmachi, pudratchi: h.pudratchi });
+    const balandlik = doc.internal.pageSize.getHeight();
+    let iy = ((doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 10;
+    if (iy + tomonlar.length * 12 > balandlik - 12) { doc.addPage(); iy = 20; }
+    doc.setFont(shrift.PTO_PDF_SHRIFT_NOMI, 'normal').setFontSize(9);
+    for (const t of tomonlar) {
+      doc.text(imzoMatni(t.rol, t.nom), chap, iy);
+      doc.text(`${IMZO_IMZO_CHIZIQ}   ${IMZO_PODPIS}${imzoMuhrli(t.rol) ? `   ${IMZO_MP}` : ''}`, doc.internal.pageSize.getWidth() - 110, iy);
+      iy += 10;
+    }
+  }
 
   // ── Resurs vedomosti — YANGI SAHIFA ──
   doc.addPage();

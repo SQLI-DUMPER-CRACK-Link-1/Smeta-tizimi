@@ -81,7 +81,7 @@ describe('ptoHujjatXlsx — haqiqiy .xlsx', () => {
     const ExcelJS = (await import('exceljs')).default;
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(bytes as unknown as ArrayBuffer);
-    expect(wb.worksheets.map((w) => w.name)).toEqual(['Hujjat', 'Ресурсная ведомость']);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['Документ', 'Ресурсная ведомость']);
   });
 
   it('resurs varag\'ida kategoriya bo\'limlari ЧЕЛ→МАШ→МАТ→ОБ tartibida', async () => {
@@ -100,16 +100,16 @@ describe('ptoHujjatXlsx — haqiqiy .xlsx', () => {
     expect(matnlar.some((m) => m === 'ВСЕГО ПО ВЕДОМОСТИ')).toBe(true);
   });
 
-  it('ИТОГО qatori faqat bo\'lim bo\'lmagan qatorlarni yig\'adi', async () => {
+  it('ИТОГО faqat pul ustunida (hajm/narx yig\'ilmaydi) va faqat bo\'lim bo\'lmagan qatorlardan', async () => {
     const h = hujjat('forma2'); // ustunlar: Кол-во, Цена, Сумма -> 10/20/30 va 5/10/15
     const bytes = await ptoHujjatXlsx(h);
     const ExcelJS = (await import('exceljs')).default;
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(bytes as unknown as ArrayBuffer);
-    const ws = wb.getWorksheet('Hujjat')!;
+    const ws = wb.getWorksheet('Документ')!;
     let jami: unknown[] = [];
-    ws.eachRow((r) => { if (r.getCell(3).value === 'ИТОГО') jami = [r.getCell(5).value, r.getCell(6).value, r.getCell(7).value]; });
-    expect(jami).toEqual([15, 30, 45]);
+    ws.eachRow((r) => { if (r.getCell(3).value === 'ИТОГО') jami = [r.getCell(5).value, r.getCell(6).value, (r.getCell(7).value as { result?: number })?.result]; });
+    expect(jami).toEqual([null, null, 45]);
   });
 });
 
@@ -141,7 +141,7 @@ describe('ptoHujjatPdf — haqiqiy PDF, kirillcha shrift bilan', () => {
 
 describe('ptoFaylNomi', () => {
   it('tur, obyekt va davrni birlashtiradi, xavfli belgilarni tozalaydi', () => {
-    expect(ptoFaylNomi({ ...hujjat('forma3'), obyekt: 'A/B:C' }, 'pdf')).toBe('FORMA3_A_B_C_2026-07.pdf');
-    expect(ptoFaylNomi(hujjat('m29'), 'xlsx')).toBe('M29_Амфитеатр_2026-07.xlsx');
+    expect(ptoFaylNomi({ ...hujjat('forma3'), obyekt: 'A/B:C' }, 'pdf')).toBe('A_B_C_ФОРМА-3_2026-07.pdf');
+    expect(ptoFaylNomi(hujjat('m29'), 'xlsx')).toBe('Амфитеатр_М-29_2026-07.xlsx');
   });
 });
