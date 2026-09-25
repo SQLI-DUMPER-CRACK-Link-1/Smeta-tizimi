@@ -49,6 +49,7 @@ const TESTLAR = [
   ['COMPANY CONTEXT adversarial oracle (Codex)', 't2_company_context_adversarial.test.cjs'],
   ['PTO visible T2 navigation/identity guard', 't2_pto_visible_surface.test.cjs'],
   ['Cloudflare Functions TS gate oracle (Codex)', 't2_functions_typecheck_gate.test.cjs'],
+  ['Smeta faqat yagona modul orqali o‘qiladi (P6)', 't2_smeta_oqish_yagona.test.cjs'],
 ];
 
 let yiqildi = 0;

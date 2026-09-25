@@ -3,6 +3,25 @@
   "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "no-restricted-imports": ["error", {
+      "paths": [
+        { "name": "xlsx", "message": "Smetani faqat smeta-anatomiya / f2-import-parse/xlsxReader orqali o'qing; hujjat yozish — hujjat-yozuvchi (SMETA_ANATOMIYA_V1 §9, HUJJAT_STANDARTI_V1)." },
+        { "name": "xlsx-js-style", "message": "Excel yozish — hujjat-yozuvchi moduli orqali (HUJJAT_STANDARTI_V1)." }
+      ]
+    }]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/lib/f2-import-parse/xlsxReader.ts",
+        "src/lib/smeta-anatomiya/**",
+        "src/lib/hujjat-yozuvchi/**",
+        "src/lib/lrv-plus-export.ts",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "rules": { "no-restricted-imports": "off" }
+    }
+  ]
 }
