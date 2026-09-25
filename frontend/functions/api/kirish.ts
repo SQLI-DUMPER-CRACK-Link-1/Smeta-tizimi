@@ -1,4 +1,4 @@
-import { imzola, type Rol } from '../_shared/auth';
+import { imzola, SESSIYA_MUDDAT_MS, type Rol } from '../_shared/auth';
 import { supabaseBaseUrl } from '../_shared/supabase-url';
 
 type Env = {
@@ -205,7 +205,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   return new Response(JSON.stringify({ ok: true, rol }), {
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': `sess=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=43200`,
+      'Set-Cookie': `sess=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${Math.floor(SESSIYA_MUDDAT_MS / 1000)}`,
     },
   });
 };

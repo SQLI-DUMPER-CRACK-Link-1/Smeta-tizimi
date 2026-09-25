@@ -21,10 +21,12 @@ describe('ExportPreview hujjat xavfsizligi', () => {
     expect(screen.getByText(/FORMA3_RULE_UNRESOLVED/)).toBeTruthy();
   });
 
-  it('offers internal Slichitelniy beside Forma-2 and Nakopitelniy', () => {
+  // Egasi (2026-09-25): eski slichitelniy prototipi olib tashlandi — rasmiy
+  // Сличительная ведомость LRV sahifasida (lib/slichitelniy-vedomost.ts).
+  it('offers Forma-2 and Nakopitelniy; old Slichitelniy prototype is removed', () => {
     render(<ExportPreview model={model} />);
     expect((screen.getByRole('button', { name: 'Nakopitelniy' }) as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByRole('button', { name: 'Forma-2' }) as HTMLButtonElement).disabled).toBe(false);
-    expect((screen.getByRole('button', { name: 'Slichitelniy' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Slichitelniy' })).toBeNull();
   });
 });

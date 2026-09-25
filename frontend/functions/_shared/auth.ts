@@ -124,11 +124,17 @@ export function kalitTekshir(secret: string | undefined | null): string {
   throw new KalitYoqError();
 }
 
+/** Sessiya muddati — 90 kun. */
+export const SESSIYA_MUDDAT_MS = 90 * 24 * 3600_000;
+
 export async function imzola(s: Omit<Sess, 'exp' | 'jti'>, secret: string): Promise<string> {
   secret = kalitTekshir(secret);
   const payload: Sess = {
     ...s,
-    exp: Date.now() + 12 * 3600_000, // 12 soat
+    // Egasi (2026-09-25): sinov/rivojlanish davrida har safar login zeriktiradi —
+    // sessiya 90 kun eslab qoladi (login butunlay o'chirilmaydi: repo ochiq,
+    // bazada real ma'lumot). A'zolik har RPC da serverda qayta tekshiriladi.
+    exp: Date.now() + SESSIYA_MUDDAT_MS,
     jti: crypto.randomUUID(),
   };
   const body = btoa(JSON.stringify(payload)).replace(/=+$/, '');

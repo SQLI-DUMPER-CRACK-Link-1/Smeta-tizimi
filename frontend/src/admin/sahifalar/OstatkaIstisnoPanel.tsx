@@ -40,6 +40,15 @@ export function useOstatkaIstisnolari(obyektId: number | null) {
 }
 
 const BARG = new Set(['rs', 'mat', 'ob']);
+
+/** Server kodlari → tushunarli matn (egasi: PTO va undan yuqori + prorab tasdiqlaydi, sabab shart). */
+function xatoMatni(e: unknown): string {
+  const code = (e as { code?: string } | null)?.code ?? '';
+  if (code === 'SABAB_MAJBURIY') return 'Sabab yozilmagan — bekor qilishni tasdiqlab bo‘lmaydi.';
+  if (code === 'CHANGE_APPROVAL_DENIED' || code === 'HTTP_403') return 'Tasdiqlash huquqingiz yo‘q: PTO, rahbar, boss yoki prorab tasdiqlaydi.';
+  if (code === 'SCOPE_DRIFT' || code === 'CHANGE_PREFLIGHT_FAILED') return 'Qator o‘zgargan — sahifani yangilab, qayta urinib ko‘ring.';
+  return e instanceof Error ? e.message : 'Amal bajarilmadi';
+}
 const HOLAT: Record<string, string> = { qoralama: 'tasdiq kutilmoqda', tasdiqlangan: 'tasdiqlangan', rad: 'qaytarilgan', bekor: 'bekor qilingan' };
 
 export function OstatkaIstisnoPanel({ obyektId, qatorlar, holatlar, royxat, yangila, onSmetaOzgardi }: {
@@ -106,7 +115,7 @@ export function OstatkaIstisnoPanel({ obyektId, qatorlar, holatlar, royxat, yang
       if (tasdiq) onSmetaOzgardi();
       setXabar({ tur: 'ok', matn: tasdiq ? 'Tasdiqlandi: smeta hajmi yangilandi, ish ostatkadan chiqdi.' : 'Qaytarildi.' });
     } catch (e) {
-      setXabar({ tur: 'xato', matn: e instanceof Error ? e.message : 'Amal bajarilmadi' });
+      setXabar({ tur: 'xato', matn: xatoMatni(e) });
     } finally { setBand(false); }
   };
 

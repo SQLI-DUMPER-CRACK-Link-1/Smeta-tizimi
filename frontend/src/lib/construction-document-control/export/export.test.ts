@@ -3,7 +3,6 @@ import ExcelJS from 'exceljs';
 import { generateNakopitelniy } from './nakopitelniy-export';
 import { generateForma2 } from './forma2-export';
 import { generateForma3 } from './forma3-export';
-import { generateSlichitelniy, slichitelniyQatorlariQur } from './slichitelniy-export';
 import { type ProgressLineResult, type ProgressValuationResult } from '../types';
 
 describe('Document Export Generators', () => {
@@ -180,26 +179,5 @@ describe('Document Export Generators', () => {
     const vatRow = ws!.getRow(9);
     expect(vatRow.getCell(2).value).toContain('QQS (12%, asos: contract-rule-17');
     expect(vatRow.getCell(4).value).toBe(15000 * 0.12); // QQS joriy davr
-  });
-
-  it('generates a stable-ID reconciliation without positional matching or silent repair', async () => {
-    const qator = slichitelniyQatorlariQur([dummyRow])[0];
-    expect(qator.lineId).toBe('l1');
-    expect(qator.quantityDifference).toBe(40);
-    expect(qator.amountDifference).toBe(20000);
-    expect(qator.holat).toBe('farq');
-    expect(qator.decision).toBe('OCHIQ');
-
-    const buffer = await generateSlichitelniy([dummyRow], {
-      projectName: 'Test Project', objectName: 'Test Object', periodLabel: '2026-09', documentNumber: 'SLC-1',
-    });
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer.buffer as ArrayBuffer);
-    const ws = wb.getWorksheet(1)!;
-    const dataRow = ws.getRow(7);
-    expect(dataRow.getCell(1).value).toBe('l1');
-    expect(dataRow.getCell(8).value).toBe(40000);
-    expect(dataRow.getCell(10).value).toBe('FARQ');
-    expect(dataRow.getCell(12).value).toBe('OCHIQ');
   });
 });

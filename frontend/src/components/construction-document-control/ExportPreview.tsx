@@ -1,7 +1,6 @@
 import type { Id, ProgressLineResult, ProgressValuationResult } from '../../lib/construction-document-control';
 import { generateNakopitelniy } from '../../lib/construction-document-control/export/nakopitelniy-export';
 import { generateForma2 } from '../../lib/construction-document-control/export/forma2-export';
-import { generateSlichitelniy } from '../../lib/construction-document-control/export/slichitelniy-export';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 
 export interface ExportPreviewModel { 
@@ -41,16 +40,6 @@ export function ExportPreview({model}:{model:ExportPreviewModel}) {
     downloadBlob(data, `Forma2_${model.f2PeriodId}.xlsx`);
   };
 
-  const handleSlichitelniy = async () => {
-    const data = await generateSlichitelniy(model.rows, {
-      projectName: model.projectName,
-      objectName: model.objectName,
-      periodLabel: model.f2PeriodId,
-      documentNumber: `SLC-${model.f2PeriodId}`,
-    });
-    downloadBlob(data, `Slichitelnaya_${model.f2PeriodId}.xlsx`);
-  };
-
   return (
     <section aria-label="Excel eksporti oldindan ko‘rish" className="rounded-xl border border-white/10 p-4">
       <div className="flex justify-between items-center mb-4">
@@ -58,7 +47,6 @@ export function ExportPreview({model}:{model:ExportPreviewModel}) {
         <div className="flex gap-2">
           <button onClick={handleNakopitelniy} className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors">Nakopitelniy</button>
           <button onClick={handleForma2} className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-sm font-medium transition-colors">Forma-2</button>
-          <button onClick={handleSlichitelniy} className="px-3 py-1 bg-sky-700 hover:bg-sky-600 rounded text-sm font-medium transition-colors">Slichitelniy</button>
           <button disabled aria-describedby="forma3-holati" className="px-3 py-1 rounded text-sm font-medium bg-slate-700 text-slate-400 cursor-not-allowed">Forma-3</button>
         </div>
       </div>
