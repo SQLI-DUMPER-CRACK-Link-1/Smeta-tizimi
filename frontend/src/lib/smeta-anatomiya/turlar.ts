@@ -134,4 +134,7 @@ export interface VaraqAnatomiyasi {
   /** Xaritaga kirmagan sarlavhali ustunlar (PTO qo'shgan: ПРИМЕЧАНИЕ, ОСТАТОК…) —
    * o'qilmaydi, operatorga ko'rsatiladi. */
   qoshimchaUstunlar?: Array<{ ustun: number; sarlavha: string }>;
+  /** Varaq profili (imzo → rol/format/ustunlar) — korpus manifesti va kelajakda
+   * kompaniya profillari uchun (§6). */
+  profil?: import('./profil').VaraqProfili;
 }

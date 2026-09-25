@@ -58,3 +58,4 @@ export { sarlavhaYoli } from './ierarxiya';
 export { sarlavhaBlokiniTop, ustunXaritasi, tartibRaqamlariQatorimi, type SarlavhaBloki } from './ustun';
 export { arifmetikUchlik, uchlikniMoslashtir, qoshimchaUstunlar, type MoslashuvNatija, type UstunUchlik } from './ustun-dalil';
 export type * from './turlar';
+export { formatAniqla, nomNaqshi, profilMos, varaqProfili, type SmetaFormat, type VaraqProfili } from './profil';

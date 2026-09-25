@@ -2,6 +2,7 @@ import { IerarxiyaQuruvchi } from './ierarxiya';
 import { bosh, kalit, son, toliqUstunlar, xom } from './matn';
 import { sarlavhaBlokiniTop, ustunXaritasi, type SarlavhaBloki } from './ustun';
 import { qoshimchaUstunlar, uchlikniMoslashtir } from './ustun-dalil';
+import { varaqProfili } from './profil';
 import type {
   Dalil, Ish, Katak, KirishVaraq, Manzil, Resurs, UstunXaritasi, VaraqAnatomiyasi, VaraqRoli,
 } from './turlar';
@@ -170,6 +171,7 @@ export function varaqniTahlilQil(fayl: string, varaq: KirishVaraq, sarlavhaBoshI
     titul: [], sarlavhalar: [], ishlar: [], vedomost: [], jamilar: [], review: [],
     ...(qoshimcha?.length ? { qoshimchaUstunlar: qoshimcha } : {}),
   };
+  if (blok) natija.profil = varaqProfili(natija, blok.sarlavhalar, rows.slice(0, blok.bosh).flatMap((row) => row.map((c) => String(c ?? ''))).join(' ').toUpperCase());
   if (!u || !blok || (rol !== 'lrv' && rol !== 'res')) return natija;
 
   const titul = titulOqi(rows, blok.bosh);

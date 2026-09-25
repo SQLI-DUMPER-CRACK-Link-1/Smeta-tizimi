@@ -10,7 +10,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "tekshir": "node testlar/hammasi.cjs"
+    "tekshir": "node testlar/hammasi.cjs",
+    "korpus": "vitest run src/lib/smeta-anatomiya/korpus"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
