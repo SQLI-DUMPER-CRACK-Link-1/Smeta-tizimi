@@ -18,8 +18,9 @@
  *   2. Shifr      0…25  — aynan 25, kod-kanon 18
  *   3. Nom        0…20  — aynan 20, o'xshash (raqamlari teng) Dice×15
  *   4. Birlik     qalqon — farqli bo'lsa −100 (avto yo'q)
- *   5. Hajm     −10…+10 — F2 hajmi ≤ smeta (qoldiq) +6; teng +10; oshsa −10
- *   6. Resurslar −5…+25 — tarkib (kod/nom+birlik) Jaccard×15, norma tengligi ×7, tartib ×3
+ *   5. Resurslar −5…+25 — tarkib (kod/nom+birlik) Jaccard×15, norma tengligi ×7, tartib ×3
+ *   6. Hajm       0…+2  — ENG OXIRGI: faqat teng nomzodlarni ajratadi (teng smeta +2, ≤ qoldiq +1);
+ *                          hech qachon jarima emas — F2 ishni qisman oladi; oshsa faqat ogohlantirish
  *   + xotira (o'tgan oy tasdiqlangan) — ball emas, darhol; marka farqi −30; tartib +2
  */
 import { kodKanon, normBir, normKod, normNom, normRz, rzKodlar } from '../f2-match-engine';
@@ -282,16 +283,7 @@ export function f2MoslashV3(f2: readonly F2Tugun[], smeta: readonly SmetaQator[]
     // 4. Birlik — qalqon
     const bm = birMos(f.birlik, t.birlik);
     q.push({ nom: 'birlik', ball: bm ? 0 : -100, izoh: bm ? 'birlik ✓' : `birlik ✗ (${f.birlik ?? '?'} ↔ ${t.birlik ?? '?'})` });
-    // 5. Hajm
-    let hj = 0; let hIzoh = 'hajm —';
-    const chegara = opts.qoldiq?.get(t.id) ?? t.hajm;
-    if (f.hajm != null && chegara != null && chegara > 0) {
-      if (t.hajm != null && Math.abs(f.hajm - t.hajm) <= Math.abs(t.hajm) * 0.005) { hj = 10; hIzoh = 'hajm = smeta'; }
-      else if (f.hajm <= chegara * 1.001) { hj = 6; hIzoh = 'hajm ≤ qoldiq'; }
-      else { hj = -10; hIzoh = `hajm > qoldiq (${f.hajm} > ${+chegara.toFixed(4)})`; }
-    }
-    q.push({ nom: 'hajm', ball: hj, izoh: hIzoh });
-    // 6. Resurslar
+    // 5. Resurslar
     let rs = 0; let rIzoh = 'resurslar —';
     if (f.bolalar.length && t.resKalitlar.length) {
       const fk2 = f.bolalar.map((r) => resKalit(r.kod, r.nom, r.birlik));
@@ -308,6 +300,17 @@ export function f2MoslashV3(f2: readonly F2Tugun[], smeta: readonly SmetaQator[]
       rIzoh = `resurslar ${kesish.length}/${Math.max(A.size, B.size)}${normaTeng ? `, norma ${normaTeng}` : ''}`;
     } else if (f.bolalar.length && !t.resKalitlar.length) { rs = -5; rIzoh = 'smetada resurssiz'; }
     q.push({ nom: 'resurslar', ball: rs, izoh: rIzoh });
+    // 6. Hajm — ENG OXIRGI va eng kuchsiz qavat (egasi, 2026-09-25): F2 ko'pincha ishning bir
+    //    qismini oladi, shuning uchun hajm hech qachon jarima bermaydi — faqat teng nomzodlarni
+    //    ajratadi. Qoldiqdan oshsa — ball emas, ogohlantirish (o'ng oynada qizil qoldiq).
+    let hj = 0; let hIzoh = 'hajm —';
+    const chegara = opts.qoldiq?.get(t.id) ?? t.hajm;
+    if (f.hajm != null && chegara != null) {
+      if (t.hajm != null && t.hajm !== 0 && Math.abs(f.hajm - t.hajm) <= Math.abs(t.hajm) * 0.005) { hj = 2; hIzoh = 'hajm = smeta'; }
+      else if (chegara > 0 && f.hajm <= chegara * 1.001) { hj = 1; hIzoh = 'hajm ≤ qoldiq'; }
+      else { hIzoh = `⚠ hajm > qoldiq (${f.hajm} > ${+chegara.toFixed(4)})`; }
+    }
+    q.push({ nom: 'hajm', ball: hj, izoh: hIzoh });
     // Marka farqi, tartib
     if (gradeFarq(f.nom, t.nom)) q.push({ nom: 'marka', ball: -30, izoh: 'marka farqli — ehtimoliy zamena' });
     if (oxirgiTartib >= 0 && (t.tartib ?? t.id) > oxirgiTartib) q.push({ nom: 'tartib', ball: 2, izoh: 'tartib ✓' });
@@ -378,7 +381,7 @@ export function f2MoslashV3(f2: readonly F2Tugun[], smeta: readonly SmetaQator[]
     }
     // Hal qiluvchi dalil: F2 hajmi aynan b1 ning smeta hajmiga teng, qolganlariniki emas —
     // PTO shu ishni to'liq yopgan (bu tasodif bo'lishi ehtimoli juda past).
-    const hajmTeng = (n?: Nomzod) => !!n?.qavatlar.some((q) => q.nom === 'hajm' && q.ball === 10);
+    const hajmTeng = (n?: Nomzod) => !!n?.qavatlar.some((q) => q.nom === 'hajm' && q.ball === 2);
     if (b1 && toza(b1) && b1.ball >= AVTO_MIN && hajmTeng(b1) && nz.slice(1).every((n) => !hajmTeng(n) && b1.ball > n.ball)) {
       yoz(f.uid, { uid: f.uid, holat: 'aniq', qatorId: b1.qatorId, usul: 'hajm_aynan', nomzodlar: nz, sabab: `${b1.ball} ball, F2 hajmi aynan shu qatorning smeta hajmiga teng: ${b1.sabab.join(', ')}` });
       return S.byId.get(b1.qatorId)!;
