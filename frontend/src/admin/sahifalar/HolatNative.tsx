@@ -12,7 +12,9 @@ import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
 import { t2ObyektNakrutka } from '../../api/t2-nakrutka';
 import type { TreeNode } from '../../api/types';
 import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
-import { ostatkaQatorlari } from '../../lib/ostatka-export';
+import { ostatkaHujjatModeli, ostatkaHujjatXlsx } from '../../lib/ostatka-export';
+import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
+import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { toast } from '../../umumiy/ui/Toast';
 import SmetaYuklaNative from './SmetaYuklaNative';
 import ResursVedomostNative from './ResursVedomostNative';
@@ -27,6 +29,7 @@ export function HolatNative() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { joriy } = useKompaniya();
+  const [tomonlar, setTomonlar] = useHujjatTomonlari(joriy?.id);
   const [obyektlar, setObyektlar] = useState<T2Obyekt[]>([]);
   /* Sahifaning o'z xatolari (obyektlar ro'yxati, eksport). Daraxt xatosi hook'dan. */
   const [sahifaXato, setError] = useState('');
@@ -149,34 +152,33 @@ export function HolatNative() {
   }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason]);
 
   /* Egasi (2026-09-23): "tizim ostatka ishlarni ham bittada smeta shaklida bera
-     oladigan bo'lishi kerak". Ostatka = smeta − fakt (LRV_PLUS Q ustuni bilan bir
-     xil); hujjat Forma-2 ko'rinishida LRV_PLUS yozuvchisidan chiqadi. */
+     oladigan bo'lishi kerak". Ostatka = smeta − fakt; hujjat — rasmiy
+     "ВЕДОМОСТЬ ОСТАТКА РАБОТ" (hujjat standarti H1–H9): ichma-ich RZ, ИТОГО,
+     oshib ketgan va noma'lum pozitsiyalar hujjatda ochiq ro'yxatda. */
   const ostatkaEksport = useCallback(async () => {
     if (!selected || !daraxtXom.length) return;
     if (!exportGate.ok) {
       setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
       return;
     }
-    const ost = ostatkaQatorlari(daraxtXom, holatXom);
-    if (!ost.barglar) {
-      toast(`Ostatka yo‘q: barcha ishlar bajarilgan${ost.oshibKetgan ? `, ${ost.oshibKetgan} ta qatorda fakt smetadan oshgan` : ''}.`, 'warn');
+    const model = ostatkaHujjatModeli(daraxtXom, holatXom);
+    if (!model.barglar) {
+      toast(`Ostatka yo‘q: barcha ishlar bajarilgan${model.oshibKetgan.length ? `, ${model.oshibKetgan.length} ta qatorda fakt smetadan oshgan` : ''}.`, 'warn');
       return;
     }
     setEksportBolmoqda(true);
     try {
-      const bytes = await lrvPlusFaylBaytlari(ost.qatorlar, selected.nom, undefined, {
-        rejim: 'forma2', sarlavha: `ОСТАТКА ИШЛАР — ${selected.nom}`,
-      }, exportContext);
-      lrvPlusYuklab(bytes, selected.nom + '_OSTATKA');
+      const { bytes, faylNomi } = ostatkaHujjatXlsx(model, { obyektNomi: selected.nom, imzo: tomonlar });
+      downloadBlob(bytes, faylNomi);
       const izoh = [
-        ost.oshibKetgan ? `${ost.oshibKetgan} ta qatorda fakt smetadan oshgan — kirmadi` : '',
-        ost.nomalum ? `${ost.nomalum} ta qatorda smeta hajmi noma’lum — kirmadi` : '',
+        model.oshibKetgan.length ? `${model.oshibKetgan.length} ta qatorda fakt smetadan oshgan — alohida ro‘yxatda` : '',
+        model.diqqat.length ? `${model.diqqat.length} ta pozitsiyada hajm/fakt/narx noma’lum — jami bo‘sh qoldirildi` : '',
       ].filter(Boolean).join('; ');
-      toast(`Ostatka: ${ost.barglar} ta qator.${izoh ? ' ' + izoh + '.' : ''}`, izoh ? 'warn' : 'ok');
+      toast(`Ostatka: ${model.barglar} ta pozitsiya${model.jami != null ? `, jami ${model.jami.toLocaleString('ru-RU')} so‘m` : ''}.${izoh ? ' ' + izoh + '.' : ''}`, izoh ? 'warn' : 'ok');
     } catch {
       setError('Ostatka Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, exportContext, exportGate.ok, exportBlockReason]);
+  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar]);
 
 
   const smetaJami = tree.reduce((sum, n) => sum + (n.smeta || 0), 0);
@@ -241,7 +243,7 @@ export function HolatNative() {
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Forma-2 Excel'}
             </button>
             <button onClick={() => void ostatkaEksport()} disabled={eksportBolmoqda || !exportGate.ok}
-              title={exportGate.ok ? "Bajarilmay qolgan ishlar (smeta − fakt) smeta shaklida: RZ ierarxiyasi, formulalar $ siz." : `Eksport bloklangan: ${exportBlockReason}`}
+              title={exportGate.ok ? "ВЕДОМОСТЬ ОСТАТКА РАБОТ: bajarilmay qolgan ishlar (smeta − fakt) smeta shaklida, RZ ierarxiyasi, ИТОГО, imzolar." : `Eksport bloklangan: ${exportBlockReason}`}
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Ostatka Excel'}
             </button>
@@ -252,6 +254,7 @@ export function HolatNative() {
             </span>
           )}
           {validId && <button onClick={() => navigate(`/admin/fakt?obyekt=${obyektId}`)} className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white">Fakt kiritish</button>}
+          {validId && tree.length > 0 && <div className="basis-full"><HujjatTomonlariPanel qiymat={tomonlar} onChange={setTomonlar} /></div>}
         </section>
 
         {!validId && (

@@ -330,9 +330,9 @@ export class RasmiyVaraq {
     // Imzo chizig'i jadval o'ng yarmida: matn ustunidan keyingi birinchi ko'rinadigan ustun.
     const vis = this.korinadigan.filter((c) => c > mc);
     const imzoC = vis[Math.floor(vis.length / 2)] ?? oxir;
-    for (const t of tomonlar) {
-      this.bosh();
-      const r = this.put([katakXml(0, RS.imzoMatn, imzoMatni(t.rol, t.nom)), katakXml(imzoC, RS.imzoMatn, IMZO_IMZO_CHIZIQ)], 20);
+    tomonlar.forEach((t, i) => {
+      if (i) this.put([], 8);
+      const r = this.put([katakXml(0, RS.imzoMatn, imzoMatni(t.rol, t.nom)), katakXml(imzoC, RS.imzoMatn, IMZO_IMZO_CHIZIQ)], 24);
       this.merge(0, r, Math.max(mc, imzoC - 1));
       const r2 = this.put([
         katakXml(0, RS.imzoIzoh, imzoMuhrli(t.rol) ? IMZO_IZOH : IMZO_IZOH_SHAXS),
@@ -340,7 +340,7 @@ export class RasmiyVaraq {
         ...(imzoMuhrli(t.rol) && oxir > imzoC ? [katakXml(oxir, RS.imzoIzoh, IMZO_MP)] : []),
       ]);
       this.merge(0, r2, Math.max(mc, imzoC - 1));
-    }
+    });
   }
 
   meta(): RasmiyVaraqMeta {

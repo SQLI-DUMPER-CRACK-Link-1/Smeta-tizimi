@@ -1,4 +1,8 @@
 import type { T2Qator, T2QatorHolat } from '../api/supabase';
+import {
+  RasmiyVaraq, bugunSana, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2,
+  type ImzoNomlar, type Qiymat, type RasmiyUstun,
+} from './hujjat-yozuvchi';
 
 /**
  * OSTATKA — bajarilmay qolgan ishlar smeta shaklida (egasi 2026-09-23: "tizim
@@ -69,4 +73,235 @@ export function ostatkaQatorlari(qatorlar: readonly T2Qator[], holatlar: readonl
     .filter((q) => qolsin.has(q.id))
     .map((q) => (ost.has(q.id) ? { ...q, hajm: ost.get(q.id)!, summa: null } : { ...q, summa: null }));
   return { qatorlar: chiq, oshibKetgan, nomalum, barglar };
+}
+
+// ═══════════════════ OSTATKA — rasmiy hujjat (P2, H1–H9) ═══════════════════
+
+
+export type OstatkaHujjatOpsiya = {
+  obyektNomi: string;
+  /** "По состоянию на" — sana (YYYY-MM-DD). Berilmasa — bugun. */
+  sana?: string;
+  imzo?: ImzoNomlar;
+};
+
+/** Hujjat modeli qatori — UI va Excel bir xil sonni shu modeldan oladi. */
+export type OstatkaModelQator = {
+  id: number;
+  tur: 'rz' | 'bl' | 'barg' | 'itogo';
+  daraja: number;
+  tartib: string;
+  kod: string;
+  nom: string;
+  birlik: string;
+  smetaHajm: number | null;
+  faktHajm: number | null;
+  ostatkaHajm: number | null;
+  narx: number | null;
+  summa: number | null;
+  /** Noma'lum pul pozitsiyalari soni (bu qator va uning ostida). */
+  nomalum: number;
+  /** Qaysi qatorlar yig'indisi (itogo/bl/rz uchun) — model indekslari. */
+  bolalar: number[];
+};
+
+export type OstatkaModel = {
+  qatorlar: OstatkaModelQator[];
+  /** ВСЕГО ОСТАТОК — noma'lum pozitsiya bo'lsa null (taxmin yo'q). */
+  jami: number | null;
+  /** Yuqori darajadagi qatorlar (ВСЕГО shular yig'indisi). */
+  ildizlar: number[];
+  oshibKetgan: Array<{ nom: string; birlik: string; smetaHajm: number; faktHajm: number; yol: string }>;
+  diqqat: Array<{ nom: string; sabab: string; joy?: string }>;
+  barglar: number;
+};
+
+const OST_BARG = new Set(['rs', 'mat', 'ob']);
+const OST_EPS = 1e-9;
+const ost = (x: number): number => (Math.abs(x) < OST_EPS ? 0 : x);
+
+/**
+ * Kanonik daraxt (ichma-ich RZ) → Ostatka hujjat modeli.
+ *  - barg (rs/mat/ob, bolasiz bl): ostatka = smeta hajm − fakt hajm; summa =
+ *    ROUND(ostatka × smeta narxi; 2);
+ *  - bl: bolalari summasi; bir birlik narxi = summa / bl ostatka hajmi;
+ *  - RZ: ichma-ich saqlanadi, har biri "ИТОГО ПО …" bilan yopiladi;
+ *  - tugagan (ostatka = 0) barglar kirmaydi; fakt > smeta — alohida ro'yxat;
+ *  - smeta hajmi, fakt yoki narx noma'lum — qator jadvalda qoladi, summa bo'sh,
+ *    yuqoridagi barcha jamilar ham bo'sh (NULL ≠ 0), "ТРЕБУЮТ ВНИМАНИЯ" da.
+ */
+export function ostatkaHujjatModeli(qatorlar: readonly T2Qator[], holatlar: readonly T2QatorHolat[]): OstatkaModel {
+  const rows = [...qatorlar].sort((a, b) => (a.tartib ?? 0) - (b.tartib ?? 0) || a.id - b.id);
+  const byId = new Map(rows.map((q) => [q.id, q]));
+  const holat = new Map(holatlar.map((h) => [h.qator_id, h]));
+  const bolalar = new Map<number | null, T2Qator[]>();
+  for (const q of rows) {
+    const ota = q.ota_id != null && byId.has(q.ota_id) ? q.ota_id : null;
+    const a = bolalar.get(ota);
+    if (a) a.push(q); else bolalar.set(ota, [q]);
+  }
+  const yolOf = (q: T2Qator): string => {
+    const y: string[] = [];
+    for (let o = q.ota_id == null ? undefined : byId.get(q.ota_id); o; o = o.ota_id == null ? undefined : byId.get(o.ota_id)) if (o.tur === 'rz' || o.tur === 'bl') y.unshift(o.nom ?? '');
+    return y.join(' › ');
+  };
+  const out: OstatkaModelQator[] = [];
+  const oshib: OstatkaModel['oshibKetgan'] = [];
+  const diqqat: OstatkaModel['diqqat'] = [];
+  let no = 0;
+  let barglar = 0;
+
+  const bargHisob = (q: T2Qator) => {
+    const h = holat.get(q.id);
+    const smeta = q.hajm ?? null;
+    const fakt = h ? Number(h.fakt_hajm ?? 0) : null;
+    const o = smeta == null || fakt == null ? null : ost(smeta - fakt);
+    return { smeta, fakt, o };
+  };
+
+  // Qatorni qayta ishlaydi; model indeksini (yoki kirmasa null) qaytaradi.
+  const qayta = (q: T2Qator, daraja: number, blNo: string | null, k: number): number | null => {
+    const tur = q.tur ?? '';
+    const kids = bolalar.get(q.id) ?? [];
+    if (OST_BARG.has(tur) || (tur === 'bl' && !kids.length)) {
+      const { smeta, fakt, o } = bargHisob(q);
+      if (o != null && o < 0) { oshib.push({ nom: q.nom ?? '', birlik: q.birlik ?? '', smetaHajm: smeta!, faktHajm: fakt!, yol: yolOf(q) }); return null; }
+      if (o === 0) return null;
+      const narx = q.narx ?? null;
+      const summa = o != null && narx != null ? yaxlit2(o * narx) : null;
+      const sabablar = [smeta == null ? 'нет количества по смете' : '', fakt == null ? 'нет данных о выполнении' : '', narx == null ? 'нет сметной цены' : ''].filter(Boolean);
+      if (sabablar.length) diqqat.push({ nom: `${q.nom ?? ''}${q.birlik ? `, ${q.birlik}` : ''}`, sabab: sabablar.join('; '), joy: yolOf(q) || undefined });
+      barglar++;
+      const tartib = blNo ? `${blNo}.${k}` : String(++no);
+      out.push({ id: q.id, tur: 'barg', daraja, tartib, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', smetaHajm: smeta, faktHajm: fakt, ostatkaHajm: o, narx, summa, nomalum: summa == null ? 1 : 0, bolalar: [] });
+      return out.length - 1;
+    }
+    if (tur === 'bl') {
+      const idx = out.length;
+      const { smeta, fakt, o } = bargHisob(q);
+      const nomer = String(++no);
+      out.push({ id: q.id, tur: 'bl', daraja, tartib: nomer, kod: q.kod ?? '', nom: q.nom ?? '', birlik: q.birlik ?? '', smetaHajm: smeta, faktHajm: fakt, ostatkaHajm: o == null ? null : Math.max(o, 0), narx: null, summa: null, nomalum: 0, bolalar: [] });
+      let kk = 0;
+      const b: number[] = [];
+      for (const c of kids) { const i = qayta(c, daraja + 1, nomer, kk + 1); if (i != null) { b.push(i); kk++; } }
+      if (!b.length) { out.length = idx; no--; return null; }
+      const row = out[idx];
+      row.bolalar = b;
+      row.nomalum = b.reduce((s, i) => s + out[i].nomalum, 0);
+      row.summa = row.nomalum ? null : yaxlit2(b.reduce((s, i) => s + (out[i].summa ?? 0), 0));
+      row.narx = row.summa != null && row.ostatkaHajm ? row.summa / row.ostatkaHajm : null;
+      return idx;
+    }
+    // rz (yoki noma'lum tur) — bo'lim; bolalari bo'lmasa kirmaydi.
+    const idx = out.length;
+    out.push({ id: q.id, tur: 'rz', daraja, tartib: '', kod: '', nom: q.nom ?? '', birlik: '', smetaHajm: null, faktHajm: null, ostatkaHajm: null, narx: null, summa: null, nomalum: 0, bolalar: [] });
+    const b: number[] = [];
+    for (const c of kids) { const i = qayta(c, daraja + 1, null, 0); if (i != null) b.push(i); }
+    if (!b.length) { out.length = idx; return null; }
+    const nomalum = b.reduce((s, i) => s + out[i].nomalum, 0);
+    const summa = nomalum ? null : yaxlit2(b.reduce((s, i) => s + (out[i].summa ?? 0), 0));
+    out.push({ id: q.id, tur: 'itogo', daraja, tartib: '', kod: '', nom: `ИТОГО ПО РАЗДЕЛУ: ${q.nom ?? ''}`, birlik: '', smetaHajm: null, faktHajm: null, ostatkaHajm: null, narx: null, summa, nomalum, bolalar: b });
+    out[idx].nomalum = nomalum;
+    out[idx].summa = summa;
+    return out.length - 1; // ota uchun — ИТОГО qatori
+  };
+
+  const ildizlar: number[] = [];
+  for (const q of bolalar.get(null) ?? []) { const i = qayta(q, 0, null, 0); if (i != null) ildizlar.push(i); }
+  const nomalum = ildizlar.reduce((s, i) => s + out[i].nomalum, 0);
+  const jami = !ildizlar.length || nomalum ? null : yaxlit2(ildizlar.reduce((s, i) => s + (out[i].summa ?? 0), 0));
+  return { qatorlar: out, jami, ildizlar, oshibKetgan: oshib, diqqat, barglar };
+}
+
+const OSTATKA_USTUNLAR: RasmiyUstun[] = [
+  { sarlavha: '№ п/п', kenglik: 7, tur: 'tartib' },
+  { sarlavha: 'Шифр, код', kenglik: 15, tur: 'kod' },
+  { sarlavha: 'Наименование работ и затрат', kenglik: 52, tur: 'matn' },
+  { sarlavha: 'Ед. изм.', kenglik: 9, tur: 'birlik' },
+  { sarlavha: 'по смете', kenglik: 13, tur: 'hajm', guruh: 'КОЛИЧЕСТВО' },
+  { sarlavha: 'выполнено', kenglik: 13, tur: 'hajm', guruh: 'КОЛИЧЕСТВО' },
+  { sarlavha: 'остаток', kenglik: 13, tur: 'hajm', guruh: 'КОЛИЧЕСТВО' },
+  { sarlavha: 'цена за ед., сум', kenglik: 15, tur: 'narx', guruh: 'СТОИМОСТЬ ОСТАТКА' },
+  { sarlavha: 'сумма, сум', kenglik: 17, tur: 'pul', guruh: 'СТОИМОСТЬ ОСТАТКА' },
+  // Yashirin texnik ustun: noma'lum pul pozitsiyalari soni (jamini bo'sh qoldirish uchun).
+  { sarlavha: 'Н', kenglik: 4, tur: 'texnik', yashirin: true },
+];
+
+/** Ostatka — bajarilmay qolgan ishlar smeta shaklida (.xlsx). */
+export function ostatkaHujjatXlsx(model: OstatkaModel, o: OstatkaHujjatOpsiya): { bytes: Uint8Array; faylNomi: string } {
+  const sana = o.sana ?? bugunSana();
+  const sanaRu = sana.split('-').reverse().join('.');
+  const v = new RasmiyVaraq({
+    nom: 'Остаток работ',
+    sarlavha: 'ВЕДОМОСТЬ ОСТАТКА РАБОТ',
+    ostSarlavha: [`(невыполненные объемы работ по смете по состоянию на ${sanaRu})`],
+    titul: [
+      ['Объект:', o.obyektNomi],
+      ['Заказчик:', o.imzo?.zakazchik],
+      ['Подрядчик:', o.imzo?.pudratchi],
+      ['Основание:', 'ведомость объемов работ и ресурсов (ЛРВ) объекта; выполнение — по учтенным актам факта'],
+    ],
+    ustunlar: OSTATKA_USTUNLAR,
+    yonalish: 'landscape',
+  });
+  // Har model qatori hujjatda aynan bitta qator: satr raqami oldindan ma'lum,
+  // shuning uchun ota (bl/ИТОГО) formulasi bolalar qatoriga havola qila oladi.
+  const bosh = v.malumotBoshi;
+  const rowOf = (i: number) => bosh + i;
+  const qiy = (x: number | null): Qiymat => (x == null ? null : x);
+  model.qatorlar.forEach((q, i) => {
+    const kid = (col: string) => `SUM(${q.bolalar.map((k) => `${col}${rowOf(k)}`).join(',')})`;
+    let r = 0;
+    if (q.tur === 'rz') r = v.bolim(q.nom, { daraja: q.daraja });
+    else if (q.tur === 'barg') {
+      r = v.qator('oddiy', (n) => [
+        q.tartib, q.kod, q.nom, q.birlik, qiy(q.smetaHajm), qiy(q.faktHajm),
+        { f: `IF(OR(E${n}="",F${n}=""),"",E${n}-F${n})`, v: q.ostatkaHajm ?? '' },
+        qiy(q.narx),
+        { f: `IF(OR(G${n}="",H${n}=""),"",ROUND(G${n}*H${n},2))`, v: q.summa ?? '' },
+        { f: `IF(I${n}="",1,0)`, v: q.nomalum },
+      ], { daraja: q.daraja });
+    } else if (q.tur === 'bl') {
+      r = v.qator('ish', (n) => [
+        q.tartib, q.kod, q.nom, q.birlik, qiy(q.smetaHajm), qiy(q.faktHajm),
+        { f: `IF(OR(E${n}="",F${n}=""),"",MAX(E${n}-F${n},0))`, v: q.ostatkaHajm ?? '' },
+        { f: `IF(OR(I${n}="",N(G${n})=0),"",I${n}/G${n})`, v: q.narx ?? '' },
+        { f: `IF(J${n}>0,"",${kid('I')})`, v: q.summa ?? '' },
+        { f: kid('J'), v: q.nomalum },
+      ], { daraja: q.daraja });
+    } else {
+      r = v.qator('jami', (n) => [
+        null, null, q.nom, null, null, null, null, null,
+        { f: `IF(J${n}>0,"",${kid('I')})`, v: q.summa ?? '' },
+        { f: kid('J'), v: q.nomalum },
+      ], { daraja: q.daraja });
+    }
+    if (r !== rowOf(i)) throw new Error('OSTATKA_QATOR_SILJIDI');
+  });
+  if (model.ildizlar.length) {
+    const nomalum = model.ildizlar.reduce((s, i) => s + model.qatorlar[i].nomalum, 0);
+    v.qator('vsego', (n) => [
+      null, null, 'ВСЕГО ОСТАТОК РАБОТ ПО ОБЪЕКТУ', null, null, null, null, null,
+      { f: `IF(J${n}>0,"",SUM(${model.ildizlar.map((i) => `I${rowOf(i)}`).join(',')}))`, v: model.jami ?? '' },
+      { f: `SUM(${model.ildizlar.map((i) => `J${rowOf(i)}`).join(',')})`, v: nomalum },
+    ]);
+  }
+  v.bosh();
+  v.izoh('Стоимость остатка определена по сметным ценам (прямые затраты), без накладных расходов, прибыли и НДС. Позиции с неизвестным количеством, выполнением или ценой оставлены без суммы; итоги по ним не подводятся до уточнения.');
+  if (model.jami == null && model.ildizlar.length) v.izoh('Итог не определен: есть позиции без суммы — см. перечень ниже.');
+  v.diqqat(model.diqqat);
+  if (model.oshibKetgan.length) {
+    v.diqqat(model.oshibKetgan.map((x) => ({
+      nom: `${x.nom}${x.birlik ? `, ${x.birlik}` : ''}`,
+      joy: x.yol || undefined,
+      sabab: `выполнено ${fmt(x.faktHajm)} при объеме по смете ${fmt(x.smetaHajm)} (превышение ${fmt(x.faktHajm - x.smetaHajm)}); в остаток не включено`,
+    })), 'ВЫПОЛНЕНО СВЕРХ СМЕТНОГО ОБЪЕМА');
+  }
+  v.imzo(imzoTomonlari(['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ'], o.imzo));
+  const { bytes } = rasmiyKitob([v]);
+  return { bytes, faylNomi: hujjatFaylNomi({ obyekt: o.obyektNomi, hujjat: 'ОСТАТОК_РАБОТ', davr: sana }) };
+}
+
+function fmt(n: number): string {
+  return n.toLocaleString('ru-RU', { maximumFractionDigits: 3 });
 }
