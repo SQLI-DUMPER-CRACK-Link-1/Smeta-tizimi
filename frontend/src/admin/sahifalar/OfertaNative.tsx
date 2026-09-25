@@ -1,6 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { CheckCheck, Download, FileSpreadsheet, FolderOpen, Info, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { readXlsx } from '../../lib/f2-import-parse';
 import {
   OFERTA_KATEGORIYALAR, fayldagiFoizlar, ofertaHisobla, ofertaResursKaliti,
   type OfertaFoiz, type OfertaFoizYon, type OfertaGuruh, type OfertaMalumKategoriya, type OfertaNarxRejimi,
@@ -15,6 +14,7 @@ import { NAKRUTKA_KOEF_IZOH, NAKRUTKA_KOEF_KODLAR, t2NakrutkaKoefOl, type Nakrut
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
+import { readXlsxFonda } from '../../lib/f2-import-parse/xlsxFonda';
 
 const MAX_FILE_BYTES = 80 * 1024 * 1024;
 const SAHIFA = 200;
@@ -165,7 +165,7 @@ function Sessiya() {
         if (file.size > MAX_FILE_BYTES) { xatolar.push(`${file.name}: 80 MB dan katta`); continue; }
         try {
           const bytes = new Uint8Array(await file.arrayBuffer());
-          const tahlillar = ofertaResursVaraqlariniAniqla(await readXlsx(bytes));
+          const tahlillar = ofertaResursVaraqlariniAniqla(await readXlsxFonda(bytes));
           if (!tahlillar.some((s) => s.qatorlar.length > 0)) { xatolar.push(`${file.name}: resurs jadvali topilmadi`); continue; }
           yangi.push({ id: `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, nom: file.name.replace(/\.(xlsx|xlsm|xls)$/i, ''), faylNomi: file.name, bytes, tahlillar, tanlanganVaraqlar: sukutTanlov(tahlillar) });
         } catch (e) { xatolar.push(`${file.name}: ${e instanceof Error ? e.message : 'o‘qilmadi'}`); }

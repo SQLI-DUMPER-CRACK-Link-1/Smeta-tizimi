@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { readXlsx, type SheetGrid, type XlsxWorkbook } from '../../lib/f2-import-parse';
+import { type SheetGrid, type XlsxWorkbook } from '../../lib/f2-import-parse';
 import { resNarxlashPreview, resQatorlariniOl, resVaraqlariniTop, type ResNarx, type ResPreview, type ResUstunlar } from '../../lib/res-narxlash';
 import { sbT2SmetaNarxlaRes } from '../../api/t2-smeta-narxlash';
 import { yangiOperationId, sbT2DaraxtOl, sbT2ObyektlarOlKomp, type T2Obyekt, type T2Qator } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
+import { readXlsxFonda } from '../../lib/f2-import-parse/xlsxFonda';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -149,7 +150,7 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
     if (!objectId || qatorlar.length === 0) { setError('Avval smetasi bor obyektni tanlang.'); return; }
     setBusy(true);
     try {
-      const workbook = await readXlsx(await file.arrayBuffer());
+      const workbook = await readXlsxFonda(await file.arrayBuffer());
       const topilgan = resVaraqlariniTop(workbook);
       if (!topilgan.length) throw new Error('RES ustunlari topilmadi. Kod, nom, birlik va “na. ed. izm.” narx ustuni bo‘lgan varaqni yuklang.');
       const names = topilgan.map((x) => x.nom);

@@ -20,6 +20,9 @@ vi.mock('../../api/supabase', () => ({
   sbT2F2ImportJobHolat: mocks.jobHolat,
   sbT2F2ImportDraftRoyxat: mocks.draftRoyxat,
 }));
+vi.mock('../../lib/f2-import-parse/xlsxFonda', () => ({
+  readXlsxFonda: async () => ({ sheets: [{ name: 'F2' }], sheet: () => ({ rows: Array.from({ length: mocks.qatorSoni }, () => [10, 123.45, 1234.49]) }) }),
+}));
 vi.mock('../../lib/f2-import-parse', () => ({
   readXlsx: async () => ({ sheets: [{ name: 'F2' }], sheet: () => ({ rows: Array.from({ length: mocks.qatorSoni }, () => [10, 123.45, 1234.49]) }) }),
   f2FaylOqiCore: (rows: unknown[], cols: unknown) => cols

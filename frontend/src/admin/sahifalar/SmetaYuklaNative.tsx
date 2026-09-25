@@ -3,7 +3,7 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { sbT2DaraxtOl, sbT2ObyektlarOlKomp, sbT2ResursKategoriyaBelgila, yangiOperationId, type T2Obyekt, type T2Qator, type T2ResursKategoriya } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
-import { readXlsx, f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
+import { f2FaylOqiCore, f2UstunAniqla, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
 import { smetaDaraxtniYoy, bolaklarga } from '../../lib/smeta-flatten';
 import { smetaPaketQatorlariniYoy, smetaPaketRejasiniTekshir, type SmetaPaketManbaReja } from '../../lib/smeta-package-import';
 import { lrvVaIchkiResniAjrat } from '../../lib/smeta-lrv-boundary';
@@ -16,6 +16,7 @@ import { varaqniTahlilQil } from '../../lib/smeta-anatomiya/varaq';
 import { anatomiyadanAktDaraxt, daraxtlarTengmi } from '../../lib/smeta-anatomiya/akt-daraxt';
 import { smetaQaytaImportDiff, type SmetaReimportDiff, type SmetaReimportLine } from '../../lib/smeta-reimport-diff';
 import { podvalBlokTuri, resBolimKategoriya, resursMkKabAniqla } from '../../lib/res-kategoriya';
+import { readXlsxFonda } from '../../lib/f2-import-parse/xlsxFonda';
 
 /**
  * T2-FINAL-CLEAN-CUTOVER P0.2: native Smeta XLSX -> canonical Supabase, off
@@ -881,7 +882,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
     const token = generation.current;
     try {
       if (file.size > MAX_FILE_BYTES) throw new Error(`Fayl ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
-      const workbook = await readXlsx(await file.arrayBuffer());
+      const workbook = await readXlsxFonda(await file.arrayBuffer());
       if (generation.current !== token) return;
       setBook(workbook);
 
@@ -963,7 +964,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
   async function uploadRes(file: File) {
     setResError(''); setResIndex(null); setResIndexSize(0); setKatKorib([]); setResBusy(true);
     try {
-      const workbook = await readXlsx(await file.arrayBuffer());
+      const workbook = await readXlsxFonda(await file.arrayBuffer());
       setResBook(workbook);
       const detected: Record<string, F2ColumnConfig> = {};
       const tanlangan: string[] = [];
@@ -1001,7 +1002,7 @@ function Sessiya({ companyId, fixedObjectId, onImportlandi }: { companyId: numbe
         if (file.size > MAX_FILE_BYTES) throw new Error(`«${file.name}» ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
         let workbook: XlsxWorkbook;
         try {
-          workbook = await readXlsx(await file.arrayBuffer());
+          workbook = await readXlsxFonda(await file.arrayBuffer());
         } catch (e) {
           throw spreadsheetReadError(file.name, e);
         }

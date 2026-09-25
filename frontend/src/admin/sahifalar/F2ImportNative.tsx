@@ -6,12 +6,13 @@ import {
 } from '../../api/supabase';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { usePTOWorkspace } from '../../umumiy/kontekst/PTOWorkspaceContext';
-import { readXlsx, f2FaylOqiCore, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
+import { f2FaylOqiCore, type XlsxWorkbook, type F2ColumnConfig, type SheetGrid } from '../../lib/f2-import-parse';
 import { type AktNode, type LrvNode, type F2MatchResult } from '../../lib/f2-match-engine';
 import { f2AggregatsiyaQator, f2ExactPayloadQur, type F2ExactManbaTugun } from '../../test02/f2-exact-payload';
 import { F2PreapprovalAudit } from '../../test02/F2PreapprovalAudit';
 import { F2TwoPaneWorkbench } from './F2TwoPaneWorkbench';
 import { f2ImportJobRecover } from '../../api/t2-f2-job-recovery';
+import { readXlsxFonda } from '../../lib/f2-import-parse/xlsxFonda';
 
 /* T2-GAS-EXIT-001 SS5/SS6 + T2-PTO-CLOSURE-007-CODEX-F2-RESUMABLE-IMPORT:
  * eski qattiq devor (15MB / 20000 qator) endi durable job/draft modeli bilan
@@ -291,7 +292,7 @@ function NativeSession({ companyId }: { companyId: number }) {
     const token = generation.current;
     try {
       if (file.size > MAX_FILE_BYTES) throw new Error(`Fayl ${MAX_FILE_BYTES / 1024 / 1024} MB dan katta.`);
-      const workbook = await readXlsx(await file.arrayBuffer());
+      const workbook = await readXlsxFonda(await file.arrayBuffer());
       if (generation.current !== token) return;
       setBook(workbook); chooseSheet(workbook, workbook.sheets[0]?.name || ''); setPhase('Varaq va ustunlarni tekshiring');
     } catch { if (generation.current === token) setError(`Fayl o‘qilmadi yoki ${MAX_FILE_BYTES / 1024 / 1024} MB chegarasidan oshdi. XLSX faylni tekshiring.`); }
