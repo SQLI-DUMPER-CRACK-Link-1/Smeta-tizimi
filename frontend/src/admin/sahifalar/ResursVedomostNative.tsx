@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { sbT2ObyektlarOlKomp, sbT2QatorHolatOl, type T2Obyekt, type T2QatorHolat } from '../../api/supabase';
 import { resursVedomostHujjat, resursVedomostKategoriyalarga, type ResursVedomostKategoriya } from '../../lib/resurs-vedomost';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
+import { useHujjatKorinish } from '../../umumiy/hujjat/HujjatKorinish';
 import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { FmtN } from '../../lib/format';
@@ -56,8 +57,10 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
     qatorlar: filtr ? k.qatorlar.filter(r => r.nom.toUpperCase().includes(filtr)) : k.qatorlar,
   })).filter(k => k.qatorlar.length > 0);
 
+  const korinish = useHujjatKorinish();
   return (
     <div className="space-y-3 p-1">
+      {korinish.oyna}
       {!fixedObjectId && <label className="block text-sm">Obyekt
         <select aria-label="Obyekt" className="ml-2 border rounded px-2 py-1"
           value={objectId} onChange={e => void obyektTanla(e.target.value)}>
@@ -76,6 +79,12 @@ function Sessiya({ companyId, fixedObjectId }: { companyId: number; fixedObjectI
                 const h = resursVedomostHujjat(holatlar, { obyektNomi: nom, imzo: tomonlar });
                 downloadBlob(h.bytes, h.faylNomi);
               }}>Ресурсная ведомость (Excel)</button>
+            <button type="button" className="h-8 rounded-lg border px-3 text-sm hover:border-accent/50" title="Saytda hujjatdagiday ko‘rish"
+              onClick={() => {
+                const nom = objects.find((o) => String(o.id) === objectId)?.nom || `Obyekt ${objectId}`;
+                const h = resursVedomostHujjat(holatlar, { obyektNomi: nom, imzo: tomonlar });
+                korinish.ochish(h.bytes, h.faylNomi);
+              }}>Ko‘rish</button>
             <div className="min-w-[260px] flex-1"><HujjatTomonlariPanel qiymat={tomonlar} onChange={setTomonlar} /></div>
           </div>
           <label className="block text-sm">Resurs qidirish

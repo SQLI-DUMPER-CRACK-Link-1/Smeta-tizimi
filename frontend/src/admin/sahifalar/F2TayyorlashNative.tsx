@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Download, Save, Zap } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, Eye, Save, Zap } from 'lucide-react';
+import { useHujjatKorinish } from '../../umumiy/hujjat/HujjatKorinish';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { toast } from '../../umumiy/ui/Toast';
 import { FmtN } from '../../lib/format';
@@ -119,7 +120,8 @@ export function F2TayyorlashNative() {
     finally { setSaving(false); }
   };
 
-  const excelYuklash = async () => {
+  const korinish = useHujjatKorinish();
+  const excelYuklash = async (korish = false) => {
     if (!validId || !tekshiruv.ok) return;
     const object = obyektlar.find((item) => item.id === obyektId);
     if (!object) { toast('Kanonik obyekt topilmadi.', 'danger'); return; }
@@ -131,11 +133,12 @@ export function F2TayyorlashNative() {
         obyektNom: object.nom, davr: oy, imzo: tomonlar, ndsFoiz: stavka != null && Number.isFinite(stavka) ? stavka : null,
         nakrutka: nk?.ok ? nk.koeffitsientlar ?? null : null,
       });
-      downloadBlob(h.bytes, h.faylNomi);
+      if (korish) korinish.ochish(h.bytes, h.faylNomi); else downloadBlob(h.bytes, h.faylNomi);
     } catch { toast('Forma-2 Excel qoralamasini yaratib bo‘lmadi.', 'danger'); }
   };
 
   return <Sahifa sarlavha="F2 tayyorlash" tavsif="Fakt qoldig‘idan qoralama; narx va summa faqat F2 manbasidan">
+    {korinish.oyna}
     <div className="flex h-full min-h-0 flex-col gap-3">
       <section className="karta flex flex-wrap items-end gap-3 p-3">
         <label className="min-w-[260px] flex-1 text-[12px] font-medium text-text">Obyekt
@@ -169,7 +172,7 @@ export function F2TayyorlashNative() {
         </table>
       </section></>}
       {validId && qatorlar.length > 0 && <section className="flex flex-wrap items-start gap-3"><div className="min-w-[280px] flex-1"><HujjatTomonlariPanel qiymat={tomonlar} onChange={setTomonlar} /></div><label className="text-[12px] text-text-dim">QQS (НДС) stavkasi, % — hujjat oxirida bir marta<input aria-label="QQS stavkasi" value={ndsFoiz} onChange={(event) => setNdsFoiz(event.target.value)} placeholder="bo‘sh — QQS qo‘shilmaydi" inputMode="decimal" className="ml-2 w-44 rounded border border-border bg-bg px-2 py-1" /></label></section>}
-      {validId && <section className="flex flex-wrap items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> Smeta narxi fallback emas. Arifmetik farq faqat ogohlantirish; hujjat summasi aynan saqlanadi.</p><div className="flex items-center gap-2"><button onClick={() => navigate(`/admin/f2-tarix?obyekt=${obyektId}&obyekt_nomi=${encodeURIComponent(obyektlar.find((item) => item.id === obyektId)?.nom || '')}`)} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-semibold text-text">F2 tarixini ko‘rish</button><button onClick={() => void excelYuklash()} disabled={!tekshiruv.ok || saving} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text disabled:opacity-50"><Download size={16} />Forma-2 Excel qoralama</button><button onClick={() => void saqlash()} disabled={!tekshiruv.ok || saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Yaratilmoqda…' : `F2 qoralama yaratish (${tekshiruv.qatorlar.length})`}</button></div></section>}
+      {validId && <section className="flex flex-wrap items-center justify-between gap-3"><p className="flex items-center gap-1 text-[12px] text-text-dim"><AlertTriangle size={14} /> Smeta narxi fallback emas. Arifmetik farq faqat ogohlantirish; hujjat summasi aynan saqlanadi.</p><div className="flex items-center gap-2"><button onClick={() => navigate(`/admin/f2-tarix?obyekt=${obyektId}&obyekt_nomi=${encodeURIComponent(obyektlar.find((item) => item.id === obyektId)?.nom || '')}`)} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-semibold text-text">F2 tarixini ko‘rish</button><button onClick={() => void excelYuklash(false)} disabled={!tekshiruv.ok || saving} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text disabled:opacity-50"><Download size={16} />Forma-2 Excel qoralama</button><button onClick={() => void excelYuklash(true)} disabled={!tekshiruv.ok || saving} title="Проект акта Ф-2 — saytda hujjatdagiday ko‘rish" aria-label="Forma-2 qoralama ko‘rish" className="inline-flex items-center rounded-lg border border-border px-2 py-2 text-sm text-text disabled:opacity-50"><Eye size={16} /></button><button onClick={() => void saqlash()} disabled={!tekshiruv.ok || saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={16} />{saving ? 'Yaratilmoqda…' : `F2 qoralama yaratish (${tekshiruv.qatorlar.length})`}</button></div></section>}
     </div>
   </Sahifa>;
 }

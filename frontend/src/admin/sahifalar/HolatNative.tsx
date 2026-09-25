@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Database, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Database, Eye, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { SmetaTree } from '../../umumiy/daraxt/SmetaTree';
 import { Sahifa } from '../../umumiy/ui/Sahifa';
 import { FmtN } from '../../lib/format';
 import { useKompaniya } from '../../test02/KompaniyaTanlov';
 import { sbT2ObyektlarOlKomp, yangiOperationId, type T2Obyekt } from '../../api/supabase';
 import { useT2Daraxt } from '../../umumiy/daraxt/useT2Daraxt';
-import { lrvPlusEksportGate, lrvPlusFaylBaytlari, lrvPlusYuklab, type LrvPlusExportContext, type LrvPlusRejim } from '../../lib/lrv-plus-export';
+import { lrvPlusEksportGate, lrvPlusFaylBaytlari, lrvPlusFaylNomi, lrvPlusYuklab, type LrvPlusExportContext, type LrvPlusRejim } from '../../lib/lrv-plus-export';
+import { useHujjatKorinish } from '../../umumiy/hujjat/HujjatKorinish';
 import { sbFaktBelgilaV2, sbFaktYoz } from '../../api/t2-fakt';
 import { t2ObyektNakrutka } from '../../api/t2-nakrutka';
 import type { TreeNode } from '../../api/types';
@@ -38,6 +39,8 @@ export function HolatNative() {
   const [ochiqPanel, setOchiqPanel] = useState<string | null>(null);
   const [eksportBolmoqda, setEksportBolmoqda] = useState(false);
   const [slichFaqatFarq, setSlichFaqatFarq] = useState(false);
+  /* Egasi: hujjatni saytda aynan hujjatdagiday ko'rish — yuklab olinadigan faylning o'zidan. */
+  const korinish = useHujjatKorinish();
 
   const obyektId = Number(id);
   const validId = Number.isSafeInteger(obyektId) && obyektId > 0;
@@ -136,7 +139,7 @@ export function HolatNative() {
    * davr/source hujjat/revision) va read-model to'liqligi ISBOTLANMASA
    * (`exportGate`), eksport butunlay BLOKLANADI -- nakrutka bilan/siz
    * farqi yo'q, provenance hech qachon ixtiyoriy emas. */
-  const eksportQil = useCallback(async (rejim: LrvPlusRejim) => {
+  const eksportQil = useCallback(async (rejim: LrvPlusRejim, korish = false) => {
     if (!selected || !daraxtXom.length) return;
     if (!exportGate.ok) {
       setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
@@ -150,17 +153,18 @@ export function HolatNative() {
         nakrutka: nakr?.ok ? nakr.koeffitsientlar : undefined,
         imzo: tomonlar,
       }, exportContext);
-      lrvPlusYuklab(bytes, selected.nom, rejim);
+      if (korish) korinish.ochish(bytes, lrvPlusFaylNomi(selected.nom, rejim) + '.xlsx');
+      else lrvPlusYuklab(bytes, selected.nom, rejim);
     } catch {
       setError('Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason, tomonlar]);
+  }, [selected, daraxtXom, holatXom, obyektId, exportContext, exportGate.ok, exportBlockReason, tomonlar, korinish]);
 
   /* Egasi (2026-09-23): "tizim ostatka ishlarni ham bittada smeta shaklida bera
      oladigan bo'lishi kerak". Ostatka = smeta − fakt; hujjat — rasmiy
      "ВЕДОМОСТЬ ОСТАТКА РАБОТ" (hujjat standarti H1–H9): ichma-ich RZ, ИТОГО,
      oshib ketgan va noma'lum pozitsiyalar hujjatda ochiq ro'yxatda. */
-  const ostatkaEksport = useCallback(async () => {
+  const ostatkaEksport = useCallback(async (korish = false) => {
     if (!selected || !daraxtXom.length) return;
     if (!exportGate.ok) {
       setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
@@ -181,7 +185,7 @@ export function HolatNative() {
     try {
       const nk = await t2ObyektNakrutka(obyektId).catch(() => null);
       const { bytes, faylNomi } = ostatkaHujjatXlsx(model, { obyektNomi: selected.nom, imzo: tomonlar, nakrutka: nk?.ok ? nk.koeffitsientlar ?? null : null });
-      downloadBlob(bytes, faylNomi);
+      if (korish) korinish.ochish(bytes, faylNomi); else downloadBlob(bytes, faylNomi);
       const izoh = [
         model.oshibKetgan.length ? `${model.oshibKetgan.length} ta qatorda fakt smetadan oshgan — alohida ro‘yxatda` : '',
         model.diqqat.length ? `${model.diqqat.length} ta pozitsiya diqqat ro‘yxatida` : '',
@@ -191,14 +195,14 @@ export function HolatNative() {
     } catch {
       setError('Ostatka Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno, obyektId]);
+  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno, obyektId, korinish]);
 
 
   /* Egasi (2026-09-25): "slichitelniy vedomost ham yasay oladigan bo'lishi
      kerak". СЛИЧИТЕЛЬНАЯ ВЕДОМОСТЬ: smeta ↔ fakt (↔ tasdiqlangan Ф-2) har
      pozitsiya bo'yicha, farq (+ ortiq / − kam) summasi bilan. Farqni faqat
      ko'rsatadi — hech narsani o'zgartirmaydi. */
-  const slichitelniyEksport = useCallback(async () => {
+  const slichitelniyEksport = useCallback(async (korish = false) => {
     if (!selected || !daraxtXom.length) return;
     if (!exportGate.ok) {
       setError(`Excel eksporti bloklandi: ${exportBlockReason || 'provenance/context yetarli emas'}.`);
@@ -215,12 +219,12 @@ export function HolatNative() {
     try {
       const nk = await t2ObyektNakrutka(obyektId).catch(() => null);
       const { bytes, faylNomi } = slichitelniyHujjatXlsx(model, { obyektNomi: selected.nom, imzo: tomonlar, faqatFarq: slichFaqatFarq, istisnolar, nakrutka: nk?.ok ? nk.koeffitsientlar ?? null : null });
-      downloadBlob(bytes, faylNomi);
+      if (korish) korinish.ochish(bytes, faylNomi); else downloadBlob(bytes, faylNomi);
       toast(`Slichitelniy: ${model.barglar} ta pozitsiya, ${model.ortiq} tasida smetadan ortiq, ${model.kam} tasida kam bajarilgan${model.diqqat.length ? `; ${model.diqqat.length} ta pozitsiyada ma’lumot yetishmaydi — jami bo‘sh qoldirildi` : ''}.`, model.diqqat.length ? 'warn' : 'ok');
     } catch {
       setError('Slichitelniy Excel fayli tuzilmadi. Qayta urinib ko‘ring.');
     } finally { setEksportBolmoqda(false); }
-  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno, slichFaqatFarq, obyektId]);
+  }, [selected, daraxtXom, holatXom, exportGate.ok, exportBlockReason, tomonlar, istisno, slichFaqatFarq, obyektId, korinish]);
 
   const smetaJami = tree.reduce((sum, n) => sum + (n.smeta || 0), 0);
   const faktJami = tree.reduce((sum, n) => sum + (n.stFakt || 0), 0);
@@ -261,6 +265,7 @@ export function HolatNative() {
 
   return (
     <Sahifa sarlavha="Ishchi smeta / LRV" tavsif="Supabase kanonik qatorlari va tasdiqlangan F2 tarixi">
+      {korinish.oyna}
       <div className="flex h-full min-h-0 flex-col gap-3">
         <section className="karta flex flex-wrap items-end gap-3 p-3">
           <button onClick={() => navigate('/admin/obyektlar')} className="rounded-lg border border-border p-2 text-text-dim hover:text-text" aria-label="Obyektlarga qaytish"><ArrowLeft size={17} /></button>
@@ -278,21 +283,29 @@ export function HolatNative() {
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'LRV Excel'}
             </button>
+            <button onClick={() => void eksportQil('toliq', true)} disabled={eksportBolmoqda || !exportGate.ok} title="LRV — saytda hujjatdagiday ko‘rish" aria-label="LRV ko‘rish"
+              className="inline-flex items-center rounded-lg border border-border px-2 py-2 text-[12px] hover:bg-surface-2 disabled:opacity-40"><Eye size={14} /></button>
             <button onClick={() => void eksportQil('forma2')} disabled={eksportBolmoqda || !exportGate.ok}
               title={exportGate.ok ? "Forma-2 -- LRV'ning O ustunigacha bo'lgan qismi + nakrutka kaskadi. Buyurtmachiga tasdiqlash uchun yuboriladigan shakl." : `Eksport bloklangan: ${exportBlockReason}`}
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Forma-2 Excel'}
             </button>
-            <button onClick={() => void ostatkaEksport()} disabled={eksportBolmoqda || !exportGate.ok}
+            <button onClick={() => void eksportQil('forma2', true)} disabled={eksportBolmoqda || !exportGate.ok} title="Forma-2 — saytda hujjatdagiday ko‘rish" aria-label="Forma-2 ko‘rish"
+              className="inline-flex items-center rounded-lg border border-border px-2 py-2 text-[12px] hover:bg-surface-2 disabled:opacity-40"><Eye size={14} /></button>
+            <button onClick={() => void ostatkaEksport(false)} disabled={eksportBolmoqda || !exportGate.ok}
               title={exportGate.ok ? "ВЕДОМОСТЬ ОСТАТКА РАБОТ: bajarilmay qolgan ishlar (smeta − fakt) smeta shaklida, RZ ierarxiyasi, ИТОГО, imzolar." : `Eksport bloklangan: ${exportBlockReason}`}
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Ostatka Excel'}
             </button>
-            <button onClick={() => void slichitelniyEksport()} disabled={eksportBolmoqda || !exportGate.ok}
+            <button onClick={() => void ostatkaEksport(true)} disabled={eksportBolmoqda || !exportGate.ok} title="Ostatka — saytda hujjatdagiday ko‘rish" aria-label="Ostatka ko‘rish"
+              className="inline-flex items-center rounded-lg border border-border px-2 py-2 text-[12px] hover:bg-surface-2 disabled:opacity-40"><Eye size={14} /></button>
+            <button onClick={() => void slichitelniyEksport(false)} disabled={eksportBolmoqda || !exportGate.ok}
               title={exportGate.ok ? "СЛИЧИТЕЛЬНАЯ ВЕДОМОСТЬ: smeta va haqiqatda bajarilgan hajm (va tasdiqlangan Ф-2) har pozitsiya bo'yicha, farq (+/−) summasi bilan, imzolar." : `Eksport bloklangan: ${exportBlockReason}`}
               className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-40">
               <FileSpreadsheet size={14} /> {eksportBolmoqda ? 'Tuzilmoqda…' : 'Slichitelniy Excel'}
             </button>
+            <button onClick={() => void slichitelniyEksport(true)} disabled={eksportBolmoqda || !exportGate.ok} title="Slichitelniy — saytda hujjatdagiday ko‘rish" aria-label="Slichitelniy ko‘rish"
+              className="inline-flex items-center rounded-lg border border-border px-2 py-2 text-[12px] hover:bg-surface-2 disabled:opacity-40"><Eye size={14} /></button>
             <label className="inline-flex items-center gap-1.5 text-[11px] text-text-dim" title="Slichitelniy vedomostga faqat fakt smetadan farq qiladigan pozitsiyalar kirsin">
               <input type="checkbox" checked={slichFaqatFarq} onChange={(e) => setSlichFaqatFarq(e.target.checked)} /> faqat farqi borlar
             </label>

@@ -17,4 +17,5 @@ export * from './kitob';
 export * from './imzo';
 export * from './fayl-nomi';
 export * from './rasmiy';
+export * from './korinish';
 export { hujjatTekshir, imzoRollariBormi, TAQIQLANGAN_QOIDALAR, type HujjatHisobot, type TekshirVaraq, type TaqiqlanganTopilma } from './tekshir';
