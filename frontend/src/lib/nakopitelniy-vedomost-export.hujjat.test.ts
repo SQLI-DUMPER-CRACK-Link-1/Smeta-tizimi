@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NakopitelniyQator } from '../api/t2-nakopitelniy';
-import { nakopitelniyJamilar, nakopitelniyVedomostHujjat, HujjatToliqEmasXato } from './nakopitelniy-vedomost-export';
+import { nakopitelniyJamilar, nakopitelniyNds, nakopitelniyVedomostHujjat, HujjatToliqEmasXato, NDS_SUKUT_FOIZ } from './nakopitelniy-vedomost-export';
 import { f2AktHujjat } from './f2-akt-tn-export';
 import { hujjatTekshir, imzoRollariBormi } from './hujjat-yozuvchi';
 import { namunaSaqla } from './hujjat-yozuvchi/test-yordam';
@@ -65,6 +65,34 @@ describe('Накопительная ведомость — hujjat standarti', (
     expect(t.matnlar.some((s) => s.startsWith('ПОЗИЦИИ, ТРЕБУЮЩИЕ ВНИМАНИЯ (3)'))).toBe(true);
     expect(t.matnlar.some((s) => s.includes('нет объема или стоимости по смете'))).toBe(true);
     expect(t.taqiqlangan).toEqual([]);
+  });
+
+  it('Q2: НДС hujjat oxirida bir marta (sukut 12 %), faqat akt summalari ustunlarida', () => {
+    expect(NDS_SUKUT_FOIZ).toBe(12);
+    const smetaNakrutka = { pryamye: 43_596_859_620.62, itogo4: 50_556_791_619.97, nds: 6_066_814_994.4, nds_foiz: 12, vsego: 56_623_606_614.37 };
+    const { bytes, jamilar } = nakopitelniyVedomostHujjat(ROWS, { obyektNom: 'Объект', davr: '2026-09', ndsFoiz: 12, smetaNakrutka });
+    namunaSaqla('nakopitelniy_nds.xlsx', bytes);
+    const nds = nakopitelniyNds(jamilar, 12);
+    expect(nds).toEqual({ foiz: 12, oldingi: 50_400, joriy: 596_400.06, jami: 646_800.06 });
+    const t = hujjatTekshir(bytes);
+    expect(t.taqiqlangan).toEqual([]);
+    expect(t.dollarFormulalar).toEqual([]);
+    expect(t.keshsizFormulalar).toEqual([]);
+    expect(t.matnlar).toEqual(expect.arrayContaining(['ВСЕГО ПО ОБЪЕКТУ (без НДС)', 'НДС 12 %', 'ВСЕГО С НДС']));
+    expect(t.matnlar.filter((m) => /^НДС \d/.test(m))).toHaveLength(1);
+    expect(t.matnlar.map((m) => m.replace(/[\s\u00a0\u202f]/g, '')).some((m) => m.includes('всегосНДС56623606614,37сум'))).toBe(true);
+    const k = t.varaqlar[0].kataklar;
+    // НДС = ROUND(ВСЕГО × 12 / 100, 2) — kesh UI hisobiga teng; smeta/остаток ustunida НДС yo'q.
+    expect(k.some((c) => /^ROUND\(N\d+\*12\/100,2\)$/.test(c.f ?? '') && Number(c.v) === 646_800.06)).toBe(true);
+    expect(k.some((c) => /^ROUND\([GP]\d+/.test(c.f ?? ''))).toBe(false);
+    expect(k.some((c) => /^N\d+\+N\d+$/.test(c.f ?? '') && Math.abs(Number(c.v) - (jamilar.jami + 646_800.06)) < 1e-6)).toBe(true);
+  });
+
+  it('НДС stavkasi berilmasa — НДС qatorlari yo‘q, izohda aytiladi', () => {
+    const t = hujjatTekshir(nakopitelniyVedomostHujjat(ROWS, { obyektNom: 'Объект', davr: '2026-09' }).bytes);
+    expect(t.matnlar).toContain('ВСЕГО ПО ОБЪЕКТУ');
+    expect(t.matnlar.some((m) => m.startsWith('НДС '))).toBe(false);
+    expect(t.matnlar.some((m) => m.includes('НДС в ведомости не начислен'))).toBe(true);
   });
 
   it('qirqilgan ro‘yxatdan hujjat yasalmaydi (chala hujjat — rasmiy emas)', () => {

@@ -14,12 +14,17 @@
  *  - smeta hajmi/summasi noma'lum (NULL) — остаток ham bo'sh (0 emas);
  *  - RPC ro'yxati qirqilgan bo'lsa (`truncated`) hujjat yasalmaydi — chala
  *    hujjat rasmiy hujjat bo'la olmaydi;
+ *  - НДС (egasi qarori Q2, 2026-09-25): F2 resurs qatorlari НДС siz; НДС
+ *    hujjat OXIRIDA bir marta — ВСЕГО ostida «НДС n %» va «ВСЕГО С НДС»
+ *    (принято ранее / за период / с начала). Stavka sukuti 12 %, UI da
+ *    o'zgartiriladi; `ndsFoiz` berilmasa НДС qatorlari chiqmaydi;
+ *  - smeta nakrutka kaskadi (t2_obyekt_nakrutka) izohda ma'lumot sifatida;
  *  - Forma-3 yuridik jami qoidasi hal qilinmagan (FORMA3_RULE_UNRESOLVED) —
  *    hujjatga KS-3 jami chiqarilmaydi (ops/handoff/PTO_EGASI_QARORLARI_2026-09-25.md).
  */
-import type { NakopitelniyQator } from '../api/t2-nakopitelniy';
+import type { NakopitelniyQator, SmetaNakrutka } from '../api/t2-nakopitelniy';
 import {
-  RasmiyVaraq, hujjatFaylNomi, imzoTomonlari, rasmiyKitob,
+  RasmiyVaraq, hujjatFaylNomi, imzoTomonlari, rasmiyKitob, yaxlit2,
   type ImzoNomlar, type Qiymat, type RasmiyUstun,
 } from './hujjat-yozuvchi';
 
@@ -28,8 +33,23 @@ export interface NakopitelniyVedomostExportOptions {
   /** Hisobot davri: "2026-09-01" yoki "2026-09". */
   davr: string;
   imzo?: ImzoNomlar;
-  /** RPC ro'yxati qirqilganmi (t2_nakopitelniy_v1.truncated). */
+  /** RPC ro'yxati qirqilganmi (t2_nakopitelniy_v2.truncated). */
   truncated?: boolean;
+  /** НДС stavkasi, % (sukut UI da 12). null/undefined — НДС qatorlari yo'q. */
+  ndsFoiz?: number | null;
+  /** Smeta nakrutka kaskadi (RPC jami.smeta_nakrutka) — izohda ko'rsatiladi. */
+  smetaNakrutka?: SmetaNakrutka | null;
+}
+
+/** НДС stavkasi sukuti (egasi qarori Q2): 12 %, o'zgartiriladi. */
+export const NDS_SUKUT_FOIZ = 12;
+
+export type NakopitelniyNds = { foiz: number; oldingi: number; joriy: number; jami: number };
+
+/** НДС summalari — Excel `ROUND(x*stavka/100,2)` bilan aynan. */
+export function nakopitelniyNds(j: Pick<NakopitelniyJamilar, 'oldingi' | 'joriy' | 'jami'>, foiz: number): NakopitelniyNds {
+  const h = (x: number) => yaxlit2((x * foiz) / 100);
+  return { foiz, oldingi: h(j.oldingi), joriy: h(j.joriy), jami: h(j.jami) };
 }
 
 export class HujjatToliqEmasXato extends Error {
@@ -182,10 +202,11 @@ export function nakopitelniyVedomostHujjat(
     }
     if (r !== rowOf(i)) throw new Error('NAKOPITELNIY_QATOR_SILJIDI');
   });
+  const stavka = o.ndsFoiz != null && Number.isFinite(o.ndsFoiz) && o.ndsFoiz >= 0 ? o.ndsFoiz : null;
   if (bargRows.length) {
-    v.qator('vsego', (rr) => {
+    const vsegoRow = v.qator('vsego', (rr) => {
       const cells: Qiymat[] = Array(USTUNLAR.length).fill(null);
-      cells[2] = 'ВСЕГО ПО ОБЪЕКТУ';
+      cells[2] = stavka != null ? 'ВСЕГО ПО ОБЪЕКТУ (без НДС)' : 'ВСЕГО ПО ОБЪЕКТУ';
       const itogolar = reja.map((x, i) => (x.tur === 'itogo' ? i : -1)).filter((i) => i >= 0);
       // Bo'limsiz barglar ham ВСЕГО ga kiradi.
       const bolimsiz = bargRows.filter((i) => !reja.some((x) => x.tur === 'itogo' && x.bolalar.includes(i)));
@@ -198,9 +219,37 @@ export function nakopitelniyVedomostHujjat(
       cells[15] = { f: `IF(G${rr}="","",G${rr}-N${rr})`, v: j.qoldiq ?? '' };
       return cells;
     });
+    if (stavka != null) {
+      // НДС — bir marta, hujjat oxirida; faqat akt (F2) summalari ustunlarida.
+      const nds = nakopitelniyNds(j, stavka);
+      const st = String(stavka).replace('.', ',');
+      const ndsRow = v.qator('jami', () => {
+        const cells: Qiymat[] = Array(USTUNLAR.length).fill(null);
+        cells[2] = `НДС ${st} %`;
+        cells[9] = { f: `ROUND(J${vsegoRow}*${stavka}/100,2)`, v: nds.oldingi };
+        cells[11] = { f: `ROUND(L${vsegoRow}*${stavka}/100,2)`, v: nds.joriy };
+        cells[13] = { f: `ROUND(N${vsegoRow}*${stavka}/100,2)`, v: nds.jami };
+        return cells;
+      });
+      v.qator('vsego', () => {
+        const cells: Qiymat[] = Array(USTUNLAR.length).fill(null);
+        cells[2] = 'ВСЕГО С НДС';
+        cells[9] = { f: `J${vsegoRow}+J${ndsRow}`, v: j.oldingi + nds.oldingi };
+        cells[11] = { f: `L${vsegoRow}+L${ndsRow}`, v: j.joriy + nds.joriy };
+        cells[13] = { f: `N${vsegoRow}+N${ndsRow}`, v: j.jami + nds.jami };
+        return cells;
+      });
+    }
   }
   v.bosh();
   v.izoh('Графы «Принято ранее», «За отчетный период» и «С начала строительства» — по утвержденным актам формы № 2. «Можно предъявить» = выполнено по факту − принято с начала строительства. Суммы по разделам подводятся по ресурсам (материалам, труду, машинам, оборудованию).');
+  v.izoh(stavka != null
+    ? `Стоимость работ по ресурсам указана без НДС; НДС ${String(stavka).replace('.', ',')} % начислен один раз на итог по объекту.`
+    : 'Стоимость работ по ресурсам указана без НДС; НДС в ведомости не начислен.');
+  const sn = o.smetaNakrutka;
+  if (sn) {
+    v.izoh(`Сметная стоимость объекта: прямые затраты ${fmt2(sn.pryamye)} сум; с накладными расходами и прочими затратами (без НДС) ${fmt2(sn.itogo4)} сум; НДС${sn.nds_foiz != null ? ` ${String(sn.nds_foiz).replace('.', ',')} %` : ''} ${fmt2(sn.nds)} сум; всего с НДС ${fmt2(sn.vsego)} сум.`);
+  }
   v.diqqat(diqqat);
   v.imzo(imzoTomonlari(['ЗАКАЗЧИК', 'ПОДРЯДЧИК', 'СОСТАВИЛ'], o.imzo));
   const { bytes } = rasmiyKitob([v]);
@@ -227,6 +276,10 @@ function bolimOstatok(x: RejX, reja: readonly RejX[]): number | string {
   const g = (x.bolalar.reduce((s, k) => s + (reja[k].q!.smeta_summa ?? 0), 0));
   const nn = (x.bolalar.reduce((s, k) => s + reja[k].q!.oldingi_summa + reja[k].q!.joriy_summa, 0));
   return g - nn;
+}
+
+function fmt2(x: number): string {
+  return x.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmt(x: number): string {

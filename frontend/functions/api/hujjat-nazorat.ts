@@ -3,7 +3,9 @@
  * session -> actor -> Supabase canonical RPCs. No Drive/Sheets/GAS.
  *
  *   GET  /api/hujjat-nazorat?amal=workbench&obyekt_id=<n>[&davr=YYYY-MM-01][&limit=<n>]
- *   GET  /api/hujjat-nazorat?amal=nakopitelniy&obyekt_id=<n>[&davr=][&limit=][&faqat_faol=0|1]
+ *   GET  /api/hujjat-nazorat?amal=nakopitelniy&obyekt_id=<n>[&davr=][&limit=][&offset=][&faqat_faol=0|1]
+ *        (t2_nakopitelniy_v2: sahifa ≤ 5000, javobda keyingi_offset — mijoz
+ *         null bo'lguncha o'qiydi; egasi qarori Q4, 2026-09-25)
  *   GET  /api/hujjat-nazorat?amal=closeout&obyekt_id=<n>
  *   GET  /api/hujjat-nazorat?amal=ozgarish-royxat&obyekt_id=<n>[&limit=<n>]
  *   GET  /api/hujjat-nazorat?amal=forma3-royxat&obyekt_id=<n>[&loyiha_id=<n>]
@@ -80,9 +82,10 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
         return reply('t2_workbench_v1', await rpc(ctx.env, 't2_workbench_v1',
           { p_obyekt_id: obyektId, p_actor_id: actorId, p_davr: davr, p_limit: limit ?? 800 }), 'WORKBENCH_FAILED');
       case 'nakopitelniy':
-        return reply('t2_nakopitelniy_v1', await rpc(ctx.env, 't2_nakopitelniy_v1',
+        return reply('t2_nakopitelniy_v2', await rpc(ctx.env, 't2_nakopitelniy_v2',
           { p_obyekt_id: obyektId, p_actor_id: actorId, p_davr: davr, p_limit: limit ?? 500,
-            p_faqat_faol: u.searchParams.get('faqat_faol') !== '0' }), 'NAKOPITELNIY_FAILED');
+            p_faqat_faol: u.searchParams.get('faqat_faol') !== '0',
+            p_offset: num(u.searchParams.get('offset')) ?? 0 }), 'NAKOPITELNIY_FAILED');
       case 'closeout':
         return reply('t2_obyekt_yakunlash_v1', await rpc(ctx.env, 't2_obyekt_yakunlash_v1',
           { p_obyekt_id: obyektId, p_actor_id: actorId }), 'CLOSEOUT_FAILED');
@@ -117,7 +120,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
         }), 'OZGARISH_YARAT_FAILED');
       case 'ozgarish-tasdiqlash':
         if (!b.ozgarish_id) return Response.json({ ok: false, code: 'PARAMS' }, { status: 400 });
-        return reply('t2_smeta_ozgarish_tasdiqlash_v1', await rpc(ctx.env, 't2_smeta_ozgarish_tasdiqlash_v1', {
+        // v2 = v1 + signal yangilash oxirida bir marta (30 s chegarasi; 20261101091000).
+        return reply('t2_smeta_ozgarish_tasdiqlash_v2', await rpc(ctx.env, 't2_smeta_ozgarish_tasdiqlash_v2', {
           p_ozgarish_id: Number(b.ozgarish_id), p_actor_id: actorId,
           p_kutilgan_versiya: b.kutilgan_versiya ?? null, p_operation_id: opId,
         }), 'OZGARISH_TASDIQLASH_FAILED');

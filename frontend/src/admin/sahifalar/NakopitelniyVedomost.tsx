@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Search, Download, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useKompaniya } from '../../umumiy/kontekst/KompaniyaKontekst';
 import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
-import { NAKOPITELNIY_MAX_LIMIT, t2NakopitelniyOl, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami } from '../../api/t2-nakopitelniy';
-import { HujjatToliqEmasXato, nakopitelniyVedomostHujjat } from '../../lib/nakopitelniy-vedomost-export';
+import { t2NakopitelniyOl, t2NakopitelniyToliq, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami } from '../../api/t2-nakopitelniy';
+import { HujjatToliqEmasXato, NDS_SUKUT_FOIZ, nakopitelniyVedomostHujjat } from '../../lib/nakopitelniy-vedomost-export';
 import { f2AktHujjat } from '../../lib/f2-akt-tn-export';
 import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
@@ -12,8 +12,8 @@ import { FmtN } from '../../lib/format';
 /**
  * T2-PTO-OWNER-CRITICAL-CLOSURE P0-3: the real, line-by-line PTO nakopitelniy
  * vedomost -- ISH / SMETA / FAKT / PREV F2 / CURRENT F2 / CUMULATIVE F2 /
- * REMAINING, off t2_nakopitelniy_v1 (canonical, extended with Fakt in
- * 20261011100000_t2_nakopitelniy_fakt_v1.sql). Replaces the one-line KPI
+ * REMAINING, off t2_nakopitelniy_v2 (canonical; Fakt 20261011100000, barg
+ * jami + sahifalash 20261101090000). Replaces the one-line KPI
  * summary that used to stand in for this. Approved-only cumulative: a draft
  * F2 never appears in oldingi/joriy/jami -- only t2_akt.holat='tasdiqlangan'
  * rows are summed there (t2_nakopitelniy_v1's own join condition).
@@ -86,21 +86,31 @@ function Sessiya({ companyId }: { companyId: number }) {
   const sahifaSoni = Math.max(1, Math.ceil(gorunumRows.length / PAGE_SIZE));
 
   const [tomonlar, setTomonlar] = useHujjatTomonlari(companyId);
-  const [ndsFoiz, setNdsFoiz] = useState('');
+  const [ndsFoiz, setNdsFoiz] = useState(String(NDS_SUKUT_FOIZ));
   const [truncated, setTruncated] = useState(false);
 
-  /** Hujjat faqat TO'LIQ ro'yxatdan yasaladi: sahifa ro'yxati qirqilgan bo'lsa
-   *  (server sukuti 500 qator) — maksimum chegara bilan qayta o'qiladi; u ham
-   *  yetmasa eksport bloklanadi (chala hujjat rasmiy hujjat emas). */
+  /** Hujjat faqat TO'LIQ ro'yxatdan yasaladi: ekrandagi ro'yxat qisqa bo'lsa
+   *  (server sukuti 500 qator) — server sahifalari avtomat oxirigacha o'qiladi
+   *  (egasi qarori Q4). Baribir to'liq kelmasa — eksport bloklanadi. */
+  const [eksportBusy, setEksportBusy] = useState(false);
   const toliqQatorlar = async (): Promise<NakopitelniyQator[] | null> => {
     if (!truncated) return qatorlar;
-    const r = await t2NakopitelniyOl(Number(objectId), davr || null, NAKOPITELNIY_MAX_LIMIT);
-    if (!r.ok) { setXato(r.xato || r.code || 'Yuklanmadi'); return null; }
-    if (r.truncated) {
-      setXato(`Hujjat yasalmadi: obyektda ${r.qatorlar_jami} ta qator, server bir so‘rovda ${r.qatorlar_korsatildi} tagacha beradi — chala hujjat chiqarilmaydi.`);
-      return null;
-    }
-    return r.qatorlar;
+    setEksportBusy(true);
+    try {
+      const r = await t2NakopitelniyToliq(Number(objectId), davr || null);
+      if (!r.ok) {
+        setXato(r.code === 'NAKOPITELNIY_OZGARDI' ? 'O‘qish paytida smeta qatorlari o‘zgardi — qayta urinib ko‘ring.' : (r.xato || r.code || 'Yuklanmadi'));
+        return null;
+      }
+      if (r.truncated) { setXato('Hujjat yasalmadi: server ro‘yxatni to‘liq bermadi — chala hujjat chiqarilmaydi.'); return null; }
+      return r.qatorlar;
+    } finally { setEksportBusy(false); }
+  };
+  const stavkaOl = (): number | null => {
+    const t = ndsFoiz.trim();
+    if (t === '') return null;
+    const x = Number(t.replace(',', '.'));
+    return Number.isFinite(x) && x >= 0 ? x : null;
   };
 
   const eksportQil = async () => {
@@ -108,7 +118,7 @@ function Sessiya({ companyId }: { companyId: number }) {
     try {
       const rows = await toliqQatorlar();
       if (!rows) return;
-      const h = nakopitelniyVedomostHujjat(rows, { obyektNom, davr, imzo: tomonlar });
+      const h = nakopitelniyVedomostHujjat(rows, { obyektNom, davr, imzo: tomonlar, ndsFoiz: stavkaOl(), smetaNakrutka: jami?.smeta_nakrutka ?? null });
       downloadBlob(h.bytes, h.faylNomi);
     } catch (e) { setXato(e instanceof HujjatToliqEmasXato ? 'Hujjat to‘liq emas — eksport bloklandi.' : 'Excel fayli tuzilmadi.'); }
   };
@@ -119,8 +129,7 @@ function Sessiya({ companyId }: { companyId: number }) {
     try {
       const rows = await toliqQatorlar();
       if (!rows) return;
-      const stavka = ndsFoiz.trim() === '' ? null : Number(ndsFoiz.replace(',', '.'));
-      const h = f2AktHujjat(rows, { obyektNom, davr, imzo: tomonlar, ndsFoiz: stavka != null && Number.isFinite(stavka) ? stavka : null });
+      const h = f2AktHujjat(rows, { obyektNom, davr, imzo: tomonlar, ndsFoiz: stavkaOl() });
       downloadBlob(h.bytes, h.faylNomi);
     } catch (e) {
       const m = e instanceof Error ? e.message : '';
@@ -162,13 +171,13 @@ function Sessiya({ companyId }: { companyId: number }) {
           <RefreshCw size={14} className={busy ? 'animate-spin' : ''} /> Yangilash
         </button>
         {qatorlar.length > 0 && (
-          <button type="button" onClick={() => void eksportQil()}
+          <button type="button" onClick={() => void eksportQil()} disabled={eksportBusy}
             className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-sm hover:opacity-90">
             <Download size={14} /> XLSX eksport
           </button>
         )}
         {qatorlar.length > 0 && (
-          <button type="button" onClick={() => void aktEksportQil()}
+          <button type="button" onClick={() => void aktEksportQil()} disabled={eksportBusy}
             title="Mijoz/bankka topshiriladigan rasmiy shakl (TN Akt-2)"
             className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-accent/50 text-accent text-sm hover:bg-accent/10">
             <Download size={14} /> Rasmiy Ф2 hujjati
@@ -179,19 +188,26 @@ function Sessiya({ companyId }: { companyId: number }) {
       {qatorlar.length > 0 && (
         <div className="flex flex-wrap items-start gap-3">
           <div className="min-w-[280px] flex-1"><HujjatTomonlariPanel qiymat={tomonlar} onChange={setTomonlar} /></div>
-          <label className="text-[12px] text-text-dim">Ф2 akt uchun QQS (НДС) stavkasi, %
-            <input aria-label="QQS stavkasi" value={ndsFoiz} onChange={e => setNdsFoiz(e.target.value)} placeholder="bo‘sh — hujjatda ko‘rsatilmaydi"
-              className="ml-2 w-44 border rounded px-2 py-1" inputMode="decimal" />
+          <label className="text-[12px] text-text-dim" title="F2 resurs qatorlari QQS siz; QQS hujjat oxirida bir marta qo‘shiladi">QQS (НДС) stavkasi, % — hujjat oxirida bir marta
+            <input aria-label="QQS stavkasi" value={ndsFoiz} onChange={e => setNdsFoiz(e.target.value)} placeholder="bo‘sh — QQS qo‘shilmaydi"
+              className="ml-2 w-24 border rounded px-2 py-1" inputMode="decimal" />
           </label>
         </div>
       )}
 
       {busy && <p role="status">Yuklanmoqda…</p>}
+      {eksportBusy && <p role="status">To‘liq ro‘yxat serverdan sahifalab o‘qilmoqda…</p>}
+      {truncated && !busy && (
+        <p className="text-[12px] text-text-dim">Ekranda birinchi {qatorlar.length} ta qator; Excel hujjatlari obyektning barcha qatorlari bilan (avtomat) tuziladi.</p>
+      )}
       {xato && <p role="alert" className="text-danger flex items-center gap-1.5"><AlertTriangle size={14} /> {xato}</p>}
 
       {jami && (
         <div className="karta p-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-[12px]">
-          <div><span className="text-text-mute block">Smeta jami</span><FmtN val={jami.smeta_summa} /></div>
+          <div><span className="text-text-mute block">Smeta jami (to‘g‘ri xarajat)</span><FmtN val={jami.smeta_summa} />
+            {jami.smeta_nakrutka && <span className="block text-text-mute">nakrutka va QQS bilan: <FmtN val={jami.smeta_nakrutka.vsego} /></span>}
+            {!!jami.smeta_summa_nomalum && <span className="block text-warn">{jami.smeta_summa_nomalum} ta qatorda summa noma’lum</span>}
+          </div>
           <div><span className="text-text-mute block">Fakt jami</span><FmtN val={jami.fakt_summa} /></div>
           <div><span className="text-text-mute block">Jami tasdiqlangan F2</span><FmtN val={jami.jami_tasdiqlangan_summa} /></div>
           <div><span className="text-text-mute block">Faktdan F2ga mumkin</span>
