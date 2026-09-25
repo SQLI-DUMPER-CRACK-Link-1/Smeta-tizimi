@@ -24,6 +24,10 @@ export interface F2PreviewResult {
   maxCol: number;
   preview: Array<{ r: number; cells: string[]; mk: string }>;
   hdrQator: number;
+  /** Hajm/narx/summa ustunlari qanday isbotlandi (sarlavha yoki ma'lumot arifmetikasi). */
+  ustunDalil?: { qoida: 'sarlavha' | 'arifmetika'; ishonch: 'yuqori' | 'orta' | 'past'; izoh: string };
+  /** PTO qo'shgan, xaritaga kirmagan ustunlar — o'qilmaydi, operatorga ko'rsatiladi. */
+  qoshimchaUstunlar?: Array<{ ustun: number; sarlavha: string }>;
 }
 
 /** `apiF2FaylOqi`'s "colConfig given" response — the built act tree. */

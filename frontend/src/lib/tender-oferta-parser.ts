@@ -2,7 +2,7 @@ import type { SheetGrid, XlsxWorkbook } from './f2-import-parse';
 import type { T2ResursKategoriya } from '../api/supabase';
 import type { OfertaKategoriya, OfertaKategoriyaManbasi, OfertaMalumKategoriya, OfertaQator, OfertaRol } from './tender-oferta';
 import { podvalBlokTuri, resBolimKategoriya, resursMkKabAniqla } from './res-kategoriya';
-import { sarlavhaBlokiniTop, ustunXaritasi, type UstunXaritasi } from './smeta-anatomiya';
+import { sarlavhaBlokiniTop, uchlikniMoslashtir, ustunXaritasi, type UstunXaritasi } from './smeta-anatomiya';
 
 export type OfertaSheetRole = 'res' | 'lrv' | 'transport' | 'unknown';
 export type OfertaSheetConfidence = 'yuqori' | 'o‘rta' | 'past';
@@ -555,6 +555,19 @@ export function ofertaResursVaraqlariniAniqla(workbook: XlsxWorkbook): OfertaShe
     const rows = safeRows(workbook.sheet(sheet.name)?.rows ?? sheet.rows);
     const evidenceData = evidenceFor(rows, sheet.name);
     const ustunlar = findHeaders(rows);
+    // PTO qo'shgan/o'zgartirgan ustunlar: hajm/narx/summa uchligi ma'lumot
+    // bilan isbotlanadi (hajm × narx ≈ summa) — sarlavha faqat nomzod.
+    let ustunDalil: ReturnType<typeof uchlikniMoslashtir> | null = null;
+    if (ustunlar) {
+      const blok = sarlavhaBlokiniTop(rows);
+      const kenglik = maxCols(rows);
+      const matnlar = blok?.sarlavhalar ?? Array.from({ length: kenglik }, (_, c) => columnHeader(rows, ustunlar.sarlavhaBoshlanishi, ustunlar.malumotBoshlanishi - 1, c));
+      const band = new Set([ustunlar.tartib, ustunlar.shifr, ustunlar.nom, ustunlar.birlik].filter((i) => i >= 0));
+      ustunDalil = uchlikniMoslashtir(matnlar, rows.slice(ustunlar.malumotBoshlanishi, ustunlar.malumotBoshlanishi + 2000), { hajm: ustunlar.hajm, narx: ustunlar.smetaNarx, summa: ustunlar.smetaSumma }, band);
+      if (ustunDalil.qoida === 'arifmetika') {
+        ustunlar.hajm = ustunDalil.uchlik.hajm; ustunlar.smetaNarx = ustunDalil.uchlik.narx; ustunlar.smetaSumma = ustunDalil.uchlik.summa;
+      }
+    }
     const parsed = ustunlar ? parseRows(sheet.name, rows, ustunlar, evidenceData.roleHint === 'transport') : { qatorlar: [], skippedRows: 0 };
     const hasResourceShape = Boolean(ustunlar && parsed.qatorlar.some((qator) => qator.rol === 'RESOURCE' || qator.rol === 'TRANSPORT'));
     const namedLrv = /LRV|СМЕТА|СМЕТНЫЙ/.test(normal(sheet.name));
@@ -573,6 +586,7 @@ export function ofertaResursVaraqlariniAniqla(workbook: XlsxWorkbook): OfertaShe
     else if (!parsed.qatorlar.length) evidence.push('sarlavha topildi, lekin resurs satrlari topilmadi');
     else evidence.push(`${parsed.qatorlar.filter((qator) => qator.rol === 'RESOURCE').length} ta resurs, ${parsed.qatorlar.filter((qator) => qator.rol !== 'RESOURCE').length} ta hisob/bo‘lim satri`);
     if (sheet.hidden) evidence.push('Excelda yashirin varaq — sukut bo‘yicha tanlanmaydi');
+    if (ustunDalil?.qoida === 'arifmetika') evidence.push(ustunDalil.izoh);
     const anatomiya = anatomiyaSolishtir(rows, ustunlar);
     if (ustunlar && !anatomiya.mos) evidence.push(`anatomiya ustun xaritasi farq qiladi (${anatomiya.farqlar.join('; ')})`);
     return { nom: sheet.name, role, format: evidenceData.format, confidence, evidence, resScore: evidenceData.resScore, lrvScore: evidenceData.lrvScore, ustunlar, ...parsed, ...(sheet.hidden ? { yashirin: true } : {}), anatomiya };

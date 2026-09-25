@@ -8,6 +8,7 @@
  * branch without checking whether it exists to handle a specific template.
  */
 import type { F2ColumnConfig, SheetGrid } from './types';
+import { qoshimchaUstunlar, uchlikniMoslashtir } from '../smeta-anatomiya/ustun-dalil';
 
 function up(v: unknown): string {
   return String(v == null ? '' : v).toUpperCase();
@@ -69,9 +70,18 @@ function safeGrid(data: unknown): SheetGrid {
   return data.map((row) => Array.isArray(row) ? row : []);
 }
 
-export function f2UstunAniqla(data: SheetGrid | null | undefined): F2ColumnConfig & { hdrRow: number } {
+/** Aniqlash natijasi: ustunlar + qanday isbotlangani (operator ko'radi). */
+export type F2UstunAniqlash = F2ColumnConfig & {
+  hdrRow: number;
+  /** 'sarlavha' | 'arifmetika' — hajm/narx/summa qaysi dalil bilan tanlandi. */
+  dalil?: { qoida: 'sarlavha' | 'arifmetika'; ishonch: 'yuqori' | 'orta' | 'past'; izoh: string };
+  /** PTO qo'shgan, xaritaga kirmagan ustunlar (o'qilmaydi). */
+  qoshimcha?: Array<{ ustun: number; sarlavha: string }>;
+};
+
+export function f2UstunAniqla(data: SheetGrid | null | undefined): F2UstunAniqlash {
   const grid = safeGrid(data);
-  const d: F2ColumnConfig & { hdrRow: number } = { kod: 1, nom: 2, bir: 3, norma: 4, obyom: 5, narx: 6, sum: 7, hdrRow: -1 };
+  const d: F2UstunAniqlash = { kod: 1, nom: 2, bir: 3, norma: 4, obyom: 5, narx: 6, sum: 7, hdrRow: -1 };
 
   for (let r = 0; r < Math.min(60, grid.length); r++) {
     const row = grid[r] || [];
@@ -125,6 +135,32 @@ export function f2UstunAniqla(data: SheetGrid | null | undefined): F2ColumnConfi
     else if (ob >= 0) { d.obyom = ob; d.norma = Math.max(0, ob - 1); }
     if (nx >= 0) { d.narx = nx; d.sum = sm >= 0 ? sm : nx + 1; }
     else if (sm >= 0) { d.sum = sm; d.narx = Math.max(0, sm - 1); }
+
+    /* Egasi (2026-09-25): PTO F2 hujjatiga ustun qo'shishi yoki nomini
+       o'zgartirishi mumkin ("Кол-во по смете", "Выполнено ранее",
+       "Примечание", "СТОИМОСТЬ ВСЕГО"…). Sarlavha so'zi faqat nomzod —
+       hajm/narx/summa uchligi ma'lumot qatorlarida hajm × narx ≈ summa
+       bo'yicha isbotlanadi; isbot boshqa ustunni ko'rsatsa, u olinadi. */
+    // Faqat haqiqiy sarlavha qatorlari (raqamlash "1|2|3" va ma'lumot qatorlari emas).
+    const sarlavhaQatorlari: number[] = [];
+    for (let rr = r; rr < Math.min(r + 3, grid.length); rr++) {
+      const rw = grid[rr] || [];
+      const sonlar = rw.filter((v) => typeof v === 'number' || /^\s*-?\d+(?:[.,]\d+)?\s*$/.test(String(v ?? ''))).length;
+      if (rr > r && sonlar >= 2) break;
+      sarlavhaQatorlari.push(rr);
+    }
+    const kenglik = Math.max(0, ...sarlavhaQatorlari.map((rr) => (grid[rr] || []).length));
+    const matnlar = Array.from({ length: kenglik }, (_, c) => sarlavhaQatorlari.map((rr) => up((grid[rr] || [])[c]).replace(/\s+/g, ' ').trim()).filter(Boolean).join(' '));
+    const tartibUstun = row.findIndex((v) => { const k = up(v).replace(/[^0-9A-ZА-Я№]/g, ''); return k !== '' && TARTIB_KALIT.has(k); });
+    const band = new Set([d.kod, d.nom, d.bir, tartibUstun, ...(no >= 0 ? [no] : [])].filter((i) => i >= 0));
+    const m = uchlikniMoslashtir(matnlar, grid.slice(r + 1, r + 2001), { hajm: d.obyom, narx: d.narx, summa: d.sum }, band);
+    if (m.qoida === 'arifmetika') {
+      d.obyom = m.uchlik.hajm; d.narx = m.uchlik.narx; d.sum = m.uchlik.summa;
+      if (no < 0) d.norma = Math.max(0, d.obyom - 1);
+    }
+    d.dalil = { qoida: m.qoida, ishonch: m.ishonch, izoh: m.izoh };
+    const qosh = qoshimchaUstunlar(matnlar, new Set([...band, d.norma, d.obyom, d.narx, d.sum]));
+    if (qosh.length) d.qoshimcha = qosh;
     break;
   }
   return d;

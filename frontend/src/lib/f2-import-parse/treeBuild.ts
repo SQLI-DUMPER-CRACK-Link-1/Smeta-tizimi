@@ -91,6 +91,8 @@ export function f2FaylOqiCore(data: SheetGrid | null | undefined, colConfig?: Pa
       ok: true, mode: 'config', hasMarker,
       cols: { kod: cKod, nom: cNom, bir: cBir, norma: cNorma, obyom: cObyom, narx: cNarx, sum: cSum },
       maxCol: (grid[0] || []).length, preview, hdrQator: hdrRow >= 0 ? hdrRow + 1 : 0,
+      ...(det.dalil ? { ustunDalil: det.dalil } : {}),
+      ...(det.qoshimcha?.length ? { qoshimchaUstunlar: det.qoshimcha } : {}),
     };
   }
 

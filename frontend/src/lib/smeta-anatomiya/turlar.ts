@@ -131,4 +131,7 @@ export interface VaraqAnatomiyasi {
   vedomost: Resurs[];
   jamilar: JamiQator[];
   review: ReviewBand[];
+  /** Xaritaga kirmagan sarlavhali ustunlar (PTO qo'shgan: ПРИМЕЧАНИЕ, ОСТАТОК…) —
+   * o'qilmaydi, operatorga ko'rsatiladi. */
+  qoshimchaUstunlar?: Array<{ ustun: number; sarlavha: string }>;
 }

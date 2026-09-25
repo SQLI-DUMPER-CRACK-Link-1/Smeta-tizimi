@@ -1,6 +1,7 @@
 import { IerarxiyaQuruvchi } from './ierarxiya';
 import { bosh, kalit, son, toliqUstunlar, xom } from './matn';
 import { sarlavhaBlokiniTop, ustunXaritasi, type SarlavhaBloki } from './ustun';
+import { qoshimchaUstunlar, uchlikniMoslashtir } from './ustun-dalil';
 import type {
   Dalil, Ish, Katak, KirishVaraq, Manzil, Resurs, UstunXaritasi, VaraqAnatomiyasi, VaraqRoli,
 } from './turlar';
@@ -152,9 +153,22 @@ export function varaqniTahlilQil(fayl: string, varaq: KirishVaraq, sarlavhaBoshI
     }
   }
   const manzil = (r: number, c?: number): Manzil => ({ fayl, varaq: varaq.nom, qator: r + 1, ...(c != null && c >= 0 ? { ustun: c + 1 } : {}) });
+  // PTO qo'shgan/o'zgartirgan ustunlarga moslashish: hajm/narx/summa uchligi
+  // ma'lumot bilan isbotlanadi (hajm × narx ≈ summa); tanilmagan ustunlar ro'yxati.
+  let qoshimcha: VaraqAnatomiyasi['qoshimchaUstunlar'];
+  if (u && blok && (rol === 'lrv' || rol === 'res')) {
+    const band = new Set([u.tartib, u.shifr, u.nom, u.birlik, u.hajmBirlikka].filter((i) => i >= 0));
+    const m = uchlikniMoslashtir(blok.sarlavhalar, rows.slice(u.malumotBoshi, u.malumotBoshi + 2000), { hajm: u.hajmLoyiha, narx: u.narx, summa: u.summa }, band);
+    if (m.qoida === 'arifmetika') {
+      u.hajmLoyiha = m.uchlik.hajm; u.narx = m.uchlik.narx; u.summa = m.uchlik.summa;
+    }
+    rolDalil.push({ qoida: `ustunlar:${m.qoida}`, ishonch: m.ishonch, izoh: m.izoh });
+    qoshimcha = qoshimchaUstunlar(blok.sarlavhalar, new Set([...band, u.hajmLoyiha, u.narx, u.summa]));
+  }
   const natija: VaraqAnatomiyasi = {
     fayl, varaq: varaq.nom, rol, rolDalil, ustunlar: u,
     titul: [], sarlavhalar: [], ishlar: [], vedomost: [], jamilar: [], review: [],
+    ...(qoshimcha?.length ? { qoshimchaUstunlar: qoshimcha } : {}),
   };
   if (!u || !blok || (rol !== 'lrv' && rol !== 'res')) return natija;
 
