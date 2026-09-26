@@ -216,3 +216,19 @@ checkpointdir. Eski yozuvlar o‘zgartirilmaydi.
 | `owner_decisions` | Q1 (`PTO_EGASI_QARORLARI_2026-09-25.md`) javob yozildi: **B — nakrutka kaskadi**; avans hozir F3 ga kirmaydi; davr ustunlari faqat `holat=‘tasdiqlangan’` F2 dan; qamrov — loyiha (shartnoma) darajasi. |
 | `verified` | Amfiteatr (obyekt 77, kompaniya 17) real read-only: 195 razdel / 869 ish / 9 448 barg, NULL smeta = 0, kat noma’lum = 0, прямые 43 596 859 620,83 so‘m; JS kaskad (nakrutkaKaskadJS) = server `t2_obyekt_nakrutka` kaskadi AYNAN (foizlar 0 %, kf=1). Gate‘lar: tsc/functions/oxlint/tekshir 5-5/build/vitest/governance/git diff --check — PASS (t2clean clone‘da). |
 | `remaining_evidence` | Real tasdiqlangan F2 bilan «F3 за период ВСЕГО = F2 к оплате» tekshiruvi — UNKNOWN (kompaniya 17 da tasdiqlangan F2 yo‘q; baza bo‘yicha yagona F2 0 qatorli). Brauzer real sinov va LibreOffice/Excel chop — egasi sessiyasi. |
+
+# 2026-09-27 — C1 F3 reconciliation — T2-FORMA3-F3-RECONCILIATION-002
+
+Ushbu addendum F3 implementatsiyasini qayta yozmaydi. U `origin/main` va
+production catalog bo‘yicha C1 holatini ajratadi.
+
+| Field | Current value |
+|---|---|
+| `main_sha` | `81641ded6a3920f308a8de6b11eade057772ad15` — F3 commit `992384dd2e836cbe600da8a6b647e84e1d3160e0` uning tarixida. |
+| `f3_source` | `VERIFIED REMOTE`: `frontend/src/lib/forma3-export.ts`, focused test va Nakopitelniy UI mavjud. |
+| `f3_migration` | `VERIFIED PRODUCTION`: `t2_forma3_rule_mapped_v1` live version `20260926125938`; `t2_forma3_yarat_v1` `FORMA3_RULE_MAPPED` yozadi. Qayta apply qilinmadi. |
+| `f3_schema` | `VERIFIED PRODUCTION`: `qoida_holat`, `qoida_manba`, `certified_amount` mavjud; RPC `SECURITY DEFINER`, read model `STABLE`. |
+| `f3_live_data` | `t2_forma3` qatorlari `0`; approved F2 qatorlari `1`. Shu sabab real F3-period ↔ F2 `к оплате` tengligi `UNKNOWN`, uydirma PASS berilmaydi. |
+| `focused_gate` | `forma3-export.hujjat.test.ts`: `9/9 PASS`; migration static/rollback review: PASS; functions/frontend typecheck: PASS; `npm run tekshir`: PASS; `git diff --check`: PASS. |
+| `authenticated_rendering` | `UNKNOWN`: egasining login sessiyasi va Excel/LibreOffice chop dalili kerak; agent parol/cookie so‘ramaydi. |
+| `task` | `T2-FORMA3-F3-RECONCILIATION-002` — branch `codex/f3-closeout-v1`; source ownership boshqa agent taskida qolgan. |
