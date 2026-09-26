@@ -6,6 +6,9 @@ import { sbT2ObyektlarOlKomp, type T2Obyekt } from '../../api/supabase';
 import { t2NakopitelniyOl, t2NakopitelniyToliq, type NakopitelniyQator, type NakopitelniyDavr, type NakopitelniyJami } from '../../api/t2-nakopitelniy';
 import { HujjatToliqEmasXato, NDS_SUKUT_FOIZ, nakopitelniyVedomostHujjat } from '../../lib/nakopitelniy-vedomost-export';
 import { f2AktHujjat } from '../../lib/f2-akt-tn-export';
+import { forma3Hujjat, type Forma3ExportOptions } from '../../lib/forma3-export';
+import { sbT2F2TafsilotOl } from '../../api/t2-narx';
+import { ozgarishRoyxatOl } from '../../api/t2-document-control';
 import { t2ObyektNakrutka, type NakrutkaKoeffitsientlar } from '../../api/t2-nakrutka';
 import { HujjatTomonlariPanel, useHujjatTomonlari } from '../../umumiy/hujjat/HujjatTomonlari';
 import { downloadBlob } from '../../lib/construction-document-control/export/download-helper';
@@ -125,6 +128,50 @@ function Sessiya({ companyId }: { companyId: number }) {
     return Number.isFinite(x) && x >= 0 ? x : null;
   };
 
+  /** ФОРМА № 3 — СПРАВКА О СТОИМОСТИ ВЫПОЛНЕННЫХ РАБОТ И ЗАТРАТ (счет-фактура
+   *  к актам формы № 2). Manba: to‘liq nakopitelniy + TASDIQLANGAN F2 oylik
+   *  summalari (t2_f2_tafsilot, akt_holat='tasdiqlangan') + tasdiqlangan
+   *  olib_tashlash o‘zgarishlari (СМЕТНАЯ dan chiqadi). Egasi qarori (2026-09-26):
+   *  jami — nakrutka kaskadi, «за отчетный период» ВСЕГО К ОПЛАТЕ = shu davr
+   *  tasdiqlangan F2 к оплате jamisi (tiyingacha); farq — diqqat, yashirilmaydi. */
+  const [forma3Busy, setForma3Busy] = useState(false);
+  const [forma3Diqqat, setForma3Diqqat] = useState<Array<{ nom: string; sabab: string }>>([]);
+  const forma3EksportQil = async (korish = false) => {
+    setXato(''); setForma3Diqqat([]);
+    if (!objectId || !davr) { setXato('F3 uchun tasdiqlangan F2 davri yo‘q — hujjat yasalmadi.'); return; }
+    setForma3Busy(true);
+    try {
+      const rows = await toliqQatorlar();
+      if (!rows) return;
+      const taf = await sbT2F2TafsilotOl({ obyektId: Number(objectId), tur: 'f2' });
+      if (!taf.ok || taf.toliq === false || !taf.qatorlar) {
+        setXato('F2 qatorlari to‘liq o‘qilmadi — F3 chala ma’lumot ustida tuzilmaydi.'); return;
+      }
+      const f2Oylik = taf.qatorlar
+        .filter((t) => t.akt_holat === 'tasdiqlangan')
+        .map((t) => ({ obyekt_id: t.obyekt_id, qator_id: t.qator_id, oy: String(t.oy).slice(0, 7), summa: t.summa ?? 0 }));
+      let ozgarishlar: Forma3ExportOptions['ozgarishlar'] = [];
+      try {
+        const oz = await ozgarishRoyxatOl(Number(objectId), 500);
+        ozgarishlar = ((oz?.ozgarishlar ?? []) as Array<{ holat?: string | null; tur?: string | null; qatorlar?: Array<{ qator_id?: number | null; amal?: string | null }> }>)
+          .filter((o) => o.tur === 'olib_tashlash' && o.holat === 'tasdiqlangan')
+          .map((o) => ({
+            holat: String(o.holat), tur: String(o.tur),
+            qatorlar: (o.qatorlar ?? []).filter((z) => z.qator_id != null && !!z.amal)
+              .map((z) => ({ qator_id: Number(z.qator_id), amal: String(z.amal) })),
+          }));
+      } catch { /* ro‘yxat o‘qilmasa СМЕТНАЯ o‘zgarmaydi — davom etamiz */ }
+      const h = forma3Hujjat(
+        { nakopitelniy: [{ obyekt_id: Number(objectId), obyektNom, qatorlar: rows }], f2Oylik },
+        { obyektNom, davr, asosiyObyektId: Number(objectId), imzo: tomonlar, nakrutka, ndsFoiz: stavkaOl(), smetaNakrutka: jami?.smeta_nakrutka ?? null, ozgarishlar },
+      );
+      setForma3Diqqat(h.diqqat);
+      if (korish) korinish.ochish(h.bytes, h.faylNomi); else downloadBlob(h.bytes, h.faylNomi);
+    } catch (e) {
+      setXato(e instanceof Error ? `F3 tuzilmadi: ${e.message}` : 'F3 fayli tuzilmadi.');
+    } finally { setForma3Busy(false); }
+  };
+
   const korinish = useHujjatKorinish();
   const eksportQil = async (korish = false) => {
     setXato('');
@@ -205,6 +252,17 @@ function Sessiya({ companyId }: { companyId: number }) {
           <button type="button" onClick={() => void aktEksportQil(true)} disabled={eksportBusy} title="Акт Ф-2 — saytda hujjatdagiday ko‘rish" aria-label="Ф2 akt ko‘rish"
             className="h-8 px-2 inline-flex items-center rounded-lg border text-sm hover:border-accent/50"><Eye size={14} /></button>
         )}
+        {qatorlar.length > 0 && !!davr && (
+          <button type="button" onClick={() => void forma3EksportQil(false)} disabled={eksportBusy || forma3Busy}
+            title="СПРАВКА О СТОИМОСТИ ВЫПОЛНЕННЫХ РАБОТ И ЗАТРАТ (счет-фактура к актам Ф-2)"
+            className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-accent/50 text-accent text-sm hover:bg-accent/10">
+            <Download size={14} /> Форма № 3
+          </button>
+        )}
+        {qatorlar.length > 0 && !!davr && (
+          <button type="button" onClick={() => void forma3EksportQil(true)} disabled={eksportBusy || forma3Busy} title="Форма № 3 — saytda hujjatdagiday ko‘rish" aria-label="F3 ko‘rish"
+            className="h-8 px-2 inline-flex items-center rounded-lg border text-sm hover:border-accent/50"><Eye size={14} /></button>
+        )}
       </div>
 
       {qatorlar.length > 0 && (
@@ -219,10 +277,19 @@ function Sessiya({ companyId }: { companyId: number }) {
 
       {busy && <p role="status">Yuklanmoqda…</p>}
       {eksportBusy && <p role="status">To‘liq ro‘yxat serverdan sahifalab o‘qilmoqda…</p>}
+      {forma3Busy && <p role="status">Форма № 3 manbalari yig‘ilmoqda (nakopitelniy + tasdiqlangan F2)…</p>}
       {truncated && !busy && (
         <p className="text-[12px] text-text-dim">Ekranda birinchi {qatorlar.length} ta qator; Excel hujjatlari obyektning barcha qatorlari bilan (avtomat) tuziladi.</p>
       )}
       {xato && <p role="alert" className="text-danger flex items-center gap-1.5"><AlertTriangle size={14} /> {xato}</p>}
+      {forma3Diqqat.length > 0 && (
+        <details className="text-[12px] text-text-dim border border-border rounded p-2">
+          <summary className="cursor-pointer">Форма № 3 diqqatlar: {forma3Diqqat.length} ta (hujjatda ham yozilgan)</summary>
+          <ul className="mt-1 list-disc pl-5 space-y-0.5">
+            {forma3Diqqat.slice(0, 12).map((d, i) => <li key={i}><b>{d.nom}</b> — {d.sabab}</li>)}
+          </ul>
+        </details>
+      )}
 
       {jami && (
         <div className="karta p-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-[12px]">

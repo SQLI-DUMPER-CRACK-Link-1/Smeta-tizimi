@@ -205,3 +205,14 @@ checkpointdir. Eski yozuvlar o‘zgartirilmaydi.
 | `landed` | Накопительная: НДС 12 % oxirida (tahrirlanadi), smeta nakrutka izohi; mijoz avtomat sahifalash; Ostatka: «ИСКЛЮЧЕНО ИЗ ОСТАТКА» + LRV sahifasida «Bajarilmaydigan / bekor qilingan ishlar» paneli. |
 | `open_owner_decisions` | Q1 Forma-3; Q5–Q9, Q11; Q12 uchun real blanklar va F2 bloklash/ogohlantirish (`ops/handoff/IJRO_HUJJATLARI_T2_REJA_2026-09-25.md`). |
 | `remaining_evidence` | Real login bilan brauzerda: Suniy Ko'l Nakopitelniy Excel vaqti, istisno yaratish/tasdiqlash — UNKNOWN (egasi sessiyasi kerak). |
+
+# 2026-09-26 — F3 (Форма № 3, счет-фактура) T2 native — T2-FORMA3-F3-001
+
+| Field | Current value |
+|---|---|
+| `main_sha` | Base `30f663355e9aa01563f21b16ff6307b4168e89e1`. F3 kod commit‘lari `claude/forma3-f3-v1` branch‘da; shu addendumdan keyin origin/main ga merge + push (deploy avtomat, owner standing authorization). Yakuniy deploy SHA — `ops/handoff/T2_FORMA3_F3_001.md`. |
+| `landed` | `lib/forma3-export.ts` — F3 rasmiy hujjat (RasmiyVaraq): 4 pul ustuni (сметная / с начала строительства / с начала года / за отчетный период — H/I/J FAQAT tasdiqlangan F2, manba t2_f2_tafsilot), РАЗДЕЛ → ish turlari → ИТОГО ПО РАЗДЕЛУ → ИТОГО ПРЯМЫЕ ЗАТРАТЫ, oxirida nakrutka podvali har ustunga (server t2_nakrutka_hisobla_v1 kaskadi bilan aynan), eng pastki qator ВСЕГО К ОПЛАТЕ = F2 к оплате jamisi (tiyingacha nazorat, farq — diqqat); NULL ≠ 0; jonli `$` siz formulalar; 255 argument chegarasi — yashirin K/L ustunlari ustidagi SUMIF; tasdiqlangan olib_tashlash СМЕТНАЯ dan chiqadi. UI: Nakopitelniy «Форма № 3» + 👁. Testlar 9/9. |
+| `production_migrations` | `20261102090000_t2_forma3_rule_mapped_v1` — prod `schema_migrations.version = 20260926125938` (2026-09-26): `t2_forma3_yarat_v1` endi `qoida_holat=‘FORMA3_RULE_MAPPED’` + `qoida_manba=‘EGA_QAROR_B_NAKRUTKA_KASKAD_V1…’` yozadi. Additive (faqat create or replace function); tranzaksiyada (begin…rollback) test qilingan; rollback fayli bor. Biznes ma’lumotiga yozuv YO‘Q. |
+| `owner_decisions` | Q1 (`PTO_EGASI_QARORLARI_2026-09-25.md`) javob yozildi: **B — nakrutka kaskadi**; avans hozir F3 ga kirmaydi; davr ustunlari faqat `holat=‘tasdiqlangan’` F2 dan; qamrov — loyiha (shartnoma) darajasi. |
+| `verified` | Amfiteatr (obyekt 77, kompaniya 17) real read-only: 195 razdel / 869 ish / 9 448 barg, NULL smeta = 0, kat noma’lum = 0, прямые 43 596 859 620,83 so‘m; JS kaskad (nakrutkaKaskadJS) = server `t2_obyekt_nakrutka` kaskadi AYNAN (foizlar 0 %, kf=1). Gate‘lar: tsc/functions/oxlint/tekshir 5-5/build/vitest/governance/git diff --check — PASS (t2clean clone‘da). |
+| `remaining_evidence` | Real tasdiqlangan F2 bilan «F3 за период ВСЕГО = F2 к оплате» tekshiruvi — UNKNOWN (kompaniya 17 da tasdiqlangan F2 yo‘q; baza bo‘yicha yagona F2 0 qatorli). Brauzer real sinov va LibreOffice/Excel chop — egasi sessiyasi. |

@@ -1246,6 +1246,37 @@
       ],
       "production_write_allowed": false,
       "_izoh": "Egasi 2026-09-25: F2 importni Tizim1 (35_F2Moslash.js, Panel f2Imp*) kabi yoki undan yaxshi qilish; № kalit emas."
+    },
+    {
+      "id": "T2-FORMA3-F3-001",
+      "title": "F3 (Справка о стоимости выполненных работ и затрат / счет-фактура) — T2 native hujjat: razdel/ish turlari × 4 ustun + nakrutka podvali, F2 к оплате bilan tiyingacha tenglik nazorati; FORMA3_RULE_MAPPED",
+      "owner": "claude",
+      "machine": "server",
+      "branch": "claude/forma3-f3-v1",
+      "base_sha": "30f663355e9aa01563f21b16ff6307b4168e89e1",
+      "status": "kod_bajarildi_commit_kutilmoqda",
+      "owns": [
+        "frontend/src/lib/forma3-export.ts",
+        "frontend/src/lib/forma3-export.hujjat.test.ts",
+        "supabase/migrations/20261102090000_t2_forma3_rule_mapped_v1.sql",
+        "supabase/migrations/20261102090000_t2_forma3_rule_mapped_v1.rollback.sql",
+        "frontend/src/admin/sahifalar/NakopitelniyVedomost.tsx",
+        "ops/handoff/T2_FORMA3_F3_001.md"
+      ],
+      "depends_on": [
+        "PTO-LINIYA-YAKUN-001"
+      ],
+      "must_read": [
+        "AGENTS.md",
+        "docs/governance/CONSTITUTION.md",
+        "docs/governance/CURRENT_STATE.md",
+        "ops/handoff/EGA_TALABLARI_BARCHA_AGENTLAR_2026-09-26.md",
+        "ops/handoff/EGASI_TALABLARI_KEYINGI_AGENTLAR_2026-09-26.md",
+        "ops/handoff/PTO_EGASI_QARORLARI_2026-09-25.md",
+        "docs/architecture/HUJJAT_STANDARTI_V1.md"
+      ],
+      "production_write_allowed": false,
+      "_izoh": "Egasi qarorlari (chat, 2026-09-26): jami qoidasi B (nakrutka kaskadi), davr ustunlari faqat tasdiqlangan F2 dan, qamrov — loyiha (shartnoma), avans hozir yo’q. Q1 javobi PTO_EGASI_QARORLARI fayliga yoziladi."
     }
   ]
 }

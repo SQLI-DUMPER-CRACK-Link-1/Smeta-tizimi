@@ -37,7 +37,13 @@ bo‘yichami?
 **Tavsiya:** C (hujjat haqiqati) + nazorat uchun A/B hisobi yonma-yon
 ogohlantirish bilan — sayt hech qachon yuridik summani o‘zi "to‘qimaydi".
 
-**Qaror:** _(egasi yozadi)_
+**Qaror (egasi, chat 2026-09-26 — task T2-FORMA3-F3-001 bilan bajarildi):** B — **nakrutka kaskadi**.
+
+- (1) Avans (удержание аванса) hozircha F3 ga **kirmaydi** — keyinchalik alohida qaror bilan qo‘shiladi.
+- (2) Ha — «с начала строительства» / «с начала года» / «за отчетный период» ustunlari FAQAT `holat='tasdiqlangan'` F2 aktlaridan yig‘iladi.
+- (3) Qamrov — **LOYIHA (shartnoma) darajasida**: asosiy obyekt birinchi, qolganlari «В ТОМ ЧИСЛЕ — ОБЪЕКТ: …» guruh satrlari bilan; bitta obyekt bo‘lsa oddiy hujjat.
+
+Bajarildi (2026-09-26, branch `claude/forma3-f3-v1`): `frontend/src/lib/forma3-export.ts` — RasmiyVaraq, 4 ustun (сметная / с начала строительства / с начала года / за отчетный период), РАЗДЕЛ → ish turlari → ИТОГО ПО РАЗДЕЛУ → ИТОГО ПРЯМЫЕ ЗАТРАТЫ, oxirida nakrutka podvali (`lib/nakrutka-podval.ts` = server `t2_nakrutka_hisobla_v1` kaskadi bilan aynan), eng pastki qator **ВСЕГО К ОПЛАТЕ** = F2 к оплате jamisi bilan **tiyingacha** tenglik nazorati (farq — diqqat, yashirilmaydi); NULL ≠ 0; formulalar jonli `$` siz; 255 argument chegarasi yashirin kat/barg ustunlari ustidagi SUMIF bilan yechildi. UI: Nakopitelniy sahifasida «Форма № 3» + 👁. Testlar `forma3-export.hujjat.test.ts` 9/9. Migratsiya `20261102090000_t2_forma3_rule_mapped_v1.sql`: `t2_forma3_yarat_v1` endi `FORMA3_RULE_MAPPED` + `qoida_manba=EGA_QAROR_B_NAKRUTKA_KASKAD_V1` yozadi — **productionga qo‘llandi** (schema_migrations version `20260926125938`, 2026-09-26; rollback fayli bor). Amfiteatr real tekshiruv: JS kaskad = server `t2_obyekt_nakrutka` kaskadi aynan (obyekt 77: ВСЕГО 43 596 859 620,83 so‘m, foizlar 0%).
 
 ---
 
