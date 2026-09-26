@@ -224,7 +224,7 @@ production catalog bo‘yicha C1 holatini ajratadi.
 
 | Field | Current value |
 |---|---|
-| `main_sha` | `81641ded6a3920f308a8de6b11eade057772ad15` — F3 commit `992384dd2e836cbe600da8a6b647e84e1d3160e0` uning tarixida. |
+| `main_sha` | `681e88a8b9be0751e490cda31c90c485b58c40bc` — F3 code va reconciliation governance commitlari bilan origin/mainga chiqarilgan deployed product SHA. |
 | `f3_source` | `VERIFIED REMOTE`: `frontend/src/lib/forma3-export.ts`, focused test va Nakopitelniy UI mavjud. |
 | `f3_migration` | `VERIFIED PRODUCTION`: `t2_forma3_rule_mapped_v1` live version `20260926125938`; `t2_forma3_yarat_v1` `FORMA3_RULE_MAPPED` yozadi. Qayta apply qilinmadi. |
 | `f3_schema` | `VERIFIED PRODUCTION`: `qoida_holat`, `qoida_manba`, `certified_amount` mavjud; RPC `SECURITY DEFINER`, read model `STABLE`. |
