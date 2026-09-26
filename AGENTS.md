@@ -12,6 +12,7 @@ Before changing anything, read this chain in order:
 5. `ops/ACTIVE_TASKS.json` — task ownership, locks, dependencies and required reading.
 6. `ops/mailbox/INBOX.md` — open items currently waiting on someone.
 7. Only the relevant accepted contract/ADR under `docs/architecture/` or review under `docs/reviews/`.
+8. Owner's Obsidian vault (the human-readable bridge between Claude, Codex and every other agent): `D:ObsidianAnvar_Brain` on the laptop — read `80_SYSTEM/ai/AGENT_BRIDGE.md` and `20_PROJECTS/Smeta-tizimi/AGENT_LOG.md`. After every commit, deploy or owner decision, append one entry to AGENT_LOG and update CURRENT_STATE/HANDOFF/OPEN_ISSUES/TASKS (owner standing order, 2026-09-26). Agents on other machines that cannot see the vault use `ops/mailbox/INBOX.md` and the laptop agent mirrors it into the vault.
 
 Run `node ops/governance-check.cjs` before handoff. A task may edit only paths in
 its `owns` list. Do not use `tizim02/MULOQOT.md` as current state: it is an
