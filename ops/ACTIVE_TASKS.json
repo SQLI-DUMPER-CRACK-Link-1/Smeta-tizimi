@@ -1254,7 +1254,7 @@
       "machine": "server",
       "branch": "claude/forma3-f3-v1",
       "base_sha": "30f663355e9aa01563f21b16ff6307b4168e89e1",
-      "status": "kod_bajarildi_commit_kutilmoqda",
+      "status": "released_source_prod_applied_owner_evidence_open",
       "owns": [
         "frontend/src/lib/forma3-export.ts",
         "frontend/src/lib/forma3-export.hujjat.test.ts",
@@ -1276,7 +1276,7 @@
         "docs/architecture/HUJJAT_STANDARTI_V1.md"
       ],
       "production_write_allowed": false,
-      "_izoh": "Egasi qarorlari (chat, 2026-09-26): jami qoidasi B (nakrutka kaskadi), davr ustunlari faqat tasdiqlangan F2 dan, qamrov — loyiha (shartnoma), avans hozir yo’q. Q1 javobi PTO_EGASI_QARORLARI fayliga yoziladi."
+      "_izoh": "F3 source commit 992384d origin/main tarixida, migration 20260926125938 productionda live. Focused 9/9 va full Vitest 675/12 skipped PASS; qolgan dalil: real approved F2 bilan davr tengligi hamda authenticated Excel/print smoke — UNKNOWN, egasi sessiyasi kerak."
     },
     {
       "id": "T2-FORMA3-F3-RECONCILIATION-002",
